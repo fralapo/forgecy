@@ -15,7 +15,7 @@
 
 Forgecy è uno strumento interno per un'agenzia di comunicazione. Parte dal brief di un cliente e arriva a un carosello social pronto da pubblicare, con colori, font e tono di voce del brand già applicati.
 
-Oggi la repo contiene solo questo file. Il progetto è in fase di progettazione e il codice arriverà nei prossimi mesi.
+Oggi la repo contiene solo questo file. Il progetto è in fase di progettazione e il codice non è ancora iniziato.
 
 ## Come funzionerà
 
