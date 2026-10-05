@@ -1,0 +1,23 @@
+{
+  "name": "@forgecy/mail",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@forgecy/core": "workspace:*",
+    "nodemailer": "^10.0.15"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "typescript": "6.0.3",
+    "vitest": "^4.1.11",
+    "@types/nodemailer": "^7.0.0"
+  }
+}
