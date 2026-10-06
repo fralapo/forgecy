@@ -16,7 +16,9 @@
   "dependencies": {
     "@forgecy/ai": "workspace:*",
     "@forgecy/brand": "workspace:*",
+    "@forgecy/brand-guard": "workspace:*",
     "@forgecy/carousel": "workspace:*",
+    "@forgecy/catalog": "workspace:*",
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",
     "@forgecy/files": "workspace:*",

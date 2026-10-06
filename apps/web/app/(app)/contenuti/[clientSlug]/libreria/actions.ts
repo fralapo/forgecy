@@ -1,5 +1,7 @@
 "use server";
 
+import "../../_lib/ports";
+
 import { importProductImage, productSource } from "@forgecy/content";
 import { assertCan, ForgecyError, PermissionDeniedError, type Actor } from "@forgecy/core";
 import { getDb, type Database } from "@forgecy/db";

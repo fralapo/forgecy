@@ -1,0 +1,35 @@
+{
+  "name": "@forgecy/audit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./handlers": "./src/handlers/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@forgecy/ai": "workspace:*",
+    "@forgecy/carousel": "workspace:*",
+    "@forgecy/core": "workspace:*",
+    "@forgecy/db": "workspace:*",
+    "@forgecy/files": "workspace:*",
+    "@forgecy/jobs": "workspace:*",
+    "drizzle-orm": "^0.45.3",
+    "node-html-parser": "^9.0.4",
+    "playwright-core": "^1.63.0",
+    "read-excel-file": "^9.3.10",
+    "robots-parser": "^3.0.1",
+    "sharp": "^0.35.5",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "typescript": "6.0.3",
+    "vitest": "^4.1.11"
+  }
+}

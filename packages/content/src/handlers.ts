@@ -39,6 +39,9 @@ import {
   type PipelineDeps,
 } from "./pipeline";
 import { loadBrand } from "./theme";
+import { registerContentPorts } from "./wiring";
+
+registerContentPorts();
 
 let deps: Omit<PipelineDeps, "db"> | undefined;
 

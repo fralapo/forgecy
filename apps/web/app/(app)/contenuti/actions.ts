@@ -1,5 +1,7 @@
 "use server";
 
+import "./_lib/ports";
+
 import { getPublishedBrandIdentity } from "@forgecy/brand";
 import {
   activatePlan,
