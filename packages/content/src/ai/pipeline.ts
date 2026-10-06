@@ -97,6 +97,8 @@ export interface PipelineDeps {
   ai: AiGateway | null;
   /** Image providers in routing order (primary, fallback), for the commercial-use check. */
   imageRoute?: ModelRef[];
+  /** When set, replaces `imageRoute` per job (MCP providers count only while connected). */
+  resolveImageRoute?: (db: Database) => Promise<ModelRef[]>;
 }
 
 export interface PipelineContext {
@@ -968,7 +970,8 @@ export async function runGenerateImage(
   const layout = slide ? findLayout(template.manifest, slide.layout) : undefined;
   if (!slide || !layout?.slots.some((s) => s.name === input.slot && s.type === "image"))
     throw attention("content.jobErrors.imageSlotNotFound");
-  const routed = await imageRouteFor(deps.db, input.clientId, deps.imageRoute);
+  const route = deps.resolveImageRoute ? await deps.resolveImageRoute(deps.db) : deps.imageRoute;
+  const routed = await imageRouteFor(deps.db, input.clientId, route);
   if (!routed) throw attention("content.jobErrors.noImageProvider");
   if (routed.status.get(routed.route.primary.provider) === "rejected")
     throw attention("content.jobErrors.commercialUseRejected");

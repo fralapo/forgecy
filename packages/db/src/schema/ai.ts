@@ -12,7 +12,7 @@ import {
 import { users } from "./auth";
 import { clients } from "./clients";
 import { jobs } from "./jobs";
-import { createdAt, id } from "./_common";
+import { createdAt, id, updatedAt } from "./_common";
 import { aiPolicyEnum, connectionScopeEnum, providerEnum, scopeEnum } from "./enums";
 
 /**
@@ -100,4 +100,33 @@ export const aiConnections = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("ai_connections_scope_idx").on(t.scope, t.scopeId)],
+);
+
+/**
+ * Image providers reached over MCP with OAuth (Higgsfield, Figma Weave): one agency-wide
+ * connection per provider. `encryptedState` holds the OAuth client registration, tokens and
+ * the PKCE verifier of a pending authorization, encrypted with FORGECY_ENCRYPTION_KEY.
+ * `oauthState` is the random `state` of a pending authorization, used by the callback.
+ */
+export const mcpConnections = pgTable(
+  "mcp_connections",
+  {
+    id: id(),
+    provider: providerEnum("provider").notNull(),
+    serverUrl: text("server_url").notNull(),
+    status: text("status", { enum: ["pending", "connected", "error"] })
+      .notNull()
+      .default("pending"),
+    encryptedState: text("encrypted_state"),
+    oauthState: text("oauth_state"),
+    lastError: text("last_error"),
+    connectedBy: uuid("connected_by").references(() => users.id, { onDelete: "set null" }),
+    connectedAt: timestamp("connected_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("mcp_connections_provider_uq").on(t.provider),
+    index("mcp_connections_oauth_state_idx").on(t.oauthState),
+  ],
 );

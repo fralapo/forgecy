@@ -16,7 +16,7 @@
 
 Forgecy is an internal tool for a communications agency, open source and self-hosted. It analyzes prospects and clients, defines their brand identity and gets to static social carousels ready to deliver, with the brand's colors, fonts and tone of voice already applied.
 
-It runs on the agency's machine with Docker Compose, with no mandatory cloud services. The only costs are the APIs of the AI providers the agency chooses to connect (Anthropic, OpenAI, OpenRouter, DeepSeek, Google); local models via Ollama or LM Studio are supported.
+It runs on the agency's machine with Docker Compose, with no mandatory cloud services. The only costs are the APIs of the AI providers the agency chooses to connect (Anthropic, OpenAI, OpenRouter, DeepSeek, Google), or an image subscription the agency already has (Higgsfield, Figma Weave) connected over MCP; local models via Ollama or LM Studio are supported.
 
 ## How it works
 

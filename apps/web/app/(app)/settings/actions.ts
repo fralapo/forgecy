@@ -1,11 +1,15 @@
 "use server";
 
+import { beginMcpConnection, disconnectMcp, mcpImageProviderIds } from "@forgecy/ai";
 import { setCommercialUse } from "@forgecy/content";
-import { assertCan, localeSchema, PermissionDeniedError } from "@forgecy/core";
+import { assertCan, ForgecyError, localeSchema, PermissionDeniedError } from "@forgecy/core";
 import { eq, getDb, users } from "@forgecy/db";
+import type { Route } from "next";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
+import { env } from "@/lib/env";
 import { errorMessage, firstIssue, vmsg } from "@/lib/i18n";
 import { PASSWORD_MIN } from "@/lib/password";
 import { requireUser } from "@/lib/session";
@@ -71,4 +75,40 @@ export async function setLocaleAction(_prev: LocaleState, form: FormData): Promi
   await getDb().update(users).set({ locale: parsed.data }).where(eq(users.id, user.id));
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+export type McpConnectState = { error?: string };
+
+const mcpProviderSchema = z.enum(mcpImageProviderIds);
+
+/** “Connect”: start the provider's OAuth login and send the Admin's browser there. */
+export async function connectMcpAction(
+  _prev: McpConnectState,
+  form: FormData,
+): Promise<McpConnectState> {
+  const admin = await requireUser();
+  const provider = mcpProviderSchema.parse(form.get("provider"));
+  const t = await getTranslations("settings.aiProviders.mcp");
+  let url: string | null;
+  try {
+    url = await beginMcpConnection(getDb(), admin.actor, env, provider);
+  } catch (err) {
+    if (err instanceof PermissionDeniedError)
+      return { error: (await getTranslations("errors"))("adminOnly") };
+    if (err instanceof ForgecyError && err.code === "unavailable")
+      return { error: t("errors.noEncryptionKey") };
+    if (err instanceof ForgecyError) return { error: t("errors.startFailed") };
+    throw err;
+  }
+  revalidatePath("/settings/ai-providers");
+  // redirect() throws, so it stays outside the try block.
+  if (url) redirect(url as Route);
+  return {};
+}
+
+export async function disconnectMcpAction(form: FormData): Promise<void> {
+  const admin = await requireUser();
+  const provider = mcpProviderSchema.parse(form.get("provider"));
+  await disconnectMcp(getDb(), admin.actor, provider);
+  revalidatePath("/settings/ai-providers");
 }

@@ -67,6 +67,31 @@
       "consultedOn": "Date consulted",
       "note": "Note",
       "updated": "Status updated."
+    },
+    "mcp": {
+      "hint": {
+        "higgsfield": "Uses the credits of your Higgsfield subscription. You log in on Higgsfield; Forgecy never sees the password.",
+        "weave": "Runs Figma Weave models through Figma’s MCP server and spends Weave credits (Starter plan or higher, Figma account linked in Weave). At most {max} credits per image."
+      },
+      "status": {
+        "connected": "Connected",
+        "notConnected": "Not connected",
+        "pending": "Login not completed",
+        "error": "Connection error"
+      },
+      "connect": "Connect",
+      "reconnect": "Reconnect",
+      "disconnect": "Disconnect",
+      "connectedOn": "Connected on",
+      "lastError": "Last error",
+      "result": {
+        "connected": "Connection completed.",
+        "error": "The connection did not complete: see the last error on the provider."
+      },
+      "errors": {
+        "noEncryptionKey": "Set FORGECY_ENCRYPTION_KEY in .env first: it encrypts the login tokens.",
+        "startFailed": "The provider did not accept the connection. Check the server address in .env and try again."
+      }
     }
   }
 }
