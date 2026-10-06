@@ -1,6 +1,6 @@
 "use client";
 
-import { aiPolicies } from "@forgecy/core";
+import { aiPolicies, type AiPolicy } from "@forgecy/core";
 import { Button, Input, Label } from "@forgecy/ui";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -10,7 +10,7 @@ import { createClientAction, type ClientFormState } from "./actions";
 const selectClass =
   "h-10 w-full rounded-md border border-control bg-surface px-3 text-body-sm text-fg focus-visible:outline-2 focus-visible:outline-focus";
 
-export function NewClientForm() {
+export function NewClientForm({ defaultPolicy }: { defaultPolicy: AiPolicy }) {
   const [state, action, pending] = useActionState<ClientFormState, FormData>(
     createClientAction,
     {},
@@ -40,12 +40,7 @@ export function NewClientForm() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="aiPolicy">{t("aiPolicy")}</Label>
-        <select
-          id="aiPolicy"
-          name="aiPolicy"
-          className={selectClass}
-          defaultValue="external_allowed"
-        >
+        <select id="aiPolicy" name="aiPolicy" className={selectClass} defaultValue={defaultPolicy}>
           {aiPolicies.map((p) => (
             <option key={p} value={p}>
               {te(`aiPolicy.${p}`)}

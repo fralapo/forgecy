@@ -1,4 +1,5 @@
 // One import per namespace file. A new namespace: add its JSON in every language folder and one line here.
+import admin from "./admin.json";
 import audit from "./audit.json";
 import auth from "./auth.json";
 import brand from "./brand.json";
@@ -21,6 +22,7 @@ import templates from "./templates.json";
 import validation from "./validation.json";
 
 export default {
+  admin,
   audit,
   auth,
   brand,

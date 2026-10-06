@@ -4,6 +4,7 @@ export * from "./schema";
 export * from "./summary";
 export * from "./pricing";
 export * from "./ledger";
+export * from "./settings";
 export * from "./crypto";
 export * from "./gateway";
 export * from "./registry";

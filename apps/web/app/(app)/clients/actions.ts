@@ -1,5 +1,6 @@
 "use server";
 
+import { getDefaultAiPolicy } from "@forgecy/ai";
 import { aiPolicies, assertCan, clientStatuses } from "@forgecy/core";
 import { clients, eq, getDb, recordAuditEvent } from "@forgecy/db";
 import { revalidatePath } from "next/cache";
@@ -19,7 +20,7 @@ const clientSchema = z.object({
   status: z.enum(clientStatuses).default("prospect"),
   websiteUrl: optionalUrl,
   sector: z.string().trim().max(80).optional(),
-  aiPolicy: z.enum(aiPolicies).default("external_allowed"),
+  aiPolicy: z.enum(aiPolicies).optional(),
 });
 
 export type ClientFormState = { error?: string; ok?: boolean };
@@ -34,6 +35,10 @@ export async function createClientAction(
   if (!parsed.success) return { error: await firstIssue(parsed.error) };
 
   const db = getDb();
+  const { policy: defaultPolicy } = await getDefaultAiPolicy(db);
+  const aiPolicy = parsed.data.aiPolicy ?? defaultPolicy;
+  // Anyone gets the Admin's default; choosing another policy is an Admin decision.
+  if (aiPolicy !== defaultPolicy) assertCan(user.actor, "ai.policies.manage");
   const base = slugify(parsed.data.name) || "client";
   let slug = base;
   for (
@@ -49,6 +54,7 @@ export async function createClientAction(
       .insert(clients)
       .values({
         ...parsed.data,
+        aiPolicy,
         sector: parsed.data.sector || null,
         websiteUrl: parsed.data.websiteUrl ?? null,
         slug,
@@ -60,7 +66,7 @@ export async function createClientAction(
       entity: "client",
       entityId: row!.id,
       clientId: row!.id,
-      meta: { status: parsed.data.status, aiPolicy: parsed.data.aiPolicy },
+      meta: { status: parsed.data.status, aiPolicy },
     });
   });
   revalidatePath("/clients");
