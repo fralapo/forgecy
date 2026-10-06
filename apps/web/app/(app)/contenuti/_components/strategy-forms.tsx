@@ -1,0 +1,472 @@
+"use client";
+
+import {
+  funnelLabels,
+  funnelSchema,
+  type ContentChannel,
+  type Frequency,
+  type PillarInputRaw,
+  type RubricInputRaw,
+} from "@forgecy/content/client";
+import { Button, Input, Label } from "@forgecy/ui";
+import { Pencil, Plus, Save, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useId, useState, useTransition, type ReactNode } from "react";
+import { savePillarAction, saveRubricAction, type ActionResult } from "../actions";
+import { controlClass } from "./action-button";
+
+export interface StrategyOptions {
+  audience: { id: string; name: string }[];
+  /** Approved catalog products; empty when the catalog is off. */
+  products: { id: string; name: string }[];
+  templates: { key: string; name: string }[];
+  pillars: { id: string; name: string }[];
+}
+
+type Option = { value: string; label: string };
+
+/** Runs a save action, shows its error, refreshes the page on success. */
+export function useSave() {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const run = (fn: () => Promise<ActionResult>, onOk?: () => void) =>
+    start(async () => {
+      setError(null);
+      const r = await fn();
+      if (!r.ok) {
+        setError(
+          r.code === "CONFLICT-DRAFT-REV"
+            ? `${r.error} Ricarica la pagina per vedere la versione aggiornata.`
+            : r.error,
+        );
+        return;
+      }
+      onOk?.();
+      router.refresh();
+    });
+  return { pending, error, run };
+}
+
+export function FormError({ error }: { error: string | null }) {
+  return error ? (
+    <p role="alert" className="text-body-sm text-error">
+      {error}
+    </p>
+  ) : null;
+}
+
+/** Text, textarea or select field with its label. */
+export function Field({
+  label,
+  children,
+  hint,
+}: {
+  label: string;
+  hint?: string;
+  children: (id: string) => ReactNode;
+}) {
+  const id = useId();
+  return (
+    <div className="space-y-1">
+      <Label htmlFor={id}>{label}</Label>
+      {children(id)}
+      {hint ? <p className="text-body-sm text-fg-muted">{hint}</p> : null}
+    </div>
+  );
+}
+
+/** Checkbox group: products, audience segments, channels. */
+export function Checks({
+  legend,
+  options,
+  value,
+  onChange,
+}: {
+  legend: string;
+  options: Option[];
+  value: readonly string[];
+  onChange(v: string[]): void;
+}) {
+  if (!options.length) return null;
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-label text-fg">{legend}</legend>
+      <div className="flex flex-wrap gap-x-4 gap-y-2">
+        {options.map((o) => (
+          <label key={o.value} className="flex items-center gap-2 text-body-sm text-fg">
+            <input
+              type="checkbox"
+              className="size-4"
+              checked={value.includes(o.value)}
+              onChange={(e) =>
+                onChange(
+                  e.target.checked ? [...value, o.value] : value.filter((x) => x !== o.value),
+                )
+              }
+            />
+            {o.label}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+function FrequencyField({
+  value,
+  onChange,
+}: {
+  value: Frequency | null | undefined;
+  onChange(v: Frequency | null): void;
+}) {
+  const id = useId();
+  return (
+    <fieldset className="space-y-1">
+      <legend className="text-label text-fg">Frequenza</legend>
+      <div className="flex gap-2">
+        <Input
+          id={id}
+          type="number"
+          min={1}
+          max={60}
+          aria-label="Numero di contenuti"
+          placeholder="—"
+          value={value?.count ?? ""}
+          onChange={(e) => {
+            const n = Number.parseInt(e.target.value, 10);
+            onChange(
+              Number.isFinite(n) && n > 0 ? { count: n, unit: value?.unit ?? "week" } : null,
+            );
+          }}
+        />
+        <select
+          aria-label="Periodo"
+          className={controlClass}
+          value={value?.unit ?? "week"}
+          disabled={!value}
+          onChange={(e) =>
+            value && onChange({ ...value, unit: e.target.value as Frequency["unit"] })
+          }
+        >
+          <option value="week">a settimana</option>
+          <option value="month">al mese</option>
+        </select>
+      </div>
+    </fieldset>
+  );
+}
+
+const lines = (s: string) =>
+  s
+    .split("\n")
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+/** Button that opens the form in place; the form closes on save or «Annulla». */
+export function Toggle({
+  label,
+  edit,
+  children,
+}: {
+  label: string;
+  edit: boolean;
+  children: (close: () => void) => ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  if (open) return <>{children(() => setOpen(false))}</>;
+  return (
+    <Button size="sm" variant={edit ? "secondary" : "primary"} onClick={() => setOpen(true)}>
+      {edit ? <Pencil aria-hidden /> : <Plus aria-hidden />}
+      {label}
+    </Button>
+  );
+}
+
+export function Actions({ pending, onCancel }: { pending: boolean; onCancel(): void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button type="submit" disabled={pending}>
+        <Save aria-hidden />
+        Salva
+      </Button>
+      <Button type="button" variant="secondary" disabled={pending} onClick={onCancel}>
+        <X aria-hidden />
+        Annulla
+      </Button>
+    </div>
+  );
+}
+
+export const formClass = "w-full space-y-4 rounded-lg border border-subtle bg-surface p-5";
+
+// ---- Pillar ----
+
+export function PillarForm(props: {
+  slug: string;
+  clientId: string;
+  id?: string;
+  rev?: number;
+  initial?: PillarInputRaw;
+  options: StrategyOptions;
+  label: string;
+}) {
+  return (
+    <Toggle label={props.label} edit={Boolean(props.id)}>
+      {(close) => <PillarFields {...props} onClose={close} />}
+    </Toggle>
+  );
+}
+
+function PillarFields({
+  slug,
+  clientId,
+  id,
+  rev,
+  initial,
+  options,
+  onClose,
+}: Parameters<typeof PillarForm>[0] & { onClose(): void }) {
+  const [v, setV] = useState<PillarInputRaw>(initial ?? { name: "" });
+  const [themes, setThemes] = useState((initial?.themes ?? []).join("\n"));
+  const [forbidden, setForbidden] = useState((initial?.forbidden ?? []).join("\n"));
+  const { pending, error, run } = useSave();
+  const set = (patch: Partial<PillarInputRaw>) => setV((cur) => ({ ...cur, ...patch }));
+  return (
+    <form
+      aria-label={id ? `Modifica pilastro ${initial?.name ?? ""}` : "Nuovo pilastro"}
+      className={formClass}
+      onSubmit={(e) => {
+        e.preventDefault();
+        const values = { ...v, themes: lines(themes), forbidden: lines(forbidden) };
+        run(() => savePillarAction({ slug, clientId, id, rev, values }), onClose);
+      }}
+    >
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field label="Nome">
+          {(fid) => (
+            <Input
+              id={fid}
+              required
+              maxLength={40}
+              value={v.name}
+              onChange={(e) => set({ name: e.target.value })}
+            />
+          )}
+        </Field>
+        <Field label="Funnel">
+          {(fid) => (
+            <select
+              id={fid}
+              className={controlClass}
+              value={v.funnel ?? ""}
+              onChange={(e) =>
+                set({ funnel: e.target.value ? funnelSchema.parse(e.target.value) : null })
+              }
+            >
+              <option value="">Non indicato</option>
+              {Object.entries(funnelLabels).map(([k, l]) => (
+                <option key={k} value={k}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <Field label="Obiettivo">
+          {(fid) => (
+            <Input
+              id={fid}
+              maxLength={160}
+              value={v.goal ?? ""}
+              onChange={(e) => set({ goal: e.target.value })}
+            />
+          )}
+        </Field>
+        <FrequencyField value={v.frequency} onChange={(frequency) => set({ frequency })} />
+        <Field label="Call to action">
+          {(fid) => (
+            <Input
+              id={fid}
+              maxLength={200}
+              value={v.cta ?? ""}
+              onChange={(e) => set({ cta: e.target.value })}
+            />
+          )}
+        </Field>
+        <Field label="Emozione">
+          {(fid) => (
+            <Input
+              id={fid}
+              maxLength={60}
+              value={v.emotion ?? ""}
+              onChange={(e) => set({ emotion: e.target.value })}
+            />
+          )}
+        </Field>
+        <Field label="Temi" hint="Uno per riga.">
+          {(fid) => (
+            <textarea
+              id={fid}
+              rows={3}
+              className={controlClass}
+              value={themes}
+              onChange={(e) => setThemes(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field label="Da evitare" hint="Uno per riga.">
+          {(fid) => (
+            <textarea
+              id={fid}
+              rows={3}
+              className={controlClass}
+              value={forbidden}
+              onChange={(e) => setForbidden(e.target.value)}
+            />
+          )}
+        </Field>
+      </div>
+      <Checks
+        legend="Pubblico"
+        options={options.audience.map((a) => ({ value: a.id, label: a.name }))}
+        value={v.audienceIds ?? []}
+        onChange={(audienceIds) => set({ audienceIds })}
+      />
+      <Checks
+        legend="Prodotti collegati"
+        options={options.products.map((p) => ({ value: p.id, label: p.name }))}
+        value={v.productIds ?? []}
+        onChange={(productIds) => set({ productIds })}
+      />
+      <FormError error={error} />
+      <Actions pending={pending} onCancel={onClose} />
+    </form>
+  );
+}
+
+// ---- Rubric ----
+
+const channelOptions: { value: ContentChannel; label: string }[] = [
+  { value: "instagram", label: "Instagram" },
+  { value: "linkedin", label: "LinkedIn" },
+];
+
+export function RubricForm(props: {
+  slug: string;
+  clientId: string;
+  id?: string;
+  rev?: number;
+  pillarId: string;
+  initial?: RubricInputRaw;
+  options: StrategyOptions;
+  label: string;
+}) {
+  return (
+    <Toggle label={props.label} edit={Boolean(props.id)}>
+      {(close) => <RubricFields {...props} onClose={close} />}
+    </Toggle>
+  );
+}
+
+function RubricFields({
+  slug,
+  clientId,
+  id,
+  rev,
+  pillarId,
+  initial,
+  options,
+  onClose,
+}: Parameters<typeof RubricForm>[0] & { onClose(): void }) {
+  const [v, setV] = useState<RubricInputRaw>(initial ?? { pillarId, name: "" });
+  const { pending, error, run } = useSave();
+  const set = (patch: Partial<RubricInputRaw>) => setV((cur) => ({ ...cur, ...patch }));
+  const text = (key: "hookFormula" | "hookExample" | "cta", label: string) => (
+    <Field label={label}>
+      {(fid) => (
+        <Input
+          id={fid}
+          maxLength={200}
+          value={v[key] ?? ""}
+          onChange={(e) => set({ [key]: e.target.value })}
+        />
+      )}
+    </Field>
+  );
+  return (
+    <form
+      aria-label={id ? `Modifica rubrica ${initial?.name ?? ""}` : "Nuova rubrica"}
+      className={formClass}
+      onSubmit={(e) => {
+        e.preventDefault();
+        run(() => saveRubricAction({ slug, clientId, id, rev, values: v }), onClose);
+      }}
+    >
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field label="Nome">
+          {(fid) => (
+            <Input
+              id={fid}
+              required
+              maxLength={40}
+              value={v.name}
+              onChange={(e) => set({ name: e.target.value })}
+            />
+          )}
+        </Field>
+        <Field label="Pilastro">
+          {(fid) => (
+            <select
+              id={fid}
+              className={controlClass}
+              value={v.pillarId}
+              onChange={(e) => set({ pillarId: e.target.value })}
+            >
+              {options.pillars.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <FrequencyField value={v.frequency} onChange={(frequency) => set({ frequency })} />
+        <Field label="Template">
+          {(fid) => (
+            <select
+              id={fid}
+              className={controlClass}
+              value={v.templateKey ?? ""}
+              onChange={(e) => set({ templateKey: e.target.value || null })}
+            >
+              <option value="">Nessuno</option>
+              {options.templates.map((t) => (
+                <option key={t.key} value={t.key}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+        {text("hookFormula", "Formula dell'hook")}
+        {text("hookExample", "Esempio di hook")}
+        {text("cta", "Call to action")}
+      </div>
+      <Checks
+        legend="Canali"
+        options={channelOptions}
+        value={v.channels ?? []}
+        onChange={(channels) => set({ channels: channels as ContentChannel[] })}
+      />
+      <Checks
+        legend="Prodotti collegati"
+        options={options.products.map((p) => ({ value: p.id, label: p.name }))}
+        value={v.productIds ?? []}
+        onChange={(productIds) => set({ productIds })}
+      />
+      <FormError error={error} />
+      <Actions pending={pending} onCancel={onClose} />
+    </form>
+  );
+}
