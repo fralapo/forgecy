@@ -248,7 +248,7 @@ export function isSensitivePath(pointer: string): boolean {
   return matchField(pointer)?.field.sensitive ?? false;
 }
 
-/** Category stored on the proposal: block and field, e.g. "strategy.oneLiner". */
+/** Category stored on the proposal: block and field path, e.g. "strategy:strategy.oneLiner". */
 export function categoryOf(pointer: string): string {
   const m = matchField(pointer);
   if (!m) return "other";
