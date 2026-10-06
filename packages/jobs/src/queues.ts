@@ -25,6 +25,8 @@ export interface BullJobData {
 export interface JobQueues {
   get(name: JobQueueName): Queue<BullJobData>;
   close(): Promise<void>;
+  /** The shared Redis connection, for health checks. */
+  readonly connection?: RedisConnection;
 }
 
 export interface CreateQueuesOptions {
@@ -51,6 +53,7 @@ export async function createQueues(
     );
   }
   return {
+    connection,
     get(name) {
       const q = queues.get(name);
       if (!q) throw new Error(`Unknown queue "${name}"`);

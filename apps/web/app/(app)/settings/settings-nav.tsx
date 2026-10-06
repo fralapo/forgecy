@@ -13,6 +13,7 @@ const sections = [
   { href: "/settings/ai-policies", label: "aiPolicies", admin: true },
   { href: "/settings/smtp", label: "smtp", admin: true },
   { href: "/settings/storage", label: "storage", admin: true },
+  { href: "/settings/system-health", label: "health", admin: true },
 ] as const;
 
 export function SettingsNav({ isAdmin }: { isAdmin: boolean }) {

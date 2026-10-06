@@ -7,3 +7,4 @@ export * from "./worker";
 export * from "./locks";
 export * from "./events";
 export * from "./recovery";
+export * from "./health";
