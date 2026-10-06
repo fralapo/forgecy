@@ -1,0 +1,37 @@
+{
+  "metaTitle": "Ricerca",
+  "title": "Risultati per «{q}»",
+  "titleEmpty": "Ricerca",
+  "summary": "{count, plural, one {# risultato} other {# risultati}} · {types, plural, one {# tipo} other {# tipi}}",
+  "field": "Cerca clienti, caroselli, prodotti, template…",
+  "fieldLabel": "Cerca",
+  "submit": "Cerca",
+  "shortcut": "Ctrl K",
+  "tooShort": "Scrivi almeno {min, number} caratteri.",
+  "hint": "Cerca per nome del cliente, titolo del carosello, nome, SKU o tag del prodotto, nome del template, testo alternativo o tag delle immagini. La ricerca è per nome, non per significato.",
+  "noResults": "Nessun risultato per «{q}».",
+  "noResultsHints": "Controlla l’ortografia, togli i filtri o includi gli archiviati.",
+  "showAll": "Mostra tutti i {count, number}",
+  "filters": {
+    "title": "Filtri",
+    "type": "Tipo",
+    "client": "Cliente",
+    "anyClient": "Tutti i clienti",
+    "archived": "Includi archiviati",
+    "apply": "Applica",
+    "reset": "Azzera filtri"
+  },
+  "types": {
+    "client": "Clienti e prospect",
+    "carousel": "Caroselli",
+    "product": "Prodotti",
+    "brand": "Brand Identity",
+    "audit": "Audit",
+    "report": "Report",
+    "template": "Template",
+    "asset": "Immagini"
+  },
+  "groupTitle": "{type} · {count, number}",
+  "agencyTemplate": "Agenzia",
+  "noAlt": "Immagine senza testo alternativo"
+}

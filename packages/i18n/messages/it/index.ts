@@ -16,6 +16,7 @@ import mail from "./mail.json";
 import meta from "./meta.json";
 import products from "./products.json";
 import review from "./review.json";
+import search from "./search.json";
 import settings from "./settings.json";
 import shell from "./shell.json";
 import templates from "./templates.json";
@@ -39,6 +40,7 @@ export default {
   meta,
   products,
   review,
+  search,
   settings,
   shell,
   templates,

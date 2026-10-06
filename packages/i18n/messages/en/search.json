@@ -1,0 +1,37 @@
+{
+  "metaTitle": "Search",
+  "title": "Results for “{q}”",
+  "titleEmpty": "Search",
+  "summary": "{count, plural, one {# result} other {# results}} · {types, plural, one {# type} other {# types}}",
+  "field": "Search clients, carousels, products, templates…",
+  "fieldLabel": "Search",
+  "submit": "Search",
+  "shortcut": "Ctrl K",
+  "tooShort": "Type at least {min, number} characters.",
+  "hint": "Search by client name, carousel title, product name, SKU or tag, template name, image alt text or tag. The search is by name, not by meaning.",
+  "noResults": "No results for “{q}”.",
+  "noResultsHints": "Check the spelling, remove the filters or include archived items.",
+  "showAll": "Show all {count, number}",
+  "filters": {
+    "title": "Filters",
+    "type": "Type",
+    "client": "Client",
+    "anyClient": "All clients",
+    "archived": "Include archived",
+    "apply": "Apply",
+    "reset": "Clear filters"
+  },
+  "types": {
+    "client": "Clients and prospects",
+    "carousel": "Carousels",
+    "product": "Products",
+    "brand": "Brand Identity",
+    "audit": "Audits",
+    "report": "Reports",
+    "template": "Templates",
+    "asset": "Images"
+  },
+  "groupTitle": "{type} · {count, number}",
+  "agencyTemplate": "Agency",
+  "noAlt": "Image without alt text"
+}
