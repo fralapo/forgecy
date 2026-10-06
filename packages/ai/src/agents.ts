@@ -20,6 +20,7 @@ import {
   clients,
   desc,
   eq,
+  jobs,
   jobsLog,
   recordAuditEvent,
   sql,
@@ -339,4 +340,80 @@ export async function listAgentRuns(
     .orderBy(desc(jobsLog.startedAt))
     .limit(limit);
   return rows;
+}
+
+export interface AgentRunDetail {
+  run: typeof jobsLog.$inferSelect;
+  agent: AgentRole | null;
+  clientName: string | null;
+  clientSlug: string | null;
+  startedBy: string | null;
+  job: { id: string; kind: string; status: string; entity: string | null } | null;
+  /** Every `jobs_log` row of the same job and task: attempts, fallbacks, retries. */
+  attempts: Array<
+    Pick<
+      typeof jobsLog.$inferSelect,
+      "id" | "status" | "provider" | "model" | "startedAt" | "error"
+    >
+  >;
+}
+
+/** One run, for its details page (spec page 57); every user can read it. */
+export async function getAgentRun(
+  db: Pick<Database, "select">,
+  id: string,
+): Promise<AgentRunDetail | null> {
+  const [row] = await db
+    .select({
+      run: jobsLog,
+      agent: runAgentSql(),
+      clientName: clients.name,
+      clientSlug: clients.slug,
+      startedBy: users.name,
+      jobKind: jobs.kind,
+      jobStatus: jobs.status,
+      jobEntity: jobs.entity,
+    })
+    .from(jobsLog)
+    .leftJoin(clients, eq(clients.id, jobsLog.clientId))
+    .leftJoin(users, eq(users.id, jobsLog.authorizedBy))
+    .leftJoin(jobs, eq(jobs.id, jobsLog.jobId))
+    .where(eq(jobsLog.id, id))
+    .limit(1);
+  if (!row) return null;
+  const attempts = row.run.jobId
+    ? await db
+        .select({
+          id: jobsLog.id,
+          status: jobsLog.status,
+          provider: jobsLog.provider,
+          model: jobsLog.model,
+          startedAt: jobsLog.startedAt,
+          error: jobsLog.error,
+        })
+        .from(jobsLog)
+        .where(and(eq(jobsLog.jobId, row.run.jobId), eq(jobsLog.kind, row.run.kind)))
+        .orderBy(jobsLog.startedAt)
+        .limit(50)
+    : [];
+  const agent = (agentRoles as readonly string[]).includes(row.agent ?? "")
+    ? (row.agent as AgentRole)
+    : null;
+  return {
+    run: row.run,
+    agent,
+    clientName: row.clientName,
+    clientSlug: row.clientSlug,
+    startedBy: row.startedBy,
+    job:
+      row.run.jobId && row.jobKind
+        ? {
+            id: row.run.jobId,
+            kind: row.jobKind,
+            status: row.jobStatus ?? "",
+            entity: row.jobEntity,
+          }
+        : null,
+    attempts,
+  };
 }
