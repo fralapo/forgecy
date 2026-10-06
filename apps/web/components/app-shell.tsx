@@ -6,6 +6,7 @@ import {
   Palette,
   Settings,
 } from "lucide-react";
+import { Package } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { CurrentUser } from "@/lib/session";
@@ -15,6 +16,7 @@ import { SignOutButton } from "./sign-out-button";
 const nav = [
   { href: "/", label: "Panoramica", icon: LayoutDashboard },
   { href: "/clienti", label: "Clienti", icon: Building2 },
+  { href: "/prodotti", label: "Prodotti", icon: Package },
   { href: "/template", label: "Template", icon: LayoutTemplate },
   { href: "/brand", label: "Brand Identity", icon: Fingerprint },
   { href: "/impostazioni", label: "Impostazioni", icon: Settings },
