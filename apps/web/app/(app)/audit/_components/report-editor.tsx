@@ -258,6 +258,9 @@ export function ReportEditor({
         </div>
         <p className="text-body-sm text-fg-muted">
           Forgecy non invia email: copia il testo nel tuo programma di posta.
+          {!report.emailBody
+            ? " Ancora vuota: scrivila qui oppure usa «Proponi i testi con l'AI», che prepara anche l'email."
+            : ""}
         </p>
         <div className="flex flex-col gap-1">
           <Label htmlFor="email-subject">Oggetto</Label>

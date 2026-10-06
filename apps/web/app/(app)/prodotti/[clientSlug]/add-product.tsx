@@ -2,7 +2,7 @@
 
 import { Button, Input, Label } from "@forgecy/ui";
 import { Plus } from "lucide-react";
-import { useActionState, useRef } from "react";
+import { useActionState, useId, useRef } from "react";
 import type { ActionResult } from "../_lib/types";
 import { createProductAction } from "./actions";
 
@@ -15,6 +15,8 @@ export function AddProductButton({
   clientSlug: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  // The button can appear twice on a page (header and empty state): ids must stay unique.
+  const id = useId();
   const [state, action, pending] = useActionState<ActionResult, FormData>(createProductAction, {});
   return (
     <>
@@ -32,16 +34,16 @@ export function AddProductButton({
           <input type="hidden" name="clientId" value={clientId} />
           <input type="hidden" name="clientSlug" value={clientSlug} />
           <div className="space-y-2">
-            <Label htmlFor="new-product-name">Nome</Label>
-            <Input id="new-product-name" name="name" required maxLength={200} />
+            <Label htmlFor={`${id}-name`}>Nome</Label>
+            <Input id={`${id}-name`} name="name" required maxLength={200} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="new-product-sku">SKU</Label>
-            <Input id="new-product-sku" name="sku" maxLength={80} className="font-mono" />
+            <Label htmlFor={`${id}-sku`}>SKU</Label>
+            <Input id={`${id}-sku`} name="sku" maxLength={80} className="font-mono" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="new-product-category">Categoria</Label>
-            <Input id="new-product-category" name="category" maxLength={120} />
+            <Label htmlFor={`${id}-category`}>Categoria</Label>
+            <Input id={`${id}-category`} name="category" maxLength={120} />
           </div>
           {state.error ? (
             <p role="alert" className="text-body-sm text-error">

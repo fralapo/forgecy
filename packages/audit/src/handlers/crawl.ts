@@ -145,8 +145,15 @@ export async function runCrawl(
       },
     });
   } catch (err) {
-    const code = auditErrorCode(err) ?? "SOURCE-UNAVAILABLE";
-    const message = err instanceof Error ? err.message : String(err);
+    const known = auditErrorCode(err);
+    const code = known ?? "SOURCE-UNAVAILABLE";
+    // Unknown errors (file system, driver) carry paths and internals: log them, show a plain message.
+    if (!known) ctx.logger.error({ jobId: ctx.jobId, err }, "site scan failed");
+    const message = known
+      ? err instanceof Error
+        ? err.message
+        : String(err)
+      : "Errore interno durante la lettura del sito. Il dettaglio è nei log del worker.";
     steps = steps.map((s) =>
       s.status === "pending" || s.status === "running" ? { ...s, status: "skipped" } : s,
     );

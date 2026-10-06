@@ -15,6 +15,7 @@ import {
   stepLabel,
 } from "../../_lib/labels";
 import { fileUrl } from "../../_lib/server";
+import { plural } from "@/lib/plural";
 
 export const metadata = { title: "Audit · Sito" };
 
@@ -91,7 +92,9 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
           <p role="alert" className="text-body-sm text-error">
             {scan.error}
             {scan.errorCode ? (
-              <code className="ml-2 font-mono text-fg-muted">{scan.errorCode}</code>
+              <span className="mt-1 block text-fg-muted">
+                Codice: <code className="font-mono">{scan.errorCode}</code>
+              </span>
             ) : null}
           </p>
         ) : null}
@@ -179,7 +182,10 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
                 <ul className="flex flex-col gap-1 text-body-sm">
                   {ex.ctas.slice(0, 8).map((c) => (
                     <li key={c.text}>
-                      “{c.text}” <span className="text-fg-muted">· {c.pages.length} pagine</span>
+                      “{c.text}”{" "}
+                      <span className="text-fg-muted">
+                        · {plural(c.pages.length, "pagina", "pagine")}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -269,7 +275,7 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
           {skipped.length ? (
             <details className="text-body-sm">
               <summary className="cursor-pointer text-fg-muted">
-                {skipped.length} pagine non lette
+                {plural(skipped.length, "pagina non letta", "pagine non lette")}
               </summary>
               <ul className="mt-2 flex flex-col gap-1">
                 {skipped.map((p) => (

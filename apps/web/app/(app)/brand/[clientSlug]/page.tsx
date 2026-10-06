@@ -12,6 +12,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { brandPath, formatDate } from "../_lib/labels";
 import { loadBrand, openConflicts, shownVersion } from "../_lib/server";
+import { plural } from "@/lib/plural";
 
 export const metadata = { title: "Brand Identity" };
 
@@ -125,7 +126,9 @@ export default async function BrandOverviewPage({
           {
             label: "Bozza",
             value: ws.draft ? `v${ws.draft.number}` : "—",
-            detail: ws.draft ? `${draftChanges.length} modifiche rispetto alla pubblicata` : "",
+            detail: ws.draft
+              ? `${plural(draftChanges.length, "modifica", "modifiche")} rispetto alla pubblicata`
+              : "",
             href: "versions",
           },
           {
@@ -163,7 +166,9 @@ export default async function BrandOverviewPage({
                 <Badge variant="success">Completo</Badge>
               )}
               {changes ? (
-                <p className="text-body-sm text-fg">{changes} modifiche nella bozza</p>
+                <p className="text-body-sm text-fg">
+                  {plural(changes, "modifica", "modifiche")} nella bozza
+                </p>
               ) : null}
               {b === "strategy" && shown.document.strategy.oneLiner ? (
                 <p className="text-body-sm text-fg">«{shown.document.strategy.oneLiner.value}»</p>

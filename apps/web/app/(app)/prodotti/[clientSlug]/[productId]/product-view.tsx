@@ -610,7 +610,7 @@ function FieldRow({ def, data }: { def: FieldDef; data: ProductViewData }) {
         </label>
         {!editing ? (
           <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-            Modifica
+            Modifica<span className="sr-only"> {def.label}</span>
           </Button>
         ) : null}
       </div>
@@ -846,7 +846,7 @@ function ProposalDiff({
                   : decide("accept")
               }
             >
-              Accetta
+              Accetta<span className="sr-only"> {p.label}</span>
             </Button>
             <Button
               size="sm"
@@ -854,11 +854,11 @@ function ProposalDiff({
               disabled={action.pending}
               onClick={() => decide("reject")}
             >
-              Rifiuta
+              Rifiuta<span className="sr-only"> {p.label}</span>
             </Button>
             {!editing ? (
               <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-                Modifica e accetta
+                Modifica e accetta<span className="sr-only"> {p.label}</span>
               </Button>
             ) : null}
           </div>

@@ -18,6 +18,7 @@ import {
 import type { Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { env } from "@/lib/env";
 import { requireUser } from "@/lib/session";
 import {
   archiveAuditAction,
@@ -37,6 +38,7 @@ import {
   sourceStatusVariant,
 } from "../_lib/labels";
 import { readDeps } from "../_lib/server";
+import { plural } from "@/lib/plural";
 
 const policyText = {
   external_allowed: "AI esterna ammessa",
@@ -153,7 +155,7 @@ export default async function ProspectOverviewPage({
   );
 
   if (!activeAudit) {
-    const estimate = await estimateAudit(db, client.id);
+    const estimate = await estimateAudit(db, client.id, env.AI_DEFAULT_PROVIDER);
     return (
       <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
         <Card>
@@ -176,7 +178,9 @@ export default async function ProspectOverviewPage({
               <dd>
                 {estimate.costRangeUsd
                   ? `${estimate.costRangeUsd.min.toFixed(2)}–${estimate.costRangeUsd.max.toFixed(2)} $ (prezzi API del provider)`
-                  : "Nessun costo: AI disattivata"}
+                  : estimate.localModel
+                    ? "Nessun costo: modello locale"
+                    : "Nessun costo: AI disattivata"}
               </dd>
             </div>
             <div>
@@ -220,7 +224,7 @@ export default async function ProspectOverviewPage({
   if (overview.counts.observationsToReview)
     next.push({
       href: `${base}/sito`,
-      label: `Rivedi ${overview.counts.observationsToReview} osservazioni proposte`,
+      label: `Rivedi ${plural(overview.counts.observationsToReview, "osservazione proposta", "osservazioni proposte")}`,
     });
   if (overview.channels.some((c) => c.channel !== "website" && c.status === "pending"))
     next.push({ href: `${base}/social`, label: "Aggiungi i dati dei social" });

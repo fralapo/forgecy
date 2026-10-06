@@ -7,6 +7,7 @@ import {
   socialChannels,
   type Actor,
   type AiPolicy,
+  type ProviderId,
 } from "@forgecy/core";
 import {
   and,
@@ -45,16 +46,28 @@ export interface AuditEstimate {
   policy: AiPolicy;
   aiAllowed: boolean;
   costRangeUsd: { min: number; max: number } | null;
+  /** True when the audit runs on the local model: no API cost. */
+  localModel: boolean;
   /** Budget left this month (client cap if set, else agency), null when no cap. */
   budgetLeftUsd: number | null;
   budgetBlocked: boolean;
   steps: string[];
 }
 
-export async function estimateAudit(db: Database, clientId: string): Promise<AuditEstimate> {
+/**
+ * `defaultProvider` is AI_DEFAULT_PROVIDER: with the local model (or a local_only
+ * policy) the audit has no API cost, so no range is shown.
+ */
+export async function estimateAudit(
+  db: Database,
+  clientId: string,
+  defaultProvider?: ProviderId,
+): Promise<AuditEstimate> {
   const client = await db.query.clients.findFirst({ where: eq(clients.id, clientId) });
   if (!client) throw new ForgecyError("not_found", "Prospect non trovato");
   const allowed = aiAllowed(client.aiPolicy);
+  const localModel = allowed && (client.aiPolicy === "local_only" || defaultProvider === "local");
+  const paid = allowed && !localModel;
   const ledger = createDbLedger(db);
   const month = monthKey();
   let budgetLeftUsd: number | null = null;
@@ -80,9 +93,10 @@ export async function estimateAudit(db: Database, clientId: string): Promise<Aud
   return {
     policy: client.aiPolicy,
     aiAllowed: allowed,
-    costRangeUsd: allowed ? AUDIT_COST_RANGE_USD : null,
+    costRangeUsd: paid ? AUDIT_COST_RANGE_USD : null,
+    localModel,
     budgetLeftUsd,
-    budgetBlocked: allowed && budgetLeftUsd !== null && budgetLeftUsd < AUDIT_COST_RANGE_USD.min,
+    budgetBlocked: paid && budgetLeftUsd !== null && budgetLeftUsd < AUDIT_COST_RANGE_USD.min,
     steps,
   };
 }

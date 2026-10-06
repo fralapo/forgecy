@@ -22,6 +22,18 @@ export const slideRoles = [
 ] as const;
 export type SlideRole = (typeof slideRoles)[number];
 
+/** Roles of a social carousel: the report pages (section, finding, problem...) left out. */
+export const socialSlideRoles = [
+  "cover",
+  "text",
+  "list",
+  "quote",
+  "data",
+  "problem_solution",
+  "comparison",
+  "cta",
+] as const satisfies readonly SlideRole[];
+
 export const slideRoleLabels: Record<SlideRole, string> = {
   cover: "Copertina",
   text: "Testo",

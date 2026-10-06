@@ -30,7 +30,7 @@ import {
   type Database,
 } from "@forgecy/db";
 import { ilike, isNotNull } from "drizzle-orm";
-import { AUDIT_JOB_ENTITY } from "../jobs";
+import { AUDIT_JOB_ENTITY, auditDiagnoseJob } from "../jobs";
 import { computeChannelMetrics, metricSourceLabels, type MetricCard } from "../social/metrics";
 import { currentAudit } from "./audits";
 import { loadAudit } from "./common";
@@ -386,8 +386,41 @@ export async function getComparisonView(db: Database, auditId: string) {
     );
 }
 
+/** Outcome of the latest completed diagnosis job, from its stored result. */
+export interface DiagnosisOutcome {
+  proposed: number;
+  kept: number;
+  withoutEvidence: number;
+}
+
+async function lastDiagnosisOutcome(
+  db: Database,
+  auditId: string,
+): Promise<DiagnosisOutcome | null> {
+  const [row] = await db
+    .select({ result: jobs.result })
+    .from(jobs)
+    .where(
+      and(
+        eq(jobs.entity, AUDIT_JOB_ENTITY),
+        eq(jobs.entityId, auditId),
+        eq(jobs.kind, auditDiagnoseJob.kind),
+        eq(jobs.status, "completed"),
+      ),
+    )
+    .orderBy(desc(jobs.createdAt))
+    .limit(1);
+  const r = row?.result;
+  if (!r || typeof r.proposed !== "number") return null;
+  return {
+    proposed: r.proposed,
+    kept: typeof r.problems === "number" ? r.problems : 0,
+    withoutEvidence: typeof r.withoutEvidence === "number" ? r.withoutEvidence : 0,
+  };
+}
+
 export async function getDiagnosisView(db: Database, auditId: string) {
-  const [problems, observations, plan] = await Promise.all([
+  const [problems, observations, plan, outcome] = await Promise.all([
     findingsOf(db, auditId, { kind: "problem" }),
     db
       .select()
@@ -401,8 +434,9 @@ export async function getDiagnosisView(db: Database, auditId: string) {
       )
       .orderBy(asc(auditFindings.area), asc(auditFindings.position)),
     db.query.auditPlans.findFirst({ where: eq(auditPlans.auditId, auditId) }),
+    lastDiagnosisOutcome(db, auditId),
   ]);
-  return { problems, observations, plan: plan ?? null };
+  return { problems, observations, plan: plan ?? null, outcome };
 }
 
 /** Sources by id, for the "Fonte" chips of findings. */

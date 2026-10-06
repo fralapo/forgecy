@@ -7,7 +7,7 @@
  */
 import {
   slideRoleLabels,
-  slideRoles,
+  socialSlideRoles,
   type LayoutDef,
   type TemplateManifest,
 } from "@forgecy/carousel";
@@ -16,7 +16,7 @@ import { funnelLabels, objectiveLabels } from "./labels";
 import type { Brief, Outline } from "./document";
 import type { ProductSummary } from "./products";
 
-export const CONTENT_PROMPT_VERSION = "content-2026-10-06";
+export const CONTENT_PROMPT_VERSION = "content-2026-10-06b";
 
 const SHARED_RULES = `- Scrivi nella lingua indicata, con il tono e le regole della Brand Identity qui sotto. Le regole di scrittura e le parole vietate sono vincolanti.
 - Usa solo fatti presenti nel brief, nella Brand Identity o nella scheda prodotto. Non inventare dati, numeri, prezzi, testimonianze o claim.
@@ -62,7 +62,7 @@ export const strategyOutputSchema = z.object({
         name: z.string().max(40),
         frequency: frequencyOut,
         structure: z
-          .array(z.object({ name: z.string().max(40), role: z.enum(slideRoles) }))
+          .array(z.object({ name: z.string().max(40), role: z.enum(socialSlideRoles) }))
           .max(12),
         hookFormula: z.string().max(200),
         hookExample: z.string().max(200),
@@ -80,7 +80,7 @@ export const PLANNER_SYSTEM = `Sei il Planner di Forgecy, lo strumento di un'age
 Regole:
 ${SHARED_RULES}
 - Da 3 a 5 pilastri, ognuno con un obiettivo misurabile, un pubblico preso dagli id dei segmenti della Brand Identity, una fase del funnel e un'emozione precisa (es. "sollievo", non "positiva").
-- Per ogni pilastro da 1 a 3 rubriche ripetibili: una struttura di slide (ruoli: ${slideRoles.join(", ")}), una formula di hook con un esempio, una CTA.
+- Per ogni pilastro da 1 a 3 rubriche ripetibili: una struttura di slide (ruoli: ${socialSlideRoles.join(", ")}), una formula di hook con un esempio, una CTA.
 - La somma delle frequenze delle rubriche non supera quella del loro pilastro.
 - Se esistono già pilastri, proponi solo ciò che migliora davvero: per cambiare un pilastro esistente metti il suo id in "updates", altrimenti lascia "updates" vuoto.
 - productIds: solo id della lista prodotti approvati, mai altri.
@@ -122,7 +122,7 @@ export const outlineOutputSchema = z.object({
   rows: z
     .array(
       z.object({
-        role: z.enum(slideRoles),
+        role: z.enum(socialSlideRoles),
         layout: z.string().max(40),
         point: z.string().max(280),
         note: z.string().max(300),

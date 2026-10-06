@@ -6,6 +6,7 @@ import {
   addFinding,
   createProspect,
   deleteProspect,
+  estimateAudit,
   findDuplicates,
   reviewFinding,
   startAudit,
@@ -56,6 +57,19 @@ describe.skipIf(!dbUrl || !redisUrl)("audit services (integration)", () => {
       websiteUrl: `https://www.forno-${suffix}.example/`,
     });
     expect(dupes.map((d) => d.id)).toContain(clientId);
+  });
+
+  it("shows no API cost when the audit runs on the local model", async () => {
+    const p = await createProspect({ db }, human, {
+      name: `Stima ${suffix}`,
+      objectives: [],
+      aiPolicy: "external_allowed",
+    });
+    const paid = await estimateAudit(db, p.id, "anthropic");
+    expect(paid).toMatchObject({ localModel: false, costRangeUsd: { min: 1.5, max: 2.5 } });
+    const local = await estimateAudit(db, p.id, "local");
+    expect(local).toMatchObject({ localModel: true, costRangeUsd: null, budgetBlocked: false });
+    await deleteProspect({ db }, human, p.id, `Stima ${suffix}`);
   });
 
   it("does not let an agent create prospects", async () => {
