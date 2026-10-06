@@ -8,4 +8,22 @@ export const clientExportJob = defineJob({
   payload: z.object({ exportId: z.uuid() }),
 });
 
-export const clientTransferJobs = [clientExportJob] as const;
+/** Reads and checks an uploaded package (Verify step); writes only the import row. */
+export const clientImportVerifyJob = defineJob({
+  kind: "client.import.verify",
+  queue: "export",
+  payload: z.object({ importId: z.uuid() }),
+});
+
+/** Writes a confirmed import (after a backup when it replaces a client). */
+export const clientImportJob = defineJob({
+  kind: "client.import",
+  queue: "export",
+  payload: z.object({ importId: z.uuid() }),
+});
+
+export const clientTransferJobs = [
+  clientExportJob,
+  clientImportVerifyJob,
+  clientImportJob,
+] as const;

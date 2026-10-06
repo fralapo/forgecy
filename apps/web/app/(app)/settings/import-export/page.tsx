@@ -1,8 +1,10 @@
 import { estimateClientExport, listClientExports } from "@forgecy/client-transfer";
 import { clientTransferAreas } from "@forgecy/core";
 import { asc, clients, getDb } from "@forgecy/db";
-import { Badge, Card } from "@forgecy/ui";
+import { Badge, Card, cn } from "@forgecy/ui";
 import { Download, ShieldAlert } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { getFormat } from "@/lib/i18n";
@@ -10,6 +12,7 @@ import { requireUser } from "@/lib/session";
 import { AdminOnly } from "../_components/admin-only";
 import { RefreshWhileRunning } from "../backup/forms";
 import { ExportForm } from "./export-form";
+import { ImportTab } from "./import-tab";
 
 export async function generateMetadata() {
   const t = await getTranslations("clientTransfer");
@@ -34,6 +37,40 @@ export default async function ImportExportPage({
   const t = await getTranslations("clientTransfer");
   if (!user.isAdmin) return <AdminOnly title={t("title")} />;
   const sp = await searchParams;
+  const tab = sp.tab === "import" ? "import" : "export";
+  const tabs = (
+    <nav aria-label={t("tabsLabel")} className="mb-6 border-b border-subtle">
+      <ul className="flex gap-1">
+        {(["export", "import"] as const).map((key) => (
+          <li key={key}>
+            <Link
+              href={`/settings/import-export?tab=${key}` as Route}
+              aria-current={tab === key ? "page" : undefined}
+              className={cn(
+                "-mb-px flex h-11 items-center px-3 text-body-sm border-b-2",
+                tab === key
+                  ? "border-primary text-fg"
+                  : "border-transparent text-fg-muted hover:text-fg",
+              )}
+            >
+              {t(`tabs.${key}`)}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+  if (tab === "import")
+    return (
+      <>
+        <PageHeader title={t("title")} description={t("description")} />
+        {tabs}
+        <ImportTab
+          actor={user.actor}
+          importId={typeof sp.importId === "string" ? sp.importId : undefined}
+        />
+      </>
+    );
   const db = getDb();
   const format = await getFormat();
   const size = (bytes: number) =>
@@ -60,8 +97,8 @@ export default async function ImportExportPage({
   return (
     <>
       <PageHeader title={t("title")} description={t("description")} />
+      {tabs}
       <RefreshWhileRunning active={busy} />
-      <h2 className="mb-4 text-heading-sm text-fg">{t("tabs.export")}</h2>
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <Card className="p-6">
           <ExportForm clients={all} clientId={clientId} />

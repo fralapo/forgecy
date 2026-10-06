@@ -16,6 +16,8 @@
     "report_approved": "{client}: il report di audit v{version} è stato approvato.",
     "report_changes_requested": "{client}: modifiche richieste sul report di audit v{version}.",
     "automation_run_finished": "{client}: «{name}» è terminata, {completed} caroselli creati su {total}{failed, plural, =0 {} one {, # non riuscito} other {, # non riusciti}}.",
-    "client_export_ready": "{client}: l'export completo è pronto da scaricare."
+    "client_export_ready": "{client}: l'export completo è pronto da scaricare.",
+    "client_import_done": "{client} importato: {versions, plural, one {# versione} other {# versioni}}, {carousels, plural, one {# carosello} other {# caroselli}}, {audits, plural, one {# audit} other {# audit}}.",
+    "client_import_failed": "L'import di «{file}» non è riuscito. Nessun dato è stato modificato."
   }
 }

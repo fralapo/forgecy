@@ -16,6 +16,8 @@ export const notificationKinds = [
   "report_changes_requested",
   "automation_run_finished",
   "client_export_ready",
+  "client_import_done",
+  "client_import_failed",
 ] as const;
 export type NotificationKind = (typeof notificationKinds)[number];
 

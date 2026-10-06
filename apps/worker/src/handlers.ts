@@ -17,6 +17,12 @@ import pkg from "../package.json" with { type: "json" };
  * module (e.g. `...auditHandlers`), keeping the handler code in their own package.
  */
 const env = loadEnv();
+const backupEnv = {
+  dataDir: resolveMediaRoot(env.FORGECY_DATA_DIR),
+  mediaDir: resolveMediaRoot(env.MEDIA_ROOT),
+  databaseUrl: env.DATABASE_URL,
+  appVersion: pkg.version,
+};
 
 export const handlers: JobHandlers = {
   ...createAuditHandlers(),
@@ -29,12 +35,7 @@ export const handlers: JobHandlers = {
   ...brandBookHandlers(),
   ...contentHandlers,
   ...automationHandlers(),
-  ...clientTransferHandlers(),
+  ...clientTransferHandlers(backupEnv),
   ...catalogHandlers,
-  ...backupHandlers({
-    dataDir: resolveMediaRoot(env.FORGECY_DATA_DIR),
-    mediaDir: resolveMediaRoot(env.MEDIA_ROOT),
-    databaseUrl: env.DATABASE_URL,
-    appVersion: pkg.version,
-  }),
+  ...backupHandlers(backupEnv),
 };

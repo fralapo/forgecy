@@ -256,6 +256,7 @@
       "manual": "Manual",
       "nightly": "Nightly",
       "pre_restore": "Before restore",
+      "pre_import": "Before a client import",
       "cli": "Command line"
     },
     "size": {
