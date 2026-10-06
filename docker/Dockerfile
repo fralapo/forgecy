@@ -14,6 +14,7 @@ COPY apps/worker/package.json apps/worker/
 COPY packages/core/package.json packages/core/
 COPY packages/db/package.json packages/db/
 COPY packages/ai/package.json packages/ai/
+COPY packages/audit/package.json packages/audit/
 COPY packages/carousel/package.json packages/carousel/
 COPY packages/brand/package.json packages/brand/
 COPY packages/catalog/package.json packages/catalog/

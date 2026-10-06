@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  // DOM types for the functions the crawler runs inside the page (page.evaluate).
+  "compilerOptions": { "lib": ["ES2023", "DOM", "DOM.Iterable"] },
+  "include": ["src", "scripts", "test", "*.ts"]
+}

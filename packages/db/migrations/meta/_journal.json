@@ -43,6 +43,13 @@
       "when": 1791271935439,
       "tag": "0005_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791272534893,
+      "tag": "0006_audit",
+      "breakpoints": true
     }
   ]
 }

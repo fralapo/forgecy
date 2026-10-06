@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: new URL("../../", import.meta.url).pathname,
   // Internal packages ship TypeScript source ("just-in-time" packages).
   transpilePackages: [
+    "@forgecy/audit",
     "@forgecy/carousel",
     "@forgecy/core",
     "@forgecy/db",
@@ -22,7 +23,7 @@ const nextConfig: NextConfig = {
     "@forgecy/mail",
     "@forgecy/ui",
   ],
-  serverExternalPackages: ["pg", "bullmq", "nodemailer"],
+  serverExternalPackages: ["pg", "bullmq", "nodemailer", "read-excel-file"],
   poweredByHeader: false,
   // Uploads through the proxy (default 10 MB): brand books up to 50 MB, product imports (ZIP) up to 200 MB.
   experimental: { proxyClientMaxBodySize: "210mb" },

@@ -1,5 +1,6 @@
 import {
   Building2,
+  ClipboardCheck,
   Fingerprint,
   LayoutDashboard,
   LayoutTemplate,
@@ -16,6 +17,7 @@ import { SignOutButton } from "./sign-out-button";
 const nav = [
   { href: "/", label: "Panoramica", icon: LayoutDashboard },
   { href: "/clienti", label: "Clienti", icon: Building2 },
+  { href: "/audit", label: "Audit", icon: ClipboardCheck },
   { href: "/prodotti", label: "Prodotti", icon: Package },
   { href: "/template", label: "Template", icon: LayoutTemplate },
   { href: "/brand", label: "Brand Identity", icon: Fingerprint },
