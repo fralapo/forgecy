@@ -27,5 +27,172 @@
     "aiPolicy": "Policy AI",
     "created": "Cliente creato.",
     "submit": "Aggiungi"
+  },
+  "overview": {
+    "back": "Tutti i clienti",
+    "archived": "Questo cliente è archiviato: è in sola lettura.",
+    "archivedOn": "Cliente archiviato il {date}: è in sola lettura.",
+    "newCarousel": "Nuovo carosello",
+    "newCarouselBlocked": "Pubblica prima la Brand Identity di questo cliente per creare caroselli.",
+    "next": {
+      "label": "Prossima azione",
+      "approveVersion": "tu · Approva la versione {number} della Brand Identity",
+      "approveCarousel": "tu · Approva o chiedi modifiche: «{title}»",
+      "reviewProposals": "tu · Rivedi {count, plural, one {# proposta di Brand Identity} other {# proposte di Brand Identity}}",
+      "reviewProposalsCta": "Rivedi proposte",
+      "continueAudit": "tu · Continua l’audit",
+      "openAudit": "Apri audit",
+      "createCarousel": "tu · Crea un carosello",
+      "openApproval": "Apri approvazione",
+      "none": "Nessuna azione in sospeso"
+    },
+    "brand": {
+      "title": "Brand Identity",
+      "published": "v{number} · Pubblicata",
+      "publishedBy": "{date} da {name}",
+      "none": "Nessuna versione pubblicata. I caroselli non si possono generare finché non pubblichi la prima versione.",
+      "open": "v{number} · {status}",
+      "proposals": "{count, plural, one {# proposta} other {# proposte}} da rivedere",
+      "openLink": "Apri Brand Identity"
+    },
+    "policy": {
+      "title": "Policy AI",
+      "adminOnly": "Solo gli utenti Admin possono cambiare questa impostazione.",
+      "explain": {
+        "external_allowed": "Testi e immagini si possono produrre con i provider AI esterni configurati dall’agenzia.",
+        "external_restricted": "Provider esterni solo con le restrizioni impostate dall’agenzia.",
+        "local_only": "Solo AI che gira sulle macchine dell’agenzia: nessun dato di questo cliente va a provider esterni.",
+        "no_ai": "Le funzioni AI sono spente per questo cliente."
+      }
+    },
+    "budget": {
+      "title": "Spesa AI",
+      "month": "{month}",
+      "ofLimit": "{percent}: {spent} di {limit}",
+      "noLimit": "{spent} questo mese · nessun budget del cliente impostato",
+      "exhausted": "Il budget AI di {client} è esaurito: i lavori AI non partono."
+    },
+    "carousels": {
+      "title": "Ultimi caroselli",
+      "empty": "Ancora nessun carosello.",
+      "emptyNoBrand": "Nessun carosello. Serve prima una Brand Identity pubblicata.",
+      "brand": "Brand v{number}",
+      "brandOld": "Brand v{number} · è disponibile la v{current}"
+    },
+    "waiting": {
+      "title": "In attesa",
+      "empty": "Niente in attesa per {client}.",
+      "version": "Brand Identity v{number} da approvare",
+      "proposals": "{count, plural, one {# proposta di Brand Identity} other {# proposte di Brand Identity}} da rivedere",
+      "carousel": "Carosello da approvare: «{title}»",
+      "aiImages": "{count, plural, one {# immagine AI} other {# immagini AI}} da approvare",
+      "products": "{count, plural, one {# prodotto proposto} other {# prodotti proposti}} da rivedere",
+      "reports": "{count, plural, one {# report di audit} other {# report di audit}} da approvare"
+    },
+    "audits": {
+      "title": "Audit e report",
+      "empty": "Nessun audit per questo cliente.",
+      "startedBy": "{date} · {name}",
+      "openReport": "Apri report"
+    },
+    "activity": {
+      "title": "Attività recente",
+      "empty": "Nessuna attività registrata.",
+      "all": "Vedi tutta l’attività"
+    }
+  },
+  "activity": {
+    "metaTitle": "Attività del cliente",
+    "title": "Attività di {client}",
+    "description": "Tutto ciò che persone, agenti AI e sistema hanno fatto su questo cliente, dal più recente.",
+    "back": "Torna a {client}",
+    "today": "Oggi",
+    "yesterday": "Ieri",
+    "shown": "Mostrate {shown, number} di {total, number}",
+    "loadMore": "Carica {count, plural, one {un’altra} other {altre #}}",
+    "empty": "Nessuna attività registrata.",
+    "emptyFiltered": "Nessuna attività con questi filtri.",
+    "anomaly": "Anomalia: approvazione senza autore umano",
+    "actor": {
+      "system": "Sistema",
+      "deletedUser": "Utente eliminato",
+      "agent": "{role} (agente AI)"
+    },
+    "filters": {
+      "actorType": "Autore",
+      "area": "Area",
+      "period": "Periodo",
+      "all": "Tutti",
+      "anyTime": "Sempre",
+      "actorTypes": {
+        "person": "Persona",
+        "agent": "Agente AI",
+        "system": "Sistema"
+      },
+      "periods": {
+        "today": "Oggi",
+        "7d": "Ultimi 7 giorni",
+        "30d": "Ultimi 30 giorni"
+      },
+      "apply": "Applica",
+      "reset": "Azzera filtri"
+    },
+    "areas": {
+      "client": "Cliente",
+      "audit": "Audit",
+      "brand": "Brand Identity",
+      "content": "Contenuti",
+      "products": "Prodotti",
+      "templates": "Template",
+      "settings": "Impostazioni",
+      "other": "Altro"
+    },
+    "objects": {
+      "client": "il cliente",
+      "audit": "l’audit",
+      "audit_competitor": "un competitor",
+      "audit_finding": "un’osservazione",
+      "audit_report": "il report dell’audit",
+      "brand_identity_version": "una versione della Brand Identity",
+      "brand_identity_proposal": "una modifica alla Brand Identity",
+      "brand_source": "una fonte della Brand Identity",
+      "content": "un carosello",
+      "asset": "un’immagine",
+      "product": "un prodotto",
+      "product_import": "un import di prodotti",
+      "template": "un template",
+      "other": "un elemento"
+    },
+    "verbs": {
+      "created": "ha creato",
+      "added": "ha aggiunto",
+      "edited": "ha modificato",
+      "deleted": "ha eliminato",
+      "removed": "ha tolto",
+      "archived": "ha archiviato",
+      "restored": "ha ripristinato",
+      "reopened": "ha riaperto",
+      "approved": "ha approvato",
+      "rejected": "ha rifiutato",
+      "submitted": "ha inviato in revisione",
+      "published": "ha pubblicato",
+      "accepted": "ha accettato",
+      "proposed": "ha proposto",
+      "converted": "ha convertito",
+      "started": "ha avviato",
+      "completed": "ha completato",
+      "cancelled": "ha annullato",
+      "exported": "ha esportato",
+      "imported": "ha importato",
+      "confirmed": "ha confermato",
+      "skipped": "ha saltato",
+      "assigned": "ha assegnato",
+      "ignored": "ha ignorato",
+      "acknowledged": "ha preso visione di",
+      "analyzed": "ha analizzato",
+      "duplicated": "ha duplicato",
+      "generated": "ha generato con l’AI",
+      "updated": "ha aggiornato"
+    }
   }
 }

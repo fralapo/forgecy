@@ -66,7 +66,9 @@ export default async function ClientsPage() {
                 {rows.map((c) => (
                   <tr key={c.id} className="border-b border-subtle last:border-0">
                     <td className="px-6 py-3 text-fg">
-                      {c.name}
+                      <Link href={`/clients/${c.slug}` as Route} className={linkClass}>
+                        {c.name}
+                      </Link>
                       {c.websiteUrl ? (
                         <span className="block text-fg-muted">{c.websiteUrl}</span>
                       ) : null}
