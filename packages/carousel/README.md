@@ -1,0 +1,18 @@
+# @forgecy/carousel
+
+Renderer, template ed export dei caroselli (M3).
+
+- **Formati** (`FORMATS`): Instagram 4:5 e documento LinkedIn nell'MVP; Instagram 1:1, Stories 9:16, Facebook 4:5 e TikTok foto pronti per la v1, con dimensioni in pixel reali e safe zone di default.
+- **`template.json`** (`templateManifestSchema`): formato, numero di slide, layout con ruolo e posizione, slot (`text`, `list`, `image`) con limiti, font inclusi, variabili CSS legate ai ruoli colore e font della Brand Identity, scala tipografica, regole di composizione. Lo schema JSON per l'editor è `templates/agency/template.schema.json` (`pnpm --filter @forgecy/carousel schema`).
+- **Slide**: JSON con `layout` e un valore per slot. `buildSlideSchema(template)` e `buildCarouselSchema(template)` producono gli schemi Zod con cui si validano le slide scritte dall'AI o dall'editor (limiti di caratteri, voci, slide prima e ultima, CTA, immagini per slide). `==parola==` evidenzia una parola negli slot con `highlight`.
+- **`renderSlideHtml`** (il `SlideRenderer`): riempie l'HTML del layout inserendo i valori come testo, applica colori e font del brand come variabili CSS, toglie dal template script, handler e riferimenti esterni e restituisce un documento autosufficiente di esattamente `width×height` px. È puro e sincrono: stesso input, stessa stringa.
+- **Validazione** (`validateTemplatePackage`): la checklist del Template editor, con file e riga per ogni problema (`TEMPLATE-INVALID`, `ASSET-MISSING`): template.json, file presenti, slot coerenti tra HTML e metadati, font inclusi, colori scritti a mano, font-size fuori scala, variabili non legate a un ruolo, markup non ammesso, esempi validi.
+- **Export** (`@forgecy/carousel/export`, solo worker): Chromium via `playwright-core`, PNG per slide alla risoluzione esatta, PDF con una pagina per slide (gli stessi PNG), ZIP con PNG, PDF, `caption.txt`, `testi.md` e `slides.json`. Nomi `{cliente}_{contenuto}_v{n}_{formato}_{nn}.png`; date fisse e voci ordinate, così la stessa versione dà gli stessi byte. Prima dell'approvazione filigrana «Bozza» e suffisso `_bozza`. Dopo il render misura ogni slot: testo tagliato, fuori dalla slide o dalla safe zone, sovrapposto, troppe righe, immagini a bassa risoluzione.
+- **Job**: `carousel.export` (coda `export`) e `carousel.validate_template`; gli handler sono in `carouselWorkerHandlers()`.
+- **Catalogo** (`@forgecy/carousel/catalog`): tabella `templates`, una riga per versione con il pacchetto come ZIP nello storage (hash verificato a ogni lettura). L'import crea o sostituisce una bozza e accoda `carousel.validate_template`, che aggiunge il render di prova; si invia in revisione o si pubblica solo con validazione superata e note di versione. Stati: bozza, in revisione, pubblicato, archiviato. Export ed editor leggono l'ultima versione pubblicata, o quella fissata dal carosello anche se archiviata. Solo gli utenti con `templates.manage` cambiano il catalogo; gli agenti mai.
+- **Node** (`@forgecy/carousel/node`): lettura dei pacchetti da cartella o da ZIP (max 50 MB), scansione di `templates/agency` per l'import (`FORGECY_TEMPLATES_DIR` per un'altra cartella), risoluzione degli asset dallo storage limitata al cliente.
+
+Comandi:
+
+- `pnpm --filter @forgecy/carousel preview ../../templates/agency/editoriale-ig-4x5 /tmp/out`: valida un template, esegue il render di prova e salva i PNG di ogni layout con testi di esempio e lunghi.
+- `pnpm test`: i test con Chromium partono con `FORGECY_RENDER_TESTS=1` (la CI lo imposta e installa il browser) o con `FORGECY_CHROMIUM_PATH` che punta a un Chromium locale.

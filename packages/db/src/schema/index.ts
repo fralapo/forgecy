@@ -6,3 +6,4 @@ export * from "./system";
 export * from "./jobs";
 export * from "./ai";
 export * from "./audit";
+export * from "./templates";
