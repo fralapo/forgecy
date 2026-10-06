@@ -22,7 +22,7 @@ export async function generateMetadata() {
 
 export default async function DiagnosisPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { db, audit, readOnly, aiAllowed } = await sectionContext(slug);
+  const { db, audit, readOnly, aiAllowed, rt } = await sectionContext(slug);
   const { problems, observations, plan, outcome } = await getDiagnosisView(db, audit.id);
   const links = await sourceLinks(db, problems);
   const live = problems.filter((p) => p.status !== "rejected");
@@ -96,7 +96,7 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
         {problems.length ? (
           problems.map((p, i) => (
             <div key={p.id} className="flex flex-col gap-2">
-              <FindingCard finding={toView(p)} sources={links} readOnly={readOnly} />
+              <FindingCard finding={toView(p, rt)} sources={links} readOnly={readOnly} />
               <div className="flex flex-wrap items-center justify-between gap-2 px-1">
                 <p className="text-body-sm text-fg-muted">
                   {p.parentIds.length

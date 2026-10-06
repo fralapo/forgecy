@@ -30,7 +30,7 @@ export async function generateMetadata() {
 
 export default async function SitePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { db, audit, readOnly } = await sectionContext(slug);
+  const { db, audit, readOnly, rt } = await sectionContext(slug);
   const view = await getSiteView(db, audit.id);
   const { scan, pages, findings } = view;
   const [links, shots] = await Promise.all([
@@ -111,7 +111,7 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
         ) : null}
         {scan?.error ? (
           <p role="alert" className="text-body-sm text-error">
-            {scan.error}
+            {rt(scan.errorRef, scan.error)}
             {scan.errorCode ? (
               <span className="mt-1 block text-fg-muted">
                 {t.rich("website.errorCode", {
@@ -299,7 +299,8 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
               <ul className="mt-2 flex flex-col gap-1">
                 {skipped.map((p) => (
                   <li key={p.id}>
-                    {p.url} <span className="text-fg-muted">· {p.skipReason}</span>
+                    {p.url}{" "}
+                    <span className="text-fg-muted">· {rt(p.skipRef, p.skipReason ?? "")}</span>
                   </li>
                 ))}
               </ul>
@@ -340,7 +341,7 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
                 {list.map((f) => (
                   <FindingCard
                     key={f.id}
-                    finding={toView(f, scan?.id)}
+                    finding={toView(f, rt, scan?.id)}
                     sources={links}
                     readOnly={readOnly}
                   />

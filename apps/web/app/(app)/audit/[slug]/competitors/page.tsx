@@ -18,7 +18,7 @@ export async function generateMetadata() {
 
 export default async function CompetitorPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { db, audit, client, readOnly, aiAllowed } = await sectionContext(slug);
+  const { db, audit, client, readOnly, aiAllowed, rt } = await sectionContext(slug);
   const view = await getCompetitorView(db, audit.id);
   const links = await sourceLinks(db, view.findings);
   const t = await getTranslations("audit.competitors");
@@ -67,9 +67,9 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
                   confidence: c.confidence,
                   proposedByAgent: c.proposedByAgent,
                   status: c.status,
-                  removedReason: c.removedReason,
+                  removedReason: c.removedReason ? rt(c.removedRef, c.removedReason) : null,
                   sourceStatus: c.sourceStatus,
-                  sourceError: c.sourceError,
+                  sourceError: c.sourceError ? rt(c.sourceErrorRef, c.sourceError) : null,
                 }}
               />
             ))}
@@ -176,7 +176,7 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
         </div>
         {view.findings.length ? (
           view.findings.map((f) => (
-            <FindingCard key={f.id} finding={toView(f)} sources={links} readOnly={readOnly} />
+            <FindingCard key={f.id} finding={toView(f, rt)} sources={links} readOnly={readOnly} />
           ))
         ) : (
           <p className="text-body-md text-fg-muted">

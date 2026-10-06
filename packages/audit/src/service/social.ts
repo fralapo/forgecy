@@ -52,6 +52,7 @@ import {
   type AuditDeps,
 } from "./common";
 import { channelLabel } from "./prospects";
+import { stored } from "../stored";
 
 export interface UploadedFile {
   name: string;
@@ -79,6 +80,7 @@ async function upsertChannel(
         ...(values.profileUrl !== undefined ? { profileUrl: values.profileUrl } : {}),
         status: values.status,
         unavailableReason: values.unavailableReason ?? null,
+        unavailableRef: values.unavailableRef ?? null,
         updatedBy: values.updatedBy ?? null,
         updatedAt: new Date(),
       },
@@ -137,7 +139,11 @@ export async function setChannelUnavailable(
     auditId: input.auditId,
     channel: input.channel,
     status: input.mode,
-    unavailableReason: reason ?? (input.mode === "skipped" ? "Channel skipped" : null),
+    ...(reason
+      ? { unavailableReason: reason, unavailableRef: null }
+      : input.mode === "skipped"
+        ? { unavailableReason: channelSkipped.text, unavailableRef: channelSkipped.ref }
+        : { unavailableReason: null, unavailableRef: null }),
     updatedBy: userIdOf(actor),
   });
   await recordAuditEvent(deps.db, {
@@ -604,7 +610,8 @@ export async function removeSource(
           evidence,
           status: USABLE_FINDING_STATUSES.includes(f.status) ? "observed" : f.status,
           confidence: evidence.length >= 3 ? "high" : evidence.length === 2 ? "medium" : "low",
-          confidenceReason: "A source was removed: recheck the evidence",
+          confidenceReason: sourceRemoved.text,
+          confidenceRef: sourceRemoved.ref,
           rev: sql`${auditFindings.rev} + 1`,
         })
         .where(eq(auditFindings.id, f.id));
@@ -679,3 +686,6 @@ export async function requestSocialAnalysis(
     createdBy: userIdOf(actor),
   });
 }
+
+const channelSkipped = stored("audit.stored.unavailable.channelSkipped");
+const sourceRemoved = stored("audit.stored.confidence.sourceRemoved");
