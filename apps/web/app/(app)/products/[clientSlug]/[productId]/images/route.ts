@@ -38,7 +38,7 @@ export const POST = withUser(
         await temp.cleanup();
       }
     } catch (err) {
-      const res = importErrorResponse(err);
+      const res = await importErrorResponse(err);
       if (res) return res;
       throw err;
     }

@@ -6,7 +6,8 @@ import {
   monthKey,
   type AiEnv,
 } from "@forgecy/ai";
-import type { AiPolicy } from "@forgecy/core";
+import type { AiPolicy, MessageRef } from "@forgecy/core";
+import { englishMessage, messageRef } from "@forgecy/i18n";
 import type { Database } from "@forgecy/db";
 import { estimateTokens } from "./ai";
 import type { plannedAiSteps } from "./imports";
@@ -18,6 +19,8 @@ export interface AiSetup {
   /** False when the policy, or the missing configuration, rules AI out. */
   available: boolean;
   reason?: string;
+  /** `reason` for the interface, in the user's language. */
+  reasonRef?: MessageRef;
   provider?: string;
   model?: string;
 }
@@ -25,7 +28,8 @@ export interface AiSetup {
 /** Which model an import would use for this client, or why none. */
 export function importAiSetup(env: AiEnv, policy: AiPolicy): AiSetup {
   const avail = aiAvailability(policy, env.LOCAL_LLM_ENABLED);
-  if (!avail.available) return { available: false, reason: avail.reason };
+  if (!avail.available)
+    return { available: false, reason: avail.reason, reasonRef: avail.reasonRef };
   if (policy === "local_only") {
     const routing = defaultRoutingFromEnv(env);
     return { available: true, provider: "local", model: routing.local?.model };
@@ -34,8 +38,8 @@ export function importAiSetup(env: AiEnv, policy: AiPolicy): AiSetup {
   if (Object.keys(providers.text).length === 0)
     return {
       available: false,
-      reason:
-        "No AI provider configured: the import uses manual mapping, matching by file name and SKU, and PDFs as sources.",
+      reason: englishMessage("products.ai.noProvider"),
+      reasonRef: messageRef("products.ai.noProvider"),
     };
   const route = defaultRoutingFromEnv(env, providers);
   const ref = route.tasks?.catalog_extract?.primary ?? route.default.primary;

@@ -3,6 +3,7 @@
 import { Button, Card, cn } from "@forgecy/ui";
 import { FileUp, FolderUp, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { ActionMessage, useCatalogAction } from "../../_components/client";
 import { selectClass } from "../../_components/ui";
@@ -28,6 +29,8 @@ export interface FileRowView {
     message: string | null;
   }>;
 }
+
+const delimiters = ["comma", "semicolon", "tab", "pipe"] as const;
 
 interface Upload {
   key: string;
@@ -76,6 +79,7 @@ export function FileStep(props: {
   options: { language: string; matchImages: boolean; official: boolean };
 }) {
   const router = useRouter();
+  const t = useTranslations("products");
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
   const [uploads, setUploads] = useState<Upload[]>([]);
@@ -102,13 +106,12 @@ export function FileStep(props: {
           try {
             const body = JSON.parse(xhr.responseText) as { message?: string; error?: string };
             error = body.message
-              ? `${body.message}${body.error ? ` (${body.error})` : ""}`
-              : "Upload failed.";
+              ? body.error
+                ? t("errors.withCode", { message: body.message, code: body.error })
+                : body.message
+              : t("fileStep.uploadFailed");
           } catch {
-            error =
-              xhr.status === 401
-                ? "Your session has expired. Sign in again to continue."
-                : "Upload failed.";
+            error = xhr.status === 401 ? t("fileStep.sessionExpired") : t("fileStep.uploadFailed");
           }
         }
         setUploads((u) =>
@@ -118,7 +121,7 @@ export function FileStep(props: {
       };
       xhr.onerror = () => {
         setUploads((u) =>
-          u.map((x) => (x.key === key ? { ...x, error: "Connection lost. Try again." } : x)),
+          u.map((x) => (x.key === key ? { ...x, error: t("fileStep.connectionLost") } : x)),
         );
         resolve();
       };
@@ -168,11 +171,11 @@ export function FileStep(props: {
 
   return (
     <Card>
-      <h2 className="text-heading-sm">File</h2>
+      <h2 className="text-heading-sm">{t("fileStep.title")}</h2>
       <div
         role="button"
         tabIndex={0}
-        aria-label="Upload files: drag them here or press Enter to choose them"
+        aria-label={t("fileStep.dropLabel")}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
@@ -194,17 +197,15 @@ export function FileStep(props: {
           over ? "border-primary bg-app" : "border-control",
         )}
       >
-        <p className="text-body-md text-fg">
-          Drag the client’s CSV, XLSX, ZIP, images or PDFs here, or choose the files.
-        </p>
+        <p className="text-body-md text-fg">{t("fileStep.dropText")}</p>
         <div className="flex flex-wrap justify-center gap-3">
           <Button type="button" variant="secondary" onClick={() => fileInput.current?.click()}>
             <FileUp aria-hidden />
-            Choose files
+            {t("fileStep.chooseFiles")}
           </Button>
           <Button type="button" variant="secondary" onClick={() => folderInput.current?.click()}>
             <FolderUp aria-hidden />
-            Choose folder
+            {t("fileStep.chooseFolder")}
           </Button>
         </div>
         <p className="text-body-sm text-fg-muted">{props.limitsText}</p>
@@ -234,7 +235,7 @@ export function FileStep(props: {
               <div className="flex justify-between gap-3">
                 <span className="truncate text-fg">{u.name}</span>
                 <span className={u.error ? "text-error" : "text-fg-muted"}>
-                  {u.error ?? (u.done ? "Uploaded" : `${u.progress}%`)}
+                  {u.error ?? (u.done ? t("fileStep.uploaded") : `${u.progress}%`)}
                 </span>
               </div>
               {!u.done && !u.error ? (
@@ -243,7 +244,7 @@ export function FileStep(props: {
                   aria-valuenow={u.progress}
                   aria-valuemin={0}
                   aria-valuemax={100}
-                  aria-label={`Uploading ${u.name}`}
+                  aria-label={t("fileStep.uploading", { name: u.name })}
                   className="mt-1 h-1 w-full rounded-sm bg-subtle"
                 >
                   <div
@@ -269,14 +270,15 @@ export function FileStep(props: {
                     id={`file-${f.id}-status`}
                     className={cn("text-body-sm", f.valid ? "text-fg-muted" : "text-error")}
                   >
-                    {f.kindLabel} · {f.size} · {f.message ?? (f.valid ? "Valid" : "Invalid")}
+                    {f.kindLabel} · {f.size} ·{" "}
+                    {f.message ?? (f.valid ? t("files.valid") : t("files.invalid"))}
                     {f.errorCode && !f.valid ? ` (${f.errorCode})` : ""}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   {f.routes.length ? (
                     <select
-                      aria-label={`Route for ${f.name}`}
+                      aria-label={t("fileStep.routeFor", { name: f.name })}
                       aria-describedby={`file-${f.id}-status`}
                       className={selectClass}
                       value={f.route}
@@ -297,7 +299,7 @@ export function FileStep(props: {
                   <Button
                     size="icon"
                     variant="ghost"
-                    aria-label={`Remove ${f.name}`}
+                    aria-label={t("fileStep.remove", { name: f.name })}
                     disabled={action.pending}
                     onClick={() => action.run(() => removeFileAction({ ...ids, fileId: f.id }))}
                   >
@@ -322,30 +324,31 @@ export function FileStep(props: {
                   }}
                 >
                   <label className="flex flex-col gap-1 text-body-sm text-fg-muted">
-                    Encoding
+                    {t("fileStep.encoding")}
                     <select name="encoding" className={selectClass} defaultValue="windows-1252">
-                      <option value="utf-8">UTF-8</option>
-                      <option value="windows-1252">Windows (Excel)</option>
+                      <option value="utf-8">{t("fileStep.encodingUtf8")}</option>
+                      <option value="windows-1252">{t("fileStep.encodingWindows")}</option>
                     </select>
                   </label>
                   <label className="flex flex-col gap-1 text-body-sm text-fg-muted">
-                    Delimiter
+                    {t("fileStep.delimiter")}
                     <select name="delimiter" className={selectClass} defaultValue="semicolon">
-                      <option value="comma">Comma</option>
-                      <option value="semicolon">Semicolon</option>
-                      <option value="tab">Tab</option>
-                      <option value="pipe">Pipe</option>
+                      {delimiters.map((d) => (
+                        <option key={d} value={d}>
+                          {t(`fileStep.delimiters.${d}`)}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <Button type="submit" size="sm" variant="secondary" disabled={action.pending}>
-                    Read again
+                    {t("fileStep.readAgain")}
                   </Button>
                 </form>
               ) : null}
               {f.children.length ? (
                 <details>
                   <summary className="cursor-pointer text-body-sm text-fg-muted">
-                    Contents ({f.children.length} files)
+                    {t("fileStep.contents", { count: f.children.length })}
                   </summary>
                   <ul className="mt-2 space-y-1 text-body-sm">
                     {f.children.map((c) => (
@@ -375,9 +378,9 @@ export function FileStep(props: {
         }}
         onSubmit={(e) => e.preventDefault()}
       >
-        <h3 className="text-label font-medium text-fg">Options</h3>
+        <h3 className="text-label font-medium text-fg">{t("fileStep.options")}</h3>
         <label className="flex flex-col gap-1 text-body-sm text-fg-muted">
-          Content language
+          {t("fileStep.language")}
           <input
             name="language"
             defaultValue={props.options.language}
@@ -392,13 +395,10 @@ export function FileStep(props: {
             defaultChecked={props.options.matchImages}
             className="size-4"
           />
-          Match images to products
-          {props.aiReason
-            ? " (by file name and SKU only)"
-            : " (by file name and SKU, then with AI)"}
+          {props.aiReason ? t("fileStep.matchImagesNoAi") : t("fileStep.matchImages")}
         </label>
         <fieldset className="text-body-sm text-fg">
-          <legend className="mb-1">These files are official client material</legend>
+          <legend className="mb-1">{t("fileStep.official")}</legend>
           <label className="mr-4 inline-flex items-center gap-2">
             <input
               type="radio"
@@ -406,7 +406,7 @@ export function FileStep(props: {
               value="yes"
               defaultChecked={props.options.official}
             />{" "}
-            Yes
+            {t("fileStep.yes")}
           </label>
           <label className="inline-flex items-center gap-2">
             <input
@@ -415,7 +415,7 @@ export function FileStep(props: {
               value="no"
               defaultChecked={!props.options.official}
             />{" "}
-            No
+            {t("fileStep.no")}
           </label>
         </fieldset>
       </form>

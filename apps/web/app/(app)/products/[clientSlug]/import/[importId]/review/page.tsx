@@ -1,6 +1,5 @@
 import {
-  approvalBlockers,
-  describeSource,
+  approvalBlockerList,
   emptyFields,
   importReview,
   itemTab,
@@ -13,15 +12,26 @@ import {
 } from "@forgecy/catalog";
 import { getDb } from "@forgecy/db";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
+import { getFormat } from "@/lib/i18n";
 import { Breadcrumb, ImportStatusBadge } from "../../../../_components/ui";
-import { importTitle, longDate } from "../../../../_lib/labels";
+import {
+  blockerText,
+  discardText,
+  importTitle,
+  matchReasonText,
+  sourceText,
+} from "../../../../_lib/labels";
 import { paths } from "../../../../_lib/paths";
 import { catalogPage, imageUrl } from "../../../../_lib/server";
 import { NotAClient } from "../../../not-a-client";
 import { ReviewView, type ReviewItemView, type ReviewImageView } from "./review-view";
 
-export const metadata = { title: "Review import" };
+export async function generateMetadata() {
+  const t = await getTranslations("products");
+  return { title: t("review.title") };
+}
 
 export default async function ReviewPage({
   params,
@@ -35,6 +45,8 @@ export default async function ReviewPage({
   const { client } = await catalogPage(clientSlug);
   if (client.status !== "active") return <NotAClient name={client.name} />;
   if (!/^[0-9a-f-]{36}$/i.test(importId)) notFound();
+  const t = await getTranslations("products");
+  const format = await getFormat();
   const review = await importReview(getDb(), client.id, importId);
   if (!review) notFound();
   const { imp, items, files, matches, approvers } = review;
@@ -69,7 +81,7 @@ export default async function ReviewPage({
         confidence: i.confidence,
         sensitive: i.sensitive,
         byAgent: i.proposedByAgent,
-        origin: describeSource(i.origin as unknown as SourceRef),
+        origin: sourceText(t, i.origin as unknown as SourceRef),
         fields: { ...emptyFields(), ...draft },
         meta: Object.fromEntries(
           Object.entries(meta).map(([k, m]) => [
@@ -77,14 +89,14 @@ export default async function ReviewPage({
             m && {
               truth: m.truth,
               confidence: m.confidence,
-              source: describeSource(m.source),
+              source: sourceText(t, m.source),
               sensitive: m.sensitive ?? [],
               accepted: !!m.acceptedBy,
             },
           ]),
         ),
         pendingSensitive: pendingSensitive(draft, meta),
-        blockers: approvalBlockers(draft, meta),
+        blockers: approvalBlockerList(draft, meta).map((b) => blockerText(t, b)),
         images,
         match: match
           ? {
@@ -93,18 +105,18 @@ export default async function ReviewPage({
               status: match.status,
               fields: rowToFields(match),
               approvedBy: match.approvedBy ? (approvers[match.approvedBy] ?? null) : null,
-              approvedAt: match.approvedAt ? longDate(match.approvedAt) : null,
+              approvedAt: match.approvedAt ? format.date(match.approvedAt, "dateTime") : null,
               href: paths.product(client.slug, match.id),
             }
           : null,
-        matchReason: i.matchReason,
+        matchReason: matchReasonText(t, i.matchReason),
         conflicts: i.conflicts as unknown as Array<{
           field: string;
           approved: unknown;
           incoming: unknown;
         }>,
         decisions: (i.conflictDecisions ?? {}) as Record<string, string>,
-        discardReason: i.discardReason,
+        discardReason: i.discardReason ? discardText(t, i.discardReason) : null,
         productHref: i.productId ? paths.product(client.slug, i.productId) : null,
       };
     }),
@@ -148,15 +160,18 @@ export default async function ReviewPage({
     <>
       <Breadcrumb
         items={[
-          { label: "Clients", href: "/clients" },
+          { label: t("breadcrumb.clients"), href: "/clients" },
           { label: client.name, href: "/products" },
-          { label: "Products", href: paths.catalog(client.slug) },
-          { label: importTitle(imp.createdAt), href: paths.importOpen(client.slug, imp.id) },
-          { label: "Review" },
+          { label: t("breadcrumb.products"), href: paths.catalog(client.slug) },
+          {
+            label: importTitle(t, format, imp.createdAt),
+            href: paths.importOpen(client.slug, imp.id),
+          },
+          { label: t("breadcrumb.review") },
         ]}
       />
       <PageHeader
-        title="Review import"
+        title={t("review.title")}
         description={sourceNames}
         actions={<ImportStatusBadge status={imp.status} />}
       />

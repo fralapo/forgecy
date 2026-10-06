@@ -1,5 +1,5 @@
 import mammoth from "mammoth";
-import { ImportError } from "../import/errors";
+import { importError } from "../import/errors";
 import { IMPORT_LIMITS } from "../import/limits";
 import { decodeCsv } from "./sheet";
 import { assertSafeOfficeFile } from "./zip";
@@ -16,13 +16,13 @@ export async function readTextDocument(
     try {
       text = (await mammoth.extractRawText({ buffer: data })).value;
     } catch {
-      throw new ImportError("IMPORT-INVALID", `"${name}" is not a readable DOCX.`);
+      throw importError("IMPORT-INVALID", "products.errors.docxUnreadable", { name });
     }
   } else {
     try {
       text = decodeCsv(data).text;
     } catch {
-      throw new ImportError("IMPORT-INVALID", `"${name}" is not readable text.`);
+      throw importError("IMPORT-INVALID", "products.errors.textUnreadable", { name });
     }
   }
   text = text

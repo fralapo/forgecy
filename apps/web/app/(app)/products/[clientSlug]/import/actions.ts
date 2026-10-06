@@ -13,11 +13,14 @@ import {
   setFileRoute,
   setImportOptions,
   startImport,
+  type FileMeta,
 } from "@forgecy/catalog";
 import { importFileRoutes } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { env } from "@/lib/env";
+import { refText } from "@/lib/i18n";
 import { requireUser } from "@/lib/session";
 import {
   actingUser,
@@ -77,8 +80,11 @@ export async function rereadCsvAction(input: {
     })
     .parse(input);
   return attempt(async () => {
+    const t = await getTranslations("products");
     const row = await rereadCsv(getDb(), getStorage(), actingUser(user), data);
-    return row.valid ? "File read again." : (row.message ?? "The file still can’t be read.");
+    if (row.valid) return t("import.rereadDone");
+    const ref = (row.meta as FileMeta | null)?.messageRef;
+    return row.message ? await refText(ref, row.message) : t("import.rereadFailed");
   });
 }
 
@@ -104,7 +110,7 @@ export async function startAction(input: {
       ...data,
       aiAvailable: await aiAvailable(data.clientId),
     });
-    return "Analysis started.";
+    return (await getTranslations("products"))("import.started");
   });
 }
 
@@ -125,7 +131,8 @@ export async function confirmMappingAction(input: {
     .parse(input);
   return attempt(async () => {
     const r = await confirmMapping(getDb(), enqueueImportStep, actingUser(user), data);
-    return r.resumed ? "Mapping confirmed: the analysis resumes." : "Mapping confirmed.";
+    const t = await getTranslations("products");
+    return r.resumed ? t("import.mappingResumed") : t("import.mappingConfirmed");
   });
 }
 
@@ -137,7 +144,7 @@ export async function retryAction(input: {
   const data = ids.parse(input);
   return attempt(async () => {
     await retryImport(getDb(), enqueueImportStep, actingUser(user), data);
-    return "Analysis resumed.";
+    return (await getTranslations("products"))("import.resumed");
   });
 }
 
@@ -149,6 +156,6 @@ export async function cancelAction(input: {
   const data = ids.parse(input);
   return attempt(async () => {
     await cancelImport(getDb(), actingUser(user), data, cancelImportJob);
-    return "Import cancelled.";
+    return (await getTranslations("products"))("import.cancelledDone");
   });
 }

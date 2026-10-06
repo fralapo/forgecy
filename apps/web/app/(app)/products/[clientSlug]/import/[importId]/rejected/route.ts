@@ -1,6 +1,9 @@
-import { discardsToCsv, importReview, loadCatalogClient } from "@forgecy/catalog";
+import { discardsToCsv, importReview, loadCatalogClient, type FileMeta } from "@forgecy/catalog";
 import { clients, eq, getDb } from "@forgecy/db";
+import { getTranslations } from "next-intl/server";
 import { withUser } from "@/lib/api";
+import { refText } from "@/lib/i18n";
+import { discardText } from "../../../../_lib/labels";
 
 export const dynamic = "force-dynamic";
 
@@ -19,18 +22,27 @@ export const GET = withUser(
     await loadCatalogClient(db, client.id);
     const review = await importReview(db, client.id, importId);
     if (!review) return new Response("Not found", { status: 404 });
+    const t = await getTranslations("products");
     const rows = review.items
       .filter((i) => i.status === "discarded")
       .map((i) => ({
-        reason: i.discardReason ?? "",
+        reason: discardText(t, i.discardReason ?? ""),
         source: ((i.origin as { fileName?: string } | null)?.fileName ?? "") as string,
       }));
-    const invalidFiles = review.files
-      .filter((f) => !f.valid)
-      .map((f) => ({
-        reason: `${f.message ?? "Invalid"}${f.errorCode ? ` (${f.errorCode})` : ""}`,
-        source: f.path,
-      }));
+    const invalidFiles = await Promise.all(
+      review.files
+        .filter((f) => !f.valid)
+        .map(async (f) => {
+          const message = await refText(
+            (f.meta as FileMeta | null)?.messageRef,
+            f.message ?? t("files.invalid"),
+          );
+          return {
+            reason: f.errorCode ? t("errors.withCode", { message, code: f.errorCode }) : message,
+            source: f.path,
+          };
+        }),
+    );
     return new Response(discardsToCsv([...invalidFiles, ...rows]), {
       headers: {
         "content-type": "text/csv; charset=utf-8",

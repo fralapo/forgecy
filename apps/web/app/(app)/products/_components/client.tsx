@@ -2,12 +2,14 @@
 
 import { Button } from "@forgecy/ui";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { type ReactNode, useEffect, useRef, useState, useTransition } from "react";
 import type { ActionResult } from "../_lib/types";
 
 /** Runs a server action, refreshes the page and keeps the last message for `aria-live`. */
 export function useCatalogAction() {
   const router = useRouter();
+  const t = useTranslations("products");
   const [pending, start] = useTransition();
   const [result, setResult] = useState<ActionResult | null>(null);
   function run(fn: () => Promise<ActionResult>, after?: (r: ActionResult) => void) {
@@ -18,7 +20,7 @@ export function useCatalogAction() {
         if (r.ok) router.refresh();
         after?.(r);
       } catch {
-        setResult({ error: "Decision not saved. Try again." });
+        setResult({ error: t("errors.actionFailed") });
       }
     });
   }
@@ -55,6 +57,7 @@ export function ConfirmDialog({
   disabled?: boolean;
   onConfirm: (form: FormData) => void;
 }) {
+  const t = useTranslations("products");
   const ref = useRef<HTMLDialogElement>(null);
   const [isOpen, setOpen] = useState(false);
   useEffect(() => {
@@ -84,7 +87,7 @@ export function ConfirmDialog({
           {children ? <div className="space-y-3 text-body-md text-fg-muted">{children}</div> : null}
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button type="submit" variant={danger ? "danger" : "primary"} disabled={disabled}>
               {confirmLabel}

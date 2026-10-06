@@ -15,8 +15,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
-import { confidenceText, importStatusLabels, productStatusLabels } from "../_lib/labels";
 
 export function ProductStatusBadge({
   status,
@@ -25,6 +25,7 @@ export function ProductStatusBadge({
   status: ProductStatus;
   byAgent?: boolean;
 }) {
+  const t = useTranslations("products");
   const map: Record<
     ProductStatus,
     { variant: "neutral" | "info" | "success" | "error"; icon: LucideIcon }
@@ -42,12 +43,13 @@ export function ProductStatusBadge({
       icon={icon}
       className={status === "proposed" ? "border-dashed" : undefined}
     >
-      {productStatusLabels[status]}
+      {t(`status.${status}`)}
     </Badge>
   );
 }
 
 export function ImportStatusBadge({ status }: { status: ProductImportStatus }) {
+  const t = useTranslations("products");
   const variant =
     status === "failed"
       ? "error"
@@ -56,37 +58,41 @@ export function ImportStatusBadge({ status }: { status: ProductImportStatus }) {
         : status === "needs_mapping" || status === "ready_for_review" || status === "partial"
           ? "warning"
           : "neutral";
-  return <Badge variant={variant}>{importStatusLabels[status]}</Badge>;
+  return <Badge variant={variant}>{t(`importStatus.${status}`)}</Badge>;
 }
 
 export function ConfidenceBadge({ level }: { level: ConfidenceLevel }) {
+  const t = useTranslations("products");
   return (
     <Badge variant={level === "high" ? "success" : level === "medium" ? "neutral" : "warning"}>
-      {confidenceText[level]} confidence
+      {t(`confidenceOf.${level}`)}
     </Badge>
   );
 }
 
 export function SensitiveBadge() {
+  const t = useTranslations("products");
   return (
     <Badge variant="warning" icon={ShieldAlert}>
-      Sensitive
+      {t("badges.sensitive")}
     </Badge>
   );
 }
 
 export function ObservedBadge() {
+  const t = useTranslations("products");
   return (
     <Badge variant="neutral" icon={ScanEye} className="border-dashed">
-      Extracted, not reviewed
+      {t("badges.observed")}
     </Badge>
   );
 }
 
 /** Three segments plus a text label: never color alone. */
 export function CompletenessMeter({ level }: { level: "complete" | "partial" | "minimal" }) {
+  const t = useTranslations("products");
   const filled = level === "complete" ? 3 : level === "partial" ? 2 : 1;
-  const label = level === "complete" ? "Complete" : level === "partial" ? "Partial" : "Minimal";
+  const label = t(`completeness.${level}`);
   return (
     <span className="inline-flex items-center gap-2">
       <span aria-hidden className="flex gap-0.5">
@@ -114,6 +120,7 @@ export function Thumb({
   alt: string;
   size?: "md" | "lg";
 }) {
+  const t = useTranslations("products");
   const box = size === "md" ? "size-12" : "aspect-[4/5] w-full";
   if (!url)
     return (
@@ -122,10 +129,10 @@ export function Thumb({
           box,
           "flex items-center justify-center rounded-md border border-subtle bg-app",
         )}
-        title="No image"
+        title={t("badges.noImage")}
       >
         <ImageOff aria-hidden className="size-5 text-fg-muted" />
-        <span className="sr-only">No image</span>
+        <span className="sr-only">{t("badges.noImage")}</span>
       </span>
     );
   return (
@@ -188,8 +195,9 @@ export function EmptyState({
 }
 
 export function Breadcrumb({ items }: { items: Array<{ label: string; href?: Route }> }) {
+  const t = useTranslations("products");
   return (
-    <nav aria-label="Breadcrumb" className="mb-3 text-body-sm text-fg-muted">
+    <nav aria-label={t("breadcrumb.label")} className="mb-3 text-body-sm text-fg-muted">
       <ol className="flex flex-wrap items-center gap-1">
         {items.map((it, i) => (
           <li key={i} className="flex items-center gap-1">

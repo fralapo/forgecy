@@ -1,4 +1,5 @@
-import type { AiPolicy, ImportFileKind, ImportFileRoute } from "@forgecy/core";
+import type { AiPolicy, ImportFileKind, ImportFileRoute, MessageRef } from "@forgecy/core";
+import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import { IMPORT_LIMITS } from "../import/limits";
 import { extensionOf } from "./text";
 
@@ -14,6 +15,8 @@ export interface SniffResult {
   /** Present when `ok` is false. */
   code?: "IMPORT-INVALID" | "IMPORT-TOO-LARGE";
   message?: string;
+  /** The message for the interface, in the user's language. */
+  messageRef?: MessageRef;
 }
 
 const at = (b: Uint8Array, offset: number, sig: number[]) =>
@@ -54,13 +57,18 @@ export const ACCEPTED_FORMATS_TEXT = "ZIP, CSV, XLSX, PNG, JPG, WebP, TXT, DOCX 
  */
 export function sniffFile(name: string, size: number, head: Uint8Array): SniffResult {
   const ext = extensionOf(name);
-  const fail = (code: SniffResult["code"], message: string): SniffResult => ({
+  const fail = (
+    code: SniffResult["code"],
+    key: MessageKey,
+    values?: MessageValues,
+  ): SniffResult => ({
     ok: false,
     kind: "ignored",
     code,
-    message,
+    message: englishMessage(key, values),
+    messageRef: messageRef(key, values),
   });
-  if (size <= 0) return fail("IMPORT-INVALID", `"${name}" is empty.`);
+  if (size <= 0) return fail("IMPORT-INVALID", "products.errors.fileEmpty", { name });
 
   let format: SniffedFormat | undefined;
   if (at(head, 0, ascii("%PDF-"))) format = "pdf";
@@ -75,10 +83,7 @@ export function sniffFile(name: string, size: number, head: Uint8Array): SniffRe
   else if ((ext === "txt" || ext === "md") && !head.includes(0)) format = "txt";
 
   if (!format) {
-    return fail(
-      "IMPORT-INVALID",
-      `"${name}" is not an allowed format. Use ${ACCEPTED_FORMATS_TEXT}.`,
-    );
+    return fail("IMPORT-INVALID", "products.errors.formatNotAllowed", { name });
   }
   // Extension and content must agree for binary formats (e.g. a PNG renamed .pdf is refused).
   // Photos are often saved with the wrong image extension, so any image extension fits an image.
@@ -91,19 +96,16 @@ export function sniffFile(name: string, size: number, head: Uint8Array): SniffRe
   };
   const allowedExt = expectedExt[format];
   if (allowedExt && !allowedExt.includes(ext)) {
-    return fail(
-      "IMPORT-INVALID",
-      `"${name}" has an extension that does not match its content. Use ${ACCEPTED_FORMATS_TEXT}.`,
-    );
+    return fail("IMPORT-INVALID", "products.errors.extensionMismatch", { name });
   }
   const info = FORMAT_INFO[format];
   if (size > info.max) {
-    return fail(
-      "IMPORT-TOO-LARGE",
-      format === "zip"
-        ? `"${name}" exceeds 200 MB (or 2,000 files). Split it into several ZIPs.`
-        : `"${name}" exceeds ${Math.round(info.max / MB)} MB.`,
-    );
+    return format === "zip"
+      ? fail("IMPORT-TOO-LARGE", "products.errors.zipTooLarge", { name })
+      : fail("IMPORT-TOO-LARGE", "products.errors.fileExceedsMb", {
+          name,
+          mb: Math.round(info.max / MB),
+        });
   }
   return { ok: true, kind: info.kind, format, mime: info.mime, ext: format };
 }
@@ -118,18 +120,18 @@ export interface RouteChoice {
 export function aiAvailability(
   policy: AiPolicy,
   localModelConfigured: boolean,
-): { available: boolean; reason?: string } {
+): { available: boolean; reason?: string; reasonRef?: MessageRef } {
   if (policy === "no_ai")
     return {
       available: false,
-      reason:
-        "AI is turned off for this client: PDFs and images cannot be analyzed. Images are matched only by file name and SKU.",
+      reason: englishMessage("products.ai.off"),
+      reasonRef: messageRef("products.ai.off"),
     };
   if (policy === "local_only" && !localModelConfigured)
     return {
       available: false,
-      reason:
-        "The client allows only local AI and no local model is configured: using manual mapping, matching by file name and SKU, and PDFs as sources.",
+      reason: englishMessage("products.ai.localOnlyNoModel"),
+      reasonRef: messageRef("products.ai.localOnlyNoModel"),
     };
   return { available: true };
 }

@@ -1,4 +1,5 @@
 import { assertCan, ForgecyError } from "@forgecy/core";
+import { localizedError } from "@forgecy/i18n";
 import { recordAuditEvent, type Database } from "@forgecy/db";
 import type { StorageDriver } from "@forgecy/files";
 import type { ActingUser } from "../db";
@@ -17,7 +18,9 @@ export async function addProductImage(
   const product = await loadProduct(db, input.clientId, input.productId);
   const sniff = sniffFile(input.fileName, input.temp.size, input.temp.head);
   if (!sniff.ok || sniff.kind !== "image")
-    throw new ForgecyError("validation", sniff.message ?? "Upload a PNG, JPG or WebP image.");
+    throw sniff.message
+      ? new ForgecyError("validation", sniff.message, undefined, sniff.messageRef)
+      : localizedError("validation", "products.errors.uploadImage");
   const key = await storeTempFile(storage, {
     clientId: input.clientId,
     temp: input.temp,
@@ -40,8 +43,7 @@ export async function addProductImage(
       ],
       createdBy: user.id,
     });
-    if (added === 0)
-      throw new ForgecyError("conflict", "This image is already linked to the product.");
+    if (added === 0) throw localizedError("conflict", "products.errors.imageAlreadyLinked");
     await recordAuditEvent(tx, {
       actor: user.actor,
       action: "product.image_add",

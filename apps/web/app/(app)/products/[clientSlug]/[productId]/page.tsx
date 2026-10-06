@@ -1,7 +1,6 @@
 import {
-  approvalBlockers,
-  describeSource,
-  fieldDef,
+  approvalBlockerList,
+  fieldDefs,
   formatValue,
   pendingSensitive,
   productDetail,
@@ -11,35 +10,44 @@ import {
 } from "@forgecy/catalog";
 import { getDb } from "@forgecy/db";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
+import { getFormat } from "@/lib/i18n";
 import { ProductStatusBadge, Breadcrumb } from "../../_components/ui";
-import { longDate } from "../../_lib/labels";
+import { blockerText, fieldLabel, sourceText } from "../../_lib/labels";
 import { paths } from "../../_lib/paths";
 import { catalogPage, getStorage, imageUrl } from "../../_lib/server";
 import { NotAClient } from "../not-a-client";
 import { ProductView, type ProductViewData } from "./product-view";
 
-export const metadata = { title: "Product" };
+export async function generateMetadata() {
+  const t = await getTranslations("products");
+  return { title: t("product.title") };
+}
 
-const historyLabels: Record<string, string> = {
-  "product.create": "Created",
-  "product.create_from_import": "Created from import",
-  "product.update": "Edited",
-  "product.approve": "Approved",
-  "product.reject": "Rejected",
-  "product.archive": "Archived",
-  "product.restore": "Restored",
-  "product.to_draft": "Moved back to draft",
-  "product.duplicate": "Duplicated",
-  "product.sensitive_accept": "Sensitive field accepted",
-  "product.field_proposal_accepted": "Field proposal accepted",
-  "product.field_proposal_rejected": "Field proposal rejected",
-  "product.image_add": "Image added",
-  "product.image_primary": "Primary image changed",
-  "product.image_unlink": "Image unlinked",
-  "product.image_approve": "Image approved",
-  "product.image_alt": "Alt text edited",
-};
+const historyActions = [
+  "create",
+  "create_from_import",
+  "update",
+  "approve",
+  "reject",
+  "archive",
+  "restore",
+  "to_draft",
+  "duplicate",
+  "sensitive_accept",
+  "field_proposal_accepted",
+  "field_proposal_rejected",
+  "image_add",
+  "image_primary",
+  "image_unlink",
+  "image_approve",
+  "image_alt",
+] as const;
+type HistoryAction = (typeof historyActions)[number];
+
+const isFieldKey = (k: unknown): k is FieldKey =>
+  typeof k === "string" && fieldDefs.some((f) => f.key === k);
 
 export default async function ProductPage({
   params,
@@ -55,6 +63,15 @@ export default async function ProductPage({
   const { product, fields } = detail;
   const meta = (product.fieldMeta ?? {}) as FieldMetaMap;
   const storage = getStorage();
+  const t = await getTranslations("products");
+  const format = await getFormat();
+  const longDate = (d: Date) => format.date(d, "dateTime");
+  const historyLabel = (action: string) => {
+    const key = action.replace(/^product\./, "");
+    return (historyActions as readonly string[]).includes(key)
+      ? t(`product.history.${key as HistoryAction}`)
+      : action;
+  };
 
   const data: ProductViewData = {
     clientId: client.id,
@@ -72,7 +89,8 @@ export default async function ProductPage({
         m && {
           truth: m.truth,
           confidence: m.confidence,
-          source: describeSource(m.source),
+          source: sourceText(t, m.source),
+          byAgent: m.source.kind === "ai",
           sensitive: m.sensitive ?? [],
           accepted: !!m.acceptedBy,
           page: m.source.page ?? null,
@@ -80,7 +98,7 @@ export default async function ProductPage({
         },
       ]),
     ),
-    blockers: approvalBlockers(fields, meta),
+    blockers: approvalBlockerList(fields, meta).map((b) => blockerText(t, b)),
     pendingSensitive: pendingSensitive(fields, meta),
     images: await Promise.all(
       detail.images.map(async (i) => ({
@@ -97,33 +115,30 @@ export default async function ProductPage({
     proposals: detail.proposals.map(({ pr, decidedByName }) => ({
       id: pr.id,
       field: pr.field as FieldKey,
-      label: fieldDef(pr.field as FieldKey)?.label ?? pr.field,
+      label: isFieldKey(pr.field) ? fieldLabel(t, pr.field) : pr.field,
       current: formatValue(pr.field as FieldKey, pr.currentValue),
       proposed: formatValue(pr.field as FieldKey, pr.proposedValue),
       proposedRaw: pr.proposedValue,
       source: (pr.meta as { source?: SourceRef } | null)?.source
-        ? describeSource((pr.meta as { source: SourceRef }).source)
-        : "Import",
+        ? sourceText(t, (pr.meta as { source: SourceRef }).source)
+        : t("breadcrumb.import"),
       status: pr.status,
       when: longDate(pr.createdAt),
       decidedBy: decidedByName,
     })),
     history: detail.history.map(({ e, userName }) => ({
       id: String(e.id),
-      label: historyLabels[e.action] ?? e.action,
-      who: userName ?? (e.actor.startsWith("agent") ? "Brand Analyst" : "System"),
+      label: historyLabel(e.action),
+      who: userName ?? (e.actor.startsWith("agent") ? t("product.agent") : t("product.system")),
       when: longDate(e.at),
-      field:
-        typeof e.meta?.field === "string"
-          ? (fieldDef(e.meta.field as FieldKey)?.label ?? null)
-          : null,
+      field: isFieldKey(e.meta?.field) ? fieldLabel(t, e.meta.field) : null,
       note: typeof e.meta?.note === "string" ? e.meta.note : null,
     })),
     sources: [
       ...(detail.sourceImport
         ? [
             {
-              label: `Import of ${longDate(detail.sourceImport.createdAt)}`,
+              label: t("product.importOf", { date: longDate(detail.sourceImport.createdAt) }),
               href: paths.review(client.slug, detail.sourceImport.id),
               external: false,
             },
@@ -133,7 +148,7 @@ export default async function ProductPage({
         detail.pdfSources
           .filter((f) => f.storageKey)
           .map(async (f) => ({
-            label: `PDF · ${f.name}`,
+            label: t("product.pdfSource", { name: f.name }),
             href: await storage.signedUrl(f.storageKey!, { expiresInSeconds: 900 }),
             external: true,
             fileId: f.id,
@@ -152,9 +167,9 @@ export default async function ProductPage({
     <>
       <Breadcrumb
         items={[
-          { label: "Clients", href: "/clients" },
+          { label: t("breadcrumb.clients"), href: "/clients" },
           { label: client.name, href: "/products" },
-          { label: "Products", href: paths.catalog(client.slug) },
+          { label: t("breadcrumb.products"), href: paths.catalog(client.slug) },
           { label: product.name },
         ]}
       />

@@ -1,4 +1,5 @@
-import { assertCan, ForgecyError, type AiPolicy, type ImportFileRoute } from "@forgecy/core";
+import { assertCan, type AiPolicy, type ImportFileRoute } from "@forgecy/core";
+import { localizedError, type MessageKey } from "@forgecy/i18n";
 import {
   and,
   asc,
@@ -16,7 +17,7 @@ import {
 import type { StorageDriver } from "@forgecy/files";
 import { z } from "zod";
 import type { ActingUser, DbLike } from "../db";
-import { ImportError } from "./errors";
+import { importError } from "./errors";
 import {
   heuristicProposal,
   inspectFile,
@@ -77,12 +78,9 @@ export interface CatalogClient {
 /** The catalog exists only for clients, not prospects (UXA-P6-05). */
 export async function loadCatalogClient(db: DbLike, clientId: string): Promise<CatalogClient> {
   const [c] = await db.select().from(clients).where(eq(clients.id, clientId));
-  if (!c) throw new ForgecyError("not_found", "Client not found");
+  if (!c) throw localizedError("not_found", "products.errors.clientNotFound");
   if (c.status !== "active")
-    throw new ForgecyError(
-      "conflict",
-      "The product catalog is available after conversion to a client.",
-    );
+    throw localizedError("conflict", "products.errors.catalogOnlyForClients");
   return { id: c.id, name: c.name, slug: c.slug, aiPolicy: c.aiPolicy };
 }
 
@@ -95,13 +93,13 @@ export async function loadImport(
     .select()
     .from(productImports)
     .where(and(eq(productImports.id, importId), eq(productImports.clientId, clientId)));
-  if (!row) throw new ForgecyError("not_found", "Import not found");
+  if (!row) throw localizedError("not_found", "products.errors.importNotFound");
   return row;
 }
 
-function assertStatus(row: ImportRow, allowed: ImportRow["status"][], message: string) {
+function assertStatus(row: ImportRow, allowed: ImportRow["status"][], message: MessageKey) {
   if (!allowed.includes(row.status))
-    throw new ForgecyError("conflict", message, { code: "CONFLICT-STATE" });
+    throw localizedError("conflict", message, undefined, { code: "CONFLICT-STATE" });
 }
 
 /** An import still collecting files for this client and user, or a new one. */
@@ -223,7 +221,7 @@ export async function addUploadedFile(
 ): Promise<ImportFileRow> {
   assertCan(user.actor, "products.manage", input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["uploading"], "The analysis is running: add the files in a new import.");
+  assertStatus(imp, ["uploading"], "products.errors.analysisRunning");
   const count = (
     await db
       .select({ id: productImportFiles.id })
@@ -231,10 +229,9 @@ export async function addUploadedFile(
       .where(eq(productImportFiles.importId, imp.id))
   ).length;
   if (count >= IMPORT_LIMITS.filesPerImport)
-    throw new ImportError(
-      "IMPORT-TOO-LARGE",
-      `An import can contain at most ${IMPORT_LIMITS.filesPerImport} files.`,
-    );
+    throw importError("IMPORT-TOO-LARGE", "products.errors.tooManyFiles", {
+      max: IMPORT_LIMITS.filesPerImport,
+    });
 
   const relativePath = sanitizePath(input.relativePath);
   const name = relativePath.split("/").pop()!;
@@ -250,6 +247,7 @@ export async function addUploadedFile(
     valid: false,
     errorCode: sniff.code ?? null,
     message: sniff.message ?? null,
+    ...(sniff.messageRef ? { meta: { messageRef: sniff.messageRef } } : {}),
   };
   if (sniff.ok && sniff.format) {
     const needsData = sniff.format !== "zip" && sniff.kind !== "image";
@@ -309,7 +307,7 @@ export async function removeImportFile(
 ): Promise<void> {
   assertCan(user.actor, "products.manage", input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["uploading"], "Files can be removed only before the analysis starts.");
+  assertStatus(imp, ["uploading"], "products.errors.removeBeforeStart");
   await db
     .delete(productImportFiles)
     .where(and(eq(productImportFiles.id, input.fileId), eq(productImportFiles.importId, imp.id)));
@@ -328,19 +326,19 @@ export async function setFileRoute(
 ): Promise<void> {
   assertCan(user.actor, "products.manage", input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["uploading"], "The route can be changed only before the analysis starts.");
+  assertStatus(imp, ["uploading"], "products.errors.routeBeforeStart");
   const [file] = await db
     .select()
     .from(productImportFiles)
     .where(and(eq(productImportFiles.id, input.fileId), eq(productImportFiles.importId, imp.id)));
-  if (!file) throw new ForgecyError("not_found", "File not found");
+  if (!file) throw localizedError("not_found", "products.errors.fileNotFound");
   if (
     !file.valid ||
     !routesFor(file.kind, input.aiAvailable && !(file.meta as FileMeta).textless).includes(
       input.route,
     )
   )
-    throw new ForgecyError("validation", "Route not available for this file");
+    throw localizedError("validation", "products.errors.routeNotAvailable");
   await db
     .update(productImportFiles)
     .set({ route: input.route })
@@ -362,13 +360,13 @@ export async function rereadCsv(
 ): Promise<ImportFileRow> {
   assertCan(user.actor, "products.manage", input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["uploading", "needs_mapping"], "The file can no longer be re-read.");
+  assertStatus(imp, ["uploading", "needs_mapping"], "products.errors.cannotReread");
   const [file] = await db
     .select()
     .from(productImportFiles)
     .where(and(eq(productImportFiles.id, input.fileId), eq(productImportFiles.importId, imp.id)));
   if (!file?.storageKey || file.format !== "csv")
-    throw new ForgecyError("not_found", "CSV file not found");
+    throw localizedError("not_found", "products.errors.csvNotFound");
   const { readStored } = await import("../storage");
   const data = await readStored(storage, file.storageKey, IMPORT_LIMITS.sheetBytes);
   const delimiter =
@@ -413,7 +411,7 @@ export async function setImportOptions(
 ): Promise<void> {
   assertCan(user.actor, "products.manage", input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["uploading"], "Options can be changed only before the analysis starts.");
+  assertStatus(imp, ["uploading"], "products.errors.optionsBeforeStart");
   const options = importOptionsSchema.parse(input.options);
   await db
     .update(productImports)
@@ -468,31 +466,21 @@ export async function startImport(
   assertCan(user.actor, "products.manage", input.clientId);
   const client = await loadCatalogClient(db, input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["uploading"], "The import has already started.");
+  assertStatus(imp, ["uploading"], "products.errors.alreadyStarted");
   const files = await importFiles(db, imp.id);
   if (!files.some((f) => f.valid && f.route !== "ignore"))
-    throw new ForgecyError(
-      "validation",
-      "Upload at least one valid file before starting the analysis.",
-    );
+    throw localizedError("validation", "products.errors.uploadValidFirst");
   const running = await db
     .select({ id: productImports.id })
     .from(productImports)
     .where(
       and(eq(productImports.clientId, input.clientId), eq(productImports.status, "analyzing")),
     );
-  if (running.length)
-    throw new ForgecyError(
-      "conflict",
-      "An import is already being analyzed for this client: wait for it to finish.",
-    );
+  if (running.length) throw localizedError("conflict", "products.errors.alreadyAnalyzing");
   const options = importOptions(imp);
   const plan = plannedAiSteps(files, options, input.aiAvailable);
   if (plan.usesAi && client.aiPolicy === "external_restricted" && !input.aiConfirmed)
-    throw new ForgecyError(
-      "validation",
-      "Confirm sending the files to the external AI provider before starting the analysis.",
-    );
+    throw localizedError("validation", "products.errors.confirmExternalAi");
   await db.transaction(async (tx) => {
     await tx
       .update(productImports)
@@ -544,18 +532,18 @@ export async function confirmMapping(
 ): Promise<{ resumed: boolean }> {
   assertCan(user.actor, "products.manage", input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["needs_mapping"], "This import is not waiting for a mapping.");
+  assertStatus(imp, ["needs_mapping"], "products.errors.notWaitingMapping");
   const [file] = await db
     .select()
     .from(productImportFiles)
     .where(and(eq(productImportFiles.id, input.fileId), eq(productImportFiles.importId, imp.id)));
   const headers = (file?.meta as FileMeta | undefined)?.headers;
-  if (!file || !headers) throw new ForgecyError("not_found", "Sheet not found");
+  if (!file || !headers) throw localizedError("not_found", "products.errors.sheetNotFound");
   const mapping = columnMappingSchema.parse(input.mapping);
   if (mapping.columns.length !== headers.length)
-    throw new ForgecyError("validation", "The mapping does not match the file's columns");
+    throw localizedError("validation", "products.errors.mappingMismatch");
   if (!mapping.columns.includes("name"))
-    throw new ForgecyError("validation", "Map the column with the product name: it is required.");
+    throw localizedError("validation", "products.errors.mapNameRequired");
   const resumed = await db.transaction(async (tx) => {
     await tx
       .update(productImportFiles)
@@ -633,7 +621,7 @@ export async function retryImport(
 ): Promise<void> {
   assertCan(user.actor, "products.manage", input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["failed"], "Only a failed import can be retried.");
+  assertStatus(imp, ["failed"], "products.errors.onlyFailedRetry");
   const phase: ImportPhase = imp.failedStep === "scan" ? "scan" : "extract";
   await db
     .update(productImports)
@@ -660,7 +648,7 @@ export async function cancelImport(
   assertStatus(
     imp,
     ["uploading", "analyzing", "needs_mapping", "failed"],
-    "This import can no longer be cancelled.",
+    "products.errors.cannotCancel",
   );
   await db.transaction(async (tx) => {
     await tx

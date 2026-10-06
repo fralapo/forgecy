@@ -1,5 +1,5 @@
 import { extractText, getDocumentProxy } from "unpdf";
-import { ImportError } from "../import/errors";
+import { ImportError, importError } from "../import/errors";
 import { IMPORT_LIMITS } from "../import/limits";
 
 export interface PdfText {
@@ -25,19 +25,19 @@ export async function readPdfText(data: Uint8Array, name: string): Promise<PdfTe
     });
   } catch (err) {
     const n = err instanceof Error ? err.name : "";
-    throw new ImportError(
+    throw importError(
       "IMPORT-PDF-UNREADABLE",
-      n === "PasswordException"
-        ? `"${name}" is password-protected. Upload a version without a password.`
-        : `"${name}" is not a readable PDF.`,
+      n === "PasswordException" ? "products.errors.pdfPassword" : "products.errors.pdfUnreadable",
+      { name },
     );
   }
   try {
     if (pdf.numPages > IMPORT_LIMITS.pdfPages)
-      throw new ImportError(
-        "IMPORT-TOO-LARGE",
-        `"${name}" has ${pdf.numPages} pages: the limit is ${IMPORT_LIMITS.pdfPages}. Split the file.`,
-      );
+      throw importError("IMPORT-TOO-LARGE", "products.errors.tooManyPages", {
+        name,
+        pages: pdf.numPages,
+        max: IMPORT_LIMITS.pdfPages,
+      });
     const { totalPages, text } = await extractText(pdf, { mergePages: false });
     const pages = (text as string[]).map((t) =>
       t
@@ -49,7 +49,7 @@ export async function readPdfText(data: Uint8Array, name: string): Promise<PdfTe
     return { totalPages, pages, textless: chars < Math.max(10, totalPages * 8) };
   } catch (err) {
     if (err instanceof ImportError) throw err;
-    throw new ImportError("IMPORT-PDF-UNREADABLE", `"${name}" is not a readable PDF.`);
+    throw importError("IMPORT-PDF-UNREADABLE", "products.errors.pdfUnreadable", { name });
   } finally {
     await pdf.loadingTask.destroy().catch(() => undefined);
   }
