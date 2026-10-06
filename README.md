@@ -22,10 +22,10 @@ It runs on the agency's machine with Docker Compose, with no mandatory cloud ser
 
 1. **Prospects and Audit**: analysis of website, social channels and competitors, with a diagnosis, a 30-day plan and a PDF report where every observation cites its finding.
 2. **Brand Identity**: strategy, voice, visual identity with design tokens, versioned and approved by a person at the agency.
-3. **Content strategy and briefs**: pillars, rubrics and structured briefs per channel.
+3. **Content strategy and briefs**: pillars, rubrics and structured briefs per channel, drawing on the client's product catalog.
 4. **Carousel**: outline and slides generated inside the agency's templates, optional static AI images.
 5. **Review**: slide-by-slide editor, brand check and internal approval.
-6. **Export**: PNG, PDF and ZIP in the exact sizes of each channel.
+6. **Export**: PNG, PDF and ZIP in the exact sizes of each channel (Instagram 4:5 and LinkedIn document today).
 
 AI agents analyze and propose; a person always approves and publishes. No video, at any stage.
 
@@ -62,15 +62,26 @@ pnpm db:migrate && pnpm db:seed
 pnpm dev                                         # web on :3000, worker with health on :3001
 ```
 
-`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` are the same checks CI runs. Architecture, packages and conventions are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); the rules for contributors (including with Claude Code) in [CLAUDE.md](CLAUDE.md); decisions in [docs/adr](docs/adr).
+`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` are the same checks CI runs. Architecture, packages and conventions are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); the rules for contributors (including with Claude Code) in [CLAUDE.md](CLAUDE.md); decisions in [docs/adr](docs/adr); the AI agents' roles in [docs/agents](docs/agents); translations in [docs/I18N.md](docs/I18N.md).
 
 ## Status
 
-- [x] Requirements gathering
-- [x] Technical specification (internal document)
-- [x] Foundations (M1): monorepo, database, sign-in, AI gateway, job queue, storage, design system, Docker, CI
-- [ ] Prospect audits with PDF report (M2–M3)
-- [ ] Brand Identity, content strategy and carousels (M4–M6)
+The MVP milestones are all on `main`. The repository, code, docs and agent prompts are in English.
+
+- [x] Requirements gathering and technical specification (internal documents)
+- [x] **M1 Foundations**: monorepo, database, sign-in, AI gateway, job queue, storage, design system, Docker, CI
+- [x] **M2 Prospect audits**: website, social and competitor analysis, cross-source comparison, diagnosis, PDF report, conversion to client
+- [x] **M3 Renderer and templates**: agency template catalog (HTML, CSS and `template.json`), slide renderer, PNG/PDF/ZIP export
+- [x] **M4 Brand Identity**: versioned identity, brand book import, AI proposals reviewed by a person, approval and publishing
+- [x] **Product catalog**: mixed import (CSV, PDF, images), AI extraction with human review, product sheets
+- [x] **M5 Content and carousels**: strategy and plan, structured briefs, outline, slide editor, static AI images
+- [x] **M6 Brand Guard**: brand consistency checks, internal review and the export gate
+- [ ] **M7 (v1)**: client-facing Brand Book, more formats (Instagram 1:1, Stories 9:16, Facebook 4:5, TikTok photo), agent settings, batch automations, full client import/export, dark theme
+
+### Languages
+
+- **Interface**: English (source and fallback) and Italian, chosen per person in Settings; new users get their browser language. Every string lives in `packages/i18n/messages/<locale>/`; [docs/I18N.md](docs/I18N.md) explains how to add a language.
+- **Deliverables**: reports and carousels are written in English by default; each audit or content piece can be set to another language, independently of the interface language.
 
 ## License
 
