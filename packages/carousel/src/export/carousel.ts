@@ -1,5 +1,5 @@
 import { DEFAULT_LOCALE, type Locale } from "@forgecy/core";
-import { getTranslator, intlLocale } from "@forgecy/i18n";
+import { englishMessage, getTranslator, intlLocale, messageRef } from "@forgecy/i18n";
 import type { Browser } from "playwright-core";
 import type { BrandTheme } from "../brand";
 import { exportFileNames } from "../filenames";
@@ -50,8 +50,9 @@ export interface ExportCarouselResult {
 }
 
 export class ExportCancelledError extends Error {
+  readonly ref = messageRef("jobs.errors.exportCancelled");
   constructor() {
-    super("Export cancelled");
+    super(englishMessage("jobs.errors.exportCancelled"));
     this.name = "ExportCancelledError";
   }
 }
@@ -156,7 +157,7 @@ export async function exportCarousel(
     const entries = [
       ...files.map((f) => ({ name: f.name, data: f.data })),
       { name: "caption.txt", data: enc.encode(captionText(texts)) },
-      { name: "texts.md", data: enc.encode(slidesMarkdown(pkg, slides, meta, texts)) },
+      { name: "texts.md", data: enc.encode(slidesMarkdown(pkg, slides, meta, texts, language)) },
       { name: "slides.json", data: enc.encode(slidesJson(pkg, slides, meta, texts, brand)) },
     ];
     files.push({

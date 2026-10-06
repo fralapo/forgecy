@@ -32,10 +32,17 @@
       "noData": "Nessun dato raccolto per questo canale",
       "unverified": "Valore senza prove verificabili: scartato",
       "notVisible": "Non visibile nei dati"
-    }
+    },
+    "pdfTitle": "Audit {date}"
   },
   "carousel": {
     "untitled": "Carosello senza titolo",
-    "imageNote": "Immagine “{slot}”: {brief}"
+    "imageNote": "Immagine “{slot}”: {brief}",
+    "texts": {
+      "meta": "{client} · versione {version} · {format}",
+      "slide": "Slide {number} · {role}",
+      "imageAlt": "Testo alternativo dell'immagine: {alt}",
+      "caption": "Didascalia"
+    }
   }
 }

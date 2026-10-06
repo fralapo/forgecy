@@ -32,10 +32,17 @@
       "noData": "No data collected for this channel",
       "unverified": "Value without verifiable evidence: rejected",
       "notVisible": "Not visible in the data"
-    }
+    },
+    "pdfTitle": "Audit {date}"
   },
   "carousel": {
     "untitled": "Untitled carousel",
-    "imageNote": "Image “{slot}”: {brief}"
+    "imageNote": "Image “{slot}”: {brief}",
+    "texts": {
+      "meta": "{client} · version {version} · {format}",
+      "slide": "Slide {number} · {role}",
+      "imageAlt": "Image alt text: {alt}",
+      "caption": "Caption"
+    }
   }
 }
