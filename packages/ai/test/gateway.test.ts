@@ -343,3 +343,69 @@ describe("images", () => {
     ).rejects.toMatchObject({ code: "policy_blocked" });
   });
 });
+
+describe("vision input", () => {
+  const png = (tag: number) =>
+    new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, tag]);
+  const shot = { data: png(1), mimeType: "image/png" as const, id: "audit/ig-profile.png" };
+  const ok = { title: "Profilo", slides: 3 };
+
+  it("sends images on the first user turn and logs only hash, size and type", async () => {
+    const { gateway, anthropic, ledger } = setup();
+    anthropic.push({ json: ok });
+    await gateway.generateObject({
+      ...baseReq,
+      task: "audit_analyze",
+      clientPolicy: "external_allowed",
+      images: [shot],
+    });
+    expect(anthropic.calls[0]!.messages[0]!.images).toHaveLength(1);
+    const summary = ledger.entries[0]!.inputSummary as { images: unknown[] };
+    expect(summary.images).toEqual([
+      {
+        id: "audit/ig-profile.png",
+        sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+        bytes: 9,
+        mimeType: "image/png",
+      },
+    ]);
+    expect(JSON.stringify(ledger.entries)).not.toContain(Buffer.from(shot.data).toString("base64"));
+  });
+
+  it("keeps the images on the validation retry", async () => {
+    const { gateway, anthropic } = setup();
+    anthropic.push({ json: { title: "x" } }, { json: ok });
+    await gateway.generateObject({ ...baseReq, clientPolicy: "external_allowed", images: [shot] });
+    expect(anthropic.calls[1]!.messages[0]!.images).toHaveLength(1);
+    expect(anthropic.calls[1]!.messages.slice(1).every((m) => !m.images)).toBe(true);
+  });
+
+  it("applies the same policy: no_ai blocks, local_only goes to the local model", async () => {
+    const { gateway, anthropic, local, ledger } = setup();
+    await expect(
+      gateway.generateObject({ ...baseReq, clientPolicy: "no_ai", images: [shot] }),
+    ).rejects.toMatchObject({ code: "policy_blocked" });
+    expect(ledger.entries[0]!.inputSummary).toHaveProperty("images");
+    local.push({ json: ok });
+    await gateway.generateObject({ ...baseReq, clientPolicy: "local_only", images: [shot] });
+    expect(anthropic.calls).toHaveLength(0);
+    expect(local.calls[0]!.messages[0]!.images).toHaveLength(1);
+  });
+
+  it("rejects mismatched, oversized or too many images before any call", async () => {
+    const { gateway, anthropic, ledger } = setup();
+    const call = (images: Parameters<typeof gateway.generateObject>[0]["images"]) =>
+      gateway.generateObject({ ...baseReq, clientPolicy: "external_allowed", images });
+    await expect(call([{ ...shot, mimeType: "image/jpeg" }])).rejects.toMatchObject({
+      code: "validation",
+    });
+    await expect(
+      call([{ data: new Uint8Array(3_750_001), mimeType: "image/png" }]),
+    ).rejects.toMatchObject({ code: "validation" });
+    await expect(call(Array.from({ length: 21 }, () => shot))).rejects.toMatchObject({
+      code: "validation",
+    });
+    expect(anthropic.calls).toHaveLength(0);
+    expect(ledger.entries).toHaveLength(0);
+  });
+});

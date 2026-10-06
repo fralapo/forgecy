@@ -8,6 +8,7 @@
 
 [![Stato: in sviluppo][status-shield]][status-url]
 [![Ultimo commit][commit-shield]][commit-url]
+[![Licenza: AGPL-3.0][license-shield]][license-url]
 
 </div>
 
@@ -71,9 +72,15 @@ pnpm dev                                         # web su :3000, worker con heal
 - [ ] Audit dei prospect con report PDF (M2–M3)
 - [ ] Brand Identity, content strategy e caroselli (M4–M6)
 
+## Licenza
+
+Forgecy è distribuito con licenza [GNU Affero General Public License v3.0](LICENSE) (`AGPL-3.0-only`). Puoi usarlo, modificarlo e installarlo per la tua agenzia; se offri una versione modificata ad altri attraverso la rete, devi rendere disponibile a quegli utenti anche il suo codice sorgente.
+
 <p align="right">(<a href="#readme-top">torna su</a>)</p>
 
 [status-shield]: https://img.shields.io/badge/stato-in%20sviluppo-blue?style=flat-square
 [status-url]: https://github.com/fralapo/forgecy
 [commit-shield]: https://img.shields.io/github/last-commit/fralapo/forgecy?style=flat-square
 [commit-url]: https://github.com/fralapo/forgecy/commits/main
+[license-shield]: https://img.shields.io/badge/licenza-AGPL--3.0-blue?style=flat-square
+[license-url]: LICENSE

@@ -14,6 +14,7 @@ COPY apps/worker/package.json apps/worker/
 COPY packages/core/package.json packages/core/
 COPY packages/db/package.json packages/db/
 COPY packages/ai/package.json packages/ai/
+COPY packages/carousel/package.json packages/carousel/
 COPY packages/catalog/package.json packages/catalog/
 COPY packages/files/package.json packages/files/
 COPY packages/jobs/package.json packages/jobs/
@@ -40,17 +41,20 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
 WORKDIR /app
 COPY --from=web-build --chown=node:node /app/apps/web/.next/standalone ./
 COPY --from=web-build --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=workspace --chown=node:node /app/templates ./templates
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
   CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "apps/web/server.js"]
 
-# Runs TypeScript sources with tsx. M3 switches this target to a Playwright base image for Chromium.
-FROM base AS worker
-ENV NODE_ENV=production
-COPY --from=workspace --chown=node:node /app /app
-USER node
+# Runs TypeScript sources with tsx on Playwright's image, which ships Chromium and its
+# system libraries. Keep the tag equal to playwright-core in packages/carousel/package.json.
+FROM mcr.microsoft.com/playwright:v1.63.0-noble AS worker
+ENV NODE_ENV=production PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+WORKDIR /app
+COPY --from=workspace --chown=pwuser:pwuser /app /app
+USER pwuser
 EXPOSE 3001
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
   CMD node -e "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"

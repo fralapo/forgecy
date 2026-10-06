@@ -1,4 +1,4 @@
-import { Building2, LayoutDashboard, Palette, Settings } from "lucide-react";
+import { Building2, LayoutDashboard, LayoutTemplate, Palette, Settings } from "lucide-react";
 import { Package } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -10,6 +10,7 @@ const nav = [
   { href: "/", label: "Panoramica", icon: LayoutDashboard },
   { href: "/clienti", label: "Clienti", icon: Building2 },
   { href: "/prodotti", label: "Prodotti", icon: Package },
+  { href: "/template", label: "Template", icon: LayoutTemplate },
   { href: "/impostazioni", label: "Impostazioni", icon: Settings },
   { href: "/design", label: "Design system", icon: Palette },
 ] as const;

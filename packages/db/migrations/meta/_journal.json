@@ -19,8 +19,15 @@
     {
       "idx": 2,
       "version": "7",
-      "when": 1791245926231,
-      "tag": "0002_catalog",
+      "when": 1791259401766,
+      "tag": "0002_templates",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791271139245,
+      "tag": "0003_catalog",
       "breakpoints": true
     }
   ]

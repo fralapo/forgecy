@@ -5,4 +5,5 @@ export * from "./clients";
 export * from "./system";
 export * from "./jobs";
 export * from "./ai";
+export * from "./templates";
 export * from "./catalog";

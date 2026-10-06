@@ -1,5 +1,5 @@
 {
-  "id": "8912a821-6659-4b7e-a246-46ec2e6d211e",
+  "id": "955a8ede-bba9-42a2-97cd-36b17b0f097a",
   "prevId": "06cc9bc3-448f-449d-8e55-0ec9c8209f2a",
   "version": "7",
   "dialect": "postgresql",
@@ -1326,8 +1326,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.product_column_mappings": {
-      "name": "product_column_mappings",
+    "public.templates": {
+      "name": "templates",
       "schema": "",
       "columns": {
         "id": {
@@ -1337,1354 +1337,99 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "client_id": {
-          "name": "client_id",
-          "type": "uuid",
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "name": {
           "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "signature": {
-          "name": "signature",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "mapping": {
-          "name": "mapping",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "product_column_mappings_name_uq": {
-          "name": "product_column_mappings_name_uq",
-          "columns": [
-            {
-              "expression": "client_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "name",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "product_column_mappings_sig_idx": {
-          "name": "product_column_mappings_sig_idx",
-          "columns": [
-            {
-              "expression": "client_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "signature",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "product_column_mappings_client_id_clients_id_fk": {
-          "name": "product_column_mappings_client_id_clients_id_fk",
-          "tableFrom": "product_column_mappings",
-          "tableTo": "clients",
-          "columnsFrom": [
-            "client_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "product_column_mappings_created_by_users_id_fk": {
-          "name": "product_column_mappings_created_by_users_id_fk",
-          "tableFrom": "product_column_mappings",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.product_field_proposals": {
-      "name": "product_field_proposals",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "client_id": {
-          "name": "client_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "product_id": {
-          "name": "product_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "field": {
-          "name": "field",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "current_value": {
-          "name": "current_value",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "proposed_value": {
-          "name": "proposed_value",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "meta": {
-          "name": "meta",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "status": {
-          "name": "status",
-          "type": "proposal_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'proposed'"
-        },
-        "import_id": {
-          "name": "import_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "proposed_by": {
-          "name": "proposed_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "decided_by": {
-          "name": "decided_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "decided_at": {
-          "name": "decided_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "note": {
-          "name": "note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "product_field_proposals_product_idx": {
-          "name": "product_field_proposals_product_idx",
-          "columns": [
-            {
-              "expression": "product_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "product_field_proposals_client_idx": {
-          "name": "product_field_proposals_client_idx",
-          "columns": [
-            {
-              "expression": "client_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "product_field_proposals_client_id_clients_id_fk": {
-          "name": "product_field_proposals_client_id_clients_id_fk",
-          "tableFrom": "product_field_proposals",
-          "tableTo": "clients",
-          "columnsFrom": [
-            "client_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "product_field_proposals_product_id_products_id_fk": {
-          "name": "product_field_proposals_product_id_products_id_fk",
-          "tableFrom": "product_field_proposals",
-          "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "product_field_proposals_import_id_product_imports_id_fk": {
-          "name": "product_field_proposals_import_id_product_imports_id_fk",
-          "tableFrom": "product_field_proposals",
-          "tableTo": "product_imports",
-          "columnsFrom": [
-            "import_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "product_field_proposals_decided_by_users_id_fk": {
-          "name": "product_field_proposals_decided_by_users_id_fk",
-          "tableFrom": "product_field_proposals",
-          "tableTo": "users",
-          "columnsFrom": [
-            "decided_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.product_images": {
-      "name": "product_images",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "client_id": {
-          "name": "client_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "product_id": {
-          "name": "product_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "storage_key": {
-          "name": "storage_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "sha256": {
-          "name": "sha256",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "mime": {
-          "name": "mime",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "file_name": {
-          "name": "file_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "alt": {
-          "name": "alt",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "status": {
-          "name": "status",
-          "type": "product_image_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'draft'"
-        },
-        "match_method": {
-          "name": "match_method",
-          "type": "image_match_method",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "confidence": {
-          "name": "confidence",
-          "type": "confidence_level",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'high'"
-        },
-        "is_primary": {
-          "name": "is_primary",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "position": {
-          "name": "position",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "source_import_id": {
-          "name": "source_import_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "approved_by": {
-          "name": "approved_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "product_images_product_idx": {
-          "name": "product_images_product_idx",
-          "columns": [
-            {
-              "expression": "product_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "product_images_product_sha_uq": {
-          "name": "product_images_product_sha_uq",
-          "columns": [
-            {
-              "expression": "product_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "sha256",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "product_images_client_id_clients_id_fk": {
-          "name": "product_images_client_id_clients_id_fk",
-          "tableFrom": "product_images",
-          "tableTo": "clients",
-          "columnsFrom": [
-            "client_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "product_images_product_id_products_id_fk": {
-          "name": "product_images_product_id_products_id_fk",
-          "tableFrom": "product_images",
-          "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "product_images_source_import_id_product_imports_id_fk": {
-          "name": "product_images_source_import_id_product_imports_id_fk",
-          "tableFrom": "product_images",
-          "tableTo": "product_imports",
-          "columnsFrom": [
-            "source_import_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "product_images_approved_by_users_id_fk": {
-          "name": "product_images_approved_by_users_id_fk",
-          "tableFrom": "product_images",
-          "tableTo": "users",
-          "columnsFrom": [
-            "approved_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "product_images_created_by_users_id_fk": {
-          "name": "product_images_created_by_users_id_fk",
-          "tableFrom": "product_images",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.product_import_files": {
-      "name": "product_import_files",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "import_id": {
-          "name": "import_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "client_id": {
-          "name": "client_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parent_id": {
-          "name": "parent_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "path": {
-          "name": "path",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "kind": {
           "name": "kind",
-          "type": "import_file_kind",
-          "typeSchema": "public",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "channel": {
+          "name": "channel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "format": {
           "name": "format",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
-        },
-        "route": {
-          "name": "route",
-          "type": "import_file_route",
-          "typeSchema": "public",
-          "primaryKey": false,
           "notNull": true
-        },
-        "storage_key": {
-          "name": "storage_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "sha256": {
-          "name": "sha256",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "size": {
-          "name": "size",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "mime": {
-          "name": "mime",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "valid": {
-          "name": "valid",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "error_code": {
-          "name": "error_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "message": {
-          "name": "message",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "meta": {
-          "name": "meta",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "mapping": {
-          "name": "mapping",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mapping_proposal": {
-          "name": "mapping_proposal",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mapping_confirmed_by": {
-          "name": "mapping_confirmed_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mapping_confirmed_at": {
-          "name": "mapping_confirmed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "image_state": {
-          "name": "image_state",
-          "type": "import_image_state",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "suggestion": {
-          "name": "suggestion",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "product_import_files_import_idx": {
-          "name": "product_import_files_import_idx",
-          "columns": [
-            {
-              "expression": "import_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "product_import_files_parent_idx": {
-          "name": "product_import_files_parent_idx",
-          "columns": [
-            {
-              "expression": "parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "product_import_files_import_id_product_imports_id_fk": {
-          "name": "product_import_files_import_id_product_imports_id_fk",
-          "tableFrom": "product_import_files",
-          "tableTo": "product_imports",
-          "columnsFrom": [
-            "import_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "product_import_files_client_id_clients_id_fk": {
-          "name": "product_import_files_client_id_clients_id_fk",
-          "tableFrom": "product_import_files",
-          "tableTo": "clients",
-          "columnsFrom": [
-            "client_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "product_import_files_parent_id_product_import_files_id_fk": {
-          "name": "product_import_files_parent_id_product_import_files_id_fk",
-          "tableFrom": "product_import_files",
-          "tableTo": "product_import_files",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "product_import_files_mapping_confirmed_by_users_id_fk": {
-          "name": "product_import_files_mapping_confirmed_by_users_id_fk",
-          "tableFrom": "product_import_files",
-          "tableTo": "users",
-          "columnsFrom": [
-            "mapping_confirmed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.product_import_items": {
-      "name": "product_import_items",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "import_id": {
-          "name": "import_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "client_id": {
-          "name": "client_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "import_item_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "position": {
-          "name": "position",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "draft": {
-          "name": "draft",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "field_meta": {
-          "name": "field_meta",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "confidence": {
-          "name": "confidence",
-          "type": "confidence_level",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'medium'"
-        },
-        "sensitive": {
-          "name": "sensitive",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         },
         "origin": {
           "name": "origin",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "images": {
-          "name": "images",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "proposed_by_agent": {
-          "name": "proposed_by_agent",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "match_product_id": {
-          "name": "match_product_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "match_reason": {
-          "name": "match_reason",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
-        },
-        "match_revision": {
-          "name": "match_revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "conflicts": {
-          "name": "conflicts",
-          "type": "jsonb",
-          "primaryKey": false,
           "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "conflict_decisions": {
-          "name": "conflict_decisions",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "resolution": {
-          "name": "resolution",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "product_id": {
-          "name": "product_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "discard_reason": {
-          "name": "discard_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "decided_by": {
-          "name": "decided_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "decided_at": {
-          "name": "decided_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "product_import_items_import_idx": {
-          "name": "product_import_items_import_idx",
-          "columns": [
-            {
-              "expression": "import_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "product_import_items_match_idx": {
-          "name": "product_import_items_match_idx",
-          "columns": [
-            {
-              "expression": "match_product_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "product_import_items_import_id_product_imports_id_fk": {
-          "name": "product_import_items_import_id_product_imports_id_fk",
-          "tableFrom": "product_import_items",
-          "tableTo": "product_imports",
-          "columnsFrom": [
-            "import_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "product_import_items_client_id_clients_id_fk": {
-          "name": "product_import_items_client_id_clients_id_fk",
-          "tableFrom": "product_import_items",
-          "tableTo": "clients",
-          "columnsFrom": [
-            "client_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "product_import_items_match_product_id_products_id_fk": {
-          "name": "product_import_items_match_product_id_products_id_fk",
-          "tableFrom": "product_import_items",
-          "tableTo": "products",
-          "columnsFrom": [
-            "match_product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "product_import_items_product_id_products_id_fk": {
-          "name": "product_import_items_product_id_products_id_fk",
-          "tableFrom": "product_import_items",
-          "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "product_import_items_decided_by_users_id_fk": {
-          "name": "product_import_items_decided_by_users_id_fk",
-          "tableFrom": "product_import_items",
-          "tableTo": "users",
-          "columnsFrom": [
-            "decided_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.product_imports": {
-      "name": "product_imports",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "default": "'agency'"
         },
         "client_id": {
           "name": "client_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "status": {
           "name": "status",
-          "type": "product_import_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'uploading'"
-        },
-        "options": {
-          "name": "options",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "summary": {
-          "name": "summary",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "job_id": {
-          "name": "job_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "error_code": {
-          "name": "error_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "error": {
-          "name": "error",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "failed_step": {
-          "name": "failed_step",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "started_at": {
-          "name": "started_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "closed_by": {
-          "name": "closed_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "closed_at": {
-          "name": "closed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "product_imports_client_idx": {
-          "name": "product_imports_client_idx",
-          "columns": [
-            {
-              "expression": "client_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "product_imports_client_id_clients_id_fk": {
-          "name": "product_imports_client_id_clients_id_fk",
-          "tableFrom": "product_imports",
-          "tableTo": "clients",
-          "columnsFrom": [
-            "client_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "product_imports_job_id_jobs_id_fk": {
-          "name": "product_imports_job_id_jobs_id_fk",
-          "tableFrom": "product_imports",
-          "tableTo": "jobs",
-          "columnsFrom": [
-            "job_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "product_imports_created_by_users_id_fk": {
-          "name": "product_imports_created_by_users_id_fk",
-          "tableFrom": "product_imports",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "product_imports_closed_by_users_id_fk": {
-          "name": "product_imports_closed_by_users_id_fk",
-          "tableFrom": "product_imports",
-          "tableTo": "users",
-          "columnsFrom": [
-            "closed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.products": {
-      "name": "products",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "client_id": {
-          "name": "client_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "product_status",
+          "type": "version_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'draft'"
         },
-        "name": {
-          "name": "name",
+        "manifest": {
+          "name": "manifest",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "package_key": {
+          "name": "package_key",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "sku": {
-          "name": "sku",
+        "package_sha256": {
+          "name": "package_sha256",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
-        "category": {
-          "name": "category",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "tags": {
-          "name": "tags",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::text[]"
-        },
-        "details": {
-          "name": "details",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "field_meta": {
-          "name": "field_meta",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "origin": {
-          "name": "origin",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "source_import_id": {
-          "name": "source_import_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "proposed_by_agent": {
-          "name": "proposed_by_agent",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "revision": {
-          "name": "revision",
+        "package_size": {
+          "name": "package_size",
           "type": "integer",
           "primaryKey": false,
+          "notNull": true
+        },
+        "validation": {
+          "name": "validation",
+          "type": "jsonb",
+          "primaryKey": false,
           "notNull": true,
-          "default": 1
+          "default": "'{}'::jsonb"
+        },
+        "version_notes": {
+          "name": "version_notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_by": {
           "name": "created_by",
@@ -2692,33 +1437,21 @@
           "primaryKey": false,
           "notNull": false
         },
-        "updated_by": {
-          "name": "updated_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "approved_by": {
-          "name": "approved_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "approved_at": {
-          "name": "approved_at",
+        "submitted_at": {
+          "name": "submitted_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
-        "approval_note": {
-          "name": "approval_note",
-          "type": "text",
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
-        "rejected_reason": {
-          "name": "rejected_reason",
-          "type": "text",
+        "published_by": {
+          "name": "published_by",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
@@ -2744,53 +1477,32 @@
         }
       },
       "indexes": {
-        "products_client_status_idx": {
-          "name": "products_client_status_idx",
+        "templates_key_version_idx": {
+          "name": "templates_key_version_idx",
           "columns": [
             {
-              "expression": "client_id",
+              "expression": "key",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
+            {
+              "expression": "version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "templates_status_idx": {
+          "name": "templates_status_idx",
+          "columns": [
             {
               "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "products_client_sku_idx": {
-          "name": "products_client_sku_idx",
-          "columns": [
-            {
-              "expression": "client_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "sku",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "products_import_idx": {
-          "name": "products_import_idx",
-          "columns": [
-            {
-              "expression": "source_import_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2803,9 +1515,9 @@
         }
       },
       "foreignKeys": {
-        "products_client_id_clients_id_fk": {
-          "name": "products_client_id_clients_id_fk",
-          "tableFrom": "products",
+        "templates_client_id_clients_id_fk": {
+          "name": "templates_client_id_clients_id_fk",
+          "tableFrom": "templates",
           "tableTo": "clients",
           "columnsFrom": [
             "client_id"
@@ -2813,25 +1525,12 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "products_source_import_id_product_imports_id_fk": {
-          "name": "products_source_import_id_product_imports_id_fk",
-          "tableFrom": "products",
-          "tableTo": "product_imports",
-          "columnsFrom": [
-            "source_import_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "products_created_by_users_id_fk": {
-          "name": "products_created_by_users_id_fk",
-          "tableFrom": "products",
+        "templates_created_by_users_id_fk": {
+          "name": "templates_created_by_users_id_fk",
+          "tableFrom": "templates",
           "tableTo": "users",
           "columnsFrom": [
             "created_by"
@@ -2842,25 +1541,12 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "products_updated_by_users_id_fk": {
-          "name": "products_updated_by_users_id_fk",
-          "tableFrom": "products",
+        "templates_published_by_users_id_fk": {
+          "name": "templates_published_by_users_id_fk",
+          "tableFrom": "templates",
           "tableTo": "users",
           "columnsFrom": [
-            "updated_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "products_approved_by_users_id_fk": {
-          "name": "products_approved_by_users_id_fk",
-          "tableFrom": "products",
-          "tableTo": "users",
-          "columnsFrom": [
-            "approved_by"
+            "published_by"
           ],
           "columnsTo": [
             "id"
@@ -2872,7 +1558,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "templates_origin_check": {
+          "name": "templates_origin_check",
+          "value": "\"templates\".\"origin\" in ('agency', 'system')"
+        }
+      },
       "isRLSEnabled": false
     }
   },
@@ -2977,103 +1668,6 @@
         "in_review",
         "approved",
         "published",
-        "archived"
-      ]
-    },
-    "public.confidence_level": {
-      "name": "confidence_level",
-      "schema": "public",
-      "values": [
-        "high",
-        "medium",
-        "low"
-      ]
-    },
-    "public.image_match_method": {
-      "name": "image_match_method",
-      "schema": "public",
-      "values": [
-        "folder",
-        "filename",
-        "sku",
-        "sheet",
-        "ai",
-        "manual"
-      ]
-    },
-    "public.import_file_kind": {
-      "name": "import_file_kind",
-      "schema": "public",
-      "values": [
-        "sheet",
-        "pdf",
-        "image",
-        "text",
-        "archive",
-        "ignored"
-      ]
-    },
-    "public.import_file_route": {
-      "name": "import_file_route",
-      "schema": "public",
-      "values": [
-        "map",
-        "match",
-        "extract",
-        "source",
-        "ignore"
-      ]
-    },
-    "public.import_image_state": {
-      "name": "import_image_state",
-      "schema": "public",
-      "values": [
-        "unassigned",
-        "assigned",
-        "ignored"
-      ]
-    },
-    "public.import_item_status": {
-      "name": "import_item_status",
-      "schema": "public",
-      "values": [
-        "pending",
-        "accepted",
-        "approved",
-        "merged",
-        "discarded"
-      ]
-    },
-    "public.product_image_status": {
-      "name": "product_image_status",
-      "schema": "public",
-      "values": [
-        "draft",
-        "approved"
-      ]
-    },
-    "public.product_import_status": {
-      "name": "product_import_status",
-      "schema": "public",
-      "values": [
-        "uploading",
-        "analyzing",
-        "needs_mapping",
-        "ready_for_review",
-        "completed",
-        "partial",
-        "failed",
-        "cancelled"
-      ]
-    },
-    "public.product_status": {
-      "name": "product_status",
-      "schema": "public",
-      "values": [
-        "draft",
-        "proposed",
-        "approved",
-        "rejected",
         "archived"
       ]
     }
