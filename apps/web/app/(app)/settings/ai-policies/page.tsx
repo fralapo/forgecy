@@ -1,5 +1,11 @@
-import { budgetPercent, getBudgetOverview, getDefaultAiPolicy, type BudgetLine } from "@forgecy/ai";
-import { aiPolicies, type AiPolicy } from "@forgecy/core";
+import {
+  budgetPercent,
+  getBudgetOverview,
+  getDefaultAiPolicy,
+  restrictableProviders,
+  type BudgetLine,
+} from "@forgecy/ai";
+import { aiPolicies, type AiPolicy, type ProviderId } from "@forgecy/core";
 import { eq, getDb, users } from "@forgecy/db";
 import { Badge, Card } from "@forgecy/ui";
 import { Ban, Cloud, Server, Shield, type LucideIcon } from "lucide-react";
@@ -12,7 +18,13 @@ import { getFormat } from "@/lib/i18n";
 import { requireUser } from "@/lib/session";
 import { AdminOnly } from "../_components/admin-only";
 import { UsageBar } from "../_components/usage-bar";
-import { BudgetForm, ClientPolicySelect, DefaultPolicyForm } from "./forms";
+import {
+  ApprovedProvidersForm,
+  BudgetForm,
+  ClientPolicySelect,
+  DefaultPolicyForm,
+  type ProviderChoice,
+} from "./forms";
 
 export async function generateMetadata() {
   const t = await getTranslations("admin.aiPolicies");
@@ -27,6 +39,27 @@ const policyIcon: Record<AiPolicy, LucideIcon> = {
 };
 
 const usd = (microUsd: number) => microUsd / 1_000_000;
+
+const providerName: Record<Exclude<ProviderId, "local">, string> = {
+  anthropic: "Anthropic",
+  openai: "OpenAI",
+  openrouter: "OpenRouter",
+  google: "Google",
+  deepseek: "DeepSeek",
+};
+
+function providerChoices(): ProviderChoice[] {
+  const keys: Record<Exclude<ProviderId, "local">, string | undefined> = {
+    anthropic: env.ANTHROPIC_API_KEY,
+    openai: env.OPENAI_API_KEY,
+    openrouter: env.OPENROUTER_API_KEY,
+    google: env.GOOGLE_AI_API_KEY,
+    deepseek: env.DEEPSEEK_API_KEY,
+  };
+  return restrictableProviders.flatMap((id) =>
+    id === "local" ? [] : [{ id, name: providerName[id], configured: Boolean(keys[id]) }],
+  );
+}
 
 export default async function AiPoliciesPage() {
   const user = await requireUser();
@@ -79,6 +112,7 @@ export default async function AiPoliciesPage() {
   const counts = new Map<AiPolicy, number>();
   for (const c of overview.clients) counts.set(c.aiPolicy, (counts.get(c.aiPolicy) ?? 0) + 1);
   const localMissing = !env.LOCAL_LLM_ENABLED && counts.get("local_only");
+  const choices = providerChoices();
 
   return (
     <>
@@ -207,6 +241,14 @@ export default async function AiPoliciesPage() {
                           name={c.name}
                           policy={c.aiPolicy}
                         />
+                        {c.aiPolicy === "external_restricted" ? (
+                          <ApprovedProvidersForm
+                            clientId={c.clientId}
+                            name={c.name}
+                            choices={choices}
+                            approved={c.approvedProviders}
+                          />
+                        ) : null}
                       </td>
                       <td className="py-3 pr-4">
                         <BudgetForm

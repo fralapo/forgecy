@@ -46,7 +46,13 @@
       "noClientLimit": "Nessun limite del cliente: vale il budget dell’agenzia",
       "changed": "Policy cambiata.",
       "changedCancelled": "Policy cambiata. {count, plural, one {# job in attesa è stato annullato.} other {# job in attesa sono stati annullati.}}",
-      "localMissing": "Nessun modello locale configurato: le funzioni AI dei clienti con questa policy non partiranno."
+      "localMissing": "Nessun modello locale configurato: le funzioni AI dei clienti con questa policy non partiranno.",
+      "providersFor": "Provider ammessi per {name}",
+      "providerNotConfigured": "{name} (non configurato)",
+      "providersEmpty": "Ancora nessun provider ammesso: le funzioni AI di questo cliente usano solo il modello locale.",
+      "providersSave": "Salva provider ammessi",
+      "providersSaved": "Provider ammessi salvati.",
+      "providersNone": "Scegli almeno un provider."
     },
     "agency": {
       "title": "Budget dell’agenzia",

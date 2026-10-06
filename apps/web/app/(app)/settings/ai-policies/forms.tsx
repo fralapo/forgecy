@@ -1,6 +1,6 @@
 "use client";
 
-import { aiPolicies, type AiPolicy } from "@forgecy/core";
+import { aiPolicies, type AiPolicy, type ProviderId } from "@forgecy/core";
 import { Button, Input, Label } from "@forgecy/ui";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -8,7 +8,12 @@ import { useId, useState, useTransition } from "react";
 import { selectClass } from "@/app/(app)/audit/_lib/styles";
 import { ActionFeedback } from "../_components/action-feedback";
 import type { AdminActionResult } from "../_lib/admin-action";
-import { setBudgetAction, setClientPolicyAction, setDefaultPolicyAction } from "./actions";
+import {
+  setApprovedProvidersAction,
+  setBudgetAction,
+  setClientPolicyAction,
+  setDefaultPolicyAction,
+} from "./actions";
 
 function useAction() {
   const router = useRouter();
@@ -137,6 +142,60 @@ export function BudgetForm({
       <div className="basis-full">
         <ActionFeedback result={result} />
       </div>
+    </form>
+  );
+}
+
+export interface ProviderChoice {
+  id: ProviderId;
+  name: string;
+  configured: boolean;
+}
+
+/** external_restricted only: which external providers may receive this client's data. */
+export function ApprovedProvidersForm({
+  clientId,
+  name,
+  choices,
+  approved,
+}: {
+  clientId: string;
+  name: string;
+  choices: ProviderChoice[];
+  approved: ProviderId[];
+}) {
+  const t = useTranslations("admin.aiPolicies.clients");
+  const { pending, result, run } = useAction();
+  return (
+    <form
+      className="mt-3 flex flex-col gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const picked = new FormData(e.currentTarget).getAll("provider").map(String);
+        run(() => setApprovedProvidersAction(clientId, picked));
+      }}
+    >
+      <fieldset className="flex flex-col gap-1">
+        <legend className="mb-1 text-body-sm text-fg">{t("providersFor", { name })}</legend>
+        {choices.map((c) => (
+          <Label key={c.id} className="flex items-center gap-2 font-normal">
+            <input
+              type="checkbox"
+              name="provider"
+              value={c.id}
+              defaultChecked={approved.includes(c.id)}
+            />
+            {c.configured ? c.name : t("providerNotConfigured", { name: c.name })}
+          </Label>
+        ))}
+      </fieldset>
+      {approved.length === 0 ? (
+        <p className="text-body-sm text-warning">{t("providersEmpty")}</p>
+      ) : null}
+      <Button type="submit" variant="secondary" className="self-start" disabled={pending}>
+        {t("providersSave")}
+      </Button>
+      <ActionFeedback result={result} />
     </form>
   );
 }

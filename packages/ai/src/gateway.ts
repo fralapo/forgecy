@@ -77,6 +77,7 @@ export interface InputSummaryInput {
 interface CommonRequest {
   clientId?: string | null;
   clientPolicy: AiPolicy;
+  /** Narrows the client's approved providers (external_restricted); it cannot add any. */
   approvedProviders?: readonly ProviderId[];
   authorizedBy?: string | null;
   contentId?: string | null;
@@ -218,6 +219,19 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
   }
 
   /**
+   * external_restricted: the client's providers approved by an Admin (stored with the
+   * client). A request can narrow them further (e.g. `[]` until a person confirms
+   * sending files), never widen them.
+   */
+  async function approvedFor(req: CommonRequest): Promise<readonly ProviderId[]> {
+    if (req.clientPolicy !== "external_restricted") return [];
+    if (!ledger.approvedProviders) return req.approvedProviders ?? [];
+    const stored = req.clientId ? await ledger.approvedProviders(req.clientId) : [];
+    const narrow = req.approvedProviders;
+    return narrow ? stored.filter((p) => narrow.includes(p)) : stored;
+  }
+
+  /**
    * Policy filter: no_ai blocks everything, local_only only ever sees the local
    * route, external_restricted keeps approved providers. Writes a `blocked`
    * row and throws when nothing is left, so the job never starts.
@@ -263,10 +277,11 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
       candidates = route.fallback ? [route.primary, route.fallback] : [route.primary];
     }
 
+    const approved = await approvedFor(req);
     const allowed: ModelRef[] = [];
     let firstDenial: string | undefined;
     for (const c of candidates) {
-      const decision = checkAiPolicy(req.clientPolicy, c.provider, req.approvedProviders ?? []);
+      const decision = checkAiPolicy(req.clientPolicy, c.provider, approved);
       if (decision.allowed) allowed.push(c);
       else firstDenial ??= decision.reason;
     }

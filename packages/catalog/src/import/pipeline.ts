@@ -1,6 +1,5 @@
 import {
   ForgecyError,
-  providerIds,
   type Actor,
   type ConfidenceLevel,
   type ImportFileKind,
@@ -189,8 +188,9 @@ async function callAi<T>(
       input: req.input,
       clientId: run.client.id,
       clientPolicy: run.client.aiPolicy,
-      // external_restricted: the person explicitly confirmed sending these files (page 73).
-      approvedProviders: run.options.aiConfirmed ? providerIds : [],
+      // external_restricted: nothing leaves until the person confirms sending these files
+      // (page 73); then only the providers approved for the client (page 61).
+      ...(run.options.aiConfirmed ? {} : { approvedProviders: [] }),
       authorizedBy: run.options.aiConfirmedBy ?? run.createdBy,
       jobId: run.ctx.jobId ?? null,
       inputSummary: { meta: { importId: run.importId, ...req.meta } },

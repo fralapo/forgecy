@@ -3,11 +3,13 @@
 import {
   budgetPercent,
   getBudgetOverview,
+  restrictableProviders,
+  setApprovedProviders,
   setDefaultAiPolicy,
   setMonthlyBudget,
 } from "@forgecy/ai";
 import { setProspectPolicy } from "@forgecy/audit";
-import { aiPolicies, PermissionDeniedError, type AiPolicy } from "@forgecy/core";
+import { aiPolicies, PermissionDeniedError, type AiPolicy, type ProviderId } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
@@ -103,4 +105,27 @@ export async function setBudgetAction(
     ok: true,
     message: percent !== null && percent >= 100 ? t("alreadyExceeded") : t("saved"),
   };
+}
+
+export async function setApprovedProvidersAction(
+  clientId: string,
+  providers: string[],
+): Promise<AdminActionResult> {
+  const user = await requireUser();
+  const t = await getTranslations("admin.aiPolicies.clients");
+  const parsed = z
+    .object({
+      clientId: z.uuid(),
+      providers: z.array(z.enum(restrictableProviders as [ProviderId, ...ProviderId[]])).min(1),
+    })
+    .safeParse({ clientId, providers });
+  if (!parsed.success) return { ok: false, error: t("providersNone"), code: "INPUT-INVALID" };
+  try {
+    await setApprovedProviders(getDb(), user.actor, parsed.data.clientId, parsed.data.providers);
+  } catch (err) {
+    if (err instanceof PermissionDeniedError) return deniedResult();
+    throw err;
+  }
+  revalidatePath(PATH);
+  return { ok: true, message: t("providersSaved") };
 }
