@@ -1,4 +1,210 @@
 {
+  "title": "Automazioni",
+  "description": "Tanti caroselli in bozza per un cliente in una volta, da una lista di brief o dalle voci del suo piano di 30 giorni.",
+  "banner": "Le automazioni creano solo bozze. Ogni carosello va rivisto e approvato da una persona prima dell'export.",
+  "counts": "{active} attive · {paused} in pausa",
+  "new": {
+    "open": "Nuova automazione",
+    "heading": "Nuova automazione",
+    "client": "Cliente",
+    "name": "Nome",
+    "nameDefault": "Batch del {date} · {client}",
+    "source": "Elementi da",
+    "create": "Crea automazione",
+    "cancel": "Annulla",
+    "noEligible": "Per creare un'automazione serve un cliente attivo con Brand Identity pubblicata e policy AI diversa da Senza AI. <link>Apri i clienti</link>"
+  },
+  "source": {
+    "briefs": "Lista di brief",
+    "plan": "Voci del piano"
+  },
+  "sourceCount": "{source, select, plan {Dalle voci del piano} other {Da lista di brief}} ({count})",
+  "statusLabel": {
+    "draft": "Bozza",
+    "active": "Attiva",
+    "paused": "In pausa",
+    "failed": "Non riuscita"
+  },
+  "runStatus": {
+    "running": "In corso: {done} di {total}",
+    "paused": "In pausa: {done} di {total}",
+    "completed": "Completato",
+    "partial": "Completato in parte: {done} di {total}",
+    "failed": "Non riuscito",
+    "cancelled": "Annullato"
+  },
+  "outcome": "{completed, plural, one {# bozza} other {# bozze}} · {failed} non riuscite",
+  "stopAt": {
+    "outline": "Fino alla scaletta",
+    "slides": "Fino alle slide"
+  },
+  "list": {
+    "name": "Nome",
+    "client": "Cliente",
+    "status": "Stato",
+    "lastRun": "Ultima esecuzione",
+    "outcome": "Esito",
+    "stopAt": "Arresto",
+    "cost": "Costo",
+    "createdBy": "Creata da",
+    "never": "Mai eseguita",
+    "costValue": "{actual} · stima {estimate}",
+    "createdByValue": "{name}, {date}",
+    "unknownUser": "Ex membro",
+    "empty": "Nessuna automazione. Un'automazione crea più caroselli in bozza da una lista di brief o dalle voci del piano di un cliente.",
+    "emptyFiltered": "Nessuna automazione con questi filtri.",
+    "clearFilters": "Azzera filtri",
+    "filters": "Filtri",
+    "allClients": "Tutti i clienti",
+    "allStatuses": "Tutti gli stati",
+    "allSources": "Tutte le origini",
+    "apply": "Applica"
+  },
+  "detail": {
+    "breadcrumb": "Automazioni",
+    "tabs": {
+      "config": "Configurazione",
+      "runs": "Esecuzioni"
+    },
+    "sectionsLabel": "Sezioni dell'automazione",
+    "next": {
+      "incomplete": "Prossima azione: tu · Completa {count, plural, one {# elemento segnato} other {# elementi segnati}} come incompleti",
+      "start": "Prossima azione: tu · Avvia l'automazione",
+      "running": "In corso: {done} di {total} caroselli",
+      "review": "Prossima azione: tu · Rivedi {count, plural, one {# bozza creata} other {# bozze create}}",
+      "retry": "Prossima azione: tu · Riprova {count, plural, one {# elemento non riuscito} other {# elementi non riusciti}}",
+      "none": "Nessuna azione in sospeso",
+      "paused": "In pausa: riprendi per continuare con gli elementi in coda"
+    },
+    "readOnly": "Esecuzione in corso: la configurazione torna modificabile al termine o in pausa.",
+    "failedBanner": "Questa automazione è fallita in modo definitivo. Duplicala per ripartire.",
+    "name": "Nome",
+    "items": {
+      "heading": "Elementi",
+      "briefsHelp": "Una riga per carosello. Un brief richiede almeno {min} caratteri e un obiettivo.",
+      "add": "Aggiungi brief",
+      "paste": "Incolla da testo",
+      "pasteHelp": "Una riga per brief.",
+      "pasteAdd": "Aggiungi righe",
+      "remove": "Rimuovi",
+      "item": "Elemento {n}",
+      "title": "Titolo provvisorio",
+      "brief": "Brief",
+      "objective": "Obiettivo",
+      "chooseObjective": "Scegli un obiettivo",
+      "pillar": "Pilastro",
+      "rubric": "Rubrica",
+      "none": "Nessuno",
+      "audienceNote": "Nota sul pubblico",
+      "cta": "Call to action",
+      "max": "Massimo {max} caroselli per automazione.",
+      "empty": "Aggiungi almeno un brief.",
+      "issue": {
+        "briefTooShort": "Brief più corto di {min} caratteri",
+        "noObjective": "Senza obiettivo"
+      }
+    },
+    "plan": {
+      "heading": "Voci del piano",
+      "help": "Scegli le voci del piano attivo; ogni brief parte da tema, hook e note e si può modificare sopra.",
+      "day": "Giorno {day}",
+      "hasCarousel": "Ha già un carosello",
+      "empty": "Tutte le voci del piano hanno già un carosello, oppure non c'è un piano attivo. <link>Apri il piano</link>",
+      "add": "Aggiungi le voci selezionate"
+    },
+    "params": {
+      "heading": "Parametri comuni",
+      "format": "Formato",
+      "slideCount": "Numero di slide",
+      "slideCountDefault": "Default del template",
+      "language": "Lingua del deliverable",
+      "template": "Template",
+      "templateAuto": "Automatico",
+      "audiences": "Pubblici",
+      "audiencesAll": "Tutti i pubblici della Brand Identity"
+    },
+    "stop": {
+      "heading": "Fin dove arriva ogni carosello",
+      "outline": "Fino alla scaletta (default): le slide restano un'azione di una persona, «Approva scaletta e genera slide».",
+      "slides": "Fino alle slide: scaletta e slide generate, entrambe in bozza.",
+      "help": "In entrambi i casi i caroselli restano in bozza. Nessun carosello viene inviato in revisione, approvato o esportato in automatico.",
+      "images": "Gli slot immagine restano vuoti: la generazione di immagini nel batch non è prevista nella v1."
+    },
+    "save": "Salva configurazione",
+    "saving": "Salvataggio…",
+    "saved": "Salvato",
+    "unsaved": "Modifiche non salvate",
+    "summary": {
+      "heading": "Riepilogo di avvio",
+      "items": "{valid, plural, one {# elemento pronto} other {# elementi pronti}} · {incomplete} incompleti",
+      "policy": "Policy AI",
+      "estimate": "Costo stimato",
+      "estimateValue": "{low} – {high}",
+      "budgetClient": "Budget residuo del cliente",
+      "budgetAgency": "Budget residuo dell'agenzia",
+      "budgetValue": "{left} di {limit}",
+      "noLimit": "Nessun limite mensile",
+      "fits": "Rientra nel budget",
+      "confirm": "Supera il 90% del budget residuo: serve conferma",
+      "exceeds": "Supera il budget: l'esecuzione si fermerà a circa {count} elementi",
+      "exhausted": "Il budget AI mensile è esaurito",
+      "confirmCost": "Confermo il costo stimato",
+      "start": "Avvia {count, plural, one {# carosello} other {# caroselli}}",
+      "blocked": {
+        "noItems": "Aggiungi almeno un elemento",
+        "incompleteItems": "Completa gli elementi segnati come incompleti",
+        "tooManyItems": "Massimo 20 elementi",
+        "noAi": "La policy AI del cliente non consente l'AI",
+        "localOnlyNoModel": "Nessun modello locale configurato per questo cliente solo locale",
+        "exhausted": "Il budget AI mensile è esaurito",
+        "unsaved": "Prima salva la configurazione",
+        "noAudience": "Aggiungi un pubblico alla Brand Identity"
+      },
+      "lastRun": "Ultima esecuzione"
+    },
+    "actions": {
+      "pause": "Metti in pausa",
+      "resume": "Riprendi",
+      "cancel": "Annulla esecuzione",
+      "cancelConfirm": "Annullare l'esecuzione? Gli elementi in coda vengono annullati; i caroselli già creati restano in bozza.",
+      "retry": "Riprova elementi non riusciti",
+      "duplicate": "Duplica",
+      "copyName": "{name} (copia)",
+      "delete": "Elimina automazione",
+      "deleteConfirm": "Eliminare l'automazione «{name}»?",
+      "deleteConfirmButton": "Elimina automazione",
+      "keep": "Mantieni",
+      "reviewDrafts": "Apri i caroselli del cliente"
+    },
+    "runs": {
+      "empty": "Nessuna esecuzione. Avvia l'automazione per creare le bozze.",
+      "approvalNote": "Le bozze create si approvano dalla pagina di ogni carosello.",
+      "run": "Esecuzione {number}",
+      "startedBy": "Avviata da {name}, {date}",
+      "items": "{done} di {total}",
+      "cost": "Costo",
+      "title": "Titolo",
+      "status": "Stato",
+      "step": {
+        "pending": "Non iniziato",
+        "created": "Bozza creata",
+        "outline": "Scaletta pronta",
+        "slides": "Slide pronte"
+      },
+      "carousel": "Carosello",
+      "error": "Errore",
+      "open": "Apri",
+      "itemStatus": {
+        "queued": "In coda",
+        "running": "In corso",
+        "completed": "Completato",
+        "failed": "Non riuscito",
+        "cancelled": "Annullato"
+      },
+      "selected": "Esecuzione selezionata",
+      "stepReached": "Passo raggiunto"
+    }
+  },
   "errors": {
     "notFound": "Questa automazione non esiste o non puoi vederla.",
     "runNotFound": "Questa esecuzione non esiste o non puoi vederla.",
@@ -18,7 +224,8 @@
     "policy": {
       "noAi": "La policy AI del cliente non consente l'AI.",
       "localOnlyNoModel": "Il cliente consente solo modelli locali e nessuno è configurato."
-    }
+    },
+    "noAudience": "Ogni carosello richiede un pubblico: la Brand Identity pubblicata di questo cliente non ne ha. Aggiungine uno nella strategia."
   },
   "status": {
     "policyChanged": "Fallita: la policy AI del cliente è passata a nessuna AI.",
@@ -28,6 +235,7 @@
     "starterInactive": "La persona che ha avviato l'esecuzione non è più attiva.",
     "noTemplate": "Nessun template pubblicato per questo formato.",
     "interrupted": "Il worker si è fermato mentre questo elemento era in corso.",
-    "invalidItem": "Non è stato possibile leggere la configurazione dell'elemento."
+    "invalidItem": "Non è stato possibile leggere la configurazione dell'elemento.",
+    "noAudience": "La Brand Identity pubblicata non ha pubblici."
   }
 }

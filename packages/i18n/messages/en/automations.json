@@ -1,4 +1,210 @@
 {
+  "title": "Automations",
+  "description": "Many draft carousels for one client at once, from a list of briefs or from the items of its 30-day plan.",
+  "banner": "Automations only create drafts. Every carousel is reviewed and approved by a person before export.",
+  "counts": "{active} active · {paused} paused",
+  "new": {
+    "open": "New automation",
+    "heading": "New automation",
+    "client": "Client",
+    "name": "Name",
+    "nameDefault": "Batch of {date} · {client}",
+    "source": "Items from",
+    "create": "Create automation",
+    "cancel": "Cancel",
+    "noEligible": "Automations need an active client with a published Brand Identity and an AI policy other than No AI. <link>Open clients</link>"
+  },
+  "source": {
+    "briefs": "List of briefs",
+    "plan": "Plan items"
+  },
+  "sourceCount": "{source, select, plan {From plan items} other {From a list of briefs}} ({count})",
+  "statusLabel": {
+    "draft": "Draft",
+    "active": "Active",
+    "paused": "Paused",
+    "failed": "Failed"
+  },
+  "runStatus": {
+    "running": "Running: {done} of {total}",
+    "paused": "Paused: {done} of {total}",
+    "completed": "Completed",
+    "partial": "Partly completed: {done} of {total}",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  },
+  "outcome": "{completed, plural, one {# draft} other {# drafts}} · {failed} failed",
+  "stopAt": {
+    "outline": "Up to the outline",
+    "slides": "Up to the slides"
+  },
+  "list": {
+    "name": "Name",
+    "client": "Client",
+    "status": "Status",
+    "lastRun": "Last run",
+    "outcome": "Outcome",
+    "stopAt": "Stops at",
+    "cost": "Cost",
+    "createdBy": "Created by",
+    "never": "Never run",
+    "costValue": "{actual} · estimated {estimate}",
+    "createdByValue": "{name}, {date}",
+    "unknownUser": "Former member",
+    "empty": "No automations. An automation creates several draft carousels from a list of briefs or from a client's plan items.",
+    "emptyFiltered": "No automations with these filters.",
+    "clearFilters": "Clear filters",
+    "filters": "Filters",
+    "allClients": "All clients",
+    "allStatuses": "All statuses",
+    "allSources": "All origins",
+    "apply": "Apply"
+  },
+  "detail": {
+    "breadcrumb": "Automations",
+    "tabs": {
+      "config": "Configuration",
+      "runs": "Runs"
+    },
+    "sectionsLabel": "Sections of the automation",
+    "next": {
+      "incomplete": "Next action: you · Complete {count, plural, one {# item} other {# items}} marked as incomplete",
+      "start": "Next action: you · Start the automation",
+      "running": "Running: {done} of {total} carousels",
+      "review": "Next action: you · Review {count, plural, one {# draft} other {# drafts}} created",
+      "retry": "Next action: you · Retry {count, plural, one {# failed item} other {# failed items}}",
+      "none": "No pending action",
+      "paused": "Paused: resume to continue with the queued items"
+    },
+    "readOnly": "Run in progress: the configuration becomes editable again when it ends or is paused.",
+    "failedBanner": "This automation failed for good. Duplicate it to start again.",
+    "name": "Name",
+    "items": {
+      "heading": "Items",
+      "briefsHelp": "One row per carousel. A brief needs at least {min} characters and an objective.",
+      "add": "Add brief",
+      "paste": "Paste from text",
+      "pasteHelp": "One line per brief.",
+      "pasteAdd": "Add lines",
+      "remove": "Remove",
+      "item": "Item {n}",
+      "title": "Working title",
+      "brief": "Brief",
+      "objective": "Objective",
+      "chooseObjective": "Choose an objective",
+      "pillar": "Pillar",
+      "rubric": "Rubric",
+      "none": "None",
+      "audienceNote": "Audience note",
+      "cta": "Call to action",
+      "max": "At most {max} carousels per automation.",
+      "empty": "Add at least one brief.",
+      "issue": {
+        "briefTooShort": "Brief shorter than {min} characters",
+        "noObjective": "No objective"
+      }
+    },
+    "plan": {
+      "heading": "Plan items",
+      "help": "Pick the items of the active plan; each brief starts from the theme, hook and notes and can be edited above.",
+      "day": "Day {day}",
+      "hasCarousel": "Already has a carousel",
+      "empty": "Every item of the plan already has a carousel, or there is no active plan. <link>Open the plan</link>",
+      "add": "Add selected items"
+    },
+    "params": {
+      "heading": "Common parameters",
+      "format": "Format",
+      "slideCount": "Number of slides",
+      "slideCountDefault": "Template default",
+      "language": "Deliverable language",
+      "template": "Template",
+      "templateAuto": "Automatic",
+      "audiences": "Audiences",
+      "audiencesAll": "Every audience of the Brand Identity"
+    },
+    "stop": {
+      "heading": "How far each carousel goes",
+      "outline": "Up to the outline (default): the slides stay a person's action, \"Approve outline and generate slides\".",
+      "slides": "Up to the slides: outline and slides are generated, both as drafts.",
+      "help": "Either way the carousels stay drafts. No carousel is sent for review, approved or exported automatically.",
+      "images": "Image slots stay empty: batch image generation is not part of v1."
+    },
+    "save": "Save configuration",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "unsaved": "Unsaved changes",
+    "summary": {
+      "heading": "Start summary",
+      "items": "{valid, plural, one {# item ready} other {# items ready}} · {incomplete} incomplete",
+      "policy": "AI policy",
+      "estimate": "Estimated cost",
+      "estimateValue": "{low} – {high}",
+      "budgetClient": "Client budget left",
+      "budgetAgency": "Agency budget left",
+      "budgetValue": "{left} of {limit}",
+      "noLimit": "No monthly limit",
+      "fits": "Fits the budget",
+      "confirm": "Uses more than 90% of the budget left: confirmation needed",
+      "exceeds": "Exceeds the budget: the run will stop after about {count} items",
+      "exhausted": "The monthly AI budget is used up",
+      "confirmCost": "I confirm the estimated cost",
+      "start": "Start {count, plural, one {# carousel} other {# carousels}}",
+      "blocked": {
+        "noItems": "Add at least one item",
+        "incompleteItems": "Complete the items marked as incomplete",
+        "tooManyItems": "At most 20 items",
+        "noAi": "The client's AI policy does not allow AI",
+        "localOnlyNoModel": "No local model is configured for this local-only client",
+        "exhausted": "The monthly AI budget is used up",
+        "unsaved": "Save the configuration first",
+        "noAudience": "Add an audience to the Brand Identity"
+      },
+      "lastRun": "Last run"
+    },
+    "actions": {
+      "pause": "Pause",
+      "resume": "Resume",
+      "cancel": "Cancel run",
+      "cancelConfirm": "Cancel the run? Queued items are cancelled; carousels already created stay drafts.",
+      "retry": "Retry failed items",
+      "duplicate": "Duplicate",
+      "copyName": "{name} (copy)",
+      "delete": "Delete automation",
+      "deleteConfirm": "Delete the automation \"{name}\"?",
+      "deleteConfirmButton": "Delete automation",
+      "keep": "Keep it",
+      "reviewDrafts": "Open the client's carousels"
+    },
+    "runs": {
+      "empty": "No runs. Start the automation to create the drafts.",
+      "approvalNote": "The drafts created are approved from the page of each carousel.",
+      "run": "Run {number}",
+      "startedBy": "Started by {name}, {date}",
+      "items": "{done} of {total}",
+      "cost": "Cost",
+      "title": "Title",
+      "status": "Status",
+      "step": {
+        "pending": "Not started",
+        "created": "Draft created",
+        "outline": "Outline ready",
+        "slides": "Slides ready"
+      },
+      "carousel": "Carousel",
+      "error": "Error",
+      "open": "Open",
+      "itemStatus": {
+        "queued": "Queued",
+        "running": "Running",
+        "completed": "Completed",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      },
+      "selected": "Selected run",
+      "stepReached": "Step reached"
+    }
+  },
   "errors": {
     "notFound": "This automation does not exist or you cannot see it.",
     "runNotFound": "This run does not exist or you cannot see it.",
@@ -18,7 +224,8 @@
     "policy": {
       "noAi": "The client's AI policy does not allow AI.",
       "localOnlyNoModel": "The client allows only local models and none is configured."
-    }
+    },
+    "noAudience": "Every carousel needs an audience: the published Brand Identity of this client has none. Add one in its strategy."
   },
   "status": {
     "policyChanged": "Failed: the client's AI policy changed to no AI.",
@@ -28,6 +235,7 @@
     "starterInactive": "The person who started the run is no longer active.",
     "noTemplate": "No published template for this format.",
     "interrupted": "The worker stopped while this item was running.",
-    "invalidItem": "The item's configuration could not be read."
+    "invalidItem": "The item's configuration could not be read.",
+    "noAudience": "The published Brand Identity has no audience."
   }
 }

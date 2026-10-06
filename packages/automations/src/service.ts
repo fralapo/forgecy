@@ -5,6 +5,7 @@
  * run, and every carousel they create stays a draft.
  */
 import { createDbLedger, monthKey, type BudgetScope } from "@forgecy/ai";
+import { getPublishedBrandIdentity } from "@forgecy/brand";
 import { humanOnly } from "@forgecy/content";
 import {
   AUTOMATION_MAX_ITEMS,
@@ -718,6 +719,12 @@ async function startChecks(
     fail("policy_blocked", `automations.errors.policy.${blocker}`, undefined, {
       code: "POLICY-BLOCKED",
     });
+  // Every carousel speaks to at least one live audience of the published Brand Identity.
+  if (!readParams(row.params).audienceIds.length) {
+    const brand = await getPublishedBrandIdentity(deps.db, actor, row.clientId);
+    if (!brand?.document.strategy.audience.some((a) => !a.deprecated))
+      fail("validation", "automations.errors.noAudience", undefined, { code: "NO-AUDIENCE" });
+  }
   const estimate = await estimateRun(deps.db, {
     clientId: row.clientId,
     items: itemCount,

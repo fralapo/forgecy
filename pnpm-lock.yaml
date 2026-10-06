@@ -62,6 +62,9 @@ importers:
       '@forgecy/audit':
         specifier: workspace:*
         version: link:../../packages/audit
+      '@forgecy/automations':
+        specifier: workspace:*
+        version: link:../../packages/automations
       '@forgecy/backup':
         specifier: workspace:*
         version: link:../../packages/backup

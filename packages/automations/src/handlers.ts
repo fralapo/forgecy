@@ -173,6 +173,8 @@ export async function runAutomationItem(
             .filter((a) => !a.deprecated)
             .map((a) => a.id)
             .slice(0, 20);
+      if (!audienceIds.length)
+        throw new ItemError("NO-AUDIENCE", "automations.itemErrors.noAudience");
       const created = await createCarousel(db, actor, {
         clientId: run.clientId,
         params: {
