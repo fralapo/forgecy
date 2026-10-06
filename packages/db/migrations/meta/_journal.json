@@ -50,6 +50,13 @@
       "when": 1791272534893,
       "tag": "0006_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791273043158,
+      "tag": "0007_brand_guard",
+      "breakpoints": true
     }
   ]
 }
