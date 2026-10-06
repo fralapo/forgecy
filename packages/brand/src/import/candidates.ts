@@ -1,5 +1,6 @@
 /** Turns extracted candidates into proposals, skipping duplicates and values already in the draft. */
-import { ForgecyError, type Actor } from "@forgecy/core";
+import { ForgecyError, type Actor, type MessageRef } from "@forgecy/core";
+import { englishMessage, messageRef } from "@forgecy/i18n";
 import type { Database } from "@forgecy/db";
 import { BRAND_ANALYST_PROMPT_VERSION } from "./analyst";
 import { proposeChange, type ProposeInput } from "../service";
@@ -14,6 +15,8 @@ export interface CandidateProposal {
   op: ProposalOp;
   value: unknown;
   rationale?: string;
+  /** Set when the rationale is written by code, to show it in the reader's language. */
+  rationaleRef?: MessageRef;
   modelConfidence?: number;
   evidence: { locator?: string; quote?: string };
   /** provider/model, for the activity log. */
@@ -88,7 +91,8 @@ export async function addSourceProposals(
           $value: hexToDtcg(hex),
           ...(v.usage ? { $description: v.usage.slice(0, 400) } : {}),
         },
-        title: `Color ${name} ${hex}`,
+        title: englishMessage("brand.import.colorTitle", { name, hex }),
+        titleRef: messageRef("brand.import.colorTitle", { name, hex }),
       };
     } else {
       const key = `${c.path}:${JSON.stringify(c.value)}`;
@@ -103,6 +107,7 @@ export async function addSourceProposals(
       await proposeChange(db, agent, {
         ...input,
         ...(c.rationale ? { rationale: c.rationale } : {}),
+        ...(c.rationaleRef ? { rationaleRef: c.rationaleRef } : {}),
         ...(c.modelConfidence !== undefined ? { modelConfidence: c.modelConfidence } : {}),
         evidence: [
           {

@@ -10,5 +10,7 @@ export const brandImportSourceJob = defineJob({
     sourceId: z.uuid(),
     /** Person who started the import: recorded as authorized_by in jobs_log. */
     requestedBy: z.uuid().nullish(),
+    /** Interface language of that person: the Brand Analyst explains its proposals in it. */
+    language: z.string().min(2).max(8).default("en"),
   }),
 });

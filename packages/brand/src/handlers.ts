@@ -57,7 +57,7 @@ export const brandHandlers: JobHandlers = {
         requestedBy: payload.requestedBy ?? null,
         progress: ctx.progress,
       },
-      { clientId: payload.clientId, sourceId: payload.sourceId },
+      { clientId: payload.clientId, sourceId: payload.sourceId, language: payload.language },
     );
     return { ...result };
   }),

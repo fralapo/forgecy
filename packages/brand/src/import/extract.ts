@@ -3,12 +3,18 @@
  * (page, slide or section), colors and fonts. No AI here; the Brand Analyst step
  * reads the pages afterwards.
  */
+import type { MessageRef } from "@forgecy/core";
+import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import { unzipSync, strFromU8 } from "fflate";
 import { normalizeHex } from "../tokens";
 import type { ImportFileType } from "./detect";
 import { familyFromFileName, readFontNames, weightFromName } from "./fonts";
 
 export interface ExtractedPage {
+  /**
+   * Where the text is ("p. 12", "Slide 3"): a stable English id that the AI cites back;
+   * the interface translates it when shown.
+   */
   locator: string;
   text: string;
 }
@@ -33,15 +39,22 @@ export interface Extraction {
   colors: ExtractedColor[];
   fonts: ExtractedFont[];
   /** Set when part of the file could not be read. */
-  warnings: string[];
+  warnings: MessageRef[];
 }
 
+type ImportKey<G extends string> = MessageKey & `brand.import.${G}.${string}`;
+
+/** `message` is English (logs); `ref` is the same text for the interface. */
 export class ExtractionError extends Error {
-  constructor(message: string) {
-    super(message);
+  readonly ref: MessageRef;
+  constructor(key: ImportKey<"errors">) {
+    super(englishMessage(key));
     this.name = "ExtractionError";
+    this.ref = messageRef(key);
   }
 }
+
+const warning = (key: ImportKey<"warnings">, values?: MessageValues) => messageRef(key, values);
 
 const MAX_PAGES = 400;
 const MAX_PAGE_CHARS = 20_000;
@@ -119,7 +132,7 @@ function unzip(bytes: Uint8Array): Record<string, Uint8Array> {
   try {
     return unzipSync(bytes);
   } catch {
-    throw new ExtractionError("Not readable: the file is damaged or password-protected.");
+    throw new ExtractionError("brand.import.errors.damaged");
   }
 }
 
@@ -183,7 +196,7 @@ function paragraphs(
 function extractDocx(bytes: Uint8Array): Extraction {
   const files = unzip(bytes);
   const doc = files["word/document.xml"];
-  if (!doc) throw new ExtractionError("Word document without readable content.");
+  if (!doc) throw new ExtractionError("brand.import.errors.wordEmpty");
   const pages: ExtractedPage[] = [];
   let current: ExtractedPage = { locator: "Start of document", text: "" };
   let section = 0;
@@ -232,7 +245,9 @@ function extractPptx(bytes: Uint8Array): Extraction {
   const themeHex = new Set(theme.colors.map((c) => c.hex));
   const frequent = [...used.values()].filter((c) => !themeHex.has(c.hex) && c.count >= 3);
   const warnings =
-    slides.length > MAX_PAGES ? [`Only the first ${MAX_PAGES} slides were read`] : [];
+    slides.length > MAX_PAGES
+      ? [warning("brand.import.warnings.firstSlides", { max: MAX_PAGES })]
+      : [];
   return {
     pages,
     colors: [...theme.colors, ...frequent, ...colorsInText(pages)],
@@ -251,22 +266,19 @@ async function extractPdf(bytes: Uint8Array): Promise<Extraction> {
   } catch (err) {
     const name = (err as { name?: string }).name ?? "";
     if (/password/i.test(name) || /password/i.test(String((err as Error).message)))
-      throw new ExtractionError(
-        "Not readable: protected PDF. Upload a version without a password.",
-      );
-    throw new ExtractionError("Not readable: the PDF is damaged.");
+      throw new ExtractionError("brand.import.errors.pdfProtected");
+    throw new ExtractionError("brand.import.errors.pdfDamaged");
   }
   const { totalPages, text } = await extractText(pdf, { mergePages: false });
   const pages = text
     .slice(0, MAX_PAGES)
     .map((t, i) => ({ locator: `p. ${i + 1}`, text: clean(t).slice(0, MAX_PAGE_CHARS) }))
     .filter((p) => p.text);
-  const warnings: string[] = [];
-  if (totalPages > MAX_PAGES) warnings.push(`Only the first ${MAX_PAGES} pages were read`);
+  const warnings: MessageRef[] = [];
+  if (totalPages > MAX_PAGES)
+    warnings.push(warning("brand.import.warnings.firstPages", { max: MAX_PAGES }));
   if (totalPages > 0 && pages.length === 0)
-    warnings.push(
-      "No selectable text: the PDF seems to be made of images. Colors and texts must be entered manually.",
-    );
+    warnings.push(warning("brand.import.warnings.pdfNoText"));
   await pdf.cleanup?.();
   return { pages, colors: colorsInText(pages), fonts: [], warnings };
 }
@@ -299,7 +311,7 @@ function extractFont(bytes: Uint8Array, fileName: string): Extraction {
     pages: [],
     colors: [],
     fonts: [{ family, weights: weight ? [weight] : [], locator: fileName }],
-    warnings: names ? [] : ["Font name taken from the file name"],
+    warnings: names ? [] : [warning("brand.import.warnings.fontFromFileName")],
   };
 }
 

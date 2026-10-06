@@ -9,9 +9,16 @@ import {
   PermissionDeniedError,
   type Actor,
   type BrandSourceKind,
+  type MessageRef,
   type Permission,
 } from "@forgecy/core";
-import { localizedError, type MessageKey, type MessageValues } from "@forgecy/i18n";
+import {
+  englishMessage,
+  localizedError,
+  messageRef,
+  type MessageKey,
+  type MessageValues,
+} from "@forgecy/i18n";
 import {
   and,
   brandIdentities,
@@ -177,12 +184,21 @@ async function openDraft(tx: Tx, clientId: string, createdBy: string | null): Pr
   return row!;
 }
 
+function staleRef(key: "fieldChanged" | "restored" | "sourceRemoved", values?: MessageValues) {
+  return messageRef(`brand.import.stale.${key}`, values);
+}
+
+/** Why a proposal went stale: English text for logs and the API, reference for the interface. */
+function staleOf(ref: MessageRef) {
+  return { staleReason: englishMessage(ref.key as MessageKey, ref.values), staleRef: ref };
+}
+
 /** Marks pending proposals whose patch no longer applies to `state` as stale. */
 async function refreshStale(
   tx: Tx,
   identityId: string,
   state: DraftState,
-  reason = "The field changed after the proposal",
+  reason: MessageRef = staleRef("fieldChanged"),
   alsoFieldPath?: { fieldPath: string; exceptId: string },
 ): Promise<number> {
   const pending = await tx
@@ -211,7 +227,7 @@ async function refreshStale(
   if (stale.length)
     await tx
       .update(brandIdentityProposals)
-      .set({ status: "stale", staleReason: reason })
+      .set({ status: "stale", ...staleOf(reason) })
       .where(inArray(brandIdentityProposals.id, stale));
   return stale.length;
 }
@@ -400,7 +416,10 @@ export interface ProposeInput {
   op?: ProposalOp;
   value?: unknown;
   title?: string;
+  /** Set when the title is written by code, to show it in the reader's language. */
+  titleRef?: MessageRef;
   rationale?: string;
+  rationaleRef?: MessageRef;
   evidence?: EvidenceItem[];
   /** What the model said about its confidence (0–1). Stored, never used to decide. */
   modelConfidence?: number;
@@ -463,8 +482,10 @@ export async function proposeChange(
         fieldPath: built.fieldPath,
         category: categoryOf(input.path),
         title: (input.title ?? fieldLabel(input.path)).slice(0, 200),
+        titleRef: input.titleRef ?? null,
         changes: built.patch as unknown as Array<Record<string, unknown>>,
         rationale: input.rationale?.slice(0, 4000) ?? null,
+        rationaleRef: input.rationaleRef ?? null,
         evidence,
         confidence,
         modelConfidence:
@@ -592,7 +613,7 @@ async function acceptOne(
     if (!(err instanceof JsonPatchError)) throw err;
     await tx
       .update(brandIdentityProposals)
-      .set({ status: "stale", staleReason: "The field changed after the proposal" })
+      .set({ status: "stale", ...staleOf(staleRef("fieldChanged")) })
       .where(eq(brandIdentityProposals.id, p.id));
     return { status: "stale", staled: 0 };
   }
@@ -622,16 +643,10 @@ async function acceptOne(
       baseVersionId: draft.id,
     })
     .where(eq(brandIdentityProposals.id, p.id));
-  const staled = await refreshStale(
-    tx,
-    draft.brandIdentityId,
-    next,
-    "The field changed after the proposal",
-    {
-      fieldPath: p.fieldPath,
-      exceptId: p.id,
-    },
-  );
+  const staled = await refreshStale(tx, draft.brandIdentityId, next, staleRef("fieldChanged"), {
+    fieldPath: p.fieldPath,
+    exceptId: p.id,
+  });
   await recordAuditEvent(tx, {
     actor,
     action:
@@ -996,7 +1011,7 @@ export async function restoreAsDraft(
         .update(brandIdentityProposals)
         .set({
           status: "stale",
-          staleReason: `Draft v${open.number} was replaced by a restore`,
+          ...staleOf(staleRef("restored", { number: open.number })),
         })
         .where(
           and(
@@ -1142,7 +1157,7 @@ export async function removeSource(
     if (!row) notFound("brand.errors.sourceNotFound");
     const stale = await tx
       .update(brandIdentityProposals)
-      .set({ status: "stale", staleReason: "The proposal's source was removed" })
+      .set({ status: "stale", ...staleOf(staleRef("sourceRemoved")) })
       .where(
         and(
           eq(brandIdentityProposals.clientId, input.clientId),
@@ -1167,7 +1182,7 @@ export async function removeSource(
 export async function updateSourceStatus(
   db: Executor,
   sourceId: string,
-  values: Partial<Pick<SourceRow, "status" | "statusDetail" | "pages">>,
+  values: Partial<Pick<SourceRow, "status" | "statusDetail" | "statusDetailRef" | "pages">>,
 ): Promise<void> {
   await db.update(brandSources).set(values).where(eq(brandSources.id, sourceId));
 }
