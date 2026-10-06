@@ -1,0 +1,9 @@
+/**
+ * Browser-safe entry point for the web app's client components: schemas, labels,
+ * deterministic checks. No database, storage or AI imports.
+ */
+export * from "./document";
+export * from "./labels";
+export * from "./checks";
+export { GUARDED_CHECK_PREFIXES, findingsToAcknowledge } from "./brand-guard";
+export type { GuardBand, GuardFinding, GuardReport, GuardSeverity } from "./brand-guard";

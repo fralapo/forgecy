@@ -9,6 +9,7 @@ export const aiTasks = [
   "audit_plan",
   "audit_report",
   "scan",
+  "content_strategy",
   "outline",
   "slides",
   "edit_slide",

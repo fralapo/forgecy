@@ -1,0 +1,311 @@
+/**
+ * Client image library for slides. Files are content-addressed under
+ * `clients/<id>/assets/`, so the renderer's asset resolver accepts them and the same
+ * file is stored once. Uploads by a person and product photos are usable at once;
+ * AI images stay drafts until a person approves them (spec "Immagini AI").
+ */
+import type { ProviderId } from "@forgecy/core";
+import type { Actor } from "@forgecy/core";
+import {
+  aiConnections,
+  and,
+  assets,
+  desc,
+  eq,
+  inArray,
+  isNull,
+  or,
+  recordAuditEvent,
+  sql,
+  type Database,
+} from "@forgecy/db";
+import { assertValidUpload, contentKey, sha256, type StorageDriver } from "@forgecy/files";
+import { conflict, humanOnly, invalid, notFound, type Executor } from "./access";
+import { productSource } from "./products";
+
+export type AssetRow = typeof assets.$inferSelect;
+
+/** Pixel size from the file header (PNG, JPEG, WebP, GIF); null when unknown. */
+export function imageSize(b: Uint8Array): { width: number; height: number } | null {
+  const u16 = (o: number) => (b[o]! << 8) | b[o + 1]!;
+  const u16le = (o: number) => b[o]! | (b[o + 1]! << 8);
+  const u32 = (o: number) =>
+    ((b[o]! << 24) | (b[o + 1]! << 16) | (b[o + 2]! << 8) | b[o + 3]!) >>> 0;
+  if (b.length > 24 && b[0] === 0x89 && b[1] === 0x50) return { width: u32(16), height: u32(20) };
+  if (b.length > 10 && b[0] === 0x47 && b[1] === 0x49) return { width: u16le(6), height: u16le(8) };
+  if (b.length > 30 && b[0] === 0x52 && b[8] === 0x57) {
+    const chunk = String.fromCharCode(b[12]!, b[13]!, b[14]!, b[15]!);
+    if (chunk === "VP8 ") return { width: u16le(26) & 0x3fff, height: u16le(28) & 0x3fff };
+    if (chunk === "VP8L") {
+      const bits = b[21]! | (b[22]! << 8) | (b[23]! << 16) | (b[24]! << 24);
+      return { width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
+    }
+    if (chunk === "VP8X")
+      return {
+        width: 1 + (b[24]! | (b[25]! << 8) | (b[26]! << 16)),
+        height: 1 + (b[27]! | (b[28]! << 8) | (b[29]! << 16)),
+      };
+  }
+  if (b[0] === 0xff && b[1] === 0xd8) {
+    let o = 2;
+    while (o + 9 < b.length) {
+      if (b[o] !== 0xff) return null;
+      const marker = b[o + 1]!;
+      const len = u16(o + 2);
+      if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker))
+        return { width: u16(o + 7), height: u16(o + 5) };
+      o += 2 + len;
+    }
+  }
+  return null;
+}
+
+interface StoreInput {
+  clientId: string;
+  bytes: Uint8Array;
+  declaredMime: string;
+  source: "upload" | "ai" | "product";
+  status: "draft" | "approved";
+  alt?: string;
+  tags?: string[];
+  generation?: Record<string, unknown> | null;
+  productId?: string | null;
+  contentId?: string | null;
+  jobId?: string | null;
+  createdBy: string | null;
+}
+
+/** Validate, store once by hash and register the file; an identical file returns the existing row. */
+export async function storeAsset(db: Executor, storage: StorageDriver, input: StoreInput) {
+  const type = assertValidUpload({
+    kind: "image",
+    mime: input.declaredMime,
+    size: input.bytes.length,
+    firstBytes: input.bytes.slice(0, 1024),
+  });
+  const hash = sha256(input.bytes);
+  const [existing] = await db
+    .select()
+    .from(assets)
+    .where(and(eq(assets.clientId, input.clientId), eq(assets.sha256, hash)));
+  if (existing) return { row: existing, created: false };
+  const key = contentKey({
+    clientId: input.clientId,
+    scope: "assets",
+    sha256: hash,
+    ext: type.ext,
+  });
+  if (!(await storage.exists(key)))
+    await storage.put(key, input.bytes, {
+      contentType: type.mime,
+      contentLength: input.bytes.length,
+    });
+  const size = imageSize(input.bytes);
+  const [row] = await db
+    .insert(assets)
+    .values({
+      clientId: input.clientId,
+      source: input.source,
+      status: input.status,
+      storageKey: key,
+      sha256: hash,
+      mime: type.mime,
+      size: input.bytes.length,
+      width: size?.width ?? null,
+      height: size?.height ?? null,
+      alt: (input.alt ?? "").trim().slice(0, 300),
+      tags: (input.tags ?? [])
+        .map((t) => t.trim().slice(0, 40))
+        .filter(Boolean)
+        .slice(0, 20),
+      generation: input.generation ?? null,
+      productId: input.productId ?? null,
+      contentId: input.contentId ?? null,
+      jobId: input.jobId ?? null,
+      createdBy: input.createdBy,
+      ...(input.status === "approved" && input.createdBy
+        ? { decidedBy: input.createdBy, decidedAt: new Date() }
+        : {}),
+    })
+    .onConflictDoNothing()
+    .returning();
+  if (!row) {
+    const [again] = await db
+      .select()
+      .from(assets)
+      .where(and(eq(assets.clientId, input.clientId), eq(assets.sha256, hash)));
+    return { row: again!, created: false };
+  }
+  return { row, created: true };
+}
+
+export async function uploadAsset(
+  db: Database,
+  storage: StorageDriver,
+  actor: Actor,
+  input: {
+    clientId: string;
+    bytes: Uint8Array;
+    mime: string;
+    alt?: string;
+    tags?: string[];
+    contentId?: string | null;
+  },
+) {
+  humanOnly(actor, "assets.upload", input.clientId);
+  const res = await storeAsset(db, storage, {
+    clientId: input.clientId,
+    bytes: input.bytes,
+    declaredMime: input.mime,
+    source: "upload",
+    status: "approved",
+    alt: input.alt ?? "",
+    tags: input.tags ?? [],
+    contentId: input.contentId ?? null,
+    createdBy: actor.id,
+  });
+  if (res.created)
+    await recordAuditEvent(db, {
+      actor,
+      action: "content.asset_uploaded",
+      entity: "asset",
+      entityId: res.row.id,
+      clientId: input.clientId,
+    });
+  return res;
+}
+
+/** Copy an approved catalog photo into the library (the product source gives its storage key). */
+export async function importProductImage(
+  db: Database,
+  storage: StorageDriver,
+  actor: Actor,
+  input: { clientId: string; productId: string; storageKey: string; alt: string },
+) {
+  humanOnly(actor, "assets.upload", input.clientId);
+  if (!input.storageKey.startsWith(`clients/${input.clientId}/`))
+    invalid("Immagine di un altro cliente");
+  // Only images of an approved product of this client, as the catalog lists them.
+  const product = await productSource().get(db, input.clientId, input.productId);
+  if (!product?.images.some((i) => i.storageKey === input.storageKey))
+    invalid("L'immagine non appartiene a un prodotto approvato del cliente");
+  const chunks: Uint8Array[] = [];
+  for await (const c of await storage.get(input.storageKey)) chunks.push(c as Uint8Array);
+  const bytes = new Uint8Array(Buffer.concat(chunks));
+  return storeAsset(db, storage, {
+    clientId: input.clientId,
+    bytes,
+    declaredMime: "application/octet-stream",
+    source: "product",
+    status: "approved",
+    alt: input.alt,
+    productId: input.productId,
+    createdBy: actor.id,
+  });
+}
+
+/** Approve or reject a draft image (AI images must be approved before the carousel). */
+export async function decideAsset(
+  db: Database,
+  actor: Actor,
+  input: {
+    clientId: string;
+    id: string;
+    decision: "approved" | "rejected";
+    reason?: string;
+    alt?: string;
+  },
+) {
+  humanOnly(actor, input.decision === "approved" ? "approve" : "review", input.clientId);
+  const reason = input.reason?.trim().slice(0, 500) ?? "";
+  if (input.decision === "rejected" && reason.length < 3)
+    invalid("Scrivi perché l'immagine non va");
+  const [row] = await db
+    .update(assets)
+    .set({
+      status: input.decision,
+      decidedBy: actor.id,
+      decidedAt: new Date(),
+      rejectedReason: input.decision === "rejected" ? reason : null,
+      ...(input.alt !== undefined ? { alt: input.alt.trim().slice(0, 300) } : {}),
+    })
+    .where(
+      and(eq(assets.id, input.id), eq(assets.clientId, input.clientId), eq(assets.status, "draft")),
+    )
+    .returning();
+  if (!row) conflict("Immagine non trovata o già decisa");
+  await recordAuditEvent(db, {
+    actor,
+    action: `content.asset_${input.decision}`,
+    entity: "asset",
+    entityId: row.id,
+    clientId: input.clientId,
+    meta: reason ? { reason } : {},
+  });
+  return row;
+}
+
+export async function updateAssetAlt(
+  db: Database,
+  actor: Actor,
+  input: { clientId: string; id: string; alt: string },
+) {
+  humanOnly(actor, "edit_draft", input.clientId);
+  const [row] = await db
+    .update(assets)
+    .set({ alt: input.alt.trim().slice(0, 300) })
+    .where(and(eq(assets.id, input.id), eq(assets.clientId, input.clientId)))
+    .returning({ id: assets.id });
+  if (!row) notFound("Immagine non trovata");
+  return row;
+}
+
+export async function listAssets(
+  db: Database,
+  clientId: string,
+  filter: { status?: AssetRow["status"][]; contentId?: string; limit?: number } = {},
+) {
+  return db
+    .select()
+    .from(assets)
+    .where(
+      and(
+        eq(assets.clientId, clientId),
+        filter.status?.length ? inArray(assets.status, filter.status) : undefined,
+        filter.contentId
+          ? or(eq(assets.contentId, filter.contentId), isNull(assets.contentId))
+          : undefined,
+      ),
+    )
+    .orderBy(desc(assets.createdAt))
+    .limit(Math.min(filter.limit ?? 200, 500));
+}
+
+export type CommercialUse = "verified" | "pending_verification" | "rejected";
+
+/**
+ * Commercial use of an image provider for a client (ai_connections.commercial_use_status):
+ * the client's own connection wins over the agency's; a provider configured only through
+ * environment keys counts as not yet verified. `rejected` blocks generation.
+ */
+export async function commercialUseFor(
+  db: Executor,
+  provider: ProviderId,
+  clientId: string,
+): Promise<CommercialUse> {
+  const rows = await db
+    .select({ scope: aiConnections.scope, status: aiConnections.commercialUseStatus })
+    .from(aiConnections)
+    .where(
+      and(
+        eq(aiConnections.provider, provider),
+        eq(aiConnections.status, "active"),
+        or(
+          and(eq(aiConnections.scope, "client"), eq(aiConnections.scopeId, clientId)),
+          eq(aiConnections.scope, "agency"),
+        ),
+      ),
+    )
+    .orderBy(sql`case when ${aiConnections.scope} = 'client' then 0 else 1 end`);
+  return rows[0]?.status ?? "pending_verification";
+}

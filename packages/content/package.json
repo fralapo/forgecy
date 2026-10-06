@@ -1,0 +1,33 @@
+{
+  "name": "@forgecy/content",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./handlers": "./src/handlers.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@forgecy/ai": "workspace:*",
+    "@forgecy/brand": "workspace:*",
+    "@forgecy/brand-guard": "workspace:*",
+    "@forgecy/carousel": "workspace:*",
+    "@forgecy/catalog": "workspace:*",
+    "@forgecy/core": "workspace:*",
+    "@forgecy/db": "workspace:*",
+    "@forgecy/files": "workspace:*",
+    "@forgecy/jobs": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "typescript": "6.0.3",
+    "vitest": "^4.1.11"
+  }
+}

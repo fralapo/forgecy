@@ -1,6 +1,7 @@
 import { createAuditHandlers } from "@forgecy/audit/handlers";
 import { carouselWorkerHandlers } from "@forgecy/carousel/export";
 import { brandHandlers } from "@forgecy/brand/handlers";
+import { contentHandlers } from "@forgecy/content/handlers";
 import { catalogHandlers } from "@forgecy/catalog/handlers";
 import { handle, systemPingJob, type JobHandlers } from "@forgecy/jobs";
 
@@ -16,5 +17,6 @@ export const handlers: JobHandlers = {
   }),
   ...carouselWorkerHandlers(),
   ...brandHandlers,
+  ...contentHandlers,
   ...catalogHandlers,
 };

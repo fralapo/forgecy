@@ -1,4 +1,4 @@
-import { defineJob } from "@forgecy/jobs";
+import { defineJob } from "@forgecy/jobs/registry";
 import { z } from "zod";
 import { brandThemeSchema } from "./brand";
 import { slideSchema } from "./slide-schema";

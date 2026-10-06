@@ -1,7 +1,8 @@
 import {
   Building2,
-  ClipboardCheck,
   Fingerprint,
+  GalleryHorizontal,
+  ClipboardCheck,
   LayoutDashboard,
   LayoutTemplate,
   Palette,
@@ -21,6 +22,7 @@ const nav = [
   { href: "/prodotti", label: "Prodotti", icon: Package },
   { href: "/template", label: "Template", icon: LayoutTemplate },
   { href: "/brand", label: "Brand Identity", icon: Fingerprint },
+  { href: "/contenuti", label: "Contenuti", icon: GalleryHorizontal },
   { href: "/impostazioni", label: "Impostazioni", icon: Settings },
   { href: "/design", label: "Design system", icon: Palette },
 ] as const;

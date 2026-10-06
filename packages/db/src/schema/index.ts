@@ -8,5 +8,6 @@ export * from "./ai";
 export * from "./audit";
 export * from "./templates";
 export * from "./brand";
+export * from "./content";
 export * from "./catalog";
 export * from "./brand-guard";
