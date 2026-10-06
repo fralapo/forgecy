@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
+import { currentRouting } from "@/lib/ai";
 import { env } from "@/lib/env";
 import { requireUser } from "@/lib/session";
 import { getTheme } from "@/lib/theme";
@@ -28,6 +29,7 @@ export default async function SettingsPage() {
   const languages = await Promise.all(
     LOCALES.map(async (code) => ({ code, name: (await loadMessages(code)).meta.languageName })),
   );
+  const { routing } = await currentRouting();
   const browser = negotiateLocale((await headers()).get("accept-language"));
   // Only whether a key is configured, never the key itself.
   const providers = [
@@ -62,7 +64,9 @@ export default async function SettingsPage() {
               {te(env.STORAGE_DRIVER === "local" ? "storageDriver.local" : "storageDriver.s3")}
             </dd>
             <dt className="text-fg-muted">{t("instance.defaultProvider")}</dt>
-            <dd className="font-mono text-fg">{env.AI_DEFAULT_PROVIDER}</dd>
+            <dd className="font-mono text-fg">
+              {routing.default.primary.provider} · {routing.default.primary.model}
+            </dd>
           </dl>
           {user.isAdmin ? <WorkerCheck /> : null}
         </Card>

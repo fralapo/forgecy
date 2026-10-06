@@ -1,6 +1,7 @@
 import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { chunkPages } from "../src/import/analyst";
+import { colorName } from "../src/import/candidates";
 import { detectImportFile } from "../src/import/detect";
 import { extractFile } from "../src/import/extract";
 import { familyFromFileName, readFontNames, weightFromName } from "../src/import/fonts";
@@ -170,8 +171,7 @@ describe("chunkPages", () => {
 });
 
 describe("colorName", () => {
-  it("takes the words right before the value", async () => {
-    const { colorName } = await import("../src/import/candidates");
+  it("takes the words right before the value", () => {
     const ctx = "Colors Rossi Blue #0044CC used for headings. Cream #F5EBDC for backgrounds.";
     expect(colorName(ctx, "#F5EBDC", "x")).toBe("Cream");
     expect(colorName(ctx, "#0044CC", "x")).toBe("Colors Rossi Blue");

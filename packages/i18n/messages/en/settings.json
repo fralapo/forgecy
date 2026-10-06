@@ -73,6 +73,52 @@
       "consultedOn": "Date consulted",
       "note": "Note",
       "updated": "Status updated."
+    },
+    "mcp": {
+      "hint": {
+        "higgsfield": "Uses the credits of your Higgsfield subscription. You log in on Higgsfield; Forgecy never sees the password.",
+        "weave": "Runs Figma Weave models through Figma’s MCP server and spends Weave credits (Starter plan or higher, Figma account linked in Weave). At most {max} credits per image."
+      },
+      "status": {
+        "connected": "Connected",
+        "notConnected": "Not connected",
+        "pending": "Login not completed",
+        "error": "Connection error"
+      },
+      "connect": "Connect",
+      "reconnect": "Reconnect",
+      "disconnect": "Disconnect",
+      "connectedOn": "Connected on",
+      "lastError": "Last error",
+      "result": {
+        "connected": "Connection completed.",
+        "error": "The connection did not complete: see the last error on the provider."
+      },
+      "errors": {
+        "noEncryptionKey": "Set FORGECY_ENCRYPTION_KEY in .env first: it encrypts the login tokens.",
+        "startFailed": "The provider did not accept the connection. Check the server address in .env and try again."
+      }
+    },
+    "routing": {
+      "title": "Services and models",
+      "description": "Choose which service and which model Forgecy uses. Changes apply to new jobs within a few seconds.",
+      "inUse": "In use now",
+      "textInUse": "Text: {model}",
+      "imageInUse": "Images: {model}",
+      "noImage": "Images: no provider ready",
+      "textTitle": "Text (audits, strategy, slides, review)",
+      "provider": "Service",
+      "model": "Model",
+      "fallbackProvider": "Fallback service",
+      "none": "None",
+      "modelHint": "Leave the model empty for the service’s default. With OpenRouter use its model ids, e.g. deepseek/deepseek-chat or openai/gpt-6.1-sol.",
+      "imagesTitle": "Images",
+      "imagesHint": "Number the services in the order to try them; the first two ready ones are used (primary and fallback). “Off” never uses that service.",
+      "position": "Order",
+      "off": "Off",
+      "notReady": "{name} (not configured)",
+      "saved": "Choices saved.",
+      "invalid": "Check the choices: each service can appear only once."
     }
   }
 }

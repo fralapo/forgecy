@@ -6,9 +6,9 @@
 import {
   createAiGateway,
   createDbLedger,
+  createMcpImageProviders,
   createProvidersFromEnv,
-  defaultRoutingFromEnv,
-  type ModelRef,
+  createRoutingSource,
 } from "@forgecy/ai";
 import { carouselExportPayloadSchema } from "@forgecy/carousel";
 import { carouselWorkerHandlers } from "@forgecy/carousel/export";
@@ -53,18 +53,24 @@ function depsFor(db: Database, logger: JobContext["logger"]): PipelineDeps {
   if (!deps) {
     const env = loadEnv();
     const providers = createProvidersFromEnv(env);
-    const routing = defaultRoutingFromEnv(env, providers);
-    const hasText = Object.keys(providers.text).length > 0;
-    const imageRoute: ModelRef[] = routing.image
-      ? [routing.image.primary, ...(routing.image.fallback ? [routing.image.fallback] : [])]
-      : [];
+    // Subscriptions over MCP (Higgsfield, Weave) are routed only while connected.
+    const mcp = createMcpImageProviders(db, env);
+    providers.image = { ...providers.image, ...mcp };
+    // Services and models follow the Admin's choice in Settings > AI providers, read per job.
+    const source = createRoutingSource(db, env, providers);
+    const hasProvider =
+      Object.keys(providers.text).length > 0 || Object.keys(providers.image).length > 0;
     deps = {
       storage: createStorageFromEnv(env),
-      ai:
-        hasText || imageRoute.length
-          ? createAiGateway({ ledger: createDbLedger(db), providers, routing, logger })
-          : null,
-      imageRoute,
+      ai: hasProvider
+        ? createAiGateway({
+            ledger: createDbLedger(db),
+            providers,
+            routing: async () => (await source()).routing,
+            logger,
+          })
+        : null,
+      resolveImageRoute: async () => (await source()).images,
     };
   }
   return { ...deps, db };

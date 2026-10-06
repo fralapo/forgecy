@@ -98,6 +98,9 @@ export function defaultModelFor(provider: ProviderId, env: Pick<AiEnv, "LOCAL_LL
       return env.LOCAL_LLM_MODEL ?? LOCAL_DEFAULT_MODEL;
     case "google":
       return GOOGLE_IMAGE_DEFAULT_MODEL;
+    case "higgsfield":
+    case "weave":
+      return "";
   }
 }
 
@@ -106,12 +109,15 @@ export const imageProviderIds = [
   "openai",
   "google",
   "openrouter",
+  "higgsfield",
+  "weave",
 ] as const satisfies readonly ProviderId[];
 export type ImageProviderId = (typeof imageProviderIds)[number];
 
 export function imageModelFor(
   provider: ImageProviderId,
-  env: Pick<AiEnv, "OPENROUTER_IMAGE_MODEL">,
+  env: Pick<AiEnv, "OPENROUTER_IMAGE_MODEL"> &
+    Partial<Pick<Env, "HIGGSFIELD_IMAGE_MODEL" | "WEAVE_IMAGE_MODEL">>,
 ): string {
   switch (provider) {
     case "openai":
@@ -120,6 +126,11 @@ export function imageModelFor(
       return GOOGLE_IMAGE_DEFAULT_MODEL;
     case "openrouter":
       return env.OPENROUTER_IMAGE_MODEL || OPENROUTER_IMAGE_DEFAULT_MODEL;
+    // Empty: Higgsfield's own default model.
+    case "higgsfield":
+      return env.HIGGSFIELD_IMAGE_MODEL ?? "";
+    case "weave":
+      return env.WEAVE_IMAGE_MODEL ?? "nano banana 2";
   }
 }
 
@@ -144,10 +155,14 @@ export function defaultRoutingFromEnv(env: AiEnv, providers?: ProviderSet): Rout
   const routing: Routing = { default: { primary } };
   if (env.LOCAL_LLM_ENABLED)
     routing.local = { provider: "local", model: defaultModelFor("local", env) };
+  // MCP providers (higgsfield, weave) depend on a connection stored in the database:
+  // callers add them with mcpImageRoute().
   const keyFor: Record<ImageProviderId, string | undefined> = {
     openai: env.OPENAI_API_KEY,
     google: env.GOOGLE_AI_API_KEY,
     openrouter: env.OPENROUTER_API_KEY,
+    higgsfield: undefined,
+    weave: undefined,
   };
   const images: ModelRef[] = imageProviderOrder(env)
     .filter((p) => (providers ? !!providers.image[p] : !!keyFor[p]))

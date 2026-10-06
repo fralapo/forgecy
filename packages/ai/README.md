@@ -34,16 +34,26 @@ const { data } = await ai.generateObject({
 
 ## Providers
 
-| Provider     | Text | Images | Key / setting                                                 |
-| ------------ | ---- | ------ | ------------------------------------------------------------- |
-| `anthropic`  | yes  | no     | `ANTHROPIC_API_KEY`                                           |
-| `openai`     | yes  | yes    | `OPENAI_API_KEY`                                              |
-| `openrouter` | yes  | yes    | `OPENROUTER_API_KEY`, image model `OPENROUTER_IMAGE_MODEL`    |
-| `deepseek`   | yes  | no     | `DEEPSEEK_API_KEY` (JSON via `json_object`, schema in prompt) |
-| `google`     | no   | yes    | `GOOGLE_AI_API_KEY`                                           |
-| `local`      | yes  | no     | `LOCAL_LLM_ENABLED`, `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`  |
+| Provider     | Text | Images | Key / setting                                                         |
+| ------------ | ---- | ------ | --------------------------------------------------------------------- |
+| `anthropic`  | yes  | no     | `ANTHROPIC_API_KEY`                                                   |
+| `openai`     | yes  | yes    | `OPENAI_API_KEY`                                                      |
+| `openrouter` | yes  | yes    | `OPENROUTER_API_KEY`, image model `OPENROUTER_IMAGE_MODEL`            |
+| `deepseek`   | yes  | no     | `DEEPSEEK_API_KEY` (JSON via `json_object`, schema in prompt)         |
+| `google`     | no   | yes    | `GOOGLE_AI_API_KEY`                                                   |
+| `local`      | yes  | no     | `LOCAL_LLM_ENABLED`, `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`          |
+| `higgsfield` | no   | yes    | MCP + OAuth (Connect in Settings), `HIGGSFIELD_IMAGE_MODEL`           |
+| `weave`      | no   | yes    | Figma MCP + OAuth, `WEAVE_IMAGE_MODEL`, `WEAVE_MAX_CREDITS_PER_IMAGE` |
 
 Image providers are tried in the order of `IMAGE_PROVIDERS` (default `openai,google,openrouter`): first configured one primary, next one fallback. Logging in with a ChatGPT account is not supported (see `docs/adr/0006`).
+
+### Choosing services and models
+
+Admins pick the text service and model (plus a fallback) and the image services in order in Settings > AI providers. `loadAiRoutingSettings` / `saveAiRoutingSettings` store the choice in `app_settings` (`ai.routing`); `resolveRouting` keeps only usable providers and fills empty models with defaults; `createRoutingSource` / `settingsRouting` give the gateway a routing function read per request (cached 15 s). With nothing saved, the `.env` routing applies. See `docs/adr/0008`.
+
+### Subscriptions over MCP
+
+`src/mcp/` connects to remote MCP servers as an OAuth client (`@modelcontextprotocol/sdk`): `StoredMcpOAuthProvider` keeps the registration and tokens encrypted in `mcp_connections`, `beginMcpConnection` / `completeMcpConnection` drive the Admin's login, and `createMcpImageProviders` builds the Higgsfield and Weave adapters. The adapters read tool schemas at run time and poll async jobs through the gateway's usual `getStatus` loop. The routing (below) uses them only while connected. See `docs/adr/0007`.
 
 ## Adding a provider
 

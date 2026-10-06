@@ -1,4 +1,5 @@
 import {
+  connectedMcpProviders,
   budgetPercent,
   getBudgetOverview,
   getDefaultAiPolicy,
@@ -46,15 +47,19 @@ const providerName: Record<Exclude<ProviderId, "local">, string> = {
   openrouter: "OpenRouter",
   google: "Google",
   deepseek: "DeepSeek",
+  higgsfield: "Higgsfield (MCP)",
+  weave: "Figma Weave (MCP)",
 };
 
-function providerChoices(): ProviderChoice[] {
+function providerChoices(connectedMcp: ReadonlySet<string>): ProviderChoice[] {
   const keys: Record<Exclude<ProviderId, "local">, string | undefined> = {
     anthropic: env.ANTHROPIC_API_KEY,
     openai: env.OPENAI_API_KEY,
     openrouter: env.OPENROUTER_API_KEY,
     google: env.GOOGLE_AI_API_KEY,
     deepseek: env.DEEPSEEK_API_KEY,
+    higgsfield: connectedMcp.has("higgsfield") ? "connected" : undefined,
+    weave: connectedMcp.has("weave") ? "connected" : undefined,
   };
   return restrictableProviders.flatMap((id) =>
     id === "local" ? [] : [{ id, name: providerName[id], configured: Boolean(keys[id]) }],
@@ -112,7 +117,7 @@ export default async function AiPoliciesPage() {
   const counts = new Map<AiPolicy, number>();
   for (const c of overview.clients) counts.set(c.aiPolicy, (counts.get(c.aiPolicy) ?? 0) + 1);
   const localMissing = !env.LOCAL_LLM_ENABLED && counts.get("local_only");
-  const choices = providerChoices();
+  const choices = providerChoices(await connectedMcpProviders(db));
 
   return (
     <>

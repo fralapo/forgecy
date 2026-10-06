@@ -14,6 +14,7 @@ import { createStorageFromEnv, type StorageDriver } from "@forgecy/files";
 import { cancelJob, enqueueJob } from "@forgecy/jobs";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { currentRouting } from "@/lib/ai";
 import { env } from "@/lib/env";
 import { errorMessage, refText } from "@/lib/i18n";
 import { getQueues } from "@/lib/queues";
@@ -32,7 +33,13 @@ export async function catalogPage(clientSlug: string) {
   const user = await requireUser();
   const client = await getDb().query.clients.findFirst({ where: eq(clients.slug, clientSlug) });
   if (!client) notFound();
-  return { user, acting: actingUser(user), client, ai: importAiSetup(env, client.aiPolicy) };
+  const { routing } = await currentRouting();
+  return {
+    user,
+    acting: actingUser(user),
+    client,
+    ai: importAiSetup(env, client.aiPolicy, routing),
+  };
 }
 
 let storage: StorageDriver | undefined;

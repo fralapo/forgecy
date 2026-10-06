@@ -6,7 +6,7 @@ import {
   createAiGateway,
   createDbLedger,
   createProvidersFromEnv,
-  defaultRoutingFromEnv,
+  settingsRouting,
   type AiGateway,
 } from "@forgecy/ai";
 import { loadEnv } from "@forgecy/core";
@@ -37,7 +37,7 @@ function depsFor(
       ? createAiGateway({
           ledger: createDbLedger(db),
           providers,
-          routing: defaultRoutingFromEnv(env, providers),
+          routing: settingsRouting(db, env, providers),
           logger,
         })
       : null,

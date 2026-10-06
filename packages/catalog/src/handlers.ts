@@ -2,7 +2,7 @@ import {
   createAiGateway,
   createDbLedger,
   createProvidersFromEnv,
-  defaultRoutingFromEnv,
+  settingsRouting,
 } from "@forgecy/ai";
 import { loadEnv } from "@forgecy/core";
 import { and, eq, inArray, productImports } from "@forgecy/db";
@@ -34,7 +34,7 @@ export function catalogDepsFromEnv(ctx: Pick<JobContext, "db" | "logger">): Pipe
       ? createAiGateway({
           ledger: createDbLedger(ctx.db),
           providers,
-          routing: defaultRoutingFromEnv(env, providers),
+          routing: settingsRouting(ctx.db, env, providers),
           logger: ctx.logger,
         })
       : null,

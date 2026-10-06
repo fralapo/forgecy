@@ -18,6 +18,7 @@
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",
     "@forgecy/i18n": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "openai": "^7.28.0",
     "zod": "^4.6.5"
   },
