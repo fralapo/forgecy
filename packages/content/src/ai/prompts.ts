@@ -16,7 +16,7 @@ import { funnelLabels, objectiveLabels } from "../labels";
 import { contentChannels, type Brief, type Outline } from "../document";
 import type { ProductSummary } from "../products";
 
-export const CONTENT_PROMPT_VERSION = "content-2026-10-06d";
+export const CONTENT_PROMPT_VERSION = "content-2026-10-06e";
 
 const SHARED_RULES = `- Write in the indicated language (English when no language is indicated), with the tone and rules of the Brand Identity below. The writing rules and forbidden words are binding.
 - Use only facts found in the brief, the Brand Identity or the product sheet. Never invent data, numbers, prices, testimonials or claims.
@@ -253,11 +253,13 @@ export interface StrategyPromptInput {
   existingRubrics: { id: string; pillarId: string; name: string }[];
   products: readonly ProductSummary[];
   instruction: string;
+  language: string;
 }
 
 export function strategyUserPrompt(i: StrategyPromptInput): string {
   return [
     `# Client: ${i.clientName}`,
+    `Language: ${i.language}`,
     `## Audience segments (id: name)\n${i.audience.map((a) => `- ${a.id}: ${a.name}`).join("\n") || "(none)"}`,
     `## Existing pillars\n${i.existingPillars.map((p) => `- id ${p.id}: ${p.name} — ${p.goal}`).join("\n") || "(none)"}`,
     `## Existing rubrics\n${i.existingRubrics.map((r) => `- id ${r.id} (pillar ${r.pillarId}): ${r.name}`).join("\n") || "(none)"}`,
@@ -275,11 +277,13 @@ export interface PlanPromptInput {
   rubrics: { id: string; pillarId: string; name: string; frequency: string; hookFormula: string }[];
   products: readonly ProductSummary[];
   instruction: string;
+  language: string;
 }
 
 export function planUserPrompt(i: PlanPromptInput): string {
   return [
     `# Client: ${i.clientName}`,
+    `Language: ${i.language}`,
     `Channels: ${i.channels.join(", ")}`,
     `## Pillars\n${i.pillars.map((p) => `- id ${p.id}: ${p.name} (${p.frequency}) — ${p.goal}`).join("\n")}`,
     `## Rubrics\n${i.rubrics.map((r) => `- id ${r.id} (pillar ${r.pillarId}): ${r.name} (${r.frequency}); hook: ${r.hookFormula || "—"}`).join("\n") || "(none)"}`,
@@ -409,8 +413,10 @@ export function imagePromptUserPrompt(input: {
   brief: string;
   slideText: string;
   imagery: string;
+  language: string;
 }): string {
   return [
+    `Language of the alt text: ${input.language}`,
     `## Brand Identity imagery guidelines\n${input.imagery || "(no guidance)"}`,
     `## Slide text\n${input.slideText}`,
     `## Visual brief\n${input.brief}`,

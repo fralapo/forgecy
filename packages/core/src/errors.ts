@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type ForgecyErrorCode =
   | "not_found"
   | "conflict"
@@ -17,6 +19,12 @@ export type MessageRef = {
   key: string;
   values?: Record<string, string | number>;
 };
+
+/** A `MessageRef` kept inside a JSON document (provenance, evidence...). */
+export const messageRefSchema = z.object({
+  key: z.string().max(200),
+  values: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
+});
 
 /**
  * Domain error with a stable code the API layer maps to an HTTP status.

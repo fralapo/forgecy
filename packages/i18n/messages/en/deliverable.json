@@ -15,5 +15,9 @@
     "fromCauses": "It comes from the observations listed below.",
     "noRecommendation": "To be discussed together in the follow-up call.",
     "noSteps": "Let's schedule a call to agree on the priorities."
+  },
+  "carousel": {
+    "untitled": "Untitled carousel",
+    "imageNote": "Image “{slot}”: {brief}"
   }
 }

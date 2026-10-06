@@ -5,8 +5,14 @@
  * stores AI output as outlines, draft slides or slide edits a person then reviews.
  */
 import { getPublishedBrandIdentity } from "@forgecy/brand";
-import { transitionPermission, type Actor, type ContentStatus } from "@forgecy/core";
-import { localizedError } from "@forgecy/i18n";
+import {
+  isLocale,
+  LOCALES,
+  transitionPermission,
+  type Actor,
+  type ContentStatus,
+} from "@forgecy/core";
+import { getTranslator, localizedError } from "@forgecy/i18n";
 import {
   and,
   assets,
@@ -78,9 +84,12 @@ import { clampSlideCount, getTemplate } from "./templates";
 export type ContentRow = typeof contents.$inferSelect;
 
 const EDITABLE: ContentStatus[] = ["draft", "changes_requested", "approved", "exported"];
-const UNTITLED = "Untitled carousel";
-// Rows created before the English UI still carry the old Italian default title.
-const UNTITLED_TITLES = [UNTITLED, "Carosello senza titolo"];
+/** Default title, in the carousel's language: it is printed in exports. */
+function untitled(language: string): string {
+  return getTranslator(isLocale(language) ? language : "en", "deliverable")("carousel.untitled");
+}
+// The default title in every language, replaced by the outline's title.
+const UNTITLED_TITLES = [...new Set(LOCALES.map(untitled))];
 
 async function audit(
   db: Executor,
@@ -253,7 +262,7 @@ export async function createCarousel(db: Database, actor: Actor, input: CreateCa
       .insert(contents)
       .values({
         clientId: input.clientId,
-        title: title || UNTITLED,
+        title: title || untitled(params.language),
         objective: params.objective,
         audienceIds: params.audienceIds,
         pillarId,

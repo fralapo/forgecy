@@ -15,5 +15,9 @@
     "fromCauses": "Nasce dalle osservazioni elencate qui sotto.",
     "noRecommendation": "Da approfondire insieme nella call di restituzione.",
     "noSteps": "Fissiamo una call per decidere insieme le priorità."
+  },
+  "carousel": {
+    "untitled": "Carosello senza titolo",
+    "imageNote": "Immagine “{slot}”: {brief}"
   }
 }

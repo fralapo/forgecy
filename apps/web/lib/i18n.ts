@@ -40,9 +40,14 @@ export async function refText(
   ref: MessageRef | null | undefined,
   fallback: string,
 ): Promise<string> {
-  if (!ref) return fallback;
+  return (await getRefText())(ref, fallback);
+}
+
+/** `refText` as a synchronous function, for lists rendered in a `map`. */
+export async function getRefText() {
   const { t, has } = await translator();
-  return has(ref.key) ? t(ref.key, ref.values) : fallback;
+  return (ref: MessageRef | null | undefined, fallback: string): string =>
+    ref && has(ref.key) ? t(ref.key, ref.values) : fallback;
 }
 
 /**

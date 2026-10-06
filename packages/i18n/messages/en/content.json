@@ -305,7 +305,13 @@
     },
     "versionShort": "v{number}",
     "templateVersion": "{name} · v{version}",
-    "templateChannel": "{name} · {channel, select, linkedin {LinkedIn} facebook {Facebook} tiktok {TikTok} other {Instagram}}"
+    "templateChannel": "{name} · {channel, select, linkedin {LinkedIn} facebook {Facebook} tiktok {TikTok} other {Instagram}}",
+    "source": {
+      "brand": "Brand Identity v{version}",
+      "strategy": "Current strategy",
+      "catalog": "Product catalog",
+      "strategyCounts": "{pillars, plural, one {# pillar} other {# pillars}}, {rubrics, plural, one {# rubric} other {# rubrics}}"
+    }
   },
   "strategy": {
     "metaTitle": "Content strategy",

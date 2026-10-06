@@ -15,7 +15,7 @@ import { Badge, Card } from "@forgecy/ui";
 import { Archive, ArchiveRestore, LoaderCircle, TriangleAlert } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
-import { getFormat, refText } from "@/lib/i18n";
+import { getFormat, getRefText, refText } from "@/lib/i18n";
 import { archiveItemAction } from "../actions";
 import { ActionButton } from "../_components/action-button";
 import { RefreshWhile } from "../_components/refresh-while";
@@ -23,6 +23,7 @@ import { PillarForm, RubricForm, type StrategyOptions } from "../_components/str
 import { AskPlannerForm } from "../_components/strategy-planner";
 import { StrategyProposalCard } from "../_components/strategy-proposal";
 import { loadClient } from "../_lib/server";
+import { sourceLabels } from "../_lib/provenance";
 
 export async function generateMetadata() {
   const t = await getTranslations("content.strategy");
@@ -63,6 +64,7 @@ export default async function StrategyPage({
   const { db, user, client } = await loadClient(clientSlug);
   const t = await getTranslations("content.strategy");
   const tl = await getTranslations("content.labels");
+  const rt = await getRefText();
   const format = await getFormat();
   const frequency = (f: { count: number; unit: "week" | "month" } | null) =>
     f ? tl(`frequency.${f.unit}`, { count: f.count }) : "—";
@@ -182,7 +184,7 @@ export default async function StrategyPage({
         id={row.id}
         title={title}
         agent={tl(`agent.${p ? p.agent : "planner"}`)}
-        sources={p?.sources.map((s) => ({ label: s.label })) ?? []}
+        sources={sourceLabels(p?.sources, rt)}
       >
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
