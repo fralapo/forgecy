@@ -4,6 +4,7 @@ import { packageFromFiles, type TemplatePackage } from "../src/package";
 
 export const TEMPLATES = path.resolve(import.meta.dirname, "../../../templates");
 
+/** `folder` is relative to templates/, e.g. "carousels/editorial-ig-4x5". */
 export async function loadRepoTemplate(folder: string): Promise<TemplatePackage> {
   return packageFromFiles(await readTemplateDir(path.join(TEMPLATES, folder)));
 }

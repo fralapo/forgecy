@@ -12,9 +12,9 @@ import {
   type TemplateManifest,
 } from "@forgecy/carousel";
 import { z } from "zod";
-import { funnelLabels, objectiveLabels } from "./labels";
-import type { Brief, Outline } from "./document";
-import type { ProductSummary } from "./products";
+import { funnelLabels, objectiveLabels } from "../labels";
+import type { Brief, Outline } from "../document";
+import type { ProductSummary } from "../products";
 
 export const CONTENT_PROMPT_VERSION = "content-2026-10-06c";
 

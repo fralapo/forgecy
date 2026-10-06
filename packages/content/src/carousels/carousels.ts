@@ -37,7 +37,7 @@ import {
   requireClient,
   revConflict,
   type Executor,
-} from "./access";
+} from "../access";
 import {
   blockingChecks,
   computeChecks,
@@ -62,7 +62,7 @@ import {
   type ContentChannel,
   type Outline,
   type OutlineInput,
-} from "./document";
+} from "../document";
 import {
   brandGuard,
   carouselSubject,
@@ -71,7 +71,7 @@ import {
   type GuardAssetInfo,
   type GuardReport,
 } from "./brand-guard";
-import { productSource } from "./products";
+import { productSource } from "../products";
 import { clampSlideCount, getTemplate } from "./templates";
 
 export type ContentRow = typeof contents.$inferSelect;

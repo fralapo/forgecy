@@ -19,7 +19,7 @@ import {
 } from "@forgecy/db";
 import { ilike, type SQL } from "drizzle-orm";
 import { completenessOf, type Completeness } from "./completeness";
-import type { DbLike } from "./db";
+import type { DbLike } from "../db";
 import type { ProductFields } from "./fields";
 import { describeSource, type SourceRef } from "./meta";
 import { rowToFields, type ProductImageRow, type ProductRow } from "./products";

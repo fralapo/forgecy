@@ -1,10 +1,10 @@
 import { assertCan, ForgecyError } from "@forgecy/core";
 import { recordAuditEvent, type Database } from "@forgecy/db";
 import type { StorageDriver } from "@forgecy/files";
-import type { ActingUser } from "./db";
+import type { ActingUser } from "../db";
 import { attachImages, loadProduct } from "./products";
-import { sniffFile } from "./sniff";
-import { storeTempFile, type TempFile } from "./storage";
+import { sniffFile } from "../parsers/sniff";
+import { storeTempFile, type TempFile } from "../storage";
 
 /** “Add image” on the product page: a photo uploaded by a person, kept as a draft asset. */
 export async function addProductImage(

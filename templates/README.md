@@ -1,12 +1,12 @@
 # Agency templates
 
-Starter templates in Forgecy's canonical format: one folder per template with `template.json` (slots, text limits, color and font roles, safe zone, rules), `layouts/*.html`, `styles.css`, `fonts/` and `assets/`. Figma, Canva, PDF and PNG are only references: every template is rebuilt here in HTML and CSS.
+Starter templates in Forgecy's canonical format: grouped by kind (`carousels/`, `reports/`), one folder per template with `template.json` (slots, text limits, color and font roles, safe zone, rules), `layouts/*.html`, `styles.css`, `fonts/` and `assets/`. Figma, Canva, PDF and PNG are only references: every template is rebuilt here in HTML and CSS.
 
-| Folder               | Format                    | Layouts |
-| -------------------- | ------------------------- | ------- |
-| `editorial-ig-4x5`   | Instagram 4:5 · 1080×1350 | 8       |
-| `editorial-linkedin` | LinkedIn document · PDF   | 8       |
-| `report-audit-a4`    | A4 report · PDF 150 dpi   | 6       |
+| Folder                         | Format                    | Layouts |
+| ------------------------------ | ------------------------- | ------- |
+| `carousels/editorial-ig-4x5`   | Instagram 4:5 · 1080×1350 | 8       |
+| `carousels/editorial-linkedin` | LinkedIn document · PDF   | 8       |
+| `reports/report-audit-a4`      | A4 report · PDF 150 dpi   | 6       |
 
 `report-audit-a4` is the audit report (`kind: "report"`, no `channel`): cover, section, finding with evidence and recommendation, problem, next steps, method. The PDF comes out in true A4 format; there is also the `report_16x9` format (1920×1080) for reports to be projected.
 
@@ -20,4 +20,4 @@ Rules for writing a template:
 
 To use them, import them from the Templates page (section “To import from the agency’s folder”) or as a ZIP: they become drafts in the catalog and must be published. A change to an already published template requires bumping `version` in `template.json`.
 
-Check: `pnpm --filter @forgecy/carousel preview ../../templates/<folder> /tmp/out`. The fonts are Space Grotesk and Inter (SIL Open Font License 1.1, licenses in `fonts/`).
+Check: `pnpm --filter @forgecy/carousel preview ../../templates/<kind>/<folder> /tmp/out`. The fonts are Space Grotesk and Inter (SIL Open Font License 1.1, licenses in `fonts/`).

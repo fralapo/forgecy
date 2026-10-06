@@ -24,7 +24,7 @@ import {
   suggestMapping,
   type Candidate,
 } from "../src";
-import { csvCell } from "../src/csv-export";
+import { csvCell } from "../src/products/csv-export";
 import { makePdf, makeXlsx, makeZip, PNG } from "./fixtures";
 
 const WOO_HEADERS = [

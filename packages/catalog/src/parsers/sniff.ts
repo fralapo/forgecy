@@ -1,5 +1,5 @@
 import type { AiPolicy, ImportFileKind, ImportFileRoute } from "@forgecy/core";
-import { IMPORT_LIMITS } from "./limits";
+import { IMPORT_LIMITS } from "../import/limits";
 import { extensionOf } from "./text";
 
 export type SniffedFormat =

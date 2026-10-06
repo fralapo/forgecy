@@ -1,6 +1,6 @@
 import yauzl from "yauzl";
-import { ImportError } from "./errors";
-import { IMPORT_LIMITS } from "./limits";
+import { ImportError } from "../import/errors";
+import { IMPORT_LIMITS } from "../import/limits";
 
 export interface ZipEntryInfo {
   /** Normalized relative path (forward slashes, no leading slash, no "..", no drive letters). */

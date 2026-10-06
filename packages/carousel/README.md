@@ -14,5 +14,5 @@ Carousel renderer, templates and export (M3).
 
 Commands:
 
-- `pnpm --filter @forgecy/carousel preview ../../templates/editorial-ig-4x5 /tmp/out`: validates a template, runs the test render and saves the PNGs of every layout with sample and long texts.
+- `pnpm --filter @forgecy/carousel preview ../../templates/carousels/editorial-ig-4x5 /tmp/out`: validates a template, runs the test render and saves the PNGs of every layout with sample and long texts.
 - `pnpm test`: the Chromium tests run with `FORGECY_RENDER_TESTS=1` (CI sets it and installs the browser) or with `FORGECY_CHROMIUM_PATH` pointing to a local Chromium.

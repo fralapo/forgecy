@@ -4,6 +4,6 @@
  */
 export * from "./document";
 export * from "./labels";
-export * from "./checks";
-export { GUARDED_CHECK_PREFIXES, findingsToAcknowledge } from "./brand-guard";
-export type { GuardBand, GuardFinding, GuardReport, GuardSeverity } from "./brand-guard";
+export * from "./carousels/checks";
+export { GUARDED_CHECK_PREFIXES, findingsToAcknowledge } from "./carousels/brand-guard";
+export type { GuardBand, GuardFinding, GuardReport, GuardSeverity } from "./carousels/brand-guard";

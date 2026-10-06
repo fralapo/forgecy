@@ -1,8 +1,8 @@
 import type { ConfidenceLevel } from "@forgecy/core";
 import { readTextDocument } from "./documents";
-import { isImportError, type ImportErrorCode } from "./errors";
-import { IMPORT_LIMITS } from "./limits";
-import { isWooCommerceExport, suggestMapping, type ColumnMapping } from "./mapping";
+import { isImportError, type ImportErrorCode } from "../import/errors";
+import { IMPORT_LIMITS } from "../import/limits";
+import { isWooCommerceExport, suggestMapping, type ColumnMapping } from "../import/mapping";
 import { readPdfText } from "./pdf";
 import { parseSheet, type CsvOptions } from "./sheet";
 import { sniffFile, type SniffedFormat } from "./sniff";

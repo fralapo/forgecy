@@ -4,17 +4,20 @@ import { defaultTokens, parseDocument as parseBrandDocument } from "@forgecy/bra
 import { findLayout, templateManifestSchema } from "@forgecy/carousel";
 import { describe, expect, it } from "vitest";
 import { imageSize } from "../src/assets";
-import { findingsToAcknowledge, toGuardContent } from "../src/brand-guard";
-import { computeChecks } from "../src/checks";
+import { findingsToAcknowledge, toGuardContent } from "../src/carousels/brand-guard";
+import { computeChecks } from "../src/carousels/checks";
 import { carouselDocumentSchema, normalizeHashtag, perWeek } from "../src/document";
-import { slotsFromOutput } from "../src/pipeline";
-import { clampSlideCount, defaultRoles, pickLayout } from "../src/templates";
-import { brandThemeFromIdentity } from "../src/theme";
+import { slotsFromOutput } from "../src/ai/pipeline";
+import { clampSlideCount, defaultRoles, pickLayout } from "../src/carousels/templates";
+import { brandThemeFromIdentity } from "../src/carousels/theme";
 
 const manifest = templateManifestSchema.parse(
   JSON.parse(
     readFileSync(
-      path.resolve(import.meta.dirname, "../../../templates/editorial-ig-4x5/template.json"),
+      path.resolve(
+        import.meta.dirname,
+        "../../../templates/carousels/editorial-ig-4x5/template.json",
+      ),
       "utf8",
     ),
   ),

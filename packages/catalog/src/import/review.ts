@@ -13,7 +13,7 @@ import {
 } from "@forgecy/db";
 import { isNotNull } from "drizzle-orm";
 import type { ImageRef } from "./candidates";
-import type { ActingUser, Tx } from "./db";
+import type { ActingUser, Tx } from "../db";
 import {
   emptyFields,
   fieldDef,
@@ -24,9 +24,9 @@ import {
   type FieldKey,
   type ProductDraft,
   type ProductFields,
-} from "./fields";
+} from "../products/fields";
 import { loadImport, type ImportItemRow } from "./imports";
-import type { FieldMeta, FieldMetaMap } from "./meta";
+import type { FieldMeta, FieldMetaMap } from "../products/meta";
 import {
   approvalBlockers,
   attachImages,
@@ -36,7 +36,7 @@ import {
   proposeField,
   rowToFields,
   withSensitivity,
-} from "./products";
+} from "../products/products";
 
 export type ReviewTab = "new" | "duplicates" | "conflicts" | "images" | "discarded";
 

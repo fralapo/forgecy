@@ -7,9 +7,9 @@ describe("validateTemplatePackage", () => {
   it("accepts every template shipped in templates", async () => {
     const entries = await scanTemplateDir(TEMPLATES);
     expect(entries.map((e) => e.folder).sort()).toEqual([
-      "editorial-ig-4x5",
-      "editorial-linkedin",
-      "report-audit-a4",
+      "carousels/editorial-ig-4x5",
+      "carousels/editorial-linkedin",
+      "reports/report-audit-a4",
     ]);
     for (const e of entries) expect(e.report.issues.map(formatIssue), e.folder).toEqual([]);
   });

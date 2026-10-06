@@ -16,7 +16,7 @@ import {
   toRenderSlide,
   type CarouselDocument,
   type ContentChannel,
-} from "./document";
+} from "../document";
 
 export type CheckSeverity = "error" | "warning";
 

@@ -11,7 +11,7 @@ import { loadAudit } from "../service/common";
 import { buildReportDocument, recordReportExport, reportFileName } from "../service/reports";
 import type { AuditHandlerDeps } from "./context";
 
-/** Key of the agency template in the catalog (templates/report-audit-a4). */
+/** Key of the agency template in the catalog (templates/reports/report-audit-a4). */
 export const REPORT_TEMPLATE_KEY = "report-audit-a4";
 
 /**

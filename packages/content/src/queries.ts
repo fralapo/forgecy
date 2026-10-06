@@ -26,10 +26,10 @@ import {
   users,
   type Database,
 } from "@forgecy/db";
-import { checkDocument, getContentRow, isLocked, outlineOf } from "./carousels";
+import { checkDocument, getContentRow, isLocked, outlineOf } from "./carousels/carousels";
 import { parseDocument, perWeek } from "./document";
 import { productSource, hasProductCatalog } from "./products";
-import { getTemplate, listUsableTemplates } from "./templates";
+import { getTemplate, listUsableTemplates } from "./carousels/templates";
 
 const freqOf = (count: number | null, unit: "week" | "month" | null) =>
   count && unit ? { count, unit } : null;

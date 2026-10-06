@@ -9,7 +9,7 @@ import { fitText } from "../src/report/text";
 import type { ReportDocItem, ReportDocument } from "../src/service/reports";
 
 const manifestPath = fileURLToPath(
-  new URL("../../../templates/report-audit-a4/template.json", import.meta.url),
+  new URL("../../../templates/reports/report-audit-a4/template.json", import.meta.url),
 );
 const parsed = parseManifest(readFileSync(manifestPath, "utf8"));
 if (!parsed.ok) throw new Error("Invalid report template.json");

@@ -39,7 +39,7 @@ import {
   type Candidate,
   type MaterialFile,
 } from "./candidates";
-import { parseProductText, readTextDocument } from "./documents";
+import { parseProductText, readTextDocument } from "../parsers/documents";
 import { isImportError } from "./errors";
 import {
   fieldKeys,
@@ -48,7 +48,7 @@ import {
   sanitizeDraft,
   type FieldKey,
   type ProductDraft,
-} from "./fields";
+} from "../products/fields";
 import {
   importOptions,
   loadCatalogClient,
@@ -62,7 +62,7 @@ import {
   sniffEntry,
   type FileMeta,
   type MappingProposalData,
-} from "./inspect";
+} from "../parsers/inspect";
 import type { ImportPhase } from "./jobs";
 import { IMPORT_LIMITS } from "./limits";
 import { applyMapping, columnMappingSchema } from "./mapping";
@@ -72,15 +72,15 @@ import {
   type FieldMeta,
   type FieldMetaMap,
   type SourceRef,
-} from "./meta";
-import { chunkPages, readPdfText } from "./pdf";
-import { rowToFields } from "./products";
-import { sensitiveFields, type ClaimKind } from "./sensitive";
-import { parseSheet } from "./sheet";
-import { aiAvailability, proposeRoute } from "./sniff";
-import { downloadToTemp, readStored, storeBuffer } from "./storage";
-import { normalizeKey, normalizeSku } from "./text";
-import { readZip } from "./zip";
+} from "../products/meta";
+import { chunkPages, readPdfText } from "../parsers/pdf";
+import { rowToFields } from "../products/products";
+import { sensitiveFields, type ClaimKind } from "../products/sensitive";
+import { parseSheet } from "../parsers/sheet";
+import { aiAvailability, proposeRoute } from "../parsers/sniff";
+import { downloadToTemp, readStored, storeBuffer } from "../storage";
+import { normalizeKey, normalizeSku } from "../parsers/text";
+import { readZip } from "../parsers/zip";
 
 export interface PipelineDeps {
   db: Database;

@@ -10,7 +10,7 @@ import type { AiPolicy } from "@forgecy/core";
 import type { Database } from "@forgecy/db";
 import { estimateTokens } from "./ai";
 import type { plannedAiSteps } from "./imports";
-import { aiAvailability } from "./sniff";
+import { aiAvailability } from "../parsers/sniff";
 
 export type PlannedAi = ReturnType<typeof plannedAiSteps>;
 

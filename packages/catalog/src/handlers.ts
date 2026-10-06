@@ -13,9 +13,9 @@ import {
   isUnrecoverableError,
   type JobContext,
 } from "@forgecy/jobs";
-import { isImportError } from "./errors";
-import { catalogImportJob, type ImportPhase } from "./jobs";
-import { runImportPhase, type PipelineDeps } from "./pipeline";
+import { isImportError } from "./import/errors";
+import { catalogImportJob, type ImportPhase } from "./import/jobs";
+import { runImportPhase, type PipelineDeps } from "./import/pipeline";
 
 const stepLabels: Record<ImportPhase, string> = {
   scan: "Reading the files",

@@ -34,14 +34,12 @@ reviewed by a person before anything is approved.
 
 ## Layout
 
-| File                                                                     | Role                                                            |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| `fields.ts`, `meta.ts`, `sensitive.ts`, `completeness.ts`                | Product fields, provenance/truth level, claim detection         |
-| `sniff.ts`, `inspect.ts`, `zip.ts`, `sheet.ts`, `pdf.ts`, `documents.ts` | File recognition and readers                                    |
-| `mapping.ts`, `candidates.ts`                                            | Column mapping (WooCommerce preset), merging and image matching |
-| `imports.ts`, `pipeline.ts`, `jobs.ts`, `handlers.ts`                    | Import lifecycle and the `catalog.import_analyze` job           |
-| `review.ts`, `products.ts`, `product-images.ts`, `queries.ts`            | Review decisions, product operations, page queries              |
-| `cost.ts`                                                                | AI setup, cost estimate and budget shown before starting        |
+| Folder      | Files                                                                                                                            | Role                                                                                                           |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `products/` | `fields.ts`, `meta.ts`, `sensitive.ts`, `completeness.ts`, `products.ts`, `product-images.ts`, `queries.ts`, `csv-export.ts`     | Product fields, provenance/truth level, claim detection, product operations, page queries, CSV export          |
+| `parsers/`  | `sniff.ts`, `inspect.ts`, `zip.ts`, `sheet.ts`, `pdf.ts`, `documents.ts`, `text.ts`                                              | File recognition and readers                                                                                   |
+| `import/`   | `imports.ts`, `pipeline.ts`, `jobs.ts`, `mapping.ts`, `candidates.ts`, `review.ts`, `ai.ts`, `cost.ts`, `errors.ts`, `limits.ts` | Import lifecycle, column mapping (WooCommerce preset), merging, review decisions, AI prompts and cost estimate |
+| `src/` root | `index.ts`, `handlers.ts`, `db.ts`, `storage.ts`                                                                                 | Public entry point, worker handlers (`catalog.import_analyze`), shared handles                                 |
 
 The worker registers `catalogHandlers` from `@forgecy/catalog/handlers`; the web pages
 live in `apps/web/app/(app)/products`.

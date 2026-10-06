@@ -17,7 +17,7 @@ import { and, contentApprovals, contentVersions, desc, eq, type Database } from 
 import { createStorageFromEnv } from "@forgecy/files";
 import { handle, NeedsAttentionError, type JobContext, type JobHandlers } from "@forgecy/jobs";
 import { requireClient } from "./access";
-import { getContentRow, recordExport } from "./carousels";
+import { getContentRow, recordExport } from "./carousels/carousels";
 import { parseDocument, toRenderSlide } from "./document";
 import {
   editSlideJob,
@@ -37,8 +37,8 @@ import {
   runProposeStrategy,
   type PipelineContext,
   type PipelineDeps,
-} from "./pipeline";
-import { loadBrand } from "./theme";
+} from "./ai/pipeline";
+import { loadBrand } from "./carousels/theme";
 import { registerContentPorts } from "./wiring";
 
 registerContentPorts();
