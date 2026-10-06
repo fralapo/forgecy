@@ -1,6 +1,7 @@
 import "server-only";
 import {
   AGENT_TASKS,
+  agentProposalOutcomes,
   agentRunStats,
   defaultModelFor,
   loadAgentConfigs,
@@ -43,9 +44,10 @@ export interface TaskModel {
 /** Everything the Agents pages show: configuration, statistics, model in use per task. */
 export async function loadAgentsView(localName: string) {
   const db = getDb();
-  const [configs, stats, resolved] = await Promise.all([
+  const [configs, stats, outcomes, resolved] = await Promise.all([
     loadAgentConfigs(db),
     agentRunStats(db),
+    agentProposalOutcomes(db),
     currentRouting(),
   ]);
   const routing = withAgents(resolved.routing, configs, getProviders(), env);
@@ -70,7 +72,10 @@ export async function loadAgentsView(localName: string) {
     ready: textReady[id],
     defaultModel: defaultModelFor(id, env),
   }));
-  return { configs, stats, taskModels, providers };
+  return { configs, stats, outcomes, taskModels, providers };
 }
+
+/** Agents that never leave proposals: their acceptance rate is “Not applicable”. */
+export const NO_PROPOSALS: readonly AgentRole[] = ["reviewer"];
 
 export const modelLabel = (m: ModelRef | undefined) => (m ? `${m.provider} · ${m.model}` : "");

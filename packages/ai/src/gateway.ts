@@ -105,6 +105,11 @@ interface CommonRequest {
   route?: TaskRoute;
   /** The agent making the call; by default the one that owns the task. */
   agent?: AgentRole;
+  /**
+   * Instructions to use instead of the agent's published ones: “Try on an example”
+   * runs a draft (Admin only, example input, never client data).
+   */
+  instructions?: { version: number; text: string };
 }
 
 export interface GenerateObjectRequest<T> extends CommonRequest {
@@ -442,13 +447,14 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
         req.route ?? runtime?.tasks?.[req.task] ?? routing.tasks?.[req.task] ?? routing.default;
       // Published instructions, then the client's approved memories, go after the
       // module's own prompt, which wins.
+      const instructions = req.instructions ?? runtime?.instructions;
       const memories =
         agent && req.clientId && ledger.agentMemory
           ? await ledger.agentMemory(req.clientId, agent)
           : [];
       const system = [
         req.system,
-        ...(runtime?.instructions ? [agentInstructionsBlock(runtime.instructions)] : []),
+        ...(instructions ? [agentInstructionsBlock(instructions)] : []),
         ...(memories.length ? [agentMemoryBlock(memories)] : []),
       ].join("\n\n");
       const jsonSchema = zodToJsonSchema(req.schema);
@@ -461,7 +467,8 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
           ? {
               agent: {
                 key: agent,
-                instructionsVersion: runtime?.instructions?.version ?? null,
+                instructionsVersion: instructions?.version ?? null,
+                ...(req.instructions ? { preview: true } : {}),
               },
             }
           : {}),

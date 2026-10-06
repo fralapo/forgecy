@@ -119,7 +119,8 @@
     "variesByTask": "Varies by task",
     "noTasks": "No language model",
     "noInstructions": "None",
-    "version": "v{version}"
+    "version": "v{version}",
+    "accepted": "Accepted (90 days)"
   },
   "detail": {
     "back": "All agents",
@@ -128,7 +129,8 @@
       "overview": "Overview",
       "tasks": "Tasks and models",
       "instructions": "Instructions",
-      "runs": "Runs"
+      "runs": "Runs",
+      "stats": "Statistics"
     },
     "roleTitle": "Role",
     "inputsTitle": "What it reads",
@@ -474,6 +476,56 @@
         "language": "Choose a language from the list.",
         "default_cta": "Write a CTA of up to 60 characters and choose its type."
       }
+    }
+  },
+  "stats": {
+    "rate": "{percent} · {accepted} of {decided}",
+    "notEnough": "At least {min} decided proposals are needed to compute the rate ({decided} so far).",
+    "notEnoughShort": "{decided} of {min} decided",
+    "notApplicable": "Not applicable",
+    "proposalsTitle": "Proposals decided in the last 90 days",
+    "accepted": "Accepted",
+    "rejected": "Rejected",
+    "stale": "Superseded",
+    "rateTitle": "Accepted proposals",
+    "weeksTitle": "Runs per week",
+    "week": "Week",
+    "weekOf": "Week of {date}",
+    "runs": "Runs",
+    "failed": "Failed",
+    "failuresTitle": "Failures by reason (90 days)",
+    "failuresNone": "No failed or blocked runs in the last 90 days.",
+    "reason": "Reason",
+    "count": "Runs",
+    "error": "Provider or validation error",
+    "costTitle": "Cost per month",
+    "month": "Month",
+    "cost": "Cost",
+    "editsTitle": "Slide instructions (90 days)",
+    "kept": "Kept",
+    "reverted": "Undone",
+    "editsNone": "No slide instruction was decided in the last 90 days.",
+    "sources": "Counted from Brand Identity proposals, audit observations, strategy proposals, product fields and memories."
+  },
+  "preview": {
+    "title": "Try on an example",
+    "intro": "Runs one task with the draft above on an example you write. No client data is used; the run is logged and costed like any other.",
+    "task": "Task",
+    "example": "Example input",
+    "exampleHint": "A brief or text like the ones this task receives, up to {max} characters. Do not paste client data.",
+    "estimate": "About {cost} per try with {model}.",
+    "estimateUnknown": "Uses {model}; the cost is logged after the try.",
+    "run": "Try the draft",
+    "running": "Running the example…",
+    "resultTitle": "Result",
+    "followed": "How the instructions shaped it",
+    "meta": "{model} · {cost}",
+    "noAi": "The agency's default AI policy is no_ai: trying the prompt is not available.",
+    "noTasks": "This agent has no language-model task to try.",
+    "errors": {
+      "task": "Choose one of this agent's tasks.",
+      "example": "Write an example of 3 to {max} characters.",
+      "noAi": "The agency's default AI policy is no_ai: trying the prompt is not available."
     }
   }
 }

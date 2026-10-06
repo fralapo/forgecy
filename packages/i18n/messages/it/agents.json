@@ -119,7 +119,8 @@
     "variesByTask": "Varia per compito",
     "noTasks": "Nessun modello linguistico",
     "noInstructions": "Nessuna",
-    "version": "v{version}"
+    "version": "v{version}",
+    "accepted": "Accettate (90 giorni)"
   },
   "detail": {
     "back": "Tutti gli agenti",
@@ -128,7 +129,8 @@
       "overview": "Panoramica",
       "tasks": "Compiti e modelli",
       "instructions": "Istruzioni",
-      "runs": "Run"
+      "runs": "Run",
+      "stats": "Statistiche"
     },
     "roleTitle": "Ruolo",
     "inputsTitle": "Che cosa legge",
@@ -474,6 +476,56 @@
         "language": "Scegli una lingua dall'elenco.",
         "default_cta": "Scrivi una CTA di massimo 60 caratteri e scegline il tipo."
       }
+    }
+  },
+  "stats": {
+    "rate": "{percent} · {accepted} su {decided}",
+    "notEnough": "Servono almeno {min} proposte decise per calcolare il tasso (finora {decided}).",
+    "notEnoughShort": "{decided} decise su {min}",
+    "notApplicable": "Non applicabile",
+    "proposalsTitle": "Proposte decise negli ultimi 90 giorni",
+    "accepted": "Accettate",
+    "rejected": "Rifiutate",
+    "stale": "Superate",
+    "rateTitle": "Proposte accettate",
+    "weeksTitle": "Run per settimana",
+    "week": "Settimana",
+    "weekOf": "Settimana del {date}",
+    "runs": "Run",
+    "failed": "Fallite",
+    "failuresTitle": "Fallimenti per motivo (90 giorni)",
+    "failuresNone": "Nessuna run fallita o bloccata negli ultimi 90 giorni.",
+    "reason": "Motivo",
+    "count": "Run",
+    "error": "Errore del provider o di validazione",
+    "costTitle": "Costo per mese",
+    "month": "Mese",
+    "cost": "Costo",
+    "editsTitle": "Istruzioni su slide (90 giorni)",
+    "kept": "Mantenute",
+    "reverted": "Annullate",
+    "editsNone": "Nessuna istruzione su slide decisa negli ultimi 90 giorni.",
+    "sources": "Contate da proposte di Brand Identity, osservazioni dell'audit, proposte di strategia, campi prodotto e memorie."
+  },
+  "preview": {
+    "title": "Prova su un esempio",
+    "intro": "Esegue un compito con la bozza qui sopra su un esempio che scrivi tu. Non usa dati dei clienti; la run viene registrata e costa come le altre.",
+    "task": "Compito",
+    "example": "Input di esempio",
+    "exampleHint": "Un brief o un testo come quelli che riceve questo compito, fino a {max} caratteri. Non incollare dati dei clienti.",
+    "estimate": "Circa {cost} per prova con {model}.",
+    "estimateUnknown": "Usa {model}; il costo viene registrato dopo la prova.",
+    "run": "Prova la bozza",
+    "running": "Esecuzione dell'esempio…",
+    "resultTitle": "Risultato",
+    "followed": "Come le istruzioni l'hanno guidato",
+    "meta": "{model} · {cost}",
+    "noAi": "La policy AI predefinita dell'agenzia è no_ai: la prova del prompt non è disponibile.",
+    "noTasks": "Questo agente non ha compiti con un modello linguistico da provare.",
+    "errors": {
+      "task": "Scegli uno dei compiti di questo agente.",
+      "example": "Scrivi un esempio da 3 a {max} caratteri.",
+      "noAi": "La policy AI predefinita dell'agenzia è no_ai: la prova del prompt non è disponibile."
     }
   }
 }

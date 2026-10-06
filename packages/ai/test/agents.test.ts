@@ -116,6 +116,22 @@ describe("gateway with agent configuration", () => {
   });
 });
 
+describe("gateway with draft instructions (try on an example)", () => {
+  it("uses the given instructions instead of the published ones and marks the run", async () => {
+    const { gateway, anthropic, ledger } = setup({
+      copywriter: { active: true, instructions: { version: 3, text: "Published text." } },
+    });
+    anthropic.push({ json: { title: "Hi" } });
+    await gateway.generateObject({ ...req, instructions: { version: 4, text: "Draft text." } });
+    const system = anthropic.calls[0]!.system;
+    expect(system).toContain("Draft text.");
+    expect(system).not.toContain("Published text.");
+    expect(ledger.entries[0]!.inputSummary).toMatchObject({
+      agent: { key: "copywriter", instructionsVersion: 4, preview: true },
+    });
+  });
+});
+
 describe("gateway with client memory", () => {
   it("adds the client's approved memories after the instructions and records their ids", async () => {
     const ledger = Object.assign(createMemoryLedger(), {

@@ -1,4 +1,10 @@
-import { AGENT_CAPABILITIES, AGENT_ORDER } from "@forgecy/ai";
+import {
+  ACCEPTANCE_MIN_DECIDED,
+  AGENT_CAPABILITIES,
+  AGENT_ORDER,
+  acceptanceRate,
+} from "@forgecy/ai";
+import type { AgentRole } from "@forgecy/core";
 import { Badge, Button } from "@forgecy/ui";
 import { Bot, Brain, Info } from "lucide-react";
 import type { Route } from "next";
@@ -7,7 +13,7 @@ import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { getFormat } from "@/lib/i18n";
 import { requireUser } from "@/lib/session";
-import { loadAgentsView, modelLabel } from "./_components/data";
+import { loadAgentsView, modelLabel, NO_PROPOSALS } from "./_components/data";
 
 export async function generateMetadata() {
   const t = await getTranslations("agents");
@@ -24,6 +30,7 @@ const columns = [
   "instructions",
   "runs",
   "cost",
+  "accepted",
   "statusColumn",
 ] as const;
 
@@ -33,7 +40,20 @@ export default async function AgentsPage() {
   const t = await getTranslations("agents");
   const tp = await getTranslations("settings.providers");
   const format = await getFormat();
-  const { configs, stats, taskModels } = await loadAgentsView(tp("localModel"));
+  const { configs, stats, outcomes, taskModels } = await loadAgentsView(tp("localModel"));
+  const accepted = (a: AgentRole) => {
+    if (NO_PROPOSALS.includes(a)) return t("stats.notApplicable");
+    const o = outcomes[a];
+    const decided = o.accepted + o.rejected;
+    const rate = acceptanceRate(o);
+    return rate === null
+      ? t("stats.notEnoughShort", { decided, min: ACCEPTANCE_MIN_DECIDED })
+      : t("stats.rate", {
+          percent: format.number(rate, { style: "percent" }),
+          accepted: o.accepted,
+          decided,
+        });
+  };
   const money = (micro: number) =>
     format.number(micro / 1_000_000, { style: "currency", currency: "USD" });
   const active = AGENT_ORDER.filter((a) => configs[a].active).length;
@@ -130,6 +150,7 @@ export default async function AgentsPage() {
                   <td className="whitespace-nowrap px-4 py-3 text-fg">
                     {money(s.monthCostMicroUsd)}
                   </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-fg">{accepted(a)}</td>
                   <td className="px-4 py-3">
                     <Badge variant={c.active ? "success" : "neutral"}>
                       {t(c.active ? "status.active" : "status.inactive")}

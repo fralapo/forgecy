@@ -1,6 +1,11 @@
 import "server-only";
 import {
+  createAiGateway,
+  createDbLedger,
   createMcpImageProviders,
+  loadAgentConfigs,
+  withAgents,
+  type AiGateway,
   createProvidersFromEnv,
   loadAiRoutingSettings,
   resolveRouting,
@@ -31,4 +36,20 @@ export async function currentRouting(): Promise<ResolvedRouting> {
     env.FORGECY_ENCRYPTION_KEY ? connectedMcpProviders(db) : Promise.resolve(new Set<never>()),
   ]);
   return resolveRouting(env, getProviders(), settings, connected);
+}
+
+/**
+ * A gateway for the few AI calls the web app makes itself (“Try on an example”): same
+ * policy, budget, log and agent configuration as the worker.
+ */
+export function webGateway(): AiGateway {
+  const db = getDb();
+  return createAiGateway({
+    ledger: createDbLedger(db),
+    providers: getProviders(),
+    routing: async () => {
+      const [resolved, configs] = await Promise.all([currentRouting(), loadAgentConfigs(db)]);
+      return withAgents(resolved.routing, configs, getProviders(), env);
+    },
+  });
 }
