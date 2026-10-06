@@ -259,10 +259,9 @@ export const contents = pgTable(
     draftRev: integer("draft_rev").notNull().default(1),
     draftUpdatedBy: uuid("draft_updated_by").references(() => users.id, { onDelete: "set null" }),
     draftUpdatedAt: timestamp("draft_updated_at", { withTimezone: true }),
-    currentVersionId: uuid("current_version_id").references(
-      (): AnyPgColumn => contentVersions.id,
-      { onDelete: "set null" },
-    ),
+    currentVersionId: uuid("current_version_id").references((): AnyPgColumn => contentVersions.id, {
+      onDelete: "set null",
+    }),
     approvedVersionId: uuid("approved_version_id").references(
       (): AnyPgColumn => contentVersions.id,
       { onDelete: "set null" },
