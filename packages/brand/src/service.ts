@@ -6,12 +6,12 @@
  */
 import {
   assertCan,
-  ForgecyError,
   PermissionDeniedError,
   type Actor,
   type BrandSourceKind,
   type Permission,
 } from "@forgecy/core";
+import { localizedError, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import {
   and,
   brandIdentities,
@@ -73,14 +73,16 @@ function humanOnly(
 
 const userId = (actor: Actor) => (actor.type === "user" ? actor.id : null);
 
-function conflict(message: string, details?: Record<string, unknown>): never {
-  throw new ForgecyError("conflict", message, details);
+// Messages live in packages/i18n (brand.errors.*): the English text stays in err.message.
+type ErrorKey = MessageKey & `brand.errors.${string}`;
+function conflict(key: ErrorKey, values?: MessageValues, details?: Record<string, unknown>): never {
+  throw localizedError("conflict", key, values, details);
 }
-function notFound(message: string): never {
-  throw new ForgecyError("not_found", message);
+function notFound(key: ErrorKey): never {
+  throw localizedError("not_found", key);
 }
-function invalid(message: string, details?: Record<string, unknown>): never {
-  throw new ForgecyError("validation", message, details);
+function invalid(key: ErrorKey, values?: MessageValues, details?: Record<string, unknown>): never {
+  throw localizedError("validation", key, values, details);
 }
 
 async function requireClient(db: Executor, clientId: string) {
@@ -93,7 +95,7 @@ async function requireClient(db: Executor, clientId: string) {
     })
     .from(clients)
     .where(eq(clients.id, clientId));
-  if (!client) notFound("Client not found");
+  if (!client) notFound("brand.errors.clientNotFound");
   return client;
 }
 
@@ -234,7 +236,7 @@ async function writeDraft(
     .where(and(eq(brandIdentityVersions.id, draft.id), eq(brandIdentityVersions.rev, draft.rev)))
     .returning();
   if (!row)
-    conflict("Someone else changed the draft. Reload the page.", {
+    conflict("brand.errors.draftChanged", undefined, {
       code: "CONFLICT-DRAFT-REV",
     });
   return row;
@@ -310,24 +312,28 @@ export async function saveDraftSection(
   humanOnly(actor, "edit_draft");
   assertCan(actor, "edit_draft", input.clientId);
   const schema = documentSections[input.section];
-  if (!schema) invalid("Unknown section");
+  if (!schema) invalid("brand.errors.unknownSection");
   return db.transaction(async (tx) => {
     const draft = await lockOpenDraft(tx, input.clientId);
     if (!draft || draft.id !== input.versionId)
-      conflict("This draft is no longer open.", { code: "DRAFT-CLOSED" });
+      conflict("brand.errors.draftClosed", undefined, { code: "DRAFT-CLOSED" });
     if (draft.rev !== input.rev)
-      conflict("Someone else changed the draft. Reload the page.", {
+      conflict("brand.errors.draftChanged", undefined, {
         code: "CONFLICT-DRAFT-REV",
       });
     const state = stateOf(draft);
     const normalized = normalizeHumanEdit(state.document[input.section], input.value);
     const parsed = schema.safeParse(normalized);
     if (!parsed.success)
-      invalid(parsed.error.issues[0]?.message ?? "Invalid data", {
-        issues: parsed.error.issues
-          .slice(0, 10)
-          .map((i) => ({ path: i.path.join("."), message: i.message })),
-      });
+      invalid(
+        "brand.errors.invalidData",
+        { detail: parsed.error.issues[0]?.message ?? "" },
+        {
+          issues: parsed.error.issues
+            .slice(0, 10)
+            .map((i) => ({ path: i.path.join("."), message: i.message })),
+        },
+      );
     const next: DraftState = {
       document: { ...state.document, [input.section]: parsed.data } as BrandIdentityDocument,
       tokens: state.tokens,
@@ -356,13 +362,17 @@ export async function saveDraftTokens(
   assertCan(actor, "edit_draft", input.clientId);
   const issues = validateTokens(input.tokens);
   if (issues.length)
-    invalid(`Invalid tokens: ${issues[0]!.path} ${issues[0]!.message}`, { issues });
+    invalid(
+      "brand.errors.invalidTokens",
+      { path: issues[0]!.path, detail: issues[0]!.message },
+      { issues },
+    );
   return db.transaction(async (tx) => {
     const draft = await lockOpenDraft(tx, input.clientId);
     if (!draft || draft.id !== input.versionId)
-      conflict("This draft is no longer open.", { code: "DRAFT-CLOSED" });
+      conflict("brand.errors.draftClosed", undefined, { code: "DRAFT-CLOSED" });
     if (draft.rev !== input.rev)
-      conflict("Someone else changed the draft. Reload the page.", {
+      conflict("brand.errors.draftChanged", undefined, {
         code: "CONFLICT-DRAFT-REV",
       });
     const state = stateOf(draft);
@@ -416,8 +426,7 @@ export async function proposeChange(
     const state = stateOf(draft);
     const sourceIds = [...new Set(evidence.map((e) => e.sourceId))];
     const kinds = await sourceKinds(tx, input.clientId, sourceIds);
-    if (kinds.size !== sourceIds.length)
-      invalid("One of the cited sources does not exist for this client");
+    if (kinds.size !== sourceIds.length) invalid("brand.errors.unknownSource");
     const evidenceKinds = sourceIds.map((id) => kinds.get(id)!);
     if (actor.type === "agent" && !evidenceKinds.length) evidenceKinds.push("agent_observation");
 
@@ -432,14 +441,13 @@ export async function proposeChange(
         confidence,
       },
     );
-    if (!stillApplies(state, built.patch))
-      conflict("The proposal does not apply to the current draft");
+    if (!stillApplies(state, built.patch)) conflict("brand.errors.proposalNotApplicable");
     const value = proposedValue(built.patch, built.field);
     if (
       built.written !== undefined &&
       deepEqual(value, currentValue(state, built.patch, built.field))
     )
-      invalid("The proposed value is already in the draft", { code: "NO-CHANGE" });
+      invalid("brand.errors.alreadyInDraft", undefined, { code: "NO-CHANGE" });
     const [row] = await tx
       .insert(brandIdentityProposals)
       .values({
@@ -556,9 +564,9 @@ async function acceptOne(
       ),
     )
     .for("update");
-  if (!p) notFound("Proposal not found");
-  if (p.status !== "proposed") conflict("The proposal has already been decided.");
-  if (bulk && p.sensitive) invalid("Sensitive proposals are accepted one by one.");
+  if (!p) notFound("brand.errors.proposalNotFound");
+  if (p.status !== "proposed") conflict("brand.errors.proposalDecided");
+  if (bulk && p.sensitive) invalid("brand.errors.sensitiveOneByOne");
 
   const conflicting = (await conflictsFor(tx, input.clientId)).some((c) =>
     c.proposalIds.includes(p.id),
@@ -566,18 +574,13 @@ async function acceptOne(
   const effectiveLow = p.confidence === "low" || conflicting;
   const note = input.note?.trim() ?? "";
   if (p.sensitive && effectiveLow && note.length < 10)
-    invalid(
-      "Why are you accepting despite the low confidence? Write a note of at least 10 characters.",
-      {
-        code: "NOTE-REQUIRED",
-      },
-    );
+    invalid("brand.errors.noteRequired", undefined, { code: "NOTE-REQUIRED" });
 
   const draft = await openDraft(tx, input.clientId, actor.id);
   const match = matchField(p.fieldPath.replace(/\[.*\]$/, "").replace(/\/-$/, ""));
-  if (!match) invalid("Unknown proposal field");
+  if (!match) invalid("brand.errors.unknownProposalField");
   let patch = p.changes as JsonPatch;
-  if (!isJsonPatch(patch)) invalid("Malformed proposal");
+  if (!isJsonPatch(patch)) invalid("brand.errors.malformedProposal");
   if (input.editedValue !== undefined)
     patch = withEditedValue(patch, input.editedValue, match.field);
 
@@ -595,11 +598,16 @@ async function acceptOne(
   }
   const parsed = brandIdentityDocumentSchema.safeParse(next.document);
   if (!parsed.success)
-    invalid(`The proposed value is not valid: ${parsed.error.issues[0]?.message ?? ""}`);
+    invalid("brand.errors.proposedValueInvalid", {
+      detail: parsed.error.issues[0]?.message ?? "",
+    });
   if (p.fieldPath.startsWith("/tokens/")) {
     const issues = validateTokens(next.tokens);
     if (issues.length)
-      invalid(`The proposed token does not resolve: ${issues[0]!.path} ${issues[0]!.message}`);
+      invalid("brand.errors.proposedTokenUnresolved", {
+        path: issues[0]!.path,
+        detail: issues[0]!.message,
+      });
   }
   next = { document: parsed.data, tokens: next.tokens };
   const row = await writeDraft(tx, draft, next, actor.id);
@@ -663,7 +671,7 @@ export async function acceptProposals(
   humanOnly(actor, "review");
   assertCan(actor, "review", input.clientId);
   assertCan(actor, "edit_draft", input.clientId);
-  if (input.proposalIds.length > 50) invalid("At most 50 proposals at a time");
+  if (input.proposalIds.length > 50) invalid("brand.errors.tooManyProposals", { max: 50 });
   return db.transaction(async (tx) => {
     let accepted = 0;
     let stale = 0;
@@ -688,7 +696,7 @@ export async function rejectProposals(
 ): Promise<{ rejected: number }> {
   humanOnly(actor, "review");
   assertCan(actor, "review", input.clientId);
-  if (input.proposalIds.length > 50) invalid("At most 50 proposals at a time");
+  if (input.proposalIds.length > 50) invalid("brand.errors.tooManyProposals", { max: 50 });
   return db.transaction(async (tx) => {
     const rows = await tx
       .update(brandIdentityProposals)
@@ -730,10 +738,10 @@ export async function submitForReview(
   assertCan(actor, "edit_draft", input.clientId);
   await db.transaction(async (tx) => {
     const draft = await lockOpenDraft(tx, input.clientId);
-    if (!draft || draft.id !== input.versionId) conflict("This draft is no longer open.");
-    if (draft.status !== "draft") conflict("The draft is already in review.");
+    if (!draft || draft.id !== input.versionId) conflict("brand.errors.draftClosed");
+    if (draft.status !== "draft") conflict("brand.errors.alreadyInReview");
     if (draft.rev !== input.rev)
-      conflict("Someone else changed the draft. Reload the page.", {
+      conflict("brand.errors.draftChanged", undefined, {
         code: "CONFLICT-DRAFT-REV",
       });
     const conflicts = await conflictsFor(tx, input.clientId);
@@ -742,10 +750,9 @@ export async function submitForReview(
     );
     if (sensitiveConflicts.length)
       conflict(
-        `Resolve ${sensitiveConflicts.length} conflicts on sensitive fields before submitting.`,
-        {
-          code: "CONFLICTS-OPEN",
-        },
+        "brand.errors.sensitiveConflicts",
+        { count: sensitiveConflicts.length },
+        { code: "CONFLICTS-OPEN" },
       );
     await tx
       .update(brandIdentityVersions)
@@ -778,7 +785,7 @@ export async function returnToDraft(
   await db.transaction(async (tx) => {
     const draft = await lockOpenDraft(tx, input.clientId);
     if (!draft || draft.id !== input.versionId || draft.status !== "in_review")
-      conflict("This version is not in review.");
+      conflict("brand.errors.notInReview");
     await tx
       .update(brandIdentityVersions)
       .set({ status: "draft", reviewComment: input.comment?.trim() || null })
@@ -840,30 +847,38 @@ export async function approveAndPublish(
   assertCan(actor, "publish", input.clientId);
   const changelog = input.changelog.trim();
   if (changelog.length < CHANGELOG_MIN)
-    invalid(`Write a changelog of at least ${CHANGELOG_MIN} characters.`, {
-      code: "CHANGELOG-REQUIRED",
-    });
+    invalid(
+      "brand.errors.changelogTooShort",
+      { min: CHANGELOG_MIN },
+      {
+        code: "CHANGELOG-REQUIRED",
+      },
+    );
 
   return db.transaction(async (tx) => {
     const draft = await lockOpenDraft(tx, input.clientId);
-    if (!draft || draft.id !== input.versionId) conflict("This draft is no longer open.");
+    if (!draft || draft.id !== input.versionId) conflict("brand.errors.draftClosed");
     if (draft.rev !== input.rev)
-      conflict("The draft changed after you reviewed it. Check the changes again.", {
+      conflict("brand.errors.draftChangedSinceReview", undefined, {
         code: "CONFLICT-DRAFT-REV",
       });
     const note = input.note?.trim() ?? "";
     if (isSelfApproval(draft, actor.id) && note.length < SELF_APPROVAL_NOTE_MIN)
-      invalid("You are approving a draft you prepared yourself. Write a note for the history.", {
+      invalid("brand.errors.selfApprovalNote", undefined, {
         code: "SELF-APPROVAL-NOTE",
       });
 
     const parsed = brandIdentityDocumentSchema.safeParse(draft.document);
     if (!parsed.success)
-      invalid(`The draft is not valid: ${parsed.error.issues[0]?.message ?? ""}`);
+      invalid("brand.errors.draftInvalid", { detail: parsed.error.issues[0]?.message ?? "" });
     const tokens = draft.tokens as TokenTree;
     const tokenIssues = validateTokens(tokens);
     if (tokenIssues.length)
-      invalid(`Invalid tokens: ${tokenIssues[0]!.path}`, { code: "TOKENS-INVALID" });
+      invalid(
+        "brand.errors.invalidTokenPath",
+        { path: tokenIssues[0]!.path },
+        { code: "TOKENS-INVALID" },
+      );
 
     const previous = await publishedRow(tx, input.clientId);
     const pending = await tx
@@ -883,10 +898,14 @@ export async function approveAndPublish(
     });
     const missing = checks.filter((c) => !input.acknowledged.includes(c.key));
     if (missing.length)
-      invalid(`Confirm the open checks: ${missing.map((m) => m.message).join("; ")}`, {
-        code: "CHECKS-NOT-ACKNOWLEDGED",
-        missing: missing.map((m) => m.key),
-      });
+      invalid(
+        "brand.errors.checksNotAcknowledged",
+        { checks: missing.map((m) => m.message).join("; ") },
+        {
+          code: "CHECKS-NOT-ACKNOWLEDGED",
+          missing: missing.map((m) => m.key),
+        },
+      );
 
     const now = new Date();
     if (previous)
@@ -955,16 +974,20 @@ export async function restoreAsDraft(
           eq(brandIdentityVersions.clientId, input.clientId),
         ),
       );
-    if (!source) notFound("Version not found");
+    if (!source) notFound("brand.errors.versionNotFound");
     if (source.status !== "published" && source.status !== "archived")
-      invalid("Only published or archived versions can be restored.");
+      invalid("brand.errors.restoreOnlyPublished");
     const open = await lockOpenDraft(tx, input.clientId);
     if (open) {
       if (!input.replaceDraft)
-        conflict(`Draft v${open.number} already exists. Confirm to replace it.`, {
-          code: "DRAFT-EXISTS",
-          draftNumber: open.number,
-        });
+        conflict(
+          "brand.errors.draftExists",
+          { number: open.number },
+          {
+            code: "DRAFT-EXISTS",
+            draftNumber: open.number,
+          },
+        );
       await tx
         .update(brandIdentityVersions)
         .set({ status: "archived", archivedAt: new Date() })
@@ -1043,8 +1066,7 @@ export async function addSource(
     input.clientId,
   );
   await requireClient(db, input.clientId);
-  if (input.url && !/^https?:\/\//i.test(input.url))
-    invalid("Invalid address: only http and https");
+  if (input.url && !/^https?:\/\//i.test(input.url)) invalid("brand.errors.addressProtocol");
   return db.transaction(async (tx) => {
     if (input.sha256) {
       const [dup] = await tx
@@ -1058,10 +1080,14 @@ export async function addSource(
           ),
         );
       if (dup)
-        conflict(`The file is already among the sources: ${dup.title}`, {
-          code: "SOURCE-DUPLICATE",
-          sourceId: dup.id,
-        });
+        conflict(
+          "brand.errors.duplicateSource",
+          { title: dup.title },
+          {
+            code: "SOURCE-DUPLICATE",
+            sourceId: dup.id,
+          },
+        );
     }
     const [row] = await tx
       .insert(brandSources)
@@ -1113,7 +1139,7 @@ export async function removeSource(
         ),
       )
       .returning({ id: brandSources.id });
-    if (!row) notFound("Source not found");
+    if (!row) notFound("brand.errors.sourceNotFound");
     const stale = await tx
       .update(brandIdentityProposals)
       .set({ status: "stale", staleReason: "The proposal's source was removed" })

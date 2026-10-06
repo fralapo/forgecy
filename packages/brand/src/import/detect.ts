@@ -2,7 +2,9 @@
  * What a brand book import accepts (spec Flow D): PDF, PPTX, DOCX, images, SVG,
  * fonts and plain text. Types come from the bytes, never from the name alone.
  */
+import type { MessageRef } from "@forgecy/core";
 import { UPLOAD_LIMITS, validateUpload } from "@forgecy/files";
+import { englishMessage, messageRef, type MessageKey } from "@forgecy/i18n";
 import { unzipSync } from "fflate";
 
 export type ImportFileType = "pdf" | "docx" | "pptx" | "image" | "svg" | "font" | "text";
@@ -13,7 +15,13 @@ export interface DetectedImport {
   ext: string;
 }
 
-export type DetectResult = ({ ok: true } & DetectedImport) | { ok: false; message: string };
+export type DetectResult =
+  | ({ ok: true } & DetectedImport)
+  /** `message` is English; `ref`, when set, is the same text for the interface. */
+  | { ok: false; message: string; ref?: MessageRef };
+
+const refused = (key: MessageKey & `brand.errors.${string}`) =>
+  ({ ok: false, message: englishMessage(key), ref: messageRef(key) }) as const;
 
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
@@ -45,18 +53,14 @@ export function detectImportFile(input: {
 }): DetectResult {
   const { bytes, name } = input;
   const size = bytes.byteLength;
-  if (size === 0) return { ok: false, message: "The file is empty." };
+  if (size === 0) return refused("brand.errors.fileEmpty");
 
   if (isZip(bytes)) {
-    if (size > UPLOAD_LIMITS.document)
-      return { ok: false, message: "File too large: the maximum is 50 MB." };
+    if (size > UPLOAD_LIMITS.document) return refused("brand.errors.fileTooLarge");
     const kind = ooxmlKind(bytes);
     if (kind === "docx") return { ok: true, type: "docx", mime: DOCX_MIME, ext: "docx" };
     if (kind === "pptx") return { ok: true, type: "pptx", mime: PPTX_MIME, ext: "pptx" };
-    return {
-      ok: false,
-      message: "Archive not supported: upload PDF, PPTX, DOCX, images, SVG or fonts.",
-    };
+    return refused("brand.errors.archiveUnsupported");
   }
 
   const head = bytes.subarray(0, 4096);
@@ -85,13 +89,8 @@ export function detectImportFile(input: {
   }
   // WOFF (1.0) is not in the generic upload list but is a common font delivery format.
   if (head[0] === 0x77 && head[1] === 0x4f && head[2] === 0x46 && head[3] === 0x46) {
-    if (size > UPLOAD_LIMITS.font)
-      return { ok: false, message: "Font too large: the maximum is 10 MB." };
+    if (size > UPLOAD_LIMITS.font) return refused("brand.errors.fontTooLarge");
     return { ok: true, type: "font", mime: "font/woff", ext: "woff" };
   }
-  return {
-    ok: false,
-    message:
-      "Format not allowed: upload PDF, PPTX, DOCX, images (PNG, JPEG, WebP, GIF), SVG, fonts (TTF, OTF, WOFF, WOFF2) or text.",
-  };
+  return refused("brand.errors.formatNotAllowed");
 }

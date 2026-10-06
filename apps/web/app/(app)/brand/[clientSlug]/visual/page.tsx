@@ -1,9 +1,13 @@
+import { getTranslations } from "next-intl/server";
 import { BlockPage } from "../../_components/block-page";
 import { TokensEditor } from "../../_components/tokens-editor";
 import { visualUi } from "../../_lib/editor-config";
 import { versionParam } from "../../_lib/server";
 
-export const metadata = { title: "Visual · Brand Identity" };
+export async function generateMetadata() {
+  const t = await getTranslations("brand.meta");
+  return { title: t("visual") };
+}
 
 export default async function VisualPage({
   params,
@@ -13,12 +17,13 @@ export default async function VisualPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const [{ clientSlug }, sp] = await Promise.all([params, searchParams]);
+  const t = await getTranslations("brand.block.intro");
   return (
     <BlockPage
       slug={clientSlug}
       version={versionParam(sp.version)}
       sections={[visualUi]}
-      intro="Logo, palette with semantic roles, contrasts, typography, photography and layout."
+      intro={t("visual")}
       before={({ client, shown }) => (
         <TokensEditor
           key={shown.version?.id ?? "none"}

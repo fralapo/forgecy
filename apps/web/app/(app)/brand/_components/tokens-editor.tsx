@@ -13,6 +13,7 @@ import {
 import { Badge, Button, Input, Label } from "@forgecy/ui";
 import { Plus, Save, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMemo, useState, useTransition } from "react";
 import { saveTokensAction } from "../actions";
 import { controlClass } from "./section-editor";
@@ -27,12 +28,26 @@ const node = (tree: TokenTree, ...path: string[]): Node => {
 const aliasTarget = (v: unknown) =>
   typeof v === "string" && /^\{color\.reference\.([^}]+)\}$/.test(v) ? v.slice(17, -1) : "";
 
-const gradeLabel = {
-  normal: "Normal text (4.5:1)",
-  large: "Large text only (3:1)",
-  fail: "Not allowed",
-  unknown: "Can’t be calculated",
-} as const;
+/** Message key (brand.tokens.roles.*) of each semantic role. */
+const roleKey = {
+  "color.semantic.background": "background",
+  "color.semantic.surface": "surface",
+  "color.semantic.text-primary": "textPrimary",
+  "color.semantic.text-secondary": "textSecondary",
+  "color.semantic.brand-primary": "brandPrimary",
+  "color.semantic.on-brand-primary": "onBrandPrimary",
+  "color.semantic.accent": "accent",
+} as const satisfies Record<(typeof semanticColorRoles)[number]["path"], string>;
+const pairIds = [
+  "textOnBackground",
+  "secondaryTextOnBackground",
+  "textOnSurface",
+  "secondaryTextOnSurface",
+  "textOnBrand",
+  "brandOnBackground",
+] as const;
+const isPairId = (id: string): id is (typeof pairIds)[number] =>
+  (pairIds as readonly string[]).includes(id);
 const gradeVariant = {
   normal: "success",
   large: "warning",
@@ -56,6 +71,7 @@ export function TokensEditor({
   versionId: string | null;
   rev: number;
 }) {
+  const t = useTranslations("brand.tokens");
   const router = useRouter();
   const [tokens, setTokens] = useState<TokenTree>(() => clone(initial));
   const [dirty, setDirty] = useState(false);
@@ -72,9 +88,9 @@ export function TokensEditor({
   const matrix = useMemo(() => contrastMatrix(tokens), [tokens]);
   const issues = useMemo(() => validateTokens(tokens), [tokens]);
 
-  const update = (fn: (t: TokenTree) => void) => {
-    setTokens((t) => {
-      const next = clone(t);
+  const update = (fn: (tree: TokenTree) => void) => {
+    setTokens((current) => {
+      const next = clone(current);
       fn(next);
       return next;
     });
@@ -92,7 +108,7 @@ export function TokensEditor({
       if (!res.ok) return setMessage({ kind: "error", text: res.error });
       setRev(res.rev);
       setDirty(false);
-      setMessage({ kind: "ok", text: "Tokens saved." });
+      setMessage({ kind: "ok", text: t("saved") });
       router.refresh();
     });
 
@@ -102,21 +118,21 @@ export function TokensEditor({
       className="space-y-6 rounded-lg border border-subtle bg-surface p-6"
     >
       <h2 id="palette" className="text-heading-md text-fg">
-        Palette and roles
+        {t("heading")}
       </h2>
       <div>
-        <h3 className="text-heading-sm text-fg">Reference colors</h3>
+        <h3 className="text-heading-sm text-fg">{t("referenceColors")}</h3>
         <ul className="mt-3 space-y-2">
           {colors.map((c) => (
             <li key={c.name} className="flex flex-wrap items-center gap-3">
               <input
                 type="color"
-                aria-label={`Color ${c.name}`}
+                aria-label={t("colorLabel", { name: c.name })}
                 value={c.hex.toLowerCase()}
                 disabled={disabled}
                 onChange={(e) =>
-                  update((t) => {
-                    node(t, "color", "reference", c.name).$value = hexToDtcg(e.target.value);
+                  update((tree) => {
+                    node(tree, "color", "reference", c.name).$value = hexToDtcg(e.target.value);
                   })
                 }
                 className="h-10 w-12 rounded-md border border-control bg-surface"
@@ -125,7 +141,7 @@ export function TokensEditor({
               <span className="text-body-sm text-fg">{c.name}</span>
               {c.extension?.sourceIds?.length ? (
                 <span className="text-body-sm text-fg-muted">
-                  from {c.extension.sourceIds.length} sources
+                  {t("fromSources", { count: c.extension.sourceIds.length })}
                 </span>
               ) : null}
               {editable ? (
@@ -134,13 +150,13 @@ export function TokensEditor({
                   size="sm"
                   disabled={disabled}
                   onClick={() =>
-                    update((t) => {
-                      delete node(t, "color", "reference")[c.name];
+                    update((tree) => {
+                      delete node(tree, "color", "reference")[c.name];
                     })
                   }
                 >
                   <Trash2 aria-hidden />
-                  Remove
+                  {t("remove")}
                 </Button>
               ) : null}
             </li>
@@ -149,21 +165,21 @@ export function TokensEditor({
         {editable ? (
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <div className="space-y-1">
-              <Label htmlFor="new-color-name">Name</Label>
+              <Label htmlFor="new-color-name">{t("name")}</Label>
               <Input
                 id="new-color-name"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="Rossi Blue"
+                placeholder={t("namePlaceholder")}
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="new-color-hex">Hex</Label>
+              <Label htmlFor="new-color-hex">{t("hex")}</Label>
               <Input
                 id="new-color-hex"
                 value={newHex}
                 onChange={(e) => setNewHex(e.target.value)}
-                placeholder="0044CC"
+                placeholder={t("hexPlaceholder")}
                 className="w-32"
               />
             </div>
@@ -175,13 +191,13 @@ export function TokensEditor({
                 if (!hex)
                   return setMessage({
                     kind: "error",
-                    text: "Invalid color: use the #RRGGBB format.",
+                    text: t("invalidHex"),
                   });
                 const name = tokenNameFrom(newName, `color-${colors.length + 1}`);
                 if (colors.some((c) => c.name === name))
-                  return setMessage({ kind: "error", text: `The color ${name} already exists.` });
-                update((t) => {
-                  node(t, "color", "reference")[name] = {
+                  return setMessage({ kind: "error", text: t("colorExists", { name }) });
+                update((tree) => {
+                  node(tree, "color", "reference")[name] = {
                     $value: hexToDtcg(hex),
                     ...(newName ? { $description: newName } : {}),
                   };
@@ -192,32 +208,30 @@ export function TokensEditor({
               }}
             >
               <Plus aria-hidden />
-              Add color
+              {t("addColor")}
             </Button>
           </div>
         ) : null}
       </div>
 
       <div>
-        <h3 className="text-heading-sm text-fg">Semantic roles</h3>
-        <p className="text-body-sm text-fg-muted">
-          Layouts use only these roles: the renderer applies the values.
-        </p>
+        <h3 className="text-heading-sm text-fg">{t("semanticRoles")}</h3>
+        <p className="text-body-sm text-fg-muted">{t("semanticRolesHint")}</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {semanticColorRoles.map((r) => {
             const key = r.path.split(".").pop()!;
             const current = aliasTarget(node(tokens, "color", "semantic", key).$value);
             return (
               <div key={r.path} className="space-y-1">
-                <Label htmlFor={r.path}>{r.label}</Label>
+                <Label htmlFor={r.path}>{t(`roles.${roleKey[r.path]}`)}</Label>
                 <select
                   id={r.path}
                   className={controlClass}
                   value={current}
                   disabled={disabled}
                   onChange={(e) =>
-                    update((t) => {
-                      node(t, "color", "semantic", key).$value =
+                    update((tree) => {
+                      node(tree, "color", "semantic", key).$value =
                         `{color.reference.${e.target.value}}`;
                     })
                   }
@@ -236,20 +250,20 @@ export function TokensEditor({
       </div>
 
       <div>
-        <h3 className="text-heading-sm text-fg">Font families</h3>
+        <h3 className="text-heading-sm text-fg">{t("fontFamilies")}</h3>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {(["display", "body"] as const).map((role) => (
             <div key={role} className="space-y-1">
               <Label htmlFor={`font-${role}`}>
-                {role === "display" ? "Headings" : "Body text"}
+                {role === "display" ? t("fontDisplay") : t("fontBody")}
               </Label>
               <Input
                 id={`font-${role}`}
                 value={fontOf(role)}
                 disabled={disabled}
                 onChange={(e) =>
-                  update((t) => {
-                    node(t, "font", "family", role).$value = e.target.value
+                  update((tree) => {
+                    node(tree, "font", "family", role).$value = e.target.value
                       ? [e.target.value, "sans-serif"]
                       : ["sans-serif"];
                   })
@@ -261,40 +275,39 @@ export function TokensEditor({
       </div>
 
       <div>
-        <h3 className="text-heading-sm text-fg">Contrasts</h3>
-        <p className="text-body-sm text-fg-muted">
-          Large text is measured at its displayed size: at least 68 px on the canvas, or 54 px in
-          bold.
-        </p>
+        <h3 className="text-heading-sm text-fg">{t("contrasts")}</h3>
+        <p className="text-body-sm text-fg-muted">{t("contrastsHint")}</p>
         <table className="mt-3 w-full text-left text-body-sm">
-          <caption className="sr-only">Contrast of text and background pairs</caption>
+          <caption className="sr-only">{t("contrastCaption")}</caption>
           <thead className="text-label text-fg-muted">
             <tr>
               <th scope="col" className="py-2 font-medium">
-                Pair
+                {t("pair")}
               </th>
               <th scope="col" className="py-2 font-medium">
-                Preview
+                {t("preview")}
               </th>
               <th scope="col" className="py-2 font-medium">
-                Ratio
+                {t("ratio")}
               </th>
               <th scope="col" className="py-2 font-medium">
-                Result
+                {t("result")}
               </th>
             </tr>
           </thead>
           <tbody>
             {matrix.map((cell) => (
               <tr key={`${cell.fg}-${cell.bg}`} className="border-t border-subtle">
-                <td className="py-2 text-fg">{cell.label}</td>
+                <td className="py-2 text-fg">
+                  {isPairId(cell.id) ? t(`pairs.${cell.id}`) : cell.label}
+                </td>
                 <td className="py-2">
                   {cell.fgHex && cell.bgHex ? (
                     <span
                       className="inline-block rounded-sm px-2 py-1"
                       style={{ color: cell.fgHex, backgroundColor: cell.bgHex }}
                     >
-                      Aa Text
+                      {t("sample")}
                     </span>
                   ) : (
                     "—"
@@ -304,7 +317,7 @@ export function TokensEditor({
                   {cell.ratio ? `${cell.ratio.toFixed(2)}:1` : "—"}
                 </td>
                 <td className="py-2">
-                  <Badge variant={gradeVariant[cell.grade]}>{gradeLabel[cell.grade]}</Badge>
+                  <Badge variant={gradeVariant[cell.grade]}>{t(`grade.${cell.grade}`)}</Badge>
                 </td>
               </tr>
             ))}
@@ -316,7 +329,10 @@ export function TokensEditor({
         <ul role="alert" className="space-y-1 text-body-sm text-error">
           {issues.slice(0, 5).map((i) => (
             <li key={`${i.path}-${i.message}`}>
-              {i.path}: {i.message}
+              {i.path}:{" "}
+              {i.code === "unresolved"
+                ? t("issues.unresolved", { detail: i.message })
+                : t(`issues.${i.code}`)}
             </li>
           ))}
         </ul>
@@ -326,7 +342,7 @@ export function TokensEditor({
         <div className="flex flex-wrap items-center gap-3 border-t border-subtle pt-4">
           <Button onClick={save} disabled={saving || !dirty || issues.length > 0}>
             <Save aria-hidden />
-            {saving ? "Saving…" : "Save tokens"}
+            {saving ? t("saving") : t("save")}
           </Button>
           {message ? (
             <span

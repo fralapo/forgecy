@@ -2,6 +2,8 @@
  * "Ready to publish?": open checks on a draft. None of them blocks;
  * each needs an explicit "I've seen it" from the person who publishes.
  */
+import type { MessageRef } from "@forgecy/core";
+import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import { type BrandIdentityDocument, ONE_LINER_MAX_WORDS, toneAxes, wordCount } from "./document";
 import type { BlockKey } from "./fields";
 import { contrastMatrix, removedTokenPaths, validateTokens, type TokenTree } from "./tokens";
@@ -10,8 +12,16 @@ export interface PublishCheck {
   /** Stable key, stored in acknowledged_checks when confirmed. */
   key: string;
   block: BlockKey;
+  /** English text (logs, errors); the interface shows `ref`. */
   message: string;
+  ref: MessageRef;
 }
+
+type CheckKey = MessageKey & `brand.checks.${string}`;
+const text = (key: CheckKey, values?: MessageValues) => ({
+  message: englishMessage(key, values),
+  ref: messageRef(key, values),
+});
 
 export interface PublishCheckContext {
   publishedTokens?: TokenTree | null;
@@ -34,19 +44,19 @@ export function publishChecks(
     out.push({
       key: "incomplete:one-liner",
       block: "strategy",
-      message: "The one-liner is missing",
+      ...text("brand.checks.oneLinerMissing"),
     });
   else if (wordCount(s.oneLiner.value) > ONE_LINER_MAX_WORDS)
     out.push({
       key: "incomplete:one-liner",
       block: "strategy",
-      message: `One-liner over ${ONE_LINER_MAX_WORDS} words: the positioning is not decided yet`,
+      ...text("brand.checks.oneLinerTooLong", { max: ONE_LINER_MAX_WORDS }),
     });
   if (!s.audience.some((a) => !a.deprecated))
     out.push({
       key: "incomplete:audience",
       block: "strategy",
-      message: "No audience segment",
+      ...text("brand.checks.noAudience"),
     });
   const unproved = s.messages.filter(
     (m) => m.value.kind === "claim" && !m.value.proof && !m.sourceIds.length,
@@ -55,7 +65,7 @@ export function publishChecks(
     out.push({
       key: "claims:unproved",
       block: "strategy",
-      message: `${unproved.length} claims without linked proof`,
+      ...text("brand.checks.claimsUnproved", { count: unproved.length }),
     });
 
   const axes = new Set(v.toneAxes.map((a) => a.value.axis));
@@ -63,40 +73,47 @@ export function publishChecks(
     out.push({
       key: "incomplete:tone-axes",
       block: "verbal",
-      message: `Tone axes defined: ${axes.size} of ${toneAxes.length}`,
+      ...text("brand.checks.toneAxes", { defined: axes.size, total: toneAxes.length }),
     });
   if (v.weAreWeAreNot.length < 4)
     out.push({
       key: "incomplete:we-are",
       block: "verbal",
-      message: `We are / We are not: ${v.weAreWeAreNot.length} rows, at least 4 needed`,
+      ...text("brand.checks.weAre", { count: v.weAreWeAreNot.length, min: 4 }),
     });
 
   if (!document.visual.logo.variants.some((l) => l.role === "logo_primary"))
-    out.push({ key: "incomplete:logo", block: "visual", message: "The primary logo is missing" });
+    out.push({ key: "incomplete:logo", block: "visual", ...text("brand.checks.logoMissing") });
   const toVerify = document.visual.typography.filter((t) => t.value.licenseStatus === "to_verify");
   if (toVerify.length)
     out.push({
       key: "license:fonts",
       block: "visual",
-      message: `License to verify: ${toVerify.map((t) => t.value.family).join(", ")}`,
+      ...text("brand.checks.fontLicense", {
+        fonts: toVerify.map((t) => t.value.family).join(", "),
+      }),
     });
   const tokenIssues = validateTokens(tokens);
   if (tokenIssues.length)
     out.push({
       key: "tokens:invalid",
       block: "visual",
-      message: `Unresolved tokens: ${tokenIssues
-        .slice(0, 3)
-        .map((i) => i.path)
-        .join(", ")}${tokenIssues.length > 3 ? "…" : ""}`,
+      ...text("brand.checks.tokensUnresolved", {
+        paths: `${tokenIssues
+          .slice(0, 3)
+          .map((i) => i.path)
+          .join(", ")}${tokenIssues.length > 3 ? "…" : ""}`,
+      }),
     });
   for (const cell of contrastMatrix(tokens))
     if (cell.grade === "fail")
       out.push({
         key: `contrast:${cell.fg}:${cell.bg}`,
         block: "visual",
-        message: `Contrast not allowed: ${cell.label} ${cell.ratio?.toFixed(1)}:1`,
+        ...text("brand.checks.contrastFail", {
+          pair: cell.id,
+          ratio: cell.ratio?.toFixed(1) ?? "",
+        }),
       });
   if (ctx.publishedTokens) {
     const removed = removedTokenPaths(ctx.publishedTokens, tokens);
@@ -104,27 +121,29 @@ export function publishChecks(
       out.push({
         key: "tokens:removed",
         block: "visual",
-        message: `Tokens removed or renamed (templates that use them will fall back to the default value): ${removed.join(", ")}`,
+        ...text("brand.checks.tokensRemoved", { paths: removed.join(", ") }),
       });
   }
   if (ctx.pendingSensitive)
     out.push({
       key: "proposals:sensitive",
       block: "strategy",
-      message: `${ctx.pendingSensitive} sensitive proposals not decided yet`,
+      ...text("brand.checks.sensitivePending", { count: ctx.pendingSensitive }),
     });
   if (ctx.conflicts)
     out.push({
       key: "proposals:conflicts",
       block: "strategy",
-      message: `${ctx.conflicts} open conflicts between proposals`,
+      ...text("brand.checks.conflicts", { count: ctx.conflicts }),
     });
   return out;
 }
 
 export interface BlockCompleteness {
   block: BlockKey;
+  /** English texts; `missingRefs` holds the same items as message references. */
   missing: string[];
+  missingRefs: MessageRef[];
 }
 
 /** Short "Missing: …" lists for the overview cards. */
@@ -134,15 +153,19 @@ export function completeness(
 ): BlockCompleteness[] {
   const checks = publishChecks(document, tokens);
   const blocks: BlockKey[] = ["strategy", "verbal", "visual", "content"];
-  const missing: Record<BlockKey, string[]> = {
+  const missing: Record<BlockKey, Array<{ message: string; ref: MessageRef }>> = {
     strategy: [],
     verbal: [],
     visual: [],
     content: [],
     presence: [],
   };
-  for (const c of checks) missing[c.block].push(c.message);
-  if (!document.content.pillars.length) missing.content.push("No pillars");
-  if (!document.channels.length) missing.content.push("No channel rules");
-  return blocks.map((block) => ({ block, missing: missing[block] }));
+  for (const c of checks) missing[c.block].push({ message: c.message, ref: c.ref });
+  if (!document.content.pillars.length) missing.content.push(text("brand.checks.noPillars"));
+  if (!document.channels.length) missing.content.push(text("brand.checks.noChannelRules"));
+  return blocks.map((block) => ({
+    block,
+    missing: missing[block].map((m) => m.message),
+    missingRefs: missing[block].map((m) => m.ref),
+  }));
 }

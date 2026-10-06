@@ -107,6 +107,7 @@ describe("detectImportFile", () => {
     expect(detectImportFile({ name: "x.pdf", mime: "", bytes: new Uint8Array() })).toEqual({
       ok: false,
       message: "The file is empty.",
+      ref: { key: "brand.errors.fileEmpty" },
     });
     expect(
       detectImportFile({
