@@ -39,7 +39,12 @@
     "finding": "Evidenza",
     "problem": "Problema",
     "next_steps": "Prossimi passi",
-    "method": "Metodo"
+    "method": "Metodo",
+    "contents": "Indice",
+    "palette": "Palette",
+    "typography": "Tipografia",
+    "logo": "Logo",
+    "signature": "Firma"
   },
   "badge": {
     "validationErrors": "{count, plural, one {# errore di validazione} other {# errori di validazione}}",

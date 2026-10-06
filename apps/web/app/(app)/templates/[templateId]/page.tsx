@@ -20,6 +20,9 @@ import { SlideFrame } from "../slide-frame";
 import { ErrorNotice, StatusBadge, ValidationBadge } from "../status";
 import { checkText, issueText } from "../validation-text";
 
+/** Widest thumbnail that fits a layout column on a wide screen (A4 pages are 1240 px). */
+const THUMB_MAX_WIDTH = 232;
+
 const CHECK = {
   ok: { icon: CircleCheck, className: "text-success" },
   error: { icon: CircleX, className: "text-error" },
@@ -153,7 +156,7 @@ export default async function TemplateDetailPage({
                   title={layout.name}
                   width={m.width}
                   height={m.height}
-                  scale={0.25}
+                  scale={Math.min(0.25, THUMB_MAX_WIDTH / m.width)}
                 />
                 <p className="text-body-sm text-fg">
                   {layout.name}{" "}

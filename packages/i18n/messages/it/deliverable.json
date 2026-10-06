@@ -44,5 +44,129 @@
       "imageAlt": "Testo alternativo dell'immagine: {alt}",
       "caption": "Didascalia"
     }
+  },
+  "brandBook": {
+    "kicker": "Brand Book",
+    "version": "Versione {number}",
+    "contents": "Indice",
+    "footer": "Brand Identity realizzata da {agency} · Versione {number} · {date}",
+    "footerNoAgency": "Brand Identity · Versione {number} · {date}",
+    "signatureTitle": "Brand Identity realizzata da",
+    "signatureNote": "Questo manuale descrive la versione approvata {number} della Brand Identity. Le modifiche successive vengono pubblicate come nuove versioni.",
+    "sections": {
+      "strategy": {
+        "title": "Strategia",
+        "intro": "Chi siamo, a chi parliamo e cosa promettiamo. Tutto il resto del manuale discende da queste scelte."
+      },
+      "verbal": {
+        "title": "Identità verbale",
+        "intro": "Come suoniamo: la voce che resta uguale ovunque e le regole che ogni testo segue."
+      },
+      "visual": {
+        "title": "Identità visiva",
+        "intro": "Come appariamo: logo, colori, tipografia e immagini."
+      },
+      "content": {
+        "title": "Contenuti e canali",
+        "intro": "Di cosa parliamo e come ogni canale porta il marchio."
+      },
+      "dos": {
+        "title": "Da fare e da evitare",
+        "intro": "I controlli rapidi prima di pubblicare qualsiasi cosa."
+      }
+    },
+    "pages": {
+      "positioning": "Posizionamento",
+      "promise": "Promessa",
+      "missionVision": "Missione e visione",
+      "values": "Valori",
+      "audience": "A chi parliamo",
+      "messages": "Messaggi chiave",
+      "voice": "Voce",
+      "tone": "Tono di voce",
+      "weAre": "Siamo, non siamo",
+      "weAreLabel": "Siamo",
+      "weAreNotLabel": "Non siamo",
+      "writing": "Regole di scrittura",
+      "words": "Parole",
+      "preferredWords": "Parole che usiamo",
+      "forbiddenWords": "Parole che evitiamo",
+      "logo": "Logo",
+      "colors": "Colori",
+      "colorsIntro": "I campioni mostrano come si applica la palette; i colori di riferimento sono i valori ufficiali.",
+      "typography": "Tipografia",
+      "imagery": "Immagini",
+      "pillars": "Pilastri dei contenuti",
+      "channels": "Canali",
+      "dos": "Da fare e da evitare",
+      "doLabel": "Da fare",
+      "dontLabel": "Da evitare"
+    },
+    "roles": {
+      "background": "Sfondo",
+      "surface": "Superficie",
+      "text": "Testo",
+      "accent": "Accento",
+      "cta": "Invito all'azione"
+    },
+    "typeRoles": {
+      "display": "Titoli",
+      "body": "Testo",
+      "data": "Numeri e dati"
+    },
+    "weights": "Pesi {weights}",
+    "fallback": "Alternativa: {font}",
+    "tone": "{left} / {right}: {value} su 5",
+    "axes": {
+      "formal": {
+        "left": "Formale",
+        "right": "Informale"
+      },
+      "technical": {
+        "left": "Tecnico",
+        "right": "Semplice"
+      },
+      "serious": {
+        "left": "Serio",
+        "right": "Ironico"
+      },
+      "institutional": {
+        "left": "Istituzionale",
+        "right": "Umano"
+      },
+      "conservative": {
+        "left": "Conservativo",
+        "right": "Audace"
+      }
+    },
+    "logoRules": {
+      "clearSpace": "Area di rispetto: {value}",
+      "minSize": "Dimensione minima: {value} px",
+      "backgrounds": "Sfondi: {value}"
+    },
+    "imagery": {
+      "subjects": "Soggetti: {value}",
+      "settings": "Ambienti: {value}",
+      "framing": "Inquadrature: {value}",
+      "lighting": "Luce: {value}",
+      "colorMood": "Atmosfera cromatica: {value}",
+      "people": "Persone: {value}",
+      "illustration": "Illustrazione: {value}",
+      "forbidden": "Mai: {value}"
+    },
+    "writing": {
+      "person": "Ci rivolgiamo al lettore {value, select, tu {dando del tu} lei {dando del lei} voi {con il voi} noi {con il noi} other {in forma impersonale}}",
+      "emoji": "Emoji: {value, select, no {mai} limited {con moderazione} other {ammesse}}",
+      "maxSentenceWords": "Frasi di al massimo {value} parole",
+      "maxHashtags": "Al massimo {value} hashtag",
+      "anglicisms": "Anglicismi: {value, select, avoid {da evitare} limited {pochi} other {ammessi}}",
+      "exclamations": "Punti esclamativi: {value, select, no {mai} limited {di rado} other {ammessi}}",
+      "capitalization": "Maiuscole: {value}",
+      "numbers": "Numeri: {value}",
+      "ctaStyle": "Inviti all'azione: {value}",
+      "headlineStyle": "Titoli: {value}",
+      "captionStyle": "Didascalie: {value}",
+      "notes": "{value}"
+    }
   }
 }

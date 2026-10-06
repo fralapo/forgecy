@@ -24,3 +24,10 @@ export const brandSystemPartFiles: Record<BrandSystemPart, readonly string[]> = 
   changelog: ["CHANGELOG.md"],
   assets: ["assets/"],
 };
+
+/** Sections of the client-facing Brand Book, in book order (UX spec 15.4). */
+export const bookSections = ["strategy", "verbal", "visual", "content", "dos"] as const;
+export type BookSection = (typeof bookSections)[number];
+
+/** Key of the agency template in the catalog (templates/reports/brand-book-a4). */
+export const BRAND_BOOK_TEMPLATE_KEY = "brand-book-a4";

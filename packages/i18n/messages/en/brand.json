@@ -851,7 +851,51 @@
     "download": "Download",
     "errors": {
       "noParts": "Choose at least one file to include.",
-      "noPublished": "This version is not approved: only published or archived versions can be exported."
+      "noPublished": "This version is not approved: only published or archived versions can be exported.",
+      "notFound": "Brand Book not found.",
+      "noSections": "Choose at least one section.",
+      "templateMissing": "No published Brand Book template: import and publish “Brand Book · A4” from the Templates page.",
+      "notDraft": "This Brand Book is no longer a draft.",
+      "notRendered": "The preview is not ready yet: approve it once you have seen it.",
+      "noteRequired": "You prepared this Brand Book: add a note of at least {min} characters to approve it yourself.",
+      "notApproved": "Approve the preview before exporting the final PDF."
+    },
+    "clientTitle": "Brand Book for the client",
+    "clientIntro": "A PDF in the client's colors and fonts, signed by the agency. It never contains prompts, internal scores or agent rules. The preview carries a “Draft” watermark until a person approves it.",
+    "language": "Language of the book",
+    "languages": {
+      "en": "English",
+      "it": "Italian"
+    },
+    "sections": "Sections",
+    "sectionNames": {
+      "strategy": "Strategy",
+      "verbal": "Verbal identity",
+      "visual": "Visual identity",
+      "content": "Content and channels",
+      "dos": "Do and don't"
+    },
+    "sectionEmpty": "Nothing to show in this version. <link>Complete it</link> or leave it out.",
+    "generatePreview": "Generate preview",
+    "previewQueued": "BB-{number} is being prepared: the preview appears in the list when it is ready.",
+    "templateMissing": "No published Brand Book template. <link>Import and publish “Brand Book · A4”</link> from the Templates page.",
+    "rendering": "Preparing the PDF…",
+    "renderAgain": "Render again",
+    "openPreview": "Open preview",
+    "approve": "Approve",
+    "approveNote": "Approval note",
+    "approveNoteSelf": "You prepared this book: say why you approve it yourself (at least {min} characters).",
+    "approvedBy": "Approved by {name} on {date}",
+    "exportFinal": "Export final PDF",
+    "exportQueued": "The final PDF is being prepared.",
+    "pages": "{count, plural, one {# page} other {# pages}}",
+    "jobErrors": {
+      "noLongerApproved": "The Brand Book is no longer approved: approve the preview again.",
+      "versionMissing": "The Brand Identity version of this book is no longer available.",
+      "templateMissing": "The Brand Book template is no longer published: publish it again from the Templates page.",
+      "templateUnfit": "The Brand Book template lacks a page this book needs: {detail}",
+      "bookUnfit": "The book does not fit the template: {detail}",
+      "noPdf": "The renderer produced no PDF."
     }
   }
 }

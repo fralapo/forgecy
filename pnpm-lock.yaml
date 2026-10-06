@@ -168,6 +168,9 @@ importers:
       '@forgecy/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@forgecy/brand-book':
+        specifier: workspace:*
+        version: link:../../packages/brand-book
       '@forgecy/brand-guard':
         specifier: workspace:*
         version: link:../../packages/brand-guard
@@ -377,6 +380,12 @@ importers:
       '@forgecy/brand':
         specifier: workspace:*
         version: link:../brand
+      '@forgecy/carousel':
+        specifier: workspace:*
+        version: link:../carousel
+      '@forgecy/content':
+        specifier: workspace:*
+        version: link:../content
       '@forgecy/core':
         specifier: workspace:*
         version: link:../core
@@ -389,12 +398,18 @@ importers:
       '@forgecy/i18n':
         specifier: workspace:*
         version: link:../i18n
+      '@forgecy/jobs':
+        specifier: workspace:*
+        version: link:../jobs
       '@forgecy/ui':
         specifier: workspace:*
         version: link:../ui
       fflate:
         specifier: ^0.8.3
         version: 0.8.3
+      playwright-core:
+        specifier: ^1.63.0
+        version: 1.63.0
       zod:
         specifier: ^4.6.5
         version: 4.6.5

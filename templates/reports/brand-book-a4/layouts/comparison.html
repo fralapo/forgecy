@@ -1,0 +1,30 @@
+<div class="frame comparison">
+  <header class="chrome">
+    <img class="logo" data-fc="logo" alt="" />
+    <span class="brand" data-fc="brand-name"></span>
+    <span class="tag" data-slot="label"></span>
+  </header>
+  <div class="body">
+    <h2 class="title" data-slot="title"></h2>
+    <div class="columns">
+      <section class="column">
+        <p class="column-label" data-slot="left_label"></p>
+        <ul class="items items-yes" data-slot="left">
+          <li><span class="item-text" data-item></span></li>
+        </ul>
+      </section>
+      <section class="column column-no">
+        <p class="column-label" data-slot="right_label"></p>
+        <ul class="items items-no" data-slot="right">
+          <li><span class="item-text" data-item></span></li>
+        </ul>
+      </section>
+    </div>
+  </div>
+  <footer class="foot">
+    <span class="footer" data-slot="footer"></span>
+    <span class="pager"
+      ><span data-fc="page"></span><span class="sep">/</span><span data-fc="total"></span
+    ></span>
+  </footer>
+</div>

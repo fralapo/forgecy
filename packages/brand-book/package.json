@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
+    "./handlers": "./src/handlers.ts",
     "./*": "./src/*.ts"
   },
   "scripts": {
@@ -14,12 +15,16 @@
   },
   "dependencies": {
     "@forgecy/brand": "workspace:*",
+    "@forgecy/carousel": "workspace:*",
+    "@forgecy/content": "workspace:*",
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",
     "@forgecy/files": "workspace:*",
     "@forgecy/i18n": "workspace:*",
+    "@forgecy/jobs": "workspace:*",
     "@forgecy/ui": "workspace:*",
     "fflate": "^0.8.3",
+    "playwright-core": "^1.63.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {

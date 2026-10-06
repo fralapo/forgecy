@@ -1,4 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src", "scripts", "test", "*.ts"]
+  // DOM types for the renderer code it checks through @forgecy/carousel (runs inside the page).
+  "compilerOptions": { "lib": ["ES2023", "DOM", "DOM.Iterable"] },
+  "include": ["src", "test", "*.ts"]
 }

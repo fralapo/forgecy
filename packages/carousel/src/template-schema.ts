@@ -21,6 +21,11 @@ export const slideRoles = [
   "problem",
   "next_steps",
   "method",
+  "contents",
+  "palette",
+  "typography",
+  "logo",
+  "signature",
 ] as const;
 export type SlideRole = (typeof slideRoles)[number];
 
@@ -50,6 +55,11 @@ export const slideRoleLabels: Record<SlideRole, string> = {
   problem: "Problem",
   next_steps: "Next steps",
   method: "Method",
+  contents: "Contents",
+  palette: "Palette",
+  typography: "Typography",
+  logo: "Logo",
+  signature: "Signature",
 };
 
 /** Semantic Brand Identity color roles a template variable can bind to. */
