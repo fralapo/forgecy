@@ -2,6 +2,7 @@
 
 import { Button, Label } from "@forgecy/ui";
 import { Sparkles } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useId, useState } from "react";
 import { askPlannerAction } from "../actions";
 import { controlClass } from "./action-button";
@@ -21,11 +22,12 @@ export function AskPlannerForm({
 }) {
   const [instruction, setInstruction] = useState("");
   const id = useId();
+  const t = useTranslations("content.strategy.ask");
   const { pending, error, run } = useSave();
   const disabled = pending || running || Boolean(disabledReason);
   return (
     <form
-      aria-label="Ask the Planner"
+      aria-label={t("title")}
       className="space-y-3"
       onSubmit={(e) => {
         e.preventDefault();
@@ -36,20 +38,20 @@ export function AskPlannerForm({
       }}
     >
       <div className="space-y-1">
-        <Label htmlFor={id}>Instruction for the Planner (optional)</Label>
+        <Label htmlFor={id}>{t("instructionLabel")}</Label>
         <textarea
           id={id}
           rows={2}
           maxLength={500}
           className={controlClass}
-          placeholder="E.g. more room for education, less direct promotion"
+          placeholder={t("instructionPlaceholder")}
           value={instruction}
           onChange={(e) => setInstruction(e.target.value)}
         />
       </div>
       <Button type="submit" disabled={disabled}>
         <Sparkles aria-hidden />
-        Ask the Planner
+        {t("submit")}
       </Button>
       {disabledReason ? <p className="text-body-sm text-fg-muted">{disabledReason}</p> : null}
       <FormError error={error} />

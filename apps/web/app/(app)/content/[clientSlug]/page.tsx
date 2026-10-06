@@ -1,7 +1,4 @@
 import {
-  agentLabels,
-  frequencyLabel,
-  funnelLabels,
   getStrategyOverview,
   listUsableTemplates,
   pillarRowToInput,
@@ -14,26 +11,25 @@ import { can } from "@forgecy/core";
 import { and, desc, eq, jobs } from "@forgecy/db";
 import { Badge, Card } from "@forgecy/ui";
 import { Archive, ArchiveRestore, LoaderCircle, TriangleAlert } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
+import { getFormat, refText } from "@/lib/i18n";
 import { archiveItemAction } from "../actions";
 import { ActionButton } from "../_components/action-button";
 import { RefreshWhile } from "../_components/refresh-while";
 import { PillarForm, RubricForm, type StrategyOptions } from "../_components/strategy-forms";
 import { AskPlannerForm } from "../_components/strategy-planner";
 import { StrategyProposalCard } from "../_components/strategy-proposal";
-import { formatDate } from "../_lib/paths";
 import { loadClient } from "../_lib/server";
 
-export const metadata = { title: "Content strategy" };
+export async function generateMetadata() {
+  const t = await getTranslations("content.strategy");
+  return { title: t("metaTitle") };
+}
 
 type Pillar = StrategyOverview["pillars"][number];
 type Rubric = StrategyOverview["rubrics"][number];
 
-const confidenceLabel = {
-  high: "High confidence",
-  medium: "Medium confidence",
-  low: "Low confidence",
-};
 const activeJob = new Set(["queued", "running", "retrying"]);
 const freq = (count: number | null, unit: "week" | "month" | null) =>
   count && unit ? { count, unit } : null;
@@ -63,12 +59,22 @@ export default async function StrategyPage({
 }) {
   const { clientSlug } = await params;
   const { db, user, client } = await loadClient(clientSlug);
+  const t = await getTranslations("content.strategy");
+  const tl = await getTranslations("content.labels");
+  const format = await getFormat();
+  const frequency = (f: { count: number; unit: "week" | "month" } | null) =>
+    f ? tl(`frequency.${f.unit}`, { count: f.count }) : "—";
   const actor = user.actor;
   const o = await getStrategyOverview(db, actor, client.id);
   const [templates, [lastJob]] = await Promise.all([
     listUsableTemplates(db, client.id),
     db
-      .select({ status: jobs.status, error: jobs.error, createdAt: jobs.createdAt })
+      .select({
+        status: jobs.status,
+        error: jobs.error,
+        errorRef: jobs.errorRef,
+        createdAt: jobs.createdAt,
+      })
       .from(jobs)
       .where(and(eq(jobs.clientId, client.id), eq(jobs.kind, proposeStrategyJob.kind)))
       .orderBy(desc(jobs.createdAt))
@@ -96,7 +102,7 @@ export default async function StrategyPage({
         id: p.id,
         name: p.name,
         at: p.archivedAt,
-        note: "Pillar",
+        note: t("pillarLabel"),
       })),
     ...o.rubrics
       .filter((r) => r.status === "archived" && !r.targetId)
@@ -105,7 +111,7 @@ export default async function StrategyPage({
         id: r.id,
         name: r.name,
         at: r.archivedAt,
-        note: `Rubric of “${pillarName.get(r.pillarId) ?? "—"}”`,
+        note: t("rubricOf", { pillar: pillarName.get(r.pillarId) ?? "—" }),
       })),
   ];
   const options: StrategyOptions = {
@@ -114,6 +120,9 @@ export default async function StrategyPage({
     templates: templates.map((t) => ({ key: t.key, name: t.name })),
     pillars: livePillars.map((p) => ({ id: p.id, name: p.name })),
   };
+  const warnings = await Promise.all(
+    o.warnings.map(async (w) => ({ ...w, text: await refText(w.ref, w.message) })),
+  );
   const names = (ids: readonly string[], map: Map<string, string>) =>
     ids
       .map((id) => map.get(id))
@@ -121,24 +130,27 @@ export default async function StrategyPage({
       .join(", ") || null;
 
   const pillarFacts = (p: Pillar): [string, ReactNode][] => [
-    ["Goal", p.goal],
-    ["Funnel", p.funnel ? funnelLabels[p.funnel] : null],
-    ["Frequency", frequencyLabel(freq(p.frequencyCount, p.frequencyUnit))],
-    ["Audience", names(p.audienceIds, audienceName)],
-    ["Themes", p.themes.join(", ") || null],
-    ["Call to action", p.cta],
-    ["Products", o.hasCatalog ? names(p.productIds, productName) : null],
+    [t("facts.goal"), p.goal],
+    [t("facts.funnel"), p.funnel ? tl(`funnel.${p.funnel}`) : null],
+    [t("facts.frequency"), frequency(freq(p.frequencyCount, p.frequencyUnit))],
+    [t("facts.audience"), names(p.audienceIds, audienceName)],
+    [t("facts.themes"), p.themes.join(", ") || null],
+    [t("facts.cta"), p.cta],
+    [t("facts.products"), o.hasCatalog ? names(p.productIds, productName) : null],
   ];
   const rubricFacts = (r: Rubric): [string, ReactNode][] => [
-    ["Frequency", frequencyLabel(freq(r.frequencyCount, r.frequencyUnit))],
+    [t("facts.frequency"), frequency(freq(r.frequencyCount, r.frequencyUnit))],
     [
-      "Channels",
+      t("facts.channels"),
       r.channels.map((c) => (c === "linkedin" ? "LinkedIn" : "Instagram")).join(", ") || null,
     ],
-    ["Template", r.templateKey ? (templateName.get(r.templateKey) ?? r.templateKey) : null],
-    ["Hook formula", r.hookFormula],
-    ["Call to action", r.cta],
-    ["Products", o.hasCatalog ? names(r.productIds, productName) : null],
+    [
+      t("facts.template"),
+      r.templateKey ? (templateName.get(r.templateKey) ?? r.templateKey) : null,
+    ],
+    [t("facts.hookFormula"), r.hookFormula],
+    [t("facts.cta"), r.cta],
+    [t("facts.products"), o.hasCatalog ? names(r.productIds, productName) : null],
   ];
 
   const proposalCard = (
@@ -153,33 +165,38 @@ export default async function StrategyPage({
         ? pillarName.get(row.targetId)
         : liveRubrics.find((r) => r.id === row.targetId)?.name
       : null;
-    const prefix =
+    const title =
       kind === "pillar"
-        ? "Pillar"
-        : `Rubric of “${pillarName.get((row as Rubric).pillarId) ?? "—"}”`;
+        ? t("proposalPillar", { name: row.name })
+        : t("proposalRubric", {
+            pillar: pillarName.get((row as Rubric).pillarId) ?? "—",
+            name: row.name,
+          });
     return (
       <StrategyProposalCard
         key={row.id}
         {...base}
         kind={kind}
         id={row.id}
-        title={`${prefix}: ${row.name}`}
-        agent={p ? agentLabels[p.agent] : "Planner"}
+        title={title}
+        agent={tl(`agent.${p ? p.agent : "planner"}`)}
         sources={p?.sources.map((s) => ({ label: s.label })) ?? []}
       >
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
             {target ? (
-              <Badge variant="info">Edit “{target}”</Badge>
+              <Badge variant="info">{t("editTarget", { target })}</Badge>
             ) : (
-              <Badge variant="info">New</Badge>
+              <Badge variant="info">{t("new")}</Badge>
             )}
-            {p ? <Badge>{confidenceLabel[p.confidence]}</Badge> : null}
+            {p ? <Badge>{tl(`confidence.${p.confidence}`)}</Badge> : null}
           </div>
           <Facts items={facts} />
           {p?.rationale ? <p className="text-body-sm text-fg">{p.rationale}</p> : null}
           {p?.instruction ? (
-            <p className="text-body-sm text-fg-muted">Instruction: “{p.instruction}”</p>
+            <p className="text-body-sm text-fg-muted">
+              {t("instruction", { instruction: p.instruction })}
+            </p>
           ) : null}
         </div>
       </StrategyProposalCard>
@@ -193,13 +210,11 @@ export default async function StrategyPage({
         variant="ghost"
         action={archiveItemAction.bind(null, { ...base, kind, id })}
         confirm={
-          kind === "pillar"
-            ? `Archive “${name}”? Its rubrics will be archived too.`
-            : `Archive “${name}”?`
+          kind === "pillar" ? t("archivePillarConfirm", { name }) : t("archiveConfirm", { name })
         }
       >
         <Archive aria-hidden />
-        Archive
+        {t("archive")}
       </ActionButton>
     ) : null;
 
@@ -208,44 +223,42 @@ export default async function StrategyPage({
       <RefreshWhile active={running} />
 
       <Card className="space-y-3 p-5">
-        <h2 className="text-heading-sm text-fg">Ask the Planner</h2>
-        <p className="text-body-sm text-fg-muted">
-          The Planner proposes pillars and rubrics based on the Brand Identity. Proposals stay
-          pending until a person accepts them.
-        </p>
+        <h2 className="text-heading-sm text-fg">{t("ask.title")}</h2>
+        <p className="text-body-sm text-fg-muted">{t("ask.description")}</p>
         {running ? (
           <p role="status" className="flex items-center gap-2 text-body-sm text-fg">
             <LoaderCircle aria-hidden className="size-4 animate-spin" />
-            The Planner is preparing a proposal…
+            {t("ask.running")}
           </p>
         ) : failed ? (
           <p role="alert" className="text-body-sm text-error">
-            The last request to the Planner failed
-            {lastJob.error ? `: ${lastJob.error}` : "."}
+            {lastJob.error
+              ? t("ask.failedWith", { error: await refText(lastJob.errorRef, lastJob.error) })
+              : t("ask.failed")}
           </p>
         ) : null}
         {canEdit ? (
           <AskPlannerForm
             {...base}
             running={running}
-            disabledReason={o.brand ? null : "A published Brand Identity is required."}
+            disabledReason={o.brand ? null : t("ask.brandRequired")}
           />
         ) : null}
       </Card>
 
-      {o.warnings.length ? (
+      {warnings.length ? (
         <section aria-labelledby="freq-warn" className="space-y-2">
           <h2 id="freq-warn" className="sr-only">
-            Frequency warnings
+            {t("frequencyWarnings")}
           </h2>
-          {o.warnings.map((w) => (
+          {warnings.map((w) => (
             <p
               key={w.pillarId}
               role="status"
               className="flex items-start gap-2 rounded-md border border-warning-fill bg-surface px-4 py-3 text-body-sm text-fg"
             >
               <TriangleAlert aria-hidden className="mt-1 size-4 shrink-0 text-warning" />
-              {w.message}
+              {w.text}
             </p>
           ))}
         </section>
@@ -254,11 +267,9 @@ export default async function StrategyPage({
       {proposedPillars.length || proposedRubrics.length ? (
         <section aria-labelledby="proposals" className="space-y-4">
           <h2 id="proposals" className="text-heading-md text-fg">
-            Planner proposals ({proposedPillars.length + proposedRubrics.length})
+            {t("proposals", { count: proposedPillars.length + proposedRubrics.length })}
           </h2>
-          <p className="text-body-sm text-fg-muted">
-            Accept pillars first: a rubric can be accepted only if its pillar is active.
-          </p>
+          <p className="text-body-sm text-fg-muted">{t("proposalsHint")}</p>
           {proposedPillars.map((p) => proposalCard("pillar", p, pillarFacts(p)))}
           {proposedRubrics.map((r) => proposalCard("rubric", r, rubricFacts(r)))}
         </section>
@@ -267,15 +278,13 @@ export default async function StrategyPage({
       <section aria-labelledby="pillars" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="pillars" className="text-heading-md text-fg">
-            Pillars ({livePillars.length})
+            {t("pillars", { count: livePillars.length })}
           </h2>
-          {canEdit ? <PillarForm {...base} options={options} label="New pillar" /> : null}
+          {canEdit ? <PillarForm {...base} options={options} label={t("newPillar")} /> : null}
         </div>
         {!livePillars.length ? (
           <Card className="p-6">
-            <p className="text-body-md text-fg-muted">
-              No active pillars. Create one manually or ask the Planner for a proposal.
-            </p>
+            <p className="text-body-md text-fg-muted">{t("noPillars")}</p>
           </Card>
         ) : null}
         {livePillars.map((p) => {
@@ -286,8 +295,10 @@ export default async function StrategyPage({
                 <div className="space-y-1">
                   <h3 className="text-heading-sm text-fg">{p.name}</h3>
                   <div className="flex flex-wrap gap-2">
-                    {p.status === "stale" ? <Badge variant="warning">Needs review</Badge> : null}
-                    <Badge>{p.contents === 1 ? "1 carousel" : `${p.contents} carousels`}</Badge>
+                    {p.status === "stale" ? (
+                      <Badge variant="warning">{tl("strategyStatus.stale")}</Badge>
+                    ) : null}
+                    <Badge>{t("carousels", { count: p.contents })}</Badge>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-start gap-2">
@@ -298,7 +309,7 @@ export default async function StrategyPage({
                       rev={p.rev}
                       initial={pillarRowToInput(p)}
                       options={options}
-                      label="Edit"
+                      label={t("edit")}
                     />
                   ) : null}
                   {archiveButton("pillar", p.id, p.name)}
@@ -306,7 +317,9 @@ export default async function StrategyPage({
               </header>
               <Facts items={pillarFacts(p)} />
               <div className="space-y-3 border-t border-subtle pt-4">
-                <h4 className="text-label uppercase text-fg-muted">Rubrics ({rubrics.length})</h4>
+                <h4 className="text-label uppercase text-fg-muted">
+                  {t("rubrics", { count: rubrics.length })}
+                </h4>
                 {rubrics.length ? (
                   <ul className="space-y-3">
                     {rubrics.map((r) => (
@@ -315,7 +328,7 @@ export default async function StrategyPage({
                           <p className="flex flex-wrap items-center gap-2 text-body-md font-medium text-fg">
                             {r.name}
                             {r.status === "stale" ? (
-                              <Badge variant="warning">Needs review</Badge>
+                              <Badge variant="warning">{tl("strategyStatus.stale")}</Badge>
                             ) : null}
                           </p>
                           <div className="flex flex-wrap items-start gap-2">
@@ -327,7 +340,7 @@ export default async function StrategyPage({
                                 pillarId={p.id}
                                 initial={rubricRowToInput(r)}
                                 options={options}
-                                label="Edit"
+                                label={t("edit")}
                               />
                             ) : null}
                             {archiveButton("rubric", r.id, r.name)}
@@ -338,10 +351,10 @@ export default async function StrategyPage({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-body-sm text-fg-muted">No rubrics for this pillar.</p>
+                  <p className="text-body-sm text-fg-muted">{t("noRubrics")}</p>
                 )}
                 {canEdit ? (
-                  <RubricForm {...base} pillarId={p.id} options={options} label="Add rubric" />
+                  <RubricForm {...base} pillarId={p.id} options={options} label={t("addRubric")} />
                 ) : null}
               </div>
             </Card>
@@ -352,7 +365,7 @@ export default async function StrategyPage({
       {archived.length ? (
         <details className="rounded-lg border border-subtle bg-surface p-5">
           <summary className="cursor-pointer text-heading-sm text-fg">
-            Archived ({archived.length})
+            {t("archived", { count: archived.length })}
           </summary>
           <ul className="mt-4 space-y-2">
             {archived.map((a) => (
@@ -363,7 +376,8 @@ export default async function StrategyPage({
                 <span className="text-fg">
                   {a.name}{" "}
                   <span className="text-fg-muted">
-                    · {a.note} · archived {formatDate(a.at)}
+                    · {a.note} ·{" "}
+                    {t("archivedOn", { date: a.at ? format.date(a.at, "dateTime") : "—" })}
                   </span>
                 </span>
                 {canArchive ? (
@@ -378,7 +392,7 @@ export default async function StrategyPage({
                     })}
                   >
                     <ArchiveRestore aria-hidden />
-                    Restore
+                    {t("restore")}
                   </ActionButton>
                 ) : null}
               </li>

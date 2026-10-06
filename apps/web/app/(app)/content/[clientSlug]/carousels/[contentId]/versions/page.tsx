@@ -1,12 +1,15 @@
 import { Badge, Card } from "@forgecy/ui";
+import { getTranslations } from "next-intl/server";
+import { getFormat } from "@/lib/i18n";
 import { ActionButton } from "../../../../_components/action-button";
 import { CarouselVersionForm } from "../../../../_components/carousel-version-form";
 import { restoreVersionAction } from "../../../../actions";
-import { formatDate } from "../../../../_lib/paths";
-import { versionOriginLabels } from "../../_lib/labels";
 import { loadCarousel } from "../../_lib/workspace";
 
-export const metadata = { title: "Versions · Carousel" };
+export async function generateMetadata() {
+  const t = await getTranslations("content.versions");
+  return { title: t("metaTitle") };
+}
 
 const EDITABLE = ["draft", "changes_requested", "approved", "exported"];
 
@@ -23,6 +26,9 @@ export default async function VersionsPage({
   const { clientSlug, contentId } = await params;
   const { client, ws } = await loadCarousel(clientSlug, contentId);
   const c = ws.content;
+  const t = await getTranslations("content.versions");
+  const tl = await getTranslations("content.labels");
+  const format = await getFormat();
   const editable = EDITABLE.includes(c.status) && !ws.locked;
   const act = { slug: client.slug, clientId: client.id, id: c.id };
 
@@ -30,27 +36,27 @@ export default async function VersionsPage({
     <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
       <Card className="overflow-hidden p-0">
         {ws.versions.length === 0 ? (
-          <p className="p-6 text-body-md text-fg-muted">No saved versions yet.</p>
+          <p className="p-6 text-body-md text-fg-muted">{t("empty")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-body-sm">
-              <caption className="sr-only">Carousel versions</caption>
+              <caption className="sr-only">{t("table.caption")}</caption>
               <thead className="border-b border-subtle text-label text-fg-muted">
                 <tr>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Version
+                    {t("table.version")}
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Origin
+                    {t("table.origin")}
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Author and date
+                    {t("table.author")}
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Note
+                    {t("table.note")}
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t("table.actions")}</span>
                   </th>
                 </tr>
               </thead>
@@ -58,18 +64,22 @@ export default async function VersionsPage({
                 {ws.versions.map((v) => (
                   <tr key={v.id} className="border-b border-subtle align-top last:border-0">
                     <td className="px-4 py-3">
-                      <span className="text-heading-sm text-fg">v{v.number}</span>
+                      <span className="text-heading-sm text-fg">
+                        {tl("versionShort", { number: v.number })}
+                      </span>
                       <span className="mt-1 flex flex-wrap gap-1">
                         {v.id === c.approvedVersionId ? (
-                          <Badge variant="success">Approved</Badge>
+                          <Badge variant="success">{t("approved")}</Badge>
                         ) : null}
-                        {v.id === c.currentVersionId ? <Badge>Current</Badge> : null}
+                        {v.id === c.currentVersionId ? <Badge>{t("current")}</Badge> : null}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-fg">{versionOriginLabels[v.createdFrom]}</td>
+                    <td className="px-4 py-3 text-fg">{tl(`versionOrigin.${v.createdFrom}`)}</td>
                     <td className="px-4 py-3 text-fg">
-                      {v.authorName ?? "AI"}
-                      <span className="block text-fg-muted">{formatDate(v.createdAt)}</span>
+                      {v.authorName ?? t("ai")}
+                      <span className="block text-fg-muted">
+                        {format.date(v.createdAt, "dateTime")}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-fg">{noteOf(v.meta) || "—"}</td>
                     <td className="px-4 py-3 text-right">
@@ -77,10 +87,10 @@ export default async function VersionsPage({
                         size="sm"
                         variant="secondary"
                         disabled={!editable}
-                        confirm={`Restore version ${v.number}? The current draft is replaced by this version and the carousel goes back to draft.`}
+                        confirm={t("restoreConfirm", { number: v.number })}
                         action={restoreVersionAction.bind(null, { ...act, number: v.number })}
                       >
-                        Restore
+                        {t("restore")}
                       </ActionButton>
                     </td>
                   </tr>
@@ -91,9 +101,11 @@ export default async function VersionsPage({
         )}
       </Card>
       <Card className="grid content-start gap-3 p-5">
-        <h3 className="text-heading-sm text-fg">Save the draft as a version</h3>
+        <h3 className="text-heading-sm text-fg">{t("saveTitle")}</h3>
         <p className="text-body-sm text-fg-muted">
-          Draft last edited: {formatDate(c.draftUpdatedAt)}
+          {t("lastEdited", {
+            date: c.draftUpdatedAt ? format.date(c.draftUpdatedAt, "dateTime") : "—",
+          })}
         </p>
         <CarouselVersionForm
           slug={client.slug}

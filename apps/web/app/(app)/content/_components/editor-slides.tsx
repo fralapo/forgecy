@@ -8,7 +8,6 @@ import {
 } from "@forgecy/content/client";
 import {
   findLayout,
-  slideRoleLabels,
   visibleLength,
   type ImageRef,
   type LayoutDef,
@@ -17,12 +16,12 @@ import {
 } from "@forgecy/carousel";
 import { Badge, Button, Input, Label, cn } from "@forgecy/ui";
 import { ArrowDown, ArrowUp, Copy, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { updateAltAction } from "../actions";
 import { ActionButton, controlClass } from "./action-button";
 import { AiImageDrafts, ImageGenerator, Thumb } from "./editor-ai";
 import type { EditorAsset, EditorRef } from "./editor-workspace";
-import { plural } from "@/lib/plural";
 
 type Update = (fn: (d: CarouselDocument) => CarouselDocument) => void;
 
@@ -35,7 +34,11 @@ function allowedAt(m: TemplateManifest, layout: LayoutDef, index: number, total:
   return true;
 }
 
-const layoutLabel = (l: LayoutDef) => `${l.name} · ${slideRoleLabels[l.role]}`;
+/** “Name · role” label of a layout, with the role translated. */
+function useLayoutLabel() {
+  const tl = useTranslations("content.labels.slideRole");
+  return (l: LayoutDef) => `${l.name} · ${tl(l.role)}`;
+}
 
 /** Keeps the values that still fit the new layout (same slot name and type). */
 function moveSlots(slide: ContentSlide, from: LayoutDef | undefined, to: LayoutDef) {
@@ -71,6 +74,9 @@ export function SlideList({
   update: Update;
   readOnly: boolean;
 }) {
+  const t = useTranslations("content.editor.slides");
+  const tl = useTranslations("content.labels.slideRole");
+  const layoutLabel = useLayoutLabel();
   const n = doc.slides.length;
   const { min, max } = manifest.slides;
   const at =
@@ -92,10 +98,8 @@ export function SlideList({
     });
 
   return (
-    <nav aria-label="Carousel slides" className="space-y-3">
-      <p className="text-body-sm text-fg-muted">
-        {plural(n, "slide", "slides")} · the template allows {min} to {max}
-      </p>
+    <nav aria-label={t("navLabel")} className="space-y-3">
+      <p className="text-body-sm text-fg-muted">{t("count", { count: n, min, max })}</p>
       <ol className="space-y-2">
         {doc.slides.map((s, i) => {
           const layout = findLayout(manifest, s.layout);
@@ -121,7 +125,7 @@ export function SlideList({
                   {i + 1}. {layout ? layout.name : s.layout}
                 </span>
                 <span className="block text-label text-fg-muted">
-                  {layout ? slideRoleLabels[layout.role] : "Layout not in the template"}
+                  {layout ? tl(layout.role) : t("layoutMissing")}
                 </span>
               </button>
               {errors || warnings ? (
@@ -135,7 +139,7 @@ export function SlideList({
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`Move slide ${i + 1} up`}
+                    aria-label={t("moveUp", { number: i + 1 })}
                     disabled={i === 0}
                     onClick={() => move(i, -1)}
                   >
@@ -144,7 +148,7 @@ export function SlideList({
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`Move slide ${i + 1} down`}
+                    aria-label={t("moveDown", { number: i + 1 })}
                     disabled={i === n - 1}
                     onClick={() => move(i, 1)}
                   >
@@ -153,7 +157,7 @@ export function SlideList({
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`Duplicate slide ${i + 1}`}
+                    aria-label={t("duplicate", { number: i + 1 })}
                     disabled={n >= max}
                     onClick={() => {
                       const copy = { ...structuredClone(s), id: newSlideId() };
@@ -170,10 +174,10 @@ export function SlideList({
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`Delete slide ${i + 1}`}
+                    aria-label={t("delete", { number: i + 1 })}
                     disabled={n <= min}
                     onClick={() => {
-                      if (!window.confirm(`Delete slide ${i + 1}?`)) return;
+                      if (!window.confirm(t("deleteConfirm", { number: i + 1 }))) return;
                       update((d) => ({ ...d, slides: d.slides.filter((x) => x.id !== s.id) }));
                       const next = doc.slides[i + 1] ?? doc.slides[i - 1];
                       if (next) onSelect(next.id);
@@ -189,7 +193,7 @@ export function SlideList({
       </ol>
       {!readOnly ? (
         <div className="space-y-2 rounded-md border border-dashed border-subtle p-2">
-          <Label htmlFor="add-layout">New slide after the selected one</Label>
+          <Label htmlFor="add-layout">{t("newSlide")}</Label>
           <select
             id="add-layout"
             className={controlClass}
@@ -226,11 +230,9 @@ export function SlideList({
             }}
           >
             <Plus aria-hidden />
-            Add slide
+            {t("add")}
           </Button>
-          {n >= max ? (
-            <p className="text-body-sm text-fg-muted">Template maximum reached.</p>
-          ) : null}
+          {n >= max ? <p className="text-body-sm text-fg-muted">{t("maxReached")}</p> : null}
         </div>
       ) : null}
     </nav>
@@ -258,6 +260,8 @@ export function SlidePanel({
   readOnly: boolean;
   flush: () => Promise<boolean>;
 }) {
+  const t = useTranslations("content.editor.slide");
+  const layoutLabel = useLayoutLabel();
   const layout = findLayout(manifest, slide.layout);
   const layouts = manifest.layouts.filter(
     (l) => l.id === slide.layout || allowedAt(manifest, l, index, total),
@@ -285,11 +289,11 @@ export function SlidePanel({
       className="space-y-4 rounded-lg border border-subtle bg-surface p-4"
     >
       <h2 id="slide-title" className="text-heading-sm text-fg">
-        Slide {index + 1}
+        {t("title", { number: index + 1 })}
       </h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
-          <Label htmlFor="slide-layout">Layout</Label>
+          <Label htmlFor="slide-layout">{t("layout")}</Label>
           <select
             id="slide-layout"
             className={controlClass}
@@ -300,7 +304,11 @@ export function SlidePanel({
               if (to) patch((s) => moveSlots(s, layout, to));
             }}
           >
-            {!layout ? <option value={slide.layout}>{slide.layout} (unavailable)</option> : null}
+            {!layout ? (
+              <option value={slide.layout}>
+                {t("layoutUnavailable", { layout: slide.layout })}
+              </option>
+            ) : null}
             {layouts.map((l) => (
               <option key={l.id} value={l.id}>
                 {layoutLabel(l)}
@@ -309,7 +317,7 @@ export function SlidePanel({
           </select>
         </div>
         <div className="space-y-1">
-          <Label htmlFor="slide-tone">Color variant</Label>
+          <Label htmlFor="slide-tone">{t("tone")}</Label>
           <select
             id="slide-tone"
             className={controlClass}
@@ -320,8 +328,8 @@ export function SlidePanel({
               patch((s) => ({ ...s, tone }));
             }}
           >
-            <option value="default">Standard</option>
-            <option value="inverse">Inverted</option>
+            <option value="default">{t("toneDefault")}</option>
+            <option value="inverse">{t("toneInverse")}</option>
           </select>
         </div>
       </div>
@@ -343,13 +351,11 @@ export function SlidePanel({
           />
         ))
       ) : (
-        <p className="text-body-sm text-error">
-          The layout “{slide.layout}” is not in the template: choose another one.
-        </p>
+        <p className="text-body-sm text-error">{t("layoutMissing", { layout: slide.layout })}</p>
       )}
 
       <div className="space-y-1">
-        <Label htmlFor="slide-note">Note for the reviewer</Label>
+        <Label htmlFor="slide-note">{t("note")}</Label>
         <Input
           id="slide-note"
           value={slide.note ?? ""}
@@ -398,6 +404,7 @@ function SlotField({
   readOnly: boolean;
   flush: () => Promise<boolean>;
 }) {
+  const t = useTranslations("content.editor.slot");
   const id = `slot-${def.name}`;
   const label = def.label ?? def.name;
   return (
@@ -412,12 +419,12 @@ function SlotField({
         {def.type === "text" ? (
           <label id={`${id}-name`} htmlFor={id} className="text-body-sm font-medium text-fg">
             {label}
-            {def.required ? <span className="text-fg-muted"> · required</span> : null}
+            {def.required ? <span className="text-fg-muted"> · {t("required")}</span> : null}
           </label>
         ) : (
           <span id={`${id}-name`} className="text-body-sm font-medium text-fg">
             {label}
-            {def.required ? <span className="text-fg-muted"> · required</span> : null}
+            {def.required ? <span className="text-fg-muted"> · {t("required")}</span> : null}
           </span>
         )}
         <label className="flex items-center gap-2 text-body-sm text-fg">
@@ -429,7 +436,8 @@ function SlotField({
             onChange={(e) => onProtect(e.target.checked)}
           />
           <ShieldCheck aria-hidden className="size-4" />
-          Protect from AI<span className="sr-only">: {label}</span>
+          {t("protect")}
+          <span className="sr-only">: {label}</span>
         </label>
       </div>
 
@@ -478,6 +486,7 @@ function TextSlot({
   onChange: (v: SlotValue | undefined) => void;
   readOnly: boolean;
 }) {
+  const t = useTranslations("content.editor.slot");
   const multiline = (def.maxLines ?? 2) > 1 || def.maxChars > 80;
   const common = {
     id,
@@ -499,8 +508,8 @@ function TextSlot({
       )}
       <p className="flex flex-wrap justify-between gap-2 text-label text-fg-muted">
         <span>
-          {def.maxLines ? `Up to ${plural(def.maxLines, "line", "lines")}. ` : ""}
-          {def.highlight ? "Highlight a word with ==word==." : ""}
+          {def.maxLines ? `${t("maxLines", { count: def.maxLines })} ` : ""}
+          {def.highlight ? t("highlight") : ""}
         </span>
         <Counter id={`${id}-count`} len={visibleLength(value)} max={def.maxChars} />
       </p>
@@ -521,6 +530,7 @@ function ListSlot({
   onChange: (v: SlotValue | undefined) => void;
   readOnly: boolean;
 }) {
+  const t = useTranslations("content.editor.slot");
   const set = (items: string[]) => onChange(items.length ? items : undefined);
   return (
     <div className="space-y-2">
@@ -530,7 +540,7 @@ function ListSlot({
             <Input
               value={item}
               disabled={readOnly}
-              aria-label={`${def.label ?? def.name}, item ${i + 1}`}
+              aria-label={t("item", { label: def.label ?? def.name, number: i + 1 })}
               aria-describedby={`${id}-${i}-count`}
               onChange={(e) => set(value.map((x, j) => (j === i ? e.target.value : x)))}
             />
@@ -539,7 +549,7 @@ function ListSlot({
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label={`Remove item ${i + 1}`}
+                aria-label={t("removeItem", { number: i + 1 })}
                 onClick={() => set(value.filter((_, j) => j !== i))}
               >
                 <X aria-hidden />
@@ -557,11 +567,11 @@ function ListSlot({
             onClick={() => set([...value, ""])}
           >
             <Plus aria-hidden />
-            Add item
+            {t("addItem")}
           </Button>
         ) : null}
         <span className="text-label text-fg-muted">
-          {plural(value.length, "item", "items")} · {def.minItems} to {def.maxItems}
+          {t("itemCount", { count: value.length, min: def.minItems, max: def.maxItems })}
         </span>
       </div>
     </div>
@@ -587,6 +597,7 @@ function ImageSlot({
   readOnly: boolean;
   flush: () => Promise<boolean>;
 }) {
+  const t = useTranslations("content.editor.imageSlot");
   const [picking, setPicking] = useState(false);
   const current = value?.key ? library.find((a) => a.key === value.key) : undefined;
   const approved = library.filter((a) => a.status === "approved");
@@ -606,20 +617,18 @@ function ImageSlot({
             <Thumb url={current?.thumb ?? null} alt={value.alt} />
           ) : (
             <div className="flex aspect-square w-full items-center justify-center rounded-md border border-dashed border-subtle text-body-sm text-fg-muted">
-              No image
+              {t("none")}
             </div>
           )}
         </div>
         <div className="min-w-48 flex-1 space-y-2">
-          {value?.asset ? (
-            <p className="text-body-sm text-fg-muted">Template sample image.</p>
-          ) : null}
+          {value?.asset ? <p className="text-body-sm text-fg-muted">{t("sample")}</p> : null}
           {current && current.status !== "approved" ? (
-            <Badge variant="warning">Image to approve</Badge>
+            <Badge variant="warning">{t("toApprove")}</Badge>
           ) : null}
           {value ? (
             <div className="space-y-1">
-              <Label htmlFor={`alt-${slideId}-${slot}`}>Alt text</Label>
+              <Label htmlFor={`alt-${slideId}-${slot}`}>{t("alt")}</Label>
               <Input
                 id={`alt-${slideId}-${slot}`}
                 value={value.alt}
@@ -640,7 +649,7 @@ function ImageSlot({
                     })
                   }
                 >
-                  Use this text in the library too
+                  {t("altToLibrary")}
                 </ActionButton>
               ) : null}
             </div>
@@ -648,11 +657,11 @@ function ImageSlot({
           {!readOnly ? (
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" size="sm" onClick={() => setPicking((p) => !p)}>
-                {picking ? "Close the library" : "Choose from the library"}
+                {picking ? t("closeLibrary") : t("chooseLibrary")}
               </Button>
               {value ? (
                 <Button variant="ghost" size="sm" onClick={() => onChange(undefined)}>
-                  Remove image
+                  {t("remove")}
                 </Button>
               ) : null}
             </div>
@@ -677,14 +686,14 @@ function ImageSlot({
                 >
                   <Thumb url={a.thumb} alt={a.alt} />
                   <span className="mt-1 block truncate text-label text-fg-muted">
-                    {a.alt || "No alt text"}
+                    {a.alt || t("noAlt")}
                   </span>
                 </button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-body-sm text-fg-muted">No approved images in the client’s library.</p>
+          <p className="text-body-sm text-fg-muted">{t("noApproved")}</p>
         )
       ) : null}
 

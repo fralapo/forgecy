@@ -187,11 +187,11 @@ export async function importProductImage(
 ) {
   humanOnly(actor, "assets.upload", input.clientId);
   if (!input.storageKey.startsWith(`clients/${input.clientId}/`))
-    invalid("Image of another client");
+    invalid("content.errors.imageOtherClient");
   // Only images of an approved product of this client, as the catalog lists them.
   const product = await productSource().get(db, input.clientId, input.productId);
   if (!product?.images.some((i) => i.storageKey === input.storageKey))
-    invalid("The image does not belong to an approved product of the client");
+    invalid("content.errors.imageNotProduct");
   const chunks: Uint8Array[] = [];
   for await (const c of await storage.get(input.storageKey)) chunks.push(c as Uint8Array);
   const bytes = new Uint8Array(Buffer.concat(chunks));
@@ -222,7 +222,7 @@ export async function decideAsset(
   humanOnly(actor, input.decision === "approved" ? "approve" : "review", input.clientId);
   const reason = input.reason?.trim().slice(0, 500) ?? "";
   if (input.decision === "rejected" && reason.length < 3)
-    invalid("Write why the image is not right");
+    invalid("content.errors.rejectReasonRequired");
   const [row] = await db
     .update(assets)
     .set({
@@ -236,7 +236,7 @@ export async function decideAsset(
       and(eq(assets.id, input.id), eq(assets.clientId, input.clientId), eq(assets.status, "draft")),
     )
     .returning();
-  if (!row) conflict("Image not found or already decided");
+  if (!row) conflict("content.errors.imageDecided");
   await recordAuditEvent(db, {
     actor,
     action: `content.asset_${input.decision}`,
@@ -259,7 +259,7 @@ export async function updateAssetAlt(
     .set({ alt: input.alt.trim().slice(0, 300) })
     .where(and(eq(assets.id, input.id), eq(assets.clientId, input.clientId)))
     .returning({ id: assets.id });
-  if (!row) notFound("Image not found");
+  if (!row) notFound("content.errors.imageNotFound");
   return row;
 }
 
@@ -314,22 +314,22 @@ const reviewInputSchema = z
     provider: z.enum(imageProviders),
     status: reviewValueSchema.shape.status,
     termsUrl: z
-      .union([z.url("Invalid terms URL").max(500), z.literal("")])
+      .union([z.url("content.errors.termsUrlInvalid").max(500), z.literal("")])
       .optional()
       .transform((v) => v || null),
     consultedOn: z
-      .union([z.iso.date("Invalid date"), z.literal("")])
+      .union([z.iso.date("content.errors.dateInvalid"), z.literal("")])
       .optional()
       .transform((v) => v || null),
     note: z
       .string()
       .trim()
-      .max(500, "Note too long")
+      .max(500, "content.errors.noteTooLong")
       .optional()
       .transform((v) => v || null),
   })
   .refine((v) => v.status !== "verified" || v.termsUrl, {
-    message: "“Verified” needs the URL of the terms you checked",
+    message: "content.errors.verifiedNeedsTerms",
     path: ["termsUrl"],
   });
 

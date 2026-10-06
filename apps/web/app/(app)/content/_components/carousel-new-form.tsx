@@ -3,15 +3,16 @@
 import {
   channelLabels,
   contentLanguages,
-  objectiveLabels,
   type CarouselParamsInput,
   type ContentChannel,
 } from "@forgecy/content/client";
 import type { getNewCarouselOptions } from "@forgecy/content";
+import { contentObjectives } from "@forgecy/core";
 import { Button, Input, Label } from "@forgecy/ui";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { createCarouselAction } from "../actions";
 import { carouselPath } from "../_lib/paths";
@@ -45,6 +46,8 @@ export function CarouselNewForm({
   plan: PlanSeed | null;
 }) {
   const router = useRouter();
+  const t = useTranslations("content.newCarousel.form");
+  const tl = useTranslations("content.labels");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const templates = options.templates.filter((t) => t.channel in channelLabels);
@@ -77,14 +80,14 @@ export function CarouselNewForm({
 
   function pickTemplate(key: string) {
     setTemplateKey(key);
-    const t = templates.find((x) => x.key === key);
-    if (t) setSlideCount(t.slides.default);
+    const tpl = templates.find((x) => x.key === key);
+    if (tpl) setSlideCount(tpl.slides.default);
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!template) return setError("Choose a template");
-    if (!audienceIds.length) return setError("Choose at least one audience");
+    if (!template) return setError(t("chooseTemplate"));
+    if (!audienceIds.length) return setError(t("chooseAudience"));
     setError(null);
     start(async () => {
       const r = await createCarouselAction({
@@ -116,26 +119,26 @@ export function CarouselNewForm({
     <form onSubmit={submit} className="grid max-w-3xl gap-5">
       <fieldset disabled={disabled || pending} className="grid gap-5">
         <div className="grid gap-2">
-          <Label htmlFor="nc-title">Title</Label>
+          <Label htmlFor="nc-title">{t("title")}</Label>
           <Input
             id="nc-title"
             value={title}
             maxLength={160}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Can be left empty: the outline suggests one"
+            placeholder={t("titlePlaceholder")}
           />
         </div>
         <div className="grid gap-5 md:grid-cols-2">
           <div className="grid gap-2">
-            <Label htmlFor="nc-channel">Channel</Label>
+            <Label htmlFor="nc-channel">{t("channel")}</Label>
             <select
               id="nc-channel"
               className={controlClass}
               value={channel}
               onChange={(e) => {
                 setChannel(e.target.value);
-                const t = firstTemplate(e.target.value);
-                if (t) pickTemplate(t.key);
+                const tpl = firstTemplate(e.target.value);
+                if (tpl) pickTemplate(tpl.key);
               }}
             >
               {channels.map((c) => (
@@ -146,7 +149,7 @@ export function CarouselNewForm({
             </select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nc-template">Format and template</Label>
+            <Label htmlFor="nc-template">{t("template")}</Label>
             <select
               id="nc-template"
               className={controlClass}
@@ -154,10 +157,10 @@ export function CarouselNewForm({
               onChange={(e) => pickTemplate(e.target.value)}
             >
               {templates
-                .filter((t) => t.channel === channel)
-                .map((t) => (
-                  <option key={t.key} value={t.key}>
-                    {t.name} · v{t.version}
+                .filter((tpl) => tpl.channel === channel)
+                .map((tpl) => (
+                  <option key={tpl.key} value={tpl.key}>
+                    {tl("templateVersion", { name: tpl.name, version: tpl.version })}
                   </option>
                 ))}
             </select>
@@ -166,7 +169,7 @@ export function CarouselNewForm({
             ) : null}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nc-slides">Number of slides</Label>
+            <Label htmlFor="nc-slides">{t("slides")}</Label>
             <Input
               id="nc-slides"
               type="number"
@@ -177,27 +180,27 @@ export function CarouselNewForm({
             />
             {template ? (
               <p className="text-body-sm text-fg-muted">
-                From {template.slides.min} to {template.slides.max} for this template
+                {t("slidesRange", { min: template.slides.min, max: template.slides.max })}
               </p>
             ) : null}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nc-objective">Goal</Label>
+            <Label htmlFor="nc-objective">{t("objective")}</Label>
             <select
               id="nc-objective"
               className={controlClass}
               value={objective}
               onChange={(e) => setObjective(e.target.value as Objective)}
             >
-              {(Object.keys(objectiveLabels) as Objective[]).map((o) => (
+              {contentObjectives.map((o) => (
                 <option key={o} value={o}>
-                  {objectiveLabels[o]}
+                  {tl(`objective.${o}`)}
                 </option>
               ))}
             </select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nc-pillar">Pillar</Label>
+            <Label htmlFor="nc-pillar">{t("pillar")}</Label>
             <select
               id="nc-pillar"
               className={controlClass}
@@ -207,7 +210,7 @@ export function CarouselNewForm({
                 setRubricId("");
               }}
             >
-              <option value="">None</option>
+              <option value="">{t("none")}</option>
               {options.pillars.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -216,7 +219,7 @@ export function CarouselNewForm({
             </select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nc-rubric">Rubric</Label>
+            <Label htmlFor="nc-rubric">{t("rubric")}</Label>
             <select
               id="nc-rubric"
               className={controlClass}
@@ -225,14 +228,14 @@ export function CarouselNewForm({
                 setRubricId(e.target.value);
                 const r = options.rubrics.find((x) => x.id === e.target.value);
                 if (r && !pillarId) setPillarId(r.pillarId);
-                const t = r?.templateKey && templates.find((x) => x.key === r.templateKey);
-                if (t) {
-                  setChannel(t.channel);
-                  pickTemplate(t.key);
+                const tpl = r?.templateKey && templates.find((x) => x.key === r.templateKey);
+                if (tpl) {
+                  setChannel(tpl.channel);
+                  pickTemplate(tpl.key);
                 }
               }}
             >
-              <option value="">None</option>
+              <option value="">{t("none")}</option>
               {rubrics.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
@@ -241,14 +244,14 @@ export function CarouselNewForm({
             </select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nc-product">Product (optional)</Label>
+            <Label htmlFor="nc-product">{t("product")}</Label>
             <select
               id="nc-product"
               className={controlClass}
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
             >
-              <option value="">No product</option>
+              <option value="">{t("noProduct")}</option>
               {options.products.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -257,11 +260,11 @@ export function CarouselNewForm({
               ))}
             </select>
             {options.products.length === 0 ? (
-              <p className="text-body-sm text-fg-muted">No approved products in the catalog.</p>
+              <p className="text-body-sm text-fg-muted">{t("noProducts")}</p>
             ) : null}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nc-language">Language</Label>
+            <Label htmlFor="nc-language">{t("language")}</Label>
             <select
               id="nc-language"
               className={controlClass}
@@ -270,21 +273,23 @@ export function CarouselNewForm({
             >
               {contentLanguages.map((l) => (
                 <option key={l.code} value={l.code}>
-                  {l.label}
+                  {tl(`language.${l.code}`)}
                 </option>
               ))}
             </select>
           </div>
         </div>
         <fieldset className="grid gap-2">
-          <legend className="mb-2 text-label text-fg">Audience</legend>
+          <legend className="mb-2 text-label text-fg">{t("audience")}</legend>
           {options.audience.length === 0 ? (
             <p className="text-body-sm text-fg-muted">
-              The published Brand Identity has no audience segments: add at least one in{" "}
-              <Link href={`/brand/${slug}/strategy` as Route} className="text-link underline">
-                Brand Identity › Strategy
-              </Link>{" "}
-              and publish the new version to create carousels.
+              {t.rich("noAudience", {
+                link: (chunks) => (
+                  <Link href={`/brand/${slug}/strategy` as Route} className="text-link underline">
+                    {chunks}
+                  </Link>
+                ),
+              })}
             </p>
           ) : (
             <div className="flex flex-wrap gap-4">
@@ -306,7 +311,7 @@ export function CarouselNewForm({
           )}
         </fieldset>
         <div className="grid gap-2">
-          <Label htmlFor="nc-brief">Brief</Label>
+          <Label htmlFor="nc-brief">{t("brief")}</Label>
           <textarea
             id="nc-brief"
             rows={5}
@@ -314,16 +319,16 @@ export function CarouselNewForm({
             className={controlClass}
             value={briefText}
             onChange={(e) => setBriefText(e.target.value)}
-            placeholder="What the carousel is about, for whom and why. You can complete it later in the Brief tab."
+            placeholder={t("briefPlaceholder")}
           />
           {plan && briefText === plan.briefText ? (
-            <p className="text-body-sm text-fg-muted">Text copied from the editorial plan.</p>
+            <p className="text-body-sm text-fg-muted">{t("fromPlan")}</p>
           ) : null}
         </div>
       </fieldset>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={disabled || pending}>
-          {pending ? "Creating…" : "Create carousel"}
+          {pending ? t("creating") : t("submit")}
         </Button>
         {error ? (
           <span role="alert" className="text-body-sm text-error">

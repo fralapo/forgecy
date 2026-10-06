@@ -3,10 +3,11 @@
 import { Button, Label } from "@forgecy/ui";
 import { MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { addCommentAction, resolveCommentAction } from "../actions";
-import { formatDate } from "../_lib/paths";
 import { ActionButton, controlClass } from "./action-button";
+import { useFormat } from "@/lib/use-format";
 
 export interface ReviewComment {
   id: string;
@@ -35,6 +36,8 @@ export function ReviewComments({
   canComment: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations("content.review.comments");
+  const format = useFormat();
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -51,14 +54,14 @@ export function ReviewComments({
             <li key={c.id} className="space-y-1 rounded-md border border-subtle p-2 text-body-sm">
               <p className="whitespace-pre-line text-fg">{c.body}</p>
               <p className="text-fg-muted">
-                {c.authorName ?? "Removed user"} · {formatDate(c.createdAt)}
+                {c.authorName ?? t("removedUser")} · {format.date(c.createdAt, "dateTime")}
               </p>
               <ActionButton
                 size="sm"
                 variant="ghost"
                 action={() => resolveCommentAction({ ...base, commentId: c.id })}
               >
-                Mark as resolved
+                {t("resolve")}
               </ActionButton>
             </li>
           ))}
@@ -66,11 +69,13 @@ export function ReviewComments({
       ) : null}
       {resolved.length ? (
         <details className="text-body-sm">
-          <summary className="cursor-pointer text-fg-muted">{resolved.length} resolved</summary>
+          <summary className="cursor-pointer text-fg-muted">
+            {t("resolved", { count: resolved.length })}
+          </summary>
           <ul className="mt-2 space-y-1">
             {resolved.map((c) => (
               <li key={c.id} className="text-fg-muted">
-                <span className="line-through">{c.body}</span> · {c.authorName ?? "Removed user"}
+                <span className="line-through">{c.body}</span> · {c.authorName ?? t("removedUser")}
               </li>
             ))}
           </ul>
@@ -91,20 +96,20 @@ export function ReviewComments({
           }}
         >
           <Label htmlFor={fieldId} className="sr-only">
-            Comment on {label}
+            {t("commentOn", { target: label })}
           </Label>
           <textarea
             id={fieldId}
             rows={2}
             maxLength={2000}
             className={controlClass}
-            placeholder={`Comment on ${label}`}
+            placeholder={t("commentOn", { target: label })}
             value={body}
             onChange={(e) => setBody(e.target.value)}
           />
           <Button type="submit" size="sm" variant="secondary" disabled={pending || !body.trim()}>
             <MessageSquare aria-hidden />
-            Comment
+            {t("submit")}
           </Button>
           {error ? (
             <p role="alert" className="text-body-sm text-error">

@@ -15,6 +15,7 @@ import {
   type TokenTree,
 } from "@forgecy/brand/tokens";
 import type { BrandCheckSeverity } from "@forgecy/core";
+import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import { checkContrast, colorToHex, formatRatio, WCAG } from "@forgecy/ui/tokens";
 import { coherenceScore } from "./score";
 import type {
@@ -85,7 +86,29 @@ export function findPhrase(text: string, phrase: string): string[] {
 }
 
 const slotLabel = (s: { name: string; label?: string | undefined }) => s.label ?? s.name;
-const slideLabel = (i: number | null) => (i === null ? "Caption" : `Slide ${i + 1}`);
+
+/**
+ * The finding's text in English (stored, logs, API) plus a message reference the
+ * interface shows in the person's language. Numbers that are not plurals go in as
+ * text so they read exactly as measured ("1080 px", not "1,080 px").
+ */
+type FindingKey = Extract<MessageKey, `review.guard.finding.${string}`>;
+type SuggestionKey = Extract<MessageKey, `review.guard.suggestion.${string}`>;
+const say = (key: FindingKey, values?: MessageValues) => ({
+  message: englishMessage(key, values),
+  ref: messageRef(key, values),
+});
+const suggest = (key: SuggestionKey, values?: MessageValues) => ({
+  suggestion: englishMessage(key, values),
+  suggestionRef: messageRef(key, values),
+});
+const notRunReason = (
+  check: string,
+  key: Extract<MessageKey, `review.guard.notRun.${string}`>,
+) => ({ check, reason: englishMessage(key), reasonRef: messageRef(key) });
+/** Where a text block is: "caption", or the slide number with the slot label. */
+const at = (slide: number | null, slot: string) =>
+  slide === null ? { slide: "caption", slot: "" } : { slide: String(slide + 1), slot };
 
 function blockText(slot: GuardSlot): string {
   if (slot.kind === "text") return slot.text;
@@ -164,7 +187,11 @@ function checkLengths(ctx: Ctx) {
             origin: "json",
             slide: i,
             slot: slot.name,
-            message: `${slotLabel(slot)}: ${n}/${slot.maxChars} characters. Shorten to ${slot.maxChars}.`,
+            ...say("review.guard.finding.textLength", {
+              slot: slotLabel(slot),
+              count: String(n),
+              max: String(slot.maxChars),
+            }),
             measured: n,
             threshold: slot.maxChars,
             blockHash: h,
@@ -179,7 +206,11 @@ function checkLengths(ctx: Ctx) {
           origin: "json",
           slide: i,
           slot: slot.name,
-          message: `${slotLabel(slot)}: ${slot.items.length} items out of ${slot.maxItems}.`,
+          ...say("review.guard.finding.listItems", {
+            slot: slotLabel(slot),
+            count: String(slot.items.length),
+            max: String(slot.maxItems),
+          }),
           measured: slot.items.length,
           threshold: slot.maxItems,
           blockHash: h,
@@ -197,7 +228,12 @@ function checkLengths(ctx: Ctx) {
               slide: i,
               slot: slot.name,
               discriminator: String(j),
-              message: `${slotLabel(slot)}, item ${j + 1}: ${n}/${max} characters. Shorten to ${max}.`,
+              ...say("review.guard.finding.itemLength", {
+                slot: slotLabel(slot),
+                item: String(j + 1),
+                count: String(n),
+                max: String(max),
+              }),
               measured: n,
               threshold: max,
               blockHash: h,
@@ -236,13 +272,13 @@ function checkDensity(ctx: Ctx) {
         origin: "json",
         slide: i,
         slot: null,
-        message:
-          words > limit
-            ? `${slideLabel(i)}: ${words} words, over the limit of ${limit}.`
-            : `${slideLabel(i)}: ${words} words, close to the limit of ${limit}.`,
+        ...say(
+          words > limit ? "review.guard.finding.wordsOver" : "review.guard.finding.wordsNear",
+          { slide: String(i + 1), count: String(words), max: String(limit) },
+        ),
         measured: words,
         threshold: limit,
-        suggestion: "Move part of the text to another slide or to the caption.",
+        ...suggest("review.guard.suggestion.moveText"),
         rule,
         blockHash: hash(slide.slots.map(blockText)),
       });
@@ -267,11 +303,10 @@ function checkHook(ctx: Ctx) {
       origin: "json",
       slide: 0,
       slot: title.name,
-      message: `First slide hook: ${words} words, at most ${max} recommended.`,
+      ...say("review.guard.finding.hookLength", { count: String(words), max: String(max) }),
       measured: words,
       threshold: max,
-      suggestion:
-        "Keep only the promise or the question on the cover; the rest goes on the following slides.",
+      ...suggest("review.guard.suggestion.hookCover"),
       blockHash: hash(title),
     });
 }
@@ -292,8 +327,8 @@ function checkCta(ctx: Ctx) {
     origin: "json",
     slide: i,
     slot: null,
-    message: "The last slide has no CTA.",
-    suggestion: "Use a closing layout with a CTA or fill in the CTA slot.",
+    ...say("review.guard.finding.ctaMissing"),
+    ...suggest("review.guard.suggestion.ctaMissing"),
     rule: ctaStyle
       ? { path: "/document/verbal/writingRules/value/ctaStyle", text: ctaStyle }
       : undefined,
@@ -312,7 +347,12 @@ function checkStructure(ctx: Ctx) {
       origin: "json",
       slide: null,
       slot: null,
-      message: `The “${fmt.name}” format has ${fmt.steps.length} steps (${fmt.steps.map((s) => s.step).join(", ")}); the carousel has ${slides.length} slides.`,
+      ...say("review.guard.finding.structureSteps", {
+        format: fmt.name,
+        steps: String(fmt.steps.length),
+        list: fmt.steps.map((s) => s.step).join(", "),
+        slides: String(slides.length),
+      }),
       measured: slides.length,
       threshold: fmt.steps.length,
       rule: {
@@ -331,7 +371,7 @@ function checkStructure(ctx: Ctx) {
       slide: 0,
       slot: null,
       discriminator: "cover",
-      message: "The first slide does not use an opening layout.",
+      ...say("review.guard.finding.structureCover"),
       blockHash: hash(first.layout, first.role),
     });
 }
@@ -352,11 +392,16 @@ function checkForbiddenWords(ctx: Ctx, blocks: Block[]) {
           slide: b.slide,
           slot: b.slot,
           discriminator: word.toLowerCase(),
-          message: `${slideLabel(b.slide)} · ${b.label}: “${hits[0]}” is among the forbidden words of the Brand Identity.`,
+          ...say("review.guard.finding.forbiddenWord", {
+            ...at(b.slide, b.label),
+            word: hits[0]!,
+          }),
           measured: hits[0],
-          suggestion: preferred.length
-            ? `Preferred words: ${preferred.slice(0, 8).join(", ")}.`
-            : undefined,
+          ...(preferred.length
+            ? suggest("review.guard.suggestion.preferredWords", {
+                words: preferred.slice(0, 8).join(", "),
+              })
+            : {}),
           rule: { path: `/document/verbal/forbiddenWords/${wi}`, text: word },
           blockHash: b.hash,
         });
@@ -383,9 +428,9 @@ function checkSpellings(ctx: Ctx, blocks: Block[]) {
           slide: b.slide,
           slot: b.slot,
           discriminator: `${term}|${found}`,
-          message: `${slideLabel(b.slide)} · ${b.label}: write “${term}”, not “${found}”.`,
+          ...say("review.guard.finding.spelling", { ...at(b.slide, b.label), term, found }),
           measured: found,
-          suggestion: `Replace with “${term}”.`,
+          ...suggest("review.guard.suggestion.replaceWith", { term }),
           rule: { path: `/document/verbal/spellings/${si}`, text: term },
           blockHash: b.hash,
         });
@@ -408,7 +453,7 @@ function checkAvoidTopics(ctx: Ctx, blocks: Block[]) {
           slide: b.slide,
           slot: b.slot,
           discriminator: topic.value.toLowerCase(),
-          message: `${slideLabel(b.slide)} · ${b.label}: mentions “${hits[0]}”, a topic to avoid for this brand.`,
+          ...say("review.guard.finding.avoidTopic", { ...at(b.slide, b.label), found: hits[0]! }),
           measured: hits[0],
           rule: { path: `/document/strategy/avoidTopics/${ti}`, text: topic.value },
           blockHash: b.hash,
@@ -423,7 +468,7 @@ function checkWritingRules(ctx: Ctx, blocks: Block[]) {
   const rulePath = "/document/verbal/writingRules/value";
   for (const b of blocks) {
     const text = plainText(b.text);
-    const where = `${slideLabel(b.slide)} · ${b.label}`;
+    const where = at(b.slide, b.label);
     if (wr.maxSentenceWords) {
       const longest = text
         .split(/[.!?…]+|\n/u)
@@ -437,7 +482,11 @@ function checkWritingRules(ctx: Ctx, blocks: Block[]) {
           origin: "json",
           slide: b.slide,
           slot: b.slot,
-          message: `${where}: a sentence has ${longest} words, the brand wants at most ${wr.maxSentenceWords}.`,
+          ...say("review.guard.finding.sentenceLength", {
+            ...where,
+            count: String(longest),
+            max: String(wr.maxSentenceWords),
+          }),
           measured: longest,
           threshold: wr.maxSentenceWords,
           rule: {
@@ -456,7 +505,11 @@ function checkWritingRules(ctx: Ctx, blocks: Block[]) {
         origin: "json",
         slide: b.slide,
         slot: b.slot,
-        message: `${where}: ${emoji} emoji; ${wr.emoji === "no" ? "the brand does not use them" : "the brand uses them sparingly"}.`,
+        ...say("review.guard.finding.emoji", {
+          ...where,
+          count: String(emoji),
+          rule: wr.emoji === "no" ? "no" : "limited",
+        }),
         measured: emoji,
         threshold: wr.emoji === "no" ? 0 : 1,
         rule: {
@@ -474,7 +527,11 @@ function checkWritingRules(ctx: Ctx, blocks: Block[]) {
         origin: "json",
         slide: b.slide,
         slot: b.slot,
-        message: `${where}: ${bangs} exclamation marks; ${wr.exclamations === "no" ? "the brand does not use them" : "the brand uses them sparingly"}.`,
+        ...say("review.guard.finding.exclamation", {
+          ...where,
+          count: String(bangs),
+          rule: wr.exclamations === "no" ? "no" : "limited",
+        }),
         measured: bangs,
         threshold: wr.exclamations === "no" ? 0 : 1,
         rule: {
@@ -502,7 +559,10 @@ function checkWritingRules(ctx: Ctx, blocks: Block[]) {
         origin: "json",
         slide: null,
         slot: "caption",
-        message: `Caption: ${tags.size} hashtags, the brand uses at most ${wr.maxHashtags}.`,
+        ...say("review.guard.finding.hashtags", {
+          count: String(tags.size),
+          max: String(wr.maxHashtags),
+        }),
         measured: tags.size,
         threshold: wr.maxHashtags,
         rule: { path: `${rulePath}/maxHashtags`, text: `At most ${wr.maxHashtags} hashtags.` },
@@ -562,9 +622,13 @@ function checkClaims(ctx: Ctx, blocks: Block[]) {
           slide: b.slide,
           slot: b.slot,
           discriminator: found.toLowerCase(),
-          message: `${slideLabel(b.slide)} · ${b.label}: “${found}” is a claim (${label}) without approved proof.`,
+          ...say("review.guard.finding.sensitiveClaim", {
+            ...at(b.slide, b.label),
+            found,
+            kind: label,
+          }),
           measured: found,
-          suggestion: "Use an approved claim with its proof, or rephrase without absolutes.",
+          ...suggest("review.guard.suggestion.provenClaim"),
           rule: {
             path: "/document/strategy/messages",
             text: "Every claim carries its proof or its source.",
@@ -610,14 +674,14 @@ export function extractFacts(text: string): Array<{ raw: string; value: number; 
 function checkProductFacts(ctx: Ctx, blocks: Block[]) {
   const product = ctx.content.product;
   if (!product) {
-    ctx.notRun.push({ check: "product_fact", reason: "No linked product." });
+    ctx.notRun.push(notRunReason("product_fact", "review.guard.notRun.noProduct"));
     return;
   }
   const known = extractFacts([product.name, ...product.facts].join("\n"));
   const price = product.price ? extractFacts(product.price) : [];
   for (const b of blocks)
     for (const f of extractFacts(plainText(b.text))) {
-      const where = `${slideLabel(b.slide)} · ${b.label}`;
+      const where = { ...at(b.slide, b.label), found: f.raw, product: product.name };
       const base = {
         category: "claims" as CheckCategory,
         severity: "error" as BrandCheckSeverity,
@@ -633,20 +697,23 @@ function checkProductFacts(ctx: Ctx, blocks: Block[]) {
           ctx.out.add({
             ...base,
             check: "product_fact",
-            message: `${where}: the price “${f.raw}” is not in the product sheet of “${product.name}”.`,
+            ...say("review.guard.finding.priceNotInSheet", where),
           });
         else if (!ctx.content.brief?.asksPrice)
           ctx.out.add({
             ...base,
             check: "price_not_requested",
-            message: `${where}: the brief does not ask for the price.`,
-            suggestion: "Remove the price or ask for it in the brief.",
+            ...say("review.guard.finding.priceNotRequested", where),
+            ...suggest("review.guard.suggestion.removePrice"),
           });
         else if (!price.some((p) => p.value === f.value))
           ctx.out.add({
             ...base,
             check: "product_fact",
-            message: `${where}: “${f.raw}” does not match the price in the product sheet (${product.price}).`,
+            ...say("review.guard.finding.priceMismatch", {
+              ...where,
+              price: product.price ?? "",
+            }),
             threshold: product.price,
           });
         continue;
@@ -655,8 +722,8 @@ function checkProductFacts(ctx: Ctx, blocks: Block[]) {
         ctx.out.add({
           ...base,
           check: "product_fact",
-          message: `${where}: “${f.raw}” is not in the product sheet of “${product.name}”.`,
-          suggestion: "Use only the data of the approved product.",
+          ...say("review.guard.finding.factNotInSheet", where),
+          ...suggest("review.guard.suggestion.productData"),
         });
     }
 }
@@ -721,9 +788,17 @@ function resolveColor(pal: Palette, use: ColorUse | undefined): string | null {
   return use.hex?.toUpperCase() ?? null;
 }
 
+/** Slot value of a slide background finding (kept in English: it is stored in the finding). */
+const BACKGROUND = "Background";
+
 function checkColors(ctx: Ctx, pal: Palette) {
   const visit = (i: number, where: string, use: ColorUse | undefined, h: string) => {
     if (!use) return;
+    const place = {
+      slide: String(i + 1),
+      area: where === BACKGROUND ? "background" : "slot",
+      slot: where,
+    };
     if (use.token) {
       if (resolveColor(pal, use) === null)
         ctx.out.add({
@@ -734,7 +809,7 @@ function checkColors(ctx: Ctx, pal: Palette) {
           slide: i,
           slot: where,
           discriminator: use.token,
-          message: `${slideLabel(i)} · ${where}: the color role “${use.token}” does not exist in the Brand Identity.`,
+          ...say("review.guard.finding.colorRoleMissing", { ...place, token: use.token }),
           measured: use.token,
           blockHash: h,
         });
@@ -753,15 +828,17 @@ function checkColors(ctx: Ctx, pal: Palette) {
       slide: i,
       slot: where,
       discriminator: hex,
-      message: `${slideLabel(i)} · ${where}: the color ${hex} is not in the brand palette.`,
+      ...say("review.guard.finding.colorNotInPalette", { ...place, hex }),
       measured: hex,
-      suggestion: nearest ? `Use the “${nearest.label}” role (${nearest.hex}).` : undefined,
+      ...(nearest
+        ? suggest("review.guard.suggestion.useRoleHex", { role: nearest.label, hex: nearest.hex })
+        : {}),
       rule: { path: "/tokens/color", text: "Colors only from the Brand Identity roles." },
       blockHash: h,
     });
   };
   ctx.content.slides.forEach((slide, i) => {
-    visit(i, "Background", slide.background, hash(slide.background));
+    visit(i, BACKGROUND, slide.background, hash(slide.background));
     for (const s of slide.slots) {
       if (s.kind === "image") continue;
       visit(i, slotLabel(s), s.color, hash(s));
@@ -787,9 +864,15 @@ function checkFonts(ctx: Ctx, pal: Palette) {
         slide: i,
         slot: s.name,
         discriminator: first,
-        message: `${slideLabel(i)} · ${slotLabel(s)}: the font “${shown}” is not in the brand typography.`,
+        ...say("review.guard.finding.fontNotInBrand", {
+          slide: String(i + 1),
+          slot: slotLabel(s),
+          font: shown,
+        }),
         measured: s.fontFamily,
-        suggestion: brandFonts.length ? `Brand fonts: ${brandFonts.join(", ")}.` : undefined,
+        ...(brandFonts.length
+          ? suggest("review.guard.suggestion.brandFonts", { fonts: brandFonts.join(", ") })
+          : {}),
         rule: {
           path: "/document/visual/typography",
           text: "Fonts only from the Brand Identity type scale.",
@@ -849,10 +932,17 @@ function checkTokenContrast(ctx: Ctx, pal: Palette) {
         origin: "json",
         slide: i,
         slot: s.name,
-        message: `${slideLabel(i)} · ${slotLabel(s)}: contrast ${formatRatio(ratio)} between ${fg} and ${bg}; minimum ${formatRatio(min)}.`,
+        ...say("review.guard.finding.contrast", {
+          slide: String(i + 1),
+          slot: slotLabel(s),
+          ratio: formatRatio(ratio),
+          fg,
+          bg,
+          min: formatRatio(min),
+        }),
         measured: Number(ratio.toFixed(2)),
         threshold: min,
-        suggestion: better ? `Use the “${better.label}” role.` : undefined,
+        ...(better ? suggest("review.guard.suggestion.useRole", { role: better.label }) : {}),
         rule: contrastRule,
         blockHash: hash(s, slide.background),
       });
@@ -872,10 +962,13 @@ function checkThumbnail(ctx: Ctx) {
       origin: "json",
       slide: 0,
       slot: title.name,
-      message: `In the feed thumbnail the title is ${px.toFixed(1)} px tall; at least ${ctx.options.thumbnailMinPx} px are needed.`,
+      ...say("review.guard.finding.thumbnail", {
+        px: px.toFixed(1),
+        min: String(ctx.options.thumbnailMinPx),
+      }),
       measured: Number(px.toFixed(1)),
       threshold: ctx.options.thumbnailMinPx,
-      suggestion: "Shorten the cover title and use a larger font size.",
+      ...suggest("review.guard.suggestion.thumbnail"),
       blockHash: hash(title),
     });
 }
@@ -897,10 +990,16 @@ function lowRes(
     origin,
     slide,
     slot,
-    message: `${slideLabel(slide)} · ${label}: ${size.w}×${size.h} px image for a ${Math.round(size.slotWidth)} px slot.`,
+    ...say("review.guard.finding.lowResolution", {
+      slide: String(slide + 1),
+      slot: label,
+      width: String(size.w),
+      height: String(size.h),
+      slotWidth: String(Math.round(size.slotWidth)),
+    }),
     measured: `${size.w}×${size.h}`,
     threshold: Math.round(size.slotWidth),
-    suggestion: "Use a larger image or a smaller slot.",
+    ...suggest("review.guard.suggestion.largerImage"),
     blockHash,
   };
 }
@@ -924,10 +1023,17 @@ function checkImages(ctx: Ctx) {
           origin: "json",
           slide: i,
           slot: s.name,
-          message: rejected
-            ? `${slideLabel(i)} · ${slotLabel(s)}: the AI image was rejected.`
-            : `${slideLabel(i)} · ${slotLabel(s)}: AI image waiting for approval.`,
-          suggestion: rejected ? "Choose another image." : "Approve the image or replace it.",
+          ...say(
+            rejected
+              ? "review.guard.finding.aiImageRejected"
+              : "review.guard.finding.aiImageUnapproved",
+            { slide: String(i + 1), slot: slotLabel(s) },
+          ),
+          ...suggest(
+            rejected
+              ? "review.guard.suggestion.chooseAnother"
+              : "review.guard.suggestion.approveOrReplace",
+          ),
           blocksApproval: true,
           blockHash: h,
         });
@@ -958,7 +1064,7 @@ function checkImages(ctx: Ctx) {
         origin: "json",
         slide: i,
         slot: null,
-        message: `${slideLabel(i)}: puts an AI image next to a real photo: needs human review.`,
+        ...say("review.guard.finding.aiNextToPhoto", { slide: String(i + 1) }),
         blockHash: hash(images.map((s) => s.asset.id)),
       });
   });
@@ -974,7 +1080,7 @@ function intersects(a: RenderSlot["rect"], b: RenderSlot["rect"]) {
 
 function checkRender(ctx: Ctx, pal: Palette) {
   if (!ctx.render) {
-    ctx.notRun.push({ check: "render", reason: "Render checks not run." });
+    ctx.notRun.push(notRunReason("render", "review.guard.notRun.render"));
     return;
   }
   for (const rs of ctx.render.slides) {
@@ -990,8 +1096,9 @@ function checkRender(ctx: Ctx, pal: Palette) {
       m: RenderSlot,
       check: string,
       severity: BrandCheckSeverity,
-      message: string,
+      key: FindingKey,
       extra: Partial<NewFinding> = {},
+      values: MessageValues = {},
     ) =>
       ctx.out.add({
         check,
@@ -1000,7 +1107,7 @@ function checkRender(ctx: Ctx, pal: Palette) {
         origin: "render",
         slide: i,
         slot: m.name,
-        message: `${slideLabel(i)} · ${label(m.name)}: ${message}`,
+        ...say(key, { slide: String(i + 1), slot: label(m.name), ...values }),
         blockHash: hash(bySlot.get(m.name) ?? m.name, m.rect),
         ...extra,
       });
@@ -1008,32 +1115,42 @@ function checkRender(ctx: Ctx, pal: Palette) {
       const s = bySlot.get(m.name);
       if (m.kind === "text") {
         if (m.overflow)
-          add(m, "text_overflow", "error", "in the render the text overflows its box.", {
-            suggestion: "Shorten the text or choose a layout with more space.",
-          });
-        if (m.outsideSlide) add(m, "outside_slide", "error", "goes outside the slide.");
+          add(
+            m,
+            "text_overflow",
+            "error",
+            "review.guard.finding.textOverflow",
+            suggest("review.guard.suggestion.shortenText"),
+          );
+        if (m.outsideSlide) add(m, "outside_slide", "error", "review.guard.finding.outsideSlide");
         else if (m.outsideSafe)
           add(
             m,
             "outside_safe_zone",
             s?.decorative ? "warning" : "error",
-            "is outside the format safe zone.",
+            "review.guard.finding.outsideSafe",
           );
         const maxLines = s?.kind === "text" ? s.maxLines : undefined;
         if (maxLines && m.lines > maxLines)
-          add(m, "too_many_lines", "error", `takes ${m.lines} lines out of ${maxLines}.`, {
-            measured: m.lines,
-            threshold: maxLines,
-          });
+          add(
+            m,
+            "too_many_lines",
+            "error",
+            "review.guard.finding.tooManyLines",
+            { measured: m.lines, threshold: maxLines },
+            { count: String(m.lines), max: String(maxLines) },
+          );
         continue;
       }
       if (!m.naturalWidth) {
-        add(m, "image_missing", "error", "the image did not load.", { category: "images" });
+        add(m, "image_missing", "error", "review.guard.finding.imageMissing", {
+          category: "images",
+        });
         continue;
       }
       const asset = s?.kind === "image" ? s.asset : undefined;
       if (asset?.origin === "logo" && (m.outsideSafe || m.outsideSlide))
-        add(m, "outside_safe_zone", "error", "the logo is outside the format safe zone.");
+        add(m, "outside_safe_zone", "error", "review.guard.finding.logoOutsideSafe");
       if (m.rect.width > 0 && m.rect.height > 0) {
         const ratio = Math.min(m.naturalWidth / m.rect.width, m.naturalHeight / m.rect.height);
         if (ratio < 1)
@@ -1053,9 +1170,14 @@ function checkRender(ctx: Ctx, pal: Palette) {
     for (let a = 0; a < texts.length; a++)
       for (let b = a + 1; b < texts.length; b++)
         if (intersects(texts[a]!.rect, texts[b]!.rect))
-          add(texts[a]!, "overlap", "error", `overlaps “${label(texts[b]!.name)}”.`, {
-            discriminator: texts[b]!.name,
-          });
+          add(
+            texts[a]!,
+            "overlap",
+            "error",
+            "review.guard.finding.overlap",
+            { discriminator: texts[b]!.name },
+            { other: label(texts[b]!.name) },
+          );
     for (const c of rs.contrast ?? []) {
       const s = bySlot.get(c.slot);
       if (!s || s.kind === "image") continue;
@@ -1072,12 +1194,21 @@ function checkRender(ctx: Ctx, pal: Palette) {
         origin: "render",
         slide: i,
         slot: c.slot,
-        message: `${slideLabel(i)} · ${slotLabel(s)}: contrast ${formatRatio(ratio)}${onImage ? " over an image" : ""}; minimum ${formatRatio(min)}.`,
+        ...say("review.guard.finding.contrastOnRender", {
+          slide: String(i + 1),
+          slot: slotLabel(s),
+          ratio: formatRatio(ratio),
+          onImage: onImage ? "yes" : "no",
+          min: formatRatio(min),
+        }),
         measured: Number(ratio.toFixed(2)),
         threshold: min,
-        suggestion: better
-          ? `Use the “${better.label}” role${onImage ? " or add the layout overlay" : ""}.`
-          : "Add the layout overlay or change the image.",
+        ...(better
+          ? suggest("review.guard.suggestion.useRoleOverlay", {
+              role: better.label,
+              onImage: onImage ? "yes" : "no",
+            })
+          : suggest("review.guard.suggestion.addOverlay")),
         rule: contrastRule,
         blockHash: hash(s, c.fgHex, c.bgHex),
       });
@@ -1138,11 +1269,7 @@ export function checkContent(
   checkThumbnail(ctx);
   checkImages(ctx);
   checkRender(ctx, pal);
-  ctx.notRun.push({
-    check: "reviewer_judgement",
-    reason:
-      "Vague hook, tone, topics to avoid as a theme and product facts without numbers need the Reviewer agent.",
-  });
+  ctx.notRun.push(notRunReason("reviewer_judgement", "review.guard.notRun.reviewer"));
 
   const order = (s: number | null) => (s === null ? Number.MAX_SAFE_INTEGER : s);
   const findings = ctx.out.list.sort(

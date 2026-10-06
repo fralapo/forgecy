@@ -134,9 +134,9 @@ async function requirePillar(db: Executor, clientId: string, id: string, allowPr
     .select({ id: contentPillars.id, status: contentPillars.status })
     .from(contentPillars)
     .where(and(eq(contentPillars.id, id), eq(contentPillars.clientId, clientId)));
-  if (!p) notFound("Pillar not found");
+  if (!p) notFound("content.errors.pillarNotFound");
   if (p.status !== "accepted" && !(allowProposed && p.status === "proposed"))
-    invalid("The pillar is not active");
+    invalid("content.errors.pillarNotActive");
   return p;
 }
 
@@ -149,8 +149,8 @@ async function requireRubric(db: Executor, clientId: string, id: string, pillarI
     })
     .from(contentRubrics)
     .where(and(eq(contentRubrics.id, id), eq(contentRubrics.clientId, clientId)));
-  if (!r) notFound("Rubric not found");
-  if (pillarId && r.pillarId !== pillarId) invalid("The rubric belongs to another pillar");
+  if (!r) notFound("content.errors.rubricNotFound");
+  if (pillarId && r.pillarId !== pillarId) invalid("content.errors.rubricOtherPillar");
   return r;
 }
 
@@ -289,9 +289,9 @@ async function staleOrMissing(
     .select({ rev: t.rev, updatedBy: t.updatedBy, updatedAt: t.updatedAt, status: t.status })
     .from(t)
     .where(and(eq(t.id, id), eq(t.clientId, clientId)));
-  if (!cur) notFound("Item not found");
+  if (!cur) notFound("content.errors.itemNotFound");
   if (cur.status === "archived" || cur.status === "rejected")
-    conflict("Item archived or rejected: restore it before editing it");
+    conflict("content.errors.itemArchived");
   return revConflict({
     rev: cur.rev,
     updatedBy: cur.updatedBy,
@@ -314,7 +314,7 @@ export async function archiveStrategyItem(
       .set({ status: "archived", archivedAt: now, updatedBy: actor.id })
       .where(and(eq(t.id, input.id), eq(t.clientId, input.clientId), ne(t.status, "archived")))
       .returning({ id: t.id });
-    if (!row) notFound("Item not found or already archived");
+    if (!row) notFound("content.errors.itemAlreadyArchived");
     if (input.kind === "pillar")
       await tx
         .update(contentRubrics)
@@ -343,7 +343,7 @@ export async function restoreStrategyItem(
       .set({ status: "accepted", archivedAt: null, updatedBy: actor.id, rev: sql`${t.rev} + 1` })
       .where(and(eq(t.id, input.id), eq(t.clientId, input.clientId), eq(t.status, "archived")))
       .returning({ id: t.id });
-    if (!row) notFound("Item not found or not archived");
+    if (!row) notFound("content.errors.itemNotArchived");
     await audit(tx, actor, `${input.kind}_restored`, input.kind, input.id, input.clientId);
     return row;
   });
@@ -489,9 +489,8 @@ export async function decideStrategyProposal(
         .from(contentPillars)
         .where(and(eq(contentPillars.id, input.id), eq(contentPillars.clientId, input.clientId)))
         .for("update");
-      if (!p) notFound("Proposal not found");
-      if (p.status !== "proposed")
-        conflict("This proposal has already been decided or is superseded");
+      if (!p) notFound("content.errors.proposalNotFound");
+      if (p.status !== "proposed") conflict("content.errors.proposalDecided");
       if (input.decision === "reject") {
         await tx
           .update(contentPillars)
@@ -530,9 +529,8 @@ export async function decideStrategyProposal(
         .from(contentRubrics)
         .where(and(eq(contentRubrics.id, input.id), eq(contentRubrics.clientId, input.clientId)))
         .for("update");
-      if (!r) notFound("Proposal not found");
-      if (r.status !== "proposed")
-        conflict("This proposal has already been decided or is superseded");
+      if (!r) notFound("content.errors.proposalNotFound");
+      if (r.status !== "proposed") conflict("content.errors.proposalDecided");
       if (input.decision === "reject") {
         await tx
           .update(contentRubrics)
@@ -543,7 +541,7 @@ export async function decideStrategyProposal(
           .select({ status: contentPillars.status })
           .from(contentPillars)
           .where(eq(contentPillars.id, r.pillarId));
-        if (pillar?.status !== "accepted") conflict("Accept this rubric's pillar first");
+        if (pillar?.status !== "accepted") conflict("content.errors.acceptPillarFirst");
         const edited = input.values
           ? rubricValues(parseOrThrow(rubricInputSchema, input.values))
           : null;
@@ -692,8 +690,8 @@ export async function addPlanItem(
     .select({ id: contentPlans.id, status: contentPlans.status })
     .from(contentPlans)
     .where(and(eq(contentPlans.id, input.planId), eq(contentPlans.clientId, input.clientId)));
-  if (!plan) notFound("Plan not found");
-  if (plan.status === "superseded") conflict("This plan has been superseded");
+  if (!plan) notFound("content.errors.planNotFound");
+  if (plan.status === "superseded") conflict("content.errors.planSuperseded");
   const values = await cleanProducts(db, input.clientId, planItemValues(v));
   return db.transaction(async (tx) => {
     const [row] = await tx
@@ -768,7 +766,7 @@ export async function saveProposedPlan(
     }
     items.push(r.data);
   }
-  if (!items.length) invalid("The proposed plan contains no valid items");
+  if (!items.length) invalid("content.errors.planEmpty");
   return db.transaction(async (tx) => {
     // Only one open Planner plan at a time.
     await tx
@@ -827,7 +825,7 @@ export async function decidePlanItem(
       ),
     )
     .returning({ id: contentPlanItems.id });
-  if (!row) conflict("Item already decided or not found");
+  if (!row) conflict("content.errors.itemDecided");
   await audit(db, actor, `plan_item_${input.decision}ed`, "plan_item", row.id, input.clientId);
   return row;
 }
@@ -849,8 +847,8 @@ export async function activatePlan(
       .from(contentPlans)
       .where(and(eq(contentPlans.id, input.planId), eq(contentPlans.clientId, input.clientId)))
       .for("update");
-    if (!plan) notFound("Plan not found");
-    if (plan.status !== "proposed") conflict("Only a proposed plan can be used");
+    if (!plan) notFound("content.errors.planNotFound");
+    if (plan.status !== "proposed") conflict("content.errors.planNotProposed");
     const now = new Date();
     await tx
       .update(contentPlans)
@@ -896,7 +894,7 @@ export async function discardProposedPlan(
       ),
     )
     .returning({ id: contentPlans.id });
-  if (!row) conflict("Plan not found or no longer proposed");
+  if (!row) conflict("content.errors.planNoLongerProposed");
   await audit(db, actor, "plan_discarded", "plan", row.id, input.clientId);
   return row;
 }

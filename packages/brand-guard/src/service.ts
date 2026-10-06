@@ -7,11 +7,12 @@
 import { getBrandIdentityVersion, getPublishedBrandIdentity } from "@forgecy/brand/read";
 import {
   assertCan,
-  ForgecyError,
+  type ForgecyError,
   PermissionDeniedError,
   type Actor,
   type BrandCheckIgnoreReason,
 } from "@forgecy/core";
+import { localizedError, type MessageKey } from "@forgecy/i18n";
 import {
   actorKey,
   and,
@@ -60,10 +61,10 @@ type RunRow = typeof brandCheckRuns.$inferSelect;
 
 function fail(
   code: ForgecyError["code"],
-  message: string,
+  key: Extract<MessageKey, `review.errors.${string}`>,
   details: Record<string, unknown>,
 ): never {
-  throw new ForgecyError(code, message, details);
+  throw localizedError(code, key, undefined, details);
 }
 
 function requirePerson(actor: Actor): asserts actor is Extract<Actor, { type: "user" }> {
@@ -158,8 +159,8 @@ export async function runBrandCheck(
     fail(
       "conflict",
       input.brandVersionId
-        ? "The given Brand Identity version is not approved."
-        : "The client has no published Brand Identity: the checks have no approved rules.",
+        ? "review.errors.brandVersionNotApproved"
+        : "review.errors.brandNotPublished",
       { code: "BRAND-NOT-PUBLISHED" },
     );
   const report = checkContent(content, brand, render, input.options);
@@ -226,7 +227,7 @@ async function findingOf(db: Executor, clientId: string, subject: BrandCheckSubj
   const [run] = await latestRuns(db, clientId, subject);
   const finding = run ? reportOf(run).findings.find((f) => f.key === key) : undefined;
   if (!finding)
-    fail("not_found", "Finding not found in the latest check.", {
+    fail("not_found", "review.errors.findingNotFound", {
       code: "BRAND-CHECK-FINDING-NOT-FOUND",
     });
   return finding;
@@ -261,19 +262,17 @@ export async function ignoreFinding(
   assertCan(actor, "edit_draft", input.clientId);
   const note = input.note?.trim() || null;
   if (input.reason === "other" && !note)
-    fail("validation", "Write the reason.", { code: "BRAND-CHECK-NOTE-REQUIRED" });
+    fail("validation", "review.errors.reasonRequired", { code: "BRAND-CHECK-NOTE-REQUIRED" });
   if (note && note.length > 280)
-    fail("validation", "The reason can be at most 280 characters.", {
+    fail("validation", "review.errors.reasonTooLong", {
       code: "BRAND-CHECK-NOTE-TOO-LONG",
     });
   await db.transaction(async (tx) => {
     const finding = await findingOf(tx, input.clientId, input.subject, input.findingKey);
     if (!canIgnore(finding))
-      fail(
-        "validation",
-        "Errors cannot be ignored: fix them or confirm them with “I’ve seen it”.",
-        { code: "BRAND-CHECK-ERROR-NOT-IGNORABLE" },
-      );
+      fail("validation", "review.errors.errorNotIgnorable", {
+        code: "BRAND-CHECK-ERROR-NOT-IGNORABLE",
+      });
     await tx.delete(brandCheckIssueStates).where(stateWhere(input, "ignored"));
     await tx.insert(brandCheckIssueStates).values({
       clientId: input.clientId,
@@ -342,11 +341,11 @@ export async function confirmBrandCheckForApproval(
   assertCan(actor, "approve", input.clientId);
   const [run, previous] = await latestRuns(db, input.clientId, input.subject, 2);
   if (!run)
-    fail("conflict", "The checks have not run yet.", {
+    fail("conflict", "review.errors.checksNotRun", {
       code: "BRAND-CHECK-NOT-RUN",
     });
   if (run.subjectVersion !== input.subject.version)
-    fail("conflict", "The checks are not up to date with the latest version: run them again.", {
+    fail("conflict", "review.errors.checksStale", {
       code: "BRAND-CHECK-STALE",
       checkedVersion: run.subjectVersion,
     });
@@ -358,12 +357,12 @@ export async function confirmBrandCheckForApproval(
   );
   const gate = approvalGate(report, input.acknowledgedKeys);
   if (gate.blockers.length)
-    fail("conflict", "There are AI images waiting for approval.", {
+    fail("conflict", "review.errors.aiImagesPending", {
       code: "AI-IMAGES-NOT-APPROVED",
       findings: gate.blockers.map((f) => f.key),
     });
   if (gate.toAcknowledge.length)
-    fail("validation", "Confirm every open error and warning with “I’ve seen it”.", {
+    fail("validation", "review.errors.checksNotAcknowledged", {
       code: "CHECKS-NOT-ACKNOWLEDGED",
       missing: gate.toAcknowledge.map((f) => f.key),
     });

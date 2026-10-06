@@ -10,6 +10,13 @@ import {
   type Permission,
 } from "@forgecy/core";
 import { clients, eq, type Database } from "@forgecy/db";
+import {
+  englishMessage,
+  localizedError,
+  messageRef,
+  type MessageKey,
+  type MessageValues,
+} from "@forgecy/i18n";
 
 export type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 export type Executor = Database | Tx;
@@ -28,19 +35,33 @@ export function humanOnly(
 
 export const userIdOf = (actor: Actor) => (actor.type === "user" ? actor.id : null);
 
-export function conflict(message: string, details?: Record<string, unknown>): never {
-  throw new ForgecyError("conflict", message, details);
+/** Messages of the module's errors, shown in the person's language (`content.errors.*`). */
+export type ContentErrorKey = Extract<MessageKey, `content.errors.${string}`>;
+
+export function conflict(
+  key: ContentErrorKey,
+  details?: Record<string, unknown>,
+  values?: MessageValues,
+): never {
+  throw localizedError("conflict", key, values, details);
 }
-export function notFound(message: string): never {
-  throw new ForgecyError("not_found", message);
+export function notFound(key: ContentErrorKey, values?: MessageValues): never {
+  throw localizedError("not_found", key, values);
 }
-export function invalid(message: string, details?: Record<string, unknown>): never {
-  throw new ForgecyError("validation", message, details);
+export function invalid(
+  key: ContentErrorKey,
+  details?: Record<string, unknown>,
+  values?: MessageValues,
+): never {
+  throw localizedError("validation", key, values, details);
 }
+
+const isContentKey = (message: string): message is ContentErrorKey =>
+  message.startsWith("content.errors.");
 
 /** Stale autosave: the spec's CONFLICT-DRAFT-REV, with who and when changed it last. */
 export function revConflict(details: Record<string, unknown> = {}): never {
-  conflict("Someone else changed this item while you were editing it too.", {
+  conflict("content.errors.revConflict", {
     code: "CONFLICT-DRAFT-REV",
     ...details,
   });
@@ -58,7 +79,7 @@ export async function requireClient(db: Executor, clientId: string) {
     })
     .from(clients)
     .where(eq(clients.id, clientId));
-  if (!client) notFound("Client not found");
+  if (!client) notFound("content.errors.clientNotFound");
   return client;
 }
 
@@ -82,7 +103,17 @@ export function parseOrThrow<T>(
   value: unknown,
 ): T {
   const r = schema.safeParse(value);
-  if (!r.success)
-    invalid(r.error.issues[0]?.message ?? "Invalid data", { issues: zodIssues(r.error) });
+  if (!r.success) {
+    const message = r.error.issues[0]?.message ?? englishMessage("content.errors.invalidData");
+    const details = { issues: zodIssues(r.error) };
+    // A schema message may be a key of `content.errors`; Zod's own messages stay as they are.
+    if (isContentKey(message)) invalid(message, details);
+    throw new ForgecyError(
+      "validation",
+      message,
+      details,
+      r.error.issues[0] ? undefined : messageRef("content.errors.invalidData"),
+    );
+  }
   return r.data;
 }

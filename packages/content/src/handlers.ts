@@ -15,6 +15,7 @@ import { carouselWorkerHandlers } from "@forgecy/carousel/export";
 import { DEFAULT_LOCALE, isLocale, loadEnv, type Actor } from "@forgecy/core";
 import { and, contentApprovals, contentVersions, desc, eq, type Database } from "@forgecy/db";
 import { createStorageFromEnv } from "@forgecy/files";
+import { englishMessage, messageRef, type MessageKey } from "@forgecy/i18n";
 import { handle, NeedsAttentionError, type JobContext, type JobHandlers } from "@forgecy/jobs";
 import { requireClient } from "./access";
 import { getContentRow, recordExport } from "./carousels/carousels";
@@ -40,6 +41,9 @@ import {
 } from "./ai/pipeline";
 import { loadBrand } from "./carousels/theme";
 import { registerContentPorts } from "./wiring";
+
+const attention = (key: Extract<MessageKey, `content.jobErrors.${string}`>) =>
+  new NeedsAttentionError(englishMessage(key), undefined, messageRef(key));
 
 registerContentPorts();
 
@@ -87,16 +91,16 @@ async function runExport(
     .select()
     .from(contentVersions)
     .where(and(eq(contentVersions.id, payload.versionId), eq(contentVersions.contentId, c.id)));
-  if (!version) throw new NeedsAttentionError("Carousel version not found");
+  if (!version) throw attention("content.jobErrors.versionNotFound");
   if (!payload.draft && c.approvedVersionId !== version.id)
-    throw new NeedsAttentionError("This is not the approved version");
+    throw attention("content.jobErrors.notApprovedVersion");
   const doc = parseDocument(version.document);
   const brand = await loadBrand(db, system, {
     clientId: c.clientId,
     clientName: client.name,
     versionId: version.brandVersionId ?? c.brandVersionId,
   });
-  if (!brand) throw new NeedsAttentionError("Brand Identity version not available");
+  if (!brand) throw attention("content.jobErrors.brandVersionUnavailable");
   const meta = version.meta as { templateVersion?: string | null; models?: string[] };
   const [approval] = payload.draft
     ? []

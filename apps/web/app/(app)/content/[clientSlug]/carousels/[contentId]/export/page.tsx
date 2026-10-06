@@ -1,13 +1,16 @@
-import { guardBandLabels } from "@forgecy/content";
 import { Badge, Card } from "@forgecy/ui";
 import { FileDown } from "lucide-react";
+import { getTranslations } from "next-intl/server";
+import { getFormat, refText } from "@/lib/i18n";
 import { CarouselExportForm } from "../../../../_components/carousel-export-form";
-import { formatDate } from "../../../../_lib/paths";
 import { getStorage } from "../../../../_lib/server";
 import { outputLabels } from "../../_lib/labels";
 import { isActiveJob, loadCarousel } from "../../_lib/workspace";
 
-export const metadata = { title: "Export · Carousel" };
+export async function generateMetadata() {
+  const t = await getTranslations("content.export");
+  return { title: t("metaTitle") };
+}
 
 interface ExportFile {
   name: string;
@@ -26,11 +29,6 @@ function parseFiles(raw: unknown[]): ExportFile[] {
   });
 }
 
-const formatSize = (bytes: number) =>
-  bytes >= 1_000_000
-    ? `${(bytes / 1_000_000).toLocaleString("en-GB", { maximumFractionDigits: 1 })} MB`
-    : `${Math.max(1, Math.round(bytes / 1000))} kB`;
-
 export default async function ExportPage({
   params,
 }: {
@@ -39,6 +37,13 @@ export default async function ExportPage({
   const { clientSlug, contentId } = await params;
   const { client, ws } = await loadCarousel(clientSlug, contentId);
   const c = ws.content;
+  const t = await getTranslations("content.export");
+  const tl = await getTranslations("content.labels");
+  const format = await getFormat();
+  const formatSize = (bytes: number) =>
+    bytes >= 1_000_000
+      ? t("sizeMb", { size: format.number(bytes / 1_000_000, { maximumFractionDigits: 1 }) })
+      : t("sizeKb", { size: format.number(Math.max(1, Math.round(bytes / 1000))) });
   const canFinal = (c.status === "approved" || c.status === "exported") && !!c.approvedVersionId;
   const approvedVersion = ws.versions.find((v) => v.id === c.approvedVersionId)?.number ?? null;
   const versionNumber = new Map(ws.versions.map((v) => [v.id, v.number]));
@@ -65,13 +70,21 @@ export default async function ExportPage({
     })),
   );
   const guard = ws.checks?.guard ?? null;
-  const openFindings = (guard?.findings ?? []).filter((f) => f.status === "open");
+  const openFindings = await Promise.all(
+    (guard?.findings ?? [])
+      .filter((f) => f.status === "open")
+      .map(async (f) => ({
+        ...f,
+        text: await refText(f.ref, f.message),
+        suggestionText: f.suggestion ? await refText(f.suggestionRef, f.suggestion) : null,
+      })),
+  );
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_2fr]">
       <div className="grid content-start gap-6">
         <Card className="grid gap-3 p-5">
-          <h3 className="text-heading-sm text-fg">New export</h3>
+          <h3 className="text-heading-sm text-fg">{t("new")}</h3>
           <CarouselExportForm
             slug={client.slug}
             clientId={client.id}
@@ -81,22 +94,22 @@ export default async function ExportPage({
             disabled={ws.document.slides.length === 0 || exportRunning}
           />
           {ws.document.slides.length === 0 ? (
-            <p className="text-body-sm text-fg-muted">The carousel has no slides yet.</p>
+            <p className="text-body-sm text-fg-muted">{t("noSlides")}</p>
           ) : null}
         </Card>
         {guard ? (
           <Card className="grid gap-3 p-5">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-heading-sm text-fg">Brand Guard</h3>
-              <Badge>Coherence: {guardBandLabels[guard.coherence.band].toLowerCase()}</Badge>
+              <h3 className="text-heading-sm text-fg">{t("guardTitle")}</h3>
+              <Badge>
+                {t("coherence", { band: tl(`band.${guard.coherence.band}`).toLowerCase() })}
+              </Badge>
             </div>
             {openFindings.length === 0 ? (
-              <p className="text-body-sm text-fg-muted">No open findings.</p>
+              <p className="text-body-sm text-fg-muted">{t("noFindings")}</p>
             ) : (
               <>
-                <p className="text-body-sm text-fg-muted">
-                  Findings still open: they don’t block the export.
-                </p>
+                <p className="text-body-sm text-fg-muted">{t("openFindings")}</p>
                 <ul className="grid gap-2">
                   {openFindings.map((f) => (
                     <li key={f.key} className="text-body-sm text-fg">
@@ -109,11 +122,13 @@ export default async function ExportPage({
                               : "neutral"
                         }
                       >
-                        {f.slide ? `Slide ${f.slide}` : "General"}
+                        {f.slide ? t("slide", { number: f.slide }) : t("general")}
                       </Badge>{" "}
-                      {f.message}
-                      {f.suggestion ? (
-                        <span className="block text-fg-muted">Suggestion: {f.suggestion}</span>
+                      {f.text}
+                      {f.suggestionText ? (
+                        <span className="block text-fg-muted">
+                          {t("suggestion", { suggestion: f.suggestionText })}
+                        </span>
                       ) : null}
                     </li>
                   ))}
@@ -124,19 +139,21 @@ export default async function ExportPage({
         ) : null}
       </div>
       <Card className="grid content-start gap-3 p-5">
-        <h3 className="text-heading-sm text-fg">Exports</h3>
+        <h3 className="text-heading-sm text-fg">{t("list")}</h3>
         {exports.length === 0 ? (
-          <p className="text-body-sm text-fg-muted">No exports yet.</p>
+          <p className="text-body-sm text-fg-muted">{t("empty")}</p>
         ) : (
           <ul className="grid gap-4">
             {exports.map((e) => (
               <li key={e.id} className="grid gap-2 border-b border-subtle pb-4 last:border-0">
                 <div className="flex flex-wrap items-center gap-2 text-body-sm">
                   <Badge variant={e.draft ? "neutral" : "success"}>
-                    {e.draft ? "Draft" : "Final"}
+                    {e.draft ? t("draft") : t("final")}
                   </Badge>
-                  <span className="text-fg">v{versionNumber.get(e.versionId) ?? "?"}</span>
-                  <span className="text-fg-muted">{formatDate(e.createdAt)}</span>
+                  <span className="text-fg">
+                    {tl("versionShort", { number: versionNumber.get(e.versionId) ?? "?" })}
+                  </span>
+                  <span className="text-fg-muted">{format.date(e.createdAt, "dateTime")}</span>
                   <span className="text-fg-muted">
                     ·{" "}
                     {e.outputs
@@ -161,7 +178,7 @@ export default async function ExportPage({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-body-sm text-fg-muted">No files available.</p>
+                  <p className="text-body-sm text-fg-muted">{t("noFiles")}</p>
                 )}
               </li>
             ))}

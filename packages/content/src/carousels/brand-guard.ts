@@ -7,7 +7,7 @@
  *   setBrandGuard({ run: runBrandCheck, get: getBrandCheck, confirmForApproval: confirmBrandCheckForApproval });
  */
 import { FORMATS, findLayout, type TemplateManifest } from "@forgecy/carousel";
-import type { Actor } from "@forgecy/core";
+import type { Actor, MessageRef } from "@forgecy/core";
 import type { Database } from "@forgecy/db";
 import type { Executor } from "../access";
 import type { CarouselDocument, ContentChannel } from "../document";
@@ -76,8 +76,11 @@ export interface GuardFinding {
   severity: GuardSeverity;
   slide: number | null;
   slot: string | null;
+  /** English text; `ref` and `suggestionRef` are the same messages for the interface. */
   message: string;
+  ref?: MessageRef;
   suggestion?: string;
+  suggestionRef?: MessageRef;
   blocksApproval?: boolean;
   status: "open" | "ignored";
   acknowledged?: { by: string; at: string };
@@ -88,7 +91,7 @@ export interface GuardReport {
   findings: GuardFinding[];
   /** Only the band is shown: no numeric scores in the MVP (UX spec 12.6). */
   coherence: { band: GuardBand };
-  notRun: Array<{ check: string; reason: string }>;
+  notRun: Array<{ check: string; reason: string; reasonRef?: MessageRef }>;
 }
 
 export interface GuardSubject {

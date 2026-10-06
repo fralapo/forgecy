@@ -1,19 +1,16 @@
 "use client";
 
-import {
-  guardBandLabels,
-  type ContentCheck,
-  type GuardBand,
-  type GuardFinding,
-} from "@forgecy/content/client";
+import type { ContentCheck, GuardBand, GuardFinding } from "@forgecy/content/client";
+import type { MessageRef } from "@forgecy/core";
 import { Badge, Button, Label } from "@forgecy/ui";
 import { BadgeCheck, MessageSquareWarning, RefreshCw, ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition, type ReactNode } from "react";
 import { decideAssetAction, decideReviewAction, type ActionResult } from "../actions";
 import { ActionButton, controlClass } from "./action-button";
 import { Thumb } from "./editor-ai";
-import { plural } from "@/lib/plural";
+import { useRefText } from "@/lib/use-format";
 
 const NOTE_MIN = 3;
 
@@ -30,11 +27,8 @@ export interface ReviewGuard {
   /** Open errors and warnings (notes excluded). */
   findings: GuardFinding[];
   notes: GuardFinding[];
-  notRun: Array<{ check: string; reason: string }>;
+  notRun: Array<{ check: string; reason: string; reasonRef?: MessageRef | undefined }>;
 }
-
-/** Guard findings point at a slide by its position in the carousel (0-based). */
-const slideLabel = (slide: number | null) => (slide === null ? "Carousel" : `Slide ${slide + 1}`);
 
 function groupBySlide(findings: GuardFinding[]) {
   const groups = new Map<number | null, GuardFinding[]>();
@@ -42,22 +36,13 @@ function groupBySlide(findings: GuardFinding[]) {
   return [...groups.entries()].sort(([a], [b]) => (a ?? -1) - (b ?? -1));
 }
 
-function errorText(r: Extract<ActionResult, { ok: false }>) {
-  switch (r.code) {
-    case "SELF-APPROVAL-NOTE":
-      return "You’re approving your own work: write a note for whoever comes next.";
-    case "CHECKS-BLOCKING":
-      return "There are blocking issues: they must be fixed before approval.";
-    case "CHECKS-UNACKNOWLEDGED":
-      return "Confirm “I’ve seen it” on every warning.";
-    case "VERSION-CHANGED":
-      return "The carousel changed after it was submitted: reload the page.";
-    case "PERM-DENIED":
-      return "You don’t have permission for this decision.";
-    default:
-      return r.error;
-  }
-}
+const errorKeys = {
+  "SELF-APPROVAL-NOTE": "selfApprovalNote",
+  "CHECKS-BLOCKING": "checksBlocking",
+  "CHECKS-UNACKNOWLEDGED": "checksUnacknowledged",
+  "VERSION-CHANGED": "versionChanged",
+  "PERM-DENIED": "permissionDenied",
+} as const;
 
 export function ReviewForm({
   slug,
@@ -87,6 +72,16 @@ export function ReviewForm({
   pendingImages: PendingImage[];
 }) {
   const router = useRouter();
+  const t = useTranslations("content.review.form");
+  const tl = useTranslations("content.labels");
+  const refText = useRefText();
+  /** Guard findings point at a slide by its position in the carousel (0-based). */
+  const slideLabel = (slide: number | null) =>
+    slide === null ? t("carousel") : t("slide", { number: slide + 1 });
+  const errorText = (r: Extract<ActionResult, { ok: false }>) => {
+    const key = r.code ? errorKeys[r.code as keyof typeof errorKeys] : undefined;
+    return key ? t(`errors.${key}`) : r.error;
+  };
   const [seen, setSeen] = useState<Set<string>>(new Set());
   const [note, setNote] = useState("");
   const [error, setError] = useState<{
@@ -141,7 +136,7 @@ export function ReviewForm({
         onChange={(e) => toggle(k, e.target.checked)}
       />
       <label htmlFor={`seen-${k}`} className="text-fg">
-        <span className="text-warning">I’ve seen it:</span> {children}
+        <span className="text-warning">{t("seen")}</span> {children}
       </label>
     </li>
   );
@@ -151,15 +146,15 @@ export function ReviewForm({
       {errors.length || guardBlocking.length ? (
         <section className="space-y-2" aria-labelledby="blocking-title">
           <h3 id="blocking-title" className="text-heading-sm text-error">
-            Blocking issues
+            {t("blocking")}
           </h3>
           <ul className="list-disc space-y-1 pl-5 text-body-sm text-fg">
             {errors.map((c) => (
-              <li key={c.id}>{c.message}</li>
+              <li key={c.id}>{refText(c.ref, c.message)}</li>
             ))}
             {guardBlocking.map((f) => (
               <li key={f.key}>
-                {slideLabel(f.slide)}: {f.message}
+                {slideLabel(f.slide)}: {refText(f.ref, f.message)}
               </li>
             ))}
           </ul>
@@ -169,11 +164,9 @@ export function ReviewForm({
       {pendingImages.length ? (
         <section className="space-y-2" aria-labelledby="images-title">
           <h3 id="images-title" className="text-heading-sm text-fg">
-            Images to approve
+            {t("images.title")}
           </h3>
-          <p className="text-body-sm text-fg-muted">
-            The carousel uses images that aren’t approved yet: approve them or send it back.
-          </p>
+          <p className="text-body-sm text-fg-muted">{t("images.intro")}</p>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {pendingImages.map((a) => (
               <li key={a.id} className="space-y-2 rounded-md border border-subtle p-2">
@@ -181,10 +174,10 @@ export function ReviewForm({
                 {a.source === "ai" ? (
                   <Badge variant={a.commercialUse === "verified" ? "success" : "warning"}>
                     {a.commercialUse === "verified"
-                      ? "Commercial use verified"
+                      ? t("images.verified")
                       : a.commercialUse === "rejected"
-                        ? "Commercial use rejected"
-                        : "Commercial use to be verified"}
+                        ? t("images.rejected")
+                        : t("images.toVerify")}
                   </Badge>
                 ) : null}
                 <div className="flex flex-wrap gap-1">
@@ -194,7 +187,7 @@ export function ReviewForm({
                       decideAssetAction({ slug, clientId, id: a.id, decision: "approved" })
                     }
                   >
-                    Approve
+                    {t("images.approve")}
                   </ActionButton>
                   <ActionButton
                     size="sm"
@@ -203,7 +196,7 @@ export function ReviewForm({
                       decideAssetAction({ slug, clientId, id: a.id, decision: "rejected" })
                     }
                   >
-                    Reject
+                    {t("images.reject")}
                   </ActionButton>
                 </div>
               </li>
@@ -214,12 +207,14 @@ export function ReviewForm({
 
       <section className="space-y-2" aria-labelledby="warnings-title">
         <h3 id="warnings-title" className="text-heading-sm text-fg">
-          Module checks
+          {t("moduleChecks")}
         </h3>
         {warnings.length ? (
-          <ul className="space-y-2">{warnings.map((w) => seenBox(w.id, w.message))}</ul>
+          <ul className="space-y-2">
+            {warnings.map((w) => seenBox(w.id, refText(w.ref, w.message)))}
+          </ul>
         ) : (
-          <p className="text-body-sm text-success">No warnings.</p>
+          <p className="text-body-sm text-success">{t("noWarnings")}</p>
         )}
       </section>
 
@@ -228,7 +223,7 @@ export function ReviewForm({
           <div className="flex flex-wrap items-center gap-3">
             <h3 id="guard-title" className="flex items-center gap-2 text-heading-sm text-fg">
               <ShieldAlert aria-hidden className="size-5" />
-              Brand Guard
+              {t("guardTitle")}
             </h3>
             <Badge
               variant={
@@ -239,7 +234,7 @@ export function ReviewForm({
                     : "success"
               }
             >
-              Brand coherence: {guardBandLabels[guard.band]}
+              {t("coherence", { band: tl(`band.${guard.band}`) })}
             </Badge>
           </div>
           {guardToSee.length ? (
@@ -252,12 +247,18 @@ export function ReviewForm({
                       f.key,
                       <>
                         <Badge variant={f.severity === "error" ? "error" : "warning"}>
-                          {f.severity === "error" ? "Error" : "Warning"}
+                          {f.severity === "error" ? t("error") : t("warning")}
                         </Badge>{" "}
-                        {f.slot ? <span className="text-fg-muted">“{f.slot}” · </span> : null}
-                        {f.message}
+                        {f.slot ? (
+                          <span className="text-fg-muted">{t("slot", { slot: f.slot })} · </span>
+                        ) : null}
+                        {refText(f.ref, f.message)}
                         {f.suggestion ? (
-                          <span className="block text-fg-muted">Suggestion: {f.suggestion}</span>
+                          <span className="block text-fg-muted">
+                            {t("suggestion", {
+                              suggestion: refText(f.suggestionRef, f.suggestion),
+                            })}
+                          </span>
                         ) : null}
                       </>,
                     ),
@@ -266,17 +267,17 @@ export function ReviewForm({
               </div>
             ))
           ) : (
-            <p className="text-body-sm text-success">No open findings.</p>
+            <p className="text-body-sm text-success">{t("noFindings")}</p>
           )}
           {guard.notes.length ? (
             <details className="text-body-sm">
               <summary className="cursor-pointer text-fg-muted">
-                {plural(guard.notes.length, "informational note", "informational notes")}
+                {t("notes", { count: guard.notes.length })}
               </summary>
               <ul className="mt-2 space-y-1 text-fg">
                 {guard.notes.map((f) => (
                   <li key={f.key}>
-                    {slideLabel(f.slide)}: {f.message}
+                    {slideLabel(f.slide)}: {refText(f.ref, f.message)}
                   </li>
                 ))}
               </ul>
@@ -284,7 +285,9 @@ export function ReviewForm({
           ) : null}
           {guard.notRun.length ? (
             <p className="text-body-sm text-fg-muted">
-              Checks not run: {guard.notRun.map((n) => n.reason).join("; ")}
+              {t("notRun", {
+                reasons: guard.notRun.map((n) => refText(n.reasonRef, n.reason)).join("; "),
+              })}
             </p>
           ) : null}
         </section>
@@ -292,12 +295,10 @@ export function ReviewForm({
 
       <section className="space-y-3 border-t border-subtle pt-4" aria-labelledby="decision-title">
         <h3 id="decision-title" className="text-heading-sm text-fg">
-          Decision on version {versionNumber}
+          {t("decisionTitle", { number: versionNumber })}
         </h3>
         <div className="space-y-1">
-          <Label htmlFor="review-note">
-            {selfApproval ? "Note (required to approve your own work)" : "Note"}
-          </Label>
+          <Label htmlFor="review-note">{selfApproval ? t("noteSelf") : t("note")}</Label>
           <textarea
             id="review-note"
             rows={3}
@@ -305,13 +306,9 @@ export function ReviewForm({
             className={controlClass}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="For “Request changes”, write what needs to change"
+            placeholder={t("notePlaceholder")}
           />
-          {selfApproval ? (
-            <p className="text-body-sm text-fg-muted">
-              You submitted this carousel: to approve it, write a note for the history.
-            </p>
-          ) : null}
+          {selfApproval ? <p className="text-body-sm text-fg-muted">{t("selfHint")}</p> : null}
         </div>
         {error ? (
           <div role="alert" className="space-y-1 text-body-sm text-error">
@@ -319,14 +316,14 @@ export function ReviewForm({
             {error.checks.length ? (
               <ul className="list-disc pl-5">
                 {error.checks.map((c) => (
-                  <li key={c.id}>{c.message}</li>
+                  <li key={c.id}>{refText(c.ref, c.message)}</li>
                 ))}
               </ul>
             ) : null}
             {error.reload ? (
               <Button variant="secondary" size="sm" onClick={() => router.refresh()}>
                 <RefreshCw aria-hidden />
-                Reload
+                {t("reload")}
               </Button>
             ) : null}
           </div>
@@ -335,7 +332,7 @@ export function ReviewForm({
           {canApprove ? (
             <Button disabled={pending || !canSubmitApproval} onClick={() => decide("approved")}>
               <BadgeCheck aria-hidden />
-              Approve version {versionNumber}
+              {t("approve", { number: versionNumber })}
             </Button>
           ) : null}
           {canReview ? (
@@ -345,17 +342,13 @@ export function ReviewForm({
               onClick={() => decide("changes_requested")}
             >
               <MessageSquareWarning aria-hidden />
-              Request changes
+              {t("requestChanges")}
             </Button>
           ) : null}
         </div>
         {canApprove && !canSubmitApproval ? (
           <p className="text-body-sm text-fg-muted">
-            {blocked
-              ? "Approval stays blocked while there are blocking issues."
-              : !allSeen
-                ? "Confirm “I’ve seen it” on every warning to approve."
-                : "Write the note to approve."}
+            {blocked ? t("hint.blocked") : !allSeen ? t("hint.unseen") : t("hint.note")}
           </p>
         ) : null}
       </section>

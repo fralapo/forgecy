@@ -2,11 +2,15 @@ import { channelLabels, getNewCarouselOptions, getPlanItem } from "@forgecy/cont
 import { Card } from "@forgecy/ui";
 import Link from "next/link";
 import type { Route } from "next";
+import { getTranslations } from "next-intl/server";
 import { CarouselNewForm, type PlanSeed } from "../../../_components/carousel-new-form";
 import { carouselPath, carouselsPath } from "../../../_lib/paths";
 import { loadClient } from "../../../_lib/server";
 
-export const metadata = { title: "New carousel · Content" };
+export async function generateMetadata() {
+  const t = await getTranslations("content.newCarousel");
+  return { title: t("metaTitle") };
+}
 
 export default async function NewCarouselPage({
   params,
@@ -17,6 +21,7 @@ export default async function NewCarouselPage({
 }) {
   const [{ clientSlug }, sp] = await Promise.all([params, searchParams]);
   const { db, user, client } = await loadClient(clientSlug);
+  const t = await getTranslations("content.newCarousel");
   const planId = typeof sp.plan === "string" ? sp.plan : null;
   const [options, item] = await Promise.all([
     getNewCarouselOptions(db, user.actor, client.id),
@@ -38,30 +43,31 @@ export default async function NewCarouselPage({
 
   return (
     <Card className="p-6">
-      <h2 className="mb-1 text-heading-md text-fg">New carousel</h2>
+      <h2 className="mb-1 text-heading-md text-fg">{t("title")}</h2>
       <p className="mb-6 text-body-sm text-fg-muted">
-        <Link href={carouselsPath(client.slug) as Route}>Back to carousels</Link>
+        <Link href={carouselsPath(client.slug) as Route}>{t("back")}</Link>
       </p>
       {item && item.contentId ? (
         <p role="status" className="mb-4 text-body-sm text-fg">
-          A carousel already exists for this plan item.{" "}
-          <Link href={carouselPath(client.slug, item.contentId) as Route}>Open it</Link>
+          {t("exists")}{" "}
+          <Link href={carouselPath(client.slug, item.contentId) as Route}>{t("openIt")}</Link>
         </p>
       ) : null}
       {plan ? (
         <p role="status" className="mb-4 text-body-sm text-fg">
-          From the plan: day {item?.day}, {channelLabels[plan.channel] ?? plan.channel}. The fields
-          are prefilled and can be changed.
+          {t("fromPlan", {
+            day: item?.day ?? "",
+            channel: channelLabels[plan.channel] ?? plan.channel,
+          })}
         </p>
       ) : null}
       {!options.brandPublished ? (
         <p role="alert" className="mb-4 text-body-sm text-fg">
-          A published Brand Identity is required to create a carousel.{" "}
-          <Link href={`/brand/${client.slug}` as Route}>Open the Brand Identity</Link>
+          {t("brandRequired")} <Link href={`/brand/${client.slug}` as Route}>{t("openBrand")}</Link>
         </p>
       ) : options.templates.length === 0 ? (
         <p role="alert" className="mb-4 text-body-sm text-fg">
-          No usable templates: publish one in the template catalog.
+          {t("noTemplates")}
         </p>
       ) : null}
       <CarouselNewForm slug={client.slug} clientId={client.id} options={options} plan={plan} />

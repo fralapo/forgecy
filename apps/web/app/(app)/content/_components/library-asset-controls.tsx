@@ -3,6 +3,7 @@
 import { Button, Label } from "@forgecy/ui";
 import { Check, Save, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { decideAssetAction, updateAltAction } from "../actions";
 import { controlClass } from "./action-button";
@@ -42,6 +43,7 @@ function ErrorText({ error }: { error: string | null }) {
 /** Editable alt text of a library image. */
 export function LibraryAltForm({ alt, ...ref }: AssetRef & { alt: string }) {
   const [value, setValue] = useState(alt);
+  const t = useTranslations("content.library.asset");
   const { pending, error, exec } = useRun();
   const fieldId = `alt-${ref.id}`;
   return (
@@ -52,7 +54,7 @@ export function LibraryAltForm({ alt, ...ref }: AssetRef & { alt: string }) {
         exec(() => updateAltAction({ ...ref, alt: value }));
       }}
     >
-      <Label htmlFor={fieldId}>Alt text</Label>
+      <Label htmlFor={fieldId}>{t("alt")}</Label>
       <textarea
         id={fieldId}
         rows={2}
@@ -63,7 +65,7 @@ export function LibraryAltForm({ alt, ...ref }: AssetRef & { alt: string }) {
       />
       <Button type="submit" size="sm" variant="secondary" disabled={pending || value === alt}>
         <Save aria-hidden />
-        Save
+        {t("save")}
       </Button>
       <ErrorText error={error} />
     </form>
@@ -74,6 +76,7 @@ export function LibraryAltForm({ alt, ...ref }: AssetRef & { alt: string }) {
 export function LibraryDecision(ref: AssetRef) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
+  const t = useTranslations("content.library.asset");
   const { pending, error, exec } = useRun();
   const fieldId = `reason-${ref.id}`;
   return (
@@ -89,7 +92,7 @@ export function LibraryDecision(ref: AssetRef) {
             );
           }}
         >
-          <Label htmlFor={fieldId}>What’s wrong with it?</Label>
+          <Label htmlFor={fieldId}>{t("rejectReason")}</Label>
           <textarea
             id={fieldId}
             rows={2}
@@ -103,10 +106,10 @@ export function LibraryDecision(ref: AssetRef) {
           <div className="flex flex-wrap gap-2">
             <Button type="submit" size="sm" variant="danger" disabled={pending}>
               <X aria-hidden />
-              Reject
+              {t("reject")}
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setRejecting(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
           </div>
         </form>
@@ -119,7 +122,7 @@ export function LibraryDecision(ref: AssetRef) {
             onClick={() => exec(() => decideAssetAction({ ...ref, decision: "approved" }))}
           >
             <Check aria-hidden />
-            Approve
+            {t("approve")}
           </Button>
           <Button
             type="button"
@@ -129,7 +132,7 @@ export function LibraryDecision(ref: AssetRef) {
             onClick={() => setRejecting(true)}
           >
             <X aria-hidden />
-            Reject
+            {t("reject")}
           </Button>
         </div>
       )}

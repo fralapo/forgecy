@@ -1,6 +1,7 @@
 "use client";
 
 import { AiProposal, Input, Label } from "@forgecy/ui";
+import { useTranslations } from "next-intl";
 import { useId, useState, type ReactNode } from "react";
 import { decideProposalAction } from "../actions";
 import { FormError, useSave } from "./strategy-forms";
@@ -27,6 +28,7 @@ export function StrategyProposalCard({
 }) {
   const [note, setNote] = useState("");
   const noteId = useId();
+  const t = useTranslations("content.strategy.proposal");
   const { pending, error, run } = useSave();
   const decide = (decision: "accept" | "reject") =>
     run(() => decideProposalAction({ slug, clientId, kind, id, decision, note: note.trim() }));
@@ -42,7 +44,7 @@ export function StrategyProposalCard({
       <div className="space-y-3">
         {children}
         <div className="space-y-1">
-          <Label htmlFor={noteId}>Note (optional)</Label>
+          <Label htmlFor={noteId}>{t("note")}</Label>
           <Input
             id={noteId}
             maxLength={1000}

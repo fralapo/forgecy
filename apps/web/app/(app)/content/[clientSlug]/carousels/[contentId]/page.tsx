@@ -1,9 +1,13 @@
 import { toneAxes } from "@forgecy/brand";
 import { briefSchema, getNewCarouselOptions, type CarouselParamsInput } from "@forgecy/content";
+import { getTranslations } from "next-intl/server";
 import { CarouselBriefForms } from "../../../_components/carousel-brief-forms";
 import { loadCarousel } from "../_lib/workspace";
 
-export const metadata = { title: "Brief · Carousel" };
+export async function generateMetadata() {
+  const t = await getTranslations("content.brief");
+  return { title: t("metaTitle") };
+}
 
 const EDITABLE = ["draft", "changes_requested", "approved", "exported"];
 
@@ -15,6 +19,7 @@ export default async function CarouselBriefPage({
   const { clientSlug, contentId } = await params;
   const { db, user, client, ws } = await loadCarousel(clientSlug, contentId);
   const c = ws.content;
+  const t = await getTranslations("content.brief");
   const options = await getNewCarouselOptions(db, user.actor, client.id);
   const editable = EDITABLE.includes(c.status) && !ws.locked;
   const parsed = briefSchema.safeParse(c.brief ?? {});
@@ -24,9 +29,7 @@ export default async function CarouselBriefPage({
     <>
       {!editable ? (
         <p role="status" className="mb-4 text-body-sm text-fg-muted">
-          {ws.locked
-            ? "The AI is working on this carousel: the fields become editable again when it finishes."
-            : "The brief can’t be edited in this status."}
+          {ws.locked ? t("locked") : t("notEditable")}
         </p>
       ) : null}
       <CarouselBriefForms

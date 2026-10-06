@@ -3,6 +3,7 @@
 import { Badge, Button, Label } from "@forgecy/ui";
 import { Check, ImageOff, Sparkles, Undo2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import {
   decideAssetAction,
@@ -10,34 +11,28 @@ import {
   generateImageAction,
   requestSlideEditAction,
 } from "../actions";
-import { formatDate } from "../_lib/paths";
+import { useFormat } from "@/lib/use-format";
 import { ActionButton, controlClass } from "./action-button";
 import {
-  actionMessage,
-  type CommercialUse,
+  useActionMessage,
   type EditorAsset,
   type EditorEdit,
   type EditorRef,
 } from "./editor-workspace";
 
-const editStatus: Record<
+const editVariant: Record<
   EditorEdit["status"],
-  { label: string; variant: "neutral" | "info" | "success" | "warning" | "error" }
+  "neutral" | "info" | "success" | "warning" | "error"
 > = {
-  queued: { label: "In progress", variant: "info" },
-  applied: { label: "To decide", variant: "warning" },
-  kept: { label: "Kept", variant: "success" },
-  reverted: { label: "Reverted", variant: "neutral" },
-  failed: { label: "Failed", variant: "error" },
-};
-
-const commercialUseLabels: Record<CommercialUse, string> = {
-  verified: "Commercial use verified",
-  pending_verification: "Provider’s commercial use to be verified",
-  rejected: "Commercial use rejected",
+  queued: "info",
+  applied: "warning",
+  kept: "success",
+  reverted: "neutral",
+  failed: "error",
 };
 
 export function Thumb({ url, alt }: { url: string | null; alt: string }) {
+  const t = useTranslations("content.editor.ai");
   return url ? (
     // eslint-disable-next-line @next/next/no-img-element -- signed, short-lived storage URL
     <img
@@ -49,7 +44,7 @@ export function Thumb({ url, alt }: { url: string | null; alt: string }) {
   ) : (
     <div className="flex aspect-square w-full items-center justify-center rounded-md border border-dashed border-subtle text-fg-muted">
       <ImageOff aria-hidden />
-      <span className="sr-only">Preview unavailable</span>
+      <span className="sr-only">{t("previewUnavailable")}</span>
     </div>
   );
 }
@@ -69,6 +64,9 @@ export function SlideAiPanel({
   flush: () => Promise<boolean>;
 }) {
   const router = useRouter();
+  const t = useTranslations("content.editor.ai");
+  const format = useFormat();
+  const actionMessage = useActionMessage();
   const [instruction, setInstruction] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -84,14 +82,11 @@ export function SlideAiPanel({
     >
       <h2 id={`ai-${slideId}`} className="flex items-center gap-2 text-heading-sm text-fg">
         <Sparkles aria-hidden className="size-5" />
-        Ask the AI
+        {t("ask")}
       </h2>
-      <p className="text-body-sm text-fg-muted">
-        The Copywriter rewrites only this slide and doesn’t touch protected fields. The edit still
-        has to be confirmed.
-      </p>
+      <p className="text-body-sm text-fg-muted">{t("askIntro")}</p>
       <div className="space-y-1">
-        <Label htmlFor={`ai-instruction-${slideId}`}>Instruction</Label>
+        <Label htmlFor={`ai-instruction-${slideId}`}>{t("instruction")}</Label>
         <textarea
           id={`ai-instruction-${slideId}`}
           rows={2}
@@ -99,7 +94,7 @@ export function SlideAiPanel({
           className={controlClass}
           value={instruction}
           disabled={disabled || pending}
-          placeholder="E.g. make the title more direct and shorten the text"
+          placeholder={t("instructionPlaceholder")}
           onChange={(e) => setInstruction(e.target.value)}
         />
       </div>
@@ -109,7 +104,7 @@ export function SlideAiPanel({
         onClick={() =>
           start(async () => {
             setError(null);
-            if (!(await flush())) return setError("Save pending changes first.");
+            if (!(await flush())) return setError(t("saveFirst"));
             const res = await requestSlideEditAction({ ...base, slideId, instruction });
             if (!res.ok) return setError(actionMessage(res));
             setInstruction("");
@@ -118,7 +113,7 @@ export function SlideAiPanel({
         }
       >
         <Sparkles aria-hidden />
-        Ask the AI
+        {t("ask")}
       </Button>
       {error ? (
         <p role="alert" className="text-body-sm text-error">
@@ -131,8 +126,8 @@ export function SlideAiPanel({
           {open.map((e) => (
             <li key={e.id} className="space-y-2 rounded-md border border-control p-3">
               <p className="flex flex-wrap items-center gap-2 text-body-sm text-fg">
-                <Badge variant={editStatus[e.status].variant}>{editStatus[e.status].label}</Badge>“
-                {e.instruction}”
+                <Badge variant={editVariant[e.status]}>{t(`editStatus.${e.status}`)}</Badge>
+                {t("quoted", { text: e.instruction })}
               </p>
               {e.note ? <p className="text-body-sm text-fg-muted">{e.note}</p> : null}
               {e.status === "applied" ? (
@@ -144,19 +139,18 @@ export function SlideAiPanel({
                     }
                   >
                     <Check aria-hidden />
-                    Keep
+                    {t("keep")}
                   </ActionButton>
                   <ActionButton
                     size="sm"
                     variant="secondary"
                     action={async () => {
-                      if (!(await flush()))
-                        return { ok: false, error: "Save pending changes first." };
+                      if (!(await flush())) return { ok: false, error: t("saveFirst") };
                       return decideSlideEditAction({ ...base, editId: e.id, decision: "revert" });
                     }}
                   >
                     <Undo2 aria-hidden />
-                    Undo edit
+                    {t("undo")}
                   </ActionButton>
                 </div>
               ) : null}
@@ -166,12 +160,12 @@ export function SlideAiPanel({
       ) : null}
       {past.length ? (
         <details className="text-body-sm">
-          <summary className="cursor-pointer text-fg-muted">Previous requests</summary>
+          <summary className="cursor-pointer text-fg-muted">{t("previous")}</summary>
           <ul className="mt-2 space-y-1">
             {past.map((e) => (
               <li key={e.id} className="text-fg">
-                <Badge variant={editStatus[e.status].variant}>{editStatus[e.status].label}</Badge> “
-                {e.instruction}” · {formatDate(e.createdAt)}
+                <Badge variant={editVariant[e.status]}>{t(`editStatus.${e.status}`)}</Badge>{" "}
+                {t("quoted", { text: e.instruction })} · {format.date(e.createdAt, "dateTime")}
                 {e.status === "failed" && e.note ? (
                   <span className="block text-error">{e.note}</span>
                 ) : null}
@@ -197,6 +191,8 @@ export function ImageGenerator({
   flush: () => Promise<boolean>;
 }) {
   const router = useRouter();
+  const t = useTranslations("content.editor.image");
+  const actionMessage = useActionMessage();
   const [open, setOpen] = useState(false);
   const [brief, setBrief] = useState("");
   const [variants, setVariants] = useState(2);
@@ -208,7 +204,7 @@ export function ImageGenerator({
     return (
       <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
         <Sparkles aria-hidden />
-        Generate with AI
+        {t("open")}
       </Button>
     );
   return (
@@ -218,10 +214,10 @@ export function ImageGenerator({
       className="space-y-3 rounded-md border border-control p-3"
     >
       <p id={`${id}-title`} className="text-body-sm font-medium text-fg">
-        Generate an image with AI
+        {t("title")}
       </p>
       <div className="space-y-1">
-        <Label htmlFor={`${id}-brief`}>What it should show</Label>
+        <Label htmlFor={`${id}-brief`}>{t("brief")}</Label>
         <textarea
           id={`${id}-brief`}
           rows={3}
@@ -229,11 +225,11 @@ export function ImageGenerator({
           className={controlClass}
           value={brief}
           onChange={(e) => setBrief(e.target.value)}
-          placeholder="Subject, setting, framing. The style comes from the Brand Identity."
+          placeholder={t("briefPlaceholder")}
         />
       </div>
       <div className="space-y-1">
-        <Label htmlFor={`${id}-variants`}>Variants</Label>
+        <Label htmlFor={`${id}-variants`}>{t("variants")}</Label>
         <select
           id={`${id}-variants`}
           className={`${controlClass} w-24`}
@@ -247,10 +243,7 @@ export function ImageGenerator({
           ))}
         </select>
       </div>
-      <p className="text-body-sm text-fg-muted">
-        The images land in the library as “To approve”: the carousel can’t be approved until the
-        ones it uses are approved.
-      </p>
+      <p className="text-body-sm text-fg-muted">{t("hint")}</p>
       <div className="flex flex-wrap gap-2">
         <Button
           size="sm"
@@ -258,8 +251,7 @@ export function ImageGenerator({
           onClick={() =>
             start(async () => {
               setMessage(null);
-              if (!(await flush()))
-                return setMessage({ ok: false, text: "Save pending changes first." });
+              if (!(await flush())) return setMessage({ ok: false, text: t("saveFirst") });
               const res = await generateImageAction({
                 slug: r.slug,
                 clientId: r.clientId,
@@ -270,17 +262,17 @@ export function ImageGenerator({
                 variants,
               });
               if (!res.ok) return setMessage({ ok: false, text: actionMessage(res) });
-              setMessage({ ok: true, text: "Generation started: the images will appear here." });
+              setMessage({ ok: true, text: t("started") });
               setBrief("");
               router.refresh();
             })
           }
         >
           <Sparkles aria-hidden />
-          Generate
+          {t("generate")}
         </Button>
         <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
-          Close
+          {t("close")}
         </Button>
       </div>
       {message ? (
@@ -309,17 +301,18 @@ export function AiImageDrafts({
   onUse: (a: EditorAsset) => void;
   readOnly: boolean;
 }) {
+  const t = useTranslations("content.editor.image.drafts");
   if (!drafts.length) return null;
   return (
     <div className="space-y-2">
-      <p className="text-body-sm font-medium text-fg">AI images to approve</p>
+      <p className="text-body-sm font-medium text-fg">{t("title")}</p>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {drafts.map((a) => (
           <li key={a.id} className="space-y-2 rounded-md border border-subtle p-2">
             <Thumb url={a.thumb} alt={a.alt} />
             {a.commercialUse ? (
               <Badge variant={a.commercialUse === "verified" ? "success" : "warning"}>
-                {commercialUseLabels[a.commercialUse]}
+                {t(`commercialUse.${a.commercialUse}`)}
               </Badge>
             ) : null}
             <div className="flex flex-wrap gap-1">
@@ -330,7 +323,7 @@ export function AiImageDrafts({
                   disabled={a.key === selectedKey}
                   onClick={() => onUse(a)}
                 >
-                  {a.key === selectedKey ? "In use" : "Use"}
+                  {a.key === selectedKey ? t("inUse") : t("use")}
                 </Button>
               ) : null}
               <ActionButton
@@ -345,16 +338,12 @@ export function AiImageDrafts({
                 }
               >
                 <Check aria-hidden />
-                Approve
+                {t("approve")}
               </ActionButton>
               <ActionButton
                 size="sm"
                 variant="ghost"
-                confirm={
-                  a.key === selectedKey
-                    ? "The image is used in the slide: reject it anyway?"
-                    : undefined
-                }
+                confirm={a.key === selectedKey ? t("rejectConfirm") : undefined}
                 action={() =>
                   decideAssetAction({
                     slug: r.slug,
@@ -365,7 +354,7 @@ export function AiImageDrafts({
                 }
               >
                 <X aria-hidden />
-                Reject
+                {t("reject")}
               </ActionButton>
             </div>
           </li>

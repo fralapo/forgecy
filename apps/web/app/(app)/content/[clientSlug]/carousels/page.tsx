@@ -1,21 +1,20 @@
 import { FORMATS, type FormatId } from "@forgecy/carousel";
-import {
-  channelLabels,
-  contentStatusLabels,
-  listCarousels,
-  type ContentChannel,
-} from "@forgecy/content";
+import { channelLabels, listCarousels, type ContentChannel } from "@forgecy/content";
 import { contentStatuses, type ContentStatus } from "@forgecy/core";
 import { Badge, Button, Card, cn } from "@forgecy/ui";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
-import { carouselPath, carouselsPath, formatDate } from "../../_lib/paths";
+import { getTranslations } from "next-intl/server";
+import { getFormat } from "@/lib/i18n";
+import { carouselPath, carouselsPath } from "../../_lib/paths";
 import { loadClient } from "../../_lib/server";
 import { statusVariant } from "./_lib/labels";
-import { plural } from "@/lib/plural";
 
-export const metadata = { title: "Carousels · Content" };
+export async function generateMetadata() {
+  const t = await getTranslations("content.carousels");
+  return { title: t("metaTitle") };
+}
 
 export default async function CarouselsPage({
   params,
@@ -26,6 +25,9 @@ export default async function CarouselsPage({
 }) {
   const [{ clientSlug }, sp] = await Promise.all([params, searchParams]);
   const { db, user, client } = await loadClient(clientSlug);
+  const t = await getTranslations("content.carousels");
+  const tl = await getTranslations("content.labels");
+  const format = await getFormat();
   const raw = typeof sp.status === "string" ? sp.status : "";
   const statusFilter = (contentStatuses as readonly string[]).includes(raw)
     ? (raw as ContentStatus)
@@ -36,15 +38,15 @@ export default async function CarouselsPage({
   });
   const base = carouselsPath(client.slug);
   const filters: { value: ContentStatus | null; label: string }[] = [
-    { value: null, label: "All" },
-    ...contentStatuses.map((s) => ({ value: s, label: contentStatusLabels[s] })),
+    { value: null, label: t("all") },
+    ...contentStatuses.map((s) => ({ value: s, label: tl(`contentStatus.${s}`) })),
   ];
   const now = new Date();
 
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <nav aria-label="Filter by status" className="flex flex-wrap gap-2">
+        <nav aria-label={t("filterLabel")} className="flex flex-wrap gap-2">
           {filters.map((f) => {
             const current = f.value === statusFilter;
             return (
@@ -67,38 +69,38 @@ export default async function CarouselsPage({
         <Button asChild>
           <Link href={`${base}/new` as Route}>
             <Plus aria-hidden />
-            New carousel
+            {t("new")}
           </Link>
         </Button>
       </div>
       <Card className="overflow-hidden p-0">
         {rows.length === 0 ? (
           <p className="p-6 text-body-md text-fg-muted">
-            {statusFilter ? "No carousels with this status." : "No carousels yet."}
+            {statusFilter ? t("emptyFiltered") : t("empty")}
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-body-sm">
-              <caption className="sr-only">Client carousels</caption>
+              <caption className="sr-only">{t("table.caption")}</caption>
               <thead className="border-b border-subtle text-label text-fg-muted">
                 <tr>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Title
+                    {t("table.title")}
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Status
+                    {t("table.status")}
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Channel
+                    {t("table.channel")}
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Format
+                    {t("table.format")}
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Pillar
+                    {t("table.pillar")}
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Updated
+                    {t("table.updated")}
                   </th>
                 </tr>
               </thead>
@@ -110,16 +112,16 @@ export default async function CarouselsPage({
                         {r.title}
                       </Link>
                       <span className="block text-fg-muted">
-                        {plural(r.slideCount, "slide", "slides")}
+                        {t("slides", { count: r.slideCount })}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="flex flex-wrap gap-1">
                         <Badge variant={statusVariant[r.status]}>
-                          {contentStatusLabels[r.status]}
+                          {tl(`contentStatus.${r.status}`)}
                         </Badge>
                         {r.lockedByJobId && r.lockExpiresAt && r.lockExpiresAt > now ? (
-                          <Badge variant="highlight">AI at work</Badge>
+                          <Badge variant="highlight">{t("aiAtWork")}</Badge>
                         ) : null}
                       </span>
                     </td>
@@ -130,7 +132,9 @@ export default async function CarouselsPage({
                       {FORMATS[r.format as FormatId]?.label ?? r.format}
                     </td>
                     <td className="px-4 py-3 text-fg">{r.pillarName ?? "—"}</td>
-                    <td className="px-4 py-3 text-fg-muted">{formatDate(r.updatedAt)}</td>
+                    <td className="px-4 py-3 text-fg-muted">
+                      {format.date(r.updatedAt, "dateTime")}
+                    </td>
                   </tr>
                 ))}
               </tbody>
