@@ -1,12 +1,20 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { defaultTokens, parseDocument as parseBrandDocument } from "@forgecy/brand";
-import { findLayout, templateManifestSchema } from "@forgecy/carousel";
+import { FORMATS, findLayout, templateManifestSchema } from "@forgecy/carousel";
 import { describe, expect, it } from "vitest";
 import { imageSize } from "../src/assets";
 import { findingsToAcknowledge, toGuardContent } from "../src/carousels/brand-guard";
 import { computeChecks } from "../src/carousels/checks";
-import { carouselDocumentSchema, normalizeHashtag, perWeek } from "../src/document";
+import {
+  carouselDocumentSchema,
+  channelFormat,
+  contentChannels,
+  normalizeHashtag,
+  offeredFormats,
+  perWeek,
+  planItemInputSchema,
+} from "../src/document";
 import { slotsFromOutput } from "../src/ai/pipeline";
 import { clampSlideCount, defaultRoles, pickLayout } from "../src/carousels/templates";
 import { brandThemeFromIdentity } from "../src/carousels/theme";
@@ -157,6 +165,31 @@ describe("document helpers", () => {
     expect(normalizeHashtag("  ")).toBe("");
     expect(perWeek({ count: 2, unit: "week" })).toBe(2);
     expect(perWeek({ count: 52, unit: "month" })).toBeCloseTo(12);
+  });
+
+  it("offers the v1 formats only once a published template declares them", () => {
+    expect(offeredFormats([])).toEqual(["ig_4x5", "linkedin_doc"]);
+    expect(offeredFormats(["ig_4x5", "stories_9x16", "tiktok_photo", "report_a4"])).toEqual([
+      "ig_4x5",
+      "linkedin_doc",
+      "stories_9x16",
+      "tiktok_photo",
+    ]);
+  });
+
+  it("gives every channel a default format of that channel and accepts its plan items", () => {
+    for (const channel of contentChannels) {
+      const format = channelFormat[channel];
+      expect(FORMATS[format].channel).toBe(channel);
+      const item = planItemInputSchema.safeParse({
+        day: 3,
+        channel,
+        format,
+        pillarId: "00000000-0000-4000-8000-000000000000",
+        theme: "Five mistakes",
+      });
+      expect(item.success, channel).toBe(true);
+    }
   });
 });
 

@@ -49,8 +49,12 @@ describe("template labels", () => {
   });
 
   it.each([
+    "carousels/editorial-fb-4x5",
+    "carousels/editorial-ig-1x1",
     "carousels/editorial-ig-4x5",
     "carousels/editorial-linkedin",
+    "carousels/editorial-stories-9x16",
+    "carousels/editorial-tiktok-photo",
     "reports/report-audit-a4",
   ])("%s ships every label in English and Italian", async (folder) => {
     const repo = await loadRepoTemplate(folder);

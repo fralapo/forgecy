@@ -1,0 +1,408 @@
+{
+  "$schema": "../../template.schema.json",
+  "id": "editorial-stories-9x16",
+  "name": "Editorial · Stories 9:16",
+  "description": "Instagram Stories sequence with 8 layouts: one idea per frame, texts kept clear of the profile header and the reply bar.",
+  "version": "1.0.0",
+  "kind": "carousel",
+  "channel": "instagram",
+  "format": "stories_9x16",
+  "width": 1080,
+  "height": 1920,
+  "slides": {
+    "min": 5,
+    "max": 10,
+    "default": 7
+  },
+  "styles": ["styles.css"],
+  "fonts": [
+    {
+      "family": "Space Grotesk",
+      "file": "fonts/space-grotesk.woff2",
+      "weight": "300 700",
+      "license": "OFL-1.1"
+    },
+    {
+      "family": "Inter",
+      "file": "fonts/inter.woff2",
+      "weight": "100 900",
+      "license": "OFL-1.1"
+    }
+  ],
+  "colorRoles": {
+    "--fc-bg": {
+      "role": "background",
+      "fallback": "#F5F3EE"
+    },
+    "--fc-surface": {
+      "role": "surface",
+      "fallback": "#FFFFFF"
+    },
+    "--fc-text": {
+      "role": "text.primary",
+      "fallback": "#16161A"
+    },
+    "--fc-muted": {
+      "role": "text.secondary",
+      "fallback": "#55555F"
+    },
+    "--fc-accent": {
+      "role": "accent",
+      "fallback": "#2F55D4"
+    },
+    "--fc-cta-bg": {
+      "role": "cta.bg",
+      "fallback": "#16161A"
+    },
+    "--fc-cta-text": {
+      "role": "cta.text",
+      "fallback": "#FFFFFF"
+    }
+  },
+  "fontRoles": {
+    "--fc-font-heading": {
+      "role": "heading",
+      "fallback": "Space Grotesk"
+    },
+    "--fc-font-body": {
+      "role": "body",
+      "fallback": "Inter"
+    }
+  },
+  "typeScale": [24, 28, 32, 36, 40, 48, 56, 64, 72, 88, 96, 220],
+  "rules": {
+    "ctaOnlyLast": true,
+    "logoOnCover": true,
+    "pageNumbers": true,
+    "maxImagesPerSlide": 1,
+    "notes": "One idea per frame, readable in two seconds. Keep text inside the safe zone: the app covers the edges."
+  },
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "Cover",
+      "role": "cover",
+      "position": "first",
+      "file": "layouts/cover.html",
+      "slots": [
+        {
+          "name": "kicker",
+          "type": "text",
+          "label": "Kicker",
+          "maxChars": 32,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 70,
+          "maxLines": 4,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "subtitle",
+          "type": "text",
+          "label": "Subtitle",
+          "maxChars": 110,
+          "maxLines": 3
+        },
+        {
+          "name": "image",
+          "type": "image",
+          "label": "Image",
+          "minWidth": 1080,
+          "minHeight": 620
+        }
+      ],
+      "sample": {
+        "kicker": "Practical guide",
+        "title": "E-invoicing: 5 mistakes that ==cost you dearly==",
+        "subtitle": "What to check before sending, in under a minute.",
+        "image": {
+          "asset": "assets/example-photo.svg",
+          "alt": "Abstract illustration of a document"
+        }
+      }
+    },
+    {
+      "id": "text",
+      "name": "Text",
+      "role": "text",
+      "file": "layouts/text.html",
+      "slots": [
+        {
+          "name": "kicker",
+          "type": "text",
+          "label": "Kicker",
+          "maxChars": 28,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 60,
+          "maxLines": 3,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "label": "Text",
+          "maxChars": 300,
+          "maxLines": 9,
+          "required": true
+        }
+      ],
+      "sample": {
+        "kicker": "Mistake 1",
+        "title": "==Wrong== customer VAT number",
+        "body": "One wrong digit and the e-invoicing system rejects the invoice. Copy the details from your customer records, not from emails: that is where mistakes start."
+      }
+    },
+    {
+      "id": "list",
+      "name": "List",
+      "role": "list",
+      "file": "layouts/list.html",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 56,
+          "maxLines": 2,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "items",
+          "type": "list",
+          "label": "Items",
+          "minItems": 2,
+          "maxItems": 5,
+          "maxChars": 64,
+          "required": true
+        }
+      ],
+      "sample": {
+        "title": "Before sending, check",
+        "items": [
+          "Recipient code or certified email",
+          "VAT number and tax code",
+          "VAT rate and VAT code",
+          "Date and sequential number"
+        ]
+      }
+    },
+    {
+      "id": "quote",
+      "name": "Quote",
+      "role": "quote",
+      "file": "layouts/quote.html",
+      "slots": [
+        {
+          "name": "quote",
+          "type": "text",
+          "label": "Quote",
+          "maxChars": 160,
+          "maxLines": 6,
+          "required": true
+        },
+        {
+          "name": "author",
+          "type": "text",
+          "label": "Author",
+          "maxChars": 40,
+          "maxLines": 1,
+          "required": true
+        },
+        {
+          "name": "role",
+          "type": "text",
+          "label": "Role",
+          "maxChars": 56,
+          "maxLines": 1
+        }
+      ],
+      "sample": {
+        "quote": "Since we started checking invoices with a checklist, rejections have disappeared.",
+        "author": "Laura Bianchi",
+        "role": "Accounts, Rossi S.r.l."
+      }
+    },
+    {
+      "id": "data",
+      "name": "Data",
+      "role": "data",
+      "file": "layouts/data.html",
+      "slots": [
+        {
+          "name": "value",
+          "type": "text",
+          "label": "Number",
+          "maxChars": 6,
+          "maxLines": 1,
+          "required": true
+        },
+        {
+          "name": "label",
+          "type": "text",
+          "label": "Caption",
+          "maxChars": 90,
+          "maxLines": 3,
+          "required": true
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "label": "Source",
+          "maxChars": 80,
+          "maxLines": 2
+        }
+      ],
+      "sample": {
+        "value": "1 in 8",
+        "label": "invoices rejected because of a mistake in the customer details",
+        "source": "Illustrative example, not real data"
+      }
+    },
+    {
+      "id": "problem-solution",
+      "name": "Problem and solution",
+      "role": "problem_solution",
+      "file": "layouts/problem-solution.html",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 48,
+          "maxLines": 2,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "problem",
+          "type": "text",
+          "label": "Problem",
+          "maxChars": 150,
+          "maxLines": 4,
+          "required": true
+        },
+        {
+          "name": "solution",
+          "type": "text",
+          "label": "Solution",
+          "maxChars": 150,
+          "maxLines": 4,
+          "required": true
+        }
+      ],
+      "sample": {
+        "title": "The rejection arrives days later",
+        "problem": "You find out when the customer asks where the invoice is, and the deadline is close.",
+        "solution": "Check the e-invoicing system receipts every morning: it takes two minutes."
+      }
+    },
+    {
+      "id": "comparison",
+      "name": "Comparison",
+      "role": "comparison",
+      "file": "layouts/comparison.html",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 48,
+          "maxLines": 2,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "left_title",
+          "type": "text",
+          "label": "Column A title",
+          "maxChars": 18,
+          "maxLines": 1,
+          "required": true
+        },
+        {
+          "name": "left",
+          "type": "list",
+          "label": "Column A items",
+          "minItems": 2,
+          "maxItems": 4,
+          "maxChars": 44,
+          "required": true
+        },
+        {
+          "name": "right_title",
+          "type": "text",
+          "label": "Column B title",
+          "maxChars": 18,
+          "maxLines": 1,
+          "required": true
+        },
+        {
+          "name": "right",
+          "type": "list",
+          "label": "Column B items",
+          "minItems": 2,
+          "maxItems": 4,
+          "maxChars": 44,
+          "required": true
+        }
+      ],
+      "sample": {
+        "title": "By hand or with a checklist",
+        "left_title": "By hand",
+        "left": ["Details copied from emails", "Checks from memory", "Rejections found late"],
+        "right_title": "With a checklist",
+        "right": ["Details from customer records", "Four fixed checks", "Receipts read every day"]
+      }
+    },
+    {
+      "id": "cta",
+      "name": "Call to action",
+      "role": "cta",
+      "position": "last",
+      "file": "layouts/cta.html",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 56,
+          "maxLines": 3,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "label": "Text",
+          "maxChars": 130,
+          "maxLines": 4
+        },
+        {
+          "name": "action",
+          "type": "text",
+          "label": "Action",
+          "maxChars": 28,
+          "maxLines": 1,
+          "required": true
+        }
+      ],
+      "sample": {
+        "title": "Want the full ==checklist==?",
+        "body": "Send us the word INVOICE in a DM and we will send it as a PDF.",
+        "action": "DM us INVOICE"
+      }
+    }
+  ]
+}

@@ -54,10 +54,12 @@ import {
 } from "../carousels/carousels";
 import {
   briefSchema,
+  channelFormat,
   newSlideId,
   normalizeHashtag,
   parseDocument,
   type CarouselDocument,
+  type ContentChannel,
   type ContentSlide,
   type Outline,
   type Provenance,
@@ -316,16 +318,10 @@ async function publishedIdentity(db: Database, actor: Actor, clientId: string) {
   return identity;
 }
 
-/** MVP format of each channel. */
-export const channelFormat: Record<"instagram" | "linkedin", FormatId> = {
-  instagram: "ig_4x5",
-  linkedin: "linkedin_doc",
-};
-
 export async function runProposePlan(
   deps: PipelineDeps,
   ctx: PipelineContext,
-  input: { clientId: string; instruction: string; channels: ("instagram" | "linkedin")[] },
+  input: { clientId: string; instruction: string; channels: ContentChannel[] },
 ) {
   const ai = requireAi(deps);
   const actor = agent("strategist", ctx);
