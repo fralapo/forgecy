@@ -5,6 +5,7 @@ import {
   ClipboardCheck,
   LayoutDashboard,
   LayoutTemplate,
+  Layers,
   Palette,
   Settings,
 } from "lucide-react";
@@ -25,6 +26,7 @@ const nav = [
   { href: "/templates", label: "templates", icon: LayoutTemplate },
   { href: "/brand", label: "brand", icon: Fingerprint },
   { href: "/content", label: "content", icon: GalleryHorizontal },
+  { href: "/automations", label: "automations", icon: Layers },
   { href: "/settings", label: "settings", icon: Settings },
   { href: "/design", label: "design", icon: Palette },
 ] as const;
