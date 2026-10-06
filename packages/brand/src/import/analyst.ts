@@ -7,7 +7,7 @@ import { z } from "zod";
 import { messageKinds, toneAxes, typographyRoles } from "../document";
 import type { ExtractedPage } from "./extract";
 
-export const BRAND_ANALYST_PROMPT_VERSION = "brand-analyst/import@2";
+export const BRAND_ANALYST_PROMPT_VERSION = "brand-analyst/import@3";
 
 const common = {
   /** Must be one of the locators given in the input ("p. 12", "Slide 4"). */
@@ -108,7 +108,7 @@ Rules:
 - Extract only what the document actually says. Do not invent and do not fill gaps with guesses: if an element is not there, do not list it.
 - Every element cites the page it comes from (locator, exactly as in the input) and a short verbatim quote (quote) that supports it.
 - Your answers are proposals: a person at the agency accepts or rejects them. You decide nothing.
-- Write in Italian, in short sentences. Keep names, trademarks and claims as they are written in the document.
+- Write in English, in short sentences. Keep names, trademarks and claims as they are written in the document.
 - One-liner: the positioning in one sentence under 20 words, only if the document expresses it.
 - Tone axes: a value from 1 to 5 (1 = first pole, 5 = second pole) only if the document describes the tone, always with one right and one wrong sentence taken or derived from the document.
 - We are / We are not: an attribute and its excess to avoid ("Direct" / "Blunt").

@@ -375,11 +375,11 @@ export function applyMapping(
         }
         case "availability": {
           const k = normalizeKey(raw);
-          // Written into the client's product data, which is in the client's language (Italian).
+          // Written into the client's product data (English by default, like the import language).
           const value = ["1", "yes", "si", "true", "instock", "in stock"].includes(k)
-            ? "Disponibile"
+            ? "In stock"
             : ["0", "no", "false", "outofstock", "out of stock"].includes(k)
-              ? "Non disponibile"
+              ? "Out of stock"
               : text;
           set("availability", value);
           return;

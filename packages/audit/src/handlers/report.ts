@@ -56,8 +56,8 @@ export async function runReportTexts(
     reportFindings(db, report),
   ]);
   const languageRule =
-    profile?.reportLanguage === "en"
-      ? "\nWrite every text in English: this overrides the language rule above."
+    profile?.reportLanguage === "it"
+      ? "\nWrite every text in Italian: this overrides the language rule above."
       : "";
   const instruction = payload.instruction
     ? dataBlock("agency instruction", oneLine(payload.instruction, 500))

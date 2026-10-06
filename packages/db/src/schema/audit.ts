@@ -59,7 +59,7 @@ export const prospectProfiles = pgTable("prospect_profiles", {
   area: text("area"),
   objectives: jsonb("objectives").$type<string[]>().notNull().default([]),
   otherObjective: text("other_objective"),
-  reportLanguage: text("report_language").notNull().default("it"),
+  reportLanguage: text("report_language").notNull().default("en"),
   ownerId: uuid("owner_id").references(() => users.id, { onDelete: "set null" }),
   socialUrls: jsonb("social_urls")
     .$type<Partial<Record<SocialChannel, string>>>()

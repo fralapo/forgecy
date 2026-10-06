@@ -172,8 +172,8 @@ export async function captureSlides(
     deviceScaleFactor: 1,
     colorScheme: "light",
     reducedMotion: "reduce",
-    // Same locale as the slide copy (Italian by default), not the UI locale.
-    locale: "it-IT",
+    // Same locale as the slide copy (English by default).
+    locale: "en-GB",
     timezoneId: "UTC",
     javaScriptEnabled: true,
   });

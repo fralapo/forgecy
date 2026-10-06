@@ -178,7 +178,7 @@ export async function startAudit(
     objectives: profile?.objectives ?? [],
     ...(profile?.otherObjective ? { otherObjective: profile.otherObjective } : {}),
     ...(client.notes ? { notes: client.notes } : {}),
-    reportLanguage: profile?.reportLanguage ?? "it",
+    reportLanguage: profile?.reportLanguage ?? "en",
     socialUrls: profile?.socialUrls ?? {},
   };
   const allowed = aiAllowed(client.aiPolicy);

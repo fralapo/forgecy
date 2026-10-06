@@ -37,7 +37,7 @@ const empty: ProspectFormValues = {
   objectives: [],
   otherObjective: "",
   notes: "",
-  reportLanguage: "it",
+  reportLanguage: "en",
   socialUrls: {},
 };
 
@@ -95,7 +95,7 @@ export function ProspectForm(
           objectives,
           ...(v("otherObjective") ? { otherObjective: v("otherObjective") } : {}),
           ...(v("notes") ? { notes: v("notes") } : {}),
-          reportLanguage: (v("reportLanguage") || "it") as "it" | "en",
+          reportLanguage: (v("reportLanguage") || "en") as "it" | "en",
           socialUrls,
         };
         setError(null);
@@ -247,8 +247,8 @@ export function ProspectForm(
             className={selectClass}
             defaultValue={initial.reportLanguage}
           >
-            <option value="it">Italian</option>
             <option value="en">English</option>
+            <option value="it">Italian</option>
           </select>
         </div>
         {props.mode === "create" ? (

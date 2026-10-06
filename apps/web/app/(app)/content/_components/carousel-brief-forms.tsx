@@ -132,7 +132,7 @@ function ParamsForm({
   const [pillarId, setPillarId] = useState(params.pillarId ?? "");
   const [rubricId, setRubricId] = useState(params.rubricId ?? "");
   const [productId, setProductId] = useState(params.productId ?? "");
-  const [language, setLanguage] = useState<Language>(params.language ?? "it");
+  const [language, setLanguage] = useState<Language>(params.language ?? "en");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const rubrics = options.rubrics.filter((r) => !pillarId || r.pillarId === pillarId);

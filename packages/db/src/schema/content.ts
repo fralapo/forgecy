@@ -239,7 +239,7 @@ export const contents = pgTable(
     /** Pinned when the slides are generated; null = newest published version. */
     templateVersion: text("template_version"),
     slideCount: integer("slide_count").notNull().default(7),
-    language: text("language").notNull().default("it"),
+    language: text("language").notNull().default("en"),
     brandVersionId: uuid("brand_version_id").references(() => brandIdentityVersions.id, {
       onDelete: "set null",
     }),

@@ -82,7 +82,7 @@ describe.skipIf(!enabled)("export with Chromium", () => {
     const pdf = await PDFDocument.load(a.files.find((f) => f.kind === "pdf")!.data);
     expect(pdf.getPageCount()).toBe(5);
     expect(pdf.getPage(0).getSize()).toEqual({ width: 1080, height: 1350 });
-    expect(pdf.getKeywords()).toContain("template:editorial-ig-4x5@1.0.0");
+    expect(pdf.getKeywords()).toContain("template:editorial-ig-4x5@1.1.0");
 
     const zip = unzipSync(a.files.find((f) => f.kind === "zip")!.data);
     expect(Object.keys(zip)).toEqual([

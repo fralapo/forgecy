@@ -102,7 +102,7 @@ export function sectionOf(f: Pick<FindingRow, "kind" | "area" | "channel">): Rep
 }
 
 function lang(code: string | null | undefined): "it" | "en" {
-  return code === "en" ? "en" : "it";
+  return code === "it" ? "it" : "en";
 }
 
 // ---------------------------------------------------------------- Data
