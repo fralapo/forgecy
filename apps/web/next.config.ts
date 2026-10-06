@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: new URL("../../", import.meta.url).pathname,
   // Internal packages ship TypeScript source ("just-in-time" packages).
   transpilePackages: [
+    "@forgecy/audit",
     "@forgecy/core",
     "@forgecy/db",
     "@forgecy/ai",
@@ -19,7 +20,7 @@ const nextConfig: NextConfig = {
     "@forgecy/mail",
     "@forgecy/ui",
   ],
-  serverExternalPackages: ["pg", "bullmq", "nodemailer"],
+  serverExternalPackages: ["pg", "bullmq", "nodemailer", "read-excel-file"],
   poweredByHeader: false,
   typedRoutes: true,
 };
