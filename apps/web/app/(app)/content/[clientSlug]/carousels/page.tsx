@@ -27,6 +27,7 @@ export default async function CarouselsPage({
   const { db, user, client } = await loadClient(clientSlug);
   const t = await getTranslations("content.carousels");
   const tl = await getTranslations("content.labels");
+  const tf = await getTranslations("templates");
   const format = await getFormat();
   const raw = typeof sp.status === "string" ? sp.status : "";
   const statusFilter = (contentStatuses as readonly string[]).includes(raw)
@@ -129,7 +130,7 @@ export default async function CarouselsPage({
                       {channelLabels[r.channel as ContentChannel] ?? r.channel}
                     </td>
                     <td className="px-4 py-3 text-fg">
-                      {FORMATS[r.format as FormatId]?.label ?? r.format}
+                      {r.format in FORMATS ? tf(`format.${r.format as FormatId}`) : r.format}
                     </td>
                     <td className="px-4 py-3 text-fg">{r.pillarName ?? "—"}</td>
                     <td className="px-4 py-3 text-fg-muted">

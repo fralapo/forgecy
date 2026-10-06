@@ -4,7 +4,7 @@
  * server and the worker use.
  */
 import { FORMATS, slideRoles, slideSchema, type FormatId, type Slide } from "@forgecy/carousel";
-import { confidenceLevels, contentObjectives, funnelStages } from "@forgecy/core";
+import { confidenceLevels, contentObjectives, funnelStages, messageRefSchema } from "@forgecy/core";
 import { z } from "zod";
 
 const text = (max: number) => z.string().trim().max(max);
@@ -75,7 +75,9 @@ export function perWeek(f: Frequency | null | undefined): number {
 
 export const proposalSourceSchema = z.object({
   kind: z.enum(["brand", "audit", "strategy", "catalog", "brief"]),
+  /** English text; `ref` shows it in the reader's language. */
   label: z.string().max(200),
+  ref: messageRefSchema.optional(),
 });
 
 export const provenanceSchema = z.object({

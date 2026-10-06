@@ -45,6 +45,7 @@ import {
   setProductSource,
   type ProductSummary,
 } from "../src/products";
+import type { Provenance } from "../src/document";
 import { getCarouselWorkspace, getStrategyOverview } from "../src/queries";
 import { activatePlan, createPillar, decideStrategyProposal } from "../src/strategy";
 
@@ -236,13 +237,21 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
     const res = await runProposeStrategy(deps, await job("content.propose_strategy"), {
       clientId,
       instruction: "",
+      language: "it",
     });
     expect(res).toMatchObject({ pillars: 1, rubrics: 1 });
+    // The Planner writes in the language of the person who asked.
+    expect(JSON.stringify(fake.calls.at(-1))).toContain("Language: it");
 
     const overview = await getStrategyOverview(db, anna, clientId);
     const proposed = overview.pillars.find((p) => p.status === "proposed")!;
     expect(proposed.audienceIds).toEqual(["seg1"]);
     expect(proposed.provenance).toMatchObject({ agent: "planner", model: "fake-model" });
+    // Sources carry a reference, so they are shown in the reader's language.
+    expect((proposed.provenance as Provenance | null)?.sources[0]).toMatchObject({
+      kind: "brand",
+      ref: { key: "content.labels.source.brand" },
+    });
     const rubric = overview.rubrics.find((r) => r.status === "proposed")!;
 
     // Agents can never accept, and a rubric waits for its pillar.

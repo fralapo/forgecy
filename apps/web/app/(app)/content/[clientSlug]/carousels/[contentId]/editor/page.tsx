@@ -2,6 +2,7 @@ import { getPublishedBrandIdentity } from "@forgecy/brand";
 import { briefSchema, type ContentChannel } from "@forgecy/content";
 import { eq, users } from "@forgecy/db";
 import { getTranslations } from "next-intl/server";
+import { getRefText } from "@/lib/i18n";
 import { EditorWorkspace, type EditorAsset } from "../../../../_components/editor-workspace";
 import { carouselPath } from "../../../../_lib/paths";
 import { thumbnailUrls } from "../../../../_lib/server";
@@ -22,6 +23,7 @@ export default async function EditorPage({
   const { clientSlug, contentId } = await params;
   const { db, user, client, ws } = await loadCarousel(clientSlug, contentId);
   const c = ws.content;
+  const rt = await getRefText();
   const [brand, updatedBy] = await Promise.all([
     getPublishedBrandIdentity(db, user.actor, client.id),
     c.draftUpdatedBy
@@ -96,7 +98,7 @@ export default async function EditorPage({
         slideId: e.slideId,
         instruction: e.instruction,
         status: e.status,
-        note: e.note,
+        note: rt(e.noteRef, e.note ?? "") || null,
         createdAt: e.createdAt.toISOString(),
       }))}
       comments={ws.comments
