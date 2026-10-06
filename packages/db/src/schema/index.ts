@@ -9,3 +9,4 @@ export * from "./audit";
 export * from "./templates";
 export * from "./brand";
 export * from "./catalog";
+export * from "./brand-guard";
