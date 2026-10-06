@@ -106,6 +106,25 @@ describe.skipIf(!enabled)("export with Chromium", () => {
     expect(json.slides).toHaveLength(5);
   }, 120_000);
 
+  it("exports the audit report as an A4 PDF", async () => {
+    const pkg = await loadRepoTemplate("report-audit-a4");
+    const slides = pkg.manifest.layouts.map(sampleSlide);
+    const out = await exportCarousel(browser, {
+      pkg,
+      slides,
+      brand: NEUTRAL_BRAND,
+      outputs: ["pdf"],
+      meta: { client: "Rossi", content: "Audit", version: 1 },
+    });
+    expect(out.issues).toEqual([]);
+    expect(out.files.map((f) => f.name)).toEqual(["rossi_audit_v1_report-a4.pdf"]);
+    const pdf = await PDFDocument.load(out.files[0]!.data);
+    expect(pdf.getPageCount()).toBe(6);
+    const { width, height } = pdf.getPage(0).getSize();
+    expect(Math.round(width)).toBe(595);
+    expect(Math.round(height)).toBe(842);
+  }, 120_000);
+
   it("watermarks and renames a draft preview", async () => {
     const pkg = await loadRepoTemplate("editoriale-linkedin");
     const slides = pkg.manifest.layouts.slice(0, 5).map(sampleSlide);

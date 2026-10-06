@@ -34,7 +34,16 @@
     },
     "format": {
       "type": "string",
-      "enum": ["ig_4x5", "linkedin_doc", "ig_1x1", "stories_9x16", "fb_4x5", "tiktok_photo"]
+      "enum": [
+        "ig_4x5",
+        "linkedin_doc",
+        "ig_1x1",
+        "stories_9x16",
+        "fb_4x5",
+        "tiktok_photo",
+        "report_a4",
+        "report_16x9"
+      ]
     },
     "width": {
       "type": "integer",
@@ -52,17 +61,17 @@
         "min": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 20
+          "maximum": 40
         },
         "max": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 20
+          "maximum": 40
         },
         "default": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 20
+          "maximum": 40
         }
       },
       "required": ["min", "max", "default"]
@@ -223,7 +232,12 @@
               "data",
               "problem_solution",
               "comparison",
-              "cta"
+              "cta",
+              "section",
+              "finding",
+              "problem",
+              "next_steps",
+              "method"
             ]
           },
           "position": {
@@ -460,7 +474,6 @@
     "id",
     "name",
     "version",
-    "channel",
     "format",
     "width",
     "height",

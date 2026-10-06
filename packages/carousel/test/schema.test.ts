@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { exportFileNames, slugify } from "../src/filenames";
+import { FORMATS, pdfPageSize } from "../src/formats";
 import {
   buildCarouselSchema,
   buildSlideSchema,
@@ -42,6 +43,43 @@ describe("slide schemas from template.json", async () => {
     const msgs = all.safeParse(ctaFirst).error?.issues.map((i) => i.message) ?? [];
     expect(msgs).toContain("Copertina: solo come prima slide");
     expect(msgs).toContain("CTA: solo come ultima slide");
+  });
+});
+
+describe("report formats", () => {
+  it("are paged PDFs without a channel, A4 printed at its real size", () => {
+    expect(FORMATS.report_a4).toMatchObject({
+      kind: "report",
+      channel: null,
+      primaryOutput: "pdf",
+    });
+    expect(FORMATS.report_16x9).toMatchObject({ width: 1920, height: 1080, channel: null });
+    const a4 = pdfPageSize("report_a4");
+    expect(a4.width).toBeCloseTo(595.2, 1);
+    expect(a4.height).toBeCloseTo(841.9, 1);
+    expect(pdfPageSize("linkedin_doc")).toEqual({ width: 1080, height: 1350 });
+    expect(pdfPageSize("report_16x9")).toEqual({ width: 1920, height: 1080 });
+  });
+
+  it("accept the audit report: cover first, any page order after it", async () => {
+    const pkg = await loadRepoTemplate("report-audit-a4");
+    const m = pkg.manifest;
+    expect(m.kind).toBe("report");
+    expect(m.channel).toBeUndefined();
+    expect(m.layouts.map((l) => l.role)).toEqual([
+      "cover",
+      "section",
+      "finding",
+      "problem",
+      "next_steps",
+      "method",
+    ]);
+    const pages = m.layouts.map(sampleSlide);
+    const all = buildCarouselSchema(m);
+    expect(
+      all.safeParse([pages[0], pages[1], pages[2], pages[2], pages[5], pages[4]]).success,
+    ).toBe(true);
+    expect(all.safeParse([pages[1], pages[0], pages[2], pages[3]]).success).toBe(false);
   });
 });
 

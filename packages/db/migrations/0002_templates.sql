@@ -4,7 +4,7 @@ CREATE TABLE "templates" (
 	"version" text NOT NULL,
 	"name" text NOT NULL,
 	"kind" text NOT NULL,
-	"channel" text NOT NULL,
+	"channel" text,
 	"format" text NOT NULL,
 	"origin" text DEFAULT 'agency' NOT NULL,
 	"client_id" uuid,

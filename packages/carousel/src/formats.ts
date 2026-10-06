@@ -4,6 +4,7 @@ import { z } from "zod";
  * Output formats in release order (spec "Formati"): Instagram 4:5 and the LinkedIn
  * document ship in the MVP; the others are v1 and become usable as soon as a
  * template declares them. Sizes are real pixels: the renderer never scales.
+ * The report formats (audit, A4 and 16:9) are paged PDFs with no social channel.
  */
 export const formatIds = [
   "ig_4x5",
@@ -12,6 +13,8 @@ export const formatIds = [
   "stories_9x16",
   "fb_4x5",
   "tiktok_photo",
+  "report_a4",
+  "report_16x9",
 ] as const;
 export type FormatId = (typeof formatIds)[number];
 export const formatIdSchema = z.enum(formatIds);
@@ -30,7 +33,10 @@ export type SafeZone = z.infer<typeof safeZoneSchema>;
 export interface FormatSpec {
   id: FormatId;
   label: string;
-  channel: Channel;
+  /** Social channel; null for reports, which are not published anywhere. */
+  channel: Channel | null;
+  /** What the template is: a social carousel or a paged report. */
+  kind: "carousel" | "report";
   width: number;
   height: number;
   /** Used in export file names: `{cliente}_{contenuto}_v{n}_{fileSlug}_{nn}.png`. */
@@ -39,6 +45,8 @@ export interface FormatSpec {
   safeZone: SafeZone;
   /** The PDF is the deliverable (LinkedIn document); for the others it's the PNGs. */
   primaryOutput: "png" | "pdf";
+  /** Print resolution: the PDF page is sized in points from it (A4 at 150 dpi = 595×842 pt). */
+  dpi?: number;
   phase: "mvp" | "v1";
 }
 
@@ -47,6 +55,7 @@ export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
     id: "ig_4x5",
     label: "Instagram 4:5",
     channel: "instagram",
+    kind: "carousel",
     width: 1080,
     height: 1350,
     fileSlug: "ig-4x5",
@@ -58,6 +67,7 @@ export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
     id: "linkedin_doc",
     label: "LinkedIn document",
     channel: "linkedin",
+    kind: "carousel",
     width: 1080,
     height: 1350,
     fileSlug: "linkedin-doc",
@@ -69,6 +79,7 @@ export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
     id: "ig_1x1",
     label: "Instagram 1:1",
     channel: "instagram",
+    kind: "carousel",
     width: 1080,
     height: 1080,
     fileSlug: "ig-1x1",
@@ -80,6 +91,7 @@ export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
     id: "stories_9x16",
     label: "Stories 9:16",
     channel: "instagram",
+    kind: "carousel",
     width: 1080,
     height: 1920,
     fileSlug: "stories-9x16",
@@ -92,6 +104,7 @@ export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
     id: "fb_4x5",
     label: "Facebook 4:5",
     channel: "facebook",
+    kind: "carousel",
     width: 1080,
     height: 1350,
     fileSlug: "fb-4x5",
@@ -103,6 +116,7 @@ export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
     id: "tiktok_photo",
     label: "TikTok foto",
     channel: "tiktok",
+    kind: "carousel",
     width: 1080,
     height: 1920,
     fileSlug: "tiktok-photo",
@@ -111,7 +125,40 @@ export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
     primaryOutput: "png",
     phase: "v1",
   },
+  report_a4: {
+    id: "report_a4",
+    label: "Report A4",
+    channel: null,
+    kind: "report",
+    width: 1240,
+    height: 1754,
+    fileSlug: "report-a4",
+    // 15 mm margins at 150 dpi, a little more at the bottom for the footer.
+    safeZone: { top: 88, right: 88, bottom: 104, left: 88 },
+    primaryOutput: "pdf",
+    dpi: 150,
+    phase: "mvp",
+  },
+  report_16x9: {
+    id: "report_16x9",
+    label: "Report 16:9",
+    channel: null,
+    kind: "report",
+    width: 1920,
+    height: 1080,
+    fileSlug: "report-16x9",
+    safeZone: { top: 72, right: 96, bottom: 80, left: 96 },
+    primaryOutput: "pdf",
+    phase: "mvp",
+  },
 };
+
+/** PDF page size in points: real print size when the format has a dpi, else 1 px = 1 pt. */
+export function pdfPageSize(id: FormatId): { width: number; height: number } {
+  const f = FORMATS[id];
+  const k = f.dpi ? 72 / f.dpi : 1;
+  return { width: f.width * k, height: f.height * k };
+}
 
 /** "Instagram 4:5 · 1080×1350" */
 export function describeFormat(id: FormatId): string {

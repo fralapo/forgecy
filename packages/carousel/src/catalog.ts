@@ -114,7 +114,7 @@ export async function importTemplate(input: ImportTemplateInput): Promise<Import
     version: m.version,
     name: m.name,
     kind: m.kind,
-    channel: m.channel,
+    channel: m.channel ?? null,
     format: m.format,
     origin: input.origin ?? "agency",
     manifest: m as unknown as Record<string, unknown>,

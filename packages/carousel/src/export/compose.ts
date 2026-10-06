@@ -13,7 +13,10 @@ export interface PdfMeta {
   date: Date;
 }
 
-/** One page per slide, each page exactly the slide's pixel size, holding the same PNG as the export. */
+/**
+ * One page per slide holding the same PNG as the export. The page size is in points:
+ * the slide's pixel size, or the real print size for formats with a dpi (see pdfPageSize).
+ */
 export async function pngsToPdf(
   pngs: Uint8Array[],
   width: number,

@@ -1,5 +1,5 @@
 {
-  "id": "24e0c6f4-0432-47b3-8047-9351863edaed",
+  "id": "955a8ede-bba9-42a2-97cd-36b17b0f097a",
   "prevId": "06cc9bc3-448f-449d-8e55-0ec9c8209f2a",
   "version": "7",
   "dialect": "postgresql",
@@ -1365,7 +1365,7 @@
           "name": "channel",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "format": {
           "name": "format",

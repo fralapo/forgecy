@@ -6,6 +6,9 @@ Template iniziali nel formato canonico di Forgecy: una cartella per template con
 | --------------------- | ------------------------- | ------ |
 | `editoriale-ig-4x5`   | Instagram 4:5 · 1080×1350 | 8      |
 | `editoriale-linkedin` | Documento LinkedIn · PDF  | 8      |
+| `report-audit-a4`     | Report A4 · PDF 150 dpi   | 6      |
+
+`report-audit-a4` è il report d'audit (`kind: "report"`, senza `channel`): copertina, sezione, evidenza con prova e raccomandazione, problema, prossimi passi, metodo. Il PDF esce in formato A4 reale; esiste anche il formato `report_16x9` (1920×1080) per report da proiettare.
 
 Regole per scrivere un template:
 

@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { channels, FORMATS, formatIdSchema, safeZoneSchema } from "./formats";
 
-/** Slide roles of the agency catalog (spec: "Ruoli delle slide"). */
+/**
+ * Slide roles of the agency catalog (spec: "Ruoli delle slide"). The last five are the
+ * pages of a report (audit): section opener, finding, problem, next steps, method.
+ */
 export const slideRoles = [
   "cover",
   "text",
@@ -11,6 +14,11 @@ export const slideRoles = [
   "problem_solution",
   "comparison",
   "cta",
+  "section",
+  "finding",
+  "problem",
+  "next_steps",
+  "method",
 ] as const;
 export type SlideRole = (typeof slideRoles)[number];
 
@@ -23,6 +31,11 @@ export const slideRoleLabels: Record<SlideRole, string> = {
   problem_solution: "Problema-soluzione",
   comparison: "Confronto",
   cta: "CTA",
+  section: "Sezione",
+  finding: "Evidenza",
+  problem: "Problema",
+  next_steps: "Prossimi passi",
+  method: "Metodo",
 };
 
 /** Semantic Brand Identity color roles a template variable can bind to. */
@@ -41,6 +54,9 @@ export const fontRoles = ["heading", "body"] as const;
 export type FontRole = (typeof fontRoles)[number];
 
 const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+export const MAX_CAROUSEL_SLIDES = 20;
+export const MAX_REPORT_PAGES = 40;
+
 export const hexColorSchema = z.string().regex(HEX, "Colore esadecimale (#RRGGBB)");
 
 /** CSS custom property the template uses, e.g. `--fc-bg`. */
@@ -141,14 +157,15 @@ export const templateManifestSchema = z
     description: z.string().max(240).default(""),
     version: z.string().regex(/^\d+\.\d+\.\d+$/, "Versione semver (es. 1.0.0)"),
     kind: z.enum(["carousel", "report"]).default("carousel"),
-    channel: z.enum(channels),
+    /** Required for social formats, absent for reports. */
+    channel: z.enum(channels).optional(),
     format: formatIdSchema,
     width: z.number().int(),
     height: z.number().int(),
     slides: z.object({
-      min: z.number().int().min(1).max(20),
-      max: z.number().int().min(1).max(20),
-      default: z.number().int().min(1).max(20),
+      min: z.number().int().min(1).max(MAX_REPORT_PAGES),
+      max: z.number().int().min(1).max(MAX_REPORT_PAGES),
+      default: z.number().int().min(1).max(MAX_REPORT_PAGES),
     }),
     safeZone: safeZoneSchema.optional(),
     styles: z.array(relPath).min(1).max(8),
@@ -176,11 +193,23 @@ export const templateManifestSchema = z
   })
   .superRefine((t, ctx) => {
     const f = FORMATS[t.format];
-    if (f.channel !== t.channel)
+    if (f.kind !== t.kind)
+      ctx.addIssue({
+        code: "custom",
+        path: ["kind"],
+        message: `Il formato ${f.label} è per ${f.kind === "report" ? "report" : "caroselli"}: kind "${f.kind}"`,
+      });
+    if (f.channel && f.channel !== t.channel)
       ctx.addIssue({
         code: "custom",
         path: ["channel"],
         message: `Il formato ${f.label} è del canale ${f.channel}`,
+      });
+    if (!f.channel && t.channel)
+      ctx.addIssue({
+        code: "custom",
+        path: ["channel"],
+        message: `Il formato ${f.label} non ha un canale: togli "channel"`,
       });
     if (t.width !== f.width || t.height !== f.height)
       ctx.addIssue({
@@ -189,11 +218,12 @@ export const templateManifestSchema = z
         message: `${f.label} è ${f.width}×${f.height} px`,
       });
     const { min, max, default: def } = t.slides;
-    if (!(min <= def && def <= max))
+    const limit = t.kind === "report" ? MAX_REPORT_PAGES : MAX_CAROUSEL_SLIDES;
+    if (!(min <= def && def <= max && max <= limit))
       ctx.addIssue({
         code: "custom",
         path: ["slides"],
-        message: "Numero di slide: deve valere minimo ≤ default ≤ massimo ≤ 20",
+        message: `Numero di ${t.kind === "report" ? "pagine" : "slide"}: deve valere minimo ≤ default ≤ massimo ≤ ${limit}`,
       });
     const ids = new Set<string>();
     t.layouts.forEach((l, i) => {
