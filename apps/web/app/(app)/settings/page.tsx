@@ -7,8 +7,10 @@ import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { env } from "@/lib/env";
 import { requireUser } from "@/lib/session";
+import { getTheme } from "@/lib/theme";
 import { LanguageForm } from "./language-form";
 import { NewUserForm } from "./new-user-form";
+import { ThemeForm } from "./theme-form";
 import { WorkerCheck } from "./worker-check";
 
 export async function generateMetadata() {
@@ -48,6 +50,7 @@ export default async function SettingsPage() {
             languages={languages}
             browserLanguage={languages.find((l) => l.code === browser)?.name ?? browser}
           />
+          <ThemeForm current={await getTheme()} />
         </Card>
         <Card className="p-6">
           <h2 className="text-heading-sm text-fg">{t("instance.title")}</h2>

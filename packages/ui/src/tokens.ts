@@ -363,6 +363,14 @@ export function buildTokensCss(tree: TokenTree): string {
       [["color-scheme", "dark"], ...dark.flatMap((t) => tokenDecls(tokens, t))],
       "Semantic tokens: dark theme (v1)",
     ),
+    "/* No theme chosen: follow the operating system */\n@media (prefers-color-scheme: dark) {\n" +
+      block(":root:not([data-theme])", [
+        ["color-scheme", "dark"],
+        ...dark.flatMap((t) => tokenDecls(tokens, t)),
+      ])
+        .replace(/^/gm, "  ")
+        .replace(/ +$/gm, "") +
+      "}\n",
     block(
       ":root,\n[data-theme]",
       [
