@@ -10,6 +10,8 @@ x-app-env: &app-env
     MEDIA_ROOT: /data/media
     FORGECY_DATA_DIR: /data
     FORGECY_BASE_URL: ${FORGECY_BASE_URL:-http://localhost:3000}
+    # Dates in the interface and in exports are shown in the agency's time zone.
+    TZ: ${FORGECY_TIMEZONE:-Europe/Rome}
 
 services:
   postgres:
@@ -39,6 +41,22 @@ services:
       timeout: 3s
       retries: 20
 
+  # Docker creates ./data as root; web and worker run as uid 1000 and write ./data/media.
+  data-init:
+    image: forgecy-migrate:local
+    user: "0:0"
+    command:
+      [
+        "sh",
+        "-c",
+        "mkdir -p /data/media && chown 1000:1000 /data && chown -R 1000:1000 /data/media",
+      ]
+    volumes:
+      - ./data:/data
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: "no"
+
   migrate:
     build: { context: ., dockerfile: docker/Dockerfile, target: migrate }
     image: forgecy-migrate:local
@@ -57,7 +75,7 @@ services:
     volumes:
       - ./data:/data
     depends_on:
-      migrate: { condition: service_completed_successfully }
+      data-init: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
 
   worker:
@@ -68,7 +86,7 @@ services:
     volumes:
       - ./data:/data
     depends_on:
-      migrate: { condition: service_completed_successfully }
+      data-init: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
 
   mailpit:

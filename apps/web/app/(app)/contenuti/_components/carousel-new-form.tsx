@@ -9,6 +9,8 @@ import {
 } from "@forgecy/content/client";
 import type { getNewCarouselOptions } from "@forgecy/content";
 import { Button, Input, Label } from "@forgecy/ui";
+import type { Route } from "next";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { createCarouselAction } from "../actions";
@@ -69,7 +71,9 @@ export function CarouselNewForm({
   const [briefText, setBriefText] = useState(plan?.briefText ?? "");
 
   const rubrics = options.rubrics.filter((r) => !pillarId || r.pillarId === pillarId);
-  const disabled = !options.brandPublished || templates.length === 0;
+  // Every carousel speaks to at least one audience segment of the published Brand Identity.
+  const disabled =
+    !options.brandPublished || templates.length === 0 || options.audience.length === 0;
 
   function pickTemplate(key: string) {
     setTemplateKey(key);
@@ -276,7 +280,11 @@ export function CarouselNewForm({
           <legend className="mb-2 text-label text-fg">Pubblico</legend>
           {options.audience.length === 0 ? (
             <p className="text-body-sm text-fg-muted">
-              La Brand Identity pubblicata non ha segmenti di pubblico.
+              La Brand Identity pubblicata non ha segmenti di pubblico: aggiungine almeno uno in{" "}
+              <Link href={`/brand/${slug}/strategy` as Route} className="text-link underline">
+                Brand Identity › Strategia
+              </Link>{" "}
+              e pubblica la nuova versione per creare caroselli.
             </p>
           ) : (
             <div className="flex flex-wrap gap-4">

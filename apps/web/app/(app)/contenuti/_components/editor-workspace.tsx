@@ -88,6 +88,8 @@ export interface EditorRef {
 type SaveState = "saved" | "dirty" | "saving" | "error" | "conflict";
 
 const AUTOSAVE_MS = 1200;
+/** Node groups «3000» and the browser «3.000» for it-IT: force grouping so hydration matches. */
+const countFormat = new Intl.NumberFormat("it-IT", { useGrouping: "always" });
 
 /** Italian message of an action error, by its code. */
 export function actionMessage(r: Extract<ActionResult, { ok: false }>): string {
@@ -437,7 +439,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               captionLen > limit ? "text-body-sm text-error" : "text-body-sm text-fg-muted"
             }
           >
-            {captionLen.toLocaleString("it-IT")} / {limit.toLocaleString("it-IT")} caratteri (
+            {countFormat.format(captionLen)} / {countFormat.format(limit)} caratteri (
             {props.channel === "linkedin" ? "LinkedIn" : "Instagram"})
           </p>
         </div>
