@@ -3,7 +3,7 @@
 import type { CommercialUse, ImageProvider } from "@forgecy/content";
 import { Button, Input, Label } from "@forgecy/ui";
 import { Save } from "lucide-react";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { setCommercialUseAction, type CommercialUseState } from "../actions";
 import { controlClass } from "../../contenuti/_components/action-button";
 
@@ -25,6 +25,15 @@ export function CommercialUseForm({
     setCommercialUseAction,
     {},
   );
+  // Controlled fields: React resets a form after its action runs, which would wipe the
+  // values when the server rejects them.
+  const [values, setValues] = useState(initial);
+  const bind = (field: keyof typeof initial) => ({
+    name: field,
+    value: values[field],
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+      setValues((v) => ({ ...v, [field]: e.target.value })),
+  });
   const id = (field: string) => `cu-${provider}-${field}`;
   return (
     <details className="rounded-md border border-subtle p-4">
@@ -35,12 +44,7 @@ export function CommercialUseForm({
         <input type="hidden" name="provider" value={provider} />
         <div className="grid gap-2">
           <Label htmlFor={id("status")}>Stato</Label>
-          <select
-            id={id("status")}
-            name="status"
-            defaultValue={initial.status}
-            className={controlClass}
-          >
+          <select id={id("status")} {...bind("status")} className={controlClass}>
             {statusOptions.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -50,32 +54,20 @@ export function CommercialUseForm({
         </div>
         <div className="grid gap-2">
           <Label htmlFor={id("terms")}>Indirizzo dei termini consultati</Label>
-          <Input
-            id={id("terms")}
-            name="termsUrl"
-            type="url"
-            defaultValue={initial.termsUrl}
-            placeholder="https://"
-          />
+          <Input id={id("terms")} type="url" {...bind("termsUrl")} placeholder="https://" />
           <p className="text-body-sm text-fg-muted">Obbligatorio per «Verificato».</p>
         </div>
         <div className="grid gap-2">
           <Label htmlFor={id("date")}>Data di consultazione</Label>
-          <Input
-            id={id("date")}
-            name="consultedOn"
-            type="date"
-            defaultValue={initial.consultedOn}
-          />
+          <Input id={id("date")} type="date" {...bind("consultedOn")} />
         </div>
         <div className="grid gap-2">
           <Label htmlFor={id("note")}>Nota</Label>
           <textarea
             id={id("note")}
-            name="note"
             rows={3}
             maxLength={500}
-            defaultValue={initial.note}
+            {...bind("note")}
             className={controlClass}
           />
         </div>
