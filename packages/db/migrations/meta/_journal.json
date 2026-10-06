@@ -113,6 +113,13 @@
       "when": 1791304324330,
       "tag": "0017_mcp_connections",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791305783223,
+      "tag": "0018_automations",
+      "breakpoints": true
     }
   ]
 }

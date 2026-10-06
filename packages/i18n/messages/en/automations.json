@@ -1,0 +1,33 @@
+{
+  "errors": {
+    "notFound": "This automation does not exist or you cannot see it.",
+    "runNotFound": "This run does not exist or you cannot see it.",
+    "clientNotEligible": "Automations need an active client with a published Brand Identity and AI allowed.",
+    "failedFinal": "This automation failed for good. Duplicate it to start again.",
+    "runningReadOnly": "The automation is running. Pause it before changing the configuration.",
+    "planItemInBriefs": "An automation from briefs cannot hold items of the plan.",
+    "revConflict": "Someone else saved this automation in the meantime. Reload to see their changes.",
+    "deleteRan": "Only a draft that never ran can be deleted. Its carousels point to it.",
+    "alreadyRunning": "The automation already has a run in progress.",
+    "notReady": "The automation cannot start yet: complete the items marked as incomplete.",
+    "nothingToRetry": "The last run has no failed items to retry.",
+    "notRunning": "The automation is not running.",
+    "notPaused": "The automation is not paused.",
+    "budgetExhausted": "The monthly AI budget is used up. Raise it or wait for next month.",
+    "confirmCost": "The estimated cost uses most of the remaining budget. Confirm it to start.",
+    "policy": {
+      "noAi": "The client's AI policy does not allow AI.",
+      "localOnlyNoModel": "The client allows only local models and none is configured."
+    }
+  },
+  "status": {
+    "policyChanged": "Failed: the client's AI policy changed to no AI.",
+    "budgetPaused": "Paused: the monthly AI budget ran out."
+  },
+  "itemErrors": {
+    "starterInactive": "The person who started the run is no longer active.",
+    "noTemplate": "No published template for this format.",
+    "interrupted": "The worker stopped while this item was running.",
+    "invalidItem": "The item's configuration could not be read."
+  }
+}
