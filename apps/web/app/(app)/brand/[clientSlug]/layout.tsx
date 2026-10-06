@@ -7,6 +7,7 @@ import { BrandTabs } from "../_components/brand-tabs";
 import { startDraftAction, submitAction } from "../actions";
 import { brandPath, formatDate, versionStatusLabel, versionStatusVariant } from "../_lib/labels";
 import { loadBrand, openConflicts, userNames } from "../_lib/server";
+import { plural } from "@/lib/plural";
 
 export default async function BrandLayout({
   children,
@@ -22,18 +23,18 @@ export default async function BrandLayout({
   const names = await userNames([draft?.lastEditedBy, draft?.createdBy]);
   const base = brandPath(client.slug);
   const tabs = [
-    { href: base, label: "Panoramica" },
-    { href: `${base}/strategy`, label: "Strategia" },
-    { href: `${base}/verbal`, label: "Verbale" },
+    { href: base, label: "Overview" },
+    { href: `${base}/strategy`, label: "Strategy" },
+    { href: `${base}/verbal`, label: "Verbal" },
     { href: `${base}/visual`, label: "Visual" },
-    { href: `${base}/content`, label: "Contenuti" },
+    { href: `${base}/content`, label: "Content" },
     {
       href: `${base}/sources`,
-      label: "Fonti",
+      label: "Sources",
       count: Object.values(ws.sourceCounts).reduce((a, b) => a + (b ?? 0), 0),
     },
-    { href: `${base}/proposals`, label: "Proposte", count: ws.proposalCounts.proposed ?? 0 },
-    { href: `${base}/versions`, label: "Versioni" },
+    { href: `${base}/proposals`, label: "Proposals", count: ws.proposalCounts.proposed ?? 0 },
+    { href: `${base}/versions`, label: "Versions" },
   ];
   const editor = draft ? names.get(draft.lastEditedBy ?? draft.createdBy ?? "") : undefined;
 
@@ -46,9 +47,9 @@ export default async function BrandLayout({
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="font-display text-heading-lg text-fg">Brand Identity · {client.name}</h1>
           {published ? (
-            <Badge variant="success">v{published.number} · Pubblicata</Badge>
+            <Badge variant="success">v{published.number} · Published</Badge>
           ) : (
-            <Badge>Nessuna versione pubblicata</Badge>
+            <Badge>No published version</Badge>
           )}
         </div>
       </header>
@@ -58,21 +59,23 @@ export default async function BrandLayout({
           {draft ? (
             <>
               <Badge variant={versionStatusVariant[draft.status]}>
-                Bozza v{draft.number} · {versionStatusLabel[draft.status]}
+                Draft v{draft.number} · {versionStatusLabel[draft.status]}
               </Badge>
               <span className="text-fg-muted">
-                Ultima modifica: {editor ?? "—"}, {formatDate(draft.updatedAt)}
+                Last edited: {editor ?? "—"}, {formatDate(draft.updatedAt)}
               </span>
             </>
           ) : (
             <span className="text-fg-muted">
               {published
-                ? `Nessuna bozza aperta: si lavora sulla v${published.number} pubblicata in sola lettura.`
-                : "Nessuna bozza: inizia compilando un blocco o importando un brand book."}
+                ? `No open draft: published v${published.number} is shown read-only.`
+                : "No draft: start by filling in a block or importing a brand book."}
             </span>
           )}
           {conflicts.length ? (
-            <Badge variant="warning">{conflicts.length} conflitti aperti</Badge>
+            <Badge variant="warning">
+              {plural(conflicts.length, "open conflict", "open conflicts")}
+            </Badge>
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -81,7 +84,7 @@ export default async function BrandLayout({
               action={startDraftAction.bind(null, client.slug, client.id)}
               variant="secondary"
             >
-              {published ? `Apri la bozza v${published.number + 1}` : "Inizia la bozza"}
+              {published ? `Open draft v${published.number + 1}` : "Start the draft"}
             </ActionButton>
           ) : null}
           {draft?.status === "draft" ? (
@@ -94,7 +97,7 @@ export default async function BrandLayout({
               })}
               variant="secondary"
             >
-              Invia in revisione
+              Send for review
             </ActionButton>
           ) : null}
           {draft ? (
@@ -102,7 +105,7 @@ export default async function BrandLayout({
               href={`${base}/versions/${draft.number}/approve` as Route}
               className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-body-sm font-medium text-primary-foreground"
             >
-              Apri approvazione
+              Open approval
             </Link>
           ) : null}
         </div>
@@ -112,9 +115,9 @@ export default async function BrandLayout({
           role="status"
           className="mb-6 rounded-md border border-warning-fill bg-surface px-4 py-3 text-body-sm text-fg"
         >
-          La bozza v{draft.number} è in revisione: puoi ancora modificarla; ogni modifica va riletta
-          prima di pubblicare.
-          {draft.reviewComment ? ` Commento: ${draft.reviewComment}` : ""}
+          Draft v{draft.number} is in review: you can still edit it; every change must be reread
+          before publishing.
+          {draft.reviewComment ? ` Comment: ${draft.reviewComment}` : ""}
         </p>
       ) : null}
       {draft?.status === "draft" && draft.reviewComment ? (
@@ -122,7 +125,7 @@ export default async function BrandLayout({
           role="status"
           className="mb-6 rounded-md border border-subtle bg-surface px-4 py-3 text-body-sm text-fg"
         >
-          Rimandata con commento: {draft.reviewComment}
+          Sent back with comment: {draft.reviewComment}
         </p>
       ) : null}
       {!published ? (
@@ -130,7 +133,7 @@ export default async function BrandLayout({
           role="status"
           className="mb-6 rounded-md border border-error-fill bg-surface px-4 py-3 text-body-sm text-fg"
         >
-          Nessuna versione pubblicata: i caroselli di {client.name} non si possono generare.
+          No published version: carousels for {client.name} can’t be generated.
         </p>
       ) : null}
       {children}

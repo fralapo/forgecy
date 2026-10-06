@@ -51,14 +51,14 @@ export function ReviewComments({
             <li key={c.id} className="space-y-1 rounded-md border border-subtle p-2 text-body-sm">
               <p className="whitespace-pre-line text-fg">{c.body}</p>
               <p className="text-fg-muted">
-                {c.authorName ?? "Utente rimosso"} · {formatDate(c.createdAt)}
+                {c.authorName ?? "Removed user"} · {formatDate(c.createdAt)}
               </p>
               <ActionButton
                 size="sm"
                 variant="ghost"
                 action={() => resolveCommentAction({ ...base, commentId: c.id })}
               >
-                Segna come risolto
+                Mark as resolved
               </ActionButton>
             </li>
           ))}
@@ -66,11 +66,11 @@ export function ReviewComments({
       ) : null}
       {resolved.length ? (
         <details className="text-body-sm">
-          <summary className="cursor-pointer text-fg-muted">{resolved.length} risolti</summary>
+          <summary className="cursor-pointer text-fg-muted">{resolved.length} resolved</summary>
           <ul className="mt-2 space-y-1">
             {resolved.map((c) => (
               <li key={c.id} className="text-fg-muted">
-                <span className="line-through">{c.body}</span> · {c.authorName ?? "Utente rimosso"}
+                <span className="line-through">{c.body}</span> · {c.authorName ?? "Removed user"}
               </li>
             ))}
           </ul>
@@ -91,20 +91,20 @@ export function ReviewComments({
           }}
         >
           <Label htmlFor={fieldId} className="sr-only">
-            Commento su {label}
+            Comment on {label}
           </Label>
           <textarea
             id={fieldId}
             rows={2}
             maxLength={2000}
             className={controlClass}
-            placeholder={`Commento su ${label}`}
+            placeholder={`Comment on ${label}`}
             value={body}
             onChange={(e) => setBody(e.target.value)}
           />
           <Button type="submit" size="sm" variant="secondary" disabled={pending || !body.trim()}>
             <MessageSquare aria-hidden />
-            Commenta
+            Comment
           </Button>
           {error ? (
             <p role="alert" className="text-body-sm text-error">

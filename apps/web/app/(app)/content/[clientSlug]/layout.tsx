@@ -18,23 +18,23 @@ export default async function ContentLayout({
   const { db, user, client } = await loadClient(clientSlug);
   const brand = await getPublishedBrandIdentity(db, user.actor, client.id);
   const tabs = [
-    { href: contentPath(client.slug), label: "Strategia" },
-    { href: planPath(client.slug), label: "Piano" },
-    { href: carouselsPath(client.slug), label: "Caroselli" },
-    { href: libraryPath(client.slug), label: "Libreria" },
+    { href: contentPath(client.slug), label: "Strategy" },
+    { href: planPath(client.slug), label: "Plan" },
+    { href: carouselsPath(client.slug), label: "Carousels" },
+    { href: libraryPath(client.slug), label: "Library" },
   ];
   return (
     <>
       <header className="mb-6">
         <p className="text-body-sm text-fg-muted">
-          <Link href="/content">Contenuti</Link> › {client.name}
+          <Link href="/content">Content</Link> › {client.name}
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-heading-lg text-fg">Contenuti · {client.name}</h1>
+          <h1 className="font-display text-heading-lg text-fg">Content · {client.name}</h1>
           {brand ? (
             <Badge variant="success">Brand Identity v{brand.number}</Badge>
           ) : (
-            <Badge variant="warning">Brand Identity non pubblicata</Badge>
+            <Badge variant="warning">Brand Identity not published</Badge>
           )}
         </div>
       </header>
@@ -44,8 +44,8 @@ export default async function ContentLayout({
           role="status"
           className="mb-6 rounded-md border border-warning-fill bg-surface px-4 py-3 text-body-sm text-fg"
         >
-          I caroselli richiedono una Brand Identity pubblicata.{" "}
-          <Link href={`/brand/${client.slug}` as Route}>Apri la Brand Identity</Link>
+          Carousels require a published Brand Identity.{" "}
+          <Link href={`/brand/${client.slug}` as Route}>Open the Brand Identity</Link>
         </p>
       ) : null}
       {children}

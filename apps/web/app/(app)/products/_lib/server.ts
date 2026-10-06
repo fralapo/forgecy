@@ -65,8 +65,7 @@ export async function cancelImportJob(jobId: string) {
 
 export type { ActionResult } from "./types";
 
-const PERMISSION_TEXT =
-  "Gli agenti AI possono solo proporre: approvare e archiviare spetta a una persona.";
+const PERMISSION_TEXT = "AI agents can only propose: approving and archiving is up to a person.";
 
 /** Runs a catalog operation for a server action and turns domain errors into a message. */
 export async function attempt(fn: () => Promise<string | void>): Promise<ActionResult> {

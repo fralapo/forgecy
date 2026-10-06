@@ -37,7 +37,7 @@ export function useSave() {
       if (!r.ok) {
         setError(
           r.code === "CONFLICT-DRAFT-REV"
-            ? `${r.error} Ricarica la pagina per vedere la versione aggiornata.`
+            ? `${r.error} Reload the page to see the updated version.`
             : r.error,
         );
         return;
@@ -123,14 +123,14 @@ function FrequencyField({
   const id = useId();
   return (
     <fieldset className="space-y-1">
-      <legend className="text-label text-fg">Frequenza</legend>
+      <legend className="text-label text-fg">Frequency</legend>
       <div className="flex gap-2">
         <Input
           id={id}
           type="number"
           min={1}
           max={60}
-          aria-label="Numero di contenuti"
+          aria-label="Number of posts"
           placeholder="—"
           value={value?.count ?? ""}
           onChange={(e) => {
@@ -141,7 +141,7 @@ function FrequencyField({
           }}
         />
         <select
-          aria-label="Periodo"
+          aria-label="Period"
           className={controlClass}
           value={value?.unit ?? "week"}
           disabled={!value}
@@ -149,8 +149,8 @@ function FrequencyField({
             value && onChange({ ...value, unit: e.target.value as Frequency["unit"] })
           }
         >
-          <option value="week">a settimana</option>
-          <option value="month">al mese</option>
+          <option value="week">per week</option>
+          <option value="month">per month</option>
         </select>
       </div>
     </fieldset>
@@ -163,7 +163,7 @@ const lines = (s: string) =>
     .map((x) => x.trim())
     .filter(Boolean);
 
-/** Button that opens the form in place; the form closes on save or «Annulla». */
+/** Button that opens the form in place; the form closes on save or “Cancel”. */
 export function Toggle({
   label,
   edit,
@@ -188,11 +188,11 @@ export function Actions({ pending, onCancel }: { pending: boolean; onCancel(): v
     <div className="flex flex-wrap gap-2">
       <Button type="submit" disabled={pending}>
         <Save aria-hidden />
-        Salva
+        Save
       </Button>
       <Button type="button" variant="secondary" disabled={pending} onClick={onCancel}>
         <X aria-hidden />
-        Annulla
+        Cancel
       </Button>
     </div>
   );
@@ -234,7 +234,7 @@ function PillarFields({
   const set = (patch: Partial<PillarInputRaw>) => setV((cur) => ({ ...cur, ...patch }));
   return (
     <form
-      aria-label={id ? `Modifica pilastro ${initial?.name ?? ""}` : "Nuovo pilastro"}
+      aria-label={id ? `Edit pillar ${initial?.name ?? ""}` : "New pillar"}
       className={formClass}
       onSubmit={(e) => {
         e.preventDefault();
@@ -243,7 +243,7 @@ function PillarFields({
       }}
     >
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Nome">
+        <Field label="Name">
           {(fid) => (
             <Input
               id={fid}
@@ -264,7 +264,7 @@ function PillarFields({
                 set({ funnel: e.target.value ? funnelSchema.parse(e.target.value) : null })
               }
             >
-              <option value="">Non indicato</option>
+              <option value="">Not specified</option>
               {Object.entries(funnelLabels).map(([k, l]) => (
                 <option key={k} value={k}>
                   {l}
@@ -273,7 +273,7 @@ function PillarFields({
             </select>
           )}
         </Field>
-        <Field label="Obiettivo">
+        <Field label="Goal">
           {(fid) => (
             <Input
               id={fid}
@@ -294,7 +294,7 @@ function PillarFields({
             />
           )}
         </Field>
-        <Field label="Emozione">
+        <Field label="Emotion">
           {(fid) => (
             <Input
               id={fid}
@@ -304,7 +304,7 @@ function PillarFields({
             />
           )}
         </Field>
-        <Field label="Temi" hint="Uno per riga.">
+        <Field label="Themes" hint="One per line.">
           {(fid) => (
             <textarea
               id={fid}
@@ -315,7 +315,7 @@ function PillarFields({
             />
           )}
         </Field>
-        <Field label="Da evitare" hint="Uno per riga.">
+        <Field label="To avoid" hint="One per line.">
           {(fid) => (
             <textarea
               id={fid}
@@ -328,13 +328,13 @@ function PillarFields({
         </Field>
       </div>
       <Checks
-        legend="Pubblico"
+        legend="Audience"
         options={options.audience.map((a) => ({ value: a.id, label: a.name }))}
         value={v.audienceIds ?? []}
         onChange={(audienceIds) => set({ audienceIds })}
       />
       <Checks
-        legend="Prodotti collegati"
+        legend="Linked products"
         options={options.products.map((p) => ({ value: p.id, label: p.name }))}
         value={v.productIds ?? []}
         onChange={(productIds) => set({ productIds })}
@@ -396,7 +396,7 @@ function RubricFields({
   );
   return (
     <form
-      aria-label={id ? `Modifica rubrica ${initial?.name ?? ""}` : "Nuova rubrica"}
+      aria-label={id ? `Edit rubric ${initial?.name ?? ""}` : "New rubric"}
       className={formClass}
       onSubmit={(e) => {
         e.preventDefault();
@@ -404,7 +404,7 @@ function RubricFields({
       }}
     >
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Nome">
+        <Field label="Name">
           {(fid) => (
             <Input
               id={fid}
@@ -415,7 +415,7 @@ function RubricFields({
             />
           )}
         </Field>
-        <Field label="Pilastro">
+        <Field label="Pillar">
           {(fid) => (
             <select
               id={fid}
@@ -440,7 +440,7 @@ function RubricFields({
               value={v.templateKey ?? ""}
               onChange={(e) => set({ templateKey: e.target.value || null })}
             >
-              <option value="">Nessuno</option>
+              <option value="">None</option>
               {options.templates.map((t) => (
                 <option key={t.key} value={t.key}>
                   {t.name}
@@ -449,18 +449,18 @@ function RubricFields({
             </select>
           )}
         </Field>
-        {text("hookFormula", "Formula dell'hook")}
-        {text("hookExample", "Esempio di hook")}
+        {text("hookFormula", "Hook formula")}
+        {text("hookExample", "Hook example")}
         {text("cta", "Call to action")}
       </div>
       <Checks
-        legend="Canali"
+        legend="Channels"
         options={channelOptions}
         value={v.channels ?? []}
         onChange={(channels) => set({ channels: channels as ContentChannel[] })}
       />
       <Checks
-        legend="Prodotti collegati"
+        legend="Linked products"
         options={options.products.map((p) => ({ value: p.id, label: p.name }))}
         value={v.productIds ?? []}
         onChange={(productIds) => set({ productIds })}

@@ -19,26 +19,26 @@ import { catalogPage, getStorage, imageUrl } from "../../_lib/server";
 import { NotAClient } from "../not-a-client";
 import { ProductView, type ProductViewData } from "./product-view";
 
-export const metadata = { title: "Prodotto" };
+export const metadata = { title: "Product" };
 
 const historyLabels: Record<string, string> = {
-  "product.create": "Creato",
-  "product.create_from_import": "Creato dall'import",
-  "product.update": "Modificato",
-  "product.approve": "Approvato",
-  "product.reject": "Rifiutato",
-  "product.archive": "Archiviato",
-  "product.restore": "Ripristinato",
-  "product.to_draft": "Riportato in bozza",
-  "product.duplicate": "Duplicato",
-  "product.sensitive_accept": "Campo sensibile accettato",
-  "product.field_proposal_accepted": "Proposta di campo accettata",
-  "product.field_proposal_rejected": "Proposta di campo rifiutata",
-  "product.image_add": "Immagine aggiunta",
-  "product.image_primary": "Immagine principale cambiata",
-  "product.image_unlink": "Immagine scollegata",
-  "product.image_approve": "Immagine approvata",
-  "product.image_alt": "Testo alternativo modificato",
+  "product.create": "Created",
+  "product.create_from_import": "Created from import",
+  "product.update": "Edited",
+  "product.approve": "Approved",
+  "product.reject": "Rejected",
+  "product.archive": "Archived",
+  "product.restore": "Restored",
+  "product.to_draft": "Moved back to draft",
+  "product.duplicate": "Duplicated",
+  "product.sensitive_accept": "Sensitive field accepted",
+  "product.field_proposal_accepted": "Field proposal accepted",
+  "product.field_proposal_rejected": "Field proposal rejected",
+  "product.image_add": "Image added",
+  "product.image_primary": "Primary image changed",
+  "product.image_unlink": "Image unlinked",
+  "product.image_approve": "Image approved",
+  "product.image_alt": "Alt text edited",
 };
 
 export default async function ProductPage({
@@ -111,7 +111,7 @@ export default async function ProductPage({
     history: detail.history.map(({ e, userName }) => ({
       id: String(e.id),
       label: historyLabels[e.action] ?? e.action,
-      who: userName ?? (e.actor.startsWith("agent") ? "Brand Analyst" : "Sistema"),
+      who: userName ?? (e.actor.startsWith("agent") ? "Brand Analyst" : "System"),
       when: longDate(e.at),
       field:
         typeof e.meta?.field === "string"
@@ -123,7 +123,7 @@ export default async function ProductPage({
       ...(detail.sourceImport
         ? [
             {
-              label: `Import del ${longDate(detail.sourceImport.createdAt)}`,
+              label: `Import of ${longDate(detail.sourceImport.createdAt)}`,
               href: paths.review(client.slug, detail.sourceImport.id),
               external: false,
             },
@@ -152,9 +152,9 @@ export default async function ProductPage({
     <>
       <Breadcrumb
         items={[
-          { label: "Clienti", href: "/clients" },
+          { label: "Clients", href: "/clients" },
           { label: client.name, href: "/products" },
-          { label: "Prodotti", href: paths.catalog(client.slug) },
+          { label: "Products", href: paths.catalog(client.slug) },
           { label: product.name },
         ]}
       />

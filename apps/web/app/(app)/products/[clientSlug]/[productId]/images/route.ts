@@ -6,7 +6,7 @@ import { actingUser, getStorage, importErrorResponse } from "../../../_lib/serve
 
 export const dynamic = "force-dynamic";
 
-/** «Aggiungi immagine»: raw body upload, streamed to a temp file with a size cap. */
+/** “Add image”: raw body upload, streamed to a temp file with a size cap. */
 export const POST = withUser(
   async (
     user,
@@ -18,7 +18,7 @@ export const POST = withUser(
     const client = await db.query.clients.findFirst({ where: eq(clients.slug, clientSlug) });
     if (!client || !request.body) return NextResponse.json({ error: "not_found" }, { status: 404 });
     await loadCatalogClient(db, client.id);
-    const fileName = decodeURIComponent(request.headers.get("x-file-name") ?? "immagine").slice(
+    const fileName = decodeURIComponent(request.headers.get("x-file-name") ?? "image").slice(
       0,
       300,
     );

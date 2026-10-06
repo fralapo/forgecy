@@ -10,7 +10,7 @@ import { FindingCard } from "../../_components/finding-card";
 import { sectionContext, sourceLinks, toView } from "../../_lib/findings";
 import { formatDateTime } from "../../_lib/labels";
 
-export const metadata = { title: "Audit · Competitor" };
+export const metadata = { title: "Audit · Competitors" };
 
 export default async function CompetitorPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -33,13 +33,13 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
     <div className="flex flex-col gap-8">
       <Card>
         <CardHeader>
-          <CardTitle>Lista dei competitor</CardTitle>
+          <CardTitle>Competitor list</CardTitle>
           <CardDescription>
             {audit.competitorsSkipped
-              ? "Hai scelto di proseguire senza competitor: il report non avrà questa sezione."
+              ? "You chose to continue without competitors: the report will not have this section."
               : confirmed
-                ? `Lista confermata il ${formatDateTime(audit.competitorsConfirmedAt)}. Di ogni sito si leggono fino a ${AUDIT_LIMITS.maxCompetitorPages} pagine: home, servizi e contatti.`
-                : `Fino a ${AUDIT_LIMITS.maxCompetitors} competitor diretti. Le proposte dell'AI vanno controllate: conferma la lista quando è giusta.`}
+                ? `List confirmed on ${formatDateTime(audit.competitorsConfirmedAt)}. Up to ${AUDIT_LIMITS.maxCompetitorPages} pages are read from each website: home, services and contacts.`
+                : `Up to ${AUDIT_LIMITS.maxCompetitors} direct competitors. The AI's proposals need checking: confirm the list when it is right.`}
           </CardDescription>
         </CardHeader>
         {view.competitors.length ? (
@@ -66,8 +66,8 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
         ) : (
           <p className="text-body-md text-fg-muted">
             {aiAllowed
-              ? "Nessun competitor ancora. Lo Strategist li propone dopo la lettura del sito, oppure aggiungili tu."
-              : "Aggiungi i competitor che conosci."}
+              ? "No competitors yet. The Strategist proposes them after the website is read, or add them yourself."
+              : "Add the competitors you know."}
           </p>
         )}
         {!readOnly ? (
@@ -87,7 +87,7 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
                   action={reopenCompetitorListAction.bind(null, audit.id)}
                   icon={<Pencil aria-hidden />}
                 >
-                  Modifica lista
+                  Edit list
                 </ActionButton>
               ) : (
                 <>
@@ -95,16 +95,16 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
                     action={confirmCompetitorListAction.bind(null, audit.id, false)}
                     icon={<ListChecks aria-hidden />}
                     variant="primary"
-                    confirm="Confermare la lista? Le proposte ancora aperte diventano confermate e i loro siti vengono letti."
+                    confirm="Confirm the list? Proposals still open become confirmed and their websites are read."
                   >
-                    Conferma lista
+                    Confirm list
                   </ActionButton>
                   <ActionButton
                     action={confirmCompetitorListAction.bind(null, audit.id, true)}
                     icon={<SkipForward aria-hidden />}
                     variant="ghost"
                   >
-                    Prosegui senza competitor
+                    Continue without competitors
                   </ActionButton>
                 </>
               )}
@@ -116,26 +116,26 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
       {companies.length ? (
         <Card className="overflow-x-auto">
           <CardHeader>
-            <CardTitle>A confronto</CardTitle>
+            <CardTitle>Side by side</CardTitle>
             <CardDescription>
-              Offerta e tono letti sulle pagine; la frase è citata parola per parola.
+              Offer and tone read on the pages; the sentence is quoted word for word.
             </CardDescription>
           </CardHeader>
           <table className="w-full text-left text-body-sm">
-            <caption className="sr-only">Offerta e tono di prospect e competitor</caption>
+            <caption className="sr-only">Offer and tone of the prospect and competitors</caption>
             <thead className="border-b border-subtle text-label text-fg-muted">
               <tr>
                 <th scope="col" className="px-3 py-2 font-medium">
-                  Azienda
+                  Company
                 </th>
                 <th scope="col" className="px-3 py-2 font-medium">
-                  Offerta principale
+                  Main offer
                 </th>
                 <th scope="col" className="px-3 py-2 font-medium">
-                  Tono
+                  Tone
                 </th>
                 <th scope="col" className="px-3 py-2 font-medium">
-                  CTA principale
+                  Main CTA
                 </th>
               </tr>
             </thead>
@@ -162,7 +162,7 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-heading-md text-fg">Osservazioni sui competitor</h2>
+          <h2 className="font-display text-heading-md text-fg">Competitor observations</h2>
           {!readOnly ? (
             <AddFinding auditId={audit.id} channel="website" areas={["competitors"]} />
           ) : null}
@@ -174,8 +174,8 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
         ) : (
           <p className="text-body-md text-fg-muted">
             {confirmed
-              ? "Le osservazioni arrivano dopo la lettura dei siti dei competitor."
-              : "Conferma la lista per avviare il confronto."}
+              ? "Observations arrive after the competitors’ websites are read."
+              : "Confirm the list to start the comparison."}
           </p>
         )}
       </section>

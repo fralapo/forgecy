@@ -407,8 +407,8 @@ export function checkContrast(
 
 export const WCAG = { text: 4.5, largeText: 3, nonText: 3 } as const;
 
-/** Formats a ratio the Italian way, e.g. `5,2:1`. Gates must compare the raw value, never this string. */
-export const formatRatio = (ratio: number) => `${ratio.toFixed(1).replace(".", ",")}:1`;
+/** Formats a ratio for display, e.g. `5.2:1`. Gates must compare the raw value, never this string. */
+export const formatRatio = (ratio: number) => `${ratio.toFixed(1)}:1`;
 
 /** Hex of a color token, aliases resolved. */
 export function tokenHex(tree: TokenTree | Map<string, FlatToken>, path: string): string {
@@ -429,49 +429,49 @@ const textOnSurfaces = (fg: string, label: string): ContrastPair[] =>
     fg,
     bg,
     min: WCAG.text,
-    label: `${label} su ${bg === "bg.app" ? "sfondo app" : "superficie"}`,
+    label: `${label} on ${bg === "bg.app" ? "app background" : "surface"}`,
   }));
 const nonTextOnSurfaces = (fg: string, label: string): ContrastPair[] =>
   surfaces.map((bg) => ({
     fg,
     bg,
     min: WCAG.nonText,
-    label: `${label} su ${bg === "bg.app" ? "sfondo app" : "superficie"}`,
+    label: `${label} on ${bg === "bg.app" ? "app background" : "surface"}`,
   }));
 
 /** Brand Guard: semantic pairs that must pass in every theme (paths relative to `semantic.<theme>`). */
 export const BRAND_GUARD_PAIRS: readonly ContrastPair[] = [
-  ...textOnSurfaces("text.primary", "Testo principale"),
-  ...textOnSurfaces("text.secondary", "Testo secondario"),
+  ...textOnSurfaces("text.primary", "Primary text"),
+  ...textOnSurfaces("text.secondary", "Secondary text"),
   ...textOnSurfaces("text.link", "Link"),
-  ...textOnSurfaces("status.success.text", "Testo di successo"),
-  ...textOnSurfaces("status.warning.text", "Testo di avviso"),
-  ...textOnSurfaces("status.error.text", "Testo di errore"),
-  ...nonTextOnSurfaces("border.control", "Bordo dei controlli"),
-  ...nonTextOnSurfaces("focus.ring", "Anello di focus"),
+  ...textOnSurfaces("status.success.text", "Success text"),
+  ...textOnSurfaces("status.warning.text", "Warning text"),
+  ...textOnSurfaces("status.error.text", "Error text"),
+  ...nonTextOnSurfaces("border.control", "Control border"),
+  ...nonTextOnSurfaces("focus.ring", "Focus ring"),
   {
     fg: "action.primary.text",
     bg: "action.primary.bg",
     min: WCAG.text,
-    label: "Pulsante primario",
+    label: "Primary button",
   },
   {
     fg: "action.primary.text",
     bg: "action.primary.bg-pressed",
     min: WCAG.text,
-    label: "Pulsante primario premuto",
+    label: "Primary button pressed",
   },
   {
     fg: "action.danger.text",
     bg: "action.danger.bg",
     min: WCAG.text,
-    label: "Pulsante distruttivo",
+    label: "Destructive button",
   },
   {
     fg: "accent.on-highlight",
     bg: "accent.highlight",
     min: WCAG.text,
-    label: "Testo su evidenziazione",
+    label: "Text on highlight",
   },
 ];
 

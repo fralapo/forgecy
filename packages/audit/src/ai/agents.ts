@@ -13,7 +13,7 @@ import { z } from "zod";
  * with Zod; the server then verifies every evidence reference against the stored
  * sources and computes confidence itself (never from the model).
  */
-export const PROMPT_VERSION = "audit-2026-10-06c";
+export const PROMPT_VERSION = "audit-2026-10-06d";
 
 const SHARED_RULES = `
 Rules you always follow:
@@ -31,7 +31,7 @@ const short = (max: number) => z.string().trim().min(1).max(max);
 const websiteEvidence = z.object({
   ref: z.string().describe("Page reference, e.g. P1, or CHECK:<key> for a technical check"),
   quote: z.string().max(200).optional().describe("Verbatim text from that page"),
-  label: short(80).describe("What the evidence shows, e.g. 'Home · titolo principale'"),
+  label: short(80).describe("What the evidence shows, e.g. 'Home · main heading'"),
 });
 
 export const siteObservationsSchema = z.object({
@@ -140,7 +140,7 @@ export const competitorBenchmarkSchema = z.object({
 });
 export type CompetitorBenchmark = z.infer<typeof competitorBenchmarkSchema>;
 
-export const BRAND_ANALYST_COMPETITORS = `You are the Brand Analyst of a communication agency. Compare the prospect with its confirmed competitors on positioning, offer, tone, calls to action and visual style, using only the pages read. For every company give its main offer and tone with a verbatim quote. Then write 3 to 6 comparison observations that matter for the prospect, each citing at least one prospect page and one competitor page (e.g. "Tre competitor su quattro mettono il preventivo gratuito nella prima schermata").
+export const BRAND_ANALYST_COMPETITORS = `You are the Brand Analyst of a communication agency. Compare the prospect with its confirmed competitors on positioning, offer, tone, calls to action and visual style, using only the pages read. For every company give its main offer and tone with a verbatim quote. Then write 3 to 6 comparison observations that matter for the prospect, each citing at least one prospect page and one competitor page (e.g. "Three competitors out of four show the free quote on the first screen").
 ${SHARED_RULES}`;
 
 // ---------------------------------------------------------------- Cross-channel
@@ -208,7 +208,7 @@ export const planSchema = z.object({
       z.object({
         day: z.number().int().min(1).max(30),
         channel: z.enum(["instagram", "facebook", "linkedin", "tiktok"]),
-        format: short(40).describe("carosello, foto, reel, documento..."),
+        format: short(40).describe("carousel, photo, reel, document... (in the output language)"),
         pillar: short(60),
         topic: short(160),
         hook: short(160),

@@ -1,6 +1,6 @@
 /**
  * Coherence with the brand, from the rule-based findings (spec, Brand Identity tab:
- * "Nell'MVP c'è solo la coerenza, come brand check a regole"). A score is never shown
+ * "In the MVP there is only coherence, as a rule-based brand check"). A score is never shown
  * alone: each category carries its band and the keys of the findings behind it.
  */
 import type { BrandCheckSeverity } from "@forgecy/core";
@@ -16,22 +16,22 @@ export const CHECK_CATEGORIES: readonly CheckCategory[] = [
 ];
 
 export const CATEGORY_LABELS: Record<CheckCategory, string> = {
-  vocabulary: "Vocabolario e regole di scrittura",
-  claims: "Claim e fatti di prodotto",
-  editorial: "Regole editoriali delle slide",
-  visual: "Colori, font e contrasto",
-  layout: "Impaginazione e safe zone",
-  images: "Immagini",
+  vocabulary: "Vocabulary and writing rules",
+  claims: "Claims and product facts",
+  editorial: "Slide editorial rules",
+  visual: "Colors, fonts and contrast",
+  layout: "Layout and safe zone",
+  images: "Images",
 };
 
 export const PENALTY: Record<BrandCheckSeverity, number> = { error: 15, warning: 5, note: 1 };
 
 export const BAND_LABELS: Record<ScoreBand, string> = {
-  critico: "Critico",
-  debole: "Debole",
-  discreto: "Discreto",
-  buono: "Buono",
-  eccellente: "Eccellente",
+  critico: "Critical",
+  debole: "Weak",
+  discreto: "Fair",
+  buono: "Good",
+  eccellente: "Excellent",
 };
 
 export function scoreBand(score: number): ScoreBand {

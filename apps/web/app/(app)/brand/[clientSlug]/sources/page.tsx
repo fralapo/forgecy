@@ -12,7 +12,7 @@ import {
 } from "../../_lib/labels";
 import { loadBrand, sourcesFor } from "../../_lib/server";
 
-export const metadata = { title: "Fonti · Brand Identity" };
+export const metadata = { title: "Sources · Brand Identity" };
 
 const size = (n: number | null) =>
   n === null
@@ -57,24 +57,24 @@ export default async function SourcesPage({
       <Card className="overflow-hidden p-0">
         {sources.length === 0 ? (
           <p className="p-6 text-body-md text-fg-muted">
-            Nessuna fonte. Importa il brand book del cliente o aggiungi un link.
+            No sources yet. Import the client’s brand book or add a link.
           </p>
         ) : (
           <table className="w-full text-left text-body-sm">
-            <caption className="sr-only">Fonti della Brand Identity</caption>
+            <caption className="sr-only">Brand Identity sources</caption>
             <thead className="border-b border-subtle text-label text-fg-muted">
               <tr>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Fonte
+                  Source
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Stato
+                  Status
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Aggiunta
+                  Added
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  <span className="sr-only">Azioni</span>
+                  <span className="sr-only">Actions</span>
                 </th>
               </tr>
             </thead>
@@ -94,7 +94,7 @@ export default async function SourcesPage({
                     <span className="block text-fg-muted">
                       {sourceKindLabel[s.kind]}
                       {s.size ? ` · ${size(s.size)}` : ""}
-                      {s.pageCount ? ` · ${s.pageCount} parti lette` : ""}
+                      {s.pageCount ? ` · ${s.pageCount} parts read` : ""}
                     </span>
                     {s.statusDetail ? (
                       <span className="block text-fg-muted">{s.statusDetail}</span>
@@ -118,20 +118,20 @@ export default async function SourcesPage({
                             sourceId: s.id,
                           })}
                         >
-                          Rileggi
+                          Read again
                         </ActionButton>
                       ) : null}
                       <ActionButton
                         variant="ghost"
                         size="sm"
-                        confirm="Rimuovere la fonte? Le proposte in attesa che la citano diventano superate. Il file e la cronologia restano."
+                        confirm="Remove the source? Pending proposals that cite it become superseded. The file and the history are kept."
                         action={removeSourceAction.bind(null, {
                           slug: client.slug,
                           clientId: client.id,
                           sourceId: s.id,
                         })}
                       >
-                        Rimuovi
+                        Remove
                       </ActionButton>
                     </div>
                   </td>
@@ -143,18 +143,18 @@ export default async function SourcesPage({
       </Card>
       <div className="space-y-6">
         <Card className="p-6">
-          <h2 className="text-heading-sm text-fg">Importa brand book</h2>
+          <h2 className="text-heading-sm text-fg">Import brand book</h2>
           <p className="mt-1 text-body-sm text-fg-muted">
             {noAi
-              ? "Le funzioni AI sono spente per questo cliente: estraiamo solo testi, colori e font, senza proposte interpretate."
-              : "Testi, colori e font diventano proposte con la pagina di provenienza. Nulla entra nella bozza senza una persona."}
+              ? "AI features are off for this client: we only extract text, colors and fonts, without interpreted proposals."
+              : "Text, colors and fonts become proposals with the page they come from. Nothing enters the draft without a person."}
           </p>
           <div className="mt-4">
             <UploadSourceForm slug={client.slug} open={sp.import === "1"} />
           </div>
         </Card>
         <Card className="p-6">
-          <h2 className="text-heading-sm text-fg">Aggiungi link o nota</h2>
+          <h2 className="text-heading-sm text-fg">Add a link or note</h2>
           <div className="mt-4">
             <LinkSourceForm slug={client.slug} clientId={client.id} />
           </div>

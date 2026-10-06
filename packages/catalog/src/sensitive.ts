@@ -9,12 +9,13 @@ export const claimKinds = ["health", "environmental", "certification", "warranty
 export type ClaimKind = (typeof claimKinds)[number];
 
 export const claimLabels: Record<ClaimKind, string> = {
-  health: "Claim di salute",
-  environmental: "Claim ambientale",
-  certification: "Certificazione",
-  warranty: "Garanzia",
+  health: "Health claim",
+  environmental: "Environmental claim",
+  certification: "Certification",
+  warranty: "Warranty",
 };
 
+// Keywords match Italian and English claims in client product texts.
 const KEYWORDS: Record<ClaimKind, RegExp> = {
   health:
     /\b(cura|curativ\w*|guarisc\w*|terapeutic\w*|dermatologicamente|clinicamente|testat[oaie] clinicamente|ipoallergenic\w*|anti[- ]?(age|aging|batteric\w*|infiammator\w*|cellulite|rughe)|antibatteric\w*|previene|prevenzione|benefic\w* per la salute|medical\w*|medico|immunit\w*|detox|dimagr\w*|brucia ?grassi|senza glutine|gluten[- ]free|vegan\w*|biologic\w*|bio\b|naturale al 100|100% natural\w*|hypoallergenic|clinically|dermatologically|cures?|heals?|prevents?|antibacterial|organic)\b/i,

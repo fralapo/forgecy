@@ -88,7 +88,7 @@ export const brandIdentityVersions = pgTable(
     publishedBy: uuid("published_by").references(() => users.id, { onDelete: "restrict" }),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
-    /** Open checks the approver confirmed with "Ho visto" at publication time. */
+    /** Open checks the approver confirmed with "I’ve seen it" at publication time. */
     acknowledgedChecks: jsonb("acknowledged_checks").$type<string[]>().notNull().default([]),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -201,7 +201,7 @@ export const brandIdentityProposals = pgTable(
     reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "restrict" }),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
     reviewNote: text("review_note"),
-    /** Value actually written when accepted with edits ("Accetta con modifiche"). */
+    /** Value actually written when accepted with edits ("Accept with edits"). */
     editedValue: jsonb("edited_value").$type<unknown>(),
     staleReason: text("stale_reason"),
     createdAt: createdAt(),

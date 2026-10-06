@@ -16,10 +16,10 @@ const docx = () =>
     "[Content_Types].xml": strToU8("<Types/>"),
     "word/document.xml": strToU8(
       `<w:document><w:body>
-<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Chi siamo</w:t></w:r></w:p>
-<w:p><w:r><w:t xml:space="preserve">Torrefazione dal 1950, </w:t></w:r><w:r><w:t>Milano &amp; Torino.</w:t></w:r></w:p>
-<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Colori</w:t></w:r></w:p>
-<w:p><w:r><w:t>Blu Rossi #0044CC</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>About us</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Roasting since 1950, </w:t></w:r><w:r><w:t>Milan &amp; Turin.</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Colors</w:t></w:r></w:p>
+<w:p><w:r><w:t>Rossi Blue #0044CC</w:t></w:r></w:p>
 </w:body></w:document>`,
     ),
     "word/theme/theme1.xml": strToU8(THEME),
@@ -29,7 +29,7 @@ const pptx = () =>
   zipSync({
     "ppt/presentation.xml": strToU8("<p:presentation/>"),
     "ppt/slides/slide2.xml": strToU8(
-      "<p:sld><a:p><a:r><a:t>Tono di voce</a:t></a:r></a:p></p:sld>",
+      "<p:sld><a:p><a:r><a:t>Tone of voice</a:t></a:r></a:p></p:sld>",
     ),
     "ppt/slides/slide1.xml": strToU8("<p:sld><a:p><a:r><a:t>Brand book</a:t></a:r></a:p></p:sld>"),
     "ppt/theme/theme1.xml": strToU8(THEME),
@@ -106,7 +106,7 @@ describe("detectImportFile", () => {
     });
     expect(detectImportFile({ name: "x.pdf", mime: "", bytes: new Uint8Array() })).toEqual({
       ok: false,
-      message: "Il file è vuoto.",
+      message: "The file is empty.",
     });
     expect(
       detectImportFile({
@@ -121,12 +121,12 @@ describe("detectImportFile", () => {
 describe("extractFile", () => {
   it("splits a DOCX by headings and reads theme colors and fonts", async () => {
     const r = await extractFile("docx", docx(), "book.docx");
-    expect(r.pages.map((p) => p.locator)).toEqual(["Sezione 1: Chi siamo", "Sezione 2: Colori"]);
-    expect(r.pages[0]!.text).toContain("Torrefazione dal 1950, Milano & Torino.");
+    expect(r.pages.map((p) => p.locator)).toEqual(["Section 1: About us", "Section 2: Colors"]);
+    expect(r.pages[0]!.text).toContain("Roasting since 1950, Milan & Turin.");
     expect(r.colors.map((c) => c.hex)).toContain("#0044CC");
     expect(r.fonts).toEqual([
-      { family: "Playfair Display", role: "display", weights: [], locator: "Tema del documento" },
-      { family: "Inter", role: "body", weights: [], locator: "Tema del documento" },
+      { family: "Playfair Display", role: "display", weights: [], locator: "Document theme" },
+      { family: "Inter", role: "body", weights: [], locator: "Document theme" },
     ]);
   });
 
@@ -134,7 +134,7 @@ describe("extractFile", () => {
     const r = await extractFile("pptx", pptx(), "deck.pptx");
     expect(r.pages).toEqual([
       { locator: "Slide 1", text: "Brand book" },
-      { locator: "Slide 2", text: "Tono di voce" },
+      { locator: "Slide 2", text: "Tone of voice" },
     ]);
   });
 
@@ -145,8 +145,8 @@ describe("extractFile", () => {
       "logo.svg",
     );
     expect(svg.colors[0]).toMatchObject({ hex: "#FF0000", count: 2 });
-    const md = await extractFile("text", strToU8("Intro\n# Valori\nOnestà"), "note.md");
-    expect(md.pages.map((p) => p.locator)).toEqual(["Inizio", "Sezione: Valori"]);
+    const md = await extractFile("text", strToU8("Intro\n# Values\nHonesty"), "note.md");
+    expect(md.pages.map((p) => p.locator)).toEqual(["Start", "Section: Values"]);
   });
 
   it("names fonts from the name table, else from the file name", async () => {
@@ -171,10 +171,10 @@ describe("chunkPages", () => {
 describe("colorName", () => {
   it("takes the words right before the value", async () => {
     const { colorName } = await import("../src/import/candidates");
-    const ctx = "Colori Blu Rossi #0044CC usato per titoli. Crema #F5EBDC per gli sfondi.";
-    expect(colorName(ctx, "#F5EBDC", "x")).toBe("Crema");
-    expect(colorName(ctx, "#0044CC", "x")).toBe("Colori Blu Rossi");
-    expect(colorName("Bianco: #fff", "#FFFFFF", "x")).toBe("Bianco");
-    expect(colorName("#123456", "#123456", "colore-1")).toBe("colore-1");
+    const ctx = "Colors Rossi Blue #0044CC used for headings. Cream #F5EBDC for backgrounds.";
+    expect(colorName(ctx, "#F5EBDC", "x")).toBe("Cream");
+    expect(colorName(ctx, "#0044CC", "x")).toBe("Colors Rossi Blue");
+    expect(colorName("White: #fff", "#FFFFFF", "x")).toBe("White");
+    expect(colorName("#123456", "#123456", "color-1")).toBe("color-1");
   });
 });

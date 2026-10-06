@@ -28,13 +28,12 @@ export const POST = withUser(
     const { clientSlug } = await ctx.params;
     const db = getDb();
     const client = await db.query.clients.findFirst({ where: eq(clients.slug, clientSlug) });
-    if (!client) throw new ForgecyError("not_found", "Cliente non trovato");
+    if (!client) throw new ForgecyError("not_found", "Client not found");
     assertCan(user.actor, "edit_draft", client.id);
 
     const form = await request.formData();
     const file = form.get("file");
-    if (!(file instanceof File))
-      throw new ForgecyError("validation", "Scegli un file da importare.");
+    if (!(file instanceof File)) throw new ForgecyError("validation", "Choose a file to import.");
     const kindValue = String(form.get("kind") ?? "brand_book");
     const kind = (fileKinds as readonly string[]).includes(kindValue)
       ? (kindValue as (typeof fileKinds)[number])

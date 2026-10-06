@@ -269,7 +269,7 @@ export function toGuardContent(input: {
   };
 }
 
-/** Open findings that need «Ho visto» before approval (errors and warnings, not notes). */
+/** Open findings that need “Seen” before approval (errors and warnings, not notes). */
 export function findingsToAcknowledge(report: GuardReport | null | undefined): GuardFinding[] {
   return (report?.findings ?? []).filter(
     (f) => f.status === "open" && (f.severity === "error" || f.severity === "warning"),

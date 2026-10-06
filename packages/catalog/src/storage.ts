@@ -38,10 +38,7 @@ export async function spoolToTemp(
         for await (const chunk of source) {
           size += chunk.length;
           if (size > maxBytes)
-            throw new ImportError(
-              "IMPORT-TOO-LARGE",
-              "Il file supera la dimensione massima ammessa.",
-            );
+            throw new ImportError("IMPORT-TOO-LARGE", "The file exceeds the maximum allowed size.");
           if (head.length < 4096) head.push(...chunk.subarray(0, 4096 - head.length));
           hash.update(chunk);
           yield chunk;
@@ -54,7 +51,7 @@ export async function spoolToTemp(
     if (err instanceof Error && "code" in err && err.code === "ENOSPC")
       throw new ImportError(
         "DISK-FULL",
-        "Spazio su disco esaurito: i file non sono stati salvati. Avvisa chi gestisce il server di Forgecy.",
+        "Disk space is full: the files were not saved. Tell whoever runs the Forgecy server.",
       );
     throw err;
   }
@@ -113,7 +110,7 @@ export async function readStored(
     size += b.length;
     if (size > maxBytes) {
       stream.destroy();
-      throw new ImportError("IMPORT-TOO-LARGE", "Il file supera la dimensione massima ammessa.");
+      throw new ImportError("IMPORT-TOO-LARGE", "The file exceeds the maximum allowed size.");
     }
     chunks.push(b);
   }

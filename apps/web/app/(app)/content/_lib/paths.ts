@@ -1,4 +1,4 @@
-/** URLs of the content module (Italian route names, like the rest of the app). */
+/** URLs of the content module (English route names, like the rest of the app). */
 export const contentPath = (slug: string) => `/content/${slug}`;
 export const planPath = (slug: string) => `/content/${slug}/plan`;
 export const carouselsPath = (slug: string) => `/content/${slug}/carousels`;
@@ -7,11 +7,11 @@ export const carouselPath = (slug: string, id: string) => `/content/${slug}/caro
 
 export function formatDate(d: Date | string | null | undefined): string {
   if (!d) return "—";
-  return new Intl.DateTimeFormat("it-IT", { dateStyle: "medium", timeStyle: "short" }).format(
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(
     new Date(d),
   );
 }
 
 export function formatCost(microUsd: number): string {
-  return `${(microUsd / 1_000_000).toLocaleString("it-IT", { style: "currency", currency: "USD", maximumFractionDigits: 3 })}`;
+  return `${(microUsd / 1_000_000).toLocaleString("en-GB", { style: "currency", currency: "USD", maximumFractionDigits: 3 })}`;
 }

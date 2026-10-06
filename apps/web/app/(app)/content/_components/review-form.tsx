@@ -13,6 +13,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import { decideAssetAction, decideReviewAction, type ActionResult } from "../actions";
 import { ActionButton, controlClass } from "./action-button";
 import { Thumb } from "./editor-ai";
+import { plural } from "@/lib/plural";
 
 const NOTE_MIN = 3;
 
@@ -33,7 +34,7 @@ export interface ReviewGuard {
 }
 
 /** Guard findings point at a slide by its position in the carousel (0-based). */
-const slideLabel = (slide: number | null) => (slide === null ? "Carosello" : `Slide ${slide + 1}`);
+const slideLabel = (slide: number | null) => (slide === null ? "Carousel" : `Slide ${slide + 1}`);
 
 function groupBySlide(findings: GuardFinding[]) {
   const groups = new Map<number | null, GuardFinding[]>();
@@ -44,15 +45,15 @@ function groupBySlide(findings: GuardFinding[]) {
 function errorText(r: Extract<ActionResult, { ok: false }>) {
   switch (r.code) {
     case "SELF-APPROVAL-NOTE":
-      return "Stai approvando un tuo lavoro: scrivi una nota per chi verrà dopo.";
+      return "You’re approving your own work: write a note for whoever comes next.";
     case "CHECKS-BLOCKING":
-      return "Ci sono problemi bloccanti: vanno risolti prima dell'approvazione.";
+      return "There are blocking issues: they must be fixed before approval.";
     case "CHECKS-UNACKNOWLEDGED":
-      return "Conferma «Ho visto» su ogni avviso.";
+      return "Confirm “I’ve seen it” on every warning.";
     case "VERSION-CHANGED":
-      return "Il carosello è cambiato dopo l'invio: ricarica la pagina.";
+      return "The carousel changed after it was submitted: reload the page.";
     case "PERM-DENIED":
-      return "Non hai il permesso per questa decisione.";
+      return "You don’t have permission for this decision.";
     default:
       return r.error;
   }
@@ -140,7 +141,7 @@ export function ReviewForm({
         onChange={(e) => toggle(k, e.target.checked)}
       />
       <label htmlFor={`seen-${k}`} className="text-fg">
-        <span className="text-warning">Ho visto:</span> {children}
+        <span className="text-warning">I’ve seen it:</span> {children}
       </label>
     </li>
   );
@@ -150,7 +151,7 @@ export function ReviewForm({
       {errors.length || guardBlocking.length ? (
         <section className="space-y-2" aria-labelledby="blocking-title">
           <h3 id="blocking-title" className="text-heading-sm text-error">
-            Problemi bloccanti
+            Blocking issues
           </h3>
           <ul className="list-disc space-y-1 pl-5 text-body-sm text-fg">
             {errors.map((c) => (
@@ -168,10 +169,10 @@ export function ReviewForm({
       {pendingImages.length ? (
         <section className="space-y-2" aria-labelledby="images-title">
           <h3 id="images-title" className="text-heading-sm text-fg">
-            Immagini da approvare
+            Images to approve
           </h3>
           <p className="text-body-sm text-fg-muted">
-            Il carosello usa immagini non ancora approvate: approvale o rimandalo indietro.
+            The carousel uses images that aren’t approved yet: approve them or send it back.
           </p>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {pendingImages.map((a) => (
@@ -180,10 +181,10 @@ export function ReviewForm({
                 {a.source === "ai" ? (
                   <Badge variant={a.commercialUse === "verified" ? "success" : "warning"}>
                     {a.commercialUse === "verified"
-                      ? "Uso commerciale verificato"
+                      ? "Commercial use verified"
                       : a.commercialUse === "rejected"
-                        ? "Uso commerciale rifiutato"
-                        : "Uso commerciale da verificare"}
+                        ? "Commercial use rejected"
+                        : "Commercial use to be verified"}
                   </Badge>
                 ) : null}
                 <div className="flex flex-wrap gap-1">
@@ -193,7 +194,7 @@ export function ReviewForm({
                       decideAssetAction({ slug, clientId, id: a.id, decision: "approved" })
                     }
                   >
-                    Approva
+                    Approve
                   </ActionButton>
                   <ActionButton
                     size="sm"
@@ -202,7 +203,7 @@ export function ReviewForm({
                       decideAssetAction({ slug, clientId, id: a.id, decision: "rejected" })
                     }
                   >
-                    Rifiuta
+                    Reject
                   </ActionButton>
                 </div>
               </li>
@@ -213,12 +214,12 @@ export function ReviewForm({
 
       <section className="space-y-2" aria-labelledby="warnings-title">
         <h3 id="warnings-title" className="text-heading-sm text-fg">
-          Controlli del modulo
+          Module checks
         </h3>
         {warnings.length ? (
           <ul className="space-y-2">{warnings.map((w) => seenBox(w.id, w.message))}</ul>
         ) : (
-          <p className="text-body-sm text-success">Nessun avviso.</p>
+          <p className="text-body-sm text-success">No warnings.</p>
         )}
       </section>
 
@@ -238,7 +239,7 @@ export function ReviewForm({
                     : "success"
               }
             >
-              Coerenza con il brand: {guardBandLabels[guard.band]}
+              Brand coherence: {guardBandLabels[guard.band]}
             </Badge>
           </div>
           {guardToSee.length ? (
@@ -251,12 +252,12 @@ export function ReviewForm({
                       f.key,
                       <>
                         <Badge variant={f.severity === "error" ? "error" : "warning"}>
-                          {f.severity === "error" ? "Errore" : "Avviso"}
+                          {f.severity === "error" ? "Error" : "Warning"}
                         </Badge>{" "}
-                        {f.slot ? <span className="text-fg-muted">«{f.slot}» · </span> : null}
+                        {f.slot ? <span className="text-fg-muted">“{f.slot}” · </span> : null}
                         {f.message}
                         {f.suggestion ? (
-                          <span className="block text-fg-muted">Suggerimento: {f.suggestion}</span>
+                          <span className="block text-fg-muted">Suggestion: {f.suggestion}</span>
                         ) : null}
                       </>,
                     ),
@@ -265,12 +266,12 @@ export function ReviewForm({
               </div>
             ))
           ) : (
-            <p className="text-body-sm text-success">Nessuna segnalazione aperta.</p>
+            <p className="text-body-sm text-success">No open findings.</p>
           )}
           {guard.notes.length ? (
             <details className="text-body-sm">
               <summary className="cursor-pointer text-fg-muted">
-                {guard.notes.length} note informative
+                {plural(guard.notes.length, "informational note", "informational notes")}
               </summary>
               <ul className="mt-2 space-y-1 text-fg">
                 {guard.notes.map((f) => (
@@ -283,7 +284,7 @@ export function ReviewForm({
           ) : null}
           {guard.notRun.length ? (
             <p className="text-body-sm text-fg-muted">
-              Controlli non eseguiti: {guard.notRun.map((n) => n.reason).join("; ")}
+              Checks not run: {guard.notRun.map((n) => n.reason).join("; ")}
             </p>
           ) : null}
         </section>
@@ -291,11 +292,11 @@ export function ReviewForm({
 
       <section className="space-y-3 border-t border-subtle pt-4" aria-labelledby="decision-title">
         <h3 id="decision-title" className="text-heading-sm text-fg">
-          Decisione sulla versione {versionNumber}
+          Decision on version {versionNumber}
         </h3>
         <div className="space-y-1">
           <Label htmlFor="review-note">
-            {selfApproval ? "Nota (obbligatoria per approvare un tuo lavoro)" : "Nota"}
+            {selfApproval ? "Note (required to approve your own work)" : "Note"}
           </Label>
           <textarea
             id="review-note"
@@ -304,11 +305,11 @@ export function ReviewForm({
             className={controlClass}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Per «Richiedi modifiche» scrivi cosa va cambiato"
+            placeholder="For “Request changes”, write what needs to change"
           />
           {selfApproval ? (
             <p className="text-body-sm text-fg-muted">
-              Hai inviato tu questo carosello: per approvarlo scrivi una nota per la cronologia.
+              You submitted this carousel: to approve it, write a note for the history.
             </p>
           ) : null}
         </div>
@@ -325,7 +326,7 @@ export function ReviewForm({
             {error.reload ? (
               <Button variant="secondary" size="sm" onClick={() => router.refresh()}>
                 <RefreshCw aria-hidden />
-                Ricarica
+                Reload
               </Button>
             ) : null}
           </div>
@@ -334,7 +335,7 @@ export function ReviewForm({
           {canApprove ? (
             <Button disabled={pending || !canSubmitApproval} onClick={() => decide("approved")}>
               <BadgeCheck aria-hidden />
-              Approva la versione {versionNumber}
+              Approve version {versionNumber}
             </Button>
           ) : null}
           {canReview ? (
@@ -344,17 +345,17 @@ export function ReviewForm({
               onClick={() => decide("changes_requested")}
             >
               <MessageSquareWarning aria-hidden />
-              Richiedi modifiche
+              Request changes
             </Button>
           ) : null}
         </div>
         {canApprove && !canSubmitApproval ? (
           <p className="text-body-sm text-fg-muted">
             {blocked
-              ? "L'approvazione resta bloccata finché ci sono problemi bloccanti."
+              ? "Approval stays blocked while there are blocking issues."
               : !allSeen
-                ? "Conferma «Ho visto» su ogni avviso per approvare."
-                : "Scrivi la nota per approvare."}
+                ? "Confirm “I’ve seen it” on every warning to approve."
+                : "Write the note to approve."}
           </p>
         ) : null}
       </section>

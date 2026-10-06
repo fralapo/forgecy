@@ -1,11 +1,11 @@
 import type { BrandSourceKind, BrandSourceStatus, ConfidenceLevel } from "@forgecy/core";
 
 export const versionStatusLabel = {
-  draft: "Bozza",
-  in_review: "In revisione",
-  approved: "Approvata",
-  published: "Pubblicata",
-  archived: "Archiviata",
+  draft: "Draft",
+  in_review: "In review",
+  approved: "Approved",
+  published: "Published",
+  archived: "Archived",
 } as const;
 
 export const versionStatusVariant = {
@@ -17,45 +17,45 @@ export const versionStatusVariant = {
 } as const;
 
 export const proposalStatusLabel = {
-  proposed: "Proposta",
-  accepted: "Accettata",
-  rejected: "Rifiutata",
-  stale: "Superata",
+  proposed: "Proposed",
+  accepted: "Accepted",
+  rejected: "Rejected",
+  stale: "Superseded",
 } as const;
 
 export const confidenceLabel: Record<ConfidenceLevel, string> = {
-  high: "Confidenza alta",
-  medium: "Confidenza media",
-  low: "Confidenza bassa",
+  high: "High confidence",
+  medium: "Medium confidence",
+  low: "Low confidence",
 };
 
 export const confidenceVariant = { high: "success", medium: "warning", low: "error" } as const;
 
 export const sourceKindLabel: Record<BrandSourceKind, string> = {
   brand_book: "Brand book",
-  document: "Documento del cliente",
-  interview: "Intervista",
-  questionnaire: "Questionario",
-  client_approval: "Approvazione del cliente",
-  manual: "Nota manuale",
-  internal_feedback: "Feedback interno",
-  website: "Sito web",
+  document: "Client document",
+  interview: "Interview",
+  questionnaire: "Questionnaire",
+  client_approval: "Client approval",
+  manual: "Manual note",
+  internal_feedback: "Internal feedback",
+  website: "Website",
   instagram: "Instagram",
   facebook: "Facebook",
   linkedin: "LinkedIn",
   tiktok: "TikTok",
   screenshot: "Screenshot",
   audit: "Audit",
-  competitor: "Concorrente",
-  agent_observation: "Osservazione AI",
+  competitor: "Competitor",
+  agent_observation: "AI observation",
 };
 
 export const sourceStatusLabel: Record<BrandSourceStatus, string> = {
-  pending: "In coda",
-  extracting: "In lettura",
-  extracted: "Letta",
-  partial: "Letta in parte",
-  failed: "Non riuscita",
+  pending: "Queued",
+  extracting: "Reading",
+  extracted: "Read",
+  partial: "Partly read",
+  failed: "Failed",
 };
 
 export const sourceStatusVariant = {
@@ -74,7 +74,7 @@ export const agentRoleLabel: Record<string, string> = {
   reviewer: "Reviewer",
 };
 
-const dateFmt = new Intl.DateTimeFormat("it-IT", { dateStyle: "medium", timeStyle: "short" });
+const dateFmt = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" });
 export const formatDate = (d: Date | string | null | undefined) =>
   d ? dateFmt.format(typeof d === "string" ? new Date(d) : d) : "—";
 

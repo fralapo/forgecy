@@ -36,7 +36,7 @@ export interface Inspection {
   meta: FileMeta;
   code?: ImportErrorCode;
   message?: string;
-  /** Short validation text shown in the list ("Valido · 412 righe"). */
+  /** Short validation text shown in the list ("Valid · 412 rows"). */
   summary: string;
 }
 
@@ -45,7 +45,7 @@ export interface MappingProposalData extends ColumnMapping {
   savedName?: string;
 }
 
-const fmt = (n: number) => n.toLocaleString("it-IT");
+const fmt = (n: number) => n.toLocaleString("en-GB");
 
 /**
  * Validate and read the useful facts of one file: rows and headers of a sheet,
@@ -73,7 +73,7 @@ export async function inspectFile(
             woocommerce: isWooCommerceExport(sheet.headers),
             ...(csv ? { csv } : {}),
           },
-          summary: `Valido · ${fmt(sheet.rows.length)} righe`,
+          summary: `Valid · ${fmt(sheet.rows.length)} rows`,
         };
       }
       case "pdf": {
@@ -83,8 +83,8 @@ export async function inspectFile(
           valid: true,
           meta: { pages: pdf.totalPages, chars, textless: pdf.textless },
           summary: pdf.textless
-            ? `${fmt(pdf.totalPages)} pagine · senza testo leggibile (solo come fonte)`
-            : `Valido · ${fmt(pdf.totalPages)} pagine`,
+            ? `${fmt(pdf.totalPages)} pages · no readable text (source only)`
+            : `Valid · ${fmt(pdf.totalPages)} pages`,
         };
       }
       case "zip": {
@@ -111,30 +111,30 @@ export async function inspectFile(
         }
         counts.ignored += listing.skipped;
         const parts = [
-          counts.sheets ? `${fmt(counts.sheets)} fogli` : "",
-          counts.images ? `${fmt(counts.images)} immagini` : "",
+          counts.sheets ? `${fmt(counts.sheets)} sheets` : "",
+          counts.images ? `${fmt(counts.images)} images` : "",
           counts.pdfs ? `${fmt(counts.pdfs)} PDF` : "",
-          counts.texts ? `${fmt(counts.texts)} testi` : "",
+          counts.texts ? `${fmt(counts.texts)} texts` : "",
         ].filter(Boolean);
         return {
           valid: counts.entries - counts.ignored + listing.skipped > 0,
           meta: { archive: counts },
-          summary: `ZIP: ${parts.join(", ") || "nessun file utile"}${counts.ignored ? ` · ${fmt(counts.ignored)} file ignorati: formati non ammessi` : ""}`,
+          summary: `ZIP: ${parts.join(", ") || "no usable files"}${counts.ignored ? ` · ${fmt(counts.ignored)} files ignored: formats not allowed` : ""}`,
           ...(counts.entries - counts.ignored + listing.skipped > 0
             ? {}
             : {
                 code: "IMPORT-INVALID" as const,
-                message: `"${name}" non contiene file utilizzabili.`,
+                message: `"${name}" contains no usable files.`,
               }),
         };
       }
       case "txt":
       case "docx": {
         const text = await readTextDocument(source.data!, name, format);
-        return { valid: true, meta: { chars: text.length }, summary: "Valido · testo" };
+        return { valid: true, meta: { chars: text.length }, summary: "Valid · text" };
       }
       default:
-        return { valid: true, meta: {}, summary: "Valido" };
+        return { valid: true, meta: {}, summary: "Valid" };
     }
   } catch (err) {
     if (isImportError(err))
@@ -143,7 +143,7 @@ export async function inspectFile(
         meta: {},
         code: err.code,
         message: err.message,
-        summary: "Non valido",
+        summary: "Not valid",
       };
     throw err;
   }

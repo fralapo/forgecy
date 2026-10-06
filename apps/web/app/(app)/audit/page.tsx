@@ -9,20 +9,20 @@ import { auditStatusLabel, auditStatusVariant, formatDate } from "./_lib/labels"
 import { readDeps } from "./_lib/server";
 import { selectClass } from "./_lib/styles";
 
-export const metadata = { title: "Audit dei prospect" };
+export const metadata = { title: "Prospect audits" };
 
 export default async function AuditListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; stato?: string; archivio?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; archived?: string }>;
 }) {
   await requireUser();
   const sp = await searchParams;
   const status =
-    sp.stato === "none" || auditStatuses.includes(sp.stato as AuditStatus)
-      ? (sp.stato as AuditStatus | "none")
+    sp.status === "none" || auditStatuses.includes(sp.status as AuditStatus)
+      ? (sp.status as AuditStatus | "none")
       : undefined;
-  const archived = sp.archivio === "1";
+  const archived = sp.archived === "1";
   const rows = await listProspects(readDeps().db, {
     ...(sp.q ? { q: sp.q } : {}),
     ...(status ? { status } : {}),
@@ -31,27 +31,27 @@ export default async function AuditListPage({
   return (
     <>
       <PageHeader
-        title="Audit dei prospect"
-        description="Analizza sito, social e competitor di un potenziale cliente prima del primo incontro. L'AI propone, tu decidi cosa entra nel report."
+        title="Prospect audits"
+        description="Analyze a potential client's website, social channels and competitors before the first meeting. The AI proposes, you decide what goes into the report."
         actions={
           <Button asChild>
             <Link href="/audit/new">
               <Plus aria-hidden />
-              Nuovo prospect
+              New prospect
             </Link>
           </Button>
         }
       />
       <form className="mb-6 flex flex-wrap items-end gap-3" role="search">
         <label className="flex min-w-64 flex-1 flex-col gap-1 text-label text-fg-muted">
-          Cerca
-          <Input name="q" defaultValue={sp.q ?? ""} placeholder="Nome, sito o settore" />
+          Search
+          <Input name="q" defaultValue={sp.q ?? ""} placeholder="Name, website or sector" />
         </label>
         <label className="flex w-56 flex-col gap-1 text-label text-fg-muted">
-          Stato dell&apos;audit
-          <select name="stato" defaultValue={status ?? ""} className={selectClass}>
-            <option value="">Tutti</option>
-            <option value="none">Audit non avviato</option>
+          Audit status
+          <select name="status" defaultValue={status ?? ""} className={selectClass}>
+            <option value="">All</option>
+            <option value="none">Audit not started</option>
             {auditStatuses
               .filter((s) => s !== "archived" && s !== "draft")
               .map((s) => (
@@ -62,12 +62,12 @@ export default async function AuditListPage({
           </select>
         </label>
         <label className="flex items-center gap-2 pb-2 text-body-sm text-fg">
-          <input type="checkbox" name="archivio" value="1" defaultChecked={archived} />
-          Archiviati
+          <input type="checkbox" name="archived" value="1" defaultChecked={archived} />
+          Archived
         </label>
         <Button type="submit" variant="secondary">
           <Search aria-hidden />
-          Filtra
+          Filter
         </Button>
       </form>
       <Card className="overflow-x-auto p-0">
@@ -75,32 +75,32 @@ export default async function AuditListPage({
           <div className="flex flex-col items-start gap-3 p-6">
             <p className="text-body-md text-fg-muted">
               {sp.q || status || archived
-                ? "Nessun prospect corrisponde ai filtri."
-                : "Ancora nessun prospect. Aggiungi il primo per avviare un audit."}
+                ? "No prospects match the filters."
+                : "No prospects yet. Add the first one to start an audit."}
             </p>
           </div>
         ) : (
           <table className="w-full text-left text-body-sm">
-            <caption className="sr-only">Prospect e stato dell&apos;audit</caption>
+            <caption className="sr-only">Prospects and audit status</caption>
             <thead className="border-b border-subtle text-label text-fg-muted">
               <tr>
                 <th scope="col" className="px-6 py-3 font-medium">
                   Prospect
                 </th>
                 <th scope="col" className="px-6 py-3 font-medium">
-                  Settore e area
+                  Sector and area
                 </th>
                 <th scope="col" className="px-6 py-3 font-medium">
                   Audit
                 </th>
                 <th scope="col" className="px-6 py-3 font-medium">
-                  Da rivedere
+                  To review
                 </th>
                 <th scope="col" className="px-6 py-3 font-medium">
-                  Responsabile
+                  Owner
                 </th>
                 <th scope="col" className="px-6 py-3 font-medium">
-                  Aggiornato
+                  Updated
                 </th>
               </tr>
             </thead>
@@ -127,7 +127,7 @@ export default async function AuditListPage({
                         {auditStatusLabel[r.auditStatus]}
                       </Badge>
                     ) : (
-                      <span className="text-fg-muted">Non avviato</span>
+                      <span className="text-fg-muted">Not started</span>
                     )}
                   </td>
                   <td className="px-6 py-3 text-fg">{r.toReview || "—"}</td>

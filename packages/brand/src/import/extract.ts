@@ -16,7 +16,7 @@ export interface ExtractedPage {
 export interface ExtractedColor {
   hex: string;
   locator: string;
-  /** Words around the value, used to name the color ("Blu Rossi #0044CC"). */
+  /** Words around the value, used to name the color ("Rossi Blue #0044CC"). */
   context: string;
   count: number;
 }
@@ -119,7 +119,7 @@ function unzip(bytes: Uint8Array): Record<string, Uint8Array> {
   try {
     return unzipSync(bytes);
   } catch {
-    throw new ExtractionError("Non leggibile: il file è danneggiato o protetto da password.");
+    throw new ExtractionError("Not readable: the file is damaged or password-protected.");
   }
 }
 
@@ -138,8 +138,8 @@ function themeOf(files: Record<string, Uint8Array>, prefix: "word" | "ppt") {
     if (hex)
       colors.push({
         hex,
-        locator: "Tema del documento",
-        context: `Colore del tema ${m[1]}`,
+        locator: "Document theme",
+        context: `Theme color ${m[1]}`,
         count: 1,
       });
   }
@@ -151,14 +151,14 @@ function themeOf(files: Record<string, Uint8Array>, prefix: "word" | "ppt") {
       family: decodeXml(major),
       role: "display",
       weights: [],
-      locator: "Tema del documento",
+      locator: "Document theme",
     });
   if (minor && minor !== major)
     fonts.push({
       family: decodeXml(minor),
       role: "body",
       weights: [],
-      locator: "Tema del documento",
+      locator: "Document theme",
     });
   return { colors, fonts };
 }
@@ -173,6 +173,7 @@ function paragraphs(
   for (const p of xml.match(para) ?? []) {
     const text = [...p.matchAll(run)].map((m) => decodeXml(m[1]!)).join("");
     if (!text.trim()) continue;
+    // "Titolo" is the Italian Word heading style name.
     const heading = textTag === "w:t" && /<w:pStyle w:val="(Heading|Titolo|Title)[^"]*"/i.test(p);
     out.push({ text, heading });
   }
@@ -182,16 +183,16 @@ function paragraphs(
 function extractDocx(bytes: Uint8Array): Extraction {
   const files = unzip(bytes);
   const doc = files["word/document.xml"];
-  if (!doc) throw new ExtractionError("Documento Word senza contenuto leggibile.");
+  if (!doc) throw new ExtractionError("Word document without readable content.");
   const pages: ExtractedPage[] = [];
-  let current: ExtractedPage = { locator: "Inizio del documento", text: "" };
+  let current: ExtractedPage = { locator: "Start of document", text: "" };
   let section = 0;
   for (const p of paragraphs(strFromU8(doc), "w:t")) {
     if (p.heading && current.text.trim()) {
       pages.push(current);
       section++;
-      current = { locator: `Sezione ${section + 1}: ${p.text.slice(0, 60)}`, text: "" };
-    } else if (p.heading) current.locator = `Sezione ${section + 1}: ${p.text.slice(0, 60)}`;
+      current = { locator: `Section ${section + 1}: ${p.text.slice(0, 60)}`, text: "" };
+    } else if (p.heading) current.locator = `Section ${section + 1}: ${p.text.slice(0, 60)}`;
     current.text += `${p.text}\n`;
   }
   if (current.text.trim()) pages.push(current);
@@ -225,12 +226,13 @@ function extractPptx(bytes: Uint8Array): Extraction {
     const locator = `Slide ${s.n}`;
     if (text.trim()) pages.push({ locator, text: clean(text).slice(0, MAX_PAGE_CHARS) });
     for (const m of xml.matchAll(/<a:srgbClr val="([0-9A-Fa-f]{6})"/g))
-      addColor(used, normalizeHex(m[1]!), locator, "Colore usato nelle slide");
+      addColor(used, normalizeHex(m[1]!), locator, "Color used in the slides");
   }
   const theme = themeOf(files, "ppt");
   const themeHex = new Set(theme.colors.map((c) => c.hex));
   const frequent = [...used.values()].filter((c) => !themeHex.has(c.hex) && c.count >= 3);
-  const warnings = slides.length > MAX_PAGES ? [`Lette solo le prime ${MAX_PAGES} slide`] : [];
+  const warnings =
+    slides.length > MAX_PAGES ? [`Only the first ${MAX_PAGES} slides were read`] : [];
   return {
     pages,
     colors: [...theme.colors, ...frequent, ...colorsInText(pages)],
@@ -250,9 +252,9 @@ async function extractPdf(bytes: Uint8Array): Promise<Extraction> {
     const name = (err as { name?: string }).name ?? "";
     if (/password/i.test(name) || /password/i.test(String((err as Error).message)))
       throw new ExtractionError(
-        "Non leggibile: PDF protetto. Caricane una versione senza password.",
+        "Not readable: protected PDF. Upload a version without a password.",
       );
-    throw new ExtractionError("Non leggibile: il PDF è danneggiato.");
+    throw new ExtractionError("Not readable: the PDF is damaged.");
   }
   const { totalPages, text } = await extractText(pdf, { mergePages: false });
   const pages = text
@@ -260,10 +262,10 @@ async function extractPdf(bytes: Uint8Array): Promise<Extraction> {
     .map((t, i) => ({ locator: `p. ${i + 1}`, text: clean(t).slice(0, MAX_PAGE_CHARS) }))
     .filter((p) => p.text);
   const warnings: string[] = [];
-  if (totalPages > MAX_PAGES) warnings.push(`Lette solo le prime ${MAX_PAGES} pagine`);
+  if (totalPages > MAX_PAGES) warnings.push(`Only the first ${MAX_PAGES} pages were read`);
   if (totalPages > 0 && pages.length === 0)
     warnings.push(
-      "Nessun testo selezionabile: il PDF sembra fatto di immagini. Colori e testi vanno inseriti a mano.",
+      "No selectable text: the PDF seems to be made of images. Colors and texts must be entered manually.",
     );
   await pdf.cleanup?.();
   return { pages, colors: colorsInText(pages), fonts: [], warnings };
@@ -277,12 +279,12 @@ function extractSvg(bytes: Uint8Array): Extraction {
   for (const m of xml.matchAll(
     /(?:fill|stroke|stop-color|color)\s*[:=]\s*["']?\s*(#[0-9a-fA-F]{3,6})\b/g,
   ))
-    addColor(map, normalizeHex(m[1]!), "File SVG", "Colore usato nel disegno");
+    addColor(map, normalizeHex(m[1]!), "SVG file", "Color used in the drawing");
   const text = [...xml.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)]
     .map((m) => decodeXml(m[1]!.replace(/<[^>]+>/g, "")))
     .join("\n");
   return {
-    pages: text.trim() ? [{ locator: "File SVG", text: clean(text) }] : [],
+    pages: text.trim() ? [{ locator: "SVG file", text: clean(text) }] : [],
     colors: [...map.values()].sort((a, b) => b.count - a.count),
     fonts: [],
     warnings: [],
@@ -297,19 +299,19 @@ function extractFont(bytes: Uint8Array, fileName: string): Extraction {
     pages: [],
     colors: [],
     fonts: [{ family, weights: weight ? [weight] : [], locator: fileName }],
-    warnings: names ? [] : ["Nome del font ricavato dal nome del file"],
+    warnings: names ? [] : ["Font name taken from the file name"],
   };
 }
 
 function extractText(bytes: Uint8Array): Extraction {
   const text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
   const pages: ExtractedPage[] = [];
-  let current: ExtractedPage = { locator: "Inizio", text: "" };
+  let current: ExtractedPage = { locator: "Start", text: "" };
   for (const line of text.split(/\r?\n/)) {
     const h = /^#{1,3}\s+(.+)$/.exec(line);
     if (h) {
       if (current.text.trim()) pages.push(current);
-      current = { locator: `Sezione: ${h[1]!.slice(0, 60)}`, text: "" };
+      current = { locator: `Section: ${h[1]!.slice(0, 60)}`, text: "" };
     }
     current.text += `${line}\n`;
   }

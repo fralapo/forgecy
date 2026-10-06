@@ -44,12 +44,11 @@ export function UploadSourceForm({ slug, open }: { slug: string; open?: boolean 
           setMessage(null);
           const res = await fetch(`/brand/${slug}/sources/upload`, { method: "POST", body: data });
           const body = (await res.json().catch(() => ({}))) as { message?: string };
-          if (!res.ok)
-            return setMessage({ kind: "error", text: body.message ?? "Caricamento non riuscito." });
+          if (!res.ok) return setMessage({ kind: "error", text: body.message ?? "Upload failed." });
           ref.current?.reset();
           setMessage({
             kind: "ok",
-            text: "File caricato: la lettura è in coda. Le proposte arriveranno in «Proposte».",
+            text: "File uploaded: reading is queued. Proposals will show up in “Proposals”.",
           });
           router.refresh();
         });
@@ -67,11 +66,11 @@ export function UploadSourceForm({ slug, open }: { slug: string; open?: boolean 
           className={controlClass}
         />
         <p className="text-body-sm text-fg-muted">
-          PDF, PPTX, DOCX, immagini, SVG, font o testo. Documenti fino a 50 MB.
+          PDF, PPTX, DOCX, images, SVG, fonts or text. Documents up to 50 MB.
         </p>
       </div>
       <div className="space-y-1">
-        <Label htmlFor="import-kind">Tipo</Label>
+        <Label htmlFor="import-kind">Type</Label>
         <select id="import-kind" name="kind" className={controlClass} defaultValue="brand_book">
           {fileKinds.map((k) => (
             <option key={k} value={k}>
@@ -81,8 +80,8 @@ export function UploadSourceForm({ slug, open }: { slug: string; open?: boolean 
         </select>
       </div>
       <div className="space-y-1">
-        <Label htmlFor="import-title">Titolo</Label>
-        <Input id="import-title" name="title" placeholder="Il nome del file, se vuoto" />
+        <Label htmlFor="import-title">Title</Label>
+        <Input id="import-title" name="title" placeholder="The file name, if empty" />
       </div>
       {message ? (
         <p
@@ -96,7 +95,7 @@ export function UploadSourceForm({ slug, open }: { slug: string; open?: boolean 
       ) : null}
       <Button type="submit" disabled={pending}>
         <FileUp aria-hidden />
-        {pending ? "Caricamento…" : "Importa"}
+        {pending ? "Uploading…" : "Import"}
       </Button>
     </form>
   );
@@ -125,13 +124,13 @@ export function LinkSourceForm({ slug, clientId }: { slug: string; clientId: str
           });
           if (!res.ok) return setMessage({ kind: "error", text: res.error });
           ref.current?.reset();
-          setMessage({ kind: "ok", text: "Fonte aggiunta." });
+          setMessage({ kind: "ok", text: "Source added." });
           router.refresh();
         });
       }}
     >
       <div className="space-y-1">
-        <Label htmlFor="link-kind">Tipo</Label>
+        <Label htmlFor="link-kind">Type</Label>
         <select id="link-kind" name="kind" className={controlClass} defaultValue="website">
           {linkKinds.map((k) => (
             <option key={k} value={k}>
@@ -141,19 +140,19 @@ export function LinkSourceForm({ slug, clientId }: { slug: string; clientId: str
         </select>
       </div>
       <div className="space-y-1">
-        <Label htmlFor="link-title">Titolo</Label>
+        <Label htmlFor="link-title">Title</Label>
         <Input id="link-title" name="title" required />
       </div>
       <div className="space-y-1">
-        <Label htmlFor="link-url">Indirizzo</Label>
+        <Label htmlFor="link-url">Address</Label>
         <Input id="link-url" name="url" type="url" placeholder="https://" />
       </div>
       <div className="space-y-1">
-        <Label htmlFor="link-note">Nota</Label>
+        <Label htmlFor="link-note">Note</Label>
         <textarea id="link-note" name="note" rows={4} className={controlClass} />
         <p className="text-body-sm text-fg-muted">
-          La lettura automatica dei siti arriva con l&apos;Audit: per ora l&apos;indirizzo resta
-          come riferimento e la nota come testo citabile.
+          Automatic reading of websites comes with the Audit: for now the address is kept as a
+          reference and the note as citable text.
         </p>
       </div>
       {message ? (
@@ -168,7 +167,7 @@ export function LinkSourceForm({ slug, clientId }: { slug: string; clientId: str
       ) : null}
       <Button type="submit" variant="secondary" disabled={pending}>
         <Link2 aria-hidden />
-        Aggiungi fonte
+        Add source
       </Button>
     </form>
   );

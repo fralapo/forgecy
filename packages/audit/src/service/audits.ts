@@ -64,7 +64,7 @@ export async function estimateAudit(
   defaultProvider?: ProviderId,
 ): Promise<AuditEstimate> {
   const client = await db.query.clients.findFirst({ where: eq(clients.id, clientId) });
-  if (!client) throw new ForgecyError("not_found", "Prospect non trovato");
+  if (!client) throw new ForgecyError("not_found", "Prospect not found");
   const allowed = aiAllowed(client.aiPolicy);
   const localModel = allowed && (client.aiPolicy === "local_only" || defaultProvider === "local");
   const paid = allowed && !localModel;
@@ -80,15 +80,15 @@ export async function estimateAudit(
   }
   const steps = [
     client.websiteUrl
-      ? `Lettura del sito: fino a ${AUDIT_LIMITS.maxPages} pagine, con screenshot desktop e mobile`
-      : "Nessun sito indicato: la lettura del sito viene saltata",
-    "Social: solo dati che carichi tu (screenshot, export CSV/XLSX, valori a mano)",
+      ? `Website scan: up to ${AUDIT_LIMITS.maxPages} pages, with desktop and mobile screenshots`
+      : "No website given: the website scan is skipped",
+    "Social: only data you upload (screenshots, CSV/XLSX exports, values by hand)",
     allowed
-      ? `Competitor: l'AI ne propone fino a ${AUDIT_LIMITS.maxCompetitors}, tu confermi la lista`
-      : "Competitor: li aggiungi tu (AI disattivata dalla policy)",
+      ? `Competitors: AI proposes up to ${AUDIT_LIMITS.maxCompetitors}, you confirm the list`
+      : "Competitors: you add them (AI turned off by the policy)",
     allowed
-      ? "Osservazioni, confronto e diagnosi proposte dall'AI, sempre da rivedere"
-      : "Osservazioni e diagnosi compilate a mano",
+      ? "Observations, comparison and diagnosis proposed by AI, always to be reviewed"
+      : "Observations and diagnosis filled in by hand",
   ];
   return {
     policy: client.aiPolicy,
@@ -151,7 +151,7 @@ async function enqueueCrawl(
 }
 
 /**
- * Start the audit (Page 6 → "Avvia audit"): snapshot of the inputs, social channel
+ * Start the audit (Page 6 → "Start audit"): snapshot of the inputs, social channel
  * rows, the site reading. Social data is never read automatically: the channels wait
  * for screenshots or files. Without a website the audit goes straight to competitors.
  */
@@ -164,8 +164,8 @@ export async function startAudit(
   requireQueues(deps);
   const client = await deps.db.query.clients.findFirst({ where: eq(clients.id, clientId) });
   if (!client || client.status !== "prospect")
-    throw new ForgecyError("not_found", "Prospect non trovato");
-  if (client.archivedAt) throw new ForgecyError("conflict", "Il prospect è archiviato.");
+    throw new ForgecyError("not_found", "Prospect not found");
+  if (client.archivedAt) throw new ForgecyError("conflict", "The prospect is archived.");
   const profile = await deps.db.query.prospectProfiles.findFirst({
     where: eq(prospectProfiles.clientId, clientId),
   });
@@ -204,7 +204,7 @@ export async function startAudit(
           channel: "website",
           profileUrl: websiteUrl,
           status: websiteUrl ? "collecting" : "unavailable",
-          unavailableReason: websiteUrl ? null : "Nessun sito indicato",
+          unavailableReason: websiteUrl ? null : "No website given",
           updatedBy: userId,
         },
         ...socialChannels
@@ -234,7 +234,7 @@ export async function startAudit(
     if (isUniqueViolation(err))
       throw new ForgecyError(
         "conflict",
-        "C'è già un audit in corso per questo prospect. Aprilo o archivialo prima di avviarne uno nuovo.",
+        "There is already an audit in progress for this prospect. Open or archive it before starting a new one.",
       );
     throw err;
   }
@@ -251,7 +251,7 @@ export async function startAudit(
   return { auditId: created.auditId };
 }
 
-/** Read the site again ("Rileggi il sito"): earlier reviewed observations stay, marked as older. */
+/** Read the site again ("Rescan website"): earlier reviewed observations stay, marked as older. */
 export async function rescanSite(
   deps: AuditDeps,
   actor: Actor,
@@ -261,14 +261,14 @@ export async function rescanSite(
   assertCan(actor, "project.edit", audit.clientId);
   assertEditable(audit);
   const rootUrl = audit.inputs.websiteUrl;
-  if (!rootUrl) throw new ForgecyError("validation", "Questo audit non ha un sito da leggere.");
+  if (!rootUrl) throw new ForgecyError("validation", "This audit has no website to read.");
   const running = await deps.db
     .select({ id: siteScans.id })
     .from(siteScans)
     .where(
       and(eq(siteScans.auditId, auditId), inArray(siteScans.status, ["pending", "collecting"])),
     );
-  if (running.length) throw new ForgecyError("conflict", "Una lettura del sito è già in corso.");
+  if (running.length) throw new ForgecyError("conflict", "A website scan is already in progress.");
   const userId = userIdOf(actor);
   const scanId = await deps.db.transaction(async (tx) => {
     const id = await createScan(deps, tx, {
@@ -296,10 +296,10 @@ export async function rescanSite(
   return { scanId };
 }
 
-/** Retry a failed or partial scan ("Riprova questo passo"): a fresh reading of the same URL. */
+/** Retry a failed or partial scan ("Retry this step"): a fresh reading of the same URL. */
 export async function retryScan(deps: AuditDeps, actor: Actor, scanId: string) {
   const scan = await deps.db.query.siteScans.findFirst({ where: eq(siteScans.id, scanId) });
-  if (!scan?.auditId) throw new ForgecyError("not_found", "Lettura non trovata");
+  if (!scan?.auditId) throw new ForgecyError("not_found", "Scan not found");
   if (!scan.competitorId) return rescanSite(deps, actor, scan.auditId);
   const { audit } = await loadAudit(deps.db, scan.auditId);
   assertCan(actor, "project.edit", audit.clientId);
@@ -319,12 +319,12 @@ export async function retryScan(deps: AuditDeps, actor: Actor, scanId: string) {
 /** Stop a running reading; pages already read are kept. */
 export async function cancelScan(deps: AuditDeps, actor: Actor, scanId: string): Promise<void> {
   const scan = await deps.db.query.siteScans.findFirst({ where: eq(siteScans.id, scanId) });
-  if (!scan?.auditId) throw new ForgecyError("not_found", "Lettura non trovata");
+  if (!scan?.auditId) throw new ForgecyError("not_found", "Scan not found");
   assertCan(actor, "project.edit", scan.clientId);
   if (scan.jobId) await cancelJob(deps.db, requireQueues(deps), scan.jobId);
   await deps.db
     .update(siteScans)
-    .set({ status: "partial", error: "Lettura interrotta da una persona", finishedAt: new Date() })
+    .set({ status: "partial", error: "Scan stopped by a person", finishedAt: new Date() })
     .where(and(eq(siteScans.id, scanId), inArray(siteScans.status, ["pending", "collecting"])));
 }
 

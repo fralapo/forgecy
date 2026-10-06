@@ -28,24 +28,24 @@ function sameOrigin(request: Request): boolean {
 export const POST = withUser(
   async (user, request: Request, ctx: { params: Promise<{ clientSlug: string }> }) => {
     if (!sameOrigin(request))
-      throw new ForgecyError("permission_denied", "Richiesta da un'origine non ammessa.");
+      throw new ForgecyError("permission_denied", "Request from a disallowed origin.");
     const declared = Number(request.headers.get("content-length") ?? 0);
     if (declared > MAX_BYTES + 64 * 1024)
-      throw new ForgecyError("validation", "Il file supera i 15 MB.");
+      throw new ForgecyError("validation", "The file exceeds 15 MB.");
 
     const { clientSlug } = await ctx.params;
     const db = getDb();
     const client = await db.query.clients.findFirst({ where: eq(clients.slug, clientSlug) });
-    if (!client) throw new ForgecyError("not_found", "Cliente non trovato");
+    if (!client) throw new ForgecyError("not_found", "Client not found");
     assertCan(user.actor, "assets.upload", client.id);
 
     const form = await request.formData();
     const file = form.get("file");
     if (!(file instanceof File) || file.size === 0)
-      throw new ForgecyError("validation", "Scegli un'immagine da caricare.");
-    if (file.size > MAX_BYTES) throw new ForgecyError("validation", "Il file supera i 15 MB.");
+      throw new ForgecyError("validation", "Choose an image to upload.");
+    if (file.size > MAX_BYTES) throw new ForgecyError("validation", "The file exceeds 15 MB.");
     if (!MIMES.has(file.type))
-      throw new ForgecyError("validation", "Formati ammessi: PNG, JPEG o WebP.");
+      throw new ForgecyError("validation", "Allowed formats: PNG, JPEG or WebP.");
 
     const { row, created } = await uploadAsset(db, getStorage(), user.actor, {
       clientId: client.id,

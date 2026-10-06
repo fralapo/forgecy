@@ -11,10 +11,10 @@ const optionalUrl = z
   .string()
   .trim()
   .transform((v) => (v === "" ? undefined : v))
-  .pipe(z.url({ protocol: /^https?$/, message: "Indirizzo del sito non valido" }).optional());
+  .pipe(z.url({ protocol: /^https?$/, message: "Invalid website address" }).optional());
 
 const clientSchema = z.object({
-  name: z.string().trim().min(1, "Scrivi il nome").max(120),
+  name: z.string().trim().min(1, "Enter the name").max(120),
   status: z.enum(clientStatuses).default("prospect"),
   websiteUrl: optionalUrl,
   sector: z.string().trim().max(80).optional(),
@@ -30,10 +30,10 @@ export async function createClientAction(
   const user = await requireUser();
   assertCan(user.actor, "project.edit");
   const parsed = clientSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dati non validi" };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid data" };
 
   const db = getDb();
-  const base = slugify(parsed.data.name) || "cliente";
+  const base = slugify(parsed.data.name) || "client";
   let slug = base;
   for (
     let i = 2;

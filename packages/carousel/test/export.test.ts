@@ -50,12 +50,12 @@ describe.skipIf(!enabled)("export with Chromium", () => {
       outputs: ["zip" as const],
       meta: {
         client: "Rossi S.r.l.",
-        content: "Fattura elettronica",
+        content: "Electronic invoice",
         version: 3,
         approvedAt: "2026-10-04T10:00:00.000Z",
         models: ["test-model"],
       },
-      texts: { caption: "Cinque controlli prima di inviare.", hashtags: ["fattura", "#pmi"] },
+      texts: { caption: "Five checks before sending.", hashtags: ["invoice", "#smb"] },
     };
     const steps: string[] = [];
     const a = await exportCarousel(browser, {
@@ -65,17 +65,17 @@ describe.skipIf(!enabled)("export with Chromium", () => {
     const b = await exportCarousel(browser, input);
 
     expect(a.files.map((f) => f.name)).toEqual([
-      "rossi-srl_fattura-elettronica_v3_ig-4x5_01.png",
-      "rossi-srl_fattura-elettronica_v3_ig-4x5_02.png",
-      "rossi-srl_fattura-elettronica_v3_ig-4x5_03.png",
-      "rossi-srl_fattura-elettronica_v3_ig-4x5_04.png",
-      "rossi-srl_fattura-elettronica_v3_ig-4x5_05.png",
-      "rossi-srl_fattura-elettronica_v3_ig-4x5.pdf",
-      "rossi-srl_fattura-elettronica_v3_ig-4x5.zip",
+      "rossi-srl_electronic-invoice_v3_ig-4x5_01.png",
+      "rossi-srl_electronic-invoice_v3_ig-4x5_02.png",
+      "rossi-srl_electronic-invoice_v3_ig-4x5_03.png",
+      "rossi-srl_electronic-invoice_v3_ig-4x5_04.png",
+      "rossi-srl_electronic-invoice_v3_ig-4x5_05.png",
+      "rossi-srl_electronic-invoice_v3_ig-4x5.pdf",
+      "rossi-srl_electronic-invoice_v3_ig-4x5.zip",
     ]);
     expect(a.files.map((f) => sha256(f.data))).toEqual(b.files.map((f) => sha256(f.data)));
     expect(a.issues).toEqual([]);
-    expect(steps).toContain("Render slide 5 di 5");
+    expect(steps).toContain("Rendering slide 5 of 5");
     for (const f of a.files.filter((f) => f.kind === "png"))
       expect(pngSize(f.data)).toEqual({ width: 1080, height: 1350 });
 
@@ -88,20 +88,20 @@ describe.skipIf(!enabled)("export with Chromium", () => {
     expect(Object.keys(zip)).toEqual([
       ...a.files.slice(0, 6).map((f) => f.name),
       "caption.txt",
-      "testi.md",
+      "texts.md",
       "slides.json",
     ]);
     expect(new TextDecoder().decode(zip["caption.txt"])).toBe(
-      "Cinque controlli prima di inviare.\n\n#fattura #pmi\n",
+      "Five checks before sending.\n\n#invoice #smb\n",
     );
-    expect(new TextDecoder().decode(zip["testi.md"])).toContain(
-      "Fattura elettronica: i 5 errori che costano caro",
+    expect(new TextDecoder().decode(zip["texts.md"])).toContain(
+      (slides[0]!.slots.title as string).replace(/==/g, ""),
     );
     const json = JSON.parse(new TextDecoder().decode(zip["slides.json"]));
     expect(json.template).toEqual({
       id: "editorial-ig-4x5",
-      version: "1.0.0",
-      name: "Editoriale · Instagram 4:5",
+      version: pkg.manifest.version,
+      name: pkg.manifest.name,
     });
     expect(json.slides).toHaveLength(5);
   }, 120_000);
@@ -144,7 +144,7 @@ describe.skipIf(!enabled)("export with Chromium", () => {
       outputs: ["pdf"],
       meta: { client: "Rossi", content: "Doc", version: 1 },
     });
-    expect(draft.files.map((f) => f.name)).toEqual(["rossi_doc_v1_linkedin-doc_bozza.pdf"]);
+    expect(draft.files.map((f) => f.name)).toEqual(["rossi_doc_v1_linkedin-doc_draft.pdf"]);
     expect(final.files.map((f) => f.name)).toEqual(["rossi_doc_v1_linkedin-doc.pdf"]);
     expect(sha256(draft.files[0]!.data)).not.toBe(sha256(final.files[0]!.data));
   }, 120_000);
@@ -156,7 +156,7 @@ describe.skipIf(!enabled)("export with Chromium", () => {
     const pkg = packageFromFiles(files);
     const slide = slideSchema.parse({
       layout: "only",
-      slots: { title: "Un titolo davvero troppo lungo", items: ["sovrapposto"] },
+      slots: { title: "A title that is far too long", items: ["overlapping"] },
     });
     const [cap] = await captureSlides(browser, [
       {
@@ -175,7 +175,10 @@ describe.skipIf(!enabled)("export with Chromium", () => {
     const report = await renderCheckTemplate(browser, pkg, validateTemplatePackage(pkg.files));
     expect(
       report.checks.filter((c) => c.id === "render" || c.id === "overflow").map((c) => c.label),
-    ).toEqual(["Render di prova: 8 layout senza errori", "Testo lungo: nessun overflow"]);
+    ).toEqual([
+      `Test render: ${pkg.manifest.layouts.length} layouts without errors`,
+      "Long text: no overflow",
+    ]);
     expect(report.ok).toBe(true);
   }, 120_000);
 });
@@ -184,8 +187,8 @@ describe("template ZIP import", () => {
   it("unpacks a zipped folder and refuses unsafe paths", async () => {
     const pkg = await loadRepoTemplate("editorial-ig-4x5");
     const zipped: Record<string, Uint8Array> = {};
-    for (const [k, v] of pkg.files) zipped[`editoriale/${k}`] = v;
-    zipped["editoriale/.DS_Store"] = new Uint8Array([1]);
+    for (const [k, v] of pkg.files) zipped[`editorial/${k}`] = v;
+    zipped["editorial/.DS_Store"] = new Uint8Array([1]);
     const files = unzipTemplatePackage(zipSync(zipped));
     expect([...files.keys()].sort()).toEqual([...pkg.files.keys()].sort());
     expect(validateTemplatePackage(files).ok).toBe(true);

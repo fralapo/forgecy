@@ -19,7 +19,7 @@ export function SignOutButton() {
       }}
     >
       <LogOut aria-hidden />
-      Esci
+      Sign out
     </Button>
   );
 }

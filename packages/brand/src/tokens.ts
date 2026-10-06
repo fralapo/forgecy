@@ -1,6 +1,6 @@
 /**
- * Client design tokens in DTCG format on three levels (spec: "Identità visiva e
- * design token"): reference (raw palette), semantic (roles) and component (one
+ * Client design tokens in DTCG format on three levels (spec: "Visual identity and
+ * design tokens"): reference (raw palette), semantic (roles) and component (one
  * per layout slot). The renderer turns resolved tokens into CSS variables; the
  * model only ever sees role names, never values. Provenance of each token lives
  * in `$extensions.forgecy`, so the tree stays valid DTCG.
@@ -40,50 +40,54 @@ export function hexToDtcg(hex: string): DtcgColorValue {
 
 /** Semantic roles every client defines; layouts and the brand check rely on them. */
 export const semanticColorRoles = [
-  { path: "color.semantic.background", label: "Sfondo principale" },
-  { path: "color.semantic.surface", label: "Superficie" },
-  { path: "color.semantic.text-primary", label: "Testo principale" },
-  { path: "color.semantic.text-secondary", label: "Testo secondario" },
-  { path: "color.semantic.brand-primary", label: "Colore del brand" },
-  { path: "color.semantic.on-brand-primary", label: "Testo sul colore del brand" },
-  { path: "color.semantic.accent", label: "Accento" },
+  { path: "color.semantic.background", label: "Main background" },
+  { path: "color.semantic.surface", label: "Surface" },
+  { path: "color.semantic.text-primary", label: "Primary text" },
+  { path: "color.semantic.text-secondary", label: "Secondary text" },
+  { path: "color.semantic.brand-primary", label: "Brand color" },
+  { path: "color.semantic.on-brand-primary", label: "Text on brand color" },
+  { path: "color.semantic.accent", label: "Accent" },
 ] as const;
 
 /** Component tokens: one per slot of the catalog layouts. */
 export const componentTokens = [
-  { path: "component.slide.background", label: "Slide · sfondo", default: "background" },
-  { path: "component.slide.title", label: "Slide · titolo", default: "text-primary" },
-  { path: "component.slide.body", label: "Slide · testo", default: "text-secondary" },
-  { path: "component.cover.background", label: "Copertina · sfondo", default: "brand-primary" },
-  { path: "component.cover.title", label: "Copertina · titolo", default: "on-brand-primary" },
-  { path: "component.cta.background", label: "CTA · sfondo", default: "brand-primary" },
-  { path: "component.cta.text", label: "CTA · testo", default: "on-brand-primary" },
-  { path: "component.progress.active", label: "Avanzamento · attivo", default: "accent" },
+  { path: "component.slide.background", label: "Slide · background", default: "background" },
+  { path: "component.slide.title", label: "Slide · title", default: "text-primary" },
+  { path: "component.slide.body", label: "Slide · text", default: "text-secondary" },
+  { path: "component.cover.background", label: "Cover · background", default: "brand-primary" },
+  { path: "component.cover.title", label: "Cover · title", default: "on-brand-primary" },
+  { path: "component.cta.background", label: "CTA · background", default: "brand-primary" },
+  { path: "component.cta.text", label: "CTA · text", default: "on-brand-primary" },
+  { path: "component.progress.active", label: "Progress · active", default: "accent" },
 ] as const;
 
 /** Text/background pairs checked by the contrast matrix (spec 13.7). */
 export const contrastPairs = [
-  { fg: "color.semantic.text-primary", bg: "color.semantic.background", label: "Testo su sfondo" },
+  {
+    fg: "color.semantic.text-primary",
+    bg: "color.semantic.background",
+    label: "Text on background",
+  },
   {
     fg: "color.semantic.text-secondary",
     bg: "color.semantic.background",
-    label: "Testo secondario su sfondo",
+    label: "Secondary text on background",
   },
-  { fg: "color.semantic.text-primary", bg: "color.semantic.surface", label: "Testo su superficie" },
+  { fg: "color.semantic.text-primary", bg: "color.semantic.surface", label: "Text on surface" },
   {
     fg: "color.semantic.text-secondary",
     bg: "color.semantic.surface",
-    label: "Testo secondario su superficie",
+    label: "Secondary text on surface",
   },
   {
     fg: "color.semantic.on-brand-primary",
     bg: "color.semantic.brand-primary",
-    label: "Testo sul colore del brand",
+    label: "Text on brand color",
   },
   {
     fg: "color.semantic.brand-primary",
     bg: "color.semantic.background",
-    label: "Colore del brand su sfondo",
+    label: "Brand color on background",
   },
 ] as const;
 
@@ -188,7 +192,7 @@ export function validateTokens(tree: TokenTree): TokenIssue[] {
   }
   for (const [path, token] of flat) {
     if (/[{}]/.test(path) || path.split(".").some((s) => s.startsWith("$")))
-      issues.push({ path, message: "Nome di token non valido" });
+      issues.push({ path, message: "Invalid token name" });
     try {
       const v = resolveValue(flat, path);
       if (token.type === "color" || path.startsWith("color.") || path.startsWith("component."))
@@ -198,7 +202,7 @@ export function validateTokens(tree: TokenTree): TokenIssue[] {
     }
   }
   for (const role of semanticColorRoles)
-    if (!flat.has(role.path)) issues.push({ path: role.path, message: "Ruolo semantico mancante" });
+    if (!flat.has(role.path)) issues.push({ path: role.path, message: "Missing semantic role" });
   return issues;
 }
 

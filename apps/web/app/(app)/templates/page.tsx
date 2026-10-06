@@ -16,7 +16,7 @@ import { importFolderAction } from "./actions";
 import { SlideFrame } from "./slide-frame";
 import { ErrorNotice, StatusBadge, ValidationBadge } from "./status";
 
-export const metadata = { title: "Template" };
+export const metadata = { title: "Templates" };
 
 /** The version to show for a key: the published one, else the most recent. */
 function headline(rows: TemplateRow[]): TemplateRow {
@@ -29,10 +29,10 @@ function headline(rows: TemplateRow[]): TemplateRow {
 export default async function TemplatesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ errore?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const user = await requireUser();
-  const { errore } = await searchParams;
+  const { error } = await searchParams;
   const manage = can(user.actor, "templates.manage");
   const rows = await listTemplates(getDb());
   const byKey = new Map<string, TemplateRow[]>();
@@ -47,13 +47,13 @@ export default async function TemplatesPage({
   return (
     <>
       <PageHeader
-        title="Template"
-        description="Catalogo dei template nel formato canonico (HTML, CSS e template.json). Le anteprime sono rese dallo stesso renderer dell'export; i contenuti usano solo versioni pubblicate."
+        title="Templates"
+        description="Catalog of templates in the canonical format (HTML, CSS and template.json). Previews are drawn by the same renderer as the export; content uses only published versions."
       />
-      {errore ? <ErrorNotice message={errore} /> : null}
+      {error ? <ErrorNotice message={error} /> : null}
       {byKey.size === 0 ? (
         <Card className="mb-8 p-6 text-body-md text-fg-muted">
-          Il catalogo è vuoto. Importa un template dalla cartella dell&apos;agenzia o da uno ZIP.
+          The catalog is empty. Import a template from the agency’s folder or from a ZIP.
         </Card>
       ) : (
         <ul className="mb-10 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
@@ -68,7 +68,7 @@ export default async function TemplatesPage({
                   {cover ? (
                     <SlideFrame
                       src={`/render/templates/${row.id}/${cover.id}`}
-                      title={`${row.name}: copertina`}
+                      title={`${row.name}: cover`}
                       width={m.width}
                       height={m.height}
                       scale={0.25}
@@ -81,18 +81,18 @@ export default async function TemplatesPage({
                       </Link>
                     </h2>
                     <p className="text-body-sm text-fg-muted">
-                      {m.kind === "carousel" ? "Carosello" : "Report"} · {FORMATS[m.format].label} ·{" "}
-                      {m.layouts.length} layout · {m.slides.min}–{m.slides.max} slide · v
+                      {m.kind === "carousel" ? "Carousel" : "Report"} · {FORMATS[m.format].label} ·{" "}
+                      {m.layouts.length} layouts · {m.slides.min}–{m.slides.max} slides · v
                       {row.version}
                       {others
-                        ? ` · ${others === 1 ? "1 altra versione" : `${others} altre versioni`}`
+                        ? ` · ${others === 1 ? "1 other version" : `${others} other versions`}`
                         : ""}
                     </p>
                   </div>
                   <div className="mt-auto flex flex-wrap gap-2">
                     <StatusBadge status={row.status} />
                     <ValidationBadge validation={storedValidation(row)} />
-                    <Badge>{row.origin === "system" ? "Sistema" : "Agenzia"}</Badge>
+                    <Badge>{row.origin === "system" ? "System" : "Agency"}</Badge>
                   </div>
                 </Card>
               </li>
@@ -102,9 +102,9 @@ export default async function TemplatesPage({
       )}
 
       {manage ? (
-        <section aria-labelledby="importa" className="space-y-6">
-          <h2 id="importa" className="text-heading-sm text-fg">
-            Importa
+        <section aria-labelledby="import" className="space-y-6">
+          <h2 id="import" className="text-heading-sm text-fg">
+            Import
           </h2>
           <Card className="p-5">
             <form
@@ -114,7 +114,7 @@ export default async function TemplatesPage({
               className="flex flex-wrap items-end gap-4"
             >
               <div className="min-w-64 flex-1 space-y-2">
-                <Label htmlFor="package">Pacchetto ZIP (massimo 50 MB)</Label>
+                <Label htmlFor="package">ZIP package (max 50 MB)</Label>
                 <Input
                   id="package"
                   name="package"
@@ -123,18 +123,18 @@ export default async function TemplatesPage({
                   required
                 />
               </div>
-              <Button type="submit">Importa template</Button>
+              <Button type="submit">Import template</Button>
             </form>
             <p className="mt-3 text-body-sm text-fg-muted">
-              Il pacchetto diventa una bozza. Se la stessa versione è già una bozza, ne sostituisce
-              i file; per una versione in revisione o pubblicata aumenta &quot;version&quot; in
+              The package becomes a draft. If the same version is already a draft, its files are
+              replaced; for a version in review or published, bump &quot;version&quot; in
               template.json.
             </p>
           </Card>
           {folders.length ? (
             <div className="space-y-3">
               <h3 className="text-body-md font-medium text-fg">
-                Da importare dalla cartella dell&apos;agenzia
+                To import from the agency’s folder
               </h3>
               <ul className="space-y-2">
                 {folders.map(({ folder, pkg, report }) => (
@@ -147,7 +147,7 @@ export default async function TemplatesPage({
                         <p className="text-fg-muted">
                           <code>templates/{folder}</code>
                           {report.issues.length
-                            ? ` · ${report.issues.length === 1 ? "1 errore" : `${report.issues.length} errori`} di validazione`
+                            ? ` · ${report.issues.length === 1 ? "1 validation error" : `${report.issues.length} validation errors`}`
                             : ""}
                         </p>
                       </div>
@@ -155,11 +155,11 @@ export default async function TemplatesPage({
                         <form action={importFolderAction}>
                           <input type="hidden" name="folder" value={folder} />
                           <Button type="submit" variant="secondary" size="sm">
-                            Importa
+                            Import
                           </Button>
                         </form>
                       ) : (
-                        <Badge variant="error">Manifest non valido</Badge>
+                        <Badge variant="error">Invalid manifest</Badge>
                       )}
                     </Card>
                   </li>

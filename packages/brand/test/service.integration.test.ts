@@ -116,18 +116,18 @@ describe.skipIf(!dbUrl)("brand identity workflow (integration)", () => {
       kind: "brand_book",
       title: "Brand book 2025",
     });
-    const site = await addSource(db, agent, { clientId, kind: "website", title: "Sito" });
+    const site = await addSource(db, agent, { clientId, kind: "website", title: "Website" });
 
     const p1 = await proposeChange(db, agent, {
       clientId,
       path: "/document/strategy/oneLiner",
-      value: "Caffè buono per chi lavora",
+      value: "Good coffee for people who work",
       evidence: [{ sourceId: book.id, locator: "p. 3" }],
     });
     const p2 = await proposeChange(db, agent, {
       clientId,
       path: "/document/strategy/oneLiner",
-      value: "Il caffè dell'ufficio",
+      value: "The office coffee",
       evidence: [{ sourceId: site.id }],
     });
     expect(p1).toMatchObject({ confidence: "high", sensitive: true, authorType: "agent" });
@@ -140,14 +140,14 @@ describe.skipIf(!dbUrl)("brand identity workflow (integration)", () => {
     const accepted = await acceptProposal(db, anna, {
       clientId,
       proposalId: p1.id,
-      note: "Dal brand book ufficiale",
+      note: "From the official brand book",
     });
     expect(accepted).toMatchObject({ status: "accepted", staled: 1 });
 
     const p3 = await proposeChange(db, agent, {
       clientId,
       path: "/document/strategy/category",
-      value: "Torrefazione",
+      value: "Coffee roasting",
       evidence: [{ sourceId: site.id }],
     });
     expect(await removeSource(db, anna, { clientId, sourceId: site.id })).toEqual({ staled: 1 });
@@ -165,7 +165,7 @@ describe.skipIf(!dbUrl)("brand identity workflow (integration)", () => {
         ...strategy,
         insight: {
           id: "i1",
-          value: "Chi lavora beve caffè cattivo",
+          value: "People who work drink bad coffee",
           sourceIds: [],
           confidence: "high",
         },
@@ -189,13 +189,13 @@ describe.skipIf(!dbUrl)("brand identity workflow (integration)", () => {
       clientId,
       versionId: draft.id,
       rev: saved.rev,
-      changelog: "Prima versione dal brand book",
+      changelog: "First version from the brand book",
     };
     expect(await codeOf(approveAndPublish(db, anna, { ...base, acknowledged: [] }))).toBe(
       "SELF-APPROVAL-NOTE",
     );
     expect(
-      await codeOf(approveAndPublish(db, bruno, { ...base, changelog: "corto", acknowledged: [] })),
+      await codeOf(approveAndPublish(db, bruno, { ...base, changelog: "short", acknowledged: [] })),
     ).toBe("CHANGELOG-REQUIRED");
     const missing = await missingChecks(
       approveAndPublish(db, bruno, { ...base, acknowledged: [] }),
@@ -205,15 +205,15 @@ describe.skipIf(!dbUrl)("brand identity workflow (integration)", () => {
     expect(pub).toMatchObject({ number: 1, archivedVersionId: null });
 
     const published = await getPublishedBrandIdentity(db, agent, clientId);
-    expect(published?.document.strategy.oneLiner?.value).toBe("Caffè buono per chi lavora");
+    expect(published?.document.strategy.oneLiner?.value).toBe("Good coffee for people who work");
     const ctx = await loadBrandContext(db, agent, clientId, {});
-    expect(ctx?.stable).toContain("Caffè buono per chi lavora");
+    expect(ctx?.stable).toContain("Good coffee for people who work");
 
     // Published content is immutable at the database level.
     await expect(
       db
         .update(brandIdentityVersions)
-        .set({ changelog: "riscritto" })
+        .set({ changelog: "rewritten" })
         .where(eq(brandIdentityVersions.id, pub.versionId)),
     ).rejects.toThrow();
 
@@ -223,8 +223,8 @@ describe.skipIf(!dbUrl)("brand identity workflow (integration)", () => {
       clientId,
       versionId: d2.id,
       rev: d2.rev,
-      changelog: "Seconda versione senza modifiche",
-      note: "Controllata da me",
+      changelog: "Second version without changes",
+      note: "Checked by me",
     };
     const m2 = await missingChecks(approveAndPublish(db, bruno, { ...base2, acknowledged: [] }));
     const pub2 = await approveAndPublish(db, bruno, { ...base2, acknowledged: m2 });

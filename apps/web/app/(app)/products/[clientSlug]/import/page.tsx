@@ -29,16 +29,16 @@ import { FileStep, type FileRowView } from "./file-step";
 import { ImportControls } from "./import-controls";
 import { MappingStep, type SheetView } from "./mapping-step";
 
-export const metadata = { title: "Importa prodotti" };
+export const metadata = { title: "Import products" };
 
 const policyText = {
-  external_allowed: "provider esterni",
-  external_restricted: "provider esterni con conferma",
-  local_only: "solo modello locale",
-  no_ai: "disattivata",
+  external_allowed: "external providers",
+  external_restricted: "external providers with confirmation",
+  local_only: "local model only",
+  no_ai: "off",
 } as const;
 
-const steps = ["File", "Mappatura", "Analisi", "Revisione"] as const;
+const steps = ["File", "Mapping", "Analysis", "Review"] as const;
 
 export default async function ImportPage({
   params,
@@ -141,20 +141,20 @@ export default async function ImportPage({
       {imp.status === "analyzing" ? <AutoRefresh /> : null}
       <Breadcrumb
         items={[
-          { label: "Clienti", href: "/clients" },
+          { label: "Clients", href: "/clients" },
           { label: client.name, href: "/products" },
-          { label: "Prodotti", href: paths.catalog(client.slug) },
-          { label: "Importa" },
+          { label: "Products", href: paths.catalog(client.slug) },
+          { label: "Import" },
         ]}
       />
       <PageHeader
-        title="Importa prodotti"
+        title="Import products"
         description={`${importTitle(imp.createdAt)} · AI: ${policyText[client.aiPolicy]}`}
         actions={<ImportStatusBadge status={imp.status} />}
       />
-      <ol className="mb-6 flex flex-wrap gap-2" aria-label="Passi dell'import">
+      <ol className="mb-6 flex flex-wrap gap-2" aria-label="Import steps">
         {steps.map((s, i) =>
-          s === "Mappatura" && !hasSheets ? null : (
+          s === "Mapping" && !hasSheets ? null : (
             <li
               key={s}
               aria-current={i === stepIndex ? "step" : undefined}
@@ -200,31 +200,31 @@ export default async function ImportPage({
 
           {imp.status === "analyzing" ? (
             <Card>
-              <h2 className="text-heading-sm">Analisi</h2>
+              <h2 className="text-heading-sm">Analysis</h2>
               <div
                 role="progressbar"
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={job?.progress ?? 0}
-                aria-label="Avanzamento dell'analisi"
+                aria-label="Analysis progress"
                 className="h-2 w-full overflow-hidden rounded-sm bg-subtle"
               >
                 <div className="h-full bg-primary" style={{ width: `${job?.progress ?? 0}%` }} />
               </div>
               <p aria-live="polite" className="text-body-sm text-fg-muted">
-                {job?.status === "retrying" ? "Nuovo tentativo in corso · " : ""}
-                {job?.progress ?? 0}% · {plural(top.length, "file", "file")}
+                {job?.status === "retrying" ? "Retrying · " : ""}
+                {job?.progress ?? 0}% · {plural(top.length, "file", "files")}
               </p>
               <p className="text-body-md text-fg-muted">
-                Puoi lasciare la pagina: i prodotti saranno pronti da rivedere nel catalogo.
+                You can leave this page: the products will be ready to review in the catalog.
               </p>
             </Card>
           ) : null}
 
           {imp.status === "failed" ? (
             <Banner tone="error">
-              Import non riuscito{imp.failedStep ? ` al passo «${imp.failedStep}»` : ""}.{" "}
-              {imp.error ?? ""} ({imp.errorCode ?? "IMPORT-FAILED"})
+              Import failed{imp.failedStep ? ` at step “${imp.failedStep}”` : ""}. {imp.error ?? ""}{" "}
+              ({imp.errorCode ?? "IMPORT-FAILED"})
             </Banner>
           ) : null}
 
@@ -242,18 +242,18 @@ export default async function ImportPage({
           imp.status === "completed" ||
           imp.status === "partial" ? (
             <Card>
-              <h2 className="text-heading-sm">Analisi completata</h2>
+              <h2 className="text-heading-sm">Analysis complete</h2>
               <p className="text-body-md text-fg">
-                Trovati {plural(summary.found ?? 0, "prodotto", "prodotti")} ·{" "}
-                {plural(summary.imagesMatched ?? 0, "immagine abbinata", "immagini abbinate")} ·{" "}
-                {summary.imagesUnassigned ?? 0} da assegnare
+                Found {plural(summary.found ?? 0, "product", "products")} ·{" "}
+                {plural(summary.imagesMatched ?? 0, "image matched", "images matched")} ·{" "}
+                {summary.imagesUnassigned ?? 0} to assign
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button asChild>
-                  <Link href={paths.review(client.slug, imp.id)}>Rivedi prodotti</Link>
+                  <Link href={paths.review(client.slug, imp.id)}>Review products</Link>
                 </Button>
                 <Button asChild variant="secondary">
-                  <a href={paths.discards(client.slug, imp.id)}>Scarica rapporto degli scarti</a>
+                  <a href={paths.discards(client.slug, imp.id)}>Download rejected rows report</a>
                 </Button>
               </div>
             </Card>
@@ -261,9 +261,9 @@ export default async function ImportPage({
 
           {imp.status === "cancelled" ? (
             <Banner>
-              Import annullato: nessun prodotto è stato creato.{" "}
+              Import cancelled: no products were created.{" "}
               <Link href={paths.importNew(client.slug)} className="text-link hover:underline">
-                Nuovo import
+                New import
               </Link>
             </Banner>
           ) : null}
@@ -283,29 +283,29 @@ export default async function ImportPage({
           />
         </div>
 
-        <aside aria-label="Riepilogo import">
+        <aside aria-label="Import summary">
           <Card className="gap-3">
-            <h2 className="text-heading-sm">Riepilogo import</h2>
+            <h2 className="text-heading-sm">Import summary</h2>
             <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-body-sm">
               <dt className="text-fg-muted">File</dt>
               <dd>{top.length}</dd>
               {summary.rows ? (
                 <>
-                  <dt className="text-fg-muted">Righe</dt>
-                  <dd>{summary.rows.toLocaleString("it-IT")}</dd>
+                  <dt className="text-fg-muted">Rows</dt>
+                  <dd>{summary.rows.toLocaleString("en-GB")}</dd>
                 </>
               ) : null}
               {planned.pdfPages || summary.pages ? (
                 <>
-                  <dt className="text-fg-muted">Pagine PDF</dt>
-                  <dd>{(summary.pages ?? planned.pdfPages).toLocaleString("it-IT")}</dd>
+                  <dt className="text-fg-muted">PDF pages</dt>
+                  <dd>{(summary.pages ?? planned.pdfPages).toLocaleString("en-GB")}</dd>
                 </>
               ) : null}
-              <dt className="text-fg-muted">Policy AI</dt>
+              <dt className="text-fg-muted">AI policy</dt>
               <dd>{policyText[client.aiPolicy]}</dd>
               {ai.available && ai.provider ? (
                 <>
-                  <dt className="text-fg-muted">Modello</dt>
+                  <dt className="text-fg-muted">Model</dt>
                   <dd>
                     {ai.provider} · {ai.model}
                   </dd>
@@ -313,23 +313,21 @@ export default async function ImportPage({
               ) : null}
               {planned.usesAi && imp.status === "uploading" ? (
                 <>
-                  <dt className="text-fg-muted">Costo stimato</dt>
+                  <dt className="text-fg-muted">Estimated cost</dt>
                   <dd>{formatUsd(cost)}</dd>
                 </>
               ) : null}
               {summary.costMicroUsd !== undefined ? (
                 <>
-                  <dt className="text-fg-muted">Costo effettivo</dt>
+                  <dt className="text-fg-muted">Actual cost</dt>
                   <dd>{formatUsd(summary.costMicroUsd / 1_000_000)}</dd>
                 </>
               ) : null}
               <dt className="text-fg-muted">Budget</dt>
-              <dd>
-                {budgetPercent === null ? "Nessun budget impostato" : `${budgetPercent}% usato`}
-              </dd>
+              <dd>{budgetPercent === null ? "No budget set" : `${budgetPercent}% used`}</dd>
               {imp.startedAt ? (
                 <>
-                  <dt className="text-fg-muted">Avviato</dt>
+                  <dt className="text-fg-muted">Started</dt>
                   <dd>{longDate(imp.startedAt)}</dd>
                 </>
               ) : null}

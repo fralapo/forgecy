@@ -14,8 +14,8 @@ const sourced = <T>(id: string, value: T) => ({
 
 function doc(): BrandIdentityDocument {
   const d = emptyDocument();
-  d.strategy.oneLiner = sourced("o1", "Caffè buono per chi lavora");
-  d.verbal.forbiddenWords = ["eccellenza"];
+  d.strategy.oneLiner = sourced("o1", "Good coffee for people who work");
+  d.verbal.forbiddenWords = ["excellence"];
   return d;
 }
 
@@ -24,7 +24,7 @@ const example = (i: number, verdict: "approved" | "rejected"): ContextExample =>
   kind: "caption",
   verdict,
   body: "y".repeat(700),
-  reason: "Concreto",
+  reason: "Concrete",
   channel: null,
   pillarKey: null,
   formatKey: null,
@@ -40,8 +40,8 @@ describe("buildBrandContext", () => {
       tokens: defaultTokens(),
     });
     expect(ctx.stable).toContain("# Brand Identity v3");
-    expect(ctx.stable).toContain("One-liner: Caffè buono per chi lavora");
-    expect(ctx.stable).toContain("Parole vietate (mai usarle): eccellenza");
+    expect(ctx.stable).toContain("One-liner: Good coffee for people who work");
+    expect(ctx.stable).toContain("Forbidden words (never use them): excellence");
     expect(ctx.stable).toContain("brand-primary");
     expect(ctx.stable).not.toMatch(/#[0-9a-f]{6}/i);
     expect(ctx.overBudget).toBe(false);
@@ -79,7 +79,7 @@ describe("publishChecks and diffVersions", () => {
       sensitive: true,
     });
     const next = doc();
-    next.strategy.oneLiner = sourced("o1", "Il caffè dell'ufficio");
+    next.strategy.oneLiner = sourced("o1", "The office coffee");
     const changes = diffVersions(
       { document: doc(), tokens: defaultTokens() },
       { document: next, tokens: defaultTokens() },
@@ -87,8 +87,8 @@ describe("publishChecks and diffVersions", () => {
     expect(changes).toHaveLength(1);
     expect(changes[0]).toMatchObject({
       kind: "changed",
-      before: "Caffè buono per chi lavora",
-      after: "Il caffè dell'ufficio",
+      before: "Good coffee for people who work",
+      after: "The office coffee",
     });
   });
 });

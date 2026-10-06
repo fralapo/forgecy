@@ -20,10 +20,11 @@ export interface CandidateProposal {
   agentModel?: string;
 }
 
+// Matches Italian and English color words in client documents.
 const COLOR_WORDS =
   /\b(blu|azzurro|rosso|verde|giallo|arancio(?:ne)?|viola|rosa|nero|bianco|grigio|oro|argento|blue|red|green|yellow|orange|purple|pink|black|white|gray|grey|gold|silver|primario|secondario|primary|secondary|accent[oe]?)\b/i;
 
-/** Name of a color from the words right before its value ("Crema #F5EBDC" → "Crema"). */
+/** Name of a color from the words right before its value ("Cream #F5EBDC" → "Cream"). */
 export function colorName(context: string, hex: string, fallback: string): string {
   const full = hex.replace(/^#/, "");
   // The text may use the 3-digit form (#FFF) of a 6-digit value.
@@ -76,7 +77,7 @@ export async function addSourceProposals(
       seen.add(`color:${hex}`);
       existingHex.add(hex);
       n++;
-      let name = tokenNameFrom(colorName(v.name, hex, `colore-${n}`), `colore-${n}`);
+      let name = tokenNameFrom(colorName(v.name, hex, `color-${n}`), `color-${n}`);
       while (usedNames.has(name)) name = `${name}-${n}`;
       usedNames.add(name);
       input = {
@@ -87,7 +88,7 @@ export async function addSourceProposals(
           $value: hexToDtcg(hex),
           ...(v.usage ? { $description: v.usage.slice(0, 400) } : {}),
         },
-        title: `Colore ${name} ${hex}`,
+        title: `Color ${name} ${hex}`,
       };
     } else {
       const key = `${c.path}:${JSON.stringify(c.value)}`;

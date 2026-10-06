@@ -52,6 +52,7 @@ import { channelLabel } from "./prospects";
 export type ReportRow = typeof auditReports.$inferSelect;
 type FindingRow = typeof auditFindings.$inferSelect;
 
+// Per-language texts of the client deliverable: the `it` entry stays Italian.
 const SECTION_TITLES: Record<"it" | "en", Record<ReportSectionKey, string>> = {
   it: {
     cover: "Copertina",
@@ -80,7 +81,7 @@ const SECTION_TITLES: Record<"it" | "en", Record<ReportSectionKey, string>> = {
 };
 
 /** Limits of the free texts: what an A4 page can hold next to the findings. */
-/** Limits of the «Report di audit» template pages (section intro, list items). */
+/** Limits of the “Audit report” template pages (section intro, list items). */
 export const REPORT_LIMITS = {
   intro: 420,
   nextStepsIntro: 240,
@@ -231,13 +232,13 @@ export async function checkReportEvidence(
           findingId: f.id,
           title: f.title,
           section,
-          reason: "Nessuna osservazione collegata è inclusa nel report",
+          reason: "No linked observation is included in the report",
         });
       continue;
     }
     const ev = evidenceOf(f);
     if (!ev.length) {
-      errors.push({ findingId: f.id, title: f.title, section, reason: "Nessuna evidenza" });
+      errors.push({ findingId: f.id, title: f.title, section, reason: "No evidence" });
       continue;
     }
     if (!ev.some(alive))
@@ -247,8 +248,8 @@ export async function checkReportEvidence(
         section,
         reason:
           ev[0]?.type === "screenshot"
-            ? "Screenshot rimosso dal Social Audit"
-            : "La fonte citata non esiste più",
+            ? "Screenshot removed from the Social Audit"
+            : "The cited source no longer exists",
       });
   }
 
@@ -257,10 +258,10 @@ export async function checkReportEvidence(
     if (!s.enabled || s.key === "cover" || s.key === "method") continue;
     const hasItems = (grouped[s.key] ?? []).some((f) => includedIds.has(f.id));
     if (!s.intro.trim() && !s.bullets.length && !hasItems)
-      warnings.push({ section: s.key, message: "Sezione senza testo né elementi" });
+      warnings.push({ section: s.key, message: "Section with no text or items" });
     const introMax = s.key === "next_steps" ? REPORT_LIMITS.nextStepsIntro : REPORT_LIMITS.intro;
     if (textLength(s.intro) > introMax)
-      warnings.push({ section: s.key, message: "Testo oltre il limite della pagina" });
+      warnings.push({ section: s.key, message: "Text over the page limit" });
   }
   return { ok: errors.length === 0, included: included.length, errors, warnings };
 }
@@ -269,7 +270,7 @@ export async function checkReportEvidence(
 
 async function loadReport(db: Database, id: string) {
   const report = await db.query.auditReports.findFirst({ where: eq(auditReports.id, id) });
-  if (!report) throw new ForgecyError("not_found", "Report non trovato");
+  if (!report) throw new ForgecyError("not_found", "Report not found");
   const { audit, client } = await loadAudit(db, report.auditId);
   return { report, audit, client };
 }
@@ -279,15 +280,15 @@ function assertStatus(report: ReportRow, ...allowed: ReportStatus[]) {
     throw new ForgecyError(
       "conflict",
       report.status === "in_review"
-        ? "Il report è in revisione: ritiralo dalla revisione per modificarlo."
-        : "Questa versione del report non si può più modificare: crea una nuova versione.",
+        ? "The report is in review: withdraw it from review to edit it."
+        : "This report version can no longer be edited: create a new version.",
     );
 }
 
 function conflict() {
   return new ForgecyError(
     "conflict",
-    "Qualcuno ha modificato il report mentre lavoravi. Ricarica la pagina.",
+    "Someone changed the report while you were working. Reload the page.",
   );
 }
 
@@ -325,7 +326,7 @@ async function event(
 }
 
 /**
- * «Componi report»: the first draft, or the next version copied from the latest
+ * “Compose report”: the first draft, or the next version copied from the latest
  * one. The audit must be reviewed (UX: the report comes after the diagnosis).
  * With AI allowed the Strategist and the Copywriter then propose the texts.
  */
@@ -337,20 +338,20 @@ export async function composeReport(
   const { audit, client } = await loadAudit(deps.db, auditId);
   assertCan(actor, "edit_draft", audit.clientId);
   if (audit.status === "archived")
-    throw new ForgecyError("conflict", "L'audit è archiviato: non si compongono report.");
+    throw new ForgecyError("conflict", "The audit is archived: reports cannot be composed.");
   const readiness = await reportReadiness(deps.db, auditId);
   const missing = readiness.filter((r) => !r.ok);
   if (missing.length)
     throw new ForgecyError(
       "validation",
-      `Prima del report: ${missing.map((m) => m.label.toLowerCase()).join("; ")}.`,
+      `Before the report: ${missing.map((m) => m.label.toLowerCase()).join("; ")}.`,
     );
   const latest = await deps.db.query.auditReports.findFirst({
     where: eq(auditReports.auditId, auditId),
     orderBy: desc(auditReports.version),
   });
   if (latest && (latest.status === "draft" || latest.status === "in_review"))
-    throw new ForgecyError("conflict", `La v${latest.version} è ancora aperta: lavora su quella.`);
+    throw new ForgecyError("conflict", `v${latest.version} is still open: work on that one.`);
   const profile = await deps.db.query.prospectProfiles.findFirst({
     where: eq(prospectProfiles.clientId, client.id),
   });
@@ -395,7 +396,7 @@ export async function composeReport(
   return { reportId: report.id, jobId };
 }
 
-/** «Ricomponi sezione» / «Rigenera testo»: hand-edited texts are kept. */
+/** “Recompose section” / “Regenerate text”: hand-edited texts are kept. */
 export async function requestReportTexts(
   deps: AuditDeps,
   actor: Actor,
@@ -407,10 +408,10 @@ export async function requestReportTexts(
   if (!aiAllowed(client.aiPolicy))
     throw new ForgecyError(
       "policy_blocked",
-      "La policy di questo prospect non permette l'AI: scrivi i testi a mano.",
+      "This prospect's policy does not allow AI: write the texts by hand.",
     );
   if (await hasActiveJob(deps.db, audit.id, auditReportTextsJob.kind))
-    throw new ForgecyError("conflict", "I testi del report sono già in preparazione.");
+    throw new ForgecyError("conflict", "The report texts are already being prepared.");
   return enqueueAuditJob(deps, {
     def: auditReportTextsJob,
     payload: {
@@ -429,18 +430,18 @@ export const reportSectionsSchema = z
     z.object({
       key: z.enum(reportSectionKeys),
       enabled: z.boolean(),
-      title: z.string().trim().min(1, "Ogni sezione ha un titolo").max(120),
-      intro: z.string().max(REPORT_LIMITS.intro, "Testo troppo lungo per la pagina"),
+      title: z.string().trim().min(1, "Every section needs a title").max(120),
+      intro: z.string().max(REPORT_LIMITS.intro, "Text too long for the page"),
       bullets: z
         .array(z.string().trim().min(1).max(REPORT_LIMITS.bullet))
         .max(REPORT_LIMITS.bullets),
       byAgent: z.boolean().optional(),
     }),
   )
-  .refine((s) => new Set(s.map((x) => x.key)).size === s.length, "Sezione ripetuta")
+  .refine((s) => new Set(s.map((x) => x.key)).size === s.length, "Repeated section")
   .refine(
     (s) => FIXED_REPORT_SECTIONS.every((k) => s.find((x) => x.key === k)?.enabled),
-    "Copertina e metodo restano sempre nel report",
+    "Cover and method always stay in the report",
   );
 
 /** Save the structure and texts of a draft (order, on/off, titles, intros, exclusions). */
@@ -494,7 +495,7 @@ export async function saveReportDraft(
   return updateReport(deps.db, report, values, actor);
 }
 
-/** «Invia in revisione»: the draft becomes read-only. Blocked by missing evidence. */
+/** “Submit for review”: the draft becomes read-only. Blocked by missing evidence. */
 export async function submitReport(
   deps: AuditDeps,
   actor: Actor,
@@ -508,7 +509,7 @@ export async function submitReport(
   if (!check.ok)
     throw new ForgecyError(
       "validation",
-      `${check.errors.length} elementi inclusi non hanno evidenza: correggili o escludili (REPORT-EVIDENCE-MISSING).`,
+      `${check.errors.length} included items have no evidence: fix or exclude them (REPORT-EVIDENCE-MISSING).`,
     );
   return deps.db.transaction(async (tx) => {
     const row = await updateReport(
@@ -529,7 +530,7 @@ export async function submitReport(
   });
 }
 
-/** «Ritira dalla revisione». */
+/** “Withdraw from review”. */
 export async function withdrawReport(
   deps: AuditDeps,
   actor: Actor,
@@ -547,7 +548,7 @@ export async function withdrawReport(
 }
 
 /**
- * «Segna revisione completata». Only people approve (agents get permission_denied).
+ * “Mark review complete”. Only people approve (agents get permission_denied).
  * Approving one's own submission needs a note for the record. The audit becomes
  * reviewed and older approved or exported versions are superseded.
  */
@@ -564,13 +565,13 @@ export async function approveReport(
   if (report.submittedBy && report.submittedBy === userIdOf(actor) && !note)
     throw new ForgecyError(
       "validation",
-      "Stai approvando un contenuto inviato da te: aggiungi una nota per il registro.",
+      "You are approving content you submitted: add a note for the record.",
     );
   const check = await checkReportEvidence(deps.db, report);
   if (!check.ok)
     throw new ForgecyError(
       "validation",
-      `${check.errors.length} elementi inclusi non hanno evidenza (REPORT-EVIDENCE-MISSING).`,
+      `${check.errors.length} included items have no evidence (REPORT-EVIDENCE-MISSING).`,
     );
   return deps.db.transaction(async (tx) => {
     const row = await updateReport(
@@ -603,7 +604,7 @@ export async function approveReport(
   });
 }
 
-/** «Richiedi modifiche»: back to draft with the comment on top of the editor. */
+/** “Request changes”: back to draft with the comment on top of the editor. */
 export async function requestReportChanges(
   deps: AuditDeps,
   actor: Actor,
@@ -614,7 +615,7 @@ export async function requestReportChanges(
   assertCan(actor, "review", audit.clientId);
   assertStatus(report, "in_review");
   const comment = input.comment.trim();
-  if (!comment) throw new ForgecyError("validation", "Scrivi cosa va cambiato.");
+  if (!comment) throw new ForgecyError("validation", "Write what needs to change.");
   return deps.db.transaction(async (tx) => {
     const row = await updateReport(
       tx,
@@ -627,12 +628,12 @@ export async function requestReportChanges(
   });
 }
 
-/** «Elimina bozza»: only drafts never sent to review. */
+/** “Delete draft”: only drafts never sent to review. */
 export async function deleteReportDraft(deps: AuditDeps, actor: Actor, id: string) {
   const { report, audit } = await loadReport(deps.db, id);
   assertCan(actor, "edit_draft", audit.clientId);
   if (report.status !== "draft" || report.submittedAt)
-    throw new ForgecyError("conflict", "Si eliminano solo le bozze mai inviate in revisione.");
+    throw new ForgecyError("conflict", "Only drafts never submitted for review can be deleted.");
   await deps.db.transaction(async (tx) => {
     await tx.delete(auditReports).where(eq(auditReports.id, id));
     await event(tx, actor, "audit.report.delete_draft", report, audit.clientId);
@@ -640,7 +641,7 @@ export async function deleteReportDraft(deps: AuditDeps, actor: Actor, id: strin
 }
 
 /**
- * «Esporta PDF»: a draft PDF (watermark «Bozza») at any time before delivery, the
+ * “Export PDF”: a draft PDF (“Draft” watermark) at any time before delivery, the
  * final one only for an approved version with every included item backed by evidence.
  */
 export async function requestReportExport(
@@ -651,23 +652,23 @@ export async function requestReportExport(
   const { report, audit } = await loadReport(deps.db, input.reportId);
   assertCan(actor, "reports.export", audit.clientId);
   if (report.status === "superseded")
-    throw new ForgecyError("conflict", "Questa versione è stata sostituita da una più recente.");
+    throw new ForgecyError("conflict", "This version was superseded by a newer one.");
   if (input.final) {
     assertCan(actor, "publish", audit.clientId);
     if (report.status !== "approved" && report.status !== "exported")
       throw new ForgecyError(
         "conflict",
-        "Il PDF finale si esporta solo da una versione approvata da una persona.",
+        "The final PDF can only be exported from a version approved by a person.",
       );
     const check = await checkReportEvidence(deps.db, report);
     if (!check.ok)
       throw new ForgecyError(
         "validation",
-        `${check.errors.length} elementi inclusi non hanno evidenza (REPORT-EVIDENCE-MISSING).`,
+        `${check.errors.length} included items have no evidence (REPORT-EVIDENCE-MISSING).`,
       );
   }
   if (await hasActiveJob(deps.db, audit.id, auditReportExportJob.kind))
-    throw new ForgecyError("conflict", "Un PDF del report è già in preparazione.");
+    throw new ForgecyError("conflict", "A PDF of the report is already being prepared.");
   return enqueueAuditJob(deps, {
     def: auditReportExportJob,
     payload: { reportId: report.id, variant: input.variant, final: input.final },
@@ -769,6 +770,7 @@ export interface ReportDocument {
   sections: ReportDocSection[];
 }
 
+// Per-language texts of the client deliverable: the `it` entry stays Italian.
 const METHOD_TEXT = {
   it: {
     intro:
@@ -897,7 +899,7 @@ export async function buildReportDocument(
   };
 }
 
-/** Deterministic PDF name: `rossi-srl_audit_2026-10-05_v2_completo.pdf`. */
+/** Deterministic PDF name: `rossi-srl_audit_2026-10-05_v2_full.pdf`. */
 export function reportFileName(input: {
   slug: string;
   auditDate: Date;
@@ -906,8 +908,8 @@ export function reportFileName(input: {
   final: boolean;
 }): string {
   const day = input.auditDate.toISOString().slice(0, 10);
-  const v = input.variant === "full" ? "completo" : "compatto";
-  return `${input.slug}_audit_${day}_v${input.version}_${v}${input.final ? "" : "_bozza"}.pdf`;
+  const v = input.variant === "full" ? "full" : "compact";
+  return `${input.slug}_audit_${day}_v${input.version}_${v}${input.final ? "" : "_draft"}.pdf`;
 }
 
 // ---------------------------------------------------------------- Queries

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Output formats in release order (spec "Formati"): Instagram 4:5 and the LinkedIn
+ * Output formats in release order (spec "Formats"): Instagram 4:5 and the LinkedIn
  * document ship in the MVP; the others are v1 and become usable as soon as a
  * template declares them. Sizes are real pixels: the renderer never scales.
  * The report formats (audit, A4 and 16:9) are paged PDFs with no social channel.
@@ -39,7 +39,7 @@ export interface FormatSpec {
   kind: "carousel" | "report";
   width: number;
   height: number;
-  /** Used in export file names: `{cliente}_{contenuto}_v{n}_{fileSlug}_{nn}.png`. */
+  /** Used in export file names: `{client}_{content}_v{n}_{fileSlug}_{nn}.png`. */
   fileSlug: string;
   /** Default safe zone in px; a template can override it. */
   safeZone: SafeZone;
@@ -114,7 +114,7 @@ export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
   },
   tiktok_photo: {
     id: "tiktok_photo",
-    label: "TikTok foto",
+    label: "TikTok photo",
     channel: "tiktok",
     kind: "carousel",
     width: 1080,

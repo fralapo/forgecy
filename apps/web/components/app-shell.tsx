@@ -14,16 +14,16 @@ import type { ReactNode } from "react";
 import type { CurrentUser } from "@/lib/session";
 import { SignOutButton } from "./sign-out-button";
 
-// Module threads add their entries here (Audit, Brand Identity, Contenuti, Template...).
+// Module threads add their entries here (Audit, Brand Identity, Content, Templates...).
 const nav = [
-  { href: "/", label: "Panoramica", icon: LayoutDashboard },
-  { href: "/clients", label: "Clienti", icon: Building2 },
+  { href: "/", label: "Overview", icon: LayoutDashboard },
+  { href: "/clients", label: "Clients", icon: Building2 },
   { href: "/audit", label: "Audit", icon: ClipboardCheck },
-  { href: "/products", label: "Prodotti", icon: Package },
-  { href: "/templates", label: "Template", icon: LayoutTemplate },
+  { href: "/products", label: "Products", icon: Package },
+  { href: "/templates", label: "Templates", icon: LayoutTemplate },
   { href: "/brand", label: "Brand Identity", icon: Fingerprint },
-  { href: "/content", label: "Contenuti", icon: GalleryHorizontal },
-  { href: "/settings", label: "Impostazioni", icon: Settings },
+  { href: "/content", label: "Content", icon: GalleryHorizontal },
+  { href: "/settings", label: "Settings", icon: Settings },
   { href: "/design", label: "Design system", icon: Palette },
 ] as const;
 
@@ -32,7 +32,7 @@ export function AppShell({ user, children }: { user: CurrentUser; children: Reac
     <div className="grid min-h-dvh grid-cols-[15rem_1fr]">
       <aside className="flex flex-col border-r border-subtle bg-surface">
         <div className="px-6 py-5 font-display text-heading-md text-fg">Forgecy</div>
-        <nav aria-label="Navigazione principale" className="flex-1 px-3">
+        <nav aria-label="Main navigation" className="flex-1 px-3">
           <ul className="space-y-1">
             {nav.map(({ href, label, icon: Icon }) => (
               <li key={href}>
@@ -49,7 +49,7 @@ export function AppShell({ user, children }: { user: CurrentUser; children: Reac
         </nav>
         <div className="border-t border-subtle px-6 py-4">
           <p className="text-body-sm text-fg">{user.name}</p>
-          <p className="text-body-sm text-fg-muted">{user.isAdmin ? "Admin" : "Utente"}</p>
+          <p className="text-body-sm text-fg-muted">{user.isAdmin ? "Admin" : "User"}</p>
           <SignOutButton />
         </div>
       </aside>

@@ -52,11 +52,11 @@ export default tseslint.config(
         "error",
         {
           selector: "Literal[value=/#[0-9a-fA-F]{3,8}\\b|\\brgba?\\(|\\bhsla?\\(/]",
-          message: "Brand Guard: usa i token di @forgecy/ui invece di colori scritti a mano.",
+          message: "Brand Guard: use @forgecy/ui tokens instead of hand-written colors.",
         },
         {
           selector: "Literal[value=/\\b(bg|text|border|ring|fill|stroke)-\\[#/]",
-          message: "Brand Guard: niente colori arbitrari in Tailwind, usa i token.",
+          message: "Brand Guard: no arbitrary colors in Tailwind, use the tokens.",
         },
       ],
     },

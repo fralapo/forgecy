@@ -33,7 +33,7 @@ import { RefreshWhile } from "../../_components/refresh-while";
 import { carouselPath } from "../../_lib/paths";
 import { loadClient } from "../../_lib/server";
 
-export const metadata = { title: "Piano dei contenuti" };
+export const metadata = { title: "Content plan" };
 
 type Plan = NonNullable<StrategyOverview["activePlan"]>;
 type Item = Plan["items"][number];
@@ -45,7 +45,7 @@ const objectiveOfFunnel: Record<FunnelStage, ContentObjective> = {
   conversion: "conversion",
   loyalty: "community",
 };
-const dayFormat = new Intl.DateTimeFormat("it-IT", {
+const dayFormat = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
   day: "numeric",
   month: "short",
@@ -104,13 +104,12 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
     const forFormat = newOptions.templates.filter((t) => t.format === item.format);
     const template = forFormat.find((t) => t.key === rubric?.templateKey) ?? forFormat[0];
     if (!newOptions.brandPublished)
-      return { params: null, reason: "Serve una Brand Identity pubblicata." };
-    if (!template)
-      return { params: null, reason: "Nessun template pubblicato per questo formato." };
+      return { params: null, reason: "A published Brand Identity is required." };
+    if (!template) return { params: null, reason: "No published template for this format." };
     const own = (pillar?.audienceIds ?? []).filter((a) => audienceIds.has(a));
     const audience = own.length ? own : newOptions.audience.slice(0, 1).map((a) => a.id);
     if (!audience.length)
-      return { params: null, reason: "La Brand Identity non ha un pubblico definito." };
+      return { params: null, reason: "The Brand Identity has no defined audience." };
     return {
       params: {
         objective: pillar?.funnel ? objectiveOfFunnel[pillar.funnel] : "awareness",
@@ -137,11 +136,11 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
     return (
       <div className="min-w-0 flex-1 space-y-1">
         <p className="text-body-md font-medium text-fg">{item.theme}</p>
-        {item.hook ? <p className="text-body-sm text-fg">Angolo: {item.hook}</p> : null}
+        {item.hook ? <p className="text-body-sm text-fg">Angle: {item.hook}</p> : null}
         <p className="text-body-sm text-fg-muted">
           {channelLabels[item.channel as ContentChannel] ?? item.channel} ·{" "}
           {FORMATS[item.format as keyof typeof FORMATS]?.label ?? item.format} ·{" "}
-          {pillar ?? "Pilastro rimosso"}
+          {pillar ?? "Pillar removed"}
           {rubric ? ` › ${rubric}` : ""}
           {products ? ` · ${products}` : ""}
         </p>
@@ -156,7 +155,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
       className="flex flex-wrap items-start gap-4 border-b border-subtle py-4 last:border-b-0"
     >
       <div className="w-24 shrink-0">
-        <p className="text-label uppercase text-fg-muted">Giorno {item.day}</p>
+        <p className="text-label uppercase text-fg-muted">Day {item.day}</p>
         <p className="text-body-sm text-fg">{dateOf(plan, item.day)}</p>
       </div>
       {describe(item)}
@@ -177,7 +176,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
         rev={item.rev}
         initial={planItemRowToInput(item)}
         options={options}
-        label="Modifica"
+        label="Edit"
       />
     ) : null;
 
@@ -191,19 +190,19 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
       <RefreshWhile active={running} />
 
       <Card className="space-y-3 p-5">
-        <h2 className="text-heading-sm text-fg">Proponi piano</h2>
+        <h2 className="text-heading-sm text-fg">Propose plan</h2>
         <p className="text-body-sm text-fg-muted">
-          Il Planner propone un piano di 30 giorni sui pilastri e le rubriche attivi. Il piano in
-          uso non cambia finché non attivi la proposta.
+          The Planner proposes a 30-day plan based on the active pillars and rubrics. The current
+          plan doesn’t change until you activate the proposal.
         </p>
         {running ? (
           <p role="status" className="flex items-center gap-2 text-body-sm text-fg">
             <LoaderCircle aria-hidden className="size-4 animate-spin" />
-            Il Planner sta preparando il piano…
+            The Planner is preparing the plan…
           </p>
         ) : failed ? (
           <p role="alert" className="text-body-sm text-error">
-            L&apos;ultima richiesta di piano non è riuscita
+            The last plan request failed
             {lastJob.error ? `: ${lastJob.error}` : "."}
           </p>
         ) : null}
@@ -213,9 +212,9 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
             running={running}
             disabledReason={
               !o.brand
-                ? "Serve una Brand Identity pubblicata."
+                ? "A published Brand Identity is required."
                 : !options.pillars.length
-                  ? "Serve almeno un pilastro attivo nella Strategia."
+                  ? "At least one active pillar is required in Strategy."
                   : null
             }
           />
@@ -225,19 +224,19 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
       {proposed ? (
         <section aria-labelledby="proposed-plan" className="space-y-3">
           <h2 id="proposed-plan" className="text-heading-md text-fg">
-            Piano proposto
+            Proposed plan
           </h2>
           {canEdit ? (
             <PlanProposal
               {...base}
               planId={proposed.id}
-              title={`Piano n. ${proposed.number} · ${proposed.items.length} contenuti`}
+              title={`Plan no. ${proposed.number} · ${proposed.items.length} items`}
               agent={p ? agentLabels[p.agent] : "Planner"}
               sources={p?.sources.map((s) => ({ label: s.label })) ?? []}
             >
               {p?.rationale ? <p className="text-body-sm text-fg">{p.rationale}</p> : null}
               {p?.instruction ? (
-                <p className="text-body-sm text-fg-muted">Istruzione: «{p.instruction}»</p>
+                <p className="text-body-sm text-fg-muted">Instruction: “{p.instruction}”</p>
               ) : null}
               <ul>
                 {proposed.items.map((item) =>
@@ -255,7 +254,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
                           })}
                         >
                           <Check aria-hidden />
-                          Accetta
+                          Accept
                         </ActionButton>
                         <ActionButton
                           size="sm"
@@ -267,7 +266,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
                           })}
                         >
                           <X aria-hidden />
-                          Rifiuta
+                          Reject
                         </ActionButton>
                         {editButton(item)}
                       </>
@@ -283,14 +282,14 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
       <section aria-labelledby="active-plan" className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="active-plan" className="text-heading-md text-fg">
-            {active ? `Piano in uso · n. ${active.number}` : "Piano in uso"}
+            {active ? `Current plan · no. ${active.number}` : "Current plan"}
           </h2>
-          {canEdit ? <PlanItemForm {...base} options={options} label="Aggiungi elemento" /> : null}
+          {canEdit ? <PlanItemForm {...base} options={options} label="Add item" /> : null}
         </div>
         {!active || !active.items.length ? (
           <Card className="p-6">
             <p className="text-body-md text-fg-muted">
-              Nessun elemento nel piano. Aggiungilo a mano o chiedi una proposta al Planner.
+              No items in the plan. Add one manually or ask the Planner for a proposal.
             </p>
           </Card>
         ) : (
@@ -309,7 +308,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
                           className="inline-flex h-8 items-center gap-1 rounded-md border border-control bg-surface px-3 text-body-sm text-fg"
                         >
                           <ExternalLink aria-hidden className="size-4" />
-                          Apri carosello
+                          Open carousel
                         </Link>
                       ) : canEdit ? (
                         (() => {

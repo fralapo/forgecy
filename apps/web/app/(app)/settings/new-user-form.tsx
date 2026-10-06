@@ -10,7 +10,7 @@ export function NewUserForm() {
   return (
     <form action={action} className="mt-4 space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="user-name">Nome</Label>
+        <Label htmlFor="user-name">Name</Label>
         <Input id="user-name" name="name" required />
       </div>
       <div className="space-y-2">
@@ -18,7 +18,7 @@ export function NewUserForm() {
         <Input id="user-email" name="email" type="email" required />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="user-password">Password iniziale</Label>
+        <Label htmlFor="user-password">Initial password</Label>
         <Input
           id="user-password"
           name="password"
@@ -30,7 +30,7 @@ export function NewUserForm() {
       </div>
       <label className="flex items-center gap-2 text-body-sm text-fg">
         <input type="checkbox" name="isAdmin" className="size-4 accent-primary" />
-        Admin (impostazioni, chiavi, budget e backup)
+        Admin (settings, keys, budget and backups)
       </label>
       {state.error ? (
         <p role="alert" className="text-body-sm text-error">
@@ -39,12 +39,12 @@ export function NewUserForm() {
       ) : null}
       {state.ok ? (
         <p role="status" className="text-body-sm text-success">
-          Account creato.
+          Account created.
         </p>
       ) : null}
       <Button type="submit" disabled={pending}>
         <UserPlus aria-hidden />
-        Crea account
+        Create account
       </Button>
     </form>
   );

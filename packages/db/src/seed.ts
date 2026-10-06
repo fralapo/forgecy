@@ -15,18 +15,18 @@ const fixtures: (typeof clients.$inferInsert)[] = [
     slug: "demo-trattoria-da-mario",
     status: "prospect",
     websiteUrl: "https://example.com",
-    sector: "Ristorazione",
+    sector: "Restaurants",
     aiPolicy: "external_allowed",
-    notes: "Cliente di prova per lo sviluppo.",
+    notes: "Test client for development.",
   },
   {
     name: "Studio Verdi Architetti (demo)",
     slug: "demo-studio-verdi",
     status: "active",
     websiteUrl: "https://example.org",
-    sector: "Architettura",
+    sector: "Architecture",
     aiPolicy: "local_only",
-    notes: "Cliente di prova con policy local_only.",
+    notes: "Test client with the local_only policy.",
   },
 ];
 

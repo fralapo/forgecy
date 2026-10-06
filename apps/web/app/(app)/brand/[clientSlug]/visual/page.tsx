@@ -18,7 +18,7 @@ export default async function VisualPage({
       slug={clientSlug}
       version={versionParam(sp.version)}
       sections={[visualUi]}
-      intro="Logo, palette con i ruoli semantici, contrasti, tipografia, fotografia e impaginazione."
+      intro="Logo, palette with semantic roles, contrasts, typography, photography and layout."
       before={({ client, shown }) => (
         <TokensEditor
           key={shown.version?.id ?? "none"}

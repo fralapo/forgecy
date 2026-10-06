@@ -11,11 +11,11 @@ export interface ContentTab {
   count?: number;
 }
 
-/** Sub-navigation of the content module: Strategia, Piano, Caroselli, Libreria. */
+/** Sub-navigation of the content module: Strategy, Plan, Carousels, Library. */
 export function ContentTabs({ tabs }: { tabs: ContentTab[] }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="Sezioni dei contenuti" className="mb-6 overflow-x-auto border-b border-subtle">
+    <nav aria-label="Content sections" className="mb-6 overflow-x-auto border-b border-subtle">
       <ul className="flex min-w-max gap-1">
         {tabs.map((t, i) => {
           const current = i === 0 ? pathname === t.href : pathname.startsWith(t.href);

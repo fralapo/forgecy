@@ -37,7 +37,7 @@ describe("editorial rules", () => {
     (c.slides[0]!.slots[0] as GuardTextSlot).text = "x".repeat(72);
     const f = run(c).findings.find((x) => x.check === "text_length")!;
     expect(f).toMatchObject({ severity: "error", slide: 0, slot: "title", measured: 72 });
-    expect(f.message).toBe("Titolo: 72/60 caratteri. Accorcia a 60.");
+    expect(f.message).toBe("Title: 72/60 characters. Shorten to 60.");
   });
 
   it("ignores highlight markers when counting", () => {
@@ -71,6 +71,7 @@ describe("editorial rules", () => {
   });
 });
 
+// Italian texts on purpose: the brand and the checks under test work on Italian content.
 describe("vocabulary and claims", () => {
   it("flags forbidden words as errors with the BI rule", () => {
     const f = run(withText("Un caffè Economico ma buono")).findings.find(
@@ -142,7 +143,7 @@ describe("product facts", () => {
 
   it("errors on facts missing from the approved product", () => {
     const f = run(withProduct("Garanzia 5 anni")).findings.find((x) => x.check === "product_fact")!;
-    expect(f.message).toBe("Slide 2 · Titolo: «5 anni» non è nella scheda di «Moka X200».");
+    expect(f.message).toBe("Slide 2 · Title: “5 anni” is not in the product sheet of “Moka X200”.");
     expect(checks(withProduct("Garanzia 2 anni, 0.5 l"))).not.toContain("product_fact:error");
   });
 
@@ -161,7 +162,7 @@ describe("visual rules", () => {
     t.fontFamily = "Comic Sans MS";
     const r = run(c).findings;
     expect(r.find((f) => f.check === "off_brand_color")?.suggestion).toBe(
-      "Usa il ruolo «Colore del brand» (#3B1F12).",
+      "Use the “Brand color” role (#3B1F12).",
     );
     expect(r.find((f) => f.check === "off_brand_font")?.suggestion).toContain("Fraunces");
     t.color = { token: "color.semantic.nope" };
@@ -178,7 +179,7 @@ describe("visual rules", () => {
     (c.slides[1]!.slots[1] as { color: unknown }).color = { token: "color.semantic.surface" };
     const f = run(c).findings.find((x) => x.check === "contrast")!;
     expect(f).toMatchObject({ severity: "error", origin: "json", threshold: 4.5 });
-    expect(f.suggestion).toMatch(/^Usa il ruolo «/);
+    expect(f.suggestion).toMatch(/^Use the “/);
   });
 });
 
@@ -206,7 +207,7 @@ describe("images", () => {
     expect(r.find((f) => f.check === "ai_next_to_photo")?.severity).toBe("warning");
     expect(r.find((f) => f.check === "low_resolution")).toMatchObject({
       severity: "error",
-      message: "Slide 2 · product: immagine 400×400 px per uno slot di 1080 px.",
+      message: "Slide 2 · product: 400×400 px image for a 1080 px slot.",
     });
   });
 });
@@ -259,7 +260,7 @@ describe("render measures", () => {
       "too_many_lines",
     ]);
     expect(r.findings.find((f) => f.check === "contrast_on_render")?.message).toBe(
-      "Slide 2 · Elenco: contrasto 1,6:1; minimo 4,5:1.",
+      "Slide 2 · List: contrast 1.6:1; minimum 4.5:1.",
     );
     expect(r.notRun.map((n) => n.check)).not.toContain("render");
   });

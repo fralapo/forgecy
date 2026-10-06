@@ -6,7 +6,7 @@ import { carouselPath } from "../../../../_lib/paths";
 import { thumbnailUrls } from "../../../../_lib/server";
 import { isActiveJob, loadCarousel } from "../../_lib/workspace";
 
-export const metadata = { title: "Editor del carosello" };
+export const metadata = { title: "Carousel editor" };
 
 type Generation = { commercialUse?: string; slideId?: string; slot?: string; provider?: string };
 

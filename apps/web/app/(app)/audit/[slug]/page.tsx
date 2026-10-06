@@ -41,10 +41,10 @@ import { readDeps } from "../_lib/server";
 import { plural } from "@/lib/plural";
 
 const policyText = {
-  external_allowed: "AI esterna ammessa",
-  external_restricted: "AI esterna limitata ai provider approvati",
-  local_only: "Solo AI locale",
-  no_ai: "Nessuna AI: osservazioni e diagnosi si compilano a mano",
+  external_allowed: "External AI allowed",
+  external_restricted: "External AI restricted to approved providers",
+  local_only: "Local AI only",
+  no_ai: "No AI: observations and diagnosis are filled in by hand",
 } as const;
 
 export default async function ProspectOverviewPage({
@@ -89,15 +89,15 @@ export default async function ProspectOverviewPage({
         </CardHeader>
         <dl className="grid gap-2 text-body-sm">
           <div>
-            <dt className="text-fg-muted">Sito</dt>
+            <dt className="text-fg-muted">Website</dt>
             <dd>{client.websiteUrl ?? "—"}</dd>
           </div>
           <div>
-            <dt className="text-fg-muted">Settore e area</dt>
+            <dt className="text-fg-muted">Sector and area</dt>
             <dd>{[client.sector, profile?.area].filter(Boolean).join(" · ") || "—"}</dd>
           </div>
           <div>
-            <dt className="text-fg-muted">Obiettivi</dt>
+            <dt className="text-fg-muted">Goals</dt>
             <dd>
               {(profile?.objectives ?? [])
                 .map((o) => prospectObjectiveLabels[o as ProspectObjective] ?? o)
@@ -112,40 +112,40 @@ export default async function ProspectOverviewPage({
             action={convertToClientAction.bind(null, client.id)}
             icon={<UserCheck aria-hidden />}
             variant="primary"
-            confirm={`${client.name} diventa un cliente attivo. Audit, fonti e osservazioni accettate restano collegati. Nessuna proposta diventa ufficiale senza l'approvazione di una persona.`}
+            confirm={`${client.name} becomes an active client. The audit, sources and accepted observations stay linked. No proposal becomes official without a person's approval.`}
           >
-            Converti in cliente
+            Convert to client
           </ActionButton>
         ) : (
           <>
-            <Button variant="secondary" disabled title="Consegna prima il report">
+            <Button variant="secondary" disabled title="Deliver the report first">
               <UserCheck aria-hidden />
-              Converti in cliente
+              Convert to client
             </Button>
-            <p className="text-body-sm text-fg-muted">Si attiva dopo la consegna del report.</p>
+            <p className="text-body-sm text-fg-muted">Available after the report is delivered.</p>
           </>
         )}
       </Card>
       <details className="rounded-lg border border-subtle bg-surface p-6">
-        <summary className="cursor-pointer text-heading-sm text-fg">Modifica i dati</summary>
+        <summary className="cursor-pointer text-heading-sm text-fg">Edit details</summary>
         <div className="mt-4">{editForm}</div>
       </details>
       <details className="rounded-lg border border-subtle bg-surface p-6">
-        <summary className="cursor-pointer text-heading-sm text-fg">Archivia o elimina</summary>
+        <summary className="cursor-pointer text-heading-sm text-fg">Archive or delete</summary>
         <div className="mt-4 flex flex-col gap-4">
           {client.archivedAt ? (
             <ActionButton
               action={restoreProspectAction.bind(null, client.id)}
               icon={<ArchiveRestore aria-hidden />}
             >
-              Ripristina prospect
+              Restore prospect
             </ActionButton>
           ) : (
             <ActionButton
               action={archiveProspectAction.bind(null, client.id)}
               icon={<Archive aria-hidden />}
             >
-              Archivia prospect
+              Archive prospect
             </ActionButton>
           )}
           <DeleteProspect clientId={client.id} name={client.name} />
@@ -160,11 +160,11 @@ export default async function ProspectOverviewPage({
       <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
         <Card>
           <CardHeader>
-            <CardTitle>Avvia l&apos;audit</CardTitle>
+            <CardTitle>Start the audit</CardTitle>
             <CardDescription>
               {audit
-                ? `L'ultimo audit è ${auditStatusLabel[audit.status].toLowerCase()}. Puoi avviarne uno nuovo.`
-                : "Ecco cosa succede quando lo avvii. Puoi fermare ogni passo."}
+                ? `The last audit is ${auditStatusLabel[audit.status].toLowerCase()}. You can start a new one.`
+                : "Here is what happens when you start it. You can stop every step."}
             </CardDescription>
           </CardHeader>
           <ol className="flex list-decimal flex-col gap-2 pl-5 text-body-md">
@@ -174,28 +174,28 @@ export default async function ProspectOverviewPage({
           </ol>
           <dl className="grid gap-2 text-body-sm sm:grid-cols-2">
             <div>
-              <dt className="text-fg-muted">Costo AI stimato</dt>
+              <dt className="text-fg-muted">Estimated AI cost</dt>
               <dd>
                 {estimate.costRangeUsd
-                  ? `${estimate.costRangeUsd.min.toFixed(2)}–${estimate.costRangeUsd.max.toFixed(2)} $ (prezzi API del provider)`
+                  ? `$${estimate.costRangeUsd.min.toFixed(2)}–${estimate.costRangeUsd.max.toFixed(2)} (provider API prices)`
                   : estimate.localModel
-                    ? "Nessun costo: modello locale"
-                    : "Nessun costo: AI disattivata"}
+                    ? "No cost: local model"
+                    : "No cost: AI turned off"}
               </dd>
             </div>
             <div>
-              <dt className="text-fg-muted">Budget rimasto questo mese</dt>
+              <dt className="text-fg-muted">Budget left this month</dt>
               <dd>
                 {estimate.budgetLeftUsd === null
-                  ? "Nessun limite impostato"
-                  : `${estimate.budgetLeftUsd.toFixed(2)} $`}
+                  ? "No limit set"
+                  : `$${estimate.budgetLeftUsd.toFixed(2)}`}
               </dd>
             </div>
           </dl>
           {estimate.budgetBlocked ? (
             <p role="alert" className="text-body-sm text-error">
-              Il budget rimasto non basta per l&apos;audit. Un Admin può aumentarlo nelle
-              impostazioni.
+              The remaining budget is not enough for the audit. An Admin can raise it in the
+              settings.
             </p>
           ) : null}
           <div>
@@ -204,7 +204,7 @@ export default async function ProspectOverviewPage({
               icon={<Play aria-hidden />}
               variant="primary"
             >
-              Avvia audit
+              Start audit
             </ActionButton>
           </div>
         </Card>
@@ -220,16 +220,16 @@ export default async function ProspectOverviewPage({
   const base = `/audit/${slug}`;
   const next: Array<{ href: string; label: string }> = [];
   if (overview.audit.status === "awaiting_competitors" && !overview.audit.competitorsConfirmedAt)
-    next.push({ href: `${base}/competitors`, label: "Conferma la lista dei competitor" });
+    next.push({ href: `${base}/competitors`, label: "Confirm the competitor list" });
   if (overview.counts.observationsToReview)
     next.push({
       href: `${base}/website`,
-      label: `Rivedi ${plural(overview.counts.observationsToReview, "osservazione proposta", "osservazioni proposte")}`,
+      label: `Review ${plural(overview.counts.observationsToReview, "proposed observation", "proposed observations")}`,
     });
   if (overview.channels.some((c) => c.channel !== "website" && c.status === "pending"))
-    next.push({ href: `${base}/social`, label: "Aggiungi i dati dei social" });
+    next.push({ href: `${base}/social`, label: "Add the social data" });
   if (overview.counts.observationsUsable && !overview.counts.problems)
-    next.push({ href: `${base}/diagnosis`, label: "Genera la diagnosi" });
+    next.push({ href: `${base}/diagnosis`, label: "Generate the diagnosis" });
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
@@ -237,7 +237,7 @@ export default async function ProspectOverviewPage({
         {next.length ? (
           <Card>
             <CardHeader>
-              <CardTitle>Prossimi passi</CardTitle>
+              <CardTitle>Next steps</CardTitle>
             </CardHeader>
             <ul className="flex flex-col gap-2">
               {next.map((n) => (
@@ -256,10 +256,10 @@ export default async function ProspectOverviewPage({
         ) : null}
         <Card>
           <CardHeader>
-            <CardTitle>Fonti</CardTitle>
+            <CardTitle>Sources</CardTitle>
             <CardDescription>
-              Avviato il {formatDateTime(overview.audit.startedAt)}. I social non vengono letti in
-              automatico: si caricano screenshot, export o valori.
+              Started on {formatDateTime(overview.audit.startedAt)}. Social channels are not read
+              automatically: you upload screenshots, exports or values.
             </CardDescription>
           </CardHeader>
           <ul className="flex flex-col divide-y divide-subtle">
@@ -279,26 +279,26 @@ export default async function ProspectOverviewPage({
                 </li>
               ))}
             <li className="flex flex-wrap items-center justify-between gap-2 py-3">
-              <span className="text-body-md text-fg">Competitor</span>
+              <span className="text-body-md text-fg">Competitors</span>
               <span className="text-body-sm text-fg-muted">
                 {overview.audit.competitorsSkipped
-                  ? "Audit senza competitor"
+                  ? "Audit without competitors"
                   : overview.audit.competitorsConfirmedAt
-                    ? `${overview.competitors.filter((c) => c.status === "confirmed").length} confermati`
-                    : `${overview.competitors.filter((c) => c.status === "proposed").length} proposti, da confermare`}
+                    ? `${overview.competitors.filter((c) => c.status === "confirmed").length} confirmed`
+                    : `${overview.competitors.filter((c) => c.status === "proposed").length} proposed, to confirm`}
               </span>
             </li>
           </ul>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Prima del report</CardTitle>
+            <CardTitle>Before the report</CardTitle>
             <CardDescription>
               <Link
                 href={`${base}/report` as Route}
                 className="text-link underline-offset-2 hover:underline"
               >
-                Vai al report
+                Go to the report
               </Link>
             </CardDescription>
           </CardHeader>
@@ -323,9 +323,9 @@ export default async function ProspectOverviewPage({
             action={archiveAuditAction.bind(null, overview.audit.id)}
             icon={<Archive aria-hidden />}
             variant="ghost"
-            confirm="Archiviare questo audit? I dati restano consultabili e potrai avviarne uno nuovo."
+            confirm="Archive this audit? The data stays available and you can start a new one."
           >
-            Archivia audit
+            Archive audit
           </ActionButton>
         </div>
       </div>

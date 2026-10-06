@@ -84,14 +84,12 @@ export function CatalogView(props: {
           {chosen.length ? (
             <>
               <span className="text-fg">
-                {chosen.length === 1
-                  ? "1 prodotto selezionato"
-                  : `${chosen.length} prodotti selezionati`}
+                {chosen.length === 1 ? "1 product selected" : `${chosen.length} products selected`}
               </span>
               <ConfirmDialog
-                title={`Approvare ${approvable.length} prodotti?`}
+                title={`Approve ${approvable.length} products?`}
                 confirmLabel={
-                  sensitive ? `Approva gli altri ${approvable.length}` : "Approva prodotti"
+                  sensitive ? `Approve the other ${approvable.length}` : "Approve products"
                 }
                 disabled={approvable.length === 0}
                 onConfirm={(f) =>
@@ -103,25 +101,25 @@ export function CatalogView(props: {
                 }
                 trigger={(open) => (
                   <Button size="sm" onClick={open} disabled={pending}>
-                    Approva selezionati
+                    Approve selected
                   </Button>
                 )}
               >
-                <p>Diventano utilizzabili nei caroselli di {props.clientName}.</p>
+                <p>They become usable in {props.clientName}’s carousels.</p>
                 {sensitive ? (
                   <p>
-                    {sensitive} prodotti hanno campi sensibili da accettare uno per uno. Verranno
-                    esclusi.
+                    {sensitive} products have sensitive fields to accept one by one. They will be
+                    skipped.
                   </p>
                 ) : null}
                 {chosen.length - approvable.length - sensitive > 0 ? (
                   <p>
-                    {chosen.length - approvable.length - sensitive} prodotti non sono proposti o in
-                    bozza: verranno esclusi.
+                    {chosen.length - approvable.length - sensitive} products are not proposed or in
+                    draft: they will be skipped.
                   </p>
                 ) : null}
                 <label className="block text-body-sm text-fg">
-                  Nota (facoltativa)
+                  Note (optional)
                   <textarea
                     name="note"
                     rows={2}
@@ -131,8 +129,8 @@ export function CatalogView(props: {
                 </label>
               </ConfirmDialog>
               <ConfirmDialog
-                title={`Rifiutare ${chosen.length} prodotti?`}
-                confirmLabel="Rifiuta prodotti"
+                title={`Reject ${chosen.length} products?`}
+                confirmLabel="Reject products"
                 onConfirm={(f) =>
                   bulk(
                     "reject",
@@ -142,12 +140,12 @@ export function CatalogView(props: {
                 }
                 trigger={(open) => (
                   <Button size="sm" variant="secondary" onClick={open} disabled={pending}>
-                    Rifiuta selezionati
+                    Reject selected
                   </Button>
                 )}
               >
                 <label className="block text-body-sm text-fg">
-                  Motivo (facoltativo)
+                  Reason (optional)
                   <textarea
                     name="note"
                     rows={2}
@@ -157,8 +155,8 @@ export function CatalogView(props: {
                 </label>
               </ConfirmDialog>
               <ConfirmDialog
-                title={`Archiviare ${chosen.length} prodotti?`}
-                confirmLabel="Archivia prodotti"
+                title={`Archive ${chosen.length} products?`}
+                confirmLabel="Archive products"
                 danger
                 onConfirm={() =>
                   bulk(
@@ -168,19 +166,20 @@ export function CatalogView(props: {
                 }
                 trigger={(open) => (
                   <Button size="sm" variant="secondary" onClick={open} disabled={pending}>
-                    Archivia selezionati
+                    Archive selected
                   </Button>
                 )}
               >
                 <p>
-                  Non saranno più proposti nei brief. I caroselli che li usano restano invariati.
+                  They will no longer be suggested in briefs. Carousels that use them stay
+                  unchanged.
                 </p>
               </ConfirmDialog>
             </>
           ) : (
             <span className="text-fg-muted">
-              {props.total === 1 ? "1 prodotto" : `${props.total} prodotti`}
-              {props.filtered ? " con questi filtri" : ""}
+              {props.total === 1 ? "1 product" : `${props.total} products`}
+              {props.filtered ? " with these filters" : ""}
             </span>
           )}
         </div>
@@ -188,10 +187,10 @@ export function CatalogView(props: {
           <Button asChild size="sm" variant="ghost">
             <a href={props.exportHref}>
               <Download aria-hidden />
-              Esporta CSV
+              Export CSV
             </a>
           </Button>
-          <div role="group" aria-label="Vista" className="flex">
+          <div role="group" aria-label="View" className="flex">
             <Button
               size="sm"
               variant={props.view === "table" ? "secondary" : "ghost"}
@@ -199,7 +198,7 @@ export function CatalogView(props: {
               onClick={() => router.push(paths.catalog(clientSlug, viewQuery("table")))}
             >
               <Table2 aria-hidden />
-              Tabella
+              Table
             </Button>
             <Button
               size="sm"
@@ -208,7 +207,7 @@ export function CatalogView(props: {
               onClick={() => router.push(paths.catalog(clientSlug, viewQuery("grid")))}
             >
               <LayoutGrid aria-hidden />
-              Griglia
+              Grid
             </Button>
           </div>
         </div>
@@ -223,7 +222,7 @@ export function CatalogView(props: {
             <li key={r.id} className="relative rounded-lg border border-subtle bg-surface p-3">
               <input
                 type="checkbox"
-                aria-label={`Seleziona ${r.name}`}
+                aria-label={`Select ${r.name}`}
                 checked={selected.has(r.id)}
                 onChange={() => toggle(r.id)}
                 className="absolute left-5 top-5 z-10 size-4"
@@ -245,13 +244,13 @@ export function CatalogView(props: {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[64rem] text-left text-body-sm">
-            <caption className="sr-only">Prodotti</caption>
+            <caption className="sr-only">Products</caption>
             <thead className="border-b border-subtle text-label text-fg-muted">
               <tr>
                 <th scope="col" className="w-10 px-4 py-3">
                   <input
                     type="checkbox"
-                    aria-label="Seleziona tutti i prodotti della pagina"
+                    aria-label="Select all products on this page"
                     checked={rows.length > 0 && selected.size === rows.length}
                     onChange={(e) =>
                       setSelected(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())
@@ -260,31 +259,31 @@ export function CatalogView(props: {
                   />
                 </th>
                 <th scope="col" className="px-2 py-3 font-medium">
-                  <span className="sr-only">Miniatura</span>
+                  <span className="sr-only">Thumbnail</span>
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Nome
+                  Name
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
                   SKU
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Categoria
+                  Category
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Stato
+                  Status
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Completezza
+                  Completeness
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Fonte
+                  Source
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Usato in
+                  Used in
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Ultima modifica
+                  Last modified
                 </th>
               </tr>
             </thead>
@@ -300,7 +299,7 @@ export function CatalogView(props: {
                   <td className="px-4 py-2">
                     <input
                       type="checkbox"
-                      aria-label={`Seleziona ${r.name}`}
+                      aria-label={`Select ${r.name}`}
                       checked={selected.has(r.id)}
                       onChange={() => toggle(r.id)}
                       className="size-4"
@@ -320,13 +319,13 @@ export function CatalogView(props: {
                       {r.sensitivePending ? (
                         <span className="inline-flex items-center gap-1">
                           <ShieldAlert aria-hidden className="size-4" />
-                          Campi sensibili da accettare
+                          Sensitive fields to accept
                         </span>
                       ) : null}
                       {r.openProposals ? (
                         <span className="inline-flex items-center gap-1">
                           <GitPullRequest aria-hidden className="size-4" />
-                          {r.openProposals === 1 ? "1 proposta" : `${r.openProposals} proposte`}
+                          {r.openProposals === 1 ? "1 proposal" : `${r.openProposals} proposals`}
                         </span>
                       ) : null}
                     </span>
@@ -340,7 +339,7 @@ export function CatalogView(props: {
                     <CompletenessMeter level={r.completeness} />
                   </td>
                   <td className="px-4 py-2 text-fg-muted">
-                    {r.byAgent ? "Proposto da Brand Analyst · " : ""}
+                    {r.byAgent ? "Proposed by Brand Analyst · " : ""}
                     {r.source}
                   </td>
                   <td className="px-4 py-2 text-fg-muted">—</td>
@@ -356,20 +355,20 @@ export function CatalogView(props: {
       )}
       {props.pages > 1 ? (
         <nav
-          aria-label="Pagine"
+          aria-label="Pages"
           className="flex items-center justify-end gap-2 border-t border-subtle px-4 py-3 text-body-sm"
         >
           {props.page > 1 ? (
             <Button asChild size="sm" variant="secondary">
-              <Link href={paths.catalog(clientSlug, pageQuery(props.page - 1))}>Precedente</Link>
+              <Link href={paths.catalog(clientSlug, pageQuery(props.page - 1))}>Previous</Link>
             </Button>
           ) : null}
           <span className="text-fg-muted">
-            Pagina {props.page} di {props.pages}
+            Page {props.page} of {props.pages}
           </span>
           {props.page < props.pages ? (
             <Button asChild size="sm" variant="secondary">
-              <Link href={paths.catalog(clientSlug, pageQuery(props.page + 1))}>Successiva</Link>
+              <Link href={paths.catalog(clientSlug, pageQuery(props.page + 1))}>Next</Link>
             </Button>
           ) : null}
         </nav>

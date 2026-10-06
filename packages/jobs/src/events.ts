@@ -21,7 +21,7 @@ export interface SubscribeOptions {
 
 /**
  * Async iterator of job state for the web SSE route (`GET /api/jobs/:id/events`).
- * Polls the jobs row (Postgres is the source of truth, see spec "Stato dei job") and
+ * Polls the jobs row (Postgres is the source of truth, see spec "Job status") and
  * yields on every change until a terminal status, abort, or the row disappears.
  */
 export async function* subscribeJobEvents(

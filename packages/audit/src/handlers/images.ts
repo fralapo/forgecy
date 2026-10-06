@@ -21,7 +21,7 @@ export async function toVisionImage(bytes: Uint8Array): Promise<Uint8Array> {
       .toBuffer();
     if (out.byteLength <= MAX_BYTES) return new Uint8Array(out);
   }
-  throw new Error("Screenshot troppo grande anche dopo la riduzione");
+  throw new Error("Screenshot still too large after downscaling");
 }
 
 /**

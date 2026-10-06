@@ -1,4 +1,4 @@
--- Brand Identity versions are immutable from 'approved' on (spec: "versioni immutabili").
+-- Brand Identity versions are immutable from 'approved' on (spec: "immutable versions").
 -- Only the lifecycle columns may still move: approved -> published -> archived.
 CREATE OR REPLACE FUNCTION brand_versions_guard() RETURNS trigger AS $$
 BEGIN

@@ -19,7 +19,7 @@ describe("registry", () => {
   it("registers system.ping", () => {
     expect(jobDefinitions.get("system.ping")).toBe(systemPingJob);
     expect(getJobDefinition("system.ping").queue).toBe("default");
-    expect(systemPingJob.payload.safeParse({ message: "ciao" }).success).toBe(true);
+    expect(systemPingJob.payload.safeParse({ message: "hello" }).success).toBe(true);
     expect(systemPingJob.payload.safeParse({}).success).toBe(false);
   });
 

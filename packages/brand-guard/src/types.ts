@@ -21,14 +21,14 @@ const textRoles = ["title", "subtitle", "body", "cta", "label", "other"] as cons
 
 const slotBase = {
   name: z.string().min(1).max(80),
-  /** Label shown to people ("Titolo"); defaults to the name. */
+  /** Label shown to people ("Title"); defaults to the name. */
   label: z.string().max(80).optional(),
   /** Decorative elements may leave the safe zone with a warning instead of an error. */
   decorative: z.boolean().optional(),
 };
 
 const typeStyle = {
-  /** Font size on the canvas, in px. Needed for "testo grande" and thumbnail legibility. */
+  /** Font size on the canvas, in px. Needed for "large text" and thumbnail legibility. */
   fontSizePx: z.number().positive().optional(),
   bold: z.boolean().optional(),
   color: colorUseSchema.optional(),
@@ -217,6 +217,6 @@ export interface BrandCheckReport {
   findings: BrandCheckFinding[];
   counts: Record<BrandCheckSeverity, number>;
   coherence: CoherenceScore;
-  /** Checks that need the model or data the input did not carry; shown as "non attivi". */
+  /** Checks that need the model or data the input did not carry; shown as "not active". */
   notRun: Array<{ check: string; reason: string }>;
 }

@@ -12,17 +12,17 @@ import { enqueueTemplateValidation } from "./enqueue";
 
 function fail(path: string, err: unknown): never {
   if (err instanceof ForgecyError || (err instanceof Error && err.name === "PermissionDeniedError"))
-    redirect(`${path}?errore=${encodeURIComponent(err.message)}`);
+    redirect(`${path}?error=${encodeURIComponent(err.message)}`);
   throw err;
 }
 
-/** «Importa» on a folder of templates: becomes (or replaces) a draft. */
+/** “Import” on a folder of templates: becomes (or replaces) a draft. */
 export async function importFolderAction(form: FormData) {
   const user = await requireUser();
   const folder = String(form.get("folder") ?? "");
   // Only folders the scan found: the name never becomes a path on its own.
   const entry = (await scanTemplateDir()).find((e) => e.folder === folder);
-  if (!entry?.pkg) redirect(`/templates?errore=${encodeURIComponent("Cartella non valida")}`);
+  if (!entry?.pkg) redirect(`/templates?error=${encodeURIComponent("Invalid folder")}`);
   let id: string;
   try {
     const { row } = await importTemplate({

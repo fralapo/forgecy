@@ -15,7 +15,7 @@ import { brandPath } from "../../../../_lib/labels";
 import { loadBrand, openConflicts } from "../../../../_lib/server";
 import { plural } from "@/lib/plural";
 
-export const metadata = { title: "Approvazione · Brand Identity" };
+export const metadata = { title: "Approval · Brand Identity" };
 
 export default async function ApprovePage({
   params,
@@ -30,8 +30,8 @@ export default async function ApprovePage({
     return (
       <Card className="p-6">
         <p className="text-body-md text-fg">
-          La v{number} non è una bozza aperta: le versioni approvate non si modificano.{" "}
-          <Link href={`${base}/versions` as Route}>Vai alla cronologia</Link>.
+          v{number} is not an open draft: approved versions can’t be edited.{" "}
+          <Link href={`${base}/versions` as Route}>Go to the history</Link>.
         </p>
       </Card>
     );
@@ -64,23 +64,23 @@ export default async function ApprovePage({
     <div className="grid gap-6 xl:grid-cols-[1fr_28rem]">
       <Card className="p-6">
         <h2 className="text-heading-md text-fg">
-          Modifiche della v{draft.number}{" "}
-          {published ? `rispetto alla v${ws.published!.number}` : "· prima pubblicazione"}
+          Changes in v{draft.number}{" "}
+          {published ? `compared with v${ws.published!.number}` : "· first publication"}
         </h2>
         <p className="mt-1 text-body-sm text-fg-muted">
-          {plural(changes.length, "campo cambiato", "campi cambiati")},{" "}
-          {plural(changes.filter((c) => c.sensitive).length, "sensibile", "sensibili")}.
+          {plural(changes.length, "field changed", "fields changed")},{" "}
+          {plural(changes.filter((c) => c.sensitive).length, "sensitive", "sensitive")}.
         </p>
         <div className="mt-4">
           <DiffList changes={changes} />
         </div>
       </Card>
       <Card className="p-6">
-        <h2 className="text-heading-md text-fg">Approva e pubblica</h2>
+        <h2 className="text-heading-md text-fg">Approve and publish</h2>
         <p className="mt-1 text-body-sm text-fg-muted">
-          La versione pubblicata diventa quella usata da contenuti e caroselli e non si modifica
-          più.
-          {ws.published ? ` La v${ws.published.number} viene archiviata.` : ""}
+          The published version becomes the one used by content and carousels and can no longer be
+          edited.
+          {ws.published ? ` v${ws.published.number} is archived.` : ""}
         </p>
         <div className="mt-6">
           <ApproveForm

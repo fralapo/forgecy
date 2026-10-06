@@ -39,14 +39,14 @@ const itemActionSchema: z.ZodType<ItemAction> = z.discriminatedUnion("type", [
 ]);
 
 const done: Record<ItemAction["type"], string> = {
-  accept: "Accettato come Proposto.",
-  approve: "Prodotto approvato.",
-  discard: "Scartato.",
-  recover: "Recuperato tra i Nuovi.",
-  merge: "Unito: i campi nuovi sono proposte sul prodotto esistente.",
-  keep_both: "Tenuti entrambi.",
-  replace_fields: "Campi sostituiti.",
-  conflict: "Decisione salvata.",
+  accept: "Accepted as Proposed.",
+  approve: "Product approved.",
+  discard: "Rejected.",
+  recover: "Moved back to New.",
+  merge: "Merged: the new fields are proposals on the existing product.",
+  keep_both: "Kept both.",
+  replace_fields: "Fields replaced.",
+  conflict: "Decision saved.",
 };
 
 export async function itemAction(input: {
@@ -73,10 +73,10 @@ export async function editItemAction(input: {
   const user = await requireUser();
   const data = ids.extend({ itemId: z.uuid(), field: fieldKey }).parse(input);
   const parsed = productFieldsSchema.shape[data.field].safeParse(input.value);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Valore non valido" };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid value" };
   return attempt(async () => {
     await editItemField(getDb(), actingUser(user), { ...data, value: parsed.data });
-    return "Salvato";
+    return "Saved";
   });
 }
 
@@ -93,7 +93,7 @@ export async function acceptItemSensitiveAction(input: {
     .parse(input);
   return attempt(async () => {
     await acceptItemSensitive(getDb(), actingUser(user), data);
-    return "Campo sensibile accettato.";
+    return "Sensitive field accepted.";
   });
 }
 
@@ -109,9 +109,9 @@ export async function approveItemsAction(input: {
     .parse(input);
   return attempt(async () => {
     const r = await approveItems(getDb(), actingUser(user), data);
-    if (!r.excluded.length) return `Approvati ${r.approved} prodotti.`;
+    if (!r.excluded.length) return `Approved ${r.approved} products.`;
     const reasons = [...new Set(r.excluded.map((e) => e.reason))].join("; ");
-    return `Approvati ${r.approved} prodotti. ${r.excluded.length} esclusi: ${reasons}.`;
+    return `Approved ${r.approved} products. ${r.excluded.length} skipped: ${reasons}.`;
   });
 }
 
@@ -141,7 +141,7 @@ export async function discardPendingAction(input: {
   const data = ids.parse(input);
   return attempt(async () => {
     const n = await discardPending(getDb(), actingUser(user), data);
-    return n === 1 ? "Scartato 1 prodotto." : `Scartati ${n} prodotti.`;
+    return n === 1 ? "Rejected 1 product." : `Rejected ${n} products.`;
   });
 }
 
@@ -153,6 +153,6 @@ export async function closeReviewAction(input: {
   const data = ids.parse(input);
   return attempt(async () => {
     const r = await closeReview(getDb(), actingUser(user), data);
-    return `Revisione chiusa: ${r.approved} approvati · ${r.proposed} restano Proposti nel catalogo · ${r.discarded} scartati · ${r.unassignedImages} immagini ancora da assegnare.`;
+    return `Review closed: ${r.approved} approved · ${r.proposed} stay Proposed in the catalog · ${r.discarded} rejected · ${r.unassignedImages} images still to assign.`;
   });
 }

@@ -16,7 +16,7 @@ import { carouselPath, formatDate } from "../../../../_lib/paths";
 import { outlineOriginLabels } from "../../_lib/labels";
 import { loadCarousel } from "../../_lib/workspace";
 
-export const metadata = { title: "Scaletta · Carosello" };
+export const metadata = { title: "Outline · Carousel" };
 
 const EDITABLE = ["draft", "changes_requested", "approved", "exported"];
 
@@ -49,19 +49,19 @@ export default async function OutlinePage({
             role="status"
             className="rounded-md border border-warning-fill bg-surface px-4 py-3 text-body-sm text-fg"
           >
-            Il brief è cambiato dopo questa scaletta: rigenerala o rivedila prima di approvarla.
+            The brief changed after this outline: regenerate or review it before approving it.
           </p>
         ) : null}
         <Card className="grid gap-4 p-5">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-heading-sm text-fg">
-              Scaletta{ws.outline ? ` n. ${c.outlineNumber}` : ""}
+              Outline{ws.outline ? ` no. ${c.outlineNumber}` : ""}
             </h3>
             {ws.outline ? (
               approved ? (
-                <Badge variant="success">Approvata il {formatDate(c.outlineApprovedAt)}</Badge>
+                <Badge variant="success">Approved on {formatDate(c.outlineApprovedAt)}</Badge>
               ) : (
-                <Badge variant="warning">Da approvare</Badge>
+                <Badge variant="warning">To approve</Badge>
               )
             ) : null}
           </div>
@@ -75,25 +75,25 @@ export default async function OutlinePage({
                     outlineNumber: c.outlineNumber,
                   })}
                 >
-                  Approva scaletta
+                  Approve outline
                 </ActionButton>
               ) : null}
               <ActionButton
                 variant={approved ? "primary" : "secondary"}
                 disabled={!editable || !approved}
-                title={approved ? undefined : "Approva prima la scaletta"}
+                title={approved ? undefined : "Approve the outline first"}
                 confirm={
                   hasSlides
-                    ? "Le slide attuali vengono riscritte dalla scaletta approvata. Continuare?"
+                    ? "The current slides will be rewritten from the approved outline. Continue?"
                     : undefined
                 }
                 action={generateSlidesAction.bind(null, act)}
               >
-                {hasSlides ? "Rigenera slide" : "Genera slide"}
+                {hasSlides ? "Regenerate slides" : "Generate slides"}
               </ActionButton>
               {hasSlides ? (
                 <Link href={`${base}/editor` as Route} className="self-center text-body-sm">
-                  Apri l&apos;editor
+                  Open the editor
                 </Link>
               ) : null}
             </div>
@@ -114,8 +114,8 @@ export default async function OutlinePage({
           <h3 className="text-heading-sm text-fg">Copywriter</h3>
           {!ready ? (
             <p className="text-body-sm text-fg-muted">
-              Scrivi un brief di almeno 20 caratteri per generare la scaletta.{" "}
-              <Link href={base as Route}>Apri il brief</Link>
+              Write a brief of at least 20 characters to generate the outline.{" "}
+              <Link href={base as Route}>Open the brief</Link>
             </p>
           ) : null}
           <CarouselOutlineGenerate
@@ -125,9 +125,9 @@ export default async function OutlinePage({
           />
         </Card>
         <Card className="grid gap-3 p-5">
-          <h3 className="text-heading-sm text-fg">Scalette precedenti</h3>
+          <h3 className="text-heading-sm text-fg">Previous outlines</h3>
           {ws.outlines.length <= 1 ? (
-            <p className="text-body-sm text-fg-muted">Nessuna scaletta precedente.</p>
+            <p className="text-body-sm text-fg-muted">No previous outlines.</p>
           ) : (
             <ul className="grid gap-3">
               {ws.outlines
@@ -139,21 +139,21 @@ export default async function OutlinePage({
                   >
                     <span>
                       <span className="text-fg">
-                        n. {o.number} · {outlineOriginLabels[o.origin]}
+                        no. {o.number} · {outlineOriginLabels[o.origin]}
                       </span>
                       <span className="block text-fg-muted">{formatDate(o.createdAt)}</span>
                       {o.instruction ? (
-                        <span className="block text-fg-muted">«{o.instruction}»</span>
+                        <span className="block text-fg-muted">“{o.instruction}”</span>
                       ) : null}
                     </span>
                     <ActionButton
                       size="sm"
                       variant="secondary"
                       disabled={!editable}
-                      confirm={`Ripristinare la scaletta n. ${o.number}? Diventa una nuova scaletta da approvare.`}
+                      confirm={`Restore outline no. ${o.number}? It becomes a new outline to approve.`}
                       action={restoreOutlineAction.bind(null, { ...act, number: o.number })}
                     >
-                      Ripristina
+                      Restore
                     </ActionButton>
                   </li>
                 ))}

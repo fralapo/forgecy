@@ -83,10 +83,10 @@ export function approvalBlockers(fields: ProductDraft, meta: FieldMetaMap): stri
     isEmptyValue(fields[k]),
   );
   if (missing.length)
-    out.push(`Completa ${missing.map((k) => fieldDef(k).label.toLowerCase()).join(", ")}`);
+    out.push(`Fill in ${missing.map((k) => fieldDef(k).label.toLowerCase()).join(", ")}`);
   for (const k of pendingSensitive(fields, meta)) {
     const kind = meta[k]!.sensitive![0]!;
-    out.push(`Accetta prima il campo sensibile "${fieldDef(k).label}" (${claimLabels[kind]})`);
+    out.push(`Accept the sensitive field "${fieldDef(k).label}" first (${claimLabels[kind]})`);
   }
   return out;
 }
@@ -128,7 +128,7 @@ export async function loadProduct(
     .select()
     .from(products)
     .where(and(eq(products.id, productId), eq(products.clientId, clientId)));
-  if (!row) throw new ForgecyError("not_found", "Prodotto non trovato");
+  if (!row) throw new ForgecyError("not_found", "Product not found");
   return row;
 }
 
@@ -143,7 +143,7 @@ export interface CreateProductInput {
   category?: string;
 }
 
-/** "Aggiungi prodotto": a draft typed by a person. */
+/** "Add product": a draft typed by a person. */
 export async function createProduct(
   db: Database,
   user: ActingUser,
@@ -155,7 +155,7 @@ export async function createProduct(
     sku: input.sku ?? "",
     category: input.category ?? "",
   });
-  if (!draft.name) throw new ForgecyError("validation", "Scrivi il nome del prodotto");
+  if (!draft.name) throw new ForgecyError("validation", "Enter the product name");
   const fields = { ...emptyFields(), ...draft };
   const now = new Date().toISOString();
   const meta: FieldMetaMap = {};
@@ -195,7 +195,7 @@ export async function createProduct(
 function revisionConflict(): ForgecyError {
   return new ForgecyError(
     "conflict",
-    "Un'altra persona ha modificato questo prodotto mentre lo stavi modificando. Ricarica per vedere le differenze.",
+    "Someone else changed this product while you were editing it. Reload to see the differences.",
     { code: "CONFLICT-DRAFT-REV" },
   );
 }
@@ -214,7 +214,7 @@ export async function updateProductFields(
     const row = await loadProduct(tx, input.clientId, input.productId);
     if (row.revision !== input.revision) throw revisionConflict();
     if (row.status === "archived")
-      throw new ForgecyError("conflict", "Ripristina il prodotto prima di modificarlo");
+      throw new ForgecyError("conflict", "Restore the product before editing it");
     const before = rowToFields(row);
     const after: ProductFields = { ...before };
     const changed: FieldKey[] = [];
@@ -224,13 +224,13 @@ export async function updateProductFields(
       if (!parsed.success)
         throw new ForgecyError(
           "validation",
-          `${fieldDef(k).label}: ${parsed.error.issues[0]?.message ?? "valore non valido"}`,
+          `${fieldDef(k).label}: ${parsed.error.issues[0]?.message ?? "invalid value"}`,
         );
       if (sameValue(before[k], parsed.data)) continue;
       (after as Record<string, unknown>)[k] = parsed.data;
       changed.push(k);
     }
-    if (!after.name) throw new ForgecyError("validation", "Il nome è obbligatorio");
+    if (!after.name) throw new ForgecyError("validation", "The name is required");
     if (changed.length === 0) return row;
     const now = new Date().toISOString();
     let meta = { ...metaOf(row) };
@@ -281,13 +281,10 @@ export async function acceptSensitiveField(
     const row = await loadProduct(tx, input.clientId, input.productId);
     const meta = metaOf(row);
     const m = meta[input.field];
-    if (!m?.sensitive?.length) throw new ForgecyError("validation", "Il campo non è sensibile");
+    if (!m?.sensitive?.length) throw new ForgecyError("validation", "The field is not sensitive");
     const note = input.note?.trim();
     if (m.confidence === "low" && !note)
-      throw new ForgecyError(
-        "validation",
-        "Confidenza bassa: scrivi una nota per accettare il campo",
-      );
+      throw new ForgecyError("validation", "Low confidence: write a note to accept the field");
     meta[input.field] = {
       ...m,
       acceptedBy: user.id,
@@ -335,7 +332,7 @@ export type ProductTransition = keyof typeof TRANSITIONS;
 
 export interface TransitionResult {
   done: string[];
-  /** Products left out, with the reason ("campi sensibili", "modificato da un'altra persona"...). */
+  /** Products left out, with the reason ("sensitive fields", "changed by someone else"...). */
   skipped: Array<{ id: string; name: string; reason: string; code?: string }>;
 }
 
@@ -357,7 +354,7 @@ export async function transitionProducts(
   },
 ): Promise<TransitionResult> {
   const t = TRANSITIONS[input.action];
-  if (!t) throw new ForgecyError("validation", "Azione non valida");
+  if (!t) throw new ForgecyError("validation", "Invalid action");
   assertCan(user.actor, t.permission, input.clientId);
   const ids = [...new Set(input.ids)].slice(0, 1000);
   if (ids.length === 0) return { done: [], skipped: [] };
@@ -374,7 +371,7 @@ export async function transitionProducts(
         result.skipped.push({
           id: row.id,
           name: row.name,
-          reason: "modificato da un'altra persona nel frattempo",
+          reason: "changed by someone else in the meantime",
           code: "CONFLICT-DRAFT-REV",
         });
         continue;
@@ -383,7 +380,7 @@ export async function transitionProducts(
         result.skipped.push({
           id: row.id,
           name: row.name,
-          reason: "stato non compatibile",
+          reason: "incompatible status",
           code: "CONFLICT-STATE",
         });
         continue;
@@ -402,7 +399,7 @@ export async function transitionProducts(
             id: row.id,
             name: row.name,
             reason: pendingSensitive(fields, meta).length
-              ? "campi sensibili da accettare uno per uno"
+              ? "sensitive fields to accept one by one"
               : blockers[0]!,
           });
           continue;
@@ -456,7 +453,7 @@ export async function deleteProduct(
   await db.transaction(async (tx) => {
     const row = await loadProduct(tx, input.clientId, input.productId);
     if (input.typedName.trim() !== row.name.trim())
-      throw new ForgecyError("validation", "Il nome digitato non corrisponde");
+      throw new ForgecyError("validation", "The typed name does not match");
     await tx.delete(products).where(eq(products.id, row.id));
     await recordAuditEvent(tx, {
       actor: user.actor,
@@ -477,7 +474,7 @@ export async function duplicateProduct(
 ): Promise<ProductRow> {
   assertCan(user.actor, "products.manage", input.clientId);
   const row = await loadProduct(db, input.clientId, input.productId);
-  const fields = { ...rowToFields(row), name: `${row.name} (copia)`.slice(0, 200), sku: "" };
+  const fields = { ...rowToFields(row), name: `${row.name} (copy)`.slice(0, 200), sku: "" };
   const meta: FieldMetaMap = {};
   for (const k of fieldKeys)
     if (!isEmptyValue(fields[k]))
@@ -574,9 +571,9 @@ export async function decideFieldProposal(
         ),
       )
       .for("update");
-    if (!p) throw new ForgecyError("not_found", "Proposta non trovata");
+    if (!p) throw new ForgecyError("not_found", "Proposal not found");
     if (p.status !== "proposed")
-      throw new ForgecyError("conflict", "Un'altra persona ha già deciso questa proposta", {
+      throw new ForgecyError("conflict", "Someone else has already decided this proposal", {
         code: "CONFLICT-STATE",
       });
     const field = p.field as FieldKey;
@@ -585,7 +582,7 @@ export async function decideFieldProposal(
       const row = await loadProduct(tx, input.clientId, p.productId);
       const value = input.editedValue !== undefined ? input.editedValue : p.proposedValue;
       const parsed = productFieldsSchema.shape[field].safeParse(value);
-      if (!parsed.success) throw new ForgecyError("validation", "Valore non valido");
+      if (!parsed.success) throw new ForgecyError("validation", "Invalid value");
       const fields = { ...rowToFields(row), [field]: parsed.data } as ProductFields;
       const edited = input.editedValue !== undefined;
       const flags = sensitiveFields(fields)[field];
@@ -593,7 +590,7 @@ export async function decideFieldProposal(
       if (flags?.length && proposalMeta.confidence === "low" && !note && !edited)
         throw new ForgecyError(
           "validation",
-          "Campo sensibile a confidenza bassa: scrivi una nota per accettarlo",
+          "Sensitive field with low confidence: write a note to accept it",
         );
       const meta = metaOf(row);
       meta[field] = {
@@ -674,7 +671,7 @@ export async function updateProductImage(
       .select()
       .from(productImages)
       .where(and(eq(productImages.id, input.imageId), eq(productImages.clientId, input.clientId)));
-    if (!img) throw new ForgecyError("not_found", "Immagine non trovata");
+    if (!img) throw new ForgecyError("not_found", "Image not found");
     if (input.action === "primary") {
       await tx
         .update(productImages)

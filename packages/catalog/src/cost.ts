@@ -35,7 +35,7 @@ export function importAiSetup(env: AiEnv, policy: AiPolicy): AiSetup {
     return {
       available: false,
       reason:
-        "Nessun provider AI configurato: l'import usa mappatura manuale, abbinamento per nome file e SKU e PDF come fonte.",
+        "No AI provider configured: the import uses manual mapping, matching by file name and SKU, and PDFs as sources.",
     };
   const route = defaultRoutingFromEnv(env, providers);
   const ref = route.tasks?.catalog_extract?.primary ?? route.default.primary;

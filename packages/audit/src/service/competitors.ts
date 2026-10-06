@@ -28,7 +28,7 @@ import {
 type CompetitorRow = typeof auditCompetitors.$inferSelect;
 
 export const competitorInputSchema = z.object({
-  name: z.string().trim().min(1, "Scrivi il nome").max(120),
+  name: z.string().trim().min(1, "Enter the name").max(120),
   websiteUrl: z
     .string()
     .trim()
@@ -37,7 +37,7 @@ export const competitorInputSchema = z.object({
       if (!v) return undefined;
       const url = normalizeSiteUrl(v);
       if (!url) {
-        ctx.addIssue({ code: "custom", message: "Indirizzo del sito non valido" });
+        ctx.addIssue({ code: "custom", message: "Invalid website address" });
         return z.NEVER;
       }
       return url;
@@ -47,7 +47,7 @@ export const competitorInputSchema = z.object({
 
 async function loadCompetitor(deps: AuditDeps, id: string) {
   const [row] = await deps.db.select().from(auditCompetitors).where(eq(auditCompetitors.id, id));
-  if (!row) throw new ForgecyError("not_found", "Competitor non trovato");
+  if (!row) throw new ForgecyError("not_found", "Competitor not found");
   const { audit, client } = await loadAudit(deps.db, row.auditId);
   assertEditable(audit);
   return { competitor: row, audit, client };
@@ -77,13 +77,13 @@ async function assertNotDuplicate(
   const domain = domainOf(websiteUrl);
   if (!domain) return;
   if (domain === domainOf(prospectUrl))
-    throw new ForgecyError("validation", "È il sito del prospect, non di un competitor.");
+    throw new ForgecyError("validation", "This is the prospect's website, not a competitor's.");
   const others = await deps.db
     .select({ id: auditCompetitors.id, url: auditCompetitors.websiteUrl })
     .from(auditCompetitors)
     .where(and(eq(auditCompetitors.auditId, auditId), ne(auditCompetitors.status, "removed")));
   if (others.some((o) => o.id !== excludeId && domainOf(o.url) === domain))
-    throw new ForgecyError("validation", "Questo competitor è già nella lista.");
+    throw new ForgecyError("validation", "This competitor is already in the list.");
 }
 
 /** A competitor added by a person is already confirmed. */
@@ -100,7 +100,7 @@ export async function addCompetitor(
   if ((await activeCount(deps, auditId)) >= AUDIT_LIMITS.maxCompetitors)
     throw new ForgecyError(
       "validation",
-      `Al massimo ${AUDIT_LIMITS.maxCompetitors} competitor: rimuovine uno prima.`,
+      `At most ${AUDIT_LIMITS.maxCompetitors} competitors: remove one first.`,
     );
   await assertNotDuplicate(deps, auditId, data.websiteUrl, audit.inputs.websiteUrl);
   const userId = userIdOf(actor);
@@ -119,7 +119,7 @@ export async function addCompetitor(
         confidence: "high",
         status: "confirmed",
         sourceStatus: data.websiteUrl ? "pending" : "unavailable",
-        sourceError: data.websiteUrl ? null : "Nessun sito indicato",
+        sourceError: data.websiteUrl ? null : "No website given",
         position: Number(next),
         createdBy: userId,
         confirmedBy: userId,
@@ -157,7 +157,7 @@ export async function editCompetitor(
       ...(urlChanged
         ? {
             sourceStatus: data.websiteUrl ? ("pending" as const) : ("unavailable" as const),
-            sourceError: data.websiteUrl ? null : "Nessun sito indicato",
+            sourceError: data.websiteUrl ? null : "No website given",
           }
         : {}),
     })
@@ -175,13 +175,13 @@ export async function reviewCompetitor(
   const { competitor, audit } = await loadCompetitor(deps, input.id);
   assertCan(actor, "review", audit.clientId);
   if (input.decision === "remove" && !input.reason?.trim())
-    throw new ForgecyError("validation", "Scrivi perché lo rimuovi.");
+    throw new ForgecyError("validation", "Write why you are removing it.");
   if (
     input.decision === "confirm" &&
     competitor.status === "removed" &&
     (await activeCount(deps, audit.id)) >= AUDIT_LIMITS.maxCompetitors
   )
-    throw new ForgecyError("validation", `Al massimo ${AUDIT_LIMITS.maxCompetitors} competitor.`);
+    throw new ForgecyError("validation", `At most ${AUDIT_LIMITS.maxCompetitors} competitors.`);
   const userId = userIdOf(actor);
   await deps.db.transaction(async (tx) => {
     await tx
@@ -209,7 +209,7 @@ export async function reviewCompetitor(
 }
 
 /**
- * Confirm the list ("Conferma lista"): proposals still open become confirmed by
+ * Confirm the list ("Confirm list"): proposals still open become confirmed by
  * this person, then up to 3 pages of each competitor site are read. With `skip`
  * the audit goes on without competitors and the report has no such section.
  */
@@ -234,7 +234,7 @@ export async function confirmCompetitorList(
     await deps.db.transaction(async (tx) => {
       await tx
         .update(auditCompetitors)
-        .set({ status: "removed", removedReason: "Audit senza competitor" })
+        .set({ status: "removed", removedReason: "Audit without competitors" })
         .where(
           and(eq(auditCompetitors.auditId, audit.id), eq(auditCompetitors.status, "proposed")),
         );
@@ -266,7 +266,7 @@ export async function confirmCompetitorList(
   if (!list.length)
     throw new ForgecyError(
       "validation",
-      "La lista è vuota: aggiungi un competitor o prosegui senza competitor.",
+      "The list is empty: add a competitor or continue without competitors.",
     );
   const toRead = list.filter((c) => c.websiteUrl && c.sourceStatus === "pending");
   const scanIds = await deps.db.transaction(async (tx) => {
@@ -327,7 +327,7 @@ export async function confirmCompetitorList(
   return { scans: scanIds.length };
 }
 
-/** Change the list after confirming it ("Modifica lista"). */
+/** Change the list after confirming it ("Edit list"). */
 export async function reopenCompetitorList(deps: AuditDeps, actor: Actor, auditId: string) {
   const { audit } = await loadAudit(deps.db, auditId);
   assertCan(actor, "review", audit.clientId);
@@ -349,7 +349,7 @@ export async function requestCompetitorProposal(
   assertEditable(audit);
   assertAiAllowed(client);
   if (await hasActiveJob(deps.db, audit.id, auditProposeCompetitorsJob.kind))
-    throw new ForgecyError("conflict", "Le proposte sono già in preparazione.");
+    throw new ForgecyError("conflict", "The proposals are already being prepared.");
   const instruction = input.instruction?.trim().slice(0, 500);
   return enqueueAuditJob(deps, {
     def: auditProposeCompetitorsJob,

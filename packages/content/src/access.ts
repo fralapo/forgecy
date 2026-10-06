@@ -40,7 +40,7 @@ export function invalid(message: string, details?: Record<string, unknown>): nev
 
 /** Stale autosave: the spec's CONFLICT-DRAFT-REV, with who and when changed it last. */
 export function revConflict(details: Record<string, unknown> = {}): never {
-  conflict("Qualcun altro ha modificato questo elemento mentre lo modificavi anche tu.", {
+  conflict("Someone else changed this item while you were editing it too.", {
     code: "CONFLICT-DRAFT-REV",
     ...details,
   });
@@ -58,7 +58,7 @@ export async function requireClient(db: Executor, clientId: string) {
     })
     .from(clients)
     .where(eq(clients.id, clientId));
-  if (!client) notFound("Cliente non trovato");
+  if (!client) notFound("Client not found");
   return client;
 }
 
@@ -83,6 +83,6 @@ export function parseOrThrow<T>(
 ): T {
   const r = schema.safeParse(value);
   if (!r.success)
-    invalid(r.error.issues[0]?.message ?? "Dati non validi", { issues: zodIssues(r.error) });
+    invalid(r.error.issues[0]?.message ?? "Invalid data", { issues: zodIssues(r.error) });
   return r.data;
 }

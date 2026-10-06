@@ -119,7 +119,7 @@ async function guarded<T>(fn: () => Promise<T>): Promise<T> {
       throw new NeedsAttentionError(aiErrorMessage(err), { kind: err.kind });
     if (err instanceof ForgecyError && err.code === "policy_blocked")
       throw new NeedsAttentionError(
-        "La policy AI del cliente non permette questa generazione (Impostazioni del cliente)",
+        "The client's AI policy does not allow this generation (client settings)",
         err.details,
       );
     if (err instanceof ForgecyError && ["validation", "conflict", "not_found"].includes(err.code))
@@ -131,24 +131,21 @@ async function guarded<T>(fn: () => Promise<T>): Promise<T> {
 function aiErrorMessage(err: AiProviderError): string {
   switch (err.kind) {
     case "auth":
-      return "La chiave del fornitore AI non è valida o è scaduta";
+      return "The AI provider key is invalid or expired";
     case "refusal":
     case "content_filter":
-      return "Il modello ha rifiutato la richiesta: rivedi il brief";
+      return "The model refused the request: review the brief";
     case "invalid_output":
-      return "Il modello non ha prodotto un risultato valido dopo due tentativi: riprova o semplifica il brief";
+      return "The model did not produce a valid result after two attempts: try again or simplify the brief";
     case "max_tokens":
-      return "La risposta del modello è stata troncata: riduci il numero di slide o il brief";
+      return "The model's answer was truncated: reduce the number of slides or the brief";
     default:
-      return `Errore del fornitore AI: ${err.message.slice(0, 200)}`;
+      return `AI provider error: ${err.message.slice(0, 200)}`;
   }
 }
 
 function requireAi(deps: PipelineDeps): AiGateway {
-  if (!deps.ai)
-    throw new NeedsAttentionError(
-      "Nessun fornitore AI configurato: aggiungi una chiave nelle impostazioni",
-    );
+  if (!deps.ai) throw new NeedsAttentionError("No AI provider configured: add a key in settings");
   return deps.ai;
 }
 
@@ -159,14 +156,14 @@ async function brandContextFor(
   options: { channel?: string; formatKey?: string; brief?: string } = {},
 ): Promise<BrandContext> {
   const ctx = await loadBrandContext(db, actor, clientId, options);
-  if (!ctx) throw new NeedsAttentionError("La Brand Identity del cliente non è pubblicata");
+  if (!ctx) throw new NeedsAttentionError("The client's Brand Identity is not published");
   return ctx;
 }
 
 /** Agent system prompt + the cacheable brand block; the variable part goes with the input. */
 function withBrand(system: string, brand: BrandContext) {
   return {
-    system: `${system}\n\n# Brand Identity (versione ${brand.versionNumber})\n${brand.stable}`,
+    system: `${system}\n\n# Brand Identity (version ${brand.versionNumber})\n${brand.stable}`,
     prefix: brand.variable ? `${brand.variable}\n\n` : "",
   };
 }
@@ -251,8 +248,8 @@ export async function runProposeStrategy(
     rationale: out.rationale,
     sources: [
       { kind: "brand", label: `Brand Identity v${brandCtx.versionNumber}` },
-      ...(pillars.length ? [{ kind: "strategy" as const, label: "Strategia attuale" }] : []),
-      ...(products.length ? [{ kind: "catalog" as const, label: "Catalogo prodotti" }] : []),
+      ...(pillars.length ? [{ kind: "strategy" as const, label: "Current strategy" }] : []),
+      ...(products.length ? [{ kind: "catalog" as const, label: "Product catalog" }] : []),
     ],
     confidence: pillars.length || audience.length ? "medium" : "low",
     ...(input.instruction ? { instruction: input.instruction } : {}),
@@ -306,7 +303,7 @@ const isUuid = (s: string) =>
 
 async function publishedIdentity(db: Database, actor: Actor, clientId: string) {
   const identity = await getPublishedBrandIdentity(db, actor, clientId);
-  if (!identity) throw new NeedsAttentionError("La Brand Identity del cliente non è pubblicata");
+  if (!identity) throw new NeedsAttentionError("The client's Brand Identity is not published");
   return identity;
 }
 
@@ -341,7 +338,7 @@ export async function runProposePlan(
     productSource().listApproved(deps.db, input.clientId),
   ]);
   if (!pillars.length)
-    throw new NeedsAttentionError("Accetta almeno un pilastro prima di chiedere un piano");
+    throw new NeedsAttentionError("Accept at least one pillar before asking for a plan");
   await ctx.progress(10);
   const { system, prefix } = withBrand(PLAN_SYSTEM, brandCtx);
   const freq = (c: number | null, u: "week" | "month" | null) =>
@@ -398,7 +395,7 @@ export async function runProposePlan(
         rationale: res.data.rationale,
         sources: [
           { kind: "brand", label: `Brand Identity v${brandCtx.versionNumber}` },
-          { kind: "strategy", label: `${pillars.length} pilastri, ${rubrics.length} rubriche` },
+          { kind: "strategy", label: `${pillars.length} pillars, ${rubrics.length} rubrics` },
         ],
         confidence: rubrics.length ? "high" : "medium",
         ...(input.instruction ? { instruction: input.instruction } : {}),
@@ -486,7 +483,7 @@ async function carouselSetup(
   const client = await requireClient(deps.db, clientId);
   const c = await getContentRow(deps.db, clientId, contentId);
   if (c.status === "in_review" || c.status === "archived")
-    throw new NeedsAttentionError("Il carosello non è modificabile in questo stato");
+    throw new NeedsAttentionError("The carousel cannot be edited in this status");
   const template = await getTemplate(deps.db, clientId, c.templateKey, c.templateVersion);
   const identity = await publishedIdentity(deps.db, actor, clientId);
   const brandCtx = await brandContextFor(deps.db, actor, clientId, {
@@ -520,7 +517,7 @@ async function locked<T>(
     return await withLock(deps.db, lockOf(contentId, ctx), fn);
   } catch (err) {
     if (err instanceof Error && err.name === "LockUnavailableError")
-      throw new NeedsAttentionError("Un'altra generazione sta lavorando su questo carosello");
+      throw new NeedsAttentionError("Another generation is working on this carousel");
     throw err;
   }
 }
@@ -534,7 +531,7 @@ export async function runGenerateOutline(
   return locked(deps, ctx, input.contentId, async () => {
     const s = await carouselSetup(deps, ctx, input.clientId, input.contentId);
     if (!briefReady(s.c.brief))
-      throw new NeedsAttentionError("Il brief deve avere almeno 20 caratteri");
+      throw new NeedsAttentionError("The brief needs at least 20 characters");
     const m = s.template.manifest;
     const n = s.promptInput.slideCount;
     const previous = outlineOf(s.c);
@@ -550,7 +547,7 @@ export async function runGenerateOutline(
         input:
           prefix +
           outlineUserPrompt(s.promptInput, previous, keep) +
-          (input.instruction ? `\n\n## Indicazioni della persona\n${input.instruction}` : ""),
+          (input.instruction ? `\n\n## The person's directions\n${input.instruction}` : ""),
         ...s.common,
         inputSummary: {
           fields: { brief: JSON.stringify(s.c.brief), instruction: input.instruction },
@@ -630,7 +627,7 @@ function slidesSchemaFor(m: TemplateManifest, outline: Outline) {
       zctx.addIssue({
         code: "custom",
         path: ["slides"],
-        message: `Servono esattamente ${outline.rows.length} slide, una per riga della scaletta`,
+        message: `Exactly ${outline.rows.length} slides are needed, one per outline row`,
       });
     out.slides.forEach((s, i) => {
       const layout = findLayout(m, outline.rows[i]?.layout ?? s.layout) ?? findLayout(m, s.layout);
@@ -638,7 +635,7 @@ function slidesSchemaFor(m: TemplateManifest, outline: Outline) {
         zctx.addIssue({
           code: "custom",
           path: ["slides", i, "layout"],
-          message: `Layout "${s.layout}" inesistente`,
+          message: `Layout "${s.layout}" does not exist`,
         });
         return;
       }
@@ -665,7 +662,7 @@ export async function runGenerateSlides(
     const s = await carouselSetup(deps, ctx, input.clientId, input.contentId);
     const outline = outlineOf(s.c);
     if (!outline || !s.c.outlineApprovedAt)
-      throw new NeedsAttentionError("Approva la scaletta prima di generare le slide");
+      throw new NeedsAttentionError("Approve the outline before generating the slides");
     const m = s.template.manifest;
     await ctx.progress(10);
     const { system, prefix } = withBrand(SLIDES_SYSTEM, s.brandCtx);
@@ -705,7 +702,7 @@ export async function runGenerateSlides(
         ...(out?.imageBriefs.length
           ? {
               note: out.imageBriefs
-                .map((b) => `Immagine «${b.slot}»: ${b.brief}`)
+                .map((b) => `Image “${b.slot}”: ${b.brief}`)
                 .join("\n")
                 .slice(0, 300),
             }
@@ -762,12 +759,12 @@ export async function requestSlideEdit(
 ) {
   humanOnly(actor, "edit_draft", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
-  if (isLocked(c)) invalid("L'AI sta già lavorando su questo carosello");
+  if (isLocked(c)) invalid("The AI is already working on this carousel");
   const instruction = input.instruction.trim();
   if (instruction.length < 3 || instruction.length > 500)
-    invalid("Scrivi un'istruzione da 3 a 500 caratteri");
+    invalid("Write an instruction of 3 to 500 characters");
   if (!parseDocument(c.draft).slides.some((s) => s.id === input.slideId))
-    notFound("Slide non trovata");
+    notFound("Slide not found");
   const [row] = await db
     .insert(contentSlideEdits)
     .values({ contentId: c.id, slideId: input.slideId, instruction, createdBy: actor.id })
@@ -803,10 +800,10 @@ export async function runEditSlide(
       const s = await carouselSetup(deps, ctx, input.clientId, input.contentId);
       const doc = parseDocument(s.c.draft);
       const i = doc.slides.findIndex((x) => x.id === edit.slideId);
-      if (i < 0) return fail("La slide non esiste più");
+      if (i < 0) return fail("The slide no longer exists");
       const slide = doc.slides[i]!;
       const layout = findLayout(s.template.manifest, slide.layout);
-      if (!layout) return fail("Layout della slide non presente nel template");
+      if (!layout) return fail("The slide's layout is not in the template");
       const keep: Record<string, SlotValue> = {};
       for (const def of layout.slots)
         if (def.type === "image" || slide.protectedSlots.includes(def.name)) {
@@ -838,7 +835,8 @@ export async function runEditSlide(
               current: slide.slots,
               protectedSlots: slide.protectedSlots,
               instruction: edit.instruction,
-              position: `${i + 1} di ${doc.slides.length}`,
+              position: `${i + 1} of ${doc.slides.length}`,
+              language: s.promptInput.language,
             }),
           ...s.common,
           inputSummary: {
@@ -903,14 +901,14 @@ function imageryGuidelines(identity: PublishedBrandIdentity): string {
   if (!im) return "";
   const line = (label: string, xs: string[]) => (xs.length ? `${label}: ${xs.join("; ")}` : "");
   return [
-    line("Soggetti", im.subjects),
-    line("Ambientazioni", im.settings),
-    line("Inquadrature", im.framing),
-    line("Luce", im.lighting),
-    line("Colori", im.colorMood),
-    im.people ? `Persone: ${im.people}` : "",
-    im.illustration ? `Illustrazione: ${im.illustration}` : "",
-    line("Vietato", im.forbidden),
+    line("Subjects", im.subjects),
+    line("Settings", im.settings),
+    line("Framing", im.framing),
+    line("Light", im.lighting),
+    line("Colors", im.colorMood),
+    im.people ? `People: ${im.people}` : "",
+    im.illustration ? `Illustration: ${im.illustration}` : "",
+    line("Forbidden", im.forbidden),
   ]
     .filter(Boolean)
     .join("\n");
@@ -961,12 +959,12 @@ export async function runGenerateImage(
   const slide = doc.slides.find((s) => s.id === input.slideId);
   const layout = slide ? findLayout(template.manifest, slide.layout) : undefined;
   if (!slide || !layout?.slots.some((s) => s.name === input.slot && s.type === "image"))
-    throw new NeedsAttentionError("Slot immagine non trovato nella slide");
+    throw new NeedsAttentionError("Image slot not found in the slide");
   const routed = await imageRouteFor(deps.db, input.clientId, deps.imageRoute);
-  if (!routed) throw new NeedsAttentionError("Nessun fornitore di immagini configurato");
+  if (!routed) throw new NeedsAttentionError("No image provider configured");
   if (routed.status.get(routed.route.primary.provider) === "rejected")
     throw new NeedsAttentionError(
-      "L'uso commerciale del fornitore di immagini è stato rifiutato: scegli un altro fornitore nelle impostazioni",
+      "Commercial use of the image provider was rejected: choose another provider in settings",
     );
   const identity = await publishedIdentity(deps.db, actor, input.clientId);
   const common: CommonAi = {

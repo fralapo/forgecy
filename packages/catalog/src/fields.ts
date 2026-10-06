@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Product fields (spec page 72). Identity, descriptions, "Scheda tecnica",
+ * Product fields (spec page 72). Identity, descriptions, "Specifications",
  * benefits, variants, optional commercial data and internal notes.
  * Price, currency and availability are optional: present only when the client's
  * files contain them, never invented, and approved together with the product.
@@ -49,12 +49,12 @@ export const productFieldsSchema = z.object({
     .string()
     .trim()
     .max(40)
-    .regex(/^$|^\d+([.,]\d{1,4})?$/, "Prezzo non valido"),
+    .regex(/^$|^\d+([.,]\d{1,4})?$/, "Invalid price"),
   currency: z
     .string()
     .trim()
     .max(3)
-    .regex(/^$|^[A-Z]{3}$/, "Valuta non valida (es. EUR)"),
+    .regex(/^$|^[A-Z]{3}$/, "Invalid currency (e.g. EUR)"),
   availability: str(120),
   notes: str(LIMITS.notes),
 });
@@ -79,60 +79,60 @@ export interface FieldDef {
 }
 
 export const fieldDefs: readonly FieldDef[] = [
-  { key: "name", label: "Nome", kind: "text", section: "identity", claimable: false },
-  { key: "sku", label: "SKU/codice", kind: "text", section: "identity", claimable: false },
-  { key: "category", label: "Categoria", kind: "text", section: "identity", claimable: false },
-  { key: "tags", label: "Tag", kind: "tags", section: "identity", claimable: false },
+  { key: "name", label: "Name", kind: "text", section: "identity", claimable: false },
+  { key: "sku", label: "SKU/code", kind: "text", section: "identity", claimable: false },
+  { key: "category", label: "Category", kind: "text", section: "identity", claimable: false },
+  { key: "tags", label: "Tags", kind: "tags", section: "identity", claimable: false },
   { key: "url", label: "URL", kind: "text", section: "identity", claimable: false },
   {
     key: "shortDescription",
-    label: "Descrizione breve",
+    label: "Short description",
     kind: "longtext",
     section: "descriptions",
     claimable: true,
-    placeholder: "Aggiungi una descrizione breve: verrà usata dal Copywriter",
+    placeholder: "Add a short description: the Copywriter will use it",
   },
   {
     key: "longDescription",
-    label: "Descrizione lunga",
+    label: "Long description",
     kind: "longtext",
     section: "descriptions",
     claimable: true,
   },
   {
     key: "materials",
-    label: "Ingredienti o materiali",
+    label: "Ingredients or materials",
     kind: "list",
     section: "specs",
     claimable: true,
   },
-  { key: "formats", label: "Formati", kind: "list", section: "specs", claimable: false },
-  { key: "usage", label: "Istruzioni d'uso", kind: "list", section: "specs", claimable: true },
-  { key: "features", label: "Caratteristiche", kind: "list", section: "specs", claimable: true },
-  { key: "benefits", label: "Benefici", kind: "list", section: "benefits", claimable: true },
-  { key: "variants", label: "Varianti", kind: "variants", section: "variants", claimable: false },
-  { key: "price", label: "Prezzo", kind: "text", section: "commercial", claimable: false },
-  { key: "currency", label: "Valuta", kind: "text", section: "commercial", claimable: false },
+  { key: "formats", label: "Formats", kind: "list", section: "specs", claimable: false },
+  { key: "usage", label: "Usage instructions", kind: "list", section: "specs", claimable: true },
+  { key: "features", label: "Features", kind: "list", section: "specs", claimable: true },
+  { key: "benefits", label: "Benefits", kind: "list", section: "benefits", claimable: true },
+  { key: "variants", label: "Variants", kind: "variants", section: "variants", claimable: false },
+  { key: "price", label: "Price", kind: "text", section: "commercial", claimable: false },
+  { key: "currency", label: "Currency", kind: "text", section: "commercial", claimable: false },
   {
     key: "availability",
-    label: "Disponibilità",
+    label: "Availability",
     kind: "text",
     section: "commercial",
     claimable: false,
   },
-  { key: "notes", label: "Note interne", kind: "longtext", section: "notes", claimable: false },
+  { key: "notes", label: "Internal notes", kind: "longtext", section: "notes", claimable: false },
 ];
 
 export const fieldDef = (key: FieldKey): FieldDef => fieldDefs.find((f) => f.key === key)!;
 
 export const sectionLabels: Record<FieldDef["section"], string> = {
-  identity: "Identità",
-  descriptions: "Descrizioni",
-  specs: "Scheda tecnica",
-  benefits: "Benefici",
-  variants: "Varianti",
-  commercial: "Dati commerciali facoltativi",
-  notes: "Note interne",
+  identity: "Identity",
+  descriptions: "Descriptions",
+  specs: "Specifications",
+  benefits: "Benefits",
+  variants: "Variants",
+  commercial: "Optional commercial data",
+  notes: "Internal notes",
 };
 
 export function emptyFields(): ProductFields {

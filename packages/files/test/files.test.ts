@@ -80,11 +80,11 @@ describe("LocalDiskDriver", () => {
     const key = "clients/c1/assets/a.txt";
     expect(await driver.exists(key)).toBe(false);
     expect(await driver.head(key)).toBeNull();
-    await driver.put(key, new TextEncoder().encode("ciao"), { contentType: "text/plain" });
-    expect(await readFile(path.join(root, "clients/c1/assets/a.txt"), "utf8")).toBe("ciao");
-    expect(await readAll(await driver.get(key))).toBe("ciao");
+    await driver.put(key, new TextEncoder().encode("hello"), { contentType: "text/plain" });
+    expect(await readFile(path.join(root, "clients/c1/assets/a.txt"), "utf8")).toBe("hello");
+    expect(await readAll(await driver.get(key))).toBe("hello");
     const info = await driver.head(key);
-    expect(info?.size).toBe(4);
+    expect(info?.size).toBe(5);
     expect(info?.contentType).toContain("text/plain");
     await driver.put(key, Readable.from([Buffer.from("stream")]), { contentType: "text/plain" });
     expect(await readAll(await driver.get(key))).toBe("stream");

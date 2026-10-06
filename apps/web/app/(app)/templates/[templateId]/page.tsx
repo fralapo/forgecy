@@ -19,10 +19,10 @@ import { SlideFrame } from "../slide-frame";
 import { ErrorNotice, StatusBadge, ValidationBadge } from "../status";
 
 const CHECK = {
-  ok: { icon: CircleCheck, className: "text-success", label: "Superato" },
-  error: { icon: CircleX, className: "text-error", label: "Errore" },
-  warning: { icon: CircleX, className: "text-warning", label: "Avviso" },
-  skipped: { icon: CircleMinus, className: "text-fg-muted", label: "Non verificato" },
+  ok: { icon: CircleCheck, className: "text-success", label: "Passed" },
+  error: { icon: CircleX, className: "text-error", label: "Error" },
+  warning: { icon: CircleX, className: "text-warning", label: "Warning" },
+  skipped: { icon: CircleMinus, className: "text-fg-muted", label: "Not checked" },
 } as const;
 
 function TransitionForm({
@@ -46,8 +46,14 @@ function TransitionForm({
       <input type="hidden" name="to" value={to} />
       {notes ? (
         <div className="space-y-1">
-          <Label htmlFor={`notes-${to}`}>Note di versione</Label>
-          <Input id={`notes-${to}`} name="notes" required minLength={3} placeholder="Cosa cambia" />
+          <Label htmlFor={`notes-${to}`}>Version notes</Label>
+          <Input
+            id={`notes-${to}`}
+            name="notes"
+            required
+            minLength={3}
+            placeholder="What changes"
+          />
         </div>
       ) : null}
       <Button type="submit" variant={variant} disabled={disabled} className="w-full">
@@ -62,7 +68,7 @@ export default async function TemplateDetailPage({
   searchParams,
 }: {
   params: Promise<{ templateId: string }>;
-  searchParams: Promise<{ long?: string; safe?: string; slots?: string; errore?: string }>;
+  searchParams: Promise<{ long?: string; safe?: string; slots?: string; error?: string }>;
 }) {
   const user = await requireUser();
   const { templateId } = await params;
@@ -93,26 +99,26 @@ export default async function TemplateDetailPage({
     <>
       <PageHeader
         title={`${row.name} · v${row.version}`}
-        description={`${m.description} ${FORMATS[m.format].label} · ${m.width}×${m.height} px · ${m.slides.min}–${m.slides.max} slide (default ${m.slides.default})`}
+        description={`${m.description} ${FORMATS[m.format].label} · ${m.width}×${m.height} px · ${m.slides.min}–${m.slides.max} slides (default ${m.slides.default})`}
       />
-      {q.errore ? <ErrorNotice message={q.errore} /> : null}
+      {q.error ? <ErrorNotice message={q.error} /> : null}
       <div className="mb-6 flex flex-wrap gap-2">
         <StatusBadge status={status} />
         <ValidationBadge validation={validation} />
-        <Badge>{row.origin === "system" ? "Sistema" : "Agenzia"}</Badge>
+        <Badge>{row.origin === "system" ? "System" : "Agency"}</Badge>
       </div>
       <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
         <section aria-labelledby="layouts">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 id="layouts" className="text-heading-sm text-fg">
-              Layout
+              Layouts
             </h2>
-            <nav aria-label="Opzioni di anteprima" className="flex flex-wrap gap-2 text-body-sm">
+            <nav aria-label="Preview options" className="flex flex-wrap gap-2 text-body-sm">
               {(
                 [
-                  ["long", "Testi lunghi"],
+                  ["long", "Long text"],
                   ["safe", "Safe zone"],
-                  ["slots", "Slot"],
+                  ["slots", "Slots"],
                 ] as const
               ).map(([key, label]) => (
                 <Link
@@ -140,15 +146,15 @@ export default async function TemplateDetailPage({
                   {layout.name}{" "}
                   <span className="text-fg-muted">
                     · {slideRoleLabels[layout.role]}
-                    {layout.position === "first" ? " · solo prima" : ""}
-                    {layout.position === "last" ? " · solo ultima" : ""}
+                    {layout.position === "first" ? " · first only" : ""}
+                    {layout.position === "last" ? " · last only" : ""}
                   </span>
                 </p>
                 <p className="text-body-sm text-fg-muted">
                   {layout.slots
                     .map((s) =>
                       s.type === "image"
-                        ? `${s.name} (immagine)`
+                        ? `${s.name} (image)`
                         : s.type === "list"
                           ? `${s.name} · ${s.maxItems}×${s.maxChars}`
                           : `${s.name} · ${s.maxChars}`,
@@ -162,7 +168,7 @@ export default async function TemplateDetailPage({
         <aside className="space-y-6">
           {manage ? (
             <Card className="space-y-4 p-5">
-              <h2 className="text-heading-sm text-fg">Stato</h2>
+              <h2 className="text-heading-sm text-fg">Status</h2>
               {row.versionNotes ? (
                 <p className="text-body-sm text-fg">
                   <span className="text-fg-muted">Note: </span>
@@ -172,8 +178,8 @@ export default async function TemplateDetailPage({
               {(status === "draft" || status === "in_review") && !publishable ? (
                 <p className="text-body-sm text-fg-muted">
                   {validation.ok
-                    ? "Si può pubblicare quando il render di prova è finito."
-                    : "Correggi gli errori di validazione e importa di nuovo il pacchetto."}
+                    ? "It can be published once the test render has finished."
+                    : "Fix the validation errors and import the package again."}
                 </p>
               ) : null}
               {status === "draft" ? (
@@ -181,7 +187,7 @@ export default async function TemplateDetailPage({
                   <TransitionForm
                     id={row.id}
                     to="in_review"
-                    label="Invia in revisione"
+                    label="Send for review"
                     notes
                     variant="secondary"
                     disabled={!publishable}
@@ -189,7 +195,7 @@ export default async function TemplateDetailPage({
                   <TransitionForm
                     id={row.id}
                     to="published"
-                    label="Pubblica"
+                    label="Publish"
                     notes
                     disabled={!publishable}
                   />
@@ -200,26 +206,26 @@ export default async function TemplateDetailPage({
                   <TransitionForm
                     id={row.id}
                     to="published"
-                    label="Pubblica"
+                    label="Publish"
                     notes
                     disabled={!publishable}
                   />
                   <TransitionForm
                     id={row.id}
                     to="draft"
-                    label="Riporta in bozza"
+                    label="Back to draft"
                     variant="secondary"
                   />
                 </>
               ) : null}
               {status === "published" ? (
-                <TransitionForm id={row.id} to="archived" label="Archivia" variant="secondary" />
+                <TransitionForm id={row.id} to="archived" label="Archive" variant="secondary" />
               ) : null}
               {status === "archived" ? (
                 <TransitionForm
                   id={row.id}
                   to="published"
-                  label="Ripubblica"
+                  label="Republish"
                   variant="secondary"
                   disabled={!publishable}
                 />
@@ -227,7 +233,7 @@ export default async function TemplateDetailPage({
             </Card>
           ) : null}
           <Card className="p-5">
-            <h2 className="text-heading-sm text-fg">Validazione</h2>
+            <h2 className="text-heading-sm text-fg">Validation</h2>
             <ul className="mt-4 space-y-2">
               {validation.checks.map((c) => {
                 const s = CHECK[c.status];
@@ -244,7 +250,7 @@ export default async function TemplateDetailPage({
               {!validation.rendered && validation.ok ? (
                 <li className="flex items-start gap-2 text-body-sm text-fg-muted">
                   <LoaderCircle aria-hidden className="mt-0.5 size-4 shrink-0" />
-                  <span>Render di prova in corso nel worker</span>
+                  <span>Test render in progress in the worker</span>
                 </li>
               ) : null}
             </ul>
@@ -261,14 +267,14 @@ export default async function TemplateDetailPage({
               <form action={revalidateAction} className="mt-4">
                 <input type="hidden" name="id" value={row.id} />
                 <Button type="submit" variant="ghost" size="sm">
-                  Riesegui validazione
+                  Run validation again
                 </Button>
               </form>
             ) : null}
           </Card>
           {versions.length > 1 ? (
             <Card className="p-5">
-              <h2 className="text-heading-sm text-fg">Versioni</h2>
+              <h2 className="text-heading-sm text-fg">Versions</h2>
               <ul className="mt-4 space-y-2 text-body-sm">
                 {versions.map((v) => (
                   <li key={v.id} className="flex items-center justify-between gap-2">
@@ -286,7 +292,7 @@ export default async function TemplateDetailPage({
             </Card>
           ) : null}
           <Card className="p-5">
-            <h2 className="text-heading-sm text-fg">Ruoli colore e font</h2>
+            <h2 className="text-heading-sm text-fg">Color and font roles</h2>
             <ul className="mt-4 space-y-1 text-body-sm">
               {Object.entries(m.colorRoles).map(([name, r]) => (
                 <li key={name} className="flex justify-between gap-2">
@@ -302,8 +308,8 @@ export default async function TemplateDetailPage({
               ))}
             </ul>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Badge>{m.rules.ctaOnlyLast ? "CTA solo nell'ultima" : "CTA libera"}</Badge>
-              <Badge>{m.rules.pageNumbers ? "Numeri di pagina" : "Senza numeri di pagina"}</Badge>
+              <Badge>{m.rules.ctaOnlyLast ? "CTA on the last slide only" : "CTA anywhere"}</Badge>
+              <Badge>{m.rules.pageNumbers ? "Page numbers" : "No page numbers"}</Badge>
             </div>
           </Card>
         </aside>

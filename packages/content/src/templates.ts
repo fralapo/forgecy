@@ -65,7 +65,7 @@ export async function listUsableTemplates(
   return [...newest.values()]
     .map(parseRow)
     .filter((t): t is UsableTemplate => t !== null)
-    .sort((a, b) => a.name.localeCompare(b.name, "it"));
+    .sort((a, b) => a.name.localeCompare(b.name, "en-GB"));
 }
 
 /**
@@ -91,7 +91,7 @@ export async function getTemplate(
     );
   const row = rows.sort((a, b) => compareVersions(b.version, a.version))[0];
   const parsed = row ? parseRow(row) : null;
-  if (!parsed) notFound(`Template «${key}» non disponibile`);
+  if (!parsed) notFound(`Template “${key}” not available`);
   return parsed;
 }
 

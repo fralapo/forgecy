@@ -50,7 +50,7 @@ describe.skipIf(!dbUrl)("commercial use of image providers (integration)", () =>
     member = await mk("dario", false);
     const [c] = await db
       .insert(clients)
-      .values({ name: `Uso ${suffix}`, slug: `uso-test-${suffix}` })
+      .values({ name: `Usage ${suffix}`, slug: `usage-test-${suffix}` })
       .returning();
     clientId = c!.id;
   });

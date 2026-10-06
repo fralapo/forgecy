@@ -9,7 +9,7 @@ export function SetupForm() {
   return (
     <form action={action} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name">Nome</Label>
+        <Label htmlFor="name">Name</Label>
         <Input id="name" name="name" autoComplete="name" required />
       </div>
       <div className="space-y-2">
@@ -26,7 +26,7 @@ export function SetupForm() {
           minLength={12}
           required
         />
-        <p className="text-body-sm text-fg-muted">Almeno 12 caratteri.</p>
+        <p className="text-body-sm text-fg-muted">At least 12 characters.</p>
       </div>
       {state.error ? (
         <p role="alert" className="text-body-sm text-error">
@@ -34,7 +34,7 @@ export function SetupForm() {
         </p>
       ) : null}
       <Button type="submit" className="w-full" disabled={pending}>
-        Crea l&apos;account Admin
+        Create the Admin account
       </Button>
     </form>
   );

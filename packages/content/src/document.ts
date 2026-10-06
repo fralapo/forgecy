@@ -25,11 +25,11 @@ export const contentChannelSchema = z.enum(contentChannels);
 export const captionLimits: Record<ContentChannel, number> = { instagram: 2200, linkedin: 3000 };
 
 export const contentLanguages = [
-  { code: "it", label: "Italiano" },
+  { code: "it", label: "Italian" },
   { code: "en", label: "English" },
-  { code: "de", label: "Deutsch" },
-  { code: "fr", label: "Français" },
-  { code: "es", label: "Español" },
+  { code: "de", label: "German" },
+  { code: "fr", label: "French" },
+  { code: "es", label: "Spanish" },
 ] as const;
 export const languageSchema = z.enum(["it", "en", "de", "fr", "es"]);
 
@@ -166,7 +166,7 @@ export const briefSchema = z.object({
       designerNotes: z.boolean().default(false),
     })
     .prefault({}),
-  /** Fields still holding the value copied from the plan item («Dal piano»). */
+  /** Fields still holding the value copied from the plan item (“From the plan”). */
   fromPlan: list(z.enum(["text", "problem", "promise", "cta", "constraints"]), 5),
 });
 export type Brief = z.output<typeof briefSchema>;
@@ -180,7 +180,7 @@ export const outlineRowSchema = z.object({
   point: text(280),
   layout: z.string().min(1).max(40),
   note: text(300).default(""),
-  /** Changed by a person: «Mantieni le righe modificate a mano» keeps it on regeneration. */
+  /** Changed by a person: “Keep the rows edited by hand” keeps it on regeneration. */
   edited: z.boolean().default(false),
 });
 export type OutlineRow = z.output<typeof outlineRowSchema>;
@@ -201,7 +201,7 @@ export type OutlineInput = z.input<typeof outlineSchema>;
 export const contentSlideSchema = slideSchema.extend({
   id: z.string().min(1).max(64),
   role: z.enum(slideRoles).optional(),
-  /** «Proteggi dall'AI»: slot names an AI instruction never changes. */
+  /** “Protect from AI”: slot names an AI instruction never changes. */
   protectedSlots: list(z.string().max(32), 16),
   note: text(300).optional(),
 });

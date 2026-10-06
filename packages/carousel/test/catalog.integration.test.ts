@@ -61,7 +61,7 @@ describe.skipIf(!dbUrl)("template catalog (integration)", () => {
     });
     const [user] = await db
       .insert(users)
-      .values({ name: "Test catalogo", email: `${key}@example.test` })
+      .values({ name: "Catalog test", email: `${key}@example.test` })
       .returning();
     actor = { type: "user", id: user!.id, isAdmin: false, active: true };
   });
@@ -92,12 +92,12 @@ describe.skipIf(!dbUrl)("template catalog (integration)", () => {
 
     // Publishing needs the worker's render checks.
     await expect(
-      transitionTemplate({ db, actor, id: first.row.id, to: "published", notes: "Prima versione" }),
-    ).rejects.toThrow(/validazione/);
+      transitionTemplate({ db, actor, id: first.row.id, to: "published", notes: "First version" }),
+    ).rejects.toThrow(/validation/);
     await saveTemplateValidation(db, first.row.id, { ok: true, checks: [], issues: [] });
     await expect(
       transitionTemplate({ db, actor, id: first.row.id, to: "published" }),
-    ).rejects.toThrow(/cosa cambia/);
+    ).rejects.toThrow(/what changes/);
     await expect(
       transitionTemplate({ db, actor: agent, id: first.row.id, to: "published", notes: "x x x" }),
     ).rejects.toThrow(/Permission denied/);
@@ -106,13 +106,11 @@ describe.skipIf(!dbUrl)("template catalog (integration)", () => {
       actor,
       id: first.row.id,
       to: "published",
-      notes: "Prima versione",
+      notes: "First version",
     });
     expect(published.status).toBe("published");
 
-    await expect(importTemplate({ db, storage, actor, files })).rejects.toThrow(
-      /aumenta "version"/,
-    );
+    await expect(importTemplate({ db, storage, actor, files })).rejects.toThrow(/bump "version"/);
 
     const pkg = await dbTemplateSource({ db, storage }).get(key);
     expect(pkg?.manifest.id).toBe(key);
@@ -176,7 +174,7 @@ describe.skipIf(!dbUrl)("template catalog (integration)", () => {
         payload: {
           clientId,
           client: "Rossi",
-          content: "Prova",
+          content: "Trial",
           version: 1,
           templateId: key,
           slides,
@@ -185,7 +183,7 @@ describe.skipIf(!dbUrl)("template catalog (integration)", () => {
       });
       expect(exported.status, exported.error ?? "").toBe("completed");
       const files = (exported.result as { files: ExportedFile[] }).files;
-      expect(files.map((f) => f.name).at(-1)).toBe("rossi_prova_v1_ig-4x5.zip");
+      expect(files.map((f) => f.name).at(-1)).toBe("rossi_trial_v1_ig-4x5.zip");
       for (const f of files) {
         expect(f.key.startsWith(`clients/${clientId}/exports/`)).toBe(true);
         expect(await storage.exists(f.key)).toBe(true);

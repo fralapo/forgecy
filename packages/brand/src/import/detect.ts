@@ -45,17 +45,17 @@ export function detectImportFile(input: {
 }): DetectResult {
   const { bytes, name } = input;
   const size = bytes.byteLength;
-  if (size === 0) return { ok: false, message: "Il file è vuoto." };
+  if (size === 0) return { ok: false, message: "The file is empty." };
 
   if (isZip(bytes)) {
     if (size > UPLOAD_LIMITS.document)
-      return { ok: false, message: "File troppo grande: il massimo è 50 MB." };
+      return { ok: false, message: "File too large: the maximum is 50 MB." };
     const kind = ooxmlKind(bytes);
     if (kind === "docx") return { ok: true, type: "docx", mime: DOCX_MIME, ext: "docx" };
     if (kind === "pptx") return { ok: true, type: "pptx", mime: PPTX_MIME, ext: "pptx" };
     return {
       ok: false,
-      message: "Archivio non supportato: carica PDF, PPTX, DOCX, immagini, SVG o font.",
+      message: "Archive not supported: upload PDF, PPTX, DOCX, images, SVG or fonts.",
     };
   }
 
@@ -86,12 +86,12 @@ export function detectImportFile(input: {
   // WOFF (1.0) is not in the generic upload list but is a common font delivery format.
   if (head[0] === 0x77 && head[1] === 0x4f && head[2] === 0x46 && head[3] === 0x46) {
     if (size > UPLOAD_LIMITS.font)
-      return { ok: false, message: "Font troppo grande: il massimo è 10 MB." };
+      return { ok: false, message: "Font too large: the maximum is 10 MB." };
     return { ok: true, type: "font", mime: "font/woff", ext: "woff" };
   }
   return {
     ok: false,
     message:
-      "Formato non ammesso: carica PDF, PPTX, DOCX, immagini (PNG, JPEG, WebP, GIF), SVG, font (TTF, OTF, WOFF, WOFF2) o testo.",
+      "Format not allowed: upload PDF, PPTX, DOCX, images (PNG, JPEG, WebP, GIF), SVG, fonts (TTF, OTF, WOFF, WOFF2) or text.",
   };
 }

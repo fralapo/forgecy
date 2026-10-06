@@ -24,7 +24,7 @@ export function parseCsv(input: string): string[][] {
   if (text.includes("\uFFFD"))
     throw new ForgecyError(
       "validation",
-      "Non riusciamo a leggere il file. Esportalo in UTF-8 con separatore virgola o punto e virgola.",
+      "We cannot read the file. Export it as UTF-8 with a comma or semicolon separator.",
     );
   const delimiter = detectDelimiter(text.split(/\r?\n/, 1)[0] ?? "");
   const rows: string[][] = [];
@@ -74,7 +74,7 @@ export async function readTable(
     const decoded = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
     const rows = parseCsv(decoded);
     if (rows.length < 2)
-      throw new ForgecyError("validation", "Il file non ha righe di dati dopo l'intestazione.");
+      throw new ForgecyError("validation", "The file has no data rows after the header.");
     return { sheets: [], headers: rows[0]!.map((h) => h.trim()), rows: rows.slice(1) };
   }
   const { default: readXlsxFile } = await import("read-excel-file/node");
@@ -85,11 +85,11 @@ export async function readTable(
       data: unknown[][];
     }>;
   } catch {
-    throw new ForgecyError("validation", "Non riusciamo a leggere il file XLSX.");
+    throw new ForgecyError("validation", "We cannot read the XLSX file.");
   }
   const chosen = sheets.find((s) => s.sheet === sheet) ?? sheets[0];
   if (!chosen || chosen.data.length < 2)
-    throw new ForgecyError("validation", "Il foglio non ha righe di dati dopo l'intestazione.");
+    throw new ForgecyError("validation", "The sheet has no data rows after the header.");
   return {
     sheets: sheets.map((s) => s.sheet),
     sheet: chosen.sheet,
@@ -166,14 +166,13 @@ export function interpretRows(
   dateFormat: DateFormat,
 ): InterpretResult {
   const dateCol = Object.entries(mapping).find(([, f]) => f === "date")?.[0];
-  if (dateCol === undefined)
-    throw new ForgecyError("validation", "Mappa almeno la colonna della data.");
+  if (dateCol === undefined) throw new ForgecyError("validation", "Map at least the date column.");
   const out: InterpretResult = { rows: [], invalid: [] };
   table.rows.forEach((cells, i) => {
     const rowNumber = i + 2; // 1-based, after the header row
     const postedOn = parseDateCell(cells[Number(dateCol)] ?? "", dateFormat);
     if (!postedOn) {
-      out.invalid.push({ rowNumber, reason: "Data non valida" });
+      out.invalid.push({ rowNumber, reason: "Invalid date" });
       return;
     }
     const row: InterpretedRow = { rowNumber, postedOn, metrics: {} };
@@ -195,6 +194,7 @@ export function interpretRows(
   return out;
 }
 
+// Header synonyms in Italian and English: they match column names of exported analytics files.
 const HEADER_HINTS: Array<[RegExp, SocialPostField]> = [
   [/^(data|date|giorno|publish|pubblica)/i, "date"],
   [/(tipo|type)/i, "post_type"],

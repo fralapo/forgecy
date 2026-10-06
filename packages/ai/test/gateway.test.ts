@@ -13,7 +13,7 @@ import {
 
 const NOW = new Date("2026-10-05T10:00:00Z");
 const schema = z.object({ title: z.string().min(3), slides: z.number().int().min(1) });
-const SECRET = "Cliente Rossi: lancio segreto del prodotto X";
+const SECRET = "Rossi client: secret launch of product X";
 
 function setup(opts: { routing?: Partial<Routing>; local?: boolean } = {}) {
   const ledger = createMemoryLedger();
@@ -283,14 +283,14 @@ describe("ledger rows", () => {
       clientPolicy: "external_allowed",
       authorizedBy: "22222222-2222-2222-2222-222222222222",
       inputSummary: {
-        fields: { brief: "Brief riservato del cliente" },
+        fields: { brief: "Confidential client brief" },
         assets: [{ id: "a_123", sha256: "abc" }],
       },
     });
     const row = ledger.entries[0]!;
     const serialized = JSON.stringify(row);
     expect(serialized).not.toContain(SECRET);
-    expect(serialized).not.toContain("Brief riservato");
+    expect(serialized).not.toContain("Confidential client");
     expect(serialized).not.toContain("You write carousel outlines");
     const fields = (
       row.inputSummary as { fields: Record<string, { sha256: string; bytes: number }> }

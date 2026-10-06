@@ -35,7 +35,7 @@ export interface EvidenceItem {
 
 export type ProposalOp = "set" | "append" | "remove";
 
-// ---- Confidence (spec table "Provenienza e confidenza") ----
+// ---- Confidence (spec table "Provenance and confidence") ----
 
 /** Sources that come straight from the client or the agency's own direct input. */
 const DIRECT: ReadonlySet<BrandSourceKind> = new Set([
@@ -68,13 +68,13 @@ export function confidenceReason(
   kinds: readonly BrandSourceKind[],
   options: { conflicting?: boolean } = {},
 ): string {
-  if (options.conflicting) return "Fonti in conflitto";
-  if (kinds.some((k) => DIRECT.has(k))) return "Fonte diretta del cliente";
+  if (options.conflicting) return "Sources in conflict";
+  if (kinds.some((k) => DIRECT.has(k))) return "Direct client source";
   const observed = kinds.filter((k) => k !== "agent_observation").length;
-  if (observed >= 3) return `${observed} fonti osservate concordi`;
-  if (observed === 2) return "Due fonti osservate";
-  if (observed === 1) return "Una fonte osservata";
-  return "Solo inferenza AI";
+  if (observed >= 3) return `${observed} agreeing observed sources`;
+  if (observed === 2) return "Two observed sources";
+  if (observed === 1) return "One observed source";
+  return "AI inference only";
 }
 
 /** Lower is stronger: brand book > direct input > site > social > competitor > AI inference. */
@@ -108,7 +108,7 @@ function invalid(message: string, details?: Record<string, unknown>): never {
 function parseValue(field: FieldDef, value: unknown): unknown {
   const r = field.value.safeParse(value);
   if (!r.success)
-    invalid(`Valore non valido per ${field.label}: ${r.error.issues[0]?.message ?? ""}`, {
+    invalid(`Invalid value for ${field.label}: ${r.error.issues[0]?.message ?? ""}`, {
       issues: r.error.issues.slice(0, 5),
     });
   return r.data;
@@ -116,7 +116,7 @@ function parseValue(field: FieldDef, value: unknown): unknown {
 
 function index(rest: string, path: string): number {
   const seg = rest.slice(1);
-  if (!/^(0|[1-9][0-9]*)$/.test(seg)) invalid(`Indice non valido in ${path}`);
+  if (!/^(0|[1-9][0-9]*)$/.test(seg)) invalid(`Invalid index in ${path}`);
   return Number(seg);
 }
 
@@ -131,7 +131,7 @@ export function buildProposalPatch(
   meta: { proposalId: string; sourceIds: string[]; confidence: ConfidenceLevel },
 ): BuiltProposal {
   const match = matchField(input.path);
-  if (!match) invalid(`Campo non modificabile con una proposta: ${input.path}`);
+  if (!match) invalid(`Field cannot be changed with a proposal: ${input.path}`);
   const { field, rest } = match;
   const root: DraftState = { document: state.document, tokens: state.tokens };
   const current = (p: string) => getAt(root, p);
@@ -150,10 +150,10 @@ export function buildProposalPatch(
 
   switch (field.shape) {
     case "sourced": {
-      if (rest !== "") invalid(`${field.label} è un singolo valore`);
-      if (input.op === "append") invalid(`${field.label} non è un elenco`);
+      if (rest !== "") invalid(`${field.label} is a single value`);
+      if (input.op === "append") invalid(`${field.label} is not a list`);
       if (input.op === "remove") {
-        if (!hasPath(root, field.pointer)) invalid(`${field.label} è già vuoto`);
+        if (!hasPath(root, field.pointer)) invalid(`${field.label} is already empty`);
         return {
           patch: [test(field.pointer), { op: "remove", path: field.pointer }],
           field,
@@ -176,7 +176,7 @@ export function buildProposalPatch(
       const itemValue = (it: unknown) =>
         field.shape === "sourced-list" ? (it as { value: unknown }).value : it;
       if (input.op === "append") {
-        if (rest !== "" && rest !== "/-") invalid(`Per aggiungere usa ${field.pointer}`);
+        if (rest !== "" && rest !== "/-") invalid(`To add, use ${field.pointer}`);
         let raw = parseValue(field, input.value);
         if (field.shape === "object-list" && isObject(raw) && !raw.id)
           raw = { ...raw, id: newItemId() };
@@ -185,7 +185,7 @@ export function buildProposalPatch(
           ? items.findIndex((it) => field.uniqueBy?.(itemValue(it)) === key)
           : -1;
         if (existing >= 0) {
-          if (plain) invalid(`"${String(raw)}" è già presente in ${field.label}`);
+          if (plain) invalid(`"${String(raw)}" is already in ${field.label}`);
           const p = `${field.pointer}/${existing}`;
           const old = items[existing] as Record<string, unknown>;
           const written =
@@ -209,7 +209,7 @@ export function buildProposalPatch(
       }
       const i = index(rest, input.path);
       const p = `${field.pointer}/${i}`;
-      if (i >= items.length) invalid(`Elemento ${i} inesistente in ${field.label}`);
+      if (i >= items.length) invalid(`Item ${i} does not exist in ${field.label}`);
       if (input.op === "remove")
         return {
           patch: [test(p), { op: "remove", path: p }],
@@ -233,14 +233,14 @@ export function buildProposalPatch(
       };
     }
     case "token-group": {
-      if (input.op === "append") invalid("Per i token usa set con il nome del token");
-      if (rest === "" || rest === "/-") invalid("Indica il nome del token");
+      if (input.op === "append") invalid("For tokens, use set with the token name");
+      if (rest === "" || rest === "/-") invalid("Give the token name");
       const segs = parsePointer(rest);
       if (segs.some((s) => !/^[a-z0-9][a-z0-9-]{0,40}$/.test(s)))
-        invalid("Nome di token non valido: lettere minuscole, cifre e trattini");
+        invalid("Invalid token name: lowercase letters, digits and dashes");
       const p = input.path;
       if (input.op === "remove") {
-        if (!hasPath(root, p)) invalid("Token inesistente");
+        if (!hasPath(root, p)) invalid("Token does not exist");
         return {
           patch: [test(p), { op: "remove", path: p }],
           field,
@@ -309,13 +309,13 @@ export function stillApplies(state: DraftState, patch: JsonPatch): boolean {
   }
 }
 
-/** Replaces the value of the last write op (used by "Accetta con modifiche"). */
+/** Replaces the value of the last write op (used by "Accept with changes"). */
 export function withEditedValue(patch: JsonPatch, edited: unknown, field: FieldDef): JsonPatch {
   const raw = parseValue(field, edited);
   const out = structuredClone(patch);
   const last = out.at(-1);
   if (!last || (last.op !== "add" && last.op !== "replace"))
-    invalid("Questa proposta non ha un valore da modificare");
+    invalid("This proposal has no value to edit");
   const v = last.value;
   if (field.shape === "sourced" || field.shape === "sourced-list") {
     (v as { value: unknown }).value = raw;
@@ -429,14 +429,14 @@ export function checksFor(state: DraftState, field: FieldDef, value: unknown): P
           "u",
         ).test(hay)
       )
-        checks.push({ level: "warning", message: `Parola vietata: "${w}"` });
+        checks.push({ level: "warning", message: `Forbidden word: "${w}"` });
   }
   if (field.pointer === "/document/strategy/oneLiner" && typeof value === "string") {
     const n = wordCount(value);
     if (n > ONE_LINER_MAX_WORDS)
       checks.push({
         level: "warning",
-        message: `One-liner di ${n} parole: il massimo è ${ONE_LINER_MAX_WORDS}`,
+        message: `One-liner of ${n} words: the maximum is ${ONE_LINER_MAX_WORDS}`,
       });
   }
   if (field.pointer === "/tokens/color/reference" && isObject(value)) {
@@ -447,12 +447,12 @@ export function checksFor(state: DraftState, field: FieldDef, value: unknown): P
       const ratio = checkContrast(hex, bg);
       checks.push({
         level: ratio < 3 ? "warning" : "info",
-        message: `Contrasto su Sfondo principale: ${ratio.toFixed(1).replace(".", ",")}:1${
-          ratio >= 4.5 ? "" : ratio >= 3 ? " · Solo testo grande" : " · Non adatto al testo"
+        message: `Contrast on main background: ${ratio.toFixed(1)}:1${
+          ratio >= 4.5 ? "" : ratio >= 3 ? " · Large text only" : " · Not suitable for text"
         }`,
       });
     }
   }
-  if (!checks.length) checks.push({ level: "info", message: "Nessun problema rilevato" });
+  if (!checks.length) checks.push({ level: "info", message: "No issues found" });
   return checks;
 }

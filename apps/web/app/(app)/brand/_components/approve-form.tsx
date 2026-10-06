@@ -47,9 +47,9 @@ export function ApproveForm({
     <div className="space-y-6">
       {checks.length ? (
         <fieldset className="space-y-2">
-          <legend className="text-heading-sm text-fg">Controlli aperti</legend>
+          <legend className="text-heading-sm text-fg">Open checks</legend>
           <p className="text-body-sm text-fg-muted">
-            Nessun controllo blocca: conferma di averli visti uno per uno.
+            No check blocks publishing: confirm you have seen each one.
           </p>
           <ul className="space-y-2">
             {checks.map((c) => (
@@ -69,14 +69,14 @@ export function ApproveForm({
                   }
                 />
                 <label htmlFor={`seen-${c.key}`} className="text-fg">
-                  <span className="text-warning">Ho visto:</span> {c.message}
+                  <span className="text-warning">Seen:</span> {c.message}
                 </label>
               </li>
             ))}
           </ul>
         </fieldset>
       ) : (
-        <p className="text-body-sm text-success">Nessun controllo aperto.</p>
+        <p className="text-body-sm text-success">No open checks.</p>
       )}
 
       <div className="space-y-1">
@@ -87,18 +87,18 @@ export function ApproveForm({
           className={controlClass}
           value={changelog}
           onChange={(e) => setChangelog(e.target.value)}
-          placeholder="Che cosa cambia in questa versione e perché"
+          placeholder="What changes in this version and why"
         />
         <p className="text-body-sm text-fg-muted">
-          Almeno {CHANGELOG_MIN} caratteri: resta nella cronologia.
+          At least {CHANGELOG_MIN} characters: it stays in the history.
         </p>
       </div>
       {selfApproval ? (
         <div className="space-y-1">
-          <Label htmlFor="self-note">Nota di approvazione</Label>
+          <Label htmlFor="self-note">Approval note</Label>
           <Input id="self-note" value={note} onChange={(e) => setNote(e.target.value)} />
           <p className="text-body-sm text-fg-muted">
-            Stai approvando una bozza che hai preparato tu: scrivi una nota per la cronologia.
+            You’re approving a draft you prepared yourself: write a note for the history.
           </p>
         </div>
       ) : null}
@@ -129,12 +129,12 @@ export function ApproveForm({
           }
         >
           <BadgeCheck aria-hidden />
-          Approva e pubblica la v{number}
+          Approve and publish v{number}
         </Button>
         {inReview ? (
           <div className="flex flex-wrap items-end gap-2">
             <div className="space-y-1">
-              <Label htmlFor="return-comment">Commento per chi l&apos;ha preparata</Label>
+              <Label htmlFor="return-comment">Comment for whoever prepared it</Label>
               <Input
                 id="return-comment"
                 value={comment}
@@ -159,7 +159,7 @@ export function ApproveForm({
               }
             >
               <Undo2 aria-hidden />
-              {comment.trim() ? "Rimanda con commento" : "Ritira dalla revisione"}
+              {comment.trim() ? "Send back with comment" : "Withdraw from review"}
             </Button>
           </div>
         ) : null}

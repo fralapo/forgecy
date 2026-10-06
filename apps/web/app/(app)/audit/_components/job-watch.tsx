@@ -15,13 +15,13 @@ export interface WatchedJob {
 
 const ACTIVE = new Set(["queued", "running", "retrying"]);
 const statusLabel: Record<string, string> = {
-  queued: "In coda",
-  running: "In corso",
-  retrying: "Nuovo tentativo",
-  completed: "Completato",
-  failed: "Non riuscito",
-  cancelled: "Annullato",
-  needs_attention: "Richiede attenzione",
+  queued: "Queued",
+  running: "Running",
+  retrying: "Retrying",
+  completed: "Completed",
+  failed: "Failed",
+  cancelled: "Cancelled",
+  needs_attention: "Needs attention",
 };
 
 /**

@@ -3,7 +3,7 @@ import { briefSchema, getNewCarouselOptions, type CarouselParamsInput } from "@f
 import { CarouselBriefForms } from "../../../_components/carousel-brief-forms";
 import { loadCarousel } from "../_lib/workspace";
 
-export const metadata = { title: "Brief · Carosello" };
+export const metadata = { title: "Brief · Carousel" };
 
 const EDITABLE = ["draft", "changes_requested", "approved", "exported"];
 
@@ -25,8 +25,8 @@ export default async function CarouselBriefPage({
       {!editable ? (
         <p role="status" className="mb-4 text-body-sm text-fg-muted">
           {ws.locked
-            ? "L'AI sta lavorando su questo carosello: i campi tornano modificabili alla fine."
-            : "In questo stato il brief non si modifica."}
+            ? "The AI is working on this carousel: the fields become editable again when it finishes."
+            : "The brief can’t be edited in this status."}
         </p>
       ) : null}
       <CarouselBriefForms

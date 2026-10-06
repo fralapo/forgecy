@@ -5,7 +5,7 @@ import { parseCatalogFilters } from "../../_lib/filters";
 
 export const dynamic = "force-dynamic";
 
-/** «Esporta CSV» of the filtered products (formulas neutralized, `;` for Excel). */
+/** “Export CSV” of the filtered products (formulas neutralized, `;` for Excel). */
 export const GET = withUser(
   async (_user, request: Request, { params }: { params: Promise<{ clientSlug: string }> }) => {
     const { clientSlug } = await params;
@@ -23,7 +23,7 @@ export const GET = withUser(
     return new Response(productsToCsv(rows), {
       headers: {
         "content-type": "text/csv; charset=utf-8",
-        "content-disposition": `attachment; filename="prodotti-${client.slug}.csv"`,
+        "content-disposition": `attachment; filename="products-${client.slug}.csv"`,
         "cache-control": "no-store",
       },
     });

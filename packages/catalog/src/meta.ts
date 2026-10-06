@@ -2,7 +2,7 @@ import type { ConfidenceLevel, ProductSourceKind } from "@forgecy/core";
 import type { ClaimKind } from "./sensitive";
 import type { FieldKey } from "./fields";
 
-/** Exact origin of a value: "CSV riga 42, colonna desc", "PDF listino p. 7"... */
+/** Exact origin of a value: "CSV row 42, column desc", "PDF price list p. 7"... */
 export interface SourceRef {
   kind: ProductSourceKind;
   /** Import file id, when the value comes from a file. */
@@ -43,7 +43,7 @@ export function describeSource(s: SourceRef): string {
     case "csv":
     case "xlsx": {
       const label = s.kind === "csv" ? "CSV" : "XLSX";
-      const where = [s.row ? `riga ${s.row}` : "", s.column ? `colonna "${s.column}"` : ""]
+      const where = [s.row ? `row ${s.row}` : "", s.column ? `column "${s.column}"` : ""]
         .filter(Boolean)
         .join(", ");
       return `${label}${s.fileName ? ` · ${s.fileName}` : ""}${where ? ` · ${where}` : ""}`;
@@ -51,26 +51,26 @@ export function describeSource(s: SourceRef): string {
     case "pdf":
       return `PDF${s.fileName ? ` · ${s.fileName}` : ""}${s.page ? ` p. ${s.page}` : ""}`;
     case "image":
-      return `Immagine${s.fileName ? ` ${s.fileName}` : ""}`;
+      return `Image${s.fileName ? ` ${s.fileName}` : ""}`;
     case "text":
-      return `Testo${s.fileName ? ` · ${s.fileName}` : ""}`;
+      return `Text${s.fileName ? ` · ${s.fileName}` : ""}`;
     case "ai":
-      return "Proposto da Brand Analyst";
+      return "Proposed by Brand Analyst";
     case "manual":
-      return s.userName ? `Inserito a mano da ${s.userName}` : "Inserito a mano";
+      return s.userName ? `Entered manually by ${s.userName}` : "Entered manually";
   }
 }
 
 export const confidenceLabels: Record<ConfidenceLevel, string> = {
-  high: "Alta",
-  medium: "Media",
-  low: "Bassa",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
 };
 
 export const truthLabels: Record<TruthLevel, string> = {
-  observed: "Estratto, non rivisto",
-  proposed: "Proposto",
-  approved: "Approvato",
+  observed: "Extracted, not reviewed",
+  proposed: "Proposed",
+  approved: "Approved",
 };
 
 const RANK: Record<ConfidenceLevel, number> = { low: 0, medium: 1, high: 2 };

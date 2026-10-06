@@ -67,6 +67,7 @@ import { screenshotImages } from "./images";
 type SourceRow = typeof auditSources.$inferSelect;
 type FindingInsert = typeof auditFindings.$inferInsert;
 
+// Stored as the finding title, which lands in the client report (Italian by default): kept in Italian.
 const criterionLabel: Record<(typeof comparisonCriteria)[number], string> = {
   color: "Colore dominante",
   tone: "Tono di voce",
@@ -109,20 +110,20 @@ function pagePrompt(ref: string, source: SourceRow, maxText: number): string {
   return dataBlock(
     `${ref} ${source.url ?? ""}`,
     [
-      `Titolo: ${oneLine(source.title, 200)}`,
+      `Title: ${oneLine(source.title, 200)}`,
       d.metaDescription ? `Meta description: ${oneLine(d.metaDescription, 300)}` : "",
-      d.h1?.length ? `H1: ${d.h1.map((h) => oneLine(h, 200)).join(" | ")}` : "H1: (nessuno)",
+      d.h1?.length ? `H1: ${d.h1.map((h) => oneLine(h, 200)).join(" | ")}` : "H1: (none)",
       d.headings?.length
-        ? `Titoli: ${d.headings
+        ? `Headings: ${d.headings
             .slice(0, 15)
             .map((h) => `H${h.level} ${oneLine(h.text, 120)}`)
             .join(" | ")}`
         : "",
       d.ctas?.length
         ? `Call to action: ${d.ctas.slice(0, 12).join(" | ")}`
-        : "Call to action: (nessuna)",
-      d.contactForm ? "Modulo di contatto presente" : "",
-      `Testo: ${(d.textExcerpt ?? "").slice(0, maxText)}`,
+        : "Call to action: (none)",
+      d.contactForm ? "Contact form present" : "",
+      `Text: ${(d.textExcerpt ?? "").slice(0, maxText)}`,
     ]
       .filter(Boolean)
       .join("\n"),
@@ -150,12 +151,12 @@ export function prospectContext(audit: AuditRow, client: ClientRow): string {
   return dataBlock(
     "prospect",
     [
-      `Nome: ${client.name}`,
-      i.websiteUrl ? `Sito: ${i.websiteUrl}` : "Sito: non indicato",
-      i.sector ? `Settore: ${i.sector}` : "",
-      i.area ? `Area geografica: ${i.area}` : "",
-      objectives.length ? `Obiettivi: ${objectives.join("; ")}` : "",
-      i.notes ? `Note dell'agenzia: ${oneLine(i.notes, 1500)}` : "",
+      `Name: ${client.name}`,
+      i.websiteUrl ? `Website: ${i.websiteUrl}` : "Website: not given",
+      i.sector ? `Sector: ${i.sector}` : "",
+      i.area ? `Geographic area: ${i.area}` : "",
+      objectives.length ? `Objectives: ${objectives.join("; ")}` : "",
+      i.notes ? `Agency notes: ${oneLine(i.notes, 1500)}` : "",
     ]
       .filter(Boolean)
       .join("\n"),
@@ -257,7 +258,7 @@ async function setAnalysisStep(
 function load(deps: AuditHandlerDeps, auditId: string) {
   return loadAudit(deps.db, auditId).then((r) => {
     if (r.audit.status === "archived" || r.audit.status === "delivered")
-      throw new UnrecoverableError("L'audit è chiuso.");
+      throw new UnrecoverableError("The audit is closed.");
     return r;
   });
 }
@@ -272,10 +273,10 @@ export async function runAnalyzeSite(
   const { db } = deps;
   const { audit, client } = await load(deps, payload.auditId);
   const scan = await db.query.siteScans.findFirst({ where: eq(siteScans.id, payload.scanId) });
-  if (!scan || scan.auditId !== audit.id) throw new UnrecoverableError("Lettura non trovata");
+  if (!scan || scan.auditId !== audit.id) throw new UnrecoverableError("Scan not found");
   const pages = await collectedPages(db, scan.id);
   if (!pages.length) return { observations: 0 };
-  await setAnalysisStep(db, scan.id, "running", "Brand Analyst al lavoro");
+  await setAnalysisStep(db, scan.id, "running", "Brand Analyst at work");
   await ctx.progress(10);
 
   const checks = scan.extracted?.checks ?? [];
@@ -291,32 +292,32 @@ export async function runAnalyzeSite(
     prospectContext(audit, client),
     ...pages.map((p, i) => pagePrompt(`P${i + 1}`, p, 2500)),
     dataBlock(
-      "elementi misurati sul sito",
+      "elements measured on the website",
       [
         ex.colors?.length
-          ? `Colori dominanti: ${ex.colors.map((c) => `${c.hex} ${Math.round(c.share * 100)}%`).join(", ")}`
-          : "Colori: non misurati (lettura senza browser)",
+          ? `Dominant colors: ${ex.colors.map((c) => `${c.hex} ${Math.round(c.share * 100)}%`).join(", ")}`
+          : "Colors: not measured (read without a browser)",
         ex.fonts?.length
-          ? `Font: ${ex.fonts.map((f) => `${f.family} (${f.usage})`).join(", ")}`
-          : "Font: non misurati",
+          ? `Fonts: ${ex.fonts.map((f) => `${f.family} (${f.usage})`).join(", ")}`
+          : "Fonts: not measured",
         ex.ctas?.length
-          ? `CTA più frequenti: ${ex.ctas
+          ? `Most frequent CTAs: ${ex.ctas
               .slice(0, 8)
-              .map((c) => `"${c.text}" su ${c.pages.length} pagine`)
+              .map((c) => `"${c.text}" on ${c.pages.length} pages`)
               .join("; ")}`
           : "",
-        `Modulo di contatto: ${ex.contactForm ? "sì" : "no"}`,
+        `Contact form: ${ex.contactForm ? "yes" : "no"}`,
         ex.socialLinks?.length
-          ? `Link social: ${ex.socialLinks.map((s) => s.channel).join(", ")}`
-          : "Nessun link ai social",
+          ? `Social links: ${ex.socialLinks.map((s) => s.channel).join(", ")}`
+          : "No social links",
       ]
         .filter(Boolean)
         .join("\n"),
     ),
     dataBlock(
-      "controlli tecnici",
+      "technical checks",
       checks
-        .map((c) => `CHECK:${c.key} ${c.ok ? "OK" : "DA MIGLIORARE"} · ${c.label} · ${c.detail}`)
+        .map((c) => `CHECK:${c.key} ${c.ok ? "OK" : "TO IMPROVE"} · ${c.label} · ${c.detail}`)
         .join("\n"),
     ),
     "Write the observations now. Reference pages as P1, P2... and checks as CHECK:<key>.",
@@ -378,9 +379,9 @@ export async function runAnalyzeSite(
     db,
     scan.id,
     "completed",
-    `${rows.length} osservazioni da rivedere${
+    `${rows.length} observations to review${
       rows.length < run.data.observations.length
-        ? ` (${run.data.observations.length - rows.length} scartate perché senza prove verificabili)`
+        ? ` (${run.data.observations.length - rows.length} rejected for lack of verifiable evidence)`
         : ""
     }`,
   );
@@ -407,7 +408,7 @@ async function socialData(db: Database, auditId: string, channel: SocialChannel)
       .from(auditSources)
       .where(and(eq(auditSources.auditId, auditId), eq(auditSources.channel, channel))),
   ]);
-  const fileName = new Map(files.map((f) => [f.id, f.fileName ?? "File importato"]));
+  const fileName = new Map(files.map((f) => [f.id, f.fileName ?? "Imported file"]));
   const cards = computeChannelMetrics({
     channel,
     metrics: metrics.map((m) => ({
@@ -423,7 +424,7 @@ async function socialData(db: Database, auditId: string, channel: SocialChannel)
       postType: p.postType,
       text: p.text,
       metrics: p.metrics,
-      sourceLabel: `File: ${fileName.get(p.sourceId) ?? "importato"}`,
+      sourceLabel: `File: ${fileName.get(p.sourceId) ?? "imported"}`,
     })),
   });
   return { posts, metrics, cards };
@@ -440,7 +441,7 @@ function socialIndexEntries(
       `${prefix}POST:${p.rowNumber}`,
       {
         type: "file_row",
-        label: `${label} · post del ${p.postedOn}`,
+        label: `${label} · post of ${p.postedOn}`,
         sourceId: p.sourceId,
         text: p.text ?? "",
         channel,
@@ -469,20 +470,20 @@ function socialPrompt(
 ): string {
   return [
     dataBlock(
-      `${channelLabel[channel]} · metriche`,
+      `${channelLabel[channel]} · metrics`,
       data.cards
         .map(
           (c) =>
             `${prefix}METRIC:${c.key} ${c.label}: ${c.display}${
               c.value === null
                 ? ` (${c.reason})`
-                : ` · fonte: ${c.source ?? ""}${c.date ? ` · ${c.date}` : ""}`
+                : ` · source: ${c.source ?? ""}${c.date ? ` · ${c.date}` : ""}`
             }`,
         )
         .join("\n"),
     ),
     dataBlock(
-      `${channelLabel[channel]} · post importati`,
+      `${channelLabel[channel]} · imported posts`,
       data.posts.length
         ? data.posts
             .slice(0, 60)
@@ -495,7 +496,7 @@ function socialPrompt(
                   .join(" ")}\n${oneLine(p.text, 300)}`,
             )
             .join("\n")
-        : "Nessun post importato",
+        : "No imported posts",
     ),
   ].join("\n\n");
 }
@@ -527,7 +528,7 @@ export async function runAnalyzeSocial(
   const shots = await screenshotImages(deps.storage, shotRows);
   if (!data.posts.length && !data.metrics.length && !shots.length)
     throw new NeedsAttentionError(
-      "Nessun dato da analizzare: carica screenshot, importa un export o inserisci i valori.",
+      "No data to analyze: upload screenshots, import an export or enter the values.",
     );
   const shotName = new Map(shotRows.map((s) => [s.id, s]));
   const index = buildIndex([
@@ -620,14 +621,14 @@ export async function runProposeCompetitors(
     system: STRATEGIST_COMPETITORS,
     prompt: [
       prospectContext(audit, client),
-      home ? pagePrompt("home del prospect", home, 1500) : "",
+      home ? pagePrompt("prospect home page", home, 1500) : "",
       existing.length
         ? dataBlock(
-            "già in lista",
+            "already listed",
             existing.map((c) => `${c.name} ${c.websiteUrl ?? ""} (${c.status})`).join("\n"),
           )
         : "",
-      payload.instruction ? dataBlock("istruzione della persona", payload.instruction) : "",
+      payload.instruction ? dataBlock("instruction from the person", payload.instruction) : "",
     ]
       .filter(Boolean)
       .join("\n\n"),
@@ -670,7 +671,7 @@ export async function runProposeCompetitors(
         proposedByAgent: "strategist",
         status: "proposed",
         sourceStatus: url ? "pending" : "unavailable",
-        sourceError: url ? null : "Nessun sito indicato",
+        sourceError: url ? null : "No website given",
         position: position++,
       });
       if (domain) domains.add(domain);
@@ -683,7 +684,7 @@ export async function runProposeCompetitors(
 
 /**
  * When the comparison cannot run (no provider, budget, policy) the audit must not stay
- * "Analisi in corso": it moves to review, where observations can be written by hand.
+ * "Analysis in progress": it moves to review, where observations can be written by hand.
  */
 export async function runCompareCompetitors(
   deps: AuditHandlerDeps,
@@ -783,7 +784,7 @@ async function compareCompetitors(
       prospectContext(audit, client),
       ...companies.map((co) =>
         [
-          `${co.ref} = ${co.name}${co.ref === "PROSPECT" ? " (il prospect)" : ""}`,
+          `${co.ref} = ${co.name}${co.ref === "PROSPECT" ? " (the prospect)" : ""}`,
           ...co.pages.map((p, i) => pagePrompt(`${co.ref}:P${i + 1}`, p, 1500)),
         ].join("\n"),
       ),
@@ -885,7 +886,7 @@ export async function runCompareChannels(
   };
   if (comparisonChannels.filter((c) => has[c]).length < 2)
     throw new NeedsAttentionError(
-      "Servono dati su almeno due canali tra sito, Instagram e Facebook.",
+      "Data is needed on at least two channels among website, Instagram and Facebook.",
     );
   const observations = (await usableObservations(db, audit.id)).filter(
     (o) =>
@@ -922,10 +923,10 @@ export async function runCompareChannels(
       has.website
         ? [
             dataBlock(
-              "sito · elementi misurati",
+              "website · measured elements",
               [
                 ex.colors?.length
-                  ? `Colori: ${ex.colors.map((c) => `${c.hex} ${Math.round(c.share * 100)}%`).join(", ")}`
+                  ? `Colors: ${ex.colors.map((c) => `${c.hex} ${Math.round(c.share * 100)}%`).join(", ")}`
                   : "",
                 ex.ctas?.length
                   ? `CTA: ${ex.ctas
@@ -944,13 +945,13 @@ export async function runCompareChannels(
       has.facebook ? socialPrompt("facebook", social.facebook, "FB:") : "",
       observations.length
         ? dataBlock(
-            "osservazioni accettate",
+            "accepted observations",
             observations
               .map((o, i) => `O${i + 1} [${o.channel}] ${o.title}: ${oneLine(o.description, 200)}`)
               .join("\n"),
           )
         : "",
-      payload.instruction ? dataBlock("istruzione della persona", payload.instruction) : "",
+      payload.instruction ? dataBlock("instruction from the person", payload.instruction) : "",
       "Evidence refs: P1 (site pages), IG:POST:<n>, IG:METRIC:<key>, FB:POST:<n>, FB:METRIC:<key>, O<n>.",
     ]
       .filter(Boolean)
@@ -980,7 +981,7 @@ export async function runCompareChannels(
       if (!has[channel]) {
         cells[channel] = {
           value: null,
-          unavailableReason: "Nessun dato raccolto per questo canale",
+          unavailableReason: "No data collected for this channel",
         };
         continue;
       }
@@ -991,7 +992,7 @@ export async function runCompareChannels(
       if (cell.value && !v.evidence.length) {
         cells[channel] = {
           value: null,
-          unavailableReason: "Valore senza prove verificabili: scartato",
+          unavailableReason: "Value without verifiable evidence: rejected",
         };
         continue;
       }
@@ -999,7 +1000,7 @@ export async function runCompareChannels(
         value: cell.value,
         ...(cell.value
           ? {}
-          : { unavailableReason: cell.unavailableReason ?? "Non visibile nei dati" }),
+          : { unavailableReason: cell.unavailableReason ?? "Not visible in the data" }),
         evidence: v.evidence,
       };
       all.push(...v.evidence);
@@ -1024,8 +1025,8 @@ export async function runCompareChannels(
       suggestedPriority: row.outcome === "to_align" ? "high" : "medium",
       confidence,
       confidenceReason: distinct
-        ? `Valori verificati su ${distinct} canali: ${[...new Set(labels)].slice(0, 3).join(", ")}`
-        : "Nessun valore verificato",
+        ? `Values verified on ${distinct} channels: ${[...new Set(labels)].slice(0, 3).join(", ")}`
+        : "No verified values",
       evidence: all.slice(0, 8),
       comparison,
       authorAgent: "brand_analyst",
@@ -1051,7 +1052,7 @@ export async function runDiagnose(
   const { audit, client } = await load(deps, payload.auditId);
   const observations = await usableObservations(db, audit.id);
   if (!observations.length)
-    throw new NeedsAttentionError("Nessuna osservazione accettata: rivedi le osservazioni prima.");
+    throw new NeedsAttentionError("No accepted observations: review the observations first.");
   const index = buildIndex(
     observations.map((o, i): [string, RefTarget] => [
       `O${i + 1}`,
@@ -1068,13 +1069,13 @@ export async function runDiagnose(
     prompt: [
       prospectContext(audit, client),
       dataBlock(
-        "osservazioni accettate",
+        "accepted observations",
         observations
           .map(
             (o, i) =>
-              `O${i + 1} [${o.area}${o.channel ? ` · ${o.channel}` : ""} · priorità ${o.priority} · confidenza ${o.confidence}] ${o.title}\n${oneLine(o.description, 400)}${
+              `O${i + 1} [${o.area}${o.channel ? ` · ${o.channel}` : ""} · priority ${o.priority} · confidence ${o.confidence}] ${o.title}\n${oneLine(o.description, 400)}${
                 o.comparison
-                  ? `\nEsito confronto: ${o.comparison.outcome}${o.comparison.outcomeNote ? ` (${o.comparison.outcomeNote})` : ""}`
+                  ? `\nComparison outcome: ${o.comparison.outcome}${o.comparison.outcomeNote ? ` (${o.comparison.outcomeNote})` : ""}`
                   : ""
               }`,
           )
@@ -1120,7 +1121,7 @@ export async function runDiagnose(
       priority: p.suggestedPriority,
       suggestedPriority: p.suggestedPriority,
       confidence,
-      confidenceReason: `Basato su ${parents.length} ${parents.length === 1 ? "osservazione accettata" : "osservazioni accettate"}`,
+      confidenceReason: `Based on ${parents.length} ${parents.length === 1 ? "accepted observation" : "accepted observations"}`,
       evidence,
       parentIds: parents.map((o) => o.id),
       authorAgent: "strategist",
@@ -1159,7 +1160,8 @@ export async function runPlan(
       ),
     )
     .orderBy(asc(auditFindings.position));
-  if (!problems.length) throw new NeedsAttentionError("Accetta almeno un problema della diagnosi.");
+  if (!problems.length)
+    throw new NeedsAttentionError("Accept at least one problem of the diagnosis.");
   const states = await db
     .select()
     .from(auditChannelStates)
@@ -1174,7 +1176,7 @@ export async function runPlan(
     .map((s) => s.channel)
     .filter((c): c is SocialChannel => (socialChannels as readonly string[]).includes(c));
   if (!channels.length)
-    throw new NeedsAttentionError("Aggiungi almeno un canale social al prospect per il piano.");
+    throw new NeedsAttentionError("Add at least one social channel to the prospect for the plan.");
   const run = await runAgent(deps, ctx, {
     client,
     role: "strategist",
@@ -1186,11 +1188,11 @@ export async function runPlan(
       prospectContext(audit, client),
       `Channels the prospect has: ${channels.join(", ")}.`,
       dataBlock(
-        "diagnosi",
+        "diagnosis",
         problems
           .map(
             (p, i) =>
-              `D${i + 1} [priorità ${p.priority}] ${p.title}: ${oneLine(p.recommendation, 300)}`,
+              `D${i + 1} [priority ${p.priority}] ${p.title}: ${oneLine(p.recommendation, 300)}`,
           )
           .join("\n"),
       ),

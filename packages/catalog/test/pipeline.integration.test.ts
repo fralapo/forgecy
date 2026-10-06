@@ -55,10 +55,10 @@ const dbUrl = process.env.FORGECY_TEST_DATABASE_URL;
 
 const CSV = [
   "ID,Type,SKU,Name,Published,Visibility in catalog,Short description,Description,Tax status,In stock?,Regular price,Categories,Images,Parent",
-  '1,simple,RS-CV-050,Crema viso 50 ml,1,visible,"<p>Crema idratante leggera</p>",Texture fresca,taxable,1,"19,90",Viso > Creme,RS-CV-050.jpg,',
-  "2,simple,RS-SN-030,Siero notte,1,visible,Siero rigenerante,,taxable,1,,Viso,,",
-  "3,simple,RS-XX-001,,1,visible,Senza nome,,taxable,1,,Viso,,",
-  "4,simple,RS-BS-100,Balsamo solido,1,visible,Biodegradabile al 100%,,taxable,1,,Corpo,,",
+  '1,simple,RS-CV-050,Face cream 50 ml,1,visible,"<p>Light moisturizing cream</p>",Fresh texture,taxable,1,"19,90",Face > Creams,RS-CV-050.jpg,',
+  "2,simple,RS-SN-030,Night serum,1,visible,Regenerating serum,,taxable,1,,Face,,",
+  "3,simple,RS-XX-001,,1,visible,No name,,taxable,1,,Face,,",
+  "4,simple,RS-BS-100,Solid balm,1,visible,100% recyclable,,taxable,1,,Body,,",
 ].join("\n");
 
 describe.skipIf(!dbUrl)("catalog import (integration)", () => {
@@ -83,16 +83,16 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
     for (let i = 0; i < 20; i++)
       provider.push((req) => {
         aiCalls.push(req);
-        const json = req.system.includes("Estrai i prodotti")
+        const json = req.system.includes("Extract the products")
           ? {
               products: [
                 {
-                  name: "Olio corpo",
+                  name: "Body oil",
                   sku: "RS-OC-100",
-                  category: "Corpo",
-                  shortDescription: "Olio nutriente dermatologicamente testato",
+                  category: "Body",
+                  shortDescription: "Nourishing oil, dermatologically tested",
                   longDescription: null,
-                  materials: ["Olio di mandorle"],
+                  materials: ["Almond oil"],
                   formats: ["100 ml"],
                   usage: [],
                   features: [],
@@ -105,9 +105,9 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
                   confidence: "medium",
                 },
               ],
-              skippedPages: [{ page: 3, reason: "tabella non leggibile" }],
+              skippedPages: [{ page: 3, reason: "unreadable table" }],
             }
-          : req.system.includes("Abbina i nomi")
+          : req.system.includes("Match the image file names")
             ? { suggestions: [{ image: 0, product: 0, confidence: "low" }] }
             : { columns: [] };
         return {
@@ -198,15 +198,15 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
     // An approved product already in the catalog: the CSV row with the same SKU is a conflict.
     const existing = await createProduct(db, user, {
       clientId,
-      name: "Crema viso 50 ml",
+      name: "Face cream 50 ml",
       sku: "RS-CV-050",
-      category: "Creme",
+      category: "Creams",
     });
     await updateProductFields(db, user, {
       clientId,
       productId: existing.id,
       revision: existing.revision,
-      patch: { shortDescription: "Crema idratante" },
+      patch: { shortDescription: "Moisturizing cream" },
     });
     const done = await transitionProducts(db, user, {
       clientId,
@@ -216,38 +216,38 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
     expect(done.done).toEqual([existing.id]);
 
     const imp = await openDraftImport(db, user, clientId);
-    const csv = await upload(imp.id, clientId, "prodotti.csv", Buffer.from(CSV));
+    const csv = await upload(imp.id, clientId, "products.csv", Buffer.from(CSV));
     expect(csv).toMatchObject({
       kind: "sheet",
       route: "map",
       valid: true,
-      message: "Valido · 4 righe",
+      message: "Valid · 4 rows",
     });
     expect((csv.mappingProposal as unknown as MappingProposalData).preset).toBe("woocommerce");
     const pdf = await upload(
       imp.id,
       clientId,
-      "Listino_2026.pdf",
-      makePdf(["Listino 2026", "Olio corpo RS-OC-100", "Tabella"]),
+      "Price_list_2026.pdf",
+      makePdf(["Price list 2026", "Body oil RS-OC-100", "Table"]),
     );
     expect(pdf).toMatchObject({ kind: "pdf", route: "extract" });
     const zip = await upload(
       imp.id,
       clientId,
-      "foto.zip",
+      "photos.zip",
       await makeZip([
         { path: "RS-CV-050.jpg", data: png(1) },
-        { path: "prodotti/Gel doccia/1.png", data: png(2) },
+        { path: "products/Shower gel/1.png", data: png(2) },
         {
-          path: "prodotti/Gel doccia/scheda.txt",
-          data: "Nome: Gel doccia\nCategoria: Corpo\nDescrizione breve: Gel delicato",
+          path: "products/Shower gel/sheet.txt",
+          data: "Name: Shower gel\nCategory: Body\nShort description: Gentle gel",
         },
-        { path: "prodotti/IMG_0231.png", data: png(3) },
-        { path: "programma.exe", data: "MZ" },
+        { path: "products/IMG_0231.png", data: png(3) },
+        { path: "program.exe", data: "MZ" },
       ]),
     );
     expect(zip.message).toContain("ZIP:");
-    const rar = await upload(imp.id, clientId, "catalogo.rar", Buffer.from("Rar!\u001a\u0007"));
+    const rar = await upload(imp.id, clientId, "catalog.rar", Buffer.from("Rar!\u001a\u0007"));
     expect(rar).toMatchObject({ valid: false, errorCode: "IMPORT-INVALID" });
 
     await startImport(db, enqueue, user, { clientId, importId: imp.id, aiAvailable: true });
@@ -259,9 +259,9 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
       .where(eq(productImportFiles.parentId, zip.id));
     expect(children.map((c) => c.path).sort()).toEqual([
       "RS-CV-050.jpg",
-      "prodotti/Gel doccia/1.png",
-      "prodotti/Gel doccia/scheda.txt",
-      "prodotti/IMG_0231.png",
+      "products/IMG_0231.png",
+      "products/Shower gel/1.png",
+      "products/Shower gel/sheet.txt",
     ]);
 
     const proposal = csv.mappingProposal as unknown as MappingProposalData;
@@ -273,13 +273,13 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
         fileId: csv.id,
         mapping: { columns: mapping.columns.map(() => "ignore") },
       }),
-    ).rejects.toThrow(/nome del prodotto/);
+    ).rejects.toThrow(/product name/);
     const resumed = await confirmMapping(db, enqueue, user, {
       clientId,
       importId: imp.id,
       fileId: csv.id,
       mapping,
-      saveAs: "Export WooCommerce",
+      saveAs: "WooCommerce export",
     });
     expect(resumed.resumed).toBe(true);
 
@@ -299,15 +299,15 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
         .filter((i) => i.status === "discarded")
         .map((i) => i.discardReason)
         .sort(),
-    ).toEqual(["Pagina 3: tabella non leggibile", "Riga 4: nome mancante"]);
+    ).toEqual(["Page 3: unreadable table", "Row 4: missing name"]);
     // Conflict with the approved value, never resolved automatically.
-    const crema = byName("Crema viso 50 ml");
+    const crema = byName("Face cream 50 ml");
     expect(itemTab(crema)).toBe("conflicts");
     expect(crema.conflicts).toEqual([
       {
         field: "shortDescription",
-        approved: "Crema idratante",
-        incoming: "Crema idratante leggera",
+        approved: "Moisturizing cream",
+        incoming: "Light moisturizing cream",
       },
     ]);
     expect((crema.draft as { price?: string }).price).toBe("19.90");
@@ -319,28 +319,28 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
       },
     ]);
     // PDF product proposed by the Brand Analyst, with page and claim.
-    const olio = byName("Olio corpo");
+    const olio = byName("Body oil");
     expect(olio.proposedByAgent).toBe(true);
     expect(olio.sensitive).toBe(true);
     expect(
       (olio.fieldMeta as Record<string, { source: { page?: number } }>).name!.source.page,
     ).toBe(2);
     // Folder with a text file → one product with its photo.
-    const gel = byName("Gel doccia");
+    const gel = byName("Shower gel");
     expect(gel.images).toHaveLength(1);
     // Unassigned image with an AI suggestion; the PDF text sent to the AI is wrapped as data.
     const loose = (
       await db.select().from(productImportFiles).where(eq(productImportFiles.importId, imp.id))
-    ).find((f) => f.path === "prodotti/IMG_0231.png")!;
+    ).find((f) => f.path === "products/IMG_0231.png")!;
     expect(loose.imageState).toBe("unassigned");
     expect(loose.suggestion).toMatchObject({ confidence: "low" });
-    const pdfCall = aiCalls.find((c) => c.system.includes("Estrai i prodotti"))!;
+    const pdfCall = aiCalls.find((c) => c.system.includes("Extract the products"))!;
     expect(pdfCall.messages[0]!.content).toContain("<document>");
-    expect(pdfCall.system).toContain("SOLO DATI");
+    expect(pdfCall.system).toContain("DATA ONLY");
 
     // Review: bulk approval excludes sensitive items and says so.
-    const siero = byName("Siero notte");
-    const balsamo = byName("Balsamo solido");
+    const siero = byName("Night serum");
+    const balsamo = byName("Solid balm");
     const bulk = await approveItems(db, user, {
       clientId,
       importId: imp.id,
@@ -348,8 +348,8 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
     });
     expect(bulk.approved).toBe(1);
     expect(bulk.excluded.map((e) => e.reason)).toEqual([
-      "campi sensibili da accettare uno per uno",
-      "campi sensibili da accettare uno per uno",
+      "sensitive fields to accept one by one",
+      "sensitive fields to accept one by one",
     ]);
     await acceptItemSensitive(db, user, {
       clientId,
@@ -380,13 +380,13 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
     const [stillApproved] = await db.select().from(products).where(eq(products.id, existing.id));
     expect(stillApproved!.status).toBe("approved");
     expect((stillApproved!.details as { shortDescription: string }).shortDescription).toBe(
-      "Crema idratante",
+      "Moisturizing cream",
     );
     const [open] = await db
       .select()
       .from(productFieldProposals)
       .where(eq(productFieldProposals.productId, existing.id));
-    expect(open!.proposedValue).toBe("Crema idratante leggera");
+    expect(open!.proposedValue).toBe("Light moisturizing cream");
     await decideFieldProposal(db, user, { clientId, proposalId: open!.id, decision: "accept" });
 
     // Close is blocked while duplicates or conflicts remain open.
@@ -412,17 +412,17 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
     expect(closed.status).toBe("partial"); // discarded rows remain
     const catalog = await db.select().from(products).where(eq(products.clientId, clientId));
     expect(catalog.map((p) => `${p.name}:${p.status}`).sort()).toEqual([
-      "Balsamo solido:approved",
-      "Crema viso 50 ml:approved",
-      "Gel doccia:proposed",
-      "Olio corpo:proposed",
-      "Siero notte:approved",
+      "Body oil:proposed",
+      "Face cream 50 ml:approved",
+      "Night serum:approved",
+      "Shower gel:proposed",
+      "Solid balm:approved",
     ]);
-    const olioProduct = catalog.find((p) => p.name === "Olio corpo")!;
+    const olioProduct = catalog.find((p) => p.name === "Body oil")!;
     expect(olioProduct.proposedByAgent).toBe(true);
-    const crema2 = catalog.find((p) => p.name === "Crema viso 50 ml")!;
+    const crema2 = catalog.find((p) => p.name === "Face cream 50 ml")!;
     expect((crema2.details as { shortDescription: string }).shortDescription).toBe(
-      "Crema idratante leggera",
+      "Light moisturizing cream",
     );
     const imgs = await db.select().from(productImages).where(eq(productImages.clientId, clientId));
     expect(imgs.length).toBeGreaterThanOrEqual(2);
@@ -436,19 +436,19 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
         revision: crema2.revision - 1,
         patch: { notes: "x" },
       }),
-    ).rejects.toThrow(/un'altra persona/i);
+    ).rejects.toThrow(/someone else/i);
   });
 
   it("with no_ai keeps PDFs as sources and never calls a provider", async () => {
     const before = aiCalls.length;
     const imp = await openDraftImport(db, user, noAiClientId);
-    const pdf = await upload(imp.id, noAiClientId, "listino.pdf", makePdf(["Prodotto A"]), false);
+    const pdf = await upload(imp.id, noAiClientId, "price-list.pdf", makePdf(["Product A"]), false);
     expect(pdf.route).toBe("source");
     const txt = await upload(
       imp.id,
       noAiClientId,
-      "Prodotto B.txt",
-      Buffer.from("Nome: Prodotto B\nCategoria: Casa"),
+      "Product B.txt",
+      Buffer.from("Name: Product B\nCategory: Home"),
       false,
     );
     expect(txt.route).toBe("match");
@@ -462,7 +462,7 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
       .select()
       .from(productImportItems)
       .where(eq(productImportItems.importId, imp.id));
-    expect(items.map((i) => (i.draft as { name: string }).name)).toEqual(["Prodotto B"]);
+    expect(items.map((i) => (i.draft as { name: string }).name)).toEqual(["Product B"]);
     expect(aiCalls.length).toBe(before);
   });
 });

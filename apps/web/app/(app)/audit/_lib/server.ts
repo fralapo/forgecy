@@ -38,12 +38,12 @@ export type ActionResult<T = undefined> =
 export function toActionError(err: unknown): { ok: false; error: string; code?: string } {
   const code = auditErrorCode(err) ?? undefined;
   if (err instanceof PermissionDeniedError)
-    return { ok: false, error: "Non hai il permesso per questa azione.", code: "PERM-DENIED" };
+    return { ok: false, error: "You don't have permission for this action.", code: "PERM-DENIED" };
   if (err instanceof ForgecyError)
     return { ok: false, error: err.message, ...(code ? { code } : {}) };
   if (err && typeof err === "object" && "issues" in err) {
     const issue = (err as { issues: Array<{ message: string }> }).issues[0];
-    return { ok: false, error: issue?.message ?? "Dati non validi", code: "INPUT-INVALID" };
+    return { ok: false, error: issue?.message ?? "Invalid data", code: "INPUT-INVALID" };
   }
   throw err;
 }

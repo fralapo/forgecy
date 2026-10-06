@@ -26,6 +26,7 @@ export function brandTokens(): TokenTree {
   return t as unknown as TokenTree;
 }
 
+// An Italian brand on purpose: the vocabulary, claim and fact checks match Italian content.
 export function brand(): GuardBrand {
   const document = brandIdentityDocumentSchema.parse({
     strategy: {
@@ -47,7 +48,7 @@ export function brand(): GuardBrand {
         emoji: "no",
         exclamations: "limited",
         maxHashtags: 3,
-        ctaStyle: "Verbo all'imperativo, tu",
+        ctaStyle: "Imperative verb, informal you",
       }),
     },
     visual: {
@@ -61,7 +62,7 @@ export function brand(): GuardBrand {
         {
           id: "fmt1",
           key: "guida",
-          name: "Guida pratica",
+          name: "Practical guide",
           steps: [{ step: "hook" }, { step: "consigli" }, { step: "cta" }],
           maxWordsPerSlide: 20,
         },
@@ -91,7 +92,7 @@ export function content(): GuardContent {
           {
             kind: "text",
             name: "title",
-            label: "Titolo",
+            label: "Title",
             role: "title",
             text: "Tre errori con la ==moka==",
             maxChars: 60,
@@ -110,7 +111,7 @@ export function content(): GuardContent {
           {
             kind: "text",
             name: "title",
-            label: "Titolo",
+            label: "Title",
             role: "title",
             text: "Cosa evitare",
             maxChars: 40,
@@ -118,7 +119,7 @@ export function content(): GuardContent {
           {
             kind: "list",
             name: "items",
-            label: "Elenco",
+            label: "List",
             items: ["Acqua oltre la valvola", "Caffè pressato", "Fuoco alto"],
             maxItems: 5,
             maxCharsPerItem: 40,

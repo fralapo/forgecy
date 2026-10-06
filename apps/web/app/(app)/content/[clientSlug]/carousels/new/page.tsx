@@ -6,7 +6,7 @@ import { CarouselNewForm, type PlanSeed } from "../../../_components/carousel-ne
 import { carouselPath, carouselsPath } from "../../../_lib/paths";
 import { loadClient } from "../../../_lib/server";
 
-export const metadata = { title: "Nuovo carosello · Contenuti" };
+export const metadata = { title: "New carousel · Content" };
 
 export default async function NewCarouselPage({
   params,
@@ -17,7 +17,7 @@ export default async function NewCarouselPage({
 }) {
   const [{ clientSlug }, sp] = await Promise.all([params, searchParams]);
   const { db, user, client } = await loadClient(clientSlug);
-  const planId = typeof sp.piano === "string" ? sp.piano : null;
+  const planId = typeof sp.plan === "string" ? sp.plan : null;
   const [options, item] = await Promise.all([
     getNewCarouselOptions(db, user.actor, client.id),
     planId ? getPlanItem(db, user.actor, client.id, planId) : null,
@@ -38,30 +38,30 @@ export default async function NewCarouselPage({
 
   return (
     <Card className="p-6">
-      <h2 className="mb-1 text-heading-md text-fg">Nuovo carosello</h2>
+      <h2 className="mb-1 text-heading-md text-fg">New carousel</h2>
       <p className="mb-6 text-body-sm text-fg-muted">
-        <Link href={carouselsPath(client.slug) as Route}>Torna ai caroselli</Link>
+        <Link href={carouselsPath(client.slug) as Route}>Back to carousels</Link>
       </p>
       {item && item.contentId ? (
         <p role="status" className="mb-4 text-body-sm text-fg">
-          Per questo elemento del piano esiste già un carosello.{" "}
-          <Link href={carouselPath(client.slug, item.contentId) as Route}>Aprilo</Link>
+          A carousel already exists for this plan item.{" "}
+          <Link href={carouselPath(client.slug, item.contentId) as Route}>Open it</Link>
         </p>
       ) : null}
       {plan ? (
         <p role="status" className="mb-4 text-body-sm text-fg">
-          Dal piano: giorno {item?.day}, {channelLabels[plan.channel] ?? plan.channel}. I campi sono
-          precompilati e si possono cambiare.
+          From the plan: day {item?.day}, {channelLabels[plan.channel] ?? plan.channel}. The fields
+          are prefilled and can be changed.
         </p>
       ) : null}
       {!options.brandPublished ? (
         <p role="alert" className="mb-4 text-body-sm text-fg">
-          Serve una Brand Identity pubblicata per creare un carosello.{" "}
-          <Link href={`/brand/${client.slug}` as Route}>Apri la Brand Identity</Link>
+          A published Brand Identity is required to create a carousel.{" "}
+          <Link href={`/brand/${client.slug}` as Route}>Open the Brand Identity</Link>
         </p>
       ) : options.templates.length === 0 ? (
         <p role="alert" className="mb-4 text-body-sm text-fg">
-          Nessun template utilizzabile: pubblicane uno nel catalogo dei template.
+          No usable templates: publish one in the template catalog.
         </p>
       ) : null}
       <CarouselNewForm slug={client.slug} clientId={client.id} options={options} plan={plan} />

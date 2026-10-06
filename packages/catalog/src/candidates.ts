@@ -16,7 +16,7 @@ export interface Candidate {
   sources: Partial<Record<FieldKey, SourceRef>>;
   confidence: Partial<Record<FieldKey, ConfidenceLevel>>;
   images: ImageRef[];
-  /** Main origin shown in the list ("PDF listino p. 7", "CSV riga 42"). */
+  /** Main origin shown in the list ("PDF price list p. 7", "CSV row 42"). */
   origin: SourceRef;
   /** Image references from a sheet column (file names or URLs). */
   imageNames?: string[];
@@ -100,10 +100,11 @@ export interface MaterialFile {
 export interface FolderMatchResult {
   /** New candidates from per-product folders and text files. */
   candidates: Candidate[];
-  /** Images still without a product ("Da assegnare"). */
+  /** Images still without a product ("Unassigned"). */
   unassigned: string[];
 }
 
+// Matches Italian and English folder names found in client archives.
 const GENERIC_FOLDERS = new Set([
   "foto",
   "fotos",

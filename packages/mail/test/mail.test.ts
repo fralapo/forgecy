@@ -39,13 +39,13 @@ describe("smtpOptionsFromEnv", () => {
 });
 
 describe("renderMagicLinkEmail", () => {
-  it("renders Italian subject, text and escaped html", () => {
+  it("renders English subject, text and escaped html", () => {
     const url = "https://forgecy.local/api/auth/magic-link/verify?token=abc&callbackURL=%2F";
     const m = renderMagicLinkEmail({ url, minutes: 15, appName: "Forgecy" });
-    expect(m.subject).toBe("Il tuo link di accesso a Forgecy");
+    expect(m.subject).toBe("Your sign-in link for Forgecy");
     expect(m.text).toContain(url);
-    expect(m.text).toContain("15 minuti");
-    expect(m.html).toContain('lang="it"');
+    expect(m.text).toContain("15 minutes");
+    expect(m.html).toContain('lang="en"');
     expect(m.html).toContain("token=abc&amp;callbackURL");
     expect(m.html).not.toMatch(/<img/i);
     expect(renderMagicLinkEmail({ url, minutes: 1, appName: "<b>" }).html).toContain("&lt;b&gt;");
@@ -71,9 +71,9 @@ describe("createMailer", () => {
       (
         await mailer.sendMail({
           to: ["a@b.it", "c@d.it"],
-          subject: "Prova",
-          text: "ciao",
-          html: "<p>ciao</p>",
+          subject: "Test",
+          text: "hello",
+          html: "<p>hello</p>",
         })
       ).messageId,
     ).toBeTruthy();

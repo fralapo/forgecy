@@ -44,6 +44,7 @@ export interface CrawlOptions {
 
 const SKIP_EXT =
   /\.(pdf|jpe?g|png|gif|webp|svg|zip|rar|docx?|xlsx?|pptx?|mp4|mp3|mov|avi|ico|xml|json|css|js)$/i;
+// Path stems in Italian and English: client websites are mostly Italian.
 const PRIORITY: Array<[RegExp, number]> = [
   [/(contatt|contact|dove-siamo|where)/i, 9],
   [/(serviz|service|soluzion|solution|cosa-facciamo|what-we-do)/i, 8],
@@ -154,7 +155,7 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
   if (!(await options.hostCheck(home))) {
     throw new CrawlError(
       "AUD-HOST-BLOCKED",
-      `${root.hostname} punta alla rete locale: Forgecy non lo legge.`,
+      `${root.hostname} points to the local network: Forgecy does not read it.`,
     );
   }
 
@@ -169,12 +170,12 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
   await progress({
     step: "robots",
     status: "completed",
-    detail: robotsFound ? "robots.txt presente" : "robots.txt assente: lettura consentita",
+    detail: robotsFound ? "robots.txt found" : "No robots.txt: reading allowed",
   });
   if (blockedAll) {
     throw new CrawlError(
       "AUD-ROBOTS-BLOCKED",
-      "robots.txt non permette di leggere il sito. Forgecy non lo aggira.",
+      "robots.txt does not allow reading the website. Forgecy does not bypass it.",
     );
   }
 
@@ -191,14 +192,14 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
     if (err instanceof CrawlError) throw err;
     throw new CrawlError(
       "SOURCE-UNAVAILABLE",
-      `Non riusciamo a raggiungere ${root.hostname}: ${(err instanceof Error ? err.message : String(err)).split("\n")[0]!.slice(0, 160)}`,
+      `We cannot reach ${root.hostname}: ${(err instanceof Error ? err.message : String(err)).split("\n")[0]!.slice(0, 160)}`,
     );
   }
   if (homePage.status >= 400 || homePage.status === 0) {
     await progress({ step: "discovery", status: "failed" });
     throw new CrawlError(
       "SOURCE-UNAVAILABLE",
-      `${root.hostname} risponde con errore ${homePage.status}.`,
+      `${root.hostname} responds with error ${homePage.status}.`,
     );
   }
   const sitemapUrls: string[] = [];
@@ -226,7 +227,7 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
   await progress({
     step: "discovery",
     status: "completed",
-    detail: `${targets.length} pagine da leggere (massimo ${options.maxPages})`,
+    detail: `${targets.length} pages to read (maximum ${options.maxPages})`,
   });
 
   // 3. Pages
@@ -245,7 +246,7 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
       break;
     }
     if (!isAllowed(url)) {
-      skipped.push({ url, reason: "Esclusa da robots.txt", code: "AUD-ROBOTS-BLOCKED" });
+      skipped.push({ url, reason: "Excluded by robots.txt", code: "AUD-ROBOTS-BLOCKED" });
       continue;
     }
     try {
@@ -254,11 +255,11 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
         timeoutMs: Math.min(options.pageTimeoutMs, Math.max(1000, deadline - now())),
       });
       if (!sameSite(page.finalUrl, home)) {
-        skipped.push({ url, reason: "Reindirizza a un altro sito", code: "HTTP" });
+        skipped.push({ url, reason: "Redirects to another website", code: "HTTP" });
       } else if (page.requiresLogin || LOGIN_PATH.test(new URL(page.finalUrl).pathname)) {
-        skipped.push({ url, reason: "Richiede login", code: "LOGIN" });
+        skipped.push({ url, reason: "Requires login", code: "LOGIN" });
       } else if (page.status >= 400) {
-        skipped.push({ url, reason: `Errore ${page.status}`, code: "HTTP" });
+        skipped.push({ url, reason: `Error ${page.status}`, code: "HTTP" });
       } else {
         pages.push(page);
         await options.onPage?.(page, pages.length - 1);
@@ -267,14 +268,14 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
       const code = err instanceof CrawlError ? err.code : "SOURCE-UNAVAILABLE";
       skipped.push({
         url,
-        reason: code === "AUD-CRAWL-TIMEOUT" ? "Timeout" : "Non raggiungibile",
+        reason: code === "AUD-CRAWL-TIMEOUT" ? "Timeout" : "Unreachable",
         code,
       });
     }
     await progress({
       step: "screenshots",
       status: "running",
-      detail: `Pagine lette ${pages.length}/${targets.length}`,
+      detail: `Pages read ${pages.length}/${targets.length}`,
     });
   }
   const shots = pages.filter((p) => p.screenshotDesktop).length;
@@ -283,13 +284,13 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
     status: options.fetcher.mode === "browser" ? "completed" : "skipped",
     detail:
       options.fetcher.mode === "browser"
-        ? `${pages.length} pagine lette · ${shots * 2} screenshot`
-        : "Chromium non disponibile: nessuno screenshot",
+        ? `${pages.length} pages read · ${shots * 2} screenshots`
+        : "Chromium unavailable: no screenshots",
   });
   await progress({
     step: "extraction",
     status: "completed",
-    detail: `${pages.length} pagine analizzate`,
+    detail: `${pages.length} pages analyzed`,
   });
   return { robots: { found: robotsFound, blockedAll }, pages, skipped, stoppedEarly };
 }

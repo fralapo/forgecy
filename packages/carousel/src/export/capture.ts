@@ -120,15 +120,14 @@ export function issuesFromMeasures(
   for (const s of slots) {
     const lim = limits[s.name] ?? {};
     if (s.kind === "text") {
-      if (s.overflow) add(s.name, "overflow", `Il testo di «${s.name}» esce dal suo riquadro.`);
-      if (s.outsideSlide) add(s.name, "outside_slide", `«${s.name}» esce dalla slide.`);
+      if (s.overflow) add(s.name, "overflow", `The text of “${s.name}” overflows its box.`);
+      if (s.outsideSlide) add(s.name, "outside_slide", `“${s.name}” goes outside the slide.`);
       else if (s.outsideSafe)
-        add(s.name, "outside_safe_zone", `«${s.name}» è fuori dalla safe zone.`);
+        add(s.name, "outside_safe_zone", `“${s.name}” is outside the safe zone.`);
       if (lim.maxLines && s.lines > lim.maxLines)
-        add(s.name, "too_many_lines", `«${s.name}» occupa ${s.lines} righe su ${lim.maxLines}.`);
+        add(s.name, "too_many_lines", `“${s.name}” takes ${s.lines} lines out of ${lim.maxLines}.`);
     } else {
-      if (!s.naturalWidth)
-        add(s.name, "image_missing", `L'immagine di «${s.name}» non si è caricata.`);
+      if (!s.naturalWidth) add(s.name, "image_missing", `The image of “${s.name}” did not load.`);
       else if (
         (lim.minWidth && s.naturalWidth < lim.minWidth) ||
         (lim.minHeight && s.naturalHeight < lim.minHeight)
@@ -136,7 +135,7 @@ export function issuesFromMeasures(
         add(
           s.name,
           "low_resolution",
-          `L'immagine di «${s.name}» è ${s.naturalWidth}×${s.naturalHeight} px, sotto il minimo.`,
+          `The image of “${s.name}” is ${s.naturalWidth}×${s.naturalHeight} px, below the minimum.`,
         );
     }
   }
@@ -144,7 +143,7 @@ export function issuesFromMeasures(
   for (let i = 0; i < texts.length; i++)
     for (let j = i + 1; j < texts.length; j++)
       if (intersects(texts[i]!.rect, texts[j]!.rect))
-        add(texts[i]!.name, "overlap", `«${texts[i]!.name}» si sovrappone a «${texts[j]!.name}».`);
+        add(texts[i]!.name, "overlap", `“${texts[i]!.name}” overlaps “${texts[j]!.name}”.`);
   return issues;
 }
 
@@ -173,6 +172,7 @@ export async function captureSlides(
     deviceScaleFactor: 1,
     colorScheme: "light",
     reducedMotion: "reduce",
+    // Same locale as the slide copy (Italian by default), not the UI locale.
     locale: "it-IT",
     timezoneId: "UTC",
     javaScriptEnabled: true,

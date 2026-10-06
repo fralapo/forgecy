@@ -99,9 +99,9 @@ export function confidenceOf(v: Pick<VerifiedEvidence, "distinct" | "labels">): 
   const what = v.labels.slice(0, 4).join(", ");
   const reason =
     v.distinct >= 3
-      ? `${v.distinct} elementi concordanti: ${what}`
+      ? `${v.distinct} consistent elements: ${what}`
       : v.distinct === 2
-        ? `2 elementi: ${what}`
-        : `Un solo elemento: ${what}`;
+        ? `2 elements: ${what}`
+        : `One element only: ${what}`;
   return { confidence, reason };
 }

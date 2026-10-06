@@ -18,7 +18,7 @@ export function useCatalogAction() {
         if (r.ok) router.refresh();
         after?.(r);
       } catch {
-        setResult({ error: "Decisione non salvata. Riprova." });
+        setResult({ error: "Decision not saved. Try again." });
       }
     });
   }
@@ -84,7 +84,7 @@ export function ConfirmDialog({
           {children ? <div className="space-y-3 text-body-md text-fg-muted">{children}</div> : null}
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-              Annulla
+              Cancel
             </Button>
             <Button type="submit" variant={danger ? "danger" : "primary"} disabled={disabled}>
               {confirmLabel}

@@ -30,6 +30,7 @@ export async function pngsToPdf(
   doc.setKeywords(meta.keywords);
   doc.setCreator("Forgecy");
   doc.setProducer("Forgecy");
+  // Language of the deliverable copy (Italian by default), not the UI locale.
   doc.setLanguage("it-IT");
   doc.setCreationDate(meta.date);
   doc.setModificationDate(meta.date);

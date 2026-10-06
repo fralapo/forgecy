@@ -3,6 +3,7 @@ import type { Level } from "@forgecy/core";
 import type { ReportDocItem, ReportDocSection, ReportDocument } from "../service/reports";
 import { fitText } from "./text";
 
+// Per-language texts of the client deliverable: the `it` entry stays Italian.
 const TEXT = {
   it: {
     kicker: "Audit di comunicazione",
@@ -88,7 +89,7 @@ export interface ReportSlides {
 }
 
 /**
- * Pages of the «Report di audit» template from a report document: a cover, an opener
+ * Pages of the “Audit report” template from a report document: a cover, an opener
  * per section with its findings or problems one per page, next steps and method.
  * Texts are cut to the template limits; layouts are found by role, so another
  * report template with the same roles works too.
@@ -97,7 +98,7 @@ export function reportSlides(doc: ReportDocument, template: TemplateManifest): R
   const t = TEXT[doc.language];
   const byRole = (role: SlideRole) => {
     const layout = template.layouts.find((l) => l.role === role);
-    if (!layout) throw new Error(`Il template non ha una pagina «${role}»`);
+    if (!layout) throw new Error(`The template has no “${role}” page`);
     return layout;
   };
   const cover = byRole("cover");

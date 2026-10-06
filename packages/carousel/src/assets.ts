@@ -46,19 +46,18 @@ export async function resolveAssets(
   const out = new Map<string, string>();
   for (const key of keys) {
     if (!key.startsWith(`clients/${clientId}/`) && !key.startsWith("system/"))
-      throw new ForgecyError("permission_denied", `Asset di un altro cliente: ${key}`);
+      throw new ForgecyError("permission_denied", `Asset of another client: ${key}`);
     const chunks: Uint8Array[] = [];
     let size = 0;
     for await (const chunk of await storage.get(key)) {
       const c = chunk as Uint8Array;
       size += c.length;
-      if (size > MAX_ASSET_BYTES)
-        throw new ForgecyError("validation", `Asset troppo grande: ${key}`);
+      if (size > MAX_ASSET_BYTES) throw new ForgecyError("validation", `Asset too large: ${key}`);
       chunks.push(c);
     }
     const bytes = new Uint8Array(Buffer.concat(chunks));
     const mime = sniff(bytes);
-    if (!mime) throw new ForgecyError("validation", `Formato non riconosciuto: ${key}`);
+    if (!mime) throw new ForgecyError("validation", `Unrecognized format: ${key}`);
     out.set(key, dataUrl(bytes, mime));
   }
   return out;

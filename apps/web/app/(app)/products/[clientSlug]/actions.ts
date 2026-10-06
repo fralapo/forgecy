@@ -18,11 +18,11 @@ const bulkSchema = z.object({
 });
 
 const verbs = {
-  approve: ["Approvato", "Approvati"],
-  reject: ["Rifiutato", "Rifiutati"],
-  archive: ["Archiviato", "Archiviati"],
-  to_draft: ["Riportato in bozza", "Riportati in bozza"],
-  restore: ["Ripristinato", "Ripristinati"],
+  approve: ["Approved", "Approved"],
+  reject: ["Rejected", "Rejected"],
+  archive: ["Archived", "Archived"],
+  to_draft: ["Moved back to draft", "Moved back to draft"],
+  restore: ["Restored", "Restored"],
 } as const;
 
 /** Approve, reject, archive... one product or a selection; says what was left out and why. */
@@ -34,28 +34,28 @@ export async function transitionAction(input: z.input<typeof bulkSchema>): Promi
     const [one, many] = verbs[data.action];
     const total = r.done.length + r.skipped.length;
     if (r.skipped.length === 0)
-      return r.done.length === 1 ? `${one} 1 prodotto.` : `${many} ${r.done.length} prodotti.`;
+      return r.done.length === 1 ? `${one} 1 product.` : `${many} ${r.done.length} products.`;
     const reasons = [...new Set(r.skipped.map((s) => s.reason))].join("; ");
-    return `${many} ${r.done.length} prodotti su ${total}. ${r.skipped.length} esclusi: ${reasons}.`;
+    return `${many} ${r.done.length} of ${total} products. ${r.skipped.length} skipped: ${reasons}.`;
   });
 }
 
 const createSchema = z.object({
   clientSlug: z.string().min(1),
   clientId: z.uuid(),
-  name: z.string().trim().min(1, "Scrivi il nome").max(200),
+  name: z.string().trim().min(1, "Enter a name").max(200),
   sku: z.string().trim().max(80).optional(),
   category: z.string().trim().max(120).optional(),
 });
 
-/** «Aggiungi prodotto» → «Crea bozza», then opens the new product. */
+/** “Add product” → “Create draft”, then opens the new product. */
 export async function createProductAction(
   _prev: ActionResult,
   form: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
   const parsed = createSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dati non validi" };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid data" };
   const { clientSlug, ...input } = parsed.data;
   let id = "";
   const r = await attempt(async () => {

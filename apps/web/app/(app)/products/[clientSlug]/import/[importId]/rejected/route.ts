@@ -4,7 +4,7 @@ import { withUser } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-/** «Scarica rapporto degli scarti»: rows and pages not imported, with the reason. */
+/** “Download rejected rows report”: rows and pages not imported, with the reason. */
 export const GET = withUser(
   async (
     _user,
@@ -28,13 +28,13 @@ export const GET = withUser(
     const invalidFiles = review.files
       .filter((f) => !f.valid)
       .map((f) => ({
-        reason: `${f.message ?? "Non valido"}${f.errorCode ? ` (${f.errorCode})` : ""}`,
+        reason: `${f.message ?? "Invalid"}${f.errorCode ? ` (${f.errorCode})` : ""}`,
         source: f.path,
       }));
     return new Response(discardsToCsv([...invalidFiles, ...rows]), {
       headers: {
         "content-type": "text/csv; charset=utf-8",
-        "content-disposition": `attachment; filename="scarti-import-${importId.slice(0, 8)}.csv"`,
+        "content-disposition": `attachment; filename="rejected-import-${importId.slice(0, 8)}.csv"`,
         "cache-control": "no-store",
       },
     });

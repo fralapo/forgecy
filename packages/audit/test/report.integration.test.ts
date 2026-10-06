@@ -41,8 +41,8 @@ describe.skipIf(!dbUrl || !redisUrl)("audit report and conversion (integration)"
       .returning({ id: users.id });
     human = { type: "user", id: u!.id, isAdmin: true, active: true };
     const created = await createProspect({ db }, human, {
-      name: `Pasticceria Test ${suffix}`,
-      websiteUrl: `pasticceria-${suffix}.example`,
+      name: `Pastry Test ${suffix}`,
+      websiteUrl: `pastry-${suffix}.example`,
       objectives: ["more_leads"],
       aiPolicy: "no_ai",
     });
@@ -55,16 +55,16 @@ describe.skipIf(!dbUrl || !redisUrl)("audit report and conversion (integration)"
         kind: "observation",
         area: "message",
         channel: "website",
-        title: `Osservazione ${n}`,
-        evidence: [{ type: "note", label: `Visto in home (${n})` }],
+        title: `Observation ${n}`,
+        evidence: [{ type: "note", label: `Seen on the home page (${n})` }],
       });
       observationIds.push(obs.id);
       await addFinding({ db }, human, {
         auditId,
         kind: "problem",
         area: "message",
-        title: `Problema ${n}`,
-        recommendation: `Fai la cosa ${n}`,
+        title: `Problem ${n}`,
+        recommendation: `Do thing ${n}`,
         parentIds: [obs.id],
       });
     }
@@ -90,9 +90,9 @@ describe.skipIf(!dbUrl || !redisUrl)("audit report and conversion (integration)"
     }))!;
     expect(report.version).toBe(1);
     expect(report.sections.find((s) => s.key === "overview")?.bullets).toEqual([
-      "Problema 1",
-      "Problema 2",
-      "Problema 3",
+      "Problem 1",
+      "Problem 2",
+      "Problem 3",
     ]);
     await expect(composeReport({ db, queues }, human, auditId)).rejects.toMatchObject({
       code: "conflict",
@@ -107,7 +107,7 @@ describe.skipIf(!dbUrl || !redisUrl)("audit report and conversion (integration)"
     });
     const check = await checkReportEvidence(db, report);
     expect(check.ok).toBe(false);
-    expect(check.errors[0]).toMatchObject({ title: "Problema 1", section: "problems" });
+    expect(check.errors[0]).toMatchObject({ title: "Problem 1", section: "problems" });
     await expect(
       submitReport({ db }, human, { id: report.id, rev: report.rev }),
     ).rejects.toMatchObject({ code: "validation" });
@@ -128,11 +128,11 @@ describe.skipIf(!dbUrl || !redisUrl)("audit report and conversion (integration)"
 
   it("marks hand-edited texts as no longer the agent's", async () => {
     const sections = report.sections.map((s) =>
-      s.key === "overview" ? { ...s, byAgent: true, intro: "Scritto a mano" } : s,
+      s.key === "overview" ? { ...s, byAgent: true, intro: "Written by hand" } : s,
     );
     report = await saveReportDraft({ db }, human, { id: report.id, rev: report.rev, sections });
     expect(report.sections.find((s) => s.key === "overview")).toMatchObject({
-      intro: "Scritto a mano",
+      intro: "Written by hand",
       byAgent: false,
     });
   });
@@ -152,7 +152,7 @@ describe.skipIf(!dbUrl || !redisUrl)("audit report and conversion (integration)"
     report = await approveReport({ db }, human, {
       id: report.id,
       rev: report.rev,
-      note: "Unico revisore dell'agenzia",
+      note: "Only reviewer at the agency",
     });
     expect(report.status).toBe("approved");
     const audit = await db.query.audits.findFirst({ where: eq(audits.id, auditId) });

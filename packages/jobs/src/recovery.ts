@@ -33,10 +33,10 @@ export async function recoverStaleJobs(
       .update(jobs)
       .set(
         retry
-          ? { status: "retrying", error: "Worker interrotto: nuovo tentativo" }
+          ? { status: "retrying", error: "Worker interrupted: retrying" }
           : {
               status: "failed",
-              error: "Worker interrotto dopo l'ultimo tentativo",
+              error: "Worker interrupted after the last attempt",
               endedAt: new Date(),
             },
       )

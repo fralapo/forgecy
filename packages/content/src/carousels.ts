@@ -77,6 +77,9 @@ import { clampSlideCount, getTemplate } from "./templates";
 export type ContentRow = typeof contents.$inferSelect;
 
 const EDITABLE: ContentStatus[] = ["draft", "changes_requested", "approved", "exported"];
+const UNTITLED = "Untitled carousel";
+// Rows created before the English UI still carry the old Italian default title.
+const UNTITLED_TITLES = [UNTITLED, "Carosello senza titolo"];
 
 async function audit(
   db: Executor,
@@ -100,12 +103,12 @@ export async function getContentRow(
   clientId: string,
   id: string,
 ): Promise<ContentRow> {
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound("Carosello non trovato");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound("Carousel not found");
   const [row] = await db
     .select()
     .from(contents)
     .where(and(eq(contents.id, id), eq(contents.clientId, clientId)));
-  if (!row) notFound("Carosello non trovato");
+  if (!row) notFound("Carousel not found");
   return row;
 }
 
@@ -115,7 +118,7 @@ export function isLocked(c: Pick<ContentRow, "lockedByJobId" | "lockExpiresAt">,
 
 function assertNotLocked(c: ContentRow) {
   if (isLocked(c))
-    conflict("L'AI sta lavorando su questo carosello: attendi la fine o annulla il job", {
+    conflict("The AI is working on this carousel: wait for it to finish or cancel the job", {
       code: "CONTENT-LOCKED",
       jobId: c.lockedByJobId,
     });
@@ -125,8 +128,7 @@ function assertNotLocked(c: ContentRow) {
 function nextStatus(actor: Actor, c: ContentRow, to: ContentStatus) {
   if (c.status === to) return to;
   const permission = transitionPermission(c.status, to);
-  if (!permission)
-    conflict(`Da «${c.status}» non si può passare a «${to}»`, { from: c.status, to });
+  if (!permission) conflict(`Cannot move from “${c.status}” to “${to}”`, { from: c.status, to });
   humanOnly(actor, permission, c.clientId);
   return to;
 }
@@ -159,26 +161,26 @@ export interface CreateCarouselInput {
 /**
  * New carousel (page 40). Needs a published Brand Identity: generation only ever
  * uses approved brand elements. From a plan item, its theme, hook and notes seed the
- * brief («Dal piano») and the item links to the carousel.
+ * brief (“From the plan”) and the item links to the carousel.
  */
 export async function createCarousel(db: Database, actor: Actor, input: CreateCarouselInput) {
   humanOnly(actor, "edit_draft", input.clientId);
   const client = await requireClient(db, input.clientId);
-  if (client.status === "archived" || client.archivedAt) conflict("Il cliente è archiviato");
+  if (client.status === "archived" || client.archivedAt) conflict("The client is archived");
   const brand = await getPublishedBrandIdentity(db, actor, input.clientId);
   if (!brand)
-    conflict("Pubblica la Brand Identity del cliente prima di creare un carosello", {
+    conflict("Publish the client's Brand Identity before creating a carousel", {
       code: "BRAND-NOT-PUBLISHED",
     });
   const params = parseOrThrow(carouselParamsSchema, input.params);
   const template = await getTemplate(db, input.clientId, params.templateKey);
   if (template.format !== params.format)
-    invalid(`Il template «${template.name}» è per un altro formato`);
+    invalid(`Template “${template.name}” is for another format`);
   const audience = new Set(
     brand.document.strategy.audience.filter((a) => !a.deprecated).map((a) => a.id),
   );
   if (!params.audienceIds.every((a) => audience.has(a)))
-    invalid("Pubblico non presente nella Brand Identity pubblicata");
+    invalid("Audience not in the published Brand Identity");
 
   const brief = parseOrThrow(briefSchema, input.brief ?? {});
   let title = params.title;
@@ -197,10 +199,10 @@ export async function createCarousel(db: Database, actor: Actor, input: CreateCa
           eq(contentPlanItems.clientId, input.clientId),
         ),
       );
-    if (!item) notFound("Elemento del piano non trovato");
+    if (!item) notFound("Plan item not found");
     if (item.item.status !== "accepted" || item.planStatus !== "active")
-      conflict("Si può generare un carosello solo da un elemento accettato del piano in uso");
-    if (item.item.contentId) conflict("Per questo elemento del piano esiste già un carosello");
+      conflict("A carousel can only be generated from an accepted item of the plan in use");
+    if (item.item.contentId) conflict("A carousel already exists for this plan item");
     title ||= item.item.theme;
     pillarId ??= item.item.pillarId;
     rubricId ??= item.item.rubricId;
@@ -221,7 +223,7 @@ export async function createCarousel(db: Database, actor: Actor, input: CreateCa
           eq(contentPillars.status, "accepted"),
         ),
       );
-    if (!p) invalid("Pilastro non attivo");
+    if (!p) invalid("Pillar not active");
   }
   if (rubricId) {
     const [r] = await db
@@ -234,13 +236,13 @@ export async function createCarousel(db: Database, actor: Actor, input: CreateCa
           eq(contentRubrics.status, "accepted"),
         ),
       );
-    if (!r) invalid("Rubrica non attiva");
+    if (!r) invalid("Rubric not active");
     pillarId ??= r.pillarId;
   }
   let productRevision: number | null = null;
   if (productId) {
     const product = await productSource().get(db, input.clientId, productId);
-    if (!product) invalid("Il prodotto non è approvato nel catalogo");
+    if (!product) invalid("The product is not approved in the catalog");
     productRevision = product.revision;
   }
 
@@ -249,7 +251,7 @@ export async function createCarousel(db: Database, actor: Actor, input: CreateCa
       .insert(contents)
       .values({
         clientId: input.clientId,
-        title: title || "Carosello senza titolo",
+        title: title || UNTITLED,
         objective: params.objective,
         audienceIds: params.audienceIds,
         pillarId,
@@ -294,22 +296,23 @@ export async function updateParams(
 ) {
   humanOnly(actor, "edit_draft", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
-  if (!EDITABLE.includes(c.status)) conflict("Il carosello non è modificabile in questo stato");
+  if (!EDITABLE.includes(c.status)) conflict("The carousel cannot be edited in this status");
   assertNotLocked(c);
   const p = parseOrThrow(carouselParamsSchema, input.params);
   const template = await getTemplate(db, input.clientId, p.templateKey);
-  if (template.format !== p.format)
-    invalid(`Il template «${template.name}» è per un altro formato`);
+  if (template.format !== p.format) invalid(`Template “${template.name}” is for another format`);
   const doc = parseDocument(c.draft);
   const templateChanged = p.templateKey !== c.templateKey || p.format !== c.format;
   if (templateChanged && doc.slides.length && !input.resetSlides)
-    conflict("Cambiare template o formato ricrea le slide", { code: "TEMPLATE-CHANGE-RESETS" });
+    conflict("Changing template or format recreates the slides", {
+      code: "TEMPLATE-CHANGE-RESETS",
+    });
   let productRevision = c.productRevision;
   if (p.productId !== c.productId) {
     productRevision = null;
     if (p.productId) {
       const product = await productSource().get(db, input.clientId, p.productId);
-      if (!product) invalid("Il prodotto non è approvato nel catalogo");
+      if (!product) invalid("The product is not approved in the catalog");
       productRevision = product.revision;
     }
   }
@@ -349,7 +352,7 @@ export async function saveBrief(
 ) {
   humanOnly(actor, "edit_draft", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
-  if (!EDITABLE.includes(c.status)) conflict("Il carosello non è modificabile in questo stato");
+  if (!EDITABLE.includes(c.status)) conflict("The carousel cannot be edited in this status");
   const brief = parseOrThrow(briefSchema, input.brief);
   const [row] = await db
     .update(contents)
@@ -403,7 +406,7 @@ export async function recordOutline(
       // A new outline needs a new approval before slides.
       outlineApprovedBy: null,
       outlineApprovedAt: null,
-      ...(input.outline.title && c.title === "Carosello senza titolo"
+      ...(input.outline.title && UNTITLED_TITLES.includes(c.title)
         ? { title: input.outline.title }
         : {}),
     })
@@ -420,7 +423,7 @@ export async function saveOutline(
 ) {
   humanOnly(actor, "edit_draft", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
-  if (!EDITABLE.includes(c.status)) conflict("Il carosello non è modificabile in questo stato");
+  if (!EDITABLE.includes(c.status)) conflict("The carousel cannot be edited in this status");
   assertNotLocked(c);
   if (c.outlineNumber !== input.outlineNumber) revConflict({ outlineNumber: c.outlineNumber });
   const outline = parseOrThrow(outlineSchema, input.outline);
@@ -443,7 +446,7 @@ export async function restoreOutline(
     .select()
     .from(contentOutlines)
     .where(and(eq(contentOutlines.contentId, c.id), eq(contentOutlines.number, input.number)));
-  if (!old) notFound("Scaletta non trovata");
+  if (!old) notFound("Outline not found");
   const outline = parseOrThrow(outlineSchema, old.outline);
   return db.transaction(async (tx) => {
     const row = await recordOutline(tx, { content: c, outline, origin: "restore", actor });
@@ -452,7 +455,7 @@ export async function restoreOutline(
   });
 }
 
-/** «Approva scaletta»: required before the Copywriter writes the slides. */
+/** “Approve outline”: required before the Copywriter writes the slides. */
 export async function approveOutline(
   db: Database,
   actor: Actor,
@@ -460,7 +463,7 @@ export async function approveOutline(
 ) {
   humanOnly(actor, "edit_draft", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
-  if (!outlineOf(c)) invalid("Non c'è ancora una scaletta da approvare");
+  if (!outlineOf(c)) invalid("There is no outline to approve yet");
   const [row] = await db
     .update(contents)
     .set({ outlineApprovedBy: actor.id, outlineApprovedAt: new Date() })
@@ -528,10 +531,10 @@ export async function saveDraft(
   humanOnly(actor, "edit_draft", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
   if (c.status === "in_review")
-    conflict("Il carosello è in revisione: ritiralo dalla revisione per modificarlo", {
+    conflict("The carousel is in review: withdraw it from review to edit it", {
       code: "CONTENT-IN-REVIEW",
     });
-  if (!EDITABLE.includes(c.status)) conflict("Il carosello non è modificabile in questo stato");
+  if (!EDITABLE.includes(c.status)) conflict("The carousel cannot be edited in this status");
   assertNotLocked(c);
   const doc = normalizeDocument(input.document);
   const status = c.status === "changes_requested" ? c.status : nextStatus(actor, c, "draft");
@@ -562,7 +565,7 @@ export async function saveDraft(
   return row;
 }
 
-/** «Salva versione»: named checkpoint of the current draft. */
+/** “Save version”: named checkpoint of the current draft. */
 export async function saveVersion(
   db: Database,
   actor: Actor,
@@ -572,7 +575,7 @@ export async function saveVersion(
   const c = await getContentRow(db, input.clientId, input.id);
   if (c.draftRev !== input.draftRev) revConflict({ draftRev: c.draftRev });
   const doc = parseDocument(c.draft);
-  if (!doc.slides.length) invalid("Il carosello non ha ancora slide");
+  if (!doc.slides.length) invalid("The carousel has no slides yet");
   return db.transaction(async (tx) => {
     const v = await createVersion(tx, {
       content: c,
@@ -594,14 +597,13 @@ export async function restoreVersion(
 ) {
   humanOnly(actor, "edit_draft", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
-  if (c.status === "in_review")
-    conflict("Ritira il carosello dalla revisione prima di ripristinare");
+  if (c.status === "in_review") conflict("Withdraw the carousel from review before restoring");
   assertNotLocked(c);
   const [old] = await db
     .select()
     .from(contentVersions)
     .where(and(eq(contentVersions.contentId, c.id), eq(contentVersions.number, input.number)));
-  if (!old) notFound("Versione non trovata");
+  if (!old) notFound("Version not found");
   const doc = parseDocument(old.document);
   const status = c.status === "changes_requested" ? c.status : nextStatus(actor, c, "draft");
   return db.transaction(async (tx) => {
@@ -632,7 +634,7 @@ const sameDocument = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stri
 /** The current version if it matches the draft, else a new `manual` one. */
 export async function ensureCurrentVersion(db: Executor, actor: Actor, c: ContentRow) {
   const doc = parseDocument(c.draft);
-  if (!doc.slides.length) invalid("Il carosello non ha ancora slide");
+  if (!doc.slides.length) invalid("The carousel has no slides yet");
   if (c.currentVersionId) {
     const [cur] = await db
       .select()
@@ -645,7 +647,7 @@ export async function ensureCurrentVersion(db: Executor, actor: Actor, c: Conten
 
 // ---- Slide edits from the AI ----
 
-/** «Annulla modifica» on an AI slide edit: put the slide back if nobody changed it since. */
+/** “Undo edit” on an AI slide edit: put the slide back if nobody changed it since. */
 export async function decideSlideEdit(
   db: Database,
   actor: Actor,
@@ -658,15 +660,15 @@ export async function decideSlideEdit(
     .select()
     .from(contentSlideEdits)
     .where(and(eq(contentSlideEdits.id, input.editId), eq(contentSlideEdits.contentId, c.id)));
-  if (!edit) notFound("Modifica non trovata");
-  if (edit.status !== "applied") conflict("Questa modifica è già stata decisa");
+  if (!edit) notFound("Edit not found");
+  if (edit.status !== "applied") conflict("This edit has already been decided");
   return db.transaction(async (tx) => {
     if (input.decision === "revert") {
       const doc = parseDocument(c.draft);
       const i = doc.slides.findIndex((s) => s.id === edit.slideId);
-      if (i < 0) conflict("La slide non esiste più");
+      if (i < 0) conflict("The slide no longer exists");
       if (!sameDocument(doc.slides[i], edit.after))
-        conflict("La slide è stata modificata dopo l'intervento dell'AI: annulla a mano");
+        conflict("The slide was changed after the AI edit: undo it by hand");
       doc.slides[i] = contentSlideSchema.parse(edit.before);
       await tx
         .update(contents)
@@ -817,7 +819,7 @@ export async function checkDocument(
 
 // ---- Review and approval ----
 
-/** «Invia in revisione»: blocking checks must pass; the submitted draft becomes a version. */
+/** “Send for review”: blocking checks must pass; the submitted draft becomes a version. */
 export async function submitForReview(
   db: Database,
   actor: Actor,
@@ -832,7 +834,7 @@ export async function submitForReview(
   const doc = parseDocument(c.draft);
   const { errors } = await checkDocument(db, actor, c, doc, { guard: "none" });
   if (errors.length)
-    throw new ForgecyError("validation", "Risolvi i problemi bloccanti prima dell'invio", {
+    throw new ForgecyError("validation", "Fix the blocking problems before sending", {
       code: "CHECKS-BLOCKING",
       checks: errors,
     });
@@ -870,7 +872,7 @@ export async function withdrawFromReview(
 ) {
   humanOnly(actor, "edit_draft", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
-  if (c.status !== "in_review") conflict("Il carosello non è in revisione");
+  if (c.status !== "in_review") conflict("The carousel is not in review");
   const to = nextStatus(actor, c, "draft");
   await db.update(contents).set({ status: to }).where(eq(contents.id, c.id));
   await audit(db, actor, "withdrawn", c);
@@ -879,7 +881,7 @@ export async function withdrawFromReview(
 
 /**
  * Approve or request changes on the version under review (page 47). Approval needs
- * «Ho visto» on every warning and no blocking problem (AI images approved first);
+ * “Seen” on every warning and no blocking problem (AI images approved first);
  * approving your own work needs a note. Only people: `approve` is never an agent's.
  */
 export async function decideReview(
@@ -896,9 +898,9 @@ export async function decideReview(
 ) {
   humanOnly(actor, input.decision === "approved" ? "approve" : "review", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
-  if (c.status !== "in_review") conflict("Il carosello non è in revisione");
+  if (c.status !== "in_review") conflict("The carousel is not in review");
   if (c.currentVersionId !== input.versionId)
-    conflict("Il carosello è cambiato dopo l'invio: ricarica la pagina", {
+    conflict("The carousel changed after it was sent: reload the page", {
       code: "VERSION-CHANGED",
     });
   const note = input.note?.trim().slice(0, 2000) ?? "";
@@ -907,11 +909,11 @@ export async function decideReview(
     .select()
     .from(contentVersions)
     .where(eq(contentVersions.id, input.versionId));
-  if (!version) notFound("Versione non trovata");
+  if (!version) notFound("Version not found");
   const acknowledged = [...new Set(input.acknowledged ?? [])];
 
   if (input.decision === "changes_requested") {
-    if (note.length < 3) invalid("Scrivi cosa va cambiato");
+    if (note.length < 3) invalid("Write what needs to change");
   } else {
     // The guard's report must be about this very version: check it again if not.
     const guardPort = brandGuard();
@@ -931,25 +933,25 @@ export async function decideReview(
       },
     );
     if (errors.length)
-      throw new ForgecyError("validation", "Ci sono problemi bloccanti", {
+      throw new ForgecyError("validation", "There are blocking problems", {
         code: "CHECKS-BLOCKING",
         checks: errors,
       });
     const missing = warnings.filter((w) => !acknowledged.includes(w.id));
     if (missing.length)
-      throw new ForgecyError("validation", "Conferma «Ho visto» su ogni avviso", {
+      throw new ForgecyError("validation", "Confirm “Seen” on every warning", {
         code: "CHECKS-UNACKNOWLEDGED",
         checks: missing,
       });
     if (selfApproval && note.length < 3)
-      invalid("Stai approvando un tuo lavoro: scrivi una nota per chi verrà dopo", {
+      invalid("You are approving your own work: write a note for whoever comes next", {
         code: "SELF-APPROVAL-NOTE",
       });
   }
   const to = nextStatus(actor, c, input.decision);
   const port = brandGuard();
   return db.transaction(async (tx) => {
-    // «Ho visto» on every open guard error and warning; AI images not approved block.
+    // “Seen” on every open guard error and warning; AI images not approved block.
     if (port && input.decision === "approved")
       await port.confirmForApproval(tx, actor, {
         clientId: c.clientId,
@@ -974,7 +976,7 @@ export async function decideReview(
       })
       .where(and(eq(contents.id, c.id), eq(contents.status, "in_review")))
       .returning();
-    if (!row) conflict("Il carosello è cambiato nel frattempo");
+    if (!row) conflict("The carousel changed in the meantime");
     await audit(tx, actor, input.decision, c, { version: version.number, selfApproval });
     return row;
   });
@@ -1007,7 +1009,7 @@ export async function addComment(
   humanOnly(actor, "review", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
   const body = input.body.trim();
-  if (body.length < 1 || body.length > 2000) invalid("Commento vuoto o troppo lungo");
+  if (body.length < 1 || body.length > 2000) invalid("Comment empty or too long");
   const [row] = await db
     .insert(contentComments)
     .values({
@@ -1039,7 +1041,7 @@ export async function resolveComment(
       ),
     )
     .returning({ id: contentComments.id });
-  if (!row) notFound("Commento non trovato o già risolto");
+  if (!row) notFound("Comment not found or already resolved");
   return row;
 }
 
@@ -1047,7 +1049,7 @@ export async function resolveComment(
 
 /**
  * Which version an export uses: a final export takes the approved version and
- * needs status approved or exported; a draft export («Bozza» watermark) takes the
+ * needs status approved or exported; a draft export (“Draft” watermark) takes the
  * current draft, saved as a version if it changed.
  */
 export async function prepareExport(
@@ -1059,15 +1061,15 @@ export async function prepareExport(
   const c = await getContentRow(db, input.clientId, input.id);
   if (!input.draft) {
     if (c.status !== "approved" && c.status !== "exported")
-      conflict("Solo un carosello approvato si esporta in versione finale", {
+      conflict("Only an approved carousel can be exported as final", {
         code: "EXPORT-NOT-APPROVED",
       });
-    if (!c.approvedVersionId) conflict("Manca la versione approvata");
+    if (!c.approvedVersionId) conflict("The approved version is missing");
     const [v] = await db
       .select()
       .from(contentVersions)
       .where(eq(contentVersions.id, c.approvedVersionId));
-    if (!v) notFound("Versione approvata non trovata");
+    if (!v) notFound("Approved version not found");
     return { content: c, version: v };
   }
   assertNotLocked(c);

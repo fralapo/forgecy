@@ -88,7 +88,7 @@ export async function getStrategyOverview(db: Database, actor: Actor, clientId: 
     if (cap > 0 && sum > cap + 1e-9)
       warnings.push({
         pillarId: p.id,
-        message: `Le rubriche di «${p.name}» chiedono più contenuti del pilastro (${sum.toFixed(1)} contro ${cap.toFixed(1)} a settimana)`,
+        message: `The rubrics of “${p.name}” ask for more content than the pillar (${sum.toFixed(1)} vs ${cap.toFixed(1)} per week)`,
       });
   }
   const active = plans.find((p) => p.status === "active") ?? null;
@@ -154,7 +154,7 @@ export async function listCarousels(
     .limit(300);
 }
 
-/** Recent jobs of a carousel, for progress and «needs attention» messages. */
+/** Recent jobs of a carousel, for progress and “needs attention” messages. */
 export async function listContentJobs(db: Database, contentId: string) {
   return db
     .select({
@@ -324,7 +324,7 @@ export async function getCarouselWorkspace(
 
 export type CarouselWorkspace = Awaited<ReturnType<typeof getCarouselWorkspace>>;
 
-/** Data for the «Nuovo carosello» form. */
+/** Data for the “New carousel” form. */
 export async function getNewCarouselOptions(db: Database, actor: Actor, clientId: string) {
   assertCan(actor, "view", clientId);
   const [brand, templates, pillars, rubrics, products] = await Promise.all([

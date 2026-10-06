@@ -21,7 +21,7 @@ const bodySchema = z.object({
     .object({
       showSafeZone: z.boolean().default(false),
       showSlotOutlines: z.boolean().default(false),
-      watermark: z.literal("Bozza").optional(),
+      watermark: z.literal("Draft").optional(),
     })
     .default({ showSafeZone: false, showSlotOutlines: false }),
 });
@@ -42,7 +42,7 @@ export const POST = withUser(async (user, request: Request) => {
   const keys = collectAssetKeys([body.slide], body.brand ?? brandThemeSchema.parse({}));
   if (keys.length && !body.clientId)
     return NextResponse.json(
-      { error: "validation", message: "clientId obbligatorio con asset" },
+      { error: "validation", message: "clientId is required with assets" },
       { status: 422 },
     );
   const assets = keys.length ? await resolveAssets(getStorage(), body.clientId!, keys) : undefined;

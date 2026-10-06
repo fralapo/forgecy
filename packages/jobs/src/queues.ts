@@ -122,7 +122,7 @@ export async function enqueueJob<S extends z.ZodType>(
       .update(jobs)
       .set({
         status: "failed",
-        error: `Coda non disponibile: ${errorMessage(err)}`,
+        error: `Queue unavailable: ${errorMessage(err)}`,
         endedAt: new Date(),
       })
       .where(eq(jobs.id, row.id));

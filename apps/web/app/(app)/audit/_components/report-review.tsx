@@ -8,7 +8,7 @@ import { approveReportAction, requestReportChangesAction } from "../actions";
 import { textareaClass } from "../_lib/styles";
 
 /**
- * Review of a report in revisione: a person approves (with a note when approving
+ * Review of a report in review: a person approves (with a note when approving
  * their own submission) or sends it back with a comment. Agents never see this.
  */
 export function ReportReview({
@@ -28,14 +28,14 @@ export function ReportReview({
     start(async () => {
       setError(null);
       const res = await fn();
-      if (!res.ok) return setError(res.error ?? "Operazione non riuscita");
+      if (!res.ok) return setError(res.error ?? "Operation failed");
       setText("");
       router.refresh();
     });
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <Label htmlFor="review-note">Nota o richiesta di modifica</Label>
+        <Label htmlFor="review-note">Note or change request</Label>
         <textarea
           id="review-note"
           value={text}
@@ -45,7 +45,7 @@ export function ReportReview({
         />
         {ownSubmission ? (
           <span className="text-body-sm text-fg-muted">
-            Hai inviato tu questa versione: per approvarla serve una nota per il registro.
+            You submitted this version yourself: approving it requires a note for the log.
           </span>
         ) : null}
       </div>
@@ -59,7 +59,7 @@ export function ReportReview({
           }
         >
           <Check aria-hidden />
-          Segna revisione completata
+          Mark review complete
         </Button>
         <Button
           type="button"
@@ -68,7 +68,7 @@ export function ReportReview({
           onClick={() => run(() => requestReportChangesAction({ id, rev, comment: text }))}
         >
           <MessageSquareWarning aria-hidden />
-          Richiedi modifiche
+          Request changes
         </Button>
       </div>
       {error ? (

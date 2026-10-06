@@ -7,6 +7,7 @@ import { useState, useTransition } from "react";
 import { acceptManyAction, acceptProposalAction, rejectAction } from "../actions";
 import { confidenceLabel, confidenceVariant, formatValue } from "../_lib/labels";
 import { controlClass } from "./section-editor";
+import { plural } from "@/lib/plural";
 
 export interface ProposalView {
   id: string;
@@ -59,9 +60,9 @@ function ProposalCard({
     start(async () => {
       setError(null);
       const r = await fn();
-      if (!r.ok) return setError(r.error ?? "Operazione non riuscita");
+      if (!r.ok) return setError(r.error ?? "Operation failed");
       if (r.status === "stale")
-        setInfo("Il campo è cambiato dopo la proposta: la proposta è superata.");
+        setInfo("The field changed after the proposal: the proposal is superseded.");
       router.refresh();
     });
 
@@ -82,7 +83,7 @@ function ProposalCard({
           {reviewable && !p.sensitive ? (
             <input
               type="checkbox"
-              aria-label={`Seleziona ${p.title}`}
+              aria-label={`Select ${p.title}`}
               checked={selected}
               onChange={(e) => onSelect(e.target.checked)}
               className="mt-2 size-4"
@@ -99,18 +100,17 @@ function ProposalCard({
               ) : (
                 <User aria-hidden className="size-4" />
               )}
-              {p.authorType === "agent" ? "Proposta da " : "Proposta di "}
-              {p.author} · {p.createdAt}
+              Proposed by {p.author} · {p.createdAt}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Badge variant={confidenceVariant[p.confidence]}>{confidenceLabel[p.confidence]}</Badge>
-          {p.sensitive ? <Badge variant="warning">Sensibile</Badge> : null}
+          {p.sensitive ? <Badge variant="warning">Sensitive</Badge> : null}
           {p.conflict ? (
             <Badge variant="error">
-              In conflitto con altre {p.conflict.size - 1}
-              {p.conflict.suggested ? " · fonte più autorevole" : ""}
+              In conflict with {p.conflict.size - 1} others
+              {p.conflict.suggested ? " · most authoritative source" : ""}
             </Badge>
           ) : null}
           {p.status !== "proposed" ? <Badge>{p.statusLabel}</Badge> : null}
@@ -120,12 +120,12 @@ function ProposalCard({
       <dl className="grid gap-3 text-body-sm sm:grid-cols-2">
         {p.status === "proposed" ? (
           <div>
-            <dt className="text-label text-fg-muted">Ora nella bozza</dt>
+            <dt className="text-label text-fg-muted">Now in the draft</dt>
             <dd className="mt-1 whitespace-pre-wrap text-fg">{formatValue(p.current)}</dd>
           </div>
         ) : null}
         <div>
-          <dt className="text-label text-fg-muted">Proposto</dt>
+          <dt className="text-label text-fg-muted">Proposed</dt>
           <dd className="mt-1 whitespace-pre-wrap text-fg">{formatValue(p.proposed)}</dd>
         </div>
       </dl>
@@ -140,7 +140,7 @@ function ProposalCard({
       ) : null}
 
       <div>
-        <p className="text-label uppercase text-fg-muted">Fonti</p>
+        <p className="text-label uppercase text-fg-muted">Sources</p>
         {p.evidence.length ? (
           <ul className="mt-1 space-y-1 text-body-sm">
             {p.evidence.map((e, i) => (
@@ -149,21 +149,19 @@ function ProposalCard({
                 <span>
                   {e.title}
                   {e.locator ? `, ${e.locator}` : ""}
-                  {e.quote ? <span className="block text-fg-muted">«{e.quote}»</span> : null}
+                  {e.quote ? <span className="block text-fg-muted">“{e.quote}”</span> : null}
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-body-sm text-warning">
-            Nessuna fonte indicata: verifica prima di accettare.
-          </p>
+          <p className="text-body-sm text-warning">No source given: verify before accepting.</p>
         )}
       </div>
 
       {p.review ? (
         <p className="text-body-sm text-fg-muted">
-          {p.review.by ? `${p.statusLabel} da ${p.review.by}` : p.statusLabel}
+          {p.review.by ? `${p.statusLabel} by ${p.review.by}` : p.statusLabel}
           {p.review.at ? `, ${p.review.at}` : ""}
           {p.review.note ? ` · ${p.review.note}` : ""}
         </p>
@@ -174,7 +172,7 @@ function ProposalCard({
           {editing ? (
             typeof p.proposed === "string" ? (
               <div className="space-y-1">
-                <Label htmlFor={`edit-${p.id}`}>Valore corretto</Label>
+                <Label htmlFor={`edit-${p.id}`}>Corrected value</Label>
                 <textarea
                   id={`edit-${p.id}`}
                   rows={3}
@@ -201,8 +199,8 @@ function ProposalCard({
           <div className="space-y-1">
             <Label htmlFor={`note-${p.id}`}>
               {needsNote
-                ? "Nota (obbligatoria: confidenza bassa su un campo sensibile)"
-                : "Nota (facoltativa)"}
+                ? "Note (required: low confidence on a sensitive field)"
+                : "Note (optional)"}
             </Label>
             <Input id={`note-${p.id}`} value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
@@ -222,12 +220,12 @@ function ProposalCard({
               }
             >
               <Check aria-hidden />
-              {editing ? "Accetta con modifiche" : "Accetta"}
+              {editing ? "Accept with changes" : "Accept"}
             </Button>
             {p.editable && !editing ? (
               <Button variant="secondary" disabled={pending} onClick={() => setEditing(true)}>
                 <Pencil aria-hidden />
-                Modifica
+                Edit
               </Button>
             ) : null}
             <Button
@@ -236,7 +234,7 @@ function ProposalCard({
               onClick={() => act(() => rejectAction({ slug, clientId, proposalIds: [p.id], note }))}
             >
               <X aria-hidden />
-              Rifiuta
+              Reject
             </Button>
           </div>
           {error ? (
@@ -282,11 +280,11 @@ export function ProposalList({
   ) =>
     start(async () => {
       const r = await fn();
-      if (!r.ok) return setMessage(r.error ?? "Operazione non riuscita");
+      if (!r.ok) return setMessage(r.error ?? "Operation failed");
       setMessage(
         r.rejected !== undefined
-          ? `${r.rejected} proposte rifiutate.`
-          : `${r.accepted ?? 0} accettate${r.stale ? `, ${r.stale} superate perché il campo era cambiato` : ""}.`,
+          ? `${plural(r.rejected, "proposal", "proposals")} rejected.`
+          : `${r.accepted ?? 0} accepted${r.stale ? `, ${r.stale} superseded because the field had changed` : ""}.`,
       );
       setSelected(new Set());
       router.refresh();
@@ -298,15 +296,15 @@ export function ProposalList({
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-subtle bg-surface px-4 py-3">
           <span className="text-body-sm text-fg-muted">
             {ids.length
-              ? `${ids.length} selezionate`
-              : "Seleziona le proposte non sensibili per decidere in blocco."}
+              ? `${ids.length} selected`
+              : "Select non-sensitive proposals to decide on them in bulk."}
           </span>
           <Button
             size="sm"
             disabled={!ids.length || pending}
             onClick={() => bulk(() => acceptManyAction({ slug, clientId, proposalIds: ids }))}
           >
-            Accetta selezionate
+            Accept selected
           </Button>
           <Button
             size="sm"
@@ -314,7 +312,7 @@ export function ProposalList({
             disabled={!ids.length || pending}
             onClick={() => bulk(() => rejectAction({ slug, clientId, proposalIds: ids }))}
           >
-            Rifiuta selezionate
+            Reject selected
           </Button>
           {message ? (
             <span role="status" className="text-body-sm text-fg">

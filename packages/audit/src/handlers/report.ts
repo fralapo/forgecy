@@ -28,7 +28,7 @@ export function sectionsToWrite(
 }
 
 /**
- * «audit.report_texts»: the Strategist proposes intros and key bullets, the
+ * “audit.report_texts”: the Strategist proposes intros and key bullets, the
  * Copywriter the email. Texts land in the draft marked as the agent's; a section
  * a person edited meanwhile is left as it is.
  */
@@ -46,9 +46,9 @@ export async function runReportTexts(
   const report = await db.query.auditReports.findFirst({
     where: eq(auditReports.id, payload.reportId),
   });
-  if (!report) throw new UnrecoverableError("Report non trovato");
+  if (!report) throw new UnrecoverableError("Report not found");
   if (report.status !== "draft")
-    throw new UnrecoverableError("Il report non è più una bozza: i testi non sono stati cambiati.");
+    throw new UnrecoverableError("The report is no longer a draft: the texts were not changed.");
   const { audit, client } = await loadAudit(db, report.auditId);
   const [profile, plan, grouped] = await Promise.all([
     db.query.prospectProfiles.findFirst({ where: eq(prospectProfiles.clientId, client.id) }),
@@ -60,7 +60,7 @@ export async function runReportTexts(
       ? "\nWrite every text in English: this overrides the language rule above."
       : "";
   const instruction = payload.instruction
-    ? dataBlock("istruzione dell'agenzia", oneLine(payload.instruction, 500))
+    ? dataBlock("agency instruction", oneLine(payload.instruction, 500))
     : "";
 
   const findingLines = (key: ReportSectionKey) =>
@@ -71,7 +71,7 @@ export async function runReportTexts(
           `- F${i + 1} [${f.priority}] ${f.title}: ${oneLine(
             f.kind === "comparison" ? f.comparison?.rationale : f.description,
             240,
-          )}${f.recommendation ? ` Raccomandazione: ${oneLine(f.recommendation, 200)}` : ""}`,
+          )}${f.recommendation ? ` Recommendation: ${oneLine(f.recommendation, 200)}` : ""}`,
       );
   const problems = findingLines("problems");
   const planLines =
@@ -86,9 +86,8 @@ export async function runReportTexts(
     await ctx.progress(10);
     const blocks = keys.map((key) => {
       const lines = key === "overview" || key === "next_steps" ? problems : findingLines(key);
-      const extra =
-        key === "next_steps" && planLines.length ? ["Pilastri del piano:", ...planLines] : [];
-      return `## ${key}\n${[...lines, ...extra].join("\n") || "(nessun elemento)"}`;
+      const extra = key === "next_steps" && planLines.length ? ["Plan pillars:", ...planLines] : [];
+      return `## ${key}\n${[...lines, ...extra].join("\n") || "(no items)"}`;
     });
     const run = await runAgent(deps, ctx, {
       client,
@@ -100,7 +99,7 @@ export async function runReportTexts(
       prompt: [
         prospectContext(audit, client),
         `Sections to write: ${keys.join(", ")}.`,
-        dataBlock("risultati dell'audit", blocks.join("\n\n")),
+        dataBlock("audit results", blocks.join("\n\n")),
         instruction,
       ]
         .filter(Boolean)
@@ -133,9 +132,9 @@ export async function runReportTexts(
       prompt: [
         prospectContext(audit, client),
         dataBlock(
-          "problemi principali",
-          [...problems, ...(overview.length ? ["Messaggi chiave:", ...overview] : [])].join("\n") ||
-            "(nessun problema)",
+          "main problems",
+          [...problems, ...(overview.length ? ["Key messages:", ...overview] : [])].join("\n") ||
+            "(no problems)",
         ),
         instruction,
       ]
@@ -155,9 +154,7 @@ export async function runReportTexts(
       where: eq(auditReports.id, report.id),
     });
     if (!current || current.status !== "draft")
-      throw new UnrecoverableError(
-        "Il report non è più una bozza: i testi non sono stati cambiati.",
-      );
+      throw new UnrecoverableError("The report is no longer a draft: the texts were not changed.");
     const sections = current.sections.map((s) => {
       const t = texts.get(s.key);
       const start = before.get(s.key);
@@ -188,5 +185,7 @@ export async function runReportTexts(
       .returning({ id: auditReports.id });
     if (row) return { sections: texts.size, email: Boolean(email && !keepEmail), costMicroUsd };
   }
-  throw new UnrecoverableError("Il report è cambiato troppe volte durante la scrittura. Riprova.");
+  throw new UnrecoverableError(
+    "The report changed too many times while the texts were being written. Try again.",
+  );
 }

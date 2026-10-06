@@ -18,8 +18,8 @@ import { catalogImportJob, type ImportPhase } from "./jobs";
 import { runImportPhase, type PipelineDeps } from "./pipeline";
 
 const stepLabels: Record<ImportPhase, string> = {
-  scan: "Lettura dei file",
-  extract: "Estrazione dei prodotti",
+  scan: "Reading the files",
+  extract: "Extracting the products",
 };
 
 /** Dependencies built from the environment (worker process). */
@@ -69,7 +69,7 @@ export function createCatalogHandlers(
           .set({
             status: "failed",
             errorCode: isImportError(err) ? err.code : "IMPORT-FAILED",
-            error: `Import non riuscito al passo "${stepLabels[payload.phase]}". ${message}`.slice(
+            error: `Import failed at step "${stepLabels[payload.phase]}". ${message}`.slice(
               0,
               1000,
             ),

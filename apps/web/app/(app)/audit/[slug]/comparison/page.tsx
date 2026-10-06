@@ -8,7 +8,7 @@ import { ComparisonRow } from "../../_components/comparison-row";
 import { sectionContext } from "../../_lib/findings";
 import { channelLabel } from "../../_lib/labels";
 
-export const metadata = { title: "Audit · Confronto tra canali" };
+export const metadata = { title: "Audit · Channel comparison" };
 
 export default async function ComparisonPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -24,18 +24,18 @@ export default async function ComparisonPage({ params }: { params: Promise<{ slu
     <div className="flex flex-col gap-8">
       <Card>
         <CardHeader>
-          <CardTitle>Sito, Instagram e Facebook a confronto</CardTitle>
+          <CardTitle>Website, Instagram and Facebook compared</CardTitle>
           <CardDescription>
-            Cinque criteri: colore, tono, call to action, pubblico e stile visivo. Ogni esito è una
-            proposta: se lo cambi, scrivi perché.
+            Five criteria: color, tone, call to action, audience and visual style. Every outcome is
+            a proposal: if you change it, write why.
           </CardDescription>
         </CardHeader>
         <p className="text-body-sm">
-          Canali con dati: {ready.length ? ready.map((c) => channelLabel[c]).join(", ") : "nessuno"}
+          Channels with data: {ready.length ? ready.map((c) => channelLabel[c]).join(", ") : "none"}
           {missing.length ? (
             <span className="text-fg-muted">
               {" "}
-              · senza dati: {missing.map((c) => channelLabel[c]).join(", ")}
+              · without data: {missing.map((c) => channelLabel[c]).join(", ")}
             </span>
           ) : null}
         </p>
@@ -47,19 +47,19 @@ export default async function ComparisonPage({ params }: { params: Promise<{ slu
                 icon={<Sparkles aria-hidden />}
                 variant="primary"
               >
-                {rows.length ? "Aggiorna il confronto" : "Genera il confronto"}
+                {rows.length ? "Update the comparison" : "Generate the comparison"}
               </ActionButton>
             </div>
           ) : (
             <p className="text-body-sm text-fg-muted">
-              Servono dati su almeno due canali: leggi il sito o importa i dati dei social.
+              Data from at least two channels is needed: read the website or import the social data.
             </p>
           )
         ) : null}
         {!aiAllowed ? (
           <p className="text-body-sm text-fg-muted">
-            La policy di questo prospect non permette l&apos;AI: il confronto si scrive come
-            osservazione “Tra i canali” nella diagnosi.
+            This prospect’s policy does not allow AI: write the comparison as an “Across channels”
+            observation in the diagnosis.
           </p>
         ) : null}
       </Card>

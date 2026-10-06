@@ -50,7 +50,7 @@ export async function sourceLinks(db: Database, findings: FindingRow[]): Promise
   for (const [id, s] of rows) {
     out[id] = {
       href: s.kind === "page" ? (s.url ?? null) : await fileUrl(s.storageKey),
-      label: s.title ?? s.fileName ?? s.url ?? "Fonte",
+      label: s.title ?? s.fileName ?? s.url ?? "Source",
     };
   }
   return out;

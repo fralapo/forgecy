@@ -9,9 +9,9 @@ import { requireUser } from "@/lib/session";
 import { createPasswordUser } from "@/lib/users";
 
 const newUserSchema = z.object({
-  name: z.string().trim().min(1, "Scrivi il nome"),
-  email: z.email("Email non valida"),
-  password: z.string().min(12, "La password deve avere almeno 12 caratteri"),
+  name: z.string().trim().min(1, "Enter the name"),
+  email: z.email("Invalid email"),
+  password: z.string().min(12, "The password must be at least 12 characters long"),
   isAdmin: z
     .literal("on")
     .optional()
@@ -24,12 +24,12 @@ export async function createUserAction(_prev: NewUserState, form: FormData): Pro
   const admin = await requireUser();
   assertCan(admin.actor, "users.manage");
   const parsed = newUserSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dati non validi" };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid data" };
   const exists = await getDb().query.users.findFirst({
     where: eq(users.email, parsed.data.email.toLowerCase()),
     columns: { id: true },
   });
-  if (exists) return { error: "Esiste già un utente con questa email." };
+  if (exists) return { error: "A user with this email already exists." };
   await createPasswordUser({ ...parsed.data, createdBy: admin.id });
   revalidatePath("/settings");
   return { ok: true };
@@ -46,7 +46,7 @@ export async function setCommercialUseAction(
     await setCommercialUse(getDb(), admin.actor, Object.fromEntries(form));
   } catch (err) {
     if (err instanceof PermissionDeniedError)
-      return { error: "Questa impostazione è riservata agli utenti Admin." };
+      return { error: "This setting is reserved for Admin users." };
     if (err instanceof ForgecyError) return { error: err.message };
     throw err;
   }

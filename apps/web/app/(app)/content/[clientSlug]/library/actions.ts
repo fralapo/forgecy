@@ -26,7 +26,11 @@ async function run<T extends object>(
     return { ok: true, ...out };
   } catch (err) {
     if (err instanceof PermissionDeniedError)
-      return { ok: false, error: "Non hai il permesso per questa azione.", code: "PERM-DENIED" };
+      return {
+        ok: false,
+        error: "You don't have permission for this action.",
+        code: "PERM-DENIED",
+      };
     if (err instanceof ForgecyError) return { ok: false, error: err.message, code: err.code };
     throw err;
   }
@@ -48,7 +52,7 @@ export async function importProductImageAction(input: {
     const product = await productSource().get(db, clientId, uuid.parse(input.productId));
     const img = product?.images[z.number().int().min(0).parse(input.image)];
     if (!product || !img)
-      throw new ForgecyError("not_found", "Prodotto o immagine non trovati tra quelli approvati");
+      throw new ForgecyError("not_found", "Product or image not found among the approved ones");
     const { row, created } = await importProductImage(db, getStorage(), actor, {
       clientId,
       productId: product.id,

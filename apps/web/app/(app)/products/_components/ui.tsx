@@ -62,7 +62,7 @@ export function ImportStatusBadge({ status }: { status: ProductImportStatus }) {
 export function ConfidenceBadge({ level }: { level: ConfidenceLevel }) {
   return (
     <Badge variant={level === "high" ? "success" : level === "medium" ? "neutral" : "warning"}>
-      Confidenza {confidenceText[level]}
+      {confidenceText[level]} confidence
     </Badge>
   );
 }
@@ -70,7 +70,7 @@ export function ConfidenceBadge({ level }: { level: ConfidenceLevel }) {
 export function SensitiveBadge() {
   return (
     <Badge variant="warning" icon={ShieldAlert}>
-      Sensibile
+      Sensitive
     </Badge>
   );
 }
@@ -78,7 +78,7 @@ export function SensitiveBadge() {
 export function ObservedBadge() {
   return (
     <Badge variant="neutral" icon={ScanEye} className="border-dashed">
-      Estratto, non rivisto
+      Extracted, not reviewed
     </Badge>
   );
 }
@@ -86,7 +86,7 @@ export function ObservedBadge() {
 /** Three segments plus a text label: never color alone. */
 export function CompletenessMeter({ level }: { level: "complete" | "partial" | "minimal" }) {
   const filled = level === "complete" ? 3 : level === "partial" ? 2 : 1;
-  const label = level === "complete" ? "Completo" : level === "partial" ? "Parziale" : "Minimo";
+  const label = level === "complete" ? "Complete" : level === "partial" ? "Partial" : "Minimal";
   return (
     <span className="inline-flex items-center gap-2">
       <span aria-hidden className="flex gap-0.5">
@@ -122,10 +122,10 @@ export function Thumb({
           box,
           "flex items-center justify-center rounded-md border border-subtle bg-app",
         )}
-        title="Nessuna immagine"
+        title="No image"
       >
         <ImageOff aria-hidden className="size-5 text-fg-muted" />
-        <span className="sr-only">Nessuna immagine</span>
+        <span className="sr-only">No image</span>
       </span>
     );
   return (
@@ -189,7 +189,7 @@ export function EmptyState({
 
 export function Breadcrumb({ items }: { items: Array<{ label: string; href?: Route }> }) {
   return (
-    <nav aria-label="Percorso" className="mb-3 text-body-sm text-fg-muted">
+    <nav aria-label="Breadcrumb" className="mb-3 text-body-sm text-fg-muted">
       <ol className="flex flex-wrap items-center gap-1">
         {items.map((it, i) => (
           <li key={i} className="flex items-center gap-1">

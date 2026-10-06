@@ -30,28 +30,28 @@ export const mappingTargets = [
 export type MappingTarget = (typeof mappingTargets)[number] | "ignore";
 
 export const mappingTargetLabels: Record<MappingTarget, string> = {
-  name: "Nome",
-  sku: "SKU/codice",
-  category: "Categoria",
-  shortDescription: "Descrizione breve",
-  longDescription: "Descrizione lunga",
-  materials: "Ingredienti o materiali",
-  formats: "Formati",
-  usage: "Istruzioni d'uso",
-  features: "Caratteristiche",
-  benefits: "Benefici",
-  variants: "Varianti (con separatore)",
-  image: "Immagine (nome file o URL)",
-  tags: "Tag",
+  name: "Name",
+  sku: "SKU/code",
+  category: "Category",
+  shortDescription: "Short description",
+  longDescription: "Long description",
+  materials: "Ingredients or materials",
+  formats: "Formats",
+  usage: "Usage instructions",
+  features: "Features",
+  benefits: "Benefits",
+  variants: "Variants (with separator)",
+  image: "Image (file name or URL)",
+  tags: "Tags",
   url: "URL",
-  notes: "Note",
-  price: "Prezzo (facoltativo)",
-  currency: "Valuta (facoltativo)",
-  availability: "Disponibilità (facoltativo)",
-  parent: "Prodotto padre (varianti WooCommerce)",
-  type: "Tipo (WooCommerce)",
-  externalId: "ID esterno (per collegare le varianti)",
-  ignore: "Ignora colonna",
+  notes: "Notes",
+  price: "Price (optional)",
+  currency: "Currency (optional)",
+  availability: "Availability (optional)",
+  parent: "Parent product (WooCommerce variations)",
+  type: "Type (WooCommerce)",
+  externalId: "External ID (to link variants)",
+  ignore: "Ignore column",
 };
 
 export const columnMappingSchema = z.object({
@@ -63,6 +63,7 @@ export const columnMappingSchema = z.object({
 });
 export type ColumnMapping = z.infer<typeof columnMappingSchema>;
 
+// Header synonyms match Italian and English column names in client files.
 const SYNONYMS: Record<Exclude<MappingTarget, "ignore">, string[]> = {
   name: [
     "name",
@@ -303,7 +304,7 @@ export function applyMapping(
 
     mapping.columns.forEach((target, col) => {
       const raw = cells[col] ?? "";
-      const header = sheet.headers[col] ?? `Colonna ${col + 1}`;
+      const header = sheet.headers[col] ?? `Column ${col + 1}`;
       if (target === "ignore" || raw.trim() === "") return;
       const text = htmlToText(raw);
       const ref: SourceRef = { ...source, row: rowNumber, column: header };
@@ -353,7 +354,7 @@ export function applyMapping(
             if (m[3] === "name" || m[3] === "nome") attrNames[idx] = text;
             else
               for (const v of splitList(text, ","))
-                variants.push({ attribute: attrNames[idx] ?? `Attributo ${idx}`, value: v });
+                variants.push({ attribute: attrNames[idx] ?? `Attribute ${idx}`, value: v });
             return;
           }
           for (const item of splitList(text, sep)) {
@@ -369,6 +370,7 @@ export function applyMapping(
         }
         case "availability": {
           const k = normalizeKey(raw);
+          // Written into the client's product data, which is in the client's language (Italian).
           const value = ["1", "yes", "si", "true", "instock", "in stock"].includes(k)
             ? "Disponibile"
             : ["0", "no", "false", "outofstock", "out of stock"].includes(k)
@@ -388,13 +390,13 @@ export function applyMapping(
     }
     // Attribute names come before values in WooCommerce exports; fix values seen first.
     for (const v of variants)
-      if (v.attribute.startsWith("Attributo ")) {
+      if (v.attribute.startsWith("Attribute ")) {
         const idx = v.attribute.slice(10);
         if (attrNames[idx]) v.attribute = attrNames[idx]!;
       }
 
     const clean = sanitizeDraft(draft as ProductDraft);
-    // A sheet with one short "Descrizione" column: the same text also serves as the short
+    // A sheet with one short "Descrizione" (description) column: the same text also serves as the short
     // description (copied from the file, never written by us), so the product can be approved.
     if (!clean.shortDescription && clean.longDescription && clean.longDescription.length <= 280) {
       clean.shortDescription = clean.longDescription;
@@ -411,7 +413,7 @@ export function applyMapping(
       return;
     }
     if (!clean.name) {
-      rejected.push({ row: rowNumber, reason: `Riga ${rowNumber}: nome mancante` });
+      rejected.push({ row: rowNumber, reason: `Row ${rowNumber}: missing name` });
       return;
     }
     out.push({ draft: clean, sources, images, row: rowNumber, ...extra });
@@ -440,12 +442,13 @@ function groupWooVariations(
       parents.find((p) => p.draft.name && p.draft.name === v.draft.name?.split(" - ")[0]);
     if (!parent) {
       if (v.draft.name) parents.push({ ...v, type: "simple" });
-      else rejected.push({ row: v.row, reason: `Riga ${v.row}: variante senza prodotto padre` });
+      else
+        rejected.push({ row: v.row, reason: `Row ${v.row}: variation without a parent product` });
       continue;
     }
     const attrs = v.draft.variants?.length
       ? v.draft.variants
-      : [{ attribute: "Variante", value: v.draft.name ?? v.draft.sku ?? "" }];
+      : [{ attribute: "Variant", value: v.draft.name ?? v.draft.sku ?? "" }];
     const merged = [
       ...(parent.draft.variants ?? []).filter(
         (x) => x.sku || !attrs.some((a) => a.attribute === x.attribute),

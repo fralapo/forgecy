@@ -191,7 +191,7 @@ export const contentPlanItems = pgTable(
     theme: text("theme").notNull(),
     hook: text("hook"),
     notes: text("notes"),
-    /** The carousel created from this item ("Genera carosello"). */
+    /** The carousel created from this item ("Generate carousel"). */
     contentId: uuid("content_id").references((): AnyPgColumn => contents.id, {
       onDelete: "set null",
     }),
@@ -231,7 +231,7 @@ export const contents = pgTable(
       onDelete: "set null",
     }),
     productId: uuid("product_id"),
-    /** Product revision the copy was written from ("Il prodotto è cambiato"). */
+    /** Product revision the copy was written from ("The product has changed"). */
     productRevision: integer("product_revision"),
     channel: text("channel").notNull(),
     format: text("format").notNull(),
@@ -330,7 +330,7 @@ export const contentOutlines = pgTable(
   (t) => [uniqueIndex("content_outlines_number_uq").on(t.contentId, t.number)],
 );
 
-/** AI instructions on a single slide, with the slide before and after for "Annulla modifica". */
+/** AI instructions on a single slide, with the slide before and after for "Undo change". */
 export const contentSlideEdits = pgTable(
   "content_slide_edits",
   {
@@ -387,7 +387,7 @@ export const contentApprovals = pgTable(
     decision: approvalDecisionEnum("decision").notNull(),
     note: text("note"),
     selfApproval: boolean("self_approval").notNull().default(false),
-    /** Check ids the reviewer confirmed with «Ho visto». */
+    /** Check ids the reviewer confirmed with “I’ve seen it”. */
     acknowledged: jsonb("acknowledged").$type<string[]>().notNull().default([]),
     decidedBy: uuid("decided_by")
       .notNull()

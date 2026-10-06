@@ -8,9 +8,9 @@ import { exportAction } from "../actions";
 
 type Output = "png" | "pdf" | "zip";
 const OUTPUTS: { value: Output; label: string }[] = [
-  { value: "png", label: "Immagini PNG" },
+  { value: "png", label: "PNG images" },
   { value: "pdf", label: "PDF" },
-  { value: "zip", label: "Pacchetto ZIP (immagini, testi e didascalia)" },
+  { value: "zip", label: "ZIP package (images, copy and caption)" },
 ];
 
 /** Export request: draft (watermarked, any time) or final (approved version only). */
@@ -48,20 +48,20 @@ export function CarouselExportForm({
               error: true,
               text:
                 r.code === "EXPORT-NOT-APPROVED"
-                  ? "La versione finale si esporta solo da un carosello approvato."
+                  ? "The final version can only be exported from an approved carousel."
                   : r.error,
             });
-          setMessage({ error: false, text: "Esportazione in coda: i file compaiono qui sotto." });
+          setMessage({ error: false, text: "Export queued: the files will appear below." });
           router.refresh();
         });
       }}
     >
       <fieldset disabled={disabled || pending} className="grid gap-4">
         <fieldset className="grid gap-2">
-          <legend className="mb-1 text-label text-fg">Versione</legend>
+          <legend className="mb-1 text-label text-fg">Version</legend>
           <label className="flex items-center gap-2 text-body-sm text-fg">
             <input type="radio" name="ex-kind" checked={draft} onChange={() => setDraft(true)} />
-            Bozza (con filigrana, dalla bozza attuale)
+            Draft (watermarked, from the current draft)
           </label>
           <label className="flex items-center gap-2 text-body-sm text-fg">
             <input
@@ -71,11 +71,11 @@ export function CarouselExportForm({
               disabled={!canFinal}
               onChange={() => setDraft(false)}
             />
-            Finale{approvedVersion ? ` (versione approvata v${approvedVersion})` : ""}
+            Final{approvedVersion ? ` (approved version v${approvedVersion})` : ""}
           </label>
           {!canFinal ? (
             <p className="text-body-sm text-fg-muted">
-              La versione finale è disponibile dopo l&apos;approvazione.
+              The final version is available after approval.
             </p>
           ) : null}
         </fieldset>
@@ -100,7 +100,7 @@ export function CarouselExportForm({
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={disabled || pending || outputs.length === 0}>
           <Download aria-hidden />
-          Esporta
+          Export
         </Button>
         {message ? (
           <span

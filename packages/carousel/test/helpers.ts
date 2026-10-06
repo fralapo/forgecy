@@ -38,14 +38,14 @@ export function miniPackage(
     layouts: [
       {
         id: "only",
-        name: "Unico",
+        name: "Only",
         role: "text",
         file: "layouts/only.html",
         slots: [
           { name: "title", type: "text", maxChars: 40, required: true, highlight: true },
           { name: "items", type: "list", maxItems: 3, maxChars: 30 },
         ],
-        sample: { title: "Ciao" },
+        sample: { title: "Hello" },
       },
     ],
     ...overrides.manifest,

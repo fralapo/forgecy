@@ -28,10 +28,10 @@ const aliasTarget = (v: unknown) =>
   typeof v === "string" && /^\{color\.reference\.([^}]+)\}$/.test(v) ? v.slice(17, -1) : "";
 
 const gradeLabel = {
-  normal: "Testo normale (4,5:1)",
-  large: "Solo testo grande (3:1)",
-  fail: "Non ammesso",
-  unknown: "Non calcolabile",
+  normal: "Normal text (4.5:1)",
+  large: "Large text only (3:1)",
+  fail: "Not allowed",
+  unknown: "Can’t be calculated",
 } as const;
 const gradeVariant = {
   normal: "success",
@@ -92,7 +92,7 @@ export function TokensEditor({
       if (!res.ok) return setMessage({ kind: "error", text: res.error });
       setRev(res.rev);
       setDirty(false);
-      setMessage({ kind: "ok", text: "Token salvati." });
+      setMessage({ kind: "ok", text: "Tokens saved." });
       router.refresh();
     });
 
@@ -102,16 +102,16 @@ export function TokensEditor({
       className="space-y-6 rounded-lg border border-subtle bg-surface p-6"
     >
       <h2 id="palette" className="text-heading-md text-fg">
-        Palette e ruoli
+        Palette and roles
       </h2>
       <div>
-        <h3 className="text-heading-sm text-fg">Colori di riferimento</h3>
+        <h3 className="text-heading-sm text-fg">Reference colors</h3>
         <ul className="mt-3 space-y-2">
           {colors.map((c) => (
             <li key={c.name} className="flex flex-wrap items-center gap-3">
               <input
                 type="color"
-                aria-label={`Colore ${c.name}`}
+                aria-label={`Color ${c.name}`}
                 value={c.hex.toLowerCase()}
                 disabled={disabled}
                 onChange={(e) =>
@@ -125,7 +125,7 @@ export function TokensEditor({
               <span className="text-body-sm text-fg">{c.name}</span>
               {c.extension?.sourceIds?.length ? (
                 <span className="text-body-sm text-fg-muted">
-                  da {c.extension.sourceIds.length} fonti
+                  from {c.extension.sourceIds.length} sources
                 </span>
               ) : null}
               {editable ? (
@@ -140,7 +140,7 @@ export function TokensEditor({
                   }
                 >
                   <Trash2 aria-hidden />
-                  Rimuovi
+                  Remove
                 </Button>
               ) : null}
             </li>
@@ -149,16 +149,16 @@ export function TokensEditor({
         {editable ? (
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <div className="space-y-1">
-              <Label htmlFor="new-color-name">Nome</Label>
+              <Label htmlFor="new-color-name">Name</Label>
               <Input
                 id="new-color-name"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="Blu Rossi"
+                placeholder="Rossi Blue"
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="new-color-hex">Esadecimale</Label>
+              <Label htmlFor="new-color-hex">Hex</Label>
               <Input
                 id="new-color-hex"
                 value={newHex}
@@ -175,11 +175,11 @@ export function TokensEditor({
                 if (!hex)
                   return setMessage({
                     kind: "error",
-                    text: "Colore non valido: usa il formato #RRGGBB.",
+                    text: "Invalid color: use the #RRGGBB format.",
                   });
-                const name = tokenNameFrom(newName, `colore-${colors.length + 1}`);
+                const name = tokenNameFrom(newName, `color-${colors.length + 1}`);
                 if (colors.some((c) => c.name === name))
-                  return setMessage({ kind: "error", text: `Esiste già il colore ${name}.` });
+                  return setMessage({ kind: "error", text: `The color ${name} already exists.` });
                 update((t) => {
                   node(t, "color", "reference")[name] = {
                     $value: hexToDtcg(hex),
@@ -192,16 +192,16 @@ export function TokensEditor({
               }}
             >
               <Plus aria-hidden />
-              Aggiungi colore
+              Add color
             </Button>
           </div>
         ) : null}
       </div>
 
       <div>
-        <h3 className="text-heading-sm text-fg">Ruoli semantici</h3>
+        <h3 className="text-heading-sm text-fg">Semantic roles</h3>
         <p className="text-body-sm text-fg-muted">
-          I layout usano solo questi ruoli: i valori li applica il renderer.
+          Layouts use only these roles: the renderer applies the values.
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {semanticColorRoles.map((r) => {
@@ -236,11 +236,13 @@ export function TokensEditor({
       </div>
 
       <div>
-        <h3 className="text-heading-sm text-fg">Famiglie di font</h3>
+        <h3 className="text-heading-sm text-fg">Font families</h3>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {(["display", "body"] as const).map((role) => (
             <div key={role} className="space-y-1">
-              <Label htmlFor={`font-${role}`}>{role === "display" ? "Titoli" : "Testo"}</Label>
+              <Label htmlFor={`font-${role}`}>
+                {role === "display" ? "Headings" : "Body text"}
+              </Label>
               <Input
                 id={`font-${role}`}
                 value={fontOf(role)}
@@ -259,26 +261,26 @@ export function TokensEditor({
       </div>
 
       <div>
-        <h3 className="text-heading-sm text-fg">Contrasti</h3>
+        <h3 className="text-heading-sm text-fg">Contrasts</h3>
         <p className="text-body-sm text-fg-muted">
-          Il testo grande si misura alla dimensione vista: almeno 68 px sul canvas, o 54 px in
-          grassetto.
+          Large text is measured at its displayed size: at least 68 px on the canvas, or 54 px in
+          bold.
         </p>
         <table className="mt-3 w-full text-left text-body-sm">
-          <caption className="sr-only">Contrasto delle coppie testo e sfondo</caption>
+          <caption className="sr-only">Contrast of text and background pairs</caption>
           <thead className="text-label text-fg-muted">
             <tr>
               <th scope="col" className="py-2 font-medium">
-                Coppia
+                Pair
               </th>
               <th scope="col" className="py-2 font-medium">
-                Anteprima
+                Preview
               </th>
               <th scope="col" className="py-2 font-medium">
-                Rapporto
+                Ratio
               </th>
               <th scope="col" className="py-2 font-medium">
-                Esito
+                Result
               </th>
             </tr>
           </thead>
@@ -292,7 +294,7 @@ export function TokensEditor({
                       className="inline-block rounded-sm px-2 py-1"
                       style={{ color: cell.fgHex, backgroundColor: cell.bgHex }}
                     >
-                      Aa Testo
+                      Aa Text
                     </span>
                   ) : (
                     "—"
@@ -324,7 +326,7 @@ export function TokensEditor({
         <div className="flex flex-wrap items-center gap-3 border-t border-subtle pt-4">
           <Button onClick={save} disabled={saving || !dirty || issues.length > 0}>
             <Save aria-hidden />
-            {saving ? "Salvataggio…" : "Salva i token"}
+            {saving ? "Saving…" : "Save tokens"}
           </Button>
           {message ? (
             <span

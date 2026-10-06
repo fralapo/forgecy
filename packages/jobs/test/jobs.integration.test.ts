@@ -67,7 +67,7 @@ describe.skipIf(!dbUrl || !redisUrl)("jobs (integration)", () => {
           return { attempts: ctx.attempt };
         }),
         ...handle(attentionJob, async () => {
-          throw new NeedsAttentionError("Serve una persona");
+          throw new NeedsAttentionError("Needs a person");
         }),
       },
     });
@@ -83,7 +83,7 @@ describe.skipIf(!dbUrl || !redisUrl)("jobs (integration)", () => {
   it("runs system.ping end-to-end", async () => {
     const row = await enqueueJob(db, queues, {
       kind: systemPingJob,
-      payload: { message: "ciao" },
+      payload: { message: "hello" },
       entity: "test",
     });
     created.push(row.id);
@@ -91,7 +91,7 @@ describe.skipIf(!dbUrl || !redisUrl)("jobs (integration)", () => {
     const last = (await waitTerminal(db, row.id)).at(-1)!;
     expect(last.status).toBe("completed");
     expect(last.progress).toBe(100);
-    expect(last.result).toEqual({ echo: "ciao" });
+    expect(last.result).toEqual({ echo: "hello" });
     const [stored] = await db.select().from(jobs).where(eq(jobs.id, row.id));
     expect(stored?.attempts).toBe(1);
     expect(stored?.startedAt).toBeInstanceOf(Date);
@@ -125,7 +125,7 @@ describe.skipIf(!dbUrl || !redisUrl)("jobs (integration)", () => {
     const last = (await waitTerminal(db, row.id)).at(-1)!;
     expect(last.status).toBe("needs_attention");
     expect(last.attempts).toBe(1);
-    expect(last.error).toBe("Serve una persona");
+    expect(last.error).toBe("Needs a person");
   }, 15_000);
 
   it("recovers stale running jobs", async () => {

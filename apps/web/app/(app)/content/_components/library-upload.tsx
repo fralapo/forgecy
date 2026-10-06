@@ -38,22 +38,21 @@ export function LibraryUploadForm({ slug }: { slug: string }) {
             return setMessage({
               kind: "error",
               text:
-                body.message ??
-                (res.status === 413 ? "Il file supera i 15 MB." : "Caricamento non riuscito."),
+                body.message ?? (res.status === 413 ? "The file exceeds 15 MB." : "Upload failed."),
             });
           ref.current?.reset();
           setMessage({
             kind: "ok",
             text: body.created
-              ? "Immagine caricata e già utilizzabile."
-              : "Questa immagine era già in libreria.",
+              ? "Image uploaded and ready to use."
+              : "This image was already in the library.",
           });
           router.refresh();
         });
       }}
     >
       <div className="space-y-1">
-        <Label htmlFor="library-file">Immagine</Label>
+        <Label htmlFor="library-file">Image</Label>
         <input
           id="library-file"
           name="file"
@@ -62,16 +61,16 @@ export function LibraryUploadForm({ slug }: { slug: string }) {
           accept="image/png,image/jpeg,image/webp"
           className={controlClass}
         />
-        <p className="text-body-sm text-fg-muted">PNG, JPEG o WebP fino a 15 MB.</p>
+        <p className="text-body-sm text-fg-muted">PNG, JPEG or WebP up to 15 MB.</p>
       </div>
       <div className="space-y-1">
-        <Label htmlFor="library-alt">Testo alternativo</Label>
-        <Input id="library-alt" name="alt" maxLength={300} placeholder="Cosa mostra l'immagine" />
+        <Label htmlFor="library-alt">Alt text</Label>
+        <Input id="library-alt" name="alt" maxLength={300} placeholder="What the image shows" />
       </div>
       <div className="flex flex-wrap items-center gap-3 md:col-span-2">
         <Button type="submit" disabled={pending}>
           <ImageUp aria-hidden />
-          {pending ? "Caricamento…" : "Carica immagine"}
+          {pending ? "Uploading…" : "Upload image"}
         </Button>
         {message ? (
           <p

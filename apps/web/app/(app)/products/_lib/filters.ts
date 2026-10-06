@@ -33,7 +33,7 @@ export function parseCatalogFilters(p: Params): CatalogFilters & { view: "table"
   };
 }
 
-/** Query string without page/view, for export links and «Azzera filtri». */
+/** Query string without page/view, for export links and “Clear filters”. */
 export function filtersQuery(p: Params, drop: string[] = []): string {
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(p)) {

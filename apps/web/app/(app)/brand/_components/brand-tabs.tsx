@@ -16,7 +16,7 @@ export function BrandTabs({ tabs }: { tabs: BrandTab[] }) {
   const pathname = usePathname();
   return (
     <nav
-      aria-label="Sezioni della Brand Identity"
+      aria-label="Brand Identity sections"
       className="mb-4 overflow-x-auto border-b border-subtle"
     >
       <ul className="flex min-w-max gap-1">

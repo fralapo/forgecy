@@ -178,7 +178,7 @@ function deterministic(
       path: "",
       op: "set",
       value: { name: c.context, hex: c.hex, usage: "" },
-      rationale: `Colore trovato nel file (${c.count} ${c.count === 1 ? "occorrenza" : "occorrenze"}).`,
+      rationale: `Color found in the file (${c.count} ${c.count === 1 ? "occurrence" : "occurrences"}).`,
       evidence: { locator: c.locator, quote: c.context },
     });
   for (const f of extraction.fonts)
@@ -194,10 +194,11 @@ function deterministic(
       },
       rationale:
         type === "font"
-          ? "Font importato: conferma ruolo e licenza."
-          : "Font indicato nel tema del documento.",
+          ? "Imported font: confirm role and license."
+          : "Font named in the document theme.",
       evidence: { locator: f.locator },
     });
+  // File names may be Italian ("marchio", "logotipo").
   if ((type === "image" || type === "svg") && /logo|marchio|logotipo/i.test(fileName)) {
     const role = /mono|nero|black|bianco|white/i.test(fileName)
       ? "logo_mono"
@@ -210,7 +211,7 @@ function deterministic(
       path: "/document/visual/logo/variants",
       op: "append",
       value: { role, sourceId, background: role === "logo_negative" ? "dark" : "any" },
-      rationale: "File di logo importato: conferma il ruolo della variante.",
+      rationale: "Imported logo file: confirm the variant's role.",
       evidence: { locator: fileName },
     });
   }
@@ -229,12 +230,12 @@ export async function runSourceImport(
     .from(brandSources)
     .where(and(eq(brandSources.id, input.sourceId), eq(brandSources.clientId, input.clientId)));
   if (!source || source.removedAt)
-    throw new ForgecyError("not_found", "Fonte non trovata o rimossa");
+    throw new ForgecyError("not_found", "Source not found or removed");
   const [client] = await db
     .select({ name: clients.name, aiPolicy: clients.aiPolicy })
     .from(clients)
     .where(eq(clients.id, input.clientId));
-  if (!client) throw new ForgecyError("not_found", "Cliente non trovato");
+  if (!client) throw new ForgecyError("not_found", "Client not found");
 
   const agent: Actor = { type: "agent", role: "brand_analyst", runId: ctx.jobId };
   // A retry of the same run replaces what the failed attempt left pending.
@@ -246,7 +247,7 @@ export async function runSourceImport(
         eq(brandIdentityProposals.status, "proposed"),
       ),
     );
-  await updateSourceStatus(db, source.id, { status: "extracting", statusDetail: "Lettura" });
+  await updateSourceStatus(db, source.id, { status: "extracting", statusDetail: "Reading" });
 
   let extraction: Extraction;
   let candidates: CandidateProposal[];
@@ -292,9 +293,9 @@ export async function runSourceImport(
   let ai: ImportResult["ai"] = "skipped";
   let aiNote = "";
   const textPages = extraction.pages.filter((p) => p.text.trim().length > 20);
-  if (!deps.ai) aiNote = "Nessun provider AI configurato: estrazione solo automatica";
-  else if (client.aiPolicy === "no_ai") aiNote = "Funzioni AI spente per questo cliente";
-  else if (!textPages.length) aiNote = "Nessun testo da interpretare";
+  if (!deps.ai) aiNote = "No AI provider configured: automatic extraction only";
+  else if (client.aiPolicy === "no_ai") aiNote = "AI features turned off for this client";
+  else if (!textPages.length) aiNote = "No text to interpret";
   else {
     try {
       const chunks = chunkPages(textPages);
@@ -337,8 +338,8 @@ export async function runSourceImport(
         ai = "failed";
         aiNote =
           err instanceof ForgecyError
-            ? `Interpretazione AI non eseguita: ${err.message}`
-            : "Interpretazione AI non riuscita";
+            ? `AI interpretation not run: ${err.message}`
+            : "AI interpretation failed";
       } else throw err;
     }
   }
@@ -353,10 +354,10 @@ export async function runSourceImport(
   await ctx.progress?.(95);
   const parts = [
     extraction.pages.length
-      ? `${extraction.pages.length} ${extraction.pages.length === 1 ? "pagina letta" : "pagine lette"}`
+      ? `${extraction.pages.length} ${extraction.pages.length === 1 ? "page read" : "pages read"}`
       : null,
-    `${created} ${created === 1 ? "proposta" : "proposte"}`,
-    skipped ? `${skipped} già presenti o non valide` : null,
+    `${created} ${created === 1 ? "proposal" : "proposals"}`,
+    skipped ? `${skipped} already present or invalid` : null,
     ...extraction.warnings,
     aiNote || null,
   ].filter(Boolean);

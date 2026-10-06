@@ -34,12 +34,12 @@ async function runExport(deps: CarouselHandlerDeps, p: CarouselExportPayload, ct
   const pkg = await source.get(p.templateId, p.templateVersion);
   if (!pkg)
     throw new NeedsAttentionError(
-      `Template ${p.templateId}${p.templateVersion ? ` v${p.templateVersion}` : ""} non trovato`,
+      `Template ${p.templateId}${p.templateVersion ? ` v${p.templateVersion}` : ""} not found`,
     );
   const check = buildCarouselSchema(pkg.manifest).safeParse(p.slides);
   if (!check.success)
     throw new NeedsAttentionError(
-      `Slide non valide per il template: ${check.error.issues[0]?.message ?? "errore"}`,
+      `Slides not valid for the template: ${check.error.issues[0]?.message ?? "error"}`,
       {
         issues: check.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
       },
@@ -107,7 +107,7 @@ export function carouselHandlers(deps: CarouselHandlerDeps) {
     ...handle(carouselExportJob, (payload, ctx) => runExport(deps, payload, ctx)),
     ...handle(templateValidateJob, async (payload, ctx) => {
       const row = await getTemplateRow(ctx.db, payload.templateRowId);
-      if (!row) throw new NeedsAttentionError("Template non trovato");
+      if (!row) throw new NeedsAttentionError("Template not found");
       const pkg = await loadTemplatePackage(deps.storage, row);
       const report = validateTemplatePackage(pkg.files);
       await ctx.progress(30);

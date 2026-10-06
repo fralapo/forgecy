@@ -7,7 +7,7 @@ import { askPlannerAction } from "../actions";
 import { controlClass } from "./action-button";
 import { FormError, useSave } from "./strategy-forms";
 
-/** «Chiedi al Planner»: enqueues a strategy proposal job with an optional instruction. */
+/** “Ask the Planner”: enqueues a strategy proposal job with an optional instruction. */
 export function AskPlannerForm({
   slug,
   clientId,
@@ -25,7 +25,7 @@ export function AskPlannerForm({
   const disabled = pending || running || Boolean(disabledReason);
   return (
     <form
-      aria-label="Chiedi al Planner"
+      aria-label="Ask the Planner"
       className="space-y-3"
       onSubmit={(e) => {
         e.preventDefault();
@@ -36,20 +36,20 @@ export function AskPlannerForm({
       }}
     >
       <div className="space-y-1">
-        <Label htmlFor={id}>Istruzione per il Planner (facoltativa)</Label>
+        <Label htmlFor={id}>Instruction for the Planner (optional)</Label>
         <textarea
           id={id}
           rows={2}
           maxLength={500}
           className={controlClass}
-          placeholder="Es. più spazio alla formazione, meno promozione diretta"
+          placeholder="E.g. more room for education, less direct promotion"
           value={instruction}
           onChange={(e) => setInstruction(e.target.value)}
         />
       </div>
       <Button type="submit" disabled={disabled}>
         <Sparkles aria-hidden />
-        Chiedi al Planner
+        Ask the Planner
       </Button>
       {disabledReason ? <p className="text-body-sm text-fg-muted">{disabledReason}</p> : null}
       <FormError error={error} />

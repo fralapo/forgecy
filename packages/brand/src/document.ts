@@ -1,6 +1,6 @@
 /**
  * BrandIdentityDocument: the content of a Brand Identity version (spec tab
- * "Brand Identity", "Modello dati"). Every interpretive field is `Sourced`: its
+ * "Brand Identity", "Data model"). Every interpretive field is `Sourced`: its
  * value plus the sources it cites and a confidence computed by the server.
  * Word lists are plain strings, approved as a block with the version.
  */
@@ -99,11 +99,11 @@ export const strategySchema = z.object({
 // ---- Verbal identity ----
 
 export const toneAxes = [
-  { key: "formal", left: "Formale", right: "Informale" },
-  { key: "technical", left: "Tecnico", right: "Semplice" },
-  { key: "serious", left: "Serio", right: "Ironico" },
-  { key: "institutional", left: "Istituzionale", right: "Umano" },
-  { key: "conservative", left: "Conservatore", right: "Audace" },
+  { key: "formal", left: "Formal", right: "Informal" },
+  { key: "technical", left: "Technical", right: "Simple" },
+  { key: "serious", left: "Serious", right: "Ironic" },
+  { key: "institutional", left: "Institutional", right: "Human" },
+  { key: "conservative", left: "Conservative", right: "Bold" },
 ] as const;
 export type ToneAxisKey = (typeof toneAxes)[number]["key"];
 const toneAxisKeys = toneAxes.map((a) => a.key) as [ToneAxisKey, ...ToneAxisKey[]];
@@ -230,7 +230,7 @@ export const pillarSchema = z.object({
   audienceId: z.string().max(40).optional(),
   funnel: z.enum(funnelStages).optional(),
   themes: list(text(200), 30),
-  /** A specific emotion ("sollievo"), not "positiva". */
+  /** A specific emotion ("relief"), not "positive". */
   emotion: optText(120),
   frequency: optText(120),
   cta: optText(300),
@@ -245,7 +245,7 @@ export const formatSchema = z.object({
     .max(41),
   name: text(120),
   goal: optText(600),
-  /** Step sequence (hook, problema, insight...) with the catalog layout for each step. */
+  /** Step sequence (hook, problem, insight...) with the catalog layout for each step. */
   steps: list(z.object({ step: text(120), layout: optText(120) }), 20),
   maxWordsPerSlide: z.number().int().min(1).max(200).optional(),
   cta: optText(300),

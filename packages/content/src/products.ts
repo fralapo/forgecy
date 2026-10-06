@@ -34,7 +34,7 @@ export interface ProductSummary {
   description: string;
   /** Benefits, features, use cases, as short lines. */
   highlights: string[];
-  /** Bumped by the catalog on every approved change («Il prodotto è cambiato»). */
+  /** Bumped by the catalog on every approved change (“The product has changed”). */
   revision: number;
   images: ProductImageRef[];
 }
@@ -98,7 +98,7 @@ export interface ProductUsage {
 }
 
 /**
- * Where a product is used (the catalog's «Usato in»): pillars, rubrics, items of the
+ * Where a product is used (the catalog's “Used in”): pillars, rubrics, items of the
  * active or proposed plan, carousels. Archived and rejected items are left out.
  * Read-only and scoped to the client; the caller checks the `view` permission.
  */

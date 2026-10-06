@@ -18,7 +18,7 @@ export interface PostRow {
   sourceLabel?: string;
 }
 
-/** One MetricCard: a value with its source and date, or "Non disponibile" with the reason. */
+/** One MetricCard: a value with its source and date, or "Unavailable" with the reason. */
 export interface MetricCard {
   key: string;
   label: string;
@@ -31,14 +31,14 @@ export interface MetricCard {
 }
 
 export const metricSourceLabels: Record<MetricSource, string> = {
-  provided_by_prospect: "Fornito dal prospect",
-  agency_tool: "Strumento dell'agenzia",
-  public_profile: "Letto dal profilo pubblico",
-  file_import: "File importato",
-  other: "Altro",
+  provided_by_prospect: "Provided by the prospect",
+  agency_tool: "Agency tool",
+  public_profile: "Read from the public profile",
+  file_import: "Imported file",
+  other: "Other",
 };
 
-const fmt = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 2 });
+const fmt = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
 
 function latest(rows: MetricRow[], metric: string): MetricRow | undefined {
   return rows
@@ -47,7 +47,7 @@ function latest(rows: MetricRow[], metric: string): MetricRow | undefined {
 }
 
 function fromRow(key: string, label: string, row: MetricRow | undefined, reason: string) {
-  if (!row) return { key, label, value: null, display: "Non disponibile", reason } as MetricCard;
+  if (!row) return { key, label, value: null, display: "Unavailable", reason } as MetricCard;
   return {
     key,
     label,
@@ -58,6 +58,7 @@ function fromRow(key: string, label: string, row: MetricRow | undefined, reason:
   } satisfies MetricCard;
 }
 
+// Italian and English CTA phrases: client posts are mostly Italian.
 const CTA_IN_TEXT =
   /\b(link in bio|scopri|contatt|prenot|acquista|scrivici|chiama|iscriv|scarica|richied|visita|shop now|learn more|book|dm)\b/i;
 
@@ -82,13 +83,13 @@ export function computeChannelMetrics(input: {
 }): MetricCard[] {
   const { channel, metrics, posts } = input;
   const today = input.today ?? new Date();
-  const noData = "Nessun dato fornito";
+  const noData = "No data provided";
   const cards: MetricCard[] = [];
   const followers = latest(metrics, "followers");
   cards.push(
     fromRow(
       "followers",
-      channel === "linkedin" ? "Follower della pagina" : "Follower",
+      channel === "linkedin" ? "Page followers" : "Followers",
       followers,
       noData,
     ),
@@ -96,16 +97,16 @@ export function computeChannelMetrics(input: {
 
   if (channel === "linkedin") {
     for (const [key, label] of [
-      ["followers_gained", "Follower acquisiti"],
-      ["followers_lost", "Follower persi"],
-      ["impressions", "Impressioni"],
-      ["clicks", "Clic"],
+      ["followers_gained", "Followers gained"],
+      ["followers_lost", "Followers lost"],
+      ["impressions", "Impressions"],
+      ["clicks", "Clicks"],
       ["ctr", "CTR"],
-      ["reactions", "Reazioni"],
-      ["comments", "Commenti"],
-      ["shares", "Condivisioni"],
-      ["page_visits", "Visite alla pagina"],
-      ["leads", "Lead dichiarati"],
+      ["reactions", "Reactions"],
+      ["comments", "Comments"],
+      ["shares", "Shares"],
+      ["page_visits", "Page visits"],
+      ["leads", "Reported leads"],
     ] as const) {
       const row = latest(metrics, key);
       if (row) cards.push(fromRow(key, label, row, noData));
@@ -122,10 +123,10 @@ export function computeChannelMetrics(input: {
                 label,
                 value: sum,
                 display: fmt.format(sum),
-                source: posts[0]?.sourceLabel ?? "File importato",
-                derivedFrom: `Somma di ${posts.length} post importati`,
+                source: posts[0]?.sourceLabel ?? "Imported file",
+                derivedFrom: `Sum of ${posts.length} imported posts`,
               }
-            : { key, label, value: null, display: "Non disponibile", reason: noData },
+            : { key, label, value: null, display: "Unavailable", reason: noData },
         );
       }
     }
@@ -133,7 +134,7 @@ export function computeChannelMetrics(input: {
   }
 
   const postsTotal = latest(metrics, "posts_total");
-  cards.push(fromRow("posts_total", "Post totali", postsTotal, noData));
+  cards.push(fromRow("posts_total", "Total posts", postsTotal, noData));
 
   // Frequency: real dates in the last 4 weeks.
   const from = new Date(today.getTime() - 28 * 86_400_000).toISOString().slice(0, 10);
@@ -144,18 +145,18 @@ export function computeChannelMetrics(input: {
     posts.length
       ? {
           key: "frequency",
-          label: "Frequenza",
+          label: "Frequency",
           value: recent.length / 4,
-          display: `${fmt.format(recent.length / 4)} post a settimana`,
-          source: posts[0]?.sourceLabel ?? "File importato",
-          derivedFrom: `${recent.length} post con data nelle ultime 4 settimane`,
+          display: `${fmt.format(recent.length / 4)} posts a week`,
+          source: posts[0]?.sourceLabel ?? "Imported file",
+          derivedFrom: `${recent.length} dated posts in the last 4 weeks`,
         }
       : {
           key: "frequency",
-          label: "Frequenza",
+          label: "Frequency",
           value: null,
-          display: "Non disponibile",
-          reason: "Nessun post con data",
+          display: "Unavailable",
+          reason: "No dated posts",
         },
   );
 
@@ -167,18 +168,18 @@ export function computeChannelMetrics(input: {
     avg !== null
       ? {
           key: "avg_interactions",
-          label: "Interazioni medie per post",
+          label: "Average interactions per post",
           value: avg,
           display: fmt.format(Math.round(avg * 10) / 10),
-          source: posts[0]?.sourceLabel ?? "File importato",
-          derivedFrom: `Media su ${withInteractions.length} post`,
+          source: posts[0]?.sourceLabel ?? "Imported file",
+          derivedFrom: `Average over ${withInteractions.length} posts`,
         }
       : {
           key: "avg_interactions",
-          label: "Interazioni medie per post",
+          label: "Average interactions per post",
           value: null,
-          display: "Non disponibile",
-          reason: "Nessun post con interazioni",
+          display: "Unavailable",
+          reason: "No posts with interactions",
         },
   );
 
@@ -189,18 +190,18 @@ export function computeChannelMetrics(input: {
     sameSource
       ? {
           key: "interaction_rate",
-          label: "Tasso di interazione",
+          label: "Interaction rate",
           value: (avg! / followers!.value) * 100,
           display: `${fmt.format(Math.round((avg! / followers!.value) * 10000) / 100)}%`,
           source: followers!.sourceLabel ?? metricSourceLabels[followers!.source],
-          derivedFrom: "Calcolato da: interazioni ÷ follower",
+          derivedFrom: "Calculated as: interactions ÷ followers",
         }
       : {
           key: "interaction_rate",
-          label: "Tasso di interazione",
+          label: "Interaction rate",
           value: null,
-          display: "Non disponibile",
-          reason: "Servono follower e interazioni dalla stessa fonte e dallo stesso periodo",
+          display: "Unavailable",
+          reason: "Needs followers and interactions from the same source and period",
         },
   );
 
@@ -211,17 +212,17 @@ export function computeChannelMetrics(input: {
     formats.length
       ? {
           key: "formats",
-          label: "Formati usati",
+          label: "Formats used",
           value: formats.length,
           display: formats.join(", "),
-          source: posts[0]?.sourceLabel ?? "File importato",
+          source: posts[0]?.sourceLabel ?? "Imported file",
         }
       : {
           key: "formats",
-          label: "Formati usati",
+          label: "Formats used",
           value: null,
-          display: "Non disponibile",
-          reason: "Nessun formato nei dati",
+          display: "Unavailable",
+          reason: "No formats in the data",
         },
   );
 
@@ -230,25 +231,25 @@ export function computeChannelMetrics(input: {
     withText.length
       ? {
           key: "cta_share",
-          label: "Post con CTA",
+          label: "Posts with a CTA",
           value: (withText.filter((p) => CTA_IN_TEXT.test(p.text!)).length / withText.length) * 100,
           display: `${Math.round((withText.filter((p) => CTA_IN_TEXT.test(p.text!)).length / withText.length) * 100)}%`,
-          source: posts[0]?.sourceLabel ?? "File importato",
-          derivedFrom: `${withText.length} post con testo`,
+          source: posts[0]?.sourceLabel ?? "Imported file",
+          derivedFrom: `${withText.length} posts with text`,
         }
       : {
           key: "cta_share",
-          label: "Post con CTA",
+          label: "Posts with a CTA",
           value: null,
-          display: "Non disponibile",
-          reason: "Nessun testo dei post nei dati",
+          display: "Unavailable",
+          reason: "No post text in the data",
         },
   );
 
   if (channel === "tiktok") {
     for (const [key, label, field] of [
-      ["avg_views", "Visualizzazioni medie", "views"],
-      ["avg_likes", "Like medi", "likes"],
+      ["avg_views", "Average views", "views"],
+      ["avg_likes", "Average likes", "likes"],
     ] as const) {
       const row = latest(metrics, key);
       const values = posts.map((p) => p.metrics[field]).filter((v): v is number => v !== undefined);
@@ -261,10 +262,10 @@ export function computeChannelMetrics(input: {
                 label,
                 value: values.reduce((a, b) => a + b, 0) / values.length,
                 display: fmt.format(Math.round(values.reduce((a, b) => a + b, 0) / values.length)),
-                source: posts[0]?.sourceLabel ?? "File importato",
-                derivedFrom: `Media su ${values.length} post`,
+                source: posts[0]?.sourceLabel ?? "Imported file",
+                derivedFrom: `Average over ${values.length} posts`,
               }
-            : { key, label, value: null, display: "Non disponibile", reason: noData },
+            : { key, label, value: null, display: "Unavailable", reason: noData },
       );
     }
   }

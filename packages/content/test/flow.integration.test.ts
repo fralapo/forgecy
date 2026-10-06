@@ -79,12 +79,12 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
   let deps: PipelineDeps;
   const product: ProductSummary = {
     id: crypto.randomUUID(),
-    name: "Borraccia termica",
+    name: "Insulated water bottle",
     sku: "B-1",
-    category: "Accessori",
-    price: "24,90 €",
-    description: "Mantiene l'acqua fresca per 24 ore.",
-    highlights: ["Acciaio inox", "750 ml"],
+    category: "Accessories",
+    price: "€24.90",
+    description: "Keeps water cool for 24 hours.",
+    highlights: ["Stainless steel", "750 ml"],
     revision: 2,
     images: [],
   };
@@ -116,10 +116,10 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
     const [bi] = await db.insert(brandIdentities).values({ clientId }).returning();
     const document = parseBrandDocument({
       strategy: {
-        oneLiner: { id: "o1", value: "Borracce che durano" },
-        audience: [{ id: "seg1", value: { name: "Escursionisti", problems: "Acqua calda" } }],
+        oneLiner: { id: "o1", value: "Water bottles that last" },
+        audience: [{ id: "seg1", value: { name: "Hikers", problems: "Warm water" } }],
       },
-      verbal: { forbiddenWords: ["gratis"] },
+      verbal: { forbiddenWords: ["free"] },
     });
     await db.insert(brandIdentityVersions).values({
       brandIdentityId: bi!.id,
@@ -136,7 +136,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
     await db.insert(templates).values({
       key: templateKey,
       version: "1.0.0",
-      name: "Editoriale test",
+      name: "Editorial test",
       kind: "carousel",
       channel: "instagram",
       format: "ig_4x5",
@@ -188,8 +188,8 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
     );
 
     const manual = await createPillar(db, anna, clientId, {
-      name: "Prodotto",
-      goal: "Far conoscere la borraccia",
+      name: "Product",
+      goal: "Make the bottle known",
       productIds: [product.id, crypto.randomUUID()],
     });
     // Ids not approved in the catalog are dropped.
@@ -200,34 +200,34 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
         pillars: [
           {
             updates: "",
-            name: "Consigli in quota",
-            goal: "Educare sull'idratazione",
+            name: "Mountain tips",
+            goal: "Educate on hydration",
             audienceIds: ["seg1", "ghost"],
             funnel: "awareness",
-            themes: ["Idratazione"],
+            themes: ["Hydration"],
             frequency: { count: 2, unit: "week" },
-            cta: "Salva il post",
-            emotion: "sicurezza",
+            cta: "Save the post",
+            emotion: "safety",
             examples: [],
             forbidden: [],
             productIds: [],
-            rationale: "Dal pubblico Escursionisti",
+            rationale: "From the Hikers audience",
           },
         ],
         rubrics: [
           {
             pillarIndex: 0,
             pillarId: "",
-            name: "Errore comune",
+            name: "Common mistake",
             frequency: { count: 1, unit: "week" },
             structure: [{ name: "Hook", role: "cover" }],
-            hookFormula: "L'errore che fai quando…",
-            hookExample: "L'errore che fai in salita",
-            cta: "Salva",
+            hookFormula: "The mistake you make when…",
+            hookExample: "The mistake you make uphill",
+            cta: "Save",
             channels: ["instagram"],
           },
         ],
-        rationale: "Prima strategia",
+        rationale: "First strategy",
       },
     });
     const res = await runProposeStrategy(deps, await job("content.propose_strategy"), {
@@ -281,7 +281,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
 
   it("proposes a plan that a person activates", async () => {
     const overview = await getStrategyOverview(db, anna, clientId);
-    const pillar = overview.pillars.find((p) => p.name === "Prodotto")!;
+    const pillar = overview.pillars.find((p) => p.name === "Product")!;
     fake.push({
       json: {
         items: [
@@ -290,8 +290,8 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
             channel: "instagram",
             pillarId: pillar.id,
             rubricId: "",
-            theme: "Perché l'acqua resta fresca",
-            hook: "24 ore di acqua fresca",
+            theme: "Why the water stays cool",
+            hook: "24 hours of cool water",
             notes: "",
             productIds: [product.id],
           },
@@ -300,7 +300,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
             channel: "linkedin",
             pillarId: pillar.id,
             rubricId: "",
-            theme: "Canale non chiesto",
+            theme: "Channel not asked for",
             hook: "",
             notes: "",
             productIds: [],
@@ -310,13 +310,13 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
             channel: "instagram",
             pillarId: crypto.randomUUID(),
             rubricId: "",
-            theme: "Pilastro inventato",
+            theme: "Made-up pillar",
             hook: "",
             notes: "",
             productIds: [],
           },
         ],
-        rationale: "Piano di prova",
+        rationale: "Trial plan",
       },
     });
     const res = await runProposePlan(deps, await job("content.propose_plan"), {
@@ -355,23 +355,23 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
 
     const usage = await listProductUsage(db, clientId, product.id);
     expect(usage.contents.map((x) => x.id)).toEqual([c.id]);
-    expect(usage.pillars.map((p) => p.name)).toEqual(["Prodotto"]);
+    expect(usage.pillars.map((p) => p.name)).toEqual(["Product"]);
     expect(usage.planItems).toHaveLength(1);
 
     await saveBrief(db, anna, {
       clientId,
       id: c.id,
       briefRev: c.briefRev,
-      brief: { text: "Spiega perché la borraccia mantiene l'acqua fresca in escursione." },
+      brief: { text: "Explain why the bottle keeps water cool on a hike." },
     });
 
     const roles = ["cover", "text", "text", "list", "text", "text", "cta"] as const;
     fake.push({
       json: {
-        title: "Acqua fresca per 24 ore",
-        hook: "La tua acqua è calda dopo un'ora?",
-        rows: roles.map((role, i) => ({ role, layout: role, point: `Punto ${i + 1}`, note: "" })),
-        cta: "Scopri la borraccia",
+        title: "Cool water for 24 hours",
+        hook: "Is your water warm after an hour?",
+        rows: roles.map((role, i) => ({ role, layout: role, point: `Point ${i + 1}`, note: "" })),
+        cta: "Discover the bottle",
       },
     });
     const outline = await runGenerateOutline(deps, await job("content.generate_outline"), {
@@ -402,22 +402,22 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
           layout: role,
           slots:
             role === "cover"
-              ? [slot("title", "Acqua fresca per 24 ore")]
+              ? [slot("title", "Cool water for 24 hours")]
               : role === "list"
                 ? [
-                    slot("title", "Tre motivi"),
-                    { name: "items", text: "", items: ["Acciaio", "Doppia parete"] },
+                    slot("title", "Three reasons"),
+                    { name: "items", text: "", items: ["Steel", "Double wall"] },
                   ]
                 : role === "cta"
-                  ? [slot("title", "Provala in salita"), slot("action", "Scopri di più")]
+                  ? [slot("title", "Try it uphill"), slot("action", "Learn more")]
                   : [
-                      slot("title", `Punto ${i + 1}`),
-                      slot("body", "Il doppio strato isola il liquido."),
+                      slot("title", `Point ${i + 1}`),
+                      slot("body", "The double layer insulates the liquid."),
                     ],
           imageBriefs: [],
         })),
-        caption: "La tua acqua resta fresca.",
-        hashtags: ["escursionismo", "#borraccia"],
+        caption: "Your water stays cool.",
+        hashtags: ["hiking", "#waterbottle"],
       },
     });
     const slides = await runGenerateSlides(deps, await job("content.generate_slides"), {
@@ -428,7 +428,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
 
     let ws = await getCarouselWorkspace(db, anna, clientId, c.id);
     expect(ws.document.slides).toHaveLength(7);
-    expect(ws.document.hashtags).toEqual(["#escursionismo", "#borraccia"]);
+    expect(ws.document.hashtags).toEqual(["#hiking", "#waterbottle"]);
     expect(ws.checks?.errors).toEqual([]);
     expect(ws.content.templateVersion).toBe("1.0.0");
 
@@ -453,7 +453,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
       severity: "warning" as const,
       slide: 0,
       slot: "title",
-      message: "Titolo lungo",
+      message: "Long title",
       status: "open" as const,
     };
     const report = {
@@ -471,7 +471,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
         runs.length ? { subjectVersion: runs.at(-1)!.version ?? null, report } : null,
       confirmForApproval: async (_tx, _actor, input) => {
         if (!input.acknowledgedKeys.includes(finding.key))
-          throw new ForgecyError("validation", "Ho visto", { code: "CHECKS-NOT-ACKNOWLEDGED" });
+          throw new ForgecyError("validation", "Seen", { code: "CHECKS-NOT-ACKNOWLEDGED" });
         return { ok: true };
       },
     });
@@ -544,7 +544,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
     await expect(
       db
         .update(contentVersions)
-        .set({ caption: "cambiata" })
+        .set({ caption: "changed" })
         .where(eq(contentVersions.id, version.id)),
     ).rejects.toThrow();
   });

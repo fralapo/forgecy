@@ -40,7 +40,7 @@ export function AddFinding({
     return (
       <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
         <Plus aria-hidden />
-        {kind === "problem" ? "Aggiungi un problema" : "Aggiungi un'osservazione"}
+        {kind === "problem" ? "Add a problem" : "Add an observation"}
       </Button>
     );
   return (
@@ -94,7 +94,7 @@ export function AddFinding({
           </div>
         ) : null}
         <div className="flex flex-col gap-1">
-          <Label htmlFor={`priority-${auditId}`}>Priorità</Label>
+          <Label htmlFor={`priority-${auditId}`}>Priority</Label>
           <select
             id={`priority-${auditId}`}
             name="priority"
@@ -110,14 +110,14 @@ export function AddFinding({
         </div>
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor={`title-new-${auditId}`}>Titolo</Label>
+        <Label htmlFor={`title-new-${auditId}`}>Title</Label>
         <Input id={`title-new-${auditId}`} name="title" required maxLength={160} />
       </div>
       {(
         [
-          ["description", "Descrizione"],
-          ["impact", "Perché conta"],
-          ["recommendation", "Cosa fare"],
+          ["description", "Description"],
+          ["impact", "Why it matters"],
+          ["recommendation", "What to do"],
         ] as const
       ).map(([name, label]) => (
         <div key={name} className="flex flex-col gap-1">
@@ -132,7 +132,7 @@ export function AddFinding({
       ))}
       {kind === "problem" ? (
         <fieldset className="flex flex-col gap-1">
-          <legend className="text-label text-fg-muted">Osservazioni su cui si basa</legend>
+          <legend className="text-label text-fg-muted">Observations it is based on</legend>
           {observations.length ? (
             observations.map((o) => (
               <label key={o.id} className="flex items-center gap-2 text-body-sm">
@@ -141,12 +141,12 @@ export function AddFinding({
               </label>
             ))
           ) : (
-            <p className="text-body-sm text-warning">Accetta prima almeno un&apos;osservazione.</p>
+            <p className="text-body-sm text-warning">Accept at least one observation first.</p>
           )}
         </fieldset>
       ) : sources.length ? (
         <fieldset className="flex flex-col gap-1">
-          <legend className="text-label text-fg-muted">Prove</legend>
+          <legend className="text-label text-fg-muted">Evidence</legend>
           {sources.map((s) => (
             <label key={s.id} className="flex items-center gap-2 text-body-sm">
               <input type="checkbox" name="source" value={s.id} />
@@ -162,10 +162,10 @@ export function AddFinding({
       ) : null}
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={pending}>
-          Salva
+          Save
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
-          Annulla
+          Cancel
         </Button>
       </div>
     </form>

@@ -22,11 +22,11 @@ import {
 } from "./document";
 
 export const blocks = {
-  strategy: "Strategia",
-  verbal: "Verbale",
+  strategy: "Strategy",
+  verbal: "Verbal",
   visual: "Visual",
-  content: "Contenuti",
-  presence: "Presenza e competitor",
+  content: "Content",
+  presence: "Presence and competitors",
 } as const;
 export type BlockKey = keyof typeof blocks;
 
@@ -66,7 +66,7 @@ const dtcgToken = z
     $description: z.string().max(400).optional(),
     $extensions: z.record(z.string(), z.unknown()).optional(),
   })
-  .refine((t) => t.$value !== undefined, "Il token deve avere $value");
+  .refine((t) => t.$value !== undefined, "The token must have $value");
 
 const f = (
   pointer: string,
@@ -89,27 +89,27 @@ const f = (
 export const fields: readonly FieldDef[] = [
   f("/document/strategy/oneLiner", "strategy", "One-liner", "sourced", true, str(300)),
   f("/document/strategy/insight", "strategy", "Insight", "sourced", false, str(600)),
-  f("/document/strategy/positioning", "strategy", "Posizionamento", "sourced", true, str()),
-  f("/document/strategy/promise", "strategy", "Promessa", "sourced", true, str(600)),
-  f("/document/strategy/differentiation", "strategy", "Differenziazione", "sourced", true, str()),
+  f("/document/strategy/positioning", "strategy", "Positioning", "sourced", true, str()),
+  f("/document/strategy/promise", "strategy", "Promise", "sourced", true, str(600)),
+  f("/document/strategy/differentiation", "strategy", "Differentiation", "sourced", true, str()),
   f(
     "/document/strategy/perceivedPositioning",
     "presence",
-    "Posizionamento percepito",
+    "Perceived positioning",
     "sourced",
     false,
     str(),
   ),
-  f("/document/strategy/mission", "strategy", "Missione", "sourced", true, str(1000)),
-  f("/document/strategy/vision", "strategy", "Visione", "sourced", false, str(1000)),
-  f("/document/strategy/category", "strategy", "Categoria", "sourced", false, str(200)),
-  f("/document/strategy/values", "strategy", "Valori", "sourced-list", true, valueItemSchema, (v) =>
+  f("/document/strategy/mission", "strategy", "Mission", "sourced", true, str(1000)),
+  f("/document/strategy/vision", "strategy", "Vision", "sourced", false, str(1000)),
+  f("/document/strategy/category", "strategy", "Category", "sourced", false, str(200)),
+  f("/document/strategy/values", "strategy", "Values", "sourced-list", true, valueItemSchema, (v) =>
     lower(byKey("name")(v)),
   ),
   f(
     "/document/strategy/audience",
     "strategy",
-    "Pubblico",
+    "Audience",
     "sourced-list",
     true,
     audienceSegmentSchema,
@@ -118,7 +118,7 @@ export const fields: readonly FieldDef[] = [
   f(
     "/document/strategy/messages",
     "strategy",
-    "Messaggi e claim",
+    "Messages and claims",
     "sourced-list",
     true,
     messageSchema,
@@ -126,17 +126,17 @@ export const fields: readonly FieldDef[] = [
   f(
     "/document/strategy/avoidTopics",
     "strategy",
-    "Temi da evitare",
+    "Topics to avoid",
     "sourced-list",
     false,
     str(300),
     lower,
   ),
-  f("/document/verbal/voice", "verbal", "Voce", "sourced", true, str(1000)),
+  f("/document/verbal/voice", "verbal", "Voice", "sourced", true, str(1000)),
   f(
     "/document/verbal/toneAxes",
     "verbal",
-    "Assi del tono",
+    "Tone axes",
     "sourced-list",
     true,
     toneAxisSchema,
@@ -145,7 +145,7 @@ export const fields: readonly FieldDef[] = [
   f(
     "/document/verbal/weAreWeAreNot",
     "verbal",
-    "Siamo / Non siamo",
+    "We are / We are not",
     "sourced-list",
     true,
     weAreSchema,
@@ -154,7 +154,7 @@ export const fields: readonly FieldDef[] = [
   f(
     "/document/verbal/writingRules",
     "verbal",
-    "Regole di scrittura",
+    "Writing rules",
     "sourced",
     false,
     writingRulesSchema,
@@ -162,7 +162,7 @@ export const fields: readonly FieldDef[] = [
   f(
     "/document/verbal/preferredWords",
     "verbal",
-    "Parole preferite",
+    "Preferred words",
     "string-list",
     false,
     str(80),
@@ -171,7 +171,7 @@ export const fields: readonly FieldDef[] = [
   f(
     "/document/verbal/forbiddenWords",
     "verbal",
-    "Parole vietate",
+    "Forbidden words",
     "string-list",
     false,
     str(80),
@@ -180,7 +180,7 @@ export const fields: readonly FieldDef[] = [
   f(
     "/document/visual/logo/variants",
     "visual",
-    "Varianti del logo",
+    "Logo variants",
     "object-list",
     false,
     logoVariantSchema,
@@ -189,7 +189,7 @@ export const fields: readonly FieldDef[] = [
   f(
     "/document/visual/logo/forbiddenUses",
     "visual",
-    "Usi vietati del logo",
+    "Forbidden logo uses",
     "string-list",
     false,
     str(300),
@@ -198,19 +198,19 @@ export const fields: readonly FieldDef[] = [
   f(
     "/document/visual/typography",
     "visual",
-    "Tipografia",
+    "Typography",
     "sourced-list",
     false,
     typographySchema,
     (v) => lower(byKey("family")(v)),
   ),
-  f("/document/visual/imagery", "visual", "Sistema fotografico", "sourced", false, imagerySchema),
-  f("/document/visual/do", "visual", "Da fare", "string-list", false, str(300), lower),
-  f("/document/visual/dont", "visual", "Da non fare", "string-list", false, str(300), lower),
+  f("/document/visual/imagery", "visual", "Photography system", "sourced", false, imagerySchema),
+  f("/document/visual/do", "visual", "Do", "string-list", false, str(300), lower),
+  f("/document/visual/dont", "visual", "Don't", "string-list", false, str(300), lower),
   f(
     "/document/content/pillars",
     "content",
-    "Pilastri",
+    "Pillars",
     "sourced-list",
     false,
     pillarSchema,
@@ -219,17 +219,17 @@ export const fields: readonly FieldDef[] = [
   f(
     "/document/channels",
     "content",
-    "Regole per canale",
+    "Channel rules",
     "sourced-list",
     false,
     channelRulesSchema,
     byKey("channel"),
   ),
-  f("/document/presence", "presence", "Presenza digitale", "sourced-list", false, presenceSchema),
+  f("/document/presence", "presence", "Digital presence", "sourced-list", false, presenceSchema),
   f(
     "/document/competitors/list",
     "presence",
-    "Competitor",
+    "Competitors",
     "sourced-list",
     false,
     competitorSchema,
@@ -238,7 +238,7 @@ export const fields: readonly FieldDef[] = [
   f(
     "/document/competitors/overusedMessages",
     "presence",
-    "Messaggi abusati nel settore",
+    "Overused messages in the industry",
     "string-list",
     false,
     str(300),
@@ -247,16 +247,16 @@ export const fields: readonly FieldDef[] = [
   f(
     "/document/competitors/commonVisualCodes",
     "presence",
-    "Codici visivi comuni",
+    "Common visual codes",
     "string-list",
     false,
     str(300),
     lower,
   ),
   f("/tokens/color/reference", "visual", "Palette", "token-group", true, dtcgToken),
-  f("/tokens/color/semantic", "visual", "Ruoli dei colori", "token-group", true, dtcgToken),
-  f("/tokens/font/family", "visual", "Famiglie dei font", "token-group", false, dtcgToken),
-  f("/tokens/component", "visual", "Token di componente", "token-group", false, dtcgToken),
+  f("/tokens/color/semantic", "visual", "Color roles", "token-group", true, dtcgToken),
+  f("/tokens/font/family", "visual", "Font families", "token-group", false, dtcgToken),
+  f("/tokens/component", "visual", "Component tokens", "token-group", false, dtcgToken),
 ];
 
 export interface FieldMatch {

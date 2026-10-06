@@ -99,19 +99,19 @@ export interface ReviewImageView {
 }
 
 const tabLabels: Record<Tab, string> = {
-  new: "Nuovi",
-  duplicates: "Duplicati",
-  conflicts: "Conflitti",
-  images: "Immagini da assegnare",
-  discarded: "Scartati",
+  new: "New",
+  duplicates: "Duplicates",
+  conflicts: "Conflicts",
+  images: "Images to assign",
+  discarded: "Rejected",
 };
 
 const emptyTab: Record<Tab, string> = {
-  new: "Nessun prodotto nuovo.",
-  duplicates: "Nessun duplicato trovato.",
-  conflicts: "Nessun conflitto con il catalogo.",
-  images: "Tutte le immagini sono state abbinate.",
-  discarded: "Nessuna riga o pagina scartata.",
+  new: "No new products.",
+  duplicates: "No duplicates found.",
+  conflicts: "No conflicts with the catalog.",
+  images: "All images have been matched.",
+  discarded: "No rejected rows or pages.",
 };
 
 export function ReviewView(props: {
@@ -169,16 +169,16 @@ export function ReviewView(props: {
           actions={
             <>
               <Button asChild variant="secondary">
-                <Link href={props.importHref}>Torna all&apos;import</Link>
+                <Link href={props.importHref}>Back to import</Link>
               </Button>
               <Button asChild variant="secondary">
-                <a href={props.discardsHref}>Scarica rapporto degli scarti</a>
+                <a href={props.discardsHref}>Download rejected rows report</a>
               </Button>
             </>
           }
         >
-          L&apos;analisi non ha trovato prodotti in questi file. Controlla che il PDF contenga testo
-          leggibile o che il CSV abbia una colonna con il nome del prodotto.
+          The analysis found no products in these files. Check that the PDF contains readable text
+          or that the CSV has a column with the product name.
         </EmptyState>
       </Card>
     );
@@ -187,25 +187,25 @@ export function ReviewView(props: {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-body-sm text-fg-muted">
-          <span className="font-medium text-fg">Prossima azione: </span>
+          <span className="font-medium text-fg">Next action: </span>
           {!props.open
-            ? "Nessuna azione in sospeso"
+            ? "No pending actions"
             : openMatches.length
-              ? `tu · Risolvi ${counts.conflicts} conflitti e ${counts.duplicates} duplicati`
-              : "tu · Approva i prodotti e chiudi la revisione"}
+              ? `you · Resolve ${counts.conflicts} conflicts and ${counts.duplicates} duplicates`
+              : "you · Approve the products and close the review"}
         </p>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="ghost">
-            <a href={props.discardsHref}>Scarica rapporto degli scarti</a>
+            <a href={props.discardsHref}>Download rejected rows report</a>
           </Button>
           <Button asChild variant="ghost">
-            <Link href={props.importHref}>Torna all&apos;import</Link>
+            <Link href={props.importHref}>Back to import</Link>
           </Button>
           {props.open ? (
             <>
               <ConfirmDialog
-                title={`Scartare ${pendingNew} prodotti non ancora decisi?`}
-                confirmLabel="Scarta prodotti"
+                title={`Reject ${pendingNew} undecided products?`}
+                confirmLabel="Reject products"
                 danger
                 disabled={pendingNew === 0}
                 onConfirm={() => action.run(() => discardPendingAction(ids))}
@@ -215,42 +215,41 @@ export function ReviewView(props: {
                     onClick={open}
                     disabled={action.pending || pendingNew === 0}
                   >
-                    Scarta tutti i non decisi
+                    Reject all undecided
                   </Button>
                 )}
               >
                 <p>
-                  Non entreranno nel catalogo; puoi recuperarli dalla tab Scartati finché la
-                  revisione è aperta.
+                  They won’t enter the catalog; you can recover them from the Rejected tab while the
+                  review is open.
                 </p>
               </ConfirmDialog>
               <ConfirmDialog
-                title="Chiudere la revisione?"
-                confirmLabel="Chiudi revisione"
+                title="Close the review?"
+                confirmLabel="Close review"
                 onConfirm={() => action.run(() => closeReviewAction(ids))}
                 trigger={(open) => (
                   <Button
                     onClick={open}
                     disabled={action.pending || openMatches.length > 0}
-                    title={openMatches.length ? "Decidi prima duplicati e conflitti" : undefined}
+                    title={
+                      openMatches.length ? "Decide on duplicates and conflicts first" : undefined
+                    }
                   >
-                    Chiudi revisione
+                    Close review
                   </Button>
                 )}
               >
                 <p>
-                  {approved} approvati · {pendingNew} restano Proposti nel catalogo ·{" "}
-                  {counts.discarded} scartati · {counts.images} immagini ancora da assegnare.
+                  {approved} approved · {pendingNew} stay Proposed in the catalog ·{" "}
+                  {counts.discarded} rejected · {counts.images} images still to assign.
                 </p>
-                <p>
-                  Gli elementi non decisi entrano nel catalogo come Proposti con la loro
-                  provenienza.
-                </p>
+                <p>Undecided items enter the catalog as Proposed, with their source.</p>
               </ConfirmDialog>
             </>
           ) : (
             <Button asChild>
-              <Link href={props.catalogHref}>Apri catalogo</Link>
+              <Link href={props.catalogHref}>Open catalog</Link>
             </Button>
           )}
         </div>
@@ -259,22 +258,22 @@ export function ReviewView(props: {
 
       <Card className="gap-3 p-4">
         <p className="text-body-sm text-fg">
-          {found} prodotti trovati · {counts.new} nuovi · {counts.duplicates} possibili duplicati ·{" "}
-          {counts.conflicts} conflitti · {counts.discarded} scartati · {counts.images} immagini da
-          assegnare
+          {found} products found · {counts.new} new · {counts.duplicates} possible duplicates ·{" "}
+          {counts.conflicts} conflicts · {counts.discarded} rejected · {counts.images} images to
+          assign
         </p>
         <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-body-sm text-fg-muted">
-            Confidenza
+            Confidence
             <select
               className={selectClass}
               value={confidence}
               onChange={(e) => setConfidence(e.target.value as "" | ConfidenceLevel)}
             >
-              <option value="">Tutte</option>
-              <option value="high">Alta</option>
-              <option value="medium">Media</option>
-              <option value="low">Bassa</option>
+              <option value="">All</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
             </select>
           </label>
           <label className="flex items-center gap-2 text-body-sm text-fg">
@@ -284,12 +283,12 @@ export function ReviewView(props: {
               onChange={(e) => setOnlySensitive(e.target.checked)}
               className="size-4"
             />
-            Con campi sensibili
+            With sensitive fields
           </label>
         </div>
       </Card>
 
-      <div role="tablist" aria-label="Elementi dell'import" className="flex flex-wrap gap-1">
+      <div role="tablist" aria-label="Import items" className="flex flex-wrap gap-1">
         {(Object.keys(tabLabels) as Tab[]).map((t) => (
           <Button
             key={t}
@@ -322,13 +321,11 @@ export function ReviewView(props: {
                 aria-live="polite"
               >
                 <span className="text-body-sm text-fg-muted">
-                  {chosen.length
-                    ? `${chosen.length} selezionati`
-                    : "Seleziona i prodotti da approvare"}
+                  {chosen.length ? `${chosen.length} selected` : "Select the products to approve"}
                 </span>
                 <ConfirmDialog
-                  title={`Approvare ${chosen.length - chosenSensitive} prodotti?`}
-                  confirmLabel="Approva"
+                  title={`Approve ${chosen.length - chosenSensitive} products?`}
+                  confirmLabel="Approve"
                   disabled={chosen.length - chosenSensitive === 0}
                   onConfirm={() =>
                     action.run(
@@ -338,13 +335,13 @@ export function ReviewView(props: {
                   }
                   trigger={(open) => (
                     <Button size="sm" onClick={open} disabled={!chosen.length || action.pending}>
-                      Approva selezionati
+                      Approve selected
                     </Button>
                   )}
                 >
-                  <p>Diventano utilizzabili nei caroselli di {props.clientName}.</p>
+                  <p>They become usable in {props.clientName}’s carousels.</p>
                   {chosenSensitive ? (
-                    <p>{chosenSensitive} esclusi: campi sensibili da accettare uno per uno.</p>
+                    <p>{chosenSensitive} skipped: sensitive fields to accept one by one.</p>
                   ) : null}
                 </ConfirmDialog>
               </div>
@@ -361,7 +358,7 @@ export function ReviewView(props: {
                   {tab === "new" && props.open ? (
                     <input
                       type="checkbox"
-                      aria-label={`Seleziona ${i.name}`}
+                      aria-label={`Select ${i.name}`}
                       disabled={i.status !== "pending"}
                       checked={checked.has(i.id)}
                       onChange={() =>
@@ -383,7 +380,7 @@ export function ReviewView(props: {
                     className="min-w-0 flex-1 text-left focus-visible:outline-2 focus-visible:outline-focus"
                   >
                     <span className="block truncate text-body-md text-fg">
-                      {i.name || "Senza nome"}
+                      {i.name || "Untitled"}
                     </span>
                     <span className="block truncate text-body-sm text-fg-muted">
                       {[i.sku, i.category, i.origin].filter(Boolean).join(" · ")}
@@ -391,12 +388,12 @@ export function ReviewView(props: {
                   </button>
                   <div className="flex flex-col items-end gap-1">
                     {i.sensitive ? (
-                      <ShieldAlert aria-label="Campi sensibili" className="size-4 text-warning" />
+                      <ShieldAlert aria-label="Sensitive fields" className="size-4 text-warning" />
                     ) : null}
                     <span className="text-body-sm text-fg-muted">{itemStatusLabels[i.status]}</span>
                     {tab !== "discarded" ? (
                       <span className="text-body-sm text-fg-muted">
-                        Confidenza {confidenceText[i.confidence]}
+                        {confidenceText[i.confidence]} confidence
                       </span>
                     ) : null}
                   </div>
@@ -436,16 +433,16 @@ function ItemDetail({
     : [];
 
   return (
-    <Card className="gap-4" aria-label={`Dettaglio di ${item.name}`}>
+    <Card className="gap-4" aria-label={`Details of ${item.name}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-heading-sm">{item.name || "Senza nome"}</h2>
+          <h2 className="text-heading-sm">{item.name || "Untitled"}</h2>
           <p className="text-body-sm text-fg-muted">{item.origin}</p>
         </div>
         <div className="flex flex-wrap gap-1">
           {item.byAgent ? (
             <Badge variant="info" icon={Sparkles}>
-              Proposto da Brand Analyst
+              Proposed by Brand Analyst
             </Badge>
           ) : null}
           <ConfidenceBadge level={item.confidence} />
@@ -453,11 +450,11 @@ function ItemDetail({
       </div>
       {item.productHref ? (
         <Link href={item.productHref} className="text-body-sm text-link hover:underline">
-          Apri scheda
+          Open product sheet
         </Link>
       ) : null}
       {item.discardReason ? (
-        <p className="text-body-sm text-fg-muted">Motivo: {item.discardReason}</p>
+        <p className="text-body-sm text-fg-muted">Reason: {item.discardReason}</p>
       ) : null}
 
       {item.images.length ? (
@@ -480,17 +477,17 @@ function ItemDetail({
               <div key={c.field} className="rounded-md border border-subtle p-3 text-body-sm">
                 <p className="font-medium text-fg">{def?.label ?? c.field}</p>
                 <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-                  <dt className="text-fg-muted">Approvato</dt>
+                  <dt className="text-fg-muted">Approved</dt>
                   <dd>
                     {formatValue(c.field as FieldKey, c.approved) || "—"}
                     {item.match!.approvedBy ? (
                       <span className="block text-fg-muted">
-                        Approvato da {item.match!.approvedBy}
-                        {item.match!.approvedAt ? ` il ${item.match!.approvedAt}` : ""}
+                        Approved by {item.match!.approvedBy}
+                        {item.match!.approvedAt ? ` on ${item.match!.approvedAt}` : ""}
                       </span>
                     ) : null}
                   </dd>
-                  <dt className="text-fg-muted">Dal file</dt>
+                  <dt className="text-fg-muted">From file</dt>
                   <dd>
                     {formatValue(c.field as FieldKey, c.incoming) || "—"}
                     <span className="block text-fg-muted">
@@ -500,12 +497,12 @@ function ItemDetail({
                 </dl>
                 {decision ? (
                   <p className="mt-2 text-fg-muted">
-                    Deciso:{" "}
+                    Decided:{" "}
                     {decision === "keep"
-                      ? "mantenuto l'approvato"
+                      ? "kept the approved value"
                       : decision === "accept"
-                        ? "accettato il valore del file"
-                        : "rimandato"}
+                        ? "accepted the file value"
+                        : "deferred"}
                   </p>
                 ) : open && pending ? (
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -517,7 +514,7 @@ function ItemDetail({
                         run({ type: "conflict", field: c.field as FieldKey, decision: "keep" })
                       }
                     >
-                      Mantieni approvato
+                      Keep approved
                     </Button>
                     <Button
                       size="sm"
@@ -526,7 +523,7 @@ function ItemDetail({
                         run({ type: "conflict", field: c.field as FieldKey, decision: "accept" })
                       }
                     >
-                      Accetta valore del file
+                      Accept file value
                     </Button>
                     <Button
                       size="sm"
@@ -536,7 +533,7 @@ function ItemDetail({
                         run({ type: "conflict", field: c.field as FieldKey, decision: "defer" })
                       }
                     >
-                      Rimanda
+                      Defer
                     </Button>
                   </div>
                 ) : null}
@@ -544,7 +541,7 @@ function ItemDetail({
             );
           })}
           <Link href={item.match.href} className="text-body-sm text-link hover:underline">
-            Apri il prodotto nel catalogo
+            Open the product in the catalog
           </Link>
         </div>
       ) : null}
@@ -552,31 +549,31 @@ function ItemDetail({
       {item.tab === "duplicates" && item.match ? (
         <div className="space-y-3 text-body-sm">
           <p className="text-fg-muted">
-            {item.matchReason ?? "Possibile duplicato"} · nel catalogo:{" "}
+            {item.matchReason ?? "Possible duplicate"} · in the catalog:{" "}
             <Link href={item.match.href} className="text-link hover:underline">
               {item.match.name}
             </Link>{" "}
             <ProductStatusBadge status={item.match.status} />
           </p>
           {diffs.length === 0 ? (
-            <p className="text-fg-muted">Nessuna differenza nei campi presenti nel file.</p>
+            <p className="text-fg-muted">No differences in the fields present in the file.</p>
           ) : (
             <table className="w-full">
               <thead className="text-left text-fg-muted">
                 <tr>
                   {open && pending ? (
                     <th scope="col">
-                      <span className="sr-only">Sostituisci</span>
+                      <span className="sr-only">Replace</span>
                     </th>
                   ) : null}
                   <th scope="col" className="font-medium">
-                    Campo
+                    Field
                   </th>
                   <th scope="col" className="font-medium">
-                    Nel catalogo
+                    In the catalog
                   </th>
                   <th scope="col" className="font-medium">
-                    Dal file
+                    From file
                   </th>
                 </tr>
               </thead>
@@ -587,7 +584,7 @@ function ItemDetail({
                       <td className="py-1 pr-2">
                         <input
                           type="checkbox"
-                          aria-label={`Sostituisci ${d.label}`}
+                          aria-label={`Replace ${d.label}`}
                           checked={replace.has(d.key)}
                           onChange={() =>
                             setReplace((s) => {
@@ -614,7 +611,7 @@ function ItemDetail({
           {open && pending ? (
             <div className="flex flex-wrap gap-2">
               <Button size="sm" disabled={action.pending} onClick={() => run({ type: "merge" })}>
-                Unisci
+                Merge
               </Button>
               <Button
                 size="sm"
@@ -622,7 +619,7 @@ function ItemDetail({
                 disabled={action.pending}
                 onClick={() => run({ type: "keep_both" })}
               >
-                Tieni entrambi
+                Keep both
               </Button>
               <Button
                 size="sm"
@@ -630,7 +627,7 @@ function ItemDetail({
                 disabled={action.pending || replace.size === 0}
                 onClick={() => run({ type: "replace_fields", fields: [...replace] })}
               >
-                Sostituisci campi scelti
+                Replace selected fields
               </Button>
             </div>
           ) : null}
@@ -662,7 +659,7 @@ function ItemDetail({
                 title={item.blockers[0]}
                 onClick={() => run({ type: "approve" })}
               >
-                Approva
+                Approve
               </Button>
               <Button
                 size="sm"
@@ -670,25 +667,25 @@ function ItemDetail({
                 disabled={action.pending}
                 onClick={() => run({ type: "accept" })}
               >
-                Accetta come Proposto
+                Accept as Proposed
               </Button>
             </>
           ) : null}
           {item.tab !== "discarded" && pending ? (
             <ConfirmDialog
-              title={`Scartare «${item.name}»?`}
-              confirmLabel="Scarta"
+              title={`Reject “${item.name}”?`}
+              confirmLabel="Reject"
               onConfirm={(f) =>
                 run({ type: "discard", reason: String(f.get("reason") ?? "") || undefined })
               }
               trigger={(openDialog) => (
                 <Button size="sm" variant="ghost" onClick={openDialog} disabled={action.pending}>
-                  Scarta
+                  Reject
                 </Button>
               )}
             >
               <label className="block text-body-sm text-fg">
-                Motivo (facoltativo)
+                Reason (optional)
                 <input name="reason" maxLength={500} className={cn(textareaClass, "mt-1")} />
               </label>
             </ConfirmDialog>
@@ -700,7 +697,7 @@ function ItemDetail({
               disabled={action.pending}
               onClick={() => run({ type: "recover" })}
             >
-              Recupera
+              Recover
             </Button>
           ) : null}
         </div>
@@ -732,7 +729,7 @@ function ItemField({
         <span className="font-medium text-fg">{def.label}</span>
         {editable && !editing ? (
           <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-            Modifica
+            Edit
           </Button>
         ) : null}
       </div>
@@ -762,10 +759,10 @@ function ItemField({
                 )
               }
             >
-              Salva
+              Save
             </Button>
             <Button size="sm" variant="secondary" onClick={() => setEditing(false)}>
-              Annulla
+              Cancel
             </Button>
           </div>
         </div>
@@ -775,18 +772,18 @@ function ItemField({
       {meta && !isEmptyValue(value) ? (
         <p className="mt-1 flex flex-wrap items-center gap-2 text-fg-muted">
           {meta.truth === "observed" ? <ObservedBadge /> : null}
-          {meta.source} · confidenza {confidenceText[meta.confidence]}
+          {meta.source} · {confidenceText[meta.confidence]} confidence
         </p>
       ) : null}
       {meta?.sensitive.length && !isEmptyValue(value) ? (
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <Badge variant="warning" icon={ShieldAlert}>
-            Sensibile · {meta.sensitive.map((k) => claimLabels[k]).join(", ")}
+            Sensitive · {meta.sensitive.map((k) => claimLabels[k]).join(", ")}
           </Badge>
           {needsAccept && editable ? (
             <ConfirmDialog
-              title={`Accettare «${def.label}»?`}
-              confirmLabel="Accetta campo"
+              title={`Accept “${def.label}”?`}
+              confirmLabel="Accept field"
               onConfirm={(f) =>
                 action.run(() =>
                   acceptItemSensitiveAction({
@@ -804,13 +801,12 @@ function ItemField({
                   onClick={openDialog}
                   disabled={action.pending}
                 >
-                  Accetta campo sensibile
+                  Accept sensitive field
                 </Button>
               )}
             >
               <label className="block text-body-sm text-fg">
-                Nota{" "}
-                {meta.confidence === "low" ? "(obbligatoria: confidenza Bassa)" : "(facoltativa)"}
+                Note {meta.confidence === "low" ? "(required: Low confidence)" : "(optional)"}
                 <textarea
                   name="note"
                   rows={2}
@@ -821,7 +817,7 @@ function ItemField({
               </label>
             </ConfirmDialog>
           ) : !needsAccept ? (
-            <span className="text-fg-muted">Accettato</span>
+            <span className="text-fg-muted">Accepted</span>
           ) : null}
         </div>
       ) : null}
@@ -846,7 +842,7 @@ function ImagesTab({
   if (images.length === 0)
     return (
       <Card className="p-0">
-        <EmptyState icon={Inbox}>Tutte le immagini sono state abbinate.</EmptyState>
+        <EmptyState icon={Inbox}>All images have been matched.</EmptyState>
       </Card>
     );
   return (
@@ -859,7 +855,7 @@ function ImagesTab({
             <p className="truncate text-body-sm text-fg">{img.name}</p>
             {img.suggestion ? (
               <p className="text-body-sm text-fg-muted">
-                Forse: {img.suggestion.name} · {confidenceText[img.suggestion.confidence]}
+                Maybe: {img.suggestion.name} · {confidenceText[img.suggestion.confidence]}
               </p>
             ) : null}
             {open ? (
@@ -878,11 +874,11 @@ function ImagesTab({
                       )
                     }
                   >
-                    Accetta suggerimento
+                    Accept suggestion
                   </Button>
                 ) : null}
                 <select
-                  aria-label={`Assegna ${img.name} a un prodotto`}
+                  aria-label={`Assign ${img.name} to a product`}
                   className={cn(selectClass, "w-full")}
                   defaultValue=""
                   disabled={action.pending}
@@ -898,7 +894,7 @@ function ImagesTab({
                     )
                   }
                 >
-                  <option value="">Assegna a…</option>
+                  <option value="">Assign to…</option>
                   {targets.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
@@ -916,7 +912,7 @@ function ImagesTab({
                     )
                   }
                 >
-                  Ignora immagine
+                  Ignore image
                 </Button>
               </div>
             ) : null}

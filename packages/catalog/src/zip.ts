@@ -83,17 +83,19 @@ export async function readZip(
   const maxTotal = opts.maxUncompressedBytes ?? IMPORT_LIMITS.archiveUncompressedBytes;
   const maxRatio = opts.maxEntryRatio ?? IMPORT_LIMITS.archiveEntryMaxRatio;
   const maxEntryBytes = opts.maxEntryBytes ?? maxTotal;
-  const label = opts.label ? `"${opts.label}"` : "L'archivio";
+  const label = opts.label ? `"${opts.label}"` : "The archive";
 
   let zip: yauzl.ZipFile;
   try {
     zip = await open(source);
   } catch {
-    throw new ImportError("IMPORT-INVALID", `${label} non è uno ZIP leggibile.`);
+    throw new ImportError("IMPORT-INVALID", `${label} is not a readable ZIP.`);
   }
   try {
     if (zip.entryCount > maxEntries * 2)
-      throw tooLarge(`${label} contiene troppi file (max ${maxEntries}). Dividilo in più ZIP.`);
+      throw tooLarge(
+        `${label} contains too many files (max ${maxEntries}). Split it into several ZIPs.`,
+      );
     const entries: ZipEntryInfo[] = [];
     let skipped = 0;
     let declaredTotal = 0;
@@ -120,24 +122,26 @@ export async function readZip(
             uncompressedSize: entry.uncompressedSize,
           };
           if (entries.length + 1 > maxEntries)
-            throw tooLarge(`${label} contiene più di ${maxEntries} file. Dividilo in più ZIP.`);
+            throw tooLarge(
+              `${label} contains more than ${maxEntries} files. Split it into several ZIPs.`,
+            );
           declaredTotal += entry.uncompressedSize;
           if (declaredTotal > maxTotal)
             throw tooLarge(
-              `${label} decompresso supera ${Math.round(maxTotal / 1024 / 1024)} MB. Dividilo in più ZIP.`,
+              `${label} exceeds ${Math.round(maxTotal / 1024 / 1024)} MB uncompressed. Split it into several ZIPs.`,
             );
           if (
             entry.uncompressedSize > 1024 * 1024 &&
             entry.uncompressedSize / Math.max(1, entry.compressedSize) > maxRatio
           )
-            throw tooLarge(`${label} contiene un file con un rapporto di compressione anomalo.`);
+            throw tooLarge(`${label} contains a file with an abnormal compression ratio.`);
           entries.push(info);
           if (opts.want?.(info) && opts.onData) {
             if (entry.uncompressedSize > maxEntryBytes)
-              throw tooLarge(`"${path}" supera la dimensione massima ammessa.`);
+              throw tooLarge(`"${path}" exceeds the maximum allowed size.`);
             const data = await readEntry(zip, entry, maxEntryBytes);
             readTotal += data.length;
-            if (readTotal > maxTotal) throw tooLarge(`${label} decompresso è troppo grande.`);
+            if (readTotal > maxTotal) throw tooLarge(`${label} is too large uncompressed.`);
             await opts.onData(info, data);
           }
           zip.readEntry();
@@ -148,7 +152,7 @@ export async function readZip(
     return { entries, skipped };
   } catch (err) {
     if (err instanceof ImportError) throw err;
-    throw new ImportError("IMPORT-INVALID", `${label} è danneggiato o non leggibile.`);
+    throw new ImportError("IMPORT-INVALID", `${label} is damaged or unreadable.`);
   } finally {
     zip.close();
   }
@@ -163,7 +167,7 @@ function readEntry(zip: yauzl.ZipFile, entry: yauzl.Entry, cap: number): Promise
       stream.on("data", (c: Buffer) => {
         size += c.length;
         if (size > cap) {
-          stream.destroy(tooLarge(`"${entry.fileName}" supera la dimensione massima ammessa.`));
+          stream.destroy(tooLarge(`"${entry.fileName}" exceeds the maximum allowed size.`));
           return;
         }
         chunks.push(c);

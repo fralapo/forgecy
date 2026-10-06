@@ -12,14 +12,14 @@ const manifestPath = fileURLToPath(
   new URL("../../../templates/report-audit-a4/template.json", import.meta.url),
 );
 const parsed = parseManifest(readFileSync(manifestPath, "utf8"));
-if (!parsed.ok) throw new Error("template.json del report non valido");
+if (!parsed.ok) throw new Error("Invalid report template.json");
 const template: TemplateManifest = parsed.manifest;
 
-const long = (n: number) => "parola ".repeat(n).trim();
+const long = (n: number) => "word ".repeat(n).trim();
 const item = (i: number, extra: Partial<ReportDocItem> = {}): ReportDocItem => ({
   id: `f${i}`,
   kind: "observation",
-  title: `Osservazione ${i}: ${long(30)}`,
+  title: `Observation ${i}: ${long(30)}`,
   description: long(120),
   impact: null,
   recommendation: null,
@@ -31,8 +31,9 @@ const item = (i: number, extra: Partial<ReportDocItem> = {}): ReportDocItem => (
 
 function doc(sections: ReportDocument["sections"]): ReportDocument {
   return {
+    // Italian report on purpose: the assertions below check the Italian text table.
     language: "it",
-    agency: { name: "Agenzia Esempio" },
+    agency: { name: "Example Agency" },
     prospect: { name: "Forno Rossi", websiteUrl: "https://forno.example" },
     version: 2,
     status: "approved",
@@ -46,12 +47,12 @@ const section = (
   key: ReportDocument["sections"][number]["key"],
   items: ReportDocItem[] = [],
   bullets: string[] = [],
-) => ({ key, title: `Sezione ${key}`, intro: long(100), bullets, note: "", items });
+) => ({ key, title: `Section ${key}`, intro: long(100), bullets, note: "", items });
 
 describe("report pages", () => {
   it("fits texts at a word with an ellipsis and drops highlight markers", () => {
-    expect(fitText("uno due tre quattro", 12)).toBe("uno due tre…");
-    expect(fitText("già ==corto==", 40)).toBe("già =corto=");
+    expect(fitText("one two six seven", 12)).toBe("one two six…");
+    expect(fitText("now ==short==", 40)).toBe("now =short=");
     expect([...fitText(long(100), 90)].length).toBeLessThanOrEqual(90);
   });
 
@@ -60,12 +61,12 @@ describe("report pages", () => {
       section("cover"),
       section("overview", [], [long(40), long(40)]),
       section("problems", [
-        item(1, { kind: "problem", impact: long(60), causes: [long(30), "Breve"] }),
-        item(2, { kind: "problem", description: null, recommendation: "Rifare la home" }),
+        item(1, { kind: "problem", impact: long(60), causes: [long(30), "Short"] }),
+        item(2, { kind: "problem", description: null, recommendation: "Redo the home page" }),
       ]),
-      section("website", [item(3, { evidence: ["Home", "Contatti"], recommendation: long(80) })]),
+      section("website", [item(3, { evidence: ["Home", "Contact"], recommendation: long(80) })]),
       section("next_steps"),
-      section("method", [], [long(30), "Sito: letto il 2026-10-01"]),
+      section("method", [], [long(30), "Website: read on 2026-10-01"]),
     ]);
     const { slides, dropped } = reportSlides(d, template);
     expect(dropped).toBe(0);
@@ -86,12 +87,12 @@ describe("report pages", () => {
       title: "La comunicazione di ==Forno Rossi==",
       client: "Forno Rossi",
       date: "ottobre 2026",
-      prepared_by: "Agenzia Esempio",
+      prepared_by: "Example Agency",
     });
     // A finding without evidence or recommendation still fills the required slots.
     expect(slides[6]!.slots).toMatchObject({
       severity: "Priorità alta",
-      evidence: "Home · Contatti",
+      evidence: "Home · Contact",
     });
     expect(slides[7]!.slots?.steps).toEqual([
       "Fissiamo una call per decidere insieme le priorità.",

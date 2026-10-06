@@ -31,8 +31,8 @@ export function LoginForm({ magicLink, google }: { magicLink: boolean; google: b
     if (error) {
       setError(
         error.status === 429
-          ? "Troppi tentativi. Riprova tra un minuto."
-          : "Email o password non corretti.",
+          ? "Too many attempts. Try again in a minute."
+          : "Incorrect email or password.",
       );
       return;
     }
@@ -48,10 +48,10 @@ export function LoginForm({ magicLink, google }: { magicLink: boolean; google: b
       callbackURL: safeNext(params.get("next")),
     });
     setPending(false);
-    if (error) setError("Non è stato possibile inviare il link. Controlla l'indirizzo.");
+    if (error) setError("We couldn't send the link. Check the address.");
     else
       setNotice(
-        "Se l'indirizzo è autorizzato, riceverai un link di accesso valido per pochi minuti.",
+        "If the address is allowed, you'll receive a sign-in link valid for a few minutes.",
       );
   }
 
@@ -84,7 +84,7 @@ export function LoginForm({ magicLink, google }: { magicLink: boolean; google: b
         ) : null}
         <Button type="submit" className="w-full" disabled={pending}>
           <LogIn aria-hidden />
-          Accedi
+          Sign in
         </Button>
       </form>
       {magicLink ? (
@@ -95,12 +95,12 @@ export function LoginForm({ magicLink, google }: { magicLink: boolean; google: b
           onClick={() => {
             const email =
               (document.getElementById("email") as HTMLInputElement | null)?.value ?? "";
-            if (!email) setError("Scrivi la tua email per ricevere il link.");
+            if (!email) setError("Enter your email to receive the link.");
             else void onMagicLink(email);
           }}
         >
           <Mail aria-hidden />
-          Inviami un link di accesso
+          Email me a sign-in link
         </Button>
       ) : null}
       {google ? (
@@ -115,7 +115,7 @@ export function LoginForm({ magicLink, google }: { magicLink: boolean; google: b
             })
           }
         >
-          Accedi con Google
+          Sign in with Google
         </Button>
       ) : null}
     </div>
