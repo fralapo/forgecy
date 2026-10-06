@@ -29,11 +29,15 @@ describe("client tokens", () => {
     delete t.color.semantic.accent;
     const issues = validateTokens(t);
     expect(issues.some((i) => i.path === "color.semantic.background")).toBe(true);
-    expect(issues.some((i) => i.path === "color.semantic.accent" && /mancante/.test(i.message))).toBe(true);
+    expect(
+      issues.some((i) => i.path === "color.semantic.accent" && /mancante/.test(i.message)),
+    ).toBe(true);
   });
 
   it("grades contrast pairs with the WCAG thresholds", () => {
-    const t = defaultTokens() as { color: { reference: Record<string, unknown>; semantic: Record<string, unknown> } };
+    const t = defaultTokens() as {
+      color: { reference: Record<string, unknown>; semantic: Record<string, unknown> };
+    };
     t.color.reference.giallo = { $value: hexToDtcg("#FFE600") };
     t.color.semantic["text-secondary"] = { $value: "{color.reference.giallo}" };
     const m = contrastMatrix(t);

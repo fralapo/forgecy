@@ -13,5 +13,5 @@ export * from "./read";
 export * from "./service";
 export * from "./jobs";
 export { detectImportFile, type DetectResult, type ImportFileType } from "./import/detect";
-export { runSourceImport, type ImportResult } from "./import/run";
+export type { ImportResult } from "./import/run";
 export { newItemId } from "./ids";

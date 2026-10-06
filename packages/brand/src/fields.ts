@@ -76,7 +76,15 @@ const f = (
   sensitive: boolean,
   value: z.ZodType,
   uniqueBy?: FieldDef["uniqueBy"],
-): FieldDef => ({ pointer, block, label, shape, sensitive, value, ...(uniqueBy ? { uniqueBy } : {}) });
+): FieldDef => ({
+  pointer,
+  block,
+  label,
+  shape,
+  sensitive,
+  value,
+  ...(uniqueBy ? { uniqueBy } : {}),
+});
 
 export const fields: readonly FieldDef[] = [
   f("/document/strategy/oneLiner", "strategy", "One-liner", "sourced", true, str(300)),
@@ -95,14 +103,8 @@ export const fields: readonly FieldDef[] = [
   f("/document/strategy/mission", "strategy", "Missione", "sourced", true, str(1000)),
   f("/document/strategy/vision", "strategy", "Visione", "sourced", false, str(1000)),
   f("/document/strategy/category", "strategy", "Categoria", "sourced", false, str(200)),
-  f(
-    "/document/strategy/values",
-    "strategy",
-    "Valori",
-    "sourced-list",
-    true,
-    valueItemSchema,
-    (v) => lower(byKey("name")(v)),
+  f("/document/strategy/values", "strategy", "Valori", "sourced-list", true, valueItemSchema, (v) =>
+    lower(byKey("name")(v)),
   ),
   f(
     "/document/strategy/audience",
@@ -113,8 +115,23 @@ export const fields: readonly FieldDef[] = [
     audienceSegmentSchema,
     (v) => lower(byKey("name")(v)),
   ),
-  f("/document/strategy/messages", "strategy", "Messaggi e claim", "sourced-list", true, messageSchema),
-  f("/document/strategy/avoidTopics", "strategy", "Temi da evitare", "sourced-list", false, str(300), lower),
+  f(
+    "/document/strategy/messages",
+    "strategy",
+    "Messaggi e claim",
+    "sourced-list",
+    true,
+    messageSchema,
+  ),
+  f(
+    "/document/strategy/avoidTopics",
+    "strategy",
+    "Temi da evitare",
+    "sourced-list",
+    false,
+    str(300),
+    lower,
+  ),
   f("/document/verbal/voice", "verbal", "Voce", "sourced", true, str(1000)),
   f(
     "/document/verbal/toneAxes",
@@ -134,9 +151,32 @@ export const fields: readonly FieldDef[] = [
     weAreSchema,
     (v) => lower(byKey("weAre")(v)),
   ),
-  f("/document/verbal/writingRules", "verbal", "Regole di scrittura", "sourced", false, writingRulesSchema),
-  f("/document/verbal/preferredWords", "verbal", "Parole preferite", "string-list", false, str(80), lower),
-  f("/document/verbal/forbiddenWords", "verbal", "Parole vietate", "string-list", false, str(80), lower),
+  f(
+    "/document/verbal/writingRules",
+    "verbal",
+    "Regole di scrittura",
+    "sourced",
+    false,
+    writingRulesSchema,
+  ),
+  f(
+    "/document/verbal/preferredWords",
+    "verbal",
+    "Parole preferite",
+    "string-list",
+    false,
+    str(80),
+    lower,
+  ),
+  f(
+    "/document/verbal/forbiddenWords",
+    "verbal",
+    "Parole vietate",
+    "string-list",
+    false,
+    str(80),
+    lower,
+  ),
   f(
     "/document/visual/logo/variants",
     "visual",
@@ -240,7 +280,8 @@ export function matchField(pointer: string): FieldMatch | null {
 export function fieldLabel(pointer: string): string {
   const m = matchField(pointer);
   if (!m) return pointer;
-  const tail = m.field.shape === "token-group" && m.rest ? ` › ${m.rest.slice(1).replace(/\//g, ".")}` : "";
+  const tail =
+    m.field.shape === "token-group" && m.rest ? ` › ${m.rest.slice(1).replace(/\//g, ".")}` : "";
   return `${blocks[m.field.block]} › ${m.field.label}${tail}`;
 }
 

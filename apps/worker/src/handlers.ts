@@ -1,3 +1,4 @@
+import { brandHandlers } from "@forgecy/brand/handlers";
 import { handle, systemPingJob, type JobHandlers } from "@forgecy/jobs";
 
 /**
@@ -9,4 +10,5 @@ export const handlers: JobHandlers = {
     await ctx.progress(100);
     return { pong: payload.message, at: new Date().toISOString() };
   }),
+  ...brandHandlers,
 };

@@ -59,6 +59,9 @@ importers:
       '@forgecy/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@forgecy/brand':
+        specifier: workspace:*
+        version: link:../../packages/brand
       '@forgecy/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -129,6 +132,9 @@ importers:
       '@forgecy/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@forgecy/brand':
+        specifier: workspace:*
+        version: link:../../packages/brand
       '@forgecy/core':
         specifier: workspace:*
         version: link:../../packages/core

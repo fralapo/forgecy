@@ -28,7 +28,9 @@ const docx = () =>
 const pptx = () =>
   zipSync({
     "ppt/presentation.xml": strToU8("<p:presentation/>"),
-    "ppt/slides/slide2.xml": strToU8("<p:sld><a:p><a:r><a:t>Tono di voce</a:t></a:r></a:p></p:sld>"),
+    "ppt/slides/slide2.xml": strToU8(
+      "<p:sld><a:p><a:r><a:t>Tono di voce</a:t></a:r></a:p></p:sld>",
+    ),
     "ppt/slides/slide1.xml": strToU8("<p:sld><a:p><a:r><a:t>Brand book</a:t></a:r></a:p></p:sld>"),
     "ppt/theme/theme1.xml": strToU8(THEME),
   });
@@ -69,22 +71,36 @@ function ttf(family: string, subfamily: string): Uint8Array {
 
 describe("detectImportFile", () => {
   it("recognizes OOXML from the bytes, not the name", () => {
-    expect(detectImportFile({ name: "book.zip", mime: "", bytes: docx() })).toMatchObject({ ok: true, type: "docx" });
-    expect(detectImportFile({ name: "deck.docx", mime: "", bytes: pptx() })).toMatchObject({ ok: true, type: "pptx" });
+    expect(detectImportFile({ name: "book.zip", mime: "", bytes: docx() })).toMatchObject({
+      ok: true,
+      type: "docx",
+    });
+    expect(detectImportFile({ name: "deck.docx", mime: "", bytes: pptx() })).toMatchObject({
+      ok: true,
+      type: "pptx",
+    });
     const other = zipSync({ "a.txt": strToU8("x") });
-    expect(detectImportFile({ name: "a.zip", mime: "application/zip", bytes: other }).ok).toBe(false);
+    expect(detectImportFile({ name: "a.zip", mime: "application/zip", bytes: other }).ok).toBe(
+      false,
+    );
   });
 
   it("accepts PDF, text and WOFF and refuses empty or unknown files", () => {
-    expect(detectImportFile({ name: "b.pdf", mime: "application/pdf", bytes: strToU8("%PDF-1.7\n...") })).toMatchObject({
+    expect(
+      detectImportFile({ name: "b.pdf", mime: "application/pdf", bytes: strToU8("%PDF-1.7\n...") }),
+    ).toMatchObject({
       ok: true,
       type: "pdf",
     });
-    expect(detectImportFile({ name: "note.md", mime: "", bytes: strToU8("# Tono\nCaldo") })).toMatchObject({
+    expect(
+      detectImportFile({ name: "note.md", mime: "", bytes: strToU8("# Tono\nCaldo") }),
+    ).toMatchObject({
       ok: true,
       type: "text",
     });
-    expect(detectImportFile({ name: "f.woff", mime: "", bytes: strToU8("wOFF....") })).toMatchObject({
+    expect(
+      detectImportFile({ name: "f.woff", mime: "", bytes: strToU8("wOFF....") }),
+    ).toMatchObject({
       ok: true,
       type: "font",
     });
@@ -92,9 +108,13 @@ describe("detectImportFile", () => {
       ok: false,
       message: "Il file è vuoto.",
     });
-    expect(detectImportFile({ name: "x.exe", mime: "application/octet-stream", bytes: strToU8("MZ\x90\x00") }).ok).toBe(
-      false,
-    );
+    expect(
+      detectImportFile({
+        name: "x.exe",
+        mime: "application/octet-stream",
+        bytes: strToU8("MZ\x90\x00"),
+      }).ok,
+    ).toBe(false);
   });
 });
 
@@ -119,14 +139,21 @@ describe("extractFile", () => {
   });
 
   it("reads SVG colors and markdown sections", async () => {
-    const svg = await extractFile("svg", strToU8('<svg><path fill="#f00"/><path fill="#F00"/></svg>'), "logo.svg");
+    const svg = await extractFile(
+      "svg",
+      strToU8('<svg><path fill="#f00"/><path fill="#F00"/></svg>'),
+      "logo.svg",
+    );
     expect(svg.colors[0]).toMatchObject({ hex: "#FF0000", count: 2 });
     const md = await extractFile("text", strToU8("Intro\n# Valori\nOnestà"), "note.md");
     expect(md.pages.map((p) => p.locator)).toEqual(["Inizio", "Sezione: Valori"]);
   });
 
   it("names fonts from the name table, else from the file name", async () => {
-    expect(readFontNames(ttf("Rossi Sans", "Bold"))).toEqual({ family: "Rossi Sans", subfamily: "Bold" });
+    expect(readFontNames(ttf("Rossi Sans", "Bold"))).toEqual({
+      family: "Rossi Sans",
+      subfamily: "Bold",
+    });
     const r = await extractFile("font", ttf("Rossi Sans", "Bold"), "x.ttf");
     expect(r.fonts[0]).toMatchObject({ family: "Rossi Sans", weights: [700] });
     expect(familyFromFileName("RossiSerif-SemiBoldItalic.woff2")).toBe("Rossi Serif");
@@ -138,5 +165,16 @@ describe("chunkPages", () => {
   it("keeps pages whole and respects the budget", () => {
     const pages = [1, 2, 3].map((n) => ({ locator: `p. ${n}`, text: "x".repeat(40) }));
     expect(chunkPages(pages, 120).map((c) => c.length)).toEqual([2, 1]);
+  });
+});
+
+describe("colorName", () => {
+  it("takes the words right before the value", async () => {
+    const { colorName } = await import("../src/import/candidates");
+    const ctx = "Colori Blu Rossi #0044CC usato per titoli. Crema #F5EBDC per gli sfondi.";
+    expect(colorName(ctx, "#F5EBDC", "x")).toBe("Crema");
+    expect(colorName(ctx, "#0044CC", "x")).toBe("Colori Blu Rossi");
+    expect(colorName("Bianco: #fff", "#FFFFFF", "x")).toBe("Bianco");
+    expect(colorName("#123456", "#123456", "colore-1")).toBe("colore-1");
   });
 });

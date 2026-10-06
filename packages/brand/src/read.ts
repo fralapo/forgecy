@@ -16,7 +16,12 @@ import {
   sql,
   type Database,
 } from "@forgecy/db";
-import { buildBrandContext, type BrandContext, type BrandContextOptions, type ContextExample } from "./context";
+import {
+  buildBrandContext,
+  type BrandContext,
+  type BrandContextOptions,
+  type ContextExample,
+} from "./context";
 import { parseDocument, type BrandIdentityDocument } from "./document";
 import type { TokenTree } from "./tokens";
 
@@ -50,7 +55,12 @@ export async function getPublishedBrandIdentity(
   const [row] = await db
     .select()
     .from(brandIdentityVersions)
-    .where(and(eq(brandIdentityVersions.clientId, clientId), eq(brandIdentityVersions.status, "published")));
+    .where(
+      and(
+        eq(brandIdentityVersions.clientId, clientId),
+        eq(brandIdentityVersions.status, "published"),
+      ),
+    );
   return row ? toPublished(row) : null;
 }
 

@@ -5,14 +5,7 @@
  */
 import { ForgecyError, type Actor } from "@forgecy/core";
 import type { AiGateway } from "@forgecy/ai";
-import {
-  and,
-  brandIdentityProposals,
-  brandSources,
-  clients,
-  eq,
-  type Database,
-} from "@forgecy/db";
+import { and, brandIdentityProposals, brandSources, clients, eq, type Database } from "@forgecy/db";
 import type { StorageDriver } from "@forgecy/files";
 import { addSourceProposals, type CandidateProposal } from "./candidates";
 import { detectImportFile } from "./detect";
@@ -117,25 +110,51 @@ function fromAnalyst(item: AnalystItem): CandidateProposal | null {
         ...base,
         path: "/document/verbal/toneAxes",
         op: "append",
-        value: { axis: item.axis, value: item.value, goodExample: item.goodExample, badExample: item.badExample },
+        value: {
+          axis: item.axis,
+          value: item.value,
+          goodExample: item.goodExample,
+          badExample: item.badExample,
+        },
       };
     case "weAre":
-      return { ...base, path: "/document/verbal/weAreWeAreNot", op: "append", value: { weAre: item.weAre, weAreNot: item.weAreNot } };
+      return {
+        ...base,
+        path: "/document/verbal/weAreWeAreNot",
+        op: "append",
+        value: { weAre: item.weAre, weAreNot: item.weAreNot },
+      };
     case "preferredWord":
       return { ...base, path: "/document/verbal/preferredWords", op: "append", value: item.text };
     case "forbiddenWord":
       return { ...base, path: "/document/verbal/forbiddenWords", op: "append", value: item.text };
     case "color":
-      return { ...base, kind: "color", path: "", op: "set", value: { name: item.name, hex: item.hex, usage: item.usage } };
+      return {
+        ...base,
+        kind: "color",
+        path: "",
+        op: "set",
+        value: { name: item.name, hex: item.hex, usage: item.usage },
+      };
     case "typography":
       return {
         ...base,
         path: "/document/visual/typography",
         op: "append",
-        value: { role: item.role, family: item.family, weights: item.weights, licenseStatus: "to_verify" },
+        value: {
+          role: item.role,
+          family: item.family,
+          weights: item.weights,
+          licenseStatus: "to_verify",
+        },
       };
     case "logoForbiddenUse":
-      return { ...base, path: "/document/visual/logo/forbiddenUses", op: "append", value: item.text };
+      return {
+        ...base,
+        path: "/document/visual/logo/forbiddenUses",
+        op: "append",
+        value: item.text,
+      };
     case "visualDo":
       return { ...base, path: "/document/visual/do", op: "append", value: item.text };
     case "visualDont":
@@ -145,7 +164,12 @@ function fromAnalyst(item: AnalystItem): CandidateProposal | null {
   }
 }
 
-function deterministic(extraction: Extraction, fileName: string, type: string, sourceId: string): CandidateProposal[] {
+function deterministic(
+  extraction: Extraction,
+  fileName: string,
+  type: string,
+  sourceId: string,
+): CandidateProposal[] {
   const out: CandidateProposal[] = [];
   const colors = [...extraction.colors].sort((a, b) => b.count - a.count).slice(0, 16);
   for (const c of colors)
@@ -168,7 +192,10 @@ function deterministic(extraction: Extraction, fileName: string, type: string, s
         licenseStatus: "to_verify",
         ...(type === "font" ? { sourceId } : {}),
       },
-      rationale: type === "font" ? "Font importato: conferma ruolo e licenza." : "Font indicato nel tema del documento.",
+      rationale:
+        type === "font"
+          ? "Font importato: conferma ruolo e licenza."
+          : "Font indicato nel tema del documento.",
       evidence: { locator: f.locator },
     });
   if ((type === "image" || type === "svg") && /logo|marchio|logotipo/i.test(fileName)) {
@@ -201,7 +228,8 @@ export async function runSourceImport(
     .select()
     .from(brandSources)
     .where(and(eq(brandSources.id, input.sourceId), eq(brandSources.clientId, input.clientId)));
-  if (!source || source.removedAt) throw new ForgecyError("not_found", "Fonte non trovata o rimossa");
+  if (!source || source.removedAt)
+    throw new ForgecyError("not_found", "Fonte non trovata o rimossa");
   const [client] = await db
     .select({ name: clients.name, aiPolicy: clients.aiPolicy })
     .from(clients)
@@ -212,7 +240,12 @@ export async function runSourceImport(
   // A retry of the same run replaces what the failed attempt left pending.
   await db
     .delete(brandIdentityProposals)
-    .where(and(eq(brandIdentityProposals.runId, ctx.jobId), eq(brandIdentityProposals.status, "proposed")));
+    .where(
+      and(
+        eq(brandIdentityProposals.runId, ctx.jobId),
+        eq(brandIdentityProposals.status, "proposed"),
+      ),
+    );
   await updateSourceStatus(db, source.id, { status: "extracting", statusDetail: "Lettura" });
 
   let extraction: Extraction;
@@ -222,14 +255,30 @@ export async function runSourceImport(
     const detected = detectImportFile({ name: source.title, mime: source.mime ?? "", bytes });
     if (!detected.ok) {
       await updateSourceStatus(db, source.id, { status: "failed", statusDetail: detected.message });
-      return { sourceId: source.id, pages: 0, candidates: 0, proposals: 0, skipped: 0, ai: "skipped", detail: detected.message };
+      return {
+        sourceId: source.id,
+        pages: 0,
+        candidates: 0,
+        proposals: 0,
+        skipped: 0,
+        ai: "skipped",
+        detail: detected.message,
+      };
     }
     try {
       extraction = await extractFile(detected.type, bytes, source.title);
     } catch (err) {
       if (!(err instanceof ExtractionError)) throw err;
       await updateSourceStatus(db, source.id, { status: "failed", statusDetail: err.message });
-      return { sourceId: source.id, pages: 0, candidates: 0, proposals: 0, skipped: 0, ai: "skipped", detail: err.message };
+      return {
+        sourceId: source.id,
+        pages: 0,
+        candidates: 0,
+        proposals: 0,
+        skipped: 0,
+        ai: "skipped",
+        detail: err.message,
+      };
     }
     await updateSourceStatus(db, source.id, { pages: extraction.pages });
     candidates = deterministic(extraction, source.title, detected.type, source.id);
@@ -255,14 +304,22 @@ export async function runSourceImport(
           schema: analystOutputSchema,
           schemaName: "brand_identity_items",
           system: ANALYST_SYSTEM,
-          input: analystUserPrompt({ clientName: client.name, sourceTitle: source.title, pages: chunk }),
+          input: analystUserPrompt({
+            clientName: client.name,
+            sourceTitle: source.title,
+            pages: chunk,
+          }),
           clientId: input.clientId,
           clientPolicy: client.aiPolicy,
           authorizedBy: ctx.requestedBy ?? null,
           jobId: ctx.jobId,
           inputSummary: {
             fields: { document: chunk.map((p) => p.text).join("\n") },
-            meta: { promptVersion: BRAND_ANALYST_PROMPT_VERSION, sourceId: source.id, pages: chunk.length },
+            meta: {
+              promptVersion: BRAND_ANALYST_PROMPT_VERSION,
+              sourceId: source.id,
+              pages: chunk.length,
+            },
           },
         });
         const locators = new Set(chunk.map((p) => p.locator));
@@ -278,15 +335,26 @@ export async function runSourceImport(
       const last = ctx.attempt >= ctx.maxAttempts;
       if (err instanceof ForgecyError || last) {
         ai = "failed";
-        aiNote = err instanceof ForgecyError ? `Interpretazione AI non eseguita: ${err.message}` : "Interpretazione AI non riuscita";
+        aiNote =
+          err instanceof ForgecyError
+            ? `Interpretazione AI non eseguita: ${err.message}`
+            : "Interpretazione AI non riuscita";
       } else throw err;
     }
   }
 
-  const { created, skipped } = await addSourceProposals(db, agent, input.clientId, source.id, candidates);
+  const { created, skipped } = await addSourceProposals(
+    db,
+    agent,
+    input.clientId,
+    source.id,
+    candidates,
+  );
   await ctx.progress?.(95);
   const parts = [
-    extraction.pages.length ? `${extraction.pages.length} ${extraction.pages.length === 1 ? "pagina letta" : "pagine lette"}` : null,
+    extraction.pages.length
+      ? `${extraction.pages.length} ${extraction.pages.length === 1 ? "pagina letta" : "pagine lette"}`
+      : null,
     `${created} ${created === 1 ? "proposta" : "proposte"}`,
     skipped ? `${skipped} già presenti o non valide` : null,
     ...extraction.warnings,

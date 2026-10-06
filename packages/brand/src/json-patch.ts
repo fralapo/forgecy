@@ -40,9 +40,7 @@ export function parsePointer(pointer: string): string[] {
 }
 
 export function formatPointer(segments: readonly (string | number)[]): string {
-  return segments
-    .map((s) => `/${String(s).replace(/~/g, "~0").replace(/\//g, "~1")}`)
-    .join("");
+  return segments.map((s) => `/${String(s).replace(/~/g, "~0").replace(/\//g, "~1")}`).join("");
 }
 
 export function deepEqual(a: unknown, b: unknown): boolean {
@@ -118,7 +116,8 @@ function remove(root: unknown, path: string): unknown {
   if (!hasPath(root, path))
     throw new JsonPatchError("path_not_found", path, `Nothing to remove at ${path}`);
   const { parent, key } = parentOf(root, path);
-  if (Array.isArray(parent)) return parent.splice(arrayIndex(key, parent.length, false, path), 1)[0];
+  if (Array.isArray(parent))
+    return parent.splice(arrayIndex(key, parent.length, false, path), 1)[0];
   const obj = parent as Record<string, unknown>;
   const old = obj[key];
   delete obj[key];

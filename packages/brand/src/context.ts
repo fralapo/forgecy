@@ -130,12 +130,18 @@ export function buildBrandContext(
   const w = v.writingRules?.value;
   if (w) {
     if (w.person) rules.push(`Rivolgiti al lettore con: ${w.person}`);
-    if (w.emoji) rules.push(`Emoji: ${{ no: "mai", limited: "con moderazione", yes: "ammesse" }[w.emoji]}`);
+    if (w.emoji)
+      rules.push(`Emoji: ${{ no: "mai", limited: "con moderazione", yes: "ammesse" }[w.emoji]}`);
     if (w.maxSentenceWords) rules.push(`Frasi di al massimo ${w.maxSentenceWords} parole`);
     if (w.maxHashtags !== undefined) rules.push(`Al massimo ${w.maxHashtags} hashtag`);
     if (w.anglicisms)
-      rules.push(`Anglicismi: ${{ avoid: "da evitare", limited: "pochi", allowed: "ammessi" }[w.anglicisms]}`);
-    if (w.exclamations) rules.push(`Punti esclamativi: ${{ no: "mai", limited: "rari", yes: "ammessi" }[w.exclamations]}`);
+      rules.push(
+        `Anglicismi: ${{ avoid: "da evitare", limited: "pochi", allowed: "ammessi" }[w.anglicisms]}`,
+      );
+    if (w.exclamations)
+      rules.push(
+        `Punti esclamativi: ${{ no: "mai", limited: "rari", yes: "ammessi" }[w.exclamations]}`,
+      );
     for (const [label, val] of [
       ["Maiuscole", w.capitalization],
       ["Numeri", w.numbers],
@@ -146,9 +152,11 @@ export function buildBrandContext(
     ] as const)
       if (val) rules.push(`${label}: ${val}`);
   }
-  if (v.forbiddenWords.length) rules.push(`Parole vietate (mai usarle): ${v.forbiddenWords.join(", ")}`);
+  if (v.forbiddenWords.length)
+    rules.push(`Parole vietate (mai usarle): ${v.forbiddenWords.join(", ")}`);
   if (v.preferredWords.length) rules.push(`Parole preferite: ${v.preferredWords.join(", ")}`);
-  if (v.spellings.length) rules.push(`Grafia corretta: ${v.spellings.map((x) => x.term).join(", ")}`);
+  if (v.spellings.length)
+    rules.push(`Grafia corretta: ${v.spellings.map((x) => x.term).join(", ")}`);
   const avoid = live(s.avoidTopics);
   if (avoid.length) rules.push(`Temi da evitare: ${avoid.map((t) => t.value).join("; ")}`);
   const values = live(s.values);
@@ -177,8 +185,12 @@ export function buildBrandContext(
   const audience = pillar?.value.audienceId
     ? live(s.audience).find((a) => a.id === pillar.value.audienceId)
     : live(s.audience)[0];
-  const channel = options.channel ? live(d.channels).find((c) => c.value.channel === options.channel) : undefined;
-  const format = options.formatKey ? d.content.formats.find((f) => f.key === options.formatKey) : undefined;
+  const channel = options.channel
+    ? live(d.channels).find((c) => c.value.channel === options.channel)
+    : undefined;
+  const format = options.formatKey
+    ? d.content.formats.find((f) => f.key === options.formatKey)
+    : undefined;
 
   const fixed: string[] = [];
   if (audience) {
@@ -246,22 +258,41 @@ export function buildBrandContext(
       ),
     );
   }
-  if (options.memoryRules?.length) fixed.push(section("Regole di memoria", bullet(options.memoryRules)));
+  if (options.memoryRules?.length)
+    fixed.push(section("Regole di memoria", bullet(options.memoryRules)));
 
-  const approved = pickExamples(options.examples ?? [], "approved", options.approvedExamples ?? 5, options);
-  const rejected = pickExamples(options.examples ?? [], "rejected", options.rejectedExamples ?? 2, options);
+  const approved = pickExamples(
+    options.examples ?? [],
+    "approved",
+    options.approvedExamples ?? 5,
+    options,
+  );
+  const rejected = pickExamples(
+    options.examples ?? [],
+    "rejected",
+    options.rejectedExamples ?? 2,
+    options,
+  );
   const renderExamples = (a: ContextExample[], r: ContextExample[]) =>
     [
-      a.length && section("Esempi approvati", a.map((e) => `«${e.body}»\nPerché funziona: ${e.reason}`).join("\n\n")),
-      r.length && section("Esempi rifiutati", r.map((e) => `«${e.body}»\nPerché no: ${e.reason}`).join("\n\n")),
+      a.length &&
+        section(
+          "Esempi approvati",
+          a.map((e) => `«${e.body}»\nPerché funziona: ${e.reason}`).join("\n\n"),
+        ),
+      r.length &&
+        section(
+          "Esempi rifiutati",
+          r.map((e) => `«${e.body}»\nPerché no: ${e.reason}`).join("\n\n"),
+        ),
     ]
       .filter(Boolean)
       .join("\n\n");
   const brief = options.brief ? section("Brief", options.brief) : "";
 
   // Cut the oldest examples first; binding rules are never cut.
-  let a = [...approved];
-  let r = [...rejected];
+  const a = [...approved];
+  const r = [...rejected];
   const build = () => [...fixed, renderExamples(a, r), brief].filter(Boolean).join("\n\n");
   let variable = build();
   const total = () => estimateTokens(`${stable}\n\n${variable}`);

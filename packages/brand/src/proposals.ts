@@ -135,7 +135,11 @@ export function buildProposalPatch(
   const { field, rest } = match;
   const root: DraftState = { document: state.document, tokens: state.tokens };
   const current = (p: string) => getAt(root, p);
-  const test = (p: string) => ({ op: "test" as const, path: p, value: structuredClone(current(p)) });
+  const test = (p: string) => ({
+    op: "test" as const,
+    path: p,
+    value: structuredClone(current(p)),
+  });
   const wrap = (raw: unknown, id?: string) => ({
     id: id ?? newItemId(),
     value: raw,
@@ -150,7 +154,12 @@ export function buildProposalPatch(
       if (input.op === "append") invalid(`${field.label} non è un elenco`);
       if (input.op === "remove") {
         if (!hasPath(root, field.pointer)) invalid(`${field.label} è già vuoto`);
-        return { patch: [test(field.pointer), { op: "remove", path: field.pointer }], field, fieldPath: field.pointer, written: undefined };
+        return {
+          patch: [test(field.pointer), { op: "remove", path: field.pointer }],
+          field,
+          fieldPath: field.pointer,
+          written: undefined,
+        };
       }
       const old = current(field.pointer) as { id?: string } | undefined;
       const written = wrap(parseValue(field, input.value), old?.id);
@@ -164,13 +173,17 @@ export function buildProposalPatch(
     case "string-list": {
       const items = (current(field.pointer) as unknown[] | undefined) ?? [];
       const plain = field.shape === "string-list";
-      const itemValue = (it: unknown) => (field.shape === "sourced-list" ? (it as { value: unknown }).value : it);
+      const itemValue = (it: unknown) =>
+        field.shape === "sourced-list" ? (it as { value: unknown }).value : it;
       if (input.op === "append") {
         if (rest !== "" && rest !== "/-") invalid(`Per aggiungere usa ${field.pointer}`);
         let raw = parseValue(field, input.value);
-        if (field.shape === "object-list" && isObject(raw) && !raw.id) raw = { ...raw, id: newItemId() };
+        if (field.shape === "object-list" && isObject(raw) && !raw.id)
+          raw = { ...raw, id: newItemId() };
         const key = field.uniqueBy?.(raw);
-        const existing = key ? items.findIndex((it) => field.uniqueBy?.(itemValue(it)) === key) : -1;
+        const existing = key
+          ? items.findIndex((it) => field.uniqueBy?.(itemValue(it)) === key)
+          : -1;
         if (existing >= 0) {
           if (plain) invalid(`"${String(raw)}" è già presente in ${field.label}`);
           const p = `${field.pointer}/${existing}`;
@@ -198,7 +211,12 @@ export function buildProposalPatch(
       const p = `${field.pointer}/${i}`;
       if (i >= items.length) invalid(`Elemento ${i} inesistente in ${field.label}`);
       if (input.op === "remove")
-        return { patch: [test(p), { op: "remove", path: p }], field, fieldPath: p, written: undefined };
+        return {
+          patch: [test(p), { op: "remove", path: p }],
+          field,
+          fieldPath: p,
+          written: undefined,
+        };
       const raw = parseValue(field, input.value);
       const old = items[i] as Record<string, unknown>;
       const written =
@@ -207,7 +225,12 @@ export function buildProposalPatch(
           : field.shape === "object-list"
             ? { ...(raw as Record<string, unknown>), id: old.id }
             : raw;
-      return { patch: [test(p), { op: "replace", path: p, value: written }], field, fieldPath: p, written };
+      return {
+        patch: [test(p), { op: "replace", path: p, value: written }],
+        field,
+        fieldPath: p,
+        written,
+      };
     }
     case "token-group": {
       if (input.op === "append") invalid("Per i token usa set con il nome del token");
@@ -218,7 +241,12 @@ export function buildProposalPatch(
       const p = input.path;
       if (input.op === "remove") {
         if (!hasPath(root, p)) invalid("Token inesistente");
-        return { patch: [test(p), { op: "remove", path: p }], field, fieldPath: p, written: undefined };
+        return {
+          patch: [test(p), { op: "remove", path: p }],
+          field,
+          fieldPath: p,
+          written: undefined,
+        };
       }
       const raw = parseValue(field, input.value) as Record<string, unknown>;
       const written = {
@@ -233,7 +261,12 @@ export function buildProposalPatch(
         },
       };
       if (hasPath(root, p))
-        return { patch: [test(p), { op: "replace", path: p, value: written }], field, fieldPath: p, written };
+        return {
+          patch: [test(p), { op: "replace", path: p, value: written }],
+          field,
+          fieldPath: p,
+          written,
+        };
       // Create missing groups along the way with a single add on the first missing segment.
       const all = parsePointer(p);
       let k = 1;
@@ -306,7 +339,8 @@ export function proposedValue(patch: JsonPatch, field: FieldDef): unknown {
     const { $extensions: _ext, ...rest } = v as Record<string, unknown>;
     return rest;
   }
-  if (field.shape === "sourced" || field.shape === "sourced-list") return (v as { value: unknown }).value;
+  if (field.shape === "sourced" || field.shape === "sourced-list")
+    return (v as { value: unknown }).value;
   if (field.shape === "object-list" && isObject(v)) {
     const { id: _id, ...rest } = v;
     return rest;
@@ -320,7 +354,8 @@ export function currentValue(state: DraftState, patch: JsonPatch, field: FieldDe
   if (!target) return undefined;
   const v = getAt(state, target.path);
   if (v === undefined) return undefined;
-  if (field.shape === "sourced" || field.shape === "sourced-list") return (v as { value?: unknown }).value;
+  if (field.shape === "sourced" || field.shape === "sourced-list")
+    return (v as { value?: unknown }).value;
   if (field.shape === "token-group" && isObject(v)) {
     const { $extensions: _ext, ...rest } = v;
     return rest;
@@ -359,7 +394,8 @@ export function findConflicts(pending: readonly PendingLike[]): ConflictGroup[] 
     const match = matchField(fieldPath.replace(/\[.*\]$/, ""));
     const values = list.map((p) => (match ? proposedValue(p.changes, match.field) : p.changes));
     if (values.every((v) => deepEqual(v, values[0]))) continue;
-    const best = (p: PendingLike) => Math.min(...p.evidenceKinds.map(sourceRank), brandSourceKinds.length);
+    const best = (p: PendingLike) =>
+      Math.min(...p.evidenceKinds.map(sourceRank), brandSourceKinds.length);
     const suggested = [...list].sort((a, b) => best(a) - best(b))[0]!;
     out.push({ fieldPath, proposalIds: list.map((p) => p.id), suggestedId: suggested.id });
   }
@@ -387,13 +423,21 @@ export function checksFor(state: DraftState, field: FieldDef, value: unknown): P
   if (field.pointer.startsWith("/document/") && forbidden.length) {
     const hay = textsOf(value).join(" ").toLowerCase();
     for (const w of forbidden)
-      if (new RegExp(`(^|[^\\p{L}])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^\\p{L}]|$)`, "u").test(hay))
+      if (
+        new RegExp(
+          `(^|[^\\p{L}])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^\\p{L}]|$)`,
+          "u",
+        ).test(hay)
+      )
         checks.push({ level: "warning", message: `Parola vietata: "${w}"` });
   }
   if (field.pointer === "/document/strategy/oneLiner" && typeof value === "string") {
     const n = wordCount(value);
     if (n > ONE_LINER_MAX_WORDS)
-      checks.push({ level: "warning", message: `One-liner di ${n} parole: il massimo è ${ONE_LINER_MAX_WORDS}` });
+      checks.push({
+        level: "warning",
+        message: `One-liner di ${n} parole: il massimo è ${ONE_LINER_MAX_WORDS}`,
+      });
   }
   if (field.pointer === "/tokens/color/reference" && isObject(value)) {
     const v = value.$value as { hex?: string } | string | undefined;

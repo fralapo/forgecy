@@ -3,7 +3,8 @@ import { unzlibSync } from "fflate";
 
 const u16 = (b: DataView, o: number) => b.getUint16(o);
 const u32 = (b: DataView, o: number) => b.getUint32(o);
-const tag = (b: Uint8Array, o: number) => String.fromCharCode(b[o]!, b[o + 1]!, b[o + 2]!, b[o + 3]!);
+const tag = (b: Uint8Array, o: number) =>
+  String.fromCharCode(b[o]!, b[o + 1]!, b[o + 2]!, b[o + 3]!);
 
 function nameTable(bytes: Uint8Array): Uint8Array | null {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -62,7 +63,8 @@ export function readFontNames(bytes: Uint8Array): FontNames | null {
     let s: string;
     if (platform === 3 || platform === 0) {
       s = "";
-      for (let j = 0; j + 1 < raw.length; j += 2) s += String.fromCharCode((raw[j]! << 8) | raw[j + 1]!);
+      for (let j = 0; j + 1 < raw.length; j += 2)
+        s += String.fromCharCode((raw[j]! << 8) | raw[j + 1]!);
     } else s = String.fromCharCode(...raw);
     s = s.replace(/\0/g, "").trim();
     // Prefer Windows/Unicode entries, which come with proper encodings.
@@ -79,7 +81,10 @@ export function familyFromFileName(name: string): string {
   const base = name.replace(/\.[a-z0-9]+$/i, "");
   return (
     base
-      .replace(/[-_ ]?(thin|extralight|light|regular|book|medium|semibold|demibold|bold|extrabold|black|heavy|italic|oblique|variable|vf|\d{3})+$/gi, "")
+      .replace(
+        /[-_ ]?(thin|extralight|light|regular|book|medium|semibold|demibold|bold|extrabold|black|heavy|italic|oblique|variable|vf|\d{3})+$/gi,
+        "",
+      )
       .replace(/[-_]+/g, " ")
       .replace(/([a-z])([A-Z])/g, "$1 $2")
       .trim() || base

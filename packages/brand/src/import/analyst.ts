@@ -35,7 +35,12 @@ const toneKeys = toneAxes.map((a) => a.key) as [string, ...string[]];
 
 export const analystItemSchema = z.discriminatedUnion("field", [
   z.object({ field: textField, text: z.string().min(1).max(1500), ...common }),
-  z.object({ field: z.literal("value"), name: z.string().min(1).max(120), description: z.string().max(600), ...common }),
+  z.object({
+    field: z.literal("value"),
+    name: z.string().min(1).max(120),
+    description: z.string().max(600),
+    ...common,
+  }),
   z.object({
     field: z.literal("audience"),
     name: z.string().min(1).max(120),
@@ -60,8 +65,17 @@ export const analystItemSchema = z.discriminatedUnion("field", [
     badExample: z.string().min(1).max(400),
     ...common,
   }),
-  z.object({ field: z.literal("weAre"), weAre: z.string().min(1).max(200), weAreNot: z.string().min(1).max(200), ...common }),
-  z.object({ field: z.enum(["preferredWord", "forbiddenWord"]), text: z.string().min(1).max(80), ...common }),
+  z.object({
+    field: z.literal("weAre"),
+    weAre: z.string().min(1).max(200),
+    weAreNot: z.string().min(1).max(200),
+    ...common,
+  }),
+  z.object({
+    field: z.enum(["preferredWord", "forbiddenWord"]),
+    text: z.string().min(1).max(80),
+    ...common,
+  }),
   z.object({
     field: z.literal("color"),
     name: z.string().min(1).max(80),
@@ -76,7 +90,11 @@ export const analystItemSchema = z.discriminatedUnion("field", [
     weights: z.array(z.number().int().min(100).max(1000)).max(12),
     ...common,
   }),
-  z.object({ field: z.enum(["logoForbiddenUse", "visualDo", "visualDont"]), text: z.string().min(1).max(300), ...common }),
+  z.object({
+    field: z.enum(["logoForbiddenUse", "visualDo", "visualDont"]),
+    text: z.string().min(1).max(300),
+    ...common,
+  }),
 ]);
 
 export type AnalystItem = z.output<typeof analystItemSchema>;
@@ -117,7 +135,9 @@ export function chunkPages(pages: readonly ExtractedPage[], maxChars = 60_000): 
       current = [];
       size = 0;
     }
-    current.push(len > maxChars ? { locator: p.locator, text: p.text.slice(0, maxChars - 100) } : p);
+    current.push(
+      len > maxChars ? { locator: p.locator, text: p.text.slice(0, maxChars - 100) } : p,
+    );
     size += Math.min(len, maxChars);
   }
   if (current.length) chunks.push(current);
@@ -125,6 +145,8 @@ export function chunkPages(pages: readonly ExtractedPage[], maxChars = 60_000): 
 }
 
 export function analystUserPrompt(input: AnalystInput): string {
-  const body = input.pages.map((p) => `<page locator="${p.locator.replace(/"/g, "'")}">\n${p.text}\n</page>`).join("\n");
+  const body = input.pages
+    .map((p) => `<page locator="${p.locator.replace(/"/g, "'")}">\n${p.text}\n</page>`)
+    .join("\n");
   return `Cliente: ${input.clientName}\nDocumento: ${input.sourceTitle}\n\nEstrai gli elementi della Brand Identity dalle pagine seguenti.\n\n<document>\n${body}\n</document>`;
 }

@@ -20,11 +20,31 @@ export interface CandidateProposal {
   agentModel?: string;
 }
 
-const COLOR_WORDS = /\b(blu|azzurro|rosso|verde|giallo|arancio(?:ne)?|viola|rosa|nero|bianco|grigio|oro|argento|blue|red|green|yellow|orange|purple|pink|black|white|gray|grey|gold|silver|primario|secondario|primary|secondary|accent[oe]?)\b/i;
+const COLOR_WORDS =
+  /\b(blu|azzurro|rosso|verde|giallo|arancio(?:ne)?|viola|rosa|nero|bianco|grigio|oro|argento|blue|red|green|yellow|orange|purple|pink|black|white|gray|grey|gold|silver|primario|secondario|primary|secondary|accent[oe]?)\b/i;
 
-function colorName(context: string, fallback: string): string {
-  const named = /([A-Za-zÀ-ÿ][\wÀ-ÿ ]{1,30}?)\s*[:\-–]?\s*#[0-9a-f]{3,6}/i.exec(context)?.[1];
-  if (named && COLOR_WORDS.test(named)) return named.trim();
+/** Name of a color from the words right before its value ("Crema #F5EBDC" → "Crema"). */
+export function colorName(context: string, hex: string, fallback: string): string {
+  const full = hex.replace(/^#/, "");
+  // The text may use the 3-digit form (#FFF) of a 6-digit value.
+  const short = /^(.)\1(.)\2(.)\3$/.test(full) ? `|${full[0]}${full[2]}${full[4]}` : "";
+  const re = new RegExp(`#(?:${full}${short})(?![0-9a-z])`, "i");
+  const at = context.search(re);
+  if (at > 0) {
+    const clause =
+      context
+        .slice(0, at)
+        .split(/[.,;:()\n]|#[0-9a-f]{3,6}/i)
+        .pop() ?? "";
+    const words = clause
+      .replace(/[-–]\s*$/, "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(-3);
+    const named = words.join(" ");
+    if (named && named.length <= 30 && /[A-Za-zÀ-ÿ]/.test(named)) return named;
+  }
   const word = COLOR_WORDS.exec(context)?.[1];
   return word ?? fallback;
 }
@@ -56,14 +76,17 @@ export async function addSourceProposals(
       seen.add(`color:${hex}`);
       existingHex.add(hex);
       n++;
-      let name = tokenNameFrom(colorName(v.name, `colore-${n}`), `colore-${n}`);
+      let name = tokenNameFrom(colorName(v.name, hex, `colore-${n}`), `colore-${n}`);
       while (usedNames.has(name)) name = `${name}-${n}`;
       usedNames.add(name);
       input = {
         clientId,
         path: `/tokens/color/reference/${name}`,
         op: "set",
-        value: { $value: hexToDtcg(hex), ...(v.usage ? { $description: v.usage.slice(0, 400) } : {}) },
+        value: {
+          $value: hexToDtcg(hex),
+          ...(v.usage ? { $description: v.usage.slice(0, 400) } : {}),
+        },
         title: `Colore ${name} ${hex}`,
       };
     } else {
@@ -91,7 +114,8 @@ export async function addSourceProposals(
       });
       created++;
     } catch (err) {
-      if (err instanceof ForgecyError && (err.code === "validation" || err.code === "conflict")) skipped++;
+      if (err instanceof ForgecyError && (err.code === "validation" || err.code === "conflict"))
+        skipped++;
       else throw err;
     }
   }

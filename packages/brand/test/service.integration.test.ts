@@ -1,5 +1,13 @@
 import { ForgecyError, PermissionDeniedError, type Actor } from "@forgecy/core";
-import { brandIdentityVersions, clients, createDb, eq, sql, users, type Database } from "@forgecy/db";
+import {
+  brandIdentityVersions,
+  clients,
+  createDb,
+  eq,
+  sql,
+  users,
+  type Database,
+} from "@forgecy/db";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { getPublishedBrandIdentity, loadBrandContext } from "../src/read";
 import {
@@ -85,9 +93,9 @@ describe.skipIf(!dbUrl)("brand identity workflow (integration)", () => {
 
   it("refuses agents everywhere except proposals", async () => {
     expect(await codeOf(ensureDraft(db, agent, clientId))).toBe("permission_denied");
-    expect(await codeOf(acceptProposal(db, agent, { clientId, proposalId: crypto.randomUUID() }))).toBe(
-      "permission_denied",
-    );
+    expect(
+      await codeOf(acceptProposal(db, agent, { clientId, proposalId: crypto.randomUUID() })),
+    ).toBe("permission_denied");
     expect(
       await codeOf(
         approveAndPublish(db, agent, {
@@ -103,7 +111,11 @@ describe.skipIf(!dbUrl)("brand identity workflow (integration)", () => {
   });
 
   it("runs propose, accept, stale, publish and restore", async () => {
-    const book = await addSource(db, anna, { clientId, kind: "brand_book", title: "Brand book 2025" });
+    const book = await addSource(db, anna, {
+      clientId,
+      kind: "brand_book",
+      title: "Brand book 2025",
+    });
     const site = await addSource(db, agent, { clientId, kind: "website", title: "Sito" });
 
     const p1 = await proposeChange(db, agent, {
@@ -122,8 +134,14 @@ describe.skipIf(!dbUrl)("brand identity workflow (integration)", () => {
     expect(p2.confidence).toBe("medium");
 
     // A sensitive field in conflict counts as low confidence: a note is required.
-    expect(await codeOf(acceptProposal(db, anna, { clientId, proposalId: p1.id }))).toBe("NOTE-REQUIRED");
-    const accepted = await acceptProposal(db, anna, { clientId, proposalId: p1.id, note: "Dal brand book ufficiale" });
+    expect(await codeOf(acceptProposal(db, anna, { clientId, proposalId: p1.id }))).toBe(
+      "NOTE-REQUIRED",
+    );
+    const accepted = await acceptProposal(db, anna, {
+      clientId,
+      proposalId: p1.id,
+      note: "Dal brand book ufficiale",
+    });
     expect(accepted).toMatchObject({ status: "accepted", staled: 1 });
 
     const p3 = await proposeChange(db, agent, {
@@ -145,23 +163,43 @@ describe.skipIf(!dbUrl)("brand identity workflow (integration)", () => {
       section: "strategy",
       value: {
         ...strategy,
-        insight: { id: "i1", value: "Chi lavora beve caffè cattivo", sourceIds: [], confidence: "high" },
+        insight: {
+          id: "i1",
+          value: "Chi lavora beve caffè cattivo",
+          sourceIds: [],
+          confidence: "high",
+        },
       },
     });
     expect(
       await codeOf(
-        saveDraftSection(db, anna, { clientId, versionId: draft.id, rev: draft.rev, section: "strategy", value: strategy }),
+        saveDraftSection(db, anna, {
+          clientId,
+          versionId: draft.id,
+          rev: draft.rev,
+          section: "strategy",
+          value: strategy,
+        }),
       ),
     ).toBe("CONFLICT-DRAFT-REV");
 
     await submitForReview(db, anna, { clientId, versionId: draft.id, rev: saved.rev });
 
-    const base = { clientId, versionId: draft.id, rev: saved.rev, changelog: "Prima versione dal brand book" };
-    expect(await codeOf(approveAndPublish(db, anna, { ...base, acknowledged: [] }))).toBe("SELF-APPROVAL-NOTE");
-    expect(await codeOf(approveAndPublish(db, bruno, { ...base, changelog: "corto", acknowledged: [] }))).toBe(
-      "CHANGELOG-REQUIRED",
+    const base = {
+      clientId,
+      versionId: draft.id,
+      rev: saved.rev,
+      changelog: "Prima versione dal brand book",
+    };
+    expect(await codeOf(approveAndPublish(db, anna, { ...base, acknowledged: [] }))).toBe(
+      "SELF-APPROVAL-NOTE",
     );
-    const missing = await missingChecks(approveAndPublish(db, bruno, { ...base, acknowledged: [] }));
+    expect(
+      await codeOf(approveAndPublish(db, bruno, { ...base, changelog: "corto", acknowledged: [] })),
+    ).toBe("CHANGELOG-REQUIRED");
+    const missing = await missingChecks(
+      approveAndPublish(db, bruno, { ...base, acknowledged: [] }),
+    );
     expect(missing.length).toBeGreaterThan(0);
     const pub = await approveAndPublish(db, bruno, { ...base, acknowledged: missing });
     expect(pub).toMatchObject({ number: 1, archivedVersionId: null });
@@ -193,8 +231,14 @@ describe.skipIf(!dbUrl)("brand identity workflow (integration)", () => {
     expect(pub2.archivedVersionId).toBe(pub.versionId);
 
     const restored = await restoreAsDraft(db, anna, { clientId, versionId: pub.versionId });
-    expect(restored).toMatchObject({ number: 3, status: "draft", restoredFromVersionId: pub.versionId });
-    expect(await codeOf(restoreAsDraft(db, anna, { clientId, versionId: pub.versionId }))).toBe("DRAFT-EXISTS");
+    expect(restored).toMatchObject({
+      number: 3,
+      status: "draft",
+      restoredFromVersionId: pub.versionId,
+    });
+    expect(await codeOf(restoreAsDraft(db, anna, { clientId, versionId: pub.versionId }))).toBe(
+      "DRAFT-EXISTS",
+    );
     expect((await getPublishedBrandIdentity(db, anna, clientId))?.number).toBe(2);
   });
 });

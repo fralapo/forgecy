@@ -22,7 +22,9 @@ export interface FieldChange {
 const unwrap = (v: unknown) =>
   typeof v === "object" && v !== null && "value" in v ? (v as { value: unknown }).value : v;
 const idOf = (v: unknown) =>
-  typeof v === "object" && v !== null && "id" in v ? String((v as { id: unknown }).id) : JSON.stringify(v);
+  typeof v === "object" && v !== null && "id" in v
+    ? String((v as { id: unknown }).id)
+    : JSON.stringify(v);
 const proposalOf = (v: unknown) =>
   typeof v === "object" && v !== null && "acceptedFromProposalId" in v
     ? String((v as { acceptedFromProposalId: unknown }).acceptedFromProposalId)
@@ -38,7 +40,12 @@ export function diffVersions(
     if (field.shape === "token-group") continue;
     const b0 = getAt(a, field.pointer);
     const a0 = getAt(after, field.pointer);
-    const base = { block: field.block, label: field.label, pointer: field.pointer, sensitive: field.sensitive };
+    const base = {
+      block: field.block,
+      label: field.label,
+      pointer: field.pointer,
+      sensitive: field.sensitive,
+    };
     if (field.shape === "sourced") {
       if (deepEqual(unwrap(b0), unwrap(a0))) continue;
       const pid = proposalOf(a0);
@@ -77,7 +84,8 @@ export function diffVersions(
       });
     }
     for (const [id, old] of byId)
-      if (!seen.has(id)) out.push({ ...base, kind: "removed", before: unwrap(old), after: undefined });
+      if (!seen.has(id))
+        out.push({ ...base, kind: "removed", before: unwrap(old), after: undefined });
   }
   out.push(...diffTokens(a.tokens as TokenTree, after.tokens));
   return out;
@@ -92,7 +100,8 @@ function diffTokens(before: TokenTree, after: TokenTree): FieldChange[] {
   } catch {
     return out;
   }
-  const sensitive = (p: string) => p.startsWith("color.reference.") || p.startsWith("color.semantic.");
+  const sensitive = (p: string) =>
+    p.startsWith("color.reference.") || p.startsWith("color.semantic.");
   for (const [path, t] of fa) {
     const old = fb.get(path);
     if (old && deepEqual(old.value, t.value)) continue;

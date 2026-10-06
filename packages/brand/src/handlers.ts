@@ -2,7 +2,13 @@
  * Worker handlers of the Brand Identity module. The worker spreads `brandHandlers`
  * into its handler map; dependencies are built from the environment on first use.
  */
-import { createAiGateway, createDbLedger, createProvidersFromEnv, defaultRoutingFromEnv, type AiGateway } from "@forgecy/ai";
+import {
+  createAiGateway,
+  createDbLedger,
+  createProvidersFromEnv,
+  defaultRoutingFromEnv,
+  type AiGateway,
+} from "@forgecy/ai";
 import { loadEnv } from "@forgecy/core";
 import { createStorageFromEnv, type StorageDriver } from "@forgecy/files";
 import { handle, type JobHandlers } from "@forgecy/jobs";
@@ -17,7 +23,10 @@ interface Deps {
 
 let deps: Deps | undefined;
 
-function depsFor(db: Database, logger: { warn(obj: Record<string, unknown>, msg?: string): void }): Deps {
+function depsFor(
+  db: Database,
+  logger: { warn(obj: Record<string, unknown>, msg?: string): void },
+): Deps {
   if (deps) return deps;
   const env = loadEnv();
   const providers = createProvidersFromEnv(env);
@@ -25,7 +34,12 @@ function depsFor(db: Database, logger: { warn(obj: Record<string, unknown>, msg?
   deps = {
     storage: createStorageFromEnv(env),
     ai: hasText
-      ? createAiGateway({ ledger: createDbLedger(db), providers, routing: defaultRoutingFromEnv(env, providers), logger })
+      ? createAiGateway({
+          ledger: createDbLedger(db),
+          providers,
+          routing: defaultRoutingFromEnv(env, providers),
+          logger,
+        })
       : null,
   };
   return deps;
