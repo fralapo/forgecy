@@ -21,12 +21,12 @@ export function userIdOf(actor: Actor): string | null {
 }
 
 export function requireQueues(deps: AuditDeps): JobQueues {
-  if (!deps.queues) throw new ForgecyError("unavailable", "Coda dei job non disponibile");
+  if (!deps.queues) throw new ForgecyError("unavailable", "Job queue unavailable");
   return deps.queues;
 }
 
 export function requireStorage(deps: AuditDeps): StorageDriver {
-  if (!deps.storage) throw new ForgecyError("unavailable", "Archivio file non disponibile");
+  if (!deps.storage) throw new ForgecyError("unavailable", "File storage unavailable");
   return deps.storage;
 }
 
@@ -39,14 +39,14 @@ export async function loadAudit(
     .from(audits)
     .innerJoin(clients, eq(clients.id, audits.clientId))
     .where(eq(audits.id, auditId));
-  if (!row) throw new ForgecyError("not_found", "Audit non trovato");
+  if (!row) throw new ForgecyError("not_found", "Audit not found");
   return row;
 }
 
 /** Audits that are archived or delivered are read-only. */
 export function assertEditable(audit: AuditRow): void {
   if (audit.status === "archived" || audit.status === "delivered")
-    throw new ForgecyError("conflict", "L'audit è chiuso: non si può più modificare.");
+    throw new ForgecyError("conflict", "The audit is closed and can no longer be edited.");
 }
 
 export function aiAllowed(policy: AiPolicy): boolean {
@@ -57,7 +57,7 @@ export function assertAiAllowed(client: ClientRow): void {
   if (!aiAllowed(client.aiPolicy))
     throw new ForgecyError(
       "policy_blocked",
-      "La policy di questo prospect non permette l'uso dell'AI. Puoi compilare le sezioni a mano.",
+      "This prospect's policy does not allow AI. You can fill in the sections by hand.",
     );
 }
 

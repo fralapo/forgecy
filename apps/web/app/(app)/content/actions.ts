@@ -90,7 +90,11 @@ async function run<T extends object>(
     return { ok: true, ...out };
   } catch (err) {
     if (err instanceof PermissionDeniedError)
-      return { ok: false, error: "Non hai il permesso per questa azione.", code: "PERM-DENIED" };
+      return {
+        ok: false,
+        error: "You don't have permission for this action.",
+        code: "PERM-DENIED",
+      };
     if (err instanceof ForgecyError) {
       const code = typeof err.details?.code === "string" ? err.details.code : err.code;
       return {
@@ -123,7 +127,7 @@ async function enqueue<S extends z.ZodType>(
 
 async function requirePublishedBrand(ctx: Ctx, clientId: string) {
   if (!(await getPublishedBrandIdentity(ctx.db, ctx.actor, clientId)))
-    throw new ForgecyError("conflict", "Pubblica prima la Brand Identity del cliente", {
+    throw new ForgecyError("conflict", "Publish the client's Brand Identity first", {
       code: "BRAND-NOT-PUBLISHED",
     });
 }
@@ -371,7 +375,7 @@ export async function generateOutlineAction(
     humanOnly(ctx.actor, "edit_draft", r.clientId);
     const c = await getContentRow(ctx.db, r.clientId, r.id);
     if (!briefReady(c.brief))
-      throw new ForgecyError("validation", "Scrivi un brief di almeno 20 caratteri");
+      throw new ForgecyError("validation", "Write a brief of at least 20 characters");
     return enqueue(
       ctx,
       generateOutlineJob,
@@ -420,7 +424,7 @@ export async function generateSlidesAction(input: ContentRef) {
     humanOnly(ctx.actor, "edit_draft", r.clientId);
     const c = await getContentRow(ctx.db, r.clientId, r.id);
     if (!outlineOf(c) || !c.outlineApprovedAt)
-      throw new ForgecyError("validation", "Approva la scaletta prima di generare le slide");
+      throw new ForgecyError("validation", "Approve the outline before generating the slides");
     return enqueue(
       ctx,
       generateSlidesJob,

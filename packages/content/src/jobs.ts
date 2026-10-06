@@ -32,7 +32,7 @@ export const proposePlanJob = defineJob({
   }),
 });
 
-/** Copywriter: outline from the brief («Genera scaletta» / «Rigenera»). */
+/** Copywriter: outline from the brief (“Generate outline” / “Regenerate”). */
 export const generateOutlineJob = defineJob({
   kind: "content.generate_outline",
   queue: "ai",
@@ -40,7 +40,7 @@ export const generateOutlineJob = defineJob({
     ...base,
     contentId: z.uuid(),
     instruction,
-    /** «Mantieni le righe modificate a mano». */
+    /** “Keep the rows edited by hand”. */
     keepEdited: z.boolean().default(true),
   }),
 });

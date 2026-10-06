@@ -12,7 +12,7 @@ import { type LayoutDef, effectiveSafeZone, findLayout } from "./template-schema
 export type ResolvedAssets = ReadonlyMap<string, string>;
 
 export interface RenderOptions {
-  /** Diagonal "Bozza" watermark at 20% opacity (export before approval). */
+  /** Diagonal "Draft" watermark at 20% opacity (export before approval). */
   watermark?: string;
   /** Editor and template editor aids; never used for a final export. */
   showSafeZone?: boolean;
@@ -155,7 +155,7 @@ function fillSlots(
       !Array.isArray(value)
     ) {
       filled = setImage(el, value, imageSrc(value, pkg, assets));
-      if (!filled) warnings.push(`Immagine non disponibile per lo slot "${name}"`);
+      if (!filled) warnings.push(`Image not available for slot "${name}"`);
       el.setAttribute("data-slot-label", name);
     }
     if (!filled) {
@@ -245,13 +245,10 @@ export function renderSlideHtml(input: RenderSlideInput): RenderedSlide {
   const m = pkg.manifest;
   const layout = findLayout(m, slide.layout);
   if (!layout)
-    throw new ForgecyError(
-      "validation",
-      `Layout "${slide.layout}" non presente nel template ${m.id}`,
-    );
+    throw new ForgecyError("validation", `Layout "${slide.layout}" is not in template ${m.id}`);
   const source = readText(pkg, layout.file);
   if (source === undefined)
-    throw new ForgecyError("validation", `File del layout mancante: ${layout.file}`);
+    throw new ForgecyError("validation", `Layout file missing: ${layout.file}`);
 
   const warnings: string[] = [];
   const { document } = parseHTML(
@@ -291,6 +288,7 @@ export function renderSlideHtml(input: RenderSlideInput): RenderedSlide {
   const title = document.createElement("title");
   title.textContent = `${m.name} · ${layout.name} · ${index + 1}`;
   const html =
+    // Slide copy is the client's deliverable, Italian by default (not UI text).
     `<!doctype html><html lang="it"><head><meta charset="utf-8">` +
     `<meta http-equiv="Content-Security-Policy" content="${RENDER_CSP}">` +
     `<meta name="viewport" content="width=${m.width}">${title.outerHTML}` +

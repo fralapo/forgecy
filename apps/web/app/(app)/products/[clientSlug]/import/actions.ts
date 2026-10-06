@@ -78,7 +78,7 @@ export async function rereadCsvAction(input: {
     .parse(input);
   return attempt(async () => {
     const row = await rereadCsv(getDb(), getStorage(), actingUser(user), data);
-    return row.valid ? "File riletto." : (row.message ?? "Il file non si legge ancora.");
+    return row.valid ? "File read again." : (row.message ?? "The file still can’t be read.");
   });
 }
 
@@ -104,7 +104,7 @@ export async function startAction(input: {
       ...data,
       aiAvailable: await aiAvailable(data.clientId),
     });
-    return "Analisi avviata.";
+    return "Analysis started.";
   });
 }
 
@@ -125,7 +125,7 @@ export async function confirmMappingAction(input: {
     .parse(input);
   return attempt(async () => {
     const r = await confirmMapping(getDb(), enqueueImportStep, actingUser(user), data);
-    return r.resumed ? "Mappatura confermata: l'analisi riprende." : "Mappatura confermata.";
+    return r.resumed ? "Mapping confirmed: the analysis resumes." : "Mapping confirmed.";
   });
 }
 
@@ -137,7 +137,7 @@ export async function retryAction(input: {
   const data = ids.parse(input);
   return attempt(async () => {
     await retryImport(getDb(), enqueueImportStep, actingUser(user), data);
-    return "Analisi ripresa.";
+    return "Analysis resumed.";
   });
 }
 
@@ -149,6 +149,6 @@ export async function cancelAction(input: {
   const data = ids.parse(input);
   return attempt(async () => {
     await cancelImport(getDb(), actingUser(user), data, cancelImportJob);
-    return "Import annullato.";
+    return "Import cancelled.";
   });
 }

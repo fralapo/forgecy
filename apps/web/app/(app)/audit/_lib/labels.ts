@@ -12,15 +12,15 @@ import type {
 type BadgeVariant = "neutral" | "success" | "warning" | "error" | "info" | "highlight";
 
 export const auditStatusLabel: Record<AuditStatus, string> = {
-  draft: "Bozza",
-  collecting: "Raccolta dati",
-  awaiting_competitors: "Competitor da confermare",
-  analyzing: "Analisi in corso",
-  in_review: "Da rivedere",
-  reviewed: "Rivisto",
-  delivered: "Consegnato",
-  failed: "Errore",
-  archived: "Archiviato",
+  draft: "Draft",
+  collecting: "Collecting data",
+  awaiting_competitors: "Competitors to confirm",
+  analyzing: "Analysis in progress",
+  in_review: "To review",
+  reviewed: "Reviewed",
+  delivered: "Delivered",
+  failed: "Error",
+  archived: "Archived",
 };
 
 export const auditStatusVariant: Record<AuditStatus, BadgeVariant> = {
@@ -36,13 +36,13 @@ export const auditStatusVariant: Record<AuditStatus, BadgeVariant> = {
 };
 
 export const sourceStatusLabel: Record<SourceStatus, string> = {
-  pending: "Da raccogliere",
-  collecting: "In raccolta",
-  collected: "Raccolto",
-  partial: "Parziale",
-  unavailable: "Non disponibile",
-  skipped: "Saltato",
-  failed: "Errore",
+  pending: "To collect",
+  collecting: "Collecting",
+  collected: "Collected",
+  partial: "Partial",
+  unavailable: "Unavailable",
+  skipped: "Skipped",
+  failed: "Error",
 };
 
 export const sourceStatusVariant: Record<SourceStatus, BadgeVariant> = {
@@ -56,7 +56,7 @@ export const sourceStatusVariant: Record<SourceStatus, BadgeVariant> = {
 };
 
 export const channelLabel: Record<AuditChannel, string> = {
-  website: "Sito web",
+  website: "Website",
   instagram: "Instagram",
   facebook: "Facebook",
   linkedin: "LinkedIn",
@@ -64,24 +64,24 @@ export const channelLabel: Record<AuditChannel, string> = {
 };
 
 export const areaLabel: Record<FindingArea, string> = {
-  message: "Messaggio e posizionamento",
-  visual: "Identità visiva",
-  ux: "Esperienza e conversione",
-  seo_accessibility: "SEO e accessibilità",
-  social_visual: "Stile visivo",
-  social_tone: "Tono di voce",
+  message: "Message and positioning",
+  visual: "Visual identity",
+  ux: "Experience and conversion",
+  seo_accessibility: "SEO and accessibility",
+  social_visual: "Visual style",
+  social_tone: "Tone of voice",
   social_cta: "Call to action",
-  social_formats: "Formati e frequenza",
-  linkedin_leads: "LinkedIn e contatti",
-  competitors: "Competitor",
-  cross_channel: "Tra i canali",
+  social_formats: "Formats and frequency",
+  linkedin_leads: "LinkedIn and leads",
+  competitors: "Competitors",
+  cross_channel: "Across channels",
 };
 
 export const findingStatusLabel: Record<FindingStatus, string> = {
-  observed: "Da rivedere",
-  accepted: "Accettata",
-  edited: "Modificata",
-  rejected: "Scartata",
+  observed: "To review",
+  accepted: "Accepted",
+  edited: "Edited",
+  rejected: "Rejected",
 };
 
 export const findingStatusVariant: Record<FindingStatus, BadgeVariant> = {
@@ -91,13 +91,13 @@ export const findingStatusVariant: Record<FindingStatus, BadgeVariant> = {
   rejected: "neutral",
 };
 
-export const levelLabel: Record<Level, string> = { high: "Alta", medium: "Media", low: "Bassa" };
+export const levelLabel: Record<Level, string> = { high: "High", medium: "Medium", low: "Low" };
 
 export const outcomeLabel: Record<ComparisonOutcome, string> = {
-  consistent: "Coerente",
-  partial: "Coerenza parziale",
-  to_align: "Da allineare",
-  opportunity: "Opportunità",
+  consistent: "Consistent",
+  partial: "Partly consistent",
+  to_align: "To align",
+  opportunity: "Opportunity",
 };
 
 export const outcomeVariant: Record<ComparisonOutcome, BadgeVariant> = {
@@ -114,62 +114,62 @@ export const agentLabel: Record<string, string> = {
 };
 
 export const jobLabel: Record<string, string> = {
-  "audit.crawl": "Lettura del sito",
-  "audit.analyze_site": "Osservazioni sul sito",
-  "audit.analyze_social": "Osservazioni sui social",
-  "audit.propose_competitors": "Proposta dei competitor",
-  "audit.compare_competitors": "Confronto con i competitor",
-  "audit.compare_channels": "Confronto tra i canali",
-  "audit.diagnose": "Diagnosi",
-  "audit.plan": "Piano di 30 giorni",
-  "audit.report_texts": "Testi del report",
-  "audit.report_export": "PDF del report",
+  "audit.crawl": "Website reading",
+  "audit.analyze_site": "Website findings",
+  "audit.analyze_social": "Social findings",
+  "audit.propose_competitors": "Competitor proposal",
+  "audit.compare_competitors": "Comparison with competitors",
+  "audit.compare_channels": "Comparison across channels",
+  "audit.diagnose": "Diagnosis",
+  "audit.plan": "30-day plan",
+  "audit.report_texts": "Report texts",
+  "audit.report_export": "Report PDF",
 };
 
 export const stepLabel: Record<string, string> = {
   robots: "robots.txt",
-  discovery: "Scelta delle pagine",
-  screenshots: "Screenshot desktop e mobile",
-  extraction: "Testi, colori, font e CTA",
-  checks: "Controlli tecnici",
-  analysis: "Osservazioni dell'AI",
+  discovery: "Page selection",
+  screenshots: "Desktop and mobile screenshots",
+  extraction: "Texts, colors, fonts and CTAs",
+  checks: "Technical checks",
+  analysis: "AI findings",
 };
 
 export const metricLabel: Record<string, string> = {
-  followers: "Follower",
-  posts_total: "Post totali",
-  followers_gained: "Follower acquisiti",
-  followers_lost: "Follower persi",
-  impressions: "Impressioni",
-  clicks: "Clic",
+  followers: "Followers",
+  posts_total: "Total posts",
+  followers_gained: "Followers gained",
+  followers_lost: "Followers lost",
+  impressions: "Impressions",
+  clicks: "Clicks",
   ctr: "CTR (%)",
-  reactions: "Reazioni",
-  comments: "Commenti",
-  shares: "Condivisioni",
-  page_visits: "Visite alla pagina",
-  leads: "Lead dichiarati",
-  avg_views: "Visualizzazioni medie",
-  avg_likes: "Like medi",
+  reactions: "Reactions",
+  comments: "Comments",
+  shares: "Shares",
+  page_visits: "Page visits",
+  leads: "Declared leads",
+  avg_views: "Average views",
+  avg_likes: "Average likes",
 };
 
 export function formatDate(d: Date | string | null | undefined): string {
   if (!d) return "—";
   const date = typeof d === "string" ? new Date(d) : d;
-  return new Intl.DateTimeFormat("it-IT", { dateStyle: "medium" }).format(date);
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(date);
 }
 
 export function formatDateTime(d: Date | string | null | undefined): string {
   if (!d) return "—";
   const date = typeof d === "string" ? new Date(d) : d;
-  return new Intl.DateTimeFormat("it-IT", { dateStyle: "medium", timeStyle: "short" }).format(date);
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
 export const reportStatusLabel: Record<ReportStatus, string> = {
-  draft: "Bozza",
-  in_review: "In revisione",
-  approved: "Approvato",
-  exported: "Esportato",
-  superseded: "Sostituito",
+  draft: "Draft",
+  in_review: "In review",
+  approved: "Approved",
+  exported: "Exported",
+  superseded: "Superseded",
 };
 
 export const reportStatusVariant: Record<ReportStatus, BadgeVariant> = {

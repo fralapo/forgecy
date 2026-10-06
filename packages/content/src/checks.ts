@@ -1,6 +1,6 @@
 /**
- * Deterministic checks of a carousel (page 46). Errors block «Invia in revisione»;
- * warnings need a «Ho visto» from the reviewer before approval. Ids are stable for
+ * Deterministic checks of a carousel (page 46). Errors block “Send for review”;
+ * warnings need a “Seen” from the reviewer before approval. Ids are stable for
  * the same problem, so an acknowledgement survives a reload but not a new problem.
  * The full Brand Guard (AI review against the Brand Identity) arrives with M6.
  * Browser-safe: the editor runs the same checks live.
@@ -74,12 +74,12 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
   };
 
   if (!doc.slides.length) {
-    add({ id: "slides:empty", severity: "error", message: "Il carosello non ha slide" });
+    add({ id: "slides:empty", severity: "error", message: "The carousel has no slides" });
     return out;
   }
 
   if (!manifest) {
-    add({ id: "template:missing", severity: "error", message: "Template non disponibile" });
+    add({ id: "template:missing", severity: "error", message: "Template not available" });
   } else {
     const r = buildCarouselSchema(manifest).safeParse(doc.slides.map(toRenderSlide));
     if (!r.success)
@@ -101,7 +101,7 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
       add({
         id: "cta:last",
         severity: "warning",
-        message: "L'ultima slide non è una call to action",
+        message: "The last slide is not a call to action",
         slideId: last.id,
       });
   }
@@ -112,13 +112,13 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
     add({
       id: "caption:length",
       severity: "error",
-      message: `Didascalia di ${captionLen} caratteri: il limite di ${input.channel === "linkedin" ? "LinkedIn" : "Instagram"} è ${limit}`,
+      message: `Caption of ${captionLen} characters: the ${input.channel === "linkedin" ? "LinkedIn" : "Instagram"} limit is ${limit}`,
     });
   if (input.maxHashtags !== undefined && doc.hashtags.length > input.maxHashtags)
     add({
       id: "hashtags:max",
       severity: "warning",
-      message: `${doc.hashtags.length} hashtag: la Brand Identity ne prevede al massimo ${input.maxHashtags}`,
+      message: `${doc.hashtags.length} hashtags: the Brand Identity allows at most ${input.maxHashtags}`,
     });
 
   const words = (input.forbiddenWords ?? []).filter((w) => w.trim().length > 1);
@@ -134,7 +134,7 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
         add({
           id: `forbidden:${t.slideId ?? "caption"}:${w.toLowerCase()}`,
           severity: "warning",
-          message: `Parola vietata dalla Brand Identity: «${w}»`,
+          message: `Word forbidden by the Brand Identity: “${w}”`,
           ...(t.slideId ? { slideId: t.slideId } : {}),
         });
   }
@@ -145,7 +145,7 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
         add({
           id: `price:${t.slideId ?? "caption"}`,
           severity: "warning",
-          message: "Il testo cita un prezzo ma il brief non lo prevede",
+          message: "The copy mentions a price but the brief does not allow it",
           ...(t.slideId ? { slideId: t.slideId } : {}),
         });
 
@@ -159,7 +159,7 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
         add({
           id: `asset:missing:${s.id}:${slot}`,
           severity: "error",
-          message: `${where}: immagine non presente nella libreria del cliente`,
+          message: `${where}: image not in the client's library`,
           slideId: s.id,
         });
         continue;
@@ -170,22 +170,22 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
           severity: "error",
           message:
             a.source === "ai"
-              ? `${where}: immagine AI da approvare prima dell'approvazione del carosello`
-              : `${where}: immagine non approvata`,
+              ? `${where}: AI image to approve before the carousel is approved`
+              : `${where}: image not approved`,
           slideId: s.id,
         });
       if (a.source === "ai" && a.commercialUsePending)
         add({
           id: `asset:commercial:${s.id}:${slot}`,
           severity: "warning",
-          message: `${where}: uso commerciale del fornitore dell'immagine AI non ancora verificato`,
+          message: `${where}: commercial use of the AI image provider not verified yet`,
           slideId: s.id,
         });
       if (input.wantsAltText && !(v.alt || a.alt).trim())
         add({
           id: `asset:alt:${s.id}:${slot}`,
           severity: "warning",
-          message: `${where}: manca il testo alternativo dell'immagine`,
+          message: `${where}: the image alt text is missing`,
           slideId: s.id,
         });
     }
@@ -196,14 +196,14 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
     add({
       id: `product:changed:${pr.current}`,
       severity: "warning",
-      message: "Il prodotto è cambiato nel catalogo dopo la scrittura dei testi",
+      message: "The product changed in the catalog after the copy was written",
     });
   const bv = input.brandVersion;
   if (bv && bv.used && bv.current && bv.used !== bv.current)
     add({
       id: `brand:changed:${bv.current}`,
       severity: "warning",
-      message: "È stata pubblicata una nuova Brand Identity dopo la creazione del carosello",
+      message: "A new Brand Identity was published after the carousel was created",
     });
 
   return out.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "error" ? -1 : 1));

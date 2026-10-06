@@ -1,8 +1,8 @@
 /**
  * Brand Guard (M6). A run stores the full report of one check of a content
  * (findings with evidence, counts, coherence) against a Brand Identity version.
- * Issue states record what a *person* decided about a finding: "Ignora per questo
- * contenuto" (with a reason) or "Ho visto" in approval. Agents never write states.
+ * Issue states record what a *person* decided about a finding: "Ignore for this
+ * content" (with a reason) or "I’ve seen it" in approval. Agents never write states.
  *
  * The checked content is referenced generically (`subject_type` + `subject_id`), so
  * the Contents module can attach checks to carousels without this module owning them.
@@ -86,7 +86,7 @@ export const brandCheckIssueStates = pgTable(
     status: brandCheckIssueStatusEnum("status").notNull(),
     reason: brandCheckIgnoreReasonEnum("reason"),
     note: text("note"),
-    /** "Ho visto" is per content version; ignores hold across versions (null). */
+    /** "I’ve seen it" is per content version; ignores hold across versions (null). */
     subjectVersion: integer("subject_version"),
     /** Always a person: agents cannot ignore or confirm findings. */
     userId: uuid("user_id")

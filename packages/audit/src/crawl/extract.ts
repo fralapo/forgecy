@@ -91,17 +91,19 @@ export function technicalChecks(pages: FetchedPage[]): TechnicalCheck[] {
   const noH1 = pages.filter((p) => (p.data.h1?.length ?? 0) === 0);
   checks.push({
     key: "h1",
-    label: "Un titolo H1 per pagina",
+    label: "One H1 heading per page",
     ok: noH1.length === 0,
-    detail: noH1.length ? `${noH1.length} pagine senza H1` : "Tutte le pagine hanno un H1",
+    detail: noH1.length ? `${noH1.length} pages without an H1` : "Every page has an H1",
     pages: noH1.map(pathOf),
   });
   const multiH1 = pages.filter((p) => (p.data.h1?.length ?? 0) > 1);
   checks.push({
     key: "multiple_h1",
-    label: "Un solo H1",
+    label: "A single H1",
     ok: multiH1.length === 0,
-    detail: multiH1.length ? `${multiH1.length} pagine con più H1` : "Nessuna pagina con più H1",
+    detail: multiH1.length
+      ? `${multiH1.length} pages with more than one H1`
+      : "No page with more than one H1",
     pages: multiH1.map(pathOf),
   });
   const noMeta = pages.filter((p) => !p.data.metaDescription);
@@ -109,7 +111,9 @@ export function technicalChecks(pages: FetchedPage[]): TechnicalCheck[] {
     key: "meta_description",
     label: "Meta description",
     ok: noMeta.length === 0,
-    detail: noMeta.length ? `${noMeta.length} pagine senza meta description` : "Presente ovunque",
+    detail: noMeta.length
+      ? `${noMeta.length} pages without a meta description`
+      : "Present everywhere",
     pages: noMeta.map(pathOf),
   });
   const alt = pages.reduce(
@@ -121,35 +125,37 @@ export function technicalChecks(pages: FetchedPage[]): TechnicalCheck[] {
   );
   checks.push({
     key: "img_alt",
-    label: "Testo alternativo delle immagini",
+    label: "Image alt text",
     ok: alt.missing === 0,
-    detail: `${alt.missing} immagini su ${alt.total} senza attributo alt`,
+    detail: `${alt.missing} of ${alt.total} images without an alt attribute`,
     pages: pages.filter((p) => (p.data.imagesWithoutAlt ?? 0) > 0).map(pathOf),
   });
   const noLang = pages.filter((p) => !p.data.lang);
   checks.push({
     key: "lang",
-    label: "Lingua della pagina dichiarata",
+    label: "Page language declared",
     ok: noLang.length === 0,
-    detail: noLang.length ? `${noLang.length} pagine senza attributo lang` : "Dichiarata ovunque",
+    detail: noLang.length
+      ? `${noLang.length} pages without a lang attribute`
+      : "Declared everywhere",
     pages: noLang.map(pathOf),
   });
   const noViewport = pages.filter((p) => p.data.hasViewport === false);
   checks.push({
     key: "viewport",
-    label: "Pagine adatte al mobile (meta viewport)",
+    label: "Mobile-friendly pages (meta viewport)",
     ok: noViewport.length === 0,
-    detail: noViewport.length ? `${noViewport.length} pagine senza meta viewport` : "Presente",
+    detail: noViewport.length ? `${noViewport.length} pages without a meta viewport` : "Present",
     pages: noViewport.map(pathOf),
   });
   const slow = pages.filter((p) => (p.data.loadMs ?? 0) > 4000);
   checks.push({
     key: "load_time",
-    label: "Caricamento sotto 4 secondi",
+    label: "Loads in under 4 seconds",
     ok: slow.length === 0,
     detail: slow.length
-      ? `${slow.length} pagine oltre 4 s (misurato dal server di Forgecy)`
-      : "Tutte sotto 4 s (misurato dal server di Forgecy)",
+      ? `${slow.length} pages over 4 s (measured from the Forgecy server)`
+      : "All under 4 s (measured from the Forgecy server)",
     pages: slow.map(pathOf),
   });
   return checks;

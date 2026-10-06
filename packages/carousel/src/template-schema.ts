@@ -2,7 +2,7 @@ import { z } from "zod";
 import { channels, FORMATS, formatIdSchema, safeZoneSchema } from "./formats";
 
 /**
- * Slide roles of the agency catalog (spec: "Ruoli delle slide"). The last five are the
+ * Slide roles of the agency catalog (spec: "Slide roles"). The last five are the
  * pages of a report (audit): section opener, finding, problem, next steps, method.
  */
 export const slideRoles = [
@@ -35,19 +35,19 @@ export const socialSlideRoles = [
 ] as const satisfies readonly SlideRole[];
 
 export const slideRoleLabels: Record<SlideRole, string> = {
-  cover: "Copertina",
-  text: "Testo",
-  list: "Elenco",
-  quote: "Citazione",
-  data: "Dato",
-  problem_solution: "Problema-soluzione",
-  comparison: "Confronto",
+  cover: "Cover",
+  text: "Text",
+  list: "List",
+  quote: "Quote",
+  data: "Data point",
+  problem_solution: "Problem-solution",
+  comparison: "Comparison",
   cta: "CTA",
-  section: "Sezione",
-  finding: "Evidenza",
-  problem: "Problema",
-  next_steps: "Prossimi passi",
-  method: "Metodo",
+  section: "Section",
+  finding: "Finding",
+  problem: "Problem",
+  next_steps: "Next steps",
+  method: "Method",
 };
 
 /** Semantic Brand Identity color roles a template variable can bind to. */
@@ -69,15 +69,15 @@ const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 export const MAX_CAROUSEL_SLIDES = 20;
 export const MAX_REPORT_PAGES = 40;
 
-export const hexColorSchema = z.string().regex(HEX, "Colore esadecimale (#RRGGBB)");
+export const hexColorSchema = z.string().regex(HEX, "Hex color (#RRGGBB)");
 
 /** CSS custom property the template uses, e.g. `--fc-bg`. */
-const cssVarName = z.string().regex(/^--fc-[a-z0-9-]{1,40}$/, "Variabile CSS --fc-...");
+const cssVarName = z.string().regex(/^--fc-[a-z0-9-]{1,40}$/, "CSS variable --fc-...");
 const SLOT_NAME = /^[a-z][a-z0-9_]{0,31}$/;
 const relPath = z
   .string()
-  .regex(/^[a-z0-9][a-z0-9._-]*(\/[a-z0-9][a-z0-9._-]*)*$/i, "Percorso relativo nel pacchetto")
-  .refine((p) => !p.split("/").includes(".."), "Percorso relativo nel pacchetto");
+  .regex(/^[a-z0-9][a-z0-9._-]*(\/[a-z0-9][a-z0-9._-]*)*$/i, "Relative path inside the package")
+  .refine((p) => !p.split("/").includes(".."), "Relative path inside the package");
 
 const textSlotSchema = z.object({
   name: z.string().regex(SLOT_NAME),
@@ -86,7 +86,7 @@ const textSlotSchema = z.object({
   maxChars: z.number().int().min(1).max(1000),
   maxLines: z.number().int().min(1).max(30).optional(),
   required: z.boolean().default(false),
-  /** Lets the copy mark a highlighted span with `==parola==` (rendered as text, never markup). */
+  /** Lets the copy mark a highlighted span with `==word==` (rendered as text, never markup). */
   highlight: z.boolean().default(false),
 });
 
@@ -164,10 +164,10 @@ export const compositionRulesSchema = z.object({
 export const templateManifestSchema = z
   .object({
     $schema: z.string().optional(),
-    id: z.string().regex(/^[a-z][a-z0-9-]{2,63}$/, "id: minuscole, cifre e trattini"),
+    id: z.string().regex(/^[a-z][a-z0-9-]{2,63}$/, "id: lowercase letters, digits and dashes"),
     name: z.string().min(1).max(60),
     description: z.string().max(240).default(""),
-    version: z.string().regex(/^\d+\.\d+\.\d+$/, "Versione semver (es. 1.0.0)"),
+    version: z.string().regex(/^\d+\.\d+\.\d+$/, "Semver version (e.g. 1.0.0)"),
     kind: z.enum(["carousel", "report"]).default("carousel"),
     /** Required for social formats, absent for reports. */
     channel: z.enum(channels).optional(),
@@ -209,25 +209,25 @@ export const templateManifestSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["kind"],
-        message: `Il formato ${f.label} è per ${f.kind === "report" ? "report" : "caroselli"}: kind "${f.kind}"`,
+        message: `The ${f.label} format is for ${f.kind === "report" ? "reports" : "carousels"}: kind "${f.kind}"`,
       });
     if (f.channel && f.channel !== t.channel)
       ctx.addIssue({
         code: "custom",
         path: ["channel"],
-        message: `Il formato ${f.label} è del canale ${f.channel}`,
+        message: `The ${f.label} format belongs to channel ${f.channel}`,
       });
     if (!f.channel && t.channel)
       ctx.addIssue({
         code: "custom",
         path: ["channel"],
-        message: `Il formato ${f.label} non ha un canale: togli "channel"`,
+        message: `The ${f.label} format has no channel: remove "channel"`,
       });
     if (t.width !== f.width || t.height !== f.height)
       ctx.addIssue({
         code: "custom",
         path: ["width"],
-        message: `${f.label} è ${f.width}×${f.height} px`,
+        message: `${f.label} is ${f.width}×${f.height} px`,
       });
     const { min, max, default: def } = t.slides;
     const limit = t.kind === "report" ? MAX_REPORT_PAGES : MAX_CAROUSEL_SLIDES;
@@ -235,12 +235,12 @@ export const templateManifestSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["slides"],
-        message: `Numero di ${t.kind === "report" ? "pagine" : "slide"}: deve valere minimo ≤ default ≤ massimo ≤ ${limit}`,
+        message: `Number of ${t.kind === "report" ? "pages" : "slides"}: must satisfy min ≤ default ≤ max ≤ ${limit}`,
       });
     const ids = new Set<string>();
     t.layouts.forEach((l, i) => {
       if (ids.has(l.id))
-        ctx.addIssue({ code: "custom", path: ["layouts", i, "id"], message: "Layout duplicato" });
+        ctx.addIssue({ code: "custom", path: ["layouts", i, "id"], message: "Duplicate layout" });
       ids.add(l.id);
       const names = new Set<string>();
       l.slots.forEach((s, j) => {
@@ -248,7 +248,7 @@ export const templateManifestSchema = z
           ctx.addIssue({
             code: "custom",
             path: ["layouts", i, "slots", j, "name"],
-            message: `Slot duplicato "${s.name}"`,
+            message: `Duplicate slot "${s.name}"`,
           });
         names.add(s.name);
         if (s.type === "list" && s.minItems > s.maxItems)
@@ -264,7 +264,7 @@ export const templateManifestSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["fontRoles"],
-        message: "Una variabile non può essere sia colore sia font",
+        message: "A variable cannot be both a color and a font",
       });
   });
 

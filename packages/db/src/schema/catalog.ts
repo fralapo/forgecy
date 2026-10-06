@@ -118,7 +118,7 @@ export const productImportFiles = pgTable(
   ],
 );
 
-/** Saved column mappings per client ("Listino standard"). */
+/** Saved column mappings per client ("Standard price list"). */
 export const productColumnMappings = pgTable(
   "product_column_mappings",
   {
@@ -141,7 +141,7 @@ export const productColumnMappings = pgTable(
 );
 
 /**
- * The catalog. Searchable fields are columns; descriptions, "Scheda tecnica",
+ * The catalog. Searchable fields are columns; descriptions, "Technical sheet",
  * benefits, variants and optional commercial data live in `details`. `fieldMeta`
  * keeps truth level, exact source and confidence per field. `revision` guards
  * against two people overwriting each other.

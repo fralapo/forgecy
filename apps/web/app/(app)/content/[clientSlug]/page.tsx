@@ -24,20 +24,20 @@ import { StrategyProposalCard } from "../_components/strategy-proposal";
 import { formatDate } from "../_lib/paths";
 import { loadClient } from "../_lib/server";
 
-export const metadata = { title: "Strategia dei contenuti" };
+export const metadata = { title: "Content strategy" };
 
 type Pillar = StrategyOverview["pillars"][number];
 type Rubric = StrategyOverview["rubrics"][number];
 
 const confidenceLabel = {
-  high: "Confidenza alta",
-  medium: "Confidenza media",
-  low: "Confidenza bassa",
+  high: "High confidence",
+  medium: "Medium confidence",
+  low: "Low confidence",
 };
 const activeJob = new Set(["queued", "running", "retrying"]);
 const freq = (count: number | null, unit: "week" | "month" | null) =>
   count && unit ? { count, unit } : null;
-/** A live item (accepted, or accepted and then flagged «Da rivedere»). */
+/** A live item (accepted, or accepted and then flagged “Needs review”). */
 const isLive = (x: { status: string; decidedAt: Date | null; provenance: unknown }) =>
   x.status === "accepted" || (x.status === "stale" && (x.decidedAt !== null || !x.provenance));
 
@@ -96,7 +96,7 @@ export default async function StrategyPage({
         id: p.id,
         name: p.name,
         at: p.archivedAt,
-        note: "Pilastro",
+        note: "Pillar",
       })),
     ...o.rubrics
       .filter((r) => r.status === "archived" && !r.targetId)
@@ -105,7 +105,7 @@ export default async function StrategyPage({
         id: r.id,
         name: r.name,
         at: r.archivedAt,
-        note: `Rubrica di «${pillarName.get(r.pillarId) ?? "—"}»`,
+        note: `Rubric of “${pillarName.get(r.pillarId) ?? "—"}”`,
       })),
   ];
   const options: StrategyOptions = {
@@ -121,24 +121,24 @@ export default async function StrategyPage({
       .join(", ") || null;
 
   const pillarFacts = (p: Pillar): [string, ReactNode][] => [
-    ["Obiettivo", p.goal],
+    ["Goal", p.goal],
     ["Funnel", p.funnel ? funnelLabels[p.funnel] : null],
-    ["Frequenza", frequencyLabel(freq(p.frequencyCount, p.frequencyUnit))],
-    ["Pubblico", names(p.audienceIds, audienceName)],
-    ["Temi", p.themes.join(", ") || null],
+    ["Frequency", frequencyLabel(freq(p.frequencyCount, p.frequencyUnit))],
+    ["Audience", names(p.audienceIds, audienceName)],
+    ["Themes", p.themes.join(", ") || null],
     ["Call to action", p.cta],
-    ["Prodotti", o.hasCatalog ? names(p.productIds, productName) : null],
+    ["Products", o.hasCatalog ? names(p.productIds, productName) : null],
   ];
   const rubricFacts = (r: Rubric): [string, ReactNode][] => [
-    ["Frequenza", frequencyLabel(freq(r.frequencyCount, r.frequencyUnit))],
+    ["Frequency", frequencyLabel(freq(r.frequencyCount, r.frequencyUnit))],
     [
-      "Canali",
+      "Channels",
       r.channels.map((c) => (c === "linkedin" ? "LinkedIn" : "Instagram")).join(", ") || null,
     ],
     ["Template", r.templateKey ? (templateName.get(r.templateKey) ?? r.templateKey) : null],
-    ["Formula dell'hook", r.hookFormula],
+    ["Hook formula", r.hookFormula],
     ["Call to action", r.cta],
-    ["Prodotti", o.hasCatalog ? names(r.productIds, productName) : null],
+    ["Products", o.hasCatalog ? names(r.productIds, productName) : null],
   ];
 
   const proposalCard = (
@@ -155,8 +155,8 @@ export default async function StrategyPage({
       : null;
     const prefix =
       kind === "pillar"
-        ? "Pilastro"
-        : `Rubrica di «${pillarName.get((row as Rubric).pillarId) ?? "—"}»`;
+        ? "Pillar"
+        : `Rubric of “${pillarName.get((row as Rubric).pillarId) ?? "—"}”`;
     return (
       <StrategyProposalCard
         key={row.id}
@@ -170,16 +170,16 @@ export default async function StrategyPage({
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
             {target ? (
-              <Badge variant="info">Modifica «{target}»</Badge>
+              <Badge variant="info">Edit “{target}”</Badge>
             ) : (
-              <Badge variant="info">Nuovo</Badge>
+              <Badge variant="info">New</Badge>
             )}
             {p ? <Badge>{confidenceLabel[p.confidence]}</Badge> : null}
           </div>
           <Facts items={facts} />
           {p?.rationale ? <p className="text-body-sm text-fg">{p.rationale}</p> : null}
           {p?.instruction ? (
-            <p className="text-body-sm text-fg-muted">Istruzione: «{p.instruction}»</p>
+            <p className="text-body-sm text-fg-muted">Instruction: “{p.instruction}”</p>
           ) : null}
         </div>
       </StrategyProposalCard>
@@ -194,12 +194,12 @@ export default async function StrategyPage({
         action={archiveItemAction.bind(null, { ...base, kind, id })}
         confirm={
           kind === "pillar"
-            ? `Archiviare «${name}»? Anche le sue rubriche saranno archiviate.`
-            : `Archiviare «${name}»?`
+            ? `Archive “${name}”? Its rubrics will be archived too.`
+            : `Archive “${name}”?`
         }
       >
         <Archive aria-hidden />
-        Archivia
+        Archive
       </ActionButton>
     ) : null;
 
@@ -208,19 +208,19 @@ export default async function StrategyPage({
       <RefreshWhile active={running} />
 
       <Card className="space-y-3 p-5">
-        <h2 className="text-heading-sm text-fg">Chiedi al Planner</h2>
+        <h2 className="text-heading-sm text-fg">Ask the Planner</h2>
         <p className="text-body-sm text-fg-muted">
-          Il Planner propone pilastri e rubriche partendo dalla Brand Identity. Le proposte restano
-          in attesa finché una persona non le accetta.
+          The Planner proposes pillars and rubrics based on the Brand Identity. Proposals stay
+          pending until a person accepts them.
         </p>
         {running ? (
           <p role="status" className="flex items-center gap-2 text-body-sm text-fg">
             <LoaderCircle aria-hidden className="size-4 animate-spin" />
-            Il Planner sta preparando una proposta…
+            The Planner is preparing a proposal…
           </p>
         ) : failed ? (
           <p role="alert" className="text-body-sm text-error">
-            L&apos;ultima richiesta al Planner non è riuscita
+            The last request to the Planner failed
             {lastJob.error ? `: ${lastJob.error}` : "."}
           </p>
         ) : null}
@@ -228,7 +228,7 @@ export default async function StrategyPage({
           <AskPlannerForm
             {...base}
             running={running}
-            disabledReason={o.brand ? null : "Serve una Brand Identity pubblicata."}
+            disabledReason={o.brand ? null : "A published Brand Identity is required."}
           />
         ) : null}
       </Card>
@@ -236,7 +236,7 @@ export default async function StrategyPage({
       {o.warnings.length ? (
         <section aria-labelledby="freq-warn" className="space-y-2">
           <h2 id="freq-warn" className="sr-only">
-            Avvisi sulla frequenza
+            Frequency warnings
           </h2>
           {o.warnings.map((w) => (
             <p
@@ -254,10 +254,10 @@ export default async function StrategyPage({
       {proposedPillars.length || proposedRubrics.length ? (
         <section aria-labelledby="proposals" className="space-y-4">
           <h2 id="proposals" className="text-heading-md text-fg">
-            Proposte del Planner ({proposedPillars.length + proposedRubrics.length})
+            Planner proposals ({proposedPillars.length + proposedRubrics.length})
           </h2>
           <p className="text-body-sm text-fg-muted">
-            Accetta prima i pilastri: una rubrica si può accettare solo se il suo pilastro è attivo.
+            Accept pillars first: a rubric can be accepted only if its pillar is active.
           </p>
           {proposedPillars.map((p) => proposalCard("pillar", p, pillarFacts(p)))}
           {proposedRubrics.map((r) => proposalCard("rubric", r, rubricFacts(r)))}
@@ -267,14 +267,14 @@ export default async function StrategyPage({
       <section aria-labelledby="pillars" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="pillars" className="text-heading-md text-fg">
-            Pilastri ({livePillars.length})
+            Pillars ({livePillars.length})
           </h2>
-          {canEdit ? <PillarForm {...base} options={options} label="Nuovo pilastro" /> : null}
+          {canEdit ? <PillarForm {...base} options={options} label="New pillar" /> : null}
         </div>
         {!livePillars.length ? (
           <Card className="p-6">
             <p className="text-body-md text-fg-muted">
-              Nessun pilastro attivo. Crealo a mano o chiedi una proposta al Planner.
+              No active pillars. Create one manually or ask the Planner for a proposal.
             </p>
           </Card>
         ) : null}
@@ -286,8 +286,8 @@ export default async function StrategyPage({
                 <div className="space-y-1">
                   <h3 className="text-heading-sm text-fg">{p.name}</h3>
                   <div className="flex flex-wrap gap-2">
-                    {p.status === "stale" ? <Badge variant="warning">Da rivedere</Badge> : null}
-                    <Badge>{p.contents === 1 ? "1 carosello" : `${p.contents} caroselli`}</Badge>
+                    {p.status === "stale" ? <Badge variant="warning">Needs review</Badge> : null}
+                    <Badge>{p.contents === 1 ? "1 carousel" : `${p.contents} carousels`}</Badge>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-start gap-2">
@@ -298,7 +298,7 @@ export default async function StrategyPage({
                       rev={p.rev}
                       initial={pillarRowToInput(p)}
                       options={options}
-                      label="Modifica"
+                      label="Edit"
                     />
                   ) : null}
                   {archiveButton("pillar", p.id, p.name)}
@@ -306,7 +306,7 @@ export default async function StrategyPage({
               </header>
               <Facts items={pillarFacts(p)} />
               <div className="space-y-3 border-t border-subtle pt-4">
-                <h4 className="text-label uppercase text-fg-muted">Rubriche ({rubrics.length})</h4>
+                <h4 className="text-label uppercase text-fg-muted">Rubrics ({rubrics.length})</h4>
                 {rubrics.length ? (
                   <ul className="space-y-3">
                     {rubrics.map((r) => (
@@ -315,7 +315,7 @@ export default async function StrategyPage({
                           <p className="flex flex-wrap items-center gap-2 text-body-md font-medium text-fg">
                             {r.name}
                             {r.status === "stale" ? (
-                              <Badge variant="warning">Da rivedere</Badge>
+                              <Badge variant="warning">Needs review</Badge>
                             ) : null}
                           </p>
                           <div className="flex flex-wrap items-start gap-2">
@@ -327,7 +327,7 @@ export default async function StrategyPage({
                                 pillarId={p.id}
                                 initial={rubricRowToInput(r)}
                                 options={options}
-                                label="Modifica"
+                                label="Edit"
                               />
                             ) : null}
                             {archiveButton("rubric", r.id, r.name)}
@@ -338,15 +338,10 @@ export default async function StrategyPage({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-body-sm text-fg-muted">Nessuna rubrica per questo pilastro.</p>
+                  <p className="text-body-sm text-fg-muted">No rubrics for this pillar.</p>
                 )}
                 {canEdit ? (
-                  <RubricForm
-                    {...base}
-                    pillarId={p.id}
-                    options={options}
-                    label="Aggiungi rubrica"
-                  />
+                  <RubricForm {...base} pillarId={p.id} options={options} label="Add rubric" />
                 ) : null}
               </div>
             </Card>
@@ -357,7 +352,7 @@ export default async function StrategyPage({
       {archived.length ? (
         <details className="rounded-lg border border-subtle bg-surface p-5">
           <summary className="cursor-pointer text-heading-sm text-fg">
-            Archiviati ({archived.length})
+            Archived ({archived.length})
           </summary>
           <ul className="mt-4 space-y-2">
             {archived.map((a) => (
@@ -368,7 +363,7 @@ export default async function StrategyPage({
                 <span className="text-fg">
                   {a.name}{" "}
                   <span className="text-fg-muted">
-                    · {a.note} · archiviato {formatDate(a.at)}
+                    · {a.note} · archived {formatDate(a.at)}
                   </span>
                 </span>
                 {canArchive ? (
@@ -383,7 +378,7 @@ export default async function StrategyPage({
                     })}
                   >
                     <ArchiveRestore aria-hidden />
-                    Ripristina
+                    Restore
                   </ActionButton>
                 ) : null}
               </li>

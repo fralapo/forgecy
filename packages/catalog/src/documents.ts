@@ -16,13 +16,13 @@ export async function readTextDocument(
     try {
       text = (await mammoth.extractRawText({ buffer: data })).value;
     } catch {
-      throw new ImportError("IMPORT-INVALID", `"${name}" non è un DOCX leggibile.`);
+      throw new ImportError("IMPORT-INVALID", `"${name}" is not a readable DOCX.`);
     }
   } else {
     try {
       text = decodeCsv(data).text;
     } catch {
-      throw new ImportError("IMPORT-INVALID", `"${name}" non è un testo leggibile.`);
+      throw new ImportError("IMPORT-INVALID", `"${name}" is not readable text.`);
     }
   }
   text = text
@@ -39,6 +39,7 @@ export async function readTextDocument(
 export function parseProductText(text: string): Record<string, string> {
   const out: Record<string, string> = {};
   const rest: string[] = [];
+  // Labels match Italian and English product sheets.
   const labels: Array<[RegExp, string]> = [
     [/^(nome|name|prodotto|titolo)$/i, "name"],
     [/^(sku|codice|cod|codice articolo|code)$/i, "sku"],

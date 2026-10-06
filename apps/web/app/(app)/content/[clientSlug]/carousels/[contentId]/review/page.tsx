@@ -17,10 +17,11 @@ import { ReviewForm, type PendingImage } from "../../../../_components/review-fo
 import { carouselPath, formatDate } from "../../../../_lib/paths";
 import { thumbnailUrls } from "../../../../_lib/server";
 import { loadCarousel } from "../../_lib/workspace";
+import { plural } from "@/lib/plural";
 
-export const metadata = { title: "Revisione del carosello" };
+export const metadata = { title: "Carousel review" };
 
-const decisionLabels = { approved: "Approvato", changes_requested: "Modifiche richieste" } as const;
+const decisionLabels = { approved: "Approved", changes_requested: "Changes requested" } as const;
 
 export default async function ReviewPage({
   params,
@@ -98,20 +99,20 @@ export default async function ReviewPage({
       <section className="space-y-2">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-heading-md text-fg">
-            {version ? `Versione ${version.number}` : "Nessuna versione"}
+            {version ? `Version ${version.number}` : "No version"}
           </h2>
           <Badge variant={inReview ? "warning" : "neutral"}>{contentStatusLabels[c.status]}</Badge>
         </div>
         {version ? (
           <p className="text-body-sm text-fg-muted">
-            Creata {versionAuthor ? `da ${versionAuthor} ` : ""}il {formatDate(version.createdAt)}
+            Created {versionAuthor ? `by ${versionAuthor} ` : ""}on {formatDate(version.createdAt)}
           </p>
         ) : null}
         {!inReview ? (
           <p className="text-body-sm text-fg">
-            Il carosello non è in revisione.{" "}
+            The carousel is not in review.{" "}
             {c.status === "draft" || c.status === "changes_requested" ? (
-              <Link href={`${base}/editor` as Route}>Apri l&apos;editor</Link>
+              <Link href={`${base}/editor` as Route}>Open the editor</Link>
             ) : null}
           </p>
         ) : null}
@@ -125,7 +126,7 @@ export default async function ReviewPage({
       {version && doc && manifest ? (
         <section aria-labelledby="slides-title" className="space-y-4">
           <h2 id="slides-title" className="text-heading-sm text-fg">
-            Slide
+            Slides
           </h2>
           <ol className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {doc.slides.map((s, i) => {
@@ -144,10 +145,12 @@ export default async function ReviewPage({
                   <p className="flex flex-wrap items-center gap-2 text-body-sm text-fg">
                     {i + 1}. {findLayout(manifest, s.layout)?.name ?? s.layout}
                     {findings.length ? (
-                      <Badge variant="warning">{findings.length} segnalazioni</Badge>
+                      <Badge variant="warning">
+                        {plural(findings.length, "finding", "findings")}
+                      </Badge>
                     ) : null}
                   </p>
-                  {s.note ? <p className="text-body-sm text-fg-muted">Nota: {s.note}</p> : null}
+                  {s.note ? <p className="text-body-sm text-fg-muted">Note: {s.note}</p> : null}
                   <ReviewComments
                     {...ref}
                     slideId={s.id}
@@ -160,18 +163,18 @@ export default async function ReviewPage({
             })}
           </ol>
           <div className="space-y-2">
-            <h3 className="text-label text-fg">Didascalia</h3>
+            <h3 className="text-label text-fg">Caption</h3>
             <p className="whitespace-pre-line text-body-sm text-fg">{doc.caption || "—"}</p>
             {doc.hashtags.length ? (
               <p className="text-body-sm text-fg-muted">{doc.hashtags.join(" ")}</p>
             ) : null}
           </div>
           <div className="space-y-2">
-            <h3 className="text-label text-fg">Commenti sul carosello</h3>
+            <h3 className="text-label text-fg">Carousel comments</h3>
             <ReviewComments
               {...ref}
               slideId={null}
-              label="carosello"
+              label="carousel"
               comments={comments(null)}
               canComment={canComment}
             />
@@ -209,7 +212,7 @@ export default async function ReviewPage({
 
       <section aria-labelledby="history-title" className="space-y-3">
         <h2 id="history-title" className="text-heading-sm text-fg">
-          Cronologia delle approvazioni
+          Approval history
         </h2>
         {ws.approvals.length ? (
           <ol className="space-y-3">
@@ -219,9 +222,9 @@ export default async function ReviewPage({
                   <Badge variant={a.decision === "approved" ? "success" : "error"}>
                     {decisionLabels[a.decision]}
                   </Badge>
-                  Versione {versionNumbers.get(a.versionId) ?? "—"} ·{" "}
-                  {a.deciderName ?? "Utente rimosso"} · {formatDate(a.decidedAt)}
-                  {a.selfApproval ? <Badge>Auto-approvazione</Badge> : null}
+                  Version {versionNumbers.get(a.versionId) ?? "—"} ·{" "}
+                  {a.deciderName ?? "Removed user"} · {formatDate(a.decidedAt)}
+                  {a.selfApproval ? <Badge>Self-approval</Badge> : null}
                 </p>
                 {a.note ? (
                   <p className="whitespace-pre-line text-body-sm text-fg-muted">{a.note}</p>
@@ -230,7 +233,7 @@ export default async function ReviewPage({
             ))}
           </ol>
         ) : (
-          <p className="text-body-sm text-fg-muted">Nessuna decisione finora.</p>
+          <p className="text-body-sm text-fg-muted">No decisions yet.</p>
         )}
       </section>
     </div>

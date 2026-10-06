@@ -2,7 +2,7 @@ import { BlockPage } from "../../_components/block-page";
 import { verbalUi } from "../../_lib/editor-config";
 import { versionParam } from "../../_lib/server";
 
-export const metadata = { title: "Verbale · Brand Identity" };
+export const metadata = { title: "Verbal · Brand Identity" };
 
 export default async function VerbalPage({
   params,
@@ -17,7 +17,7 @@ export default async function VerbalPage({
       slug={clientSlug}
       version={versionParam(sp.version)}
       sections={[verbalUi]}
-      intro="Voce costante, tono per asse con una frase giusta e una sbagliata, regole di scrittura e vocabolario."
+      intro="Consistent voice, tone per axis with one right and one wrong sentence, writing rules and vocabulary."
     />
   );
 }

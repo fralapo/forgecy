@@ -158,7 +158,7 @@ export interface AuditJobState {
   createdAt: Date;
 }
 
-/** Latest job of each kind for the audit (for "in corso", errors and retries). */
+/** Latest job of each kind for the audit (for "in progress", errors and retries). */
 export async function auditJobStates(db: Database, auditId: string): Promise<AuditJobState[]> {
   return db
     .selectDistinctOn([jobs.kind], {
@@ -319,7 +319,7 @@ export async function getSocialView(
       .limit(500),
     findingsOf(db, auditId, { kind: "observation", channel }),
   ]);
-  const fileNames = new Map(sources.map((s) => [s.id, s.fileName ?? "File importato"]));
+  const fileNames = new Map(sources.map((s) => [s.id, s.fileName ?? "Imported file"]));
   const cards = computeChannelMetrics({
     channel,
     metrics: metrics.map((m) => ({
@@ -329,7 +329,7 @@ export async function getSocialView(
       source: m.source,
       sourceNote: m.sourceNote,
       sourceLabel: m.sourceId
-        ? `File: ${fileNames.get(m.sourceId) ?? "importato"}`
+        ? `File: ${fileNames.get(m.sourceId) ?? "imported"}`
         : `${metricSourceLabels[m.source]}${m.sourceNote ? ` · ${m.sourceNote}` : ""}`,
     })),
     posts: posts.map((p) => ({
@@ -439,7 +439,7 @@ export async function getDiagnosisView(db: Database, auditId: string) {
   return { problems, observations, plan: plan ?? null, outcome };
 }
 
-/** Sources by id, for the "Fonte" chips of findings. */
+/** Sources by id, for the "Source" chips of findings. */
 export async function sourcesById(db: Database, ids: string[]): Promise<Map<string, SourceRow>> {
   if (!ids.length) return new Map();
   const rows = await db.select().from(auditSources).where(inArray(auditSources.id, ids));

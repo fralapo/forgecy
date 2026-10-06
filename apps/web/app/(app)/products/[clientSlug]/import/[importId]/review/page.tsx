@@ -21,7 +21,7 @@ import { catalogPage, imageUrl } from "../../../../_lib/server";
 import { NotAClient } from "../../../not-a-client";
 import { ReviewView, type ReviewItemView, type ReviewImageView } from "./review-view";
 
-export const metadata = { title: "Rivedi import" };
+export const metadata = { title: "Review import" };
 
 export default async function ReviewPage({
   params,
@@ -148,15 +148,15 @@ export default async function ReviewPage({
     <>
       <Breadcrumb
         items={[
-          { label: "Clienti", href: "/clients" },
+          { label: "Clients", href: "/clients" },
           { label: client.name, href: "/products" },
-          { label: "Prodotti", href: paths.catalog(client.slug) },
+          { label: "Products", href: paths.catalog(client.slug) },
           { label: importTitle(imp.createdAt), href: paths.importOpen(client.slug, imp.id) },
-          { label: "Revisione" },
+          { label: "Review" },
         ]}
       />
       <PageHeader
-        title="Rivedi import"
+        title="Review import"
         description={sourceNames}
         actions={<ImportStatusBadge status={imp.status} />}
       />

@@ -43,7 +43,11 @@ async function run<T extends object>(
     return { ok: true, ...out };
   } catch (err) {
     if (err instanceof PermissionDeniedError)
-      return { ok: false, error: "Non hai il permesso per questa azione.", code: "PERM-DENIED" };
+      return {
+        ok: false,
+        error: "You don't have permission for this action.",
+        code: "PERM-DENIED",
+      };
     if (err instanceof ForgecyError) {
       const code = typeof err.details?.code === "string" ? err.details.code : err.code;
       return {
@@ -221,12 +225,12 @@ export async function restoreAction(input: {
 
 const linkSourceSchema = z.object({
   kind: z.enum(brandSourceKinds),
-  title: z.string().trim().min(1, "Scrivi un titolo").max(300),
+  title: z.string().trim().min(1, "Enter a title").max(300),
   url: z
     .string()
     .trim()
     .transform((v) => v || undefined)
-    .pipe(z.url({ protocol: /^https?$/, message: "Indirizzo non valido" }).optional()),
+    .pipe(z.url({ protocol: /^https?$/, message: "Invalid address" }).optional()),
   note: z.string().trim().max(20_000).optional(),
 });
 
@@ -242,9 +246,9 @@ export async function addLinkSourceAction(input: {
   slugSchema.parse(input.slug);
   const parsed = linkSourceSchema.safeParse(input);
   if (!parsed.success)
-    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Dati non validi" };
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid data" };
   if (!parsed.data.url && !parsed.data.note)
-    return { ok: false as const, error: "Indica un indirizzo o scrivi la nota." };
+    return { ok: false as const, error: "Enter an address or write the note." };
   return run(input.slug, async ({ actor }) => {
     const row = await addSource(getDb(), actor, {
       clientId: uuid.parse(input.clientId),
@@ -252,7 +256,7 @@ export async function addLinkSourceAction(input: {
       title: parsed.data.title,
       url: parsed.data.url ?? null,
       note: parsed.data.note ?? null,
-      ...(parsed.data.note ? { pages: [{ locator: "Nota", text: parsed.data.note }] } : {}),
+      ...(parsed.data.note ? { pages: [{ locator: "Note", text: parsed.data.note }] } : {}),
       status: "extracted",
     });
     return { sourceId: row.id };

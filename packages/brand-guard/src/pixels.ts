@@ -1,6 +1,6 @@
 /**
- * Contrast measured on the render pixels (spec Page 46: "Contrasto misurato sui pixel
- * del render, anche su immagine"). For each text slot the rectangle of the screenshot
+ * Contrast measured on the render pixels (spec Page 46: "Contrast measured on the render
+ * pixels, also over images"). For each text slot the rectangle of the screenshot
  * is reduced to color buckets: the most common one is the dominant background, the
  * text color is the bucket that contrasts most with it, and the background reported
  * is the *worst* sizable bucket behind the text, so text over a photo is judged on

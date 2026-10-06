@@ -31,15 +31,15 @@ export default async function SocialPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ canale?: string }>;
+  searchParams: Promise<{ channel?: string }>;
 }) {
   const { slug } = await params;
-  const { canale } = await searchParams;
+  const { channel: channelParam } = await searchParams;
   const { db, audit, readOnly, aiAllowed } = await sectionContext(slug);
   const views = await Promise.all(socialChannels.map((c) => getSocialView(db, audit.id, c)));
   const withProfile = views.filter((v) => v.state);
   const channel: SocialChannel =
-    socialChannels.find((c) => c === canale) ?? withProfile[0]?.channel ?? "instagram";
+    socialChannels.find((c) => c === channelParam) ?? withProfile[0]?.channel ?? "instagram";
   const view = views.find((v) => v.channel === channel)!;
   const [links, shots, files] = await Promise.all([
     sourceLinks(db, view.findings),
@@ -60,16 +60,16 @@ export default async function SocialPage({
   return (
     <div className="flex flex-col gap-8">
       <p className="text-body-md text-fg-muted">
-        Forgecy non legge i social in automatico. Carica screenshot come prova, importa gli export o
-        inserisci i valori a mano con la loro fonte. Un valore mancante resta “Non disponibile”, mai
-        stimato.
+        Forgecy does not read social channels automatically. Upload screenshots as evidence, import
+        the exports or enter values by hand with their source. A missing value stays “Unavailable”,
+        never estimated.
       </p>
-      <nav aria-label="Canali social">
+      <nav aria-label="Social channels">
         <ul className="flex flex-wrap gap-2">
           {views.map((v) => (
             <li key={v.channel}>
               <Link
-                href={`/audit/${slug}/social?canale=${v.channel}` as Route}
+                href={`/audit/${slug}/social?channel=${v.channel}` as Route}
                 aria-current={v.channel === channel ? "page" : undefined}
                 className={cn(
                   "inline-flex items-center gap-2 rounded-md border px-3 py-2 text-body-sm",
@@ -98,8 +98,8 @@ export default async function SocialPage({
               {view.state?.unavailableReason
                 ? view.state.unavailableReason
                 : view.state
-                  ? "Aggiungi i dati che hai."
-                  : "Canale non indicato nel prospect: aggiungi il link se esiste."}
+                  ? "Add the data you have."
+                  : "Channel not listed for the prospect: add the link if it exists."}
             </CardDescription>
           </CardHeader>
           {!readOnly ? (
@@ -113,11 +113,11 @@ export default async function SocialPage({
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Metriche</CardTitle>
+            <CardTitle>Metrics</CardTitle>
             <CardDescription>
               {channel === "linkedin"
-                ? "LinkedIn ha le sue metriche e non si confronta con Instagram."
-                : "Il tasso di interazione appare solo con follower e interazioni dalla stessa fonte."}
+                ? "LinkedIn has its own metrics and is not compared with Instagram."
+                : "The engagement rate appears only with followers and interactions from the same source."}
             </CardDescription>
           </CardHeader>
           <dl className="grid gap-3 sm:grid-cols-2">
@@ -146,13 +146,13 @@ export default async function SocialPage({
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Inserisci un valore</CardTitle>
+              <CardTitle>Enter a value</CardTitle>
             </CardHeader>
             <MetricForm auditId={audit.id} channel={channel} />
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Carica i dati</CardTitle>
+              <CardTitle>Upload data</CardTitle>
             </CardHeader>
             <TableImport
               auditId={audit.id}
@@ -167,9 +167,9 @@ export default async function SocialPage({
       {view.metrics.length || files.length || shots.length ? (
         <Card>
           <CardHeader>
-            <CardTitle>Fonti raccolte</CardTitle>
+            <CardTitle>Collected sources</CardTitle>
             <CardDescription>
-              Rimuovendo una fonte, le osservazioni che la citano tornano da rivedere.
+              Removing a source puts the observations that cite it back to review.
             </CardDescription>
           </CardHeader>
           {view.metrics.length ? (
@@ -194,7 +194,7 @@ export default async function SocialPage({
                       variant="ghost"
                       size="sm"
                     >
-                      Rimuovi
+                      Remove
                     </ActionButton>
                   ) : null}
                 </li>
@@ -220,8 +220,8 @@ export default async function SocialPage({
                       {" "}
                       ·{" "}
                       {f.status === "pending"
-                        ? "da importare"
-                        : `${f.data.rowsImported ?? 0} righe importate${f.data.rowsSkipped ? `, ${f.data.rowsSkipped} saltate` : ""}`}
+                        ? "to import"
+                        : `${f.data.rowsImported ?? 0} rows imported${f.data.rowsSkipped ? `, ${f.data.rowsSkipped} skipped` : ""}`}
                     </span>
                   </span>
                   {!readOnly ? (
@@ -230,9 +230,9 @@ export default async function SocialPage({
                       icon={<Trash2 aria-hidden />}
                       variant="ghost"
                       size="sm"
-                      confirm="Rimuovere il file e le righe importate?"
+                      confirm="Remove the file and the imported rows?"
                     >
-                      Rimuovi
+                      Remove
                     </ActionButton>
                   ) : null}
                 </li>
@@ -262,7 +262,7 @@ export default async function SocialPage({
                       variant="ghost"
                       size="sm"
                     >
-                      Rimuovi
+                      Remove
                     </ActionButton>
                   ) : null}
                 </li>
@@ -274,7 +274,7 @@ export default async function SocialPage({
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-heading-md text-fg">Osservazioni</h2>
+          <h2 className="font-display text-heading-md text-fg">Observations</h2>
           <div className="flex flex-wrap items-start gap-2">
             {!readOnly && aiAllowed && hasData ? (
               <ActionButton
@@ -284,8 +284,8 @@ export default async function SocialPage({
                 size="sm"
               >
                 {view.findings.some((f) => f.authorAgent)
-                  ? "Rigenera osservazioni"
-                  : "Genera osservazioni"}
+                  ? "Regenerate observations"
+                  : "Generate observations"}
               </ActionButton>
             ) : null}
             {!readOnly ? (
@@ -304,8 +304,8 @@ export default async function SocialPage({
         </div>
         {aiAllowed ? (
           <p className="text-body-sm text-fg-muted">
-            L&apos;AI guarda fino a 8 screenshot recenti per stile, tono e call to action; i numeri
-            li prende solo dai valori e dai post importati.
+            The AI looks at up to 8 recent screenshots for style, tone and calls to action; it takes
+            numbers only from the entered values and imported posts.
           </p>
         ) : null}
         {view.findings.length ? (
@@ -313,7 +313,7 @@ export default async function SocialPage({
             <FindingCard key={f.id} finding={toView(f)} sources={links} readOnly={readOnly} />
           ))
         ) : (
-          <p className="text-body-md text-fg-muted">Nessuna osservazione per questo canale.</p>
+          <p className="text-body-md text-fg-muted">No observations for this channel.</p>
         )}
       </section>
     </div>

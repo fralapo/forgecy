@@ -1,5 +1,5 @@
 /**
- * Permissions live in code (spec: "Utenti, ruoli e flussi" and Brand Identity
+ * Permissions live in code (spec: "Users, roles and flows" and Brand Identity
  * governance). In the MVP every human user holds every content permission;
  * settings permissions need the Admin flag. AI agents can only view and propose,
  * and that invariant is enforced here, server side, whatever the caller asks.

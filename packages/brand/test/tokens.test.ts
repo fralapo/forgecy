@@ -30,7 +30,7 @@ describe("client tokens", () => {
     const issues = validateTokens(t);
     expect(issues.some((i) => i.path === "color.semantic.background")).toBe(true);
     expect(
-      issues.some((i) => i.path === "color.semantic.accent" && /mancante/.test(i.message)),
+      issues.some((i) => i.path === "color.semantic.accent" && /Missing/.test(i.message)),
     ).toBe(true);
   });
 
@@ -38,12 +38,12 @@ describe("client tokens", () => {
     const t = defaultTokens() as {
       color: { reference: Record<string, unknown>; semantic: Record<string, unknown> };
     };
-    t.color.reference.giallo = { $value: hexToDtcg("#FFE600") };
-    t.color.semantic["text-secondary"] = { $value: "{color.reference.giallo}" };
+    t.color.reference.yellow = { $value: hexToDtcg("#FFE600") };
+    t.color.semantic["text-secondary"] = { $value: "{color.reference.yellow}" };
     const m = contrastMatrix(t);
-    expect(m.find((c) => c.label === "Testo su sfondo")?.grade).toBe("normal");
-    expect(m.find((c) => c.label === "Testo secondario su sfondo")?.grade).toBe("fail");
-    expect(referenceColors(t).map((c) => c.name)).toContain("giallo");
+    expect(m.find((c) => c.label === "Text on background")?.grade).toBe("normal");
+    expect(m.find((c) => c.label === "Secondary text on background")?.grade).toBe("fail");
+    expect(referenceColors(t).map((c) => c.name)).toContain("yellow");
   });
 
   it("lists removed token paths and builds token names", () => {
@@ -51,7 +51,7 @@ describe("client tokens", () => {
     const b = defaultTokens() as { component: Record<string, unknown> };
     delete b.component.progress;
     expect(removedTokenPaths(a, b)).toEqual(["component.progress.active"]);
-    expect(tokenNameFrom("Blu Rossi è", "x")).toBe("blu-rossi-e");
-    expect(tokenNameFrom("###", "colore-1")).toBe("colore-1");
+    expect(tokenNameFrom("Café Rossi", "x")).toBe("cafe-rossi");
+    expect(tokenNameFrom("###", "color-1")).toBe("color-1");
   });
 });

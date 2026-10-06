@@ -24,17 +24,17 @@ const editStatus: Record<
   EditorEdit["status"],
   { label: string; variant: "neutral" | "info" | "success" | "warning" | "error" }
 > = {
-  queued: { label: "In corso", variant: "info" },
-  applied: { label: "Da decidere", variant: "warning" },
-  kept: { label: "Tenuta", variant: "success" },
-  reverted: { label: "Annullata", variant: "neutral" },
-  failed: { label: "Non riuscita", variant: "error" },
+  queued: { label: "In progress", variant: "info" },
+  applied: { label: "To decide", variant: "warning" },
+  kept: { label: "Kept", variant: "success" },
+  reverted: { label: "Reverted", variant: "neutral" },
+  failed: { label: "Failed", variant: "error" },
 };
 
 const commercialUseLabels: Record<CommercialUse, string> = {
-  verified: "Uso commerciale verificato",
-  pending_verification: "Uso commerciale del fornitore da verificare",
-  rejected: "Uso commerciale rifiutato",
+  verified: "Commercial use verified",
+  pending_verification: "Provider’s commercial use to be verified",
+  rejected: "Commercial use rejected",
 };
 
 export function Thumb({ url, alt }: { url: string | null; alt: string }) {
@@ -49,12 +49,12 @@ export function Thumb({ url, alt }: { url: string | null; alt: string }) {
   ) : (
     <div className="flex aspect-square w-full items-center justify-center rounded-md border border-dashed border-subtle text-fg-muted">
       <ImageOff aria-hidden />
-      <span className="sr-only">Anteprima non disponibile</span>
+      <span className="sr-only">Preview unavailable</span>
     </div>
   );
 }
 
-/** «Chiedi all'AI» on one slide, and the AI edits waiting for «Tieni» or «Annulla modifica». */
+/** “Ask the AI” on one slide, and the AI edits waiting for “Keep” or “Undo edit”. */
 export function SlideAiPanel({
   editorRef: r,
   slideId,
@@ -84,14 +84,14 @@ export function SlideAiPanel({
     >
       <h2 id={`ai-${slideId}`} className="flex items-center gap-2 text-heading-sm text-fg">
         <Sparkles aria-hidden className="size-5" />
-        Chiedi all&apos;AI
+        Ask the AI
       </h2>
       <p className="text-body-sm text-fg-muted">
-        Il Copywriter riscrive solo questa slide e non tocca i campi protetti. La modifica resta da
-        confermare.
+        The Copywriter rewrites only this slide and doesn’t touch protected fields. The edit still
+        has to be confirmed.
       </p>
       <div className="space-y-1">
-        <Label htmlFor={`ai-instruction-${slideId}`}>Istruzione</Label>
+        <Label htmlFor={`ai-instruction-${slideId}`}>Instruction</Label>
         <textarea
           id={`ai-instruction-${slideId}`}
           rows={2}
@@ -99,7 +99,7 @@ export function SlideAiPanel({
           className={controlClass}
           value={instruction}
           disabled={disabled || pending}
-          placeholder="Es. rendi il titolo più diretto e accorcia il testo"
+          placeholder="E.g. make the title more direct and shorten the text"
           onChange={(e) => setInstruction(e.target.value)}
         />
       </div>
@@ -109,7 +109,7 @@ export function SlideAiPanel({
         onClick={() =>
           start(async () => {
             setError(null);
-            if (!(await flush())) return setError("Salva prima le modifiche in sospeso.");
+            if (!(await flush())) return setError("Save pending changes first.");
             const res = await requestSlideEditAction({ ...base, slideId, instruction });
             if (!res.ok) return setError(actionMessage(res));
             setInstruction("");
@@ -118,7 +118,7 @@ export function SlideAiPanel({
         }
       >
         <Sparkles aria-hidden />
-        Chiedi all&apos;AI
+        Ask the AI
       </Button>
       {error ? (
         <p role="alert" className="text-body-sm text-error">
@@ -131,8 +131,8 @@ export function SlideAiPanel({
           {open.map((e) => (
             <li key={e.id} className="space-y-2 rounded-md border border-control p-3">
               <p className="flex flex-wrap items-center gap-2 text-body-sm text-fg">
-                <Badge variant={editStatus[e.status].variant}>{editStatus[e.status].label}</Badge>«
-                {e.instruction}»
+                <Badge variant={editStatus[e.status].variant}>{editStatus[e.status].label}</Badge>“
+                {e.instruction}”
               </p>
               {e.note ? <p className="text-body-sm text-fg-muted">{e.note}</p> : null}
               {e.status === "applied" ? (
@@ -144,19 +144,19 @@ export function SlideAiPanel({
                     }
                   >
                     <Check aria-hidden />
-                    Tieni
+                    Keep
                   </ActionButton>
                   <ActionButton
                     size="sm"
                     variant="secondary"
                     action={async () => {
                       if (!(await flush()))
-                        return { ok: false, error: "Salva prima le modifiche in sospeso." };
+                        return { ok: false, error: "Save pending changes first." };
                       return decideSlideEditAction({ ...base, editId: e.id, decision: "revert" });
                     }}
                   >
                     <Undo2 aria-hidden />
-                    Annulla modifica
+                    Undo edit
                   </ActionButton>
                 </div>
               ) : null}
@@ -166,12 +166,12 @@ export function SlideAiPanel({
       ) : null}
       {past.length ? (
         <details className="text-body-sm">
-          <summary className="cursor-pointer text-fg-muted">Richieste precedenti</summary>
+          <summary className="cursor-pointer text-fg-muted">Previous requests</summary>
           <ul className="mt-2 space-y-1">
             {past.map((e) => (
               <li key={e.id} className="text-fg">
-                <Badge variant={editStatus[e.status].variant}>{editStatus[e.status].label}</Badge> «
-                {e.instruction}» · {formatDate(e.createdAt)}
+                <Badge variant={editStatus[e.status].variant}>{editStatus[e.status].label}</Badge> “
+                {e.instruction}” · {formatDate(e.createdAt)}
                 {e.status === "failed" && e.note ? (
                   <span className="block text-error">{e.note}</span>
                 ) : null}
@@ -184,7 +184,7 @@ export function SlideAiPanel({
   );
 }
 
-/** «Genera con l'AI» for an image slot: brief and number of variants, then a job. */
+/** “Generate with AI” for an image slot: brief and number of variants, then a job. */
 export function ImageGenerator({
   editorRef: r,
   slideId,
@@ -208,7 +208,7 @@ export function ImageGenerator({
     return (
       <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
         <Sparkles aria-hidden />
-        Genera con l&apos;AI
+        Generate with AI
       </Button>
     );
   return (
@@ -218,10 +218,10 @@ export function ImageGenerator({
       className="space-y-3 rounded-md border border-control p-3"
     >
       <p id={`${id}-title`} className="text-body-sm font-medium text-fg">
-        Genera un&apos;immagine con l&apos;AI
+        Generate an image with AI
       </p>
       <div className="space-y-1">
-        <Label htmlFor={`${id}-brief`}>Cosa deve mostrare</Label>
+        <Label htmlFor={`${id}-brief`}>What it should show</Label>
         <textarea
           id={`${id}-brief`}
           rows={3}
@@ -229,11 +229,11 @@ export function ImageGenerator({
           className={controlClass}
           value={brief}
           onChange={(e) => setBrief(e.target.value)}
-          placeholder="Soggetto, ambientazione, inquadratura. Lo stile arriva dalla Brand Identity."
+          placeholder="Subject, setting, framing. The style comes from the Brand Identity."
         />
       </div>
       <div className="space-y-1">
-        <Label htmlFor={`${id}-variants`}>Varianti</Label>
+        <Label htmlFor={`${id}-variants`}>Variants</Label>
         <select
           id={`${id}-variants`}
           className={`${controlClass} w-24`}
@@ -248,8 +248,8 @@ export function ImageGenerator({
         </select>
       </div>
       <p className="text-body-sm text-fg-muted">
-        Le immagini arrivano in libreria come «Da approvare»: il carosello non si approva finché
-        quelle usate non sono approvate.
+        The images land in the library as “To approve”: the carousel can’t be approved until the
+        ones it uses are approved.
       </p>
       <div className="flex flex-wrap gap-2">
         <Button
@@ -259,7 +259,7 @@ export function ImageGenerator({
             start(async () => {
               setMessage(null);
               if (!(await flush()))
-                return setMessage({ ok: false, text: "Salva prima le modifiche in sospeso." });
+                return setMessage({ ok: false, text: "Save pending changes first." });
               const res = await generateImageAction({
                 slug: r.slug,
                 clientId: r.clientId,
@@ -270,17 +270,17 @@ export function ImageGenerator({
                 variants,
               });
               if (!res.ok) return setMessage({ ok: false, text: actionMessage(res) });
-              setMessage({ ok: true, text: "Generazione avviata: le immagini compaiono qui." });
+              setMessage({ ok: true, text: "Generation started: the images will appear here." });
               setBrief("");
               router.refresh();
             })
           }
         >
           <Sparkles aria-hidden />
-          Genera
+          Generate
         </Button>
         <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
-          Chiudi
+          Close
         </Button>
       </div>
       {message ? (
@@ -312,7 +312,7 @@ export function AiImageDrafts({
   if (!drafts.length) return null;
   return (
     <div className="space-y-2">
-      <p className="text-body-sm font-medium text-fg">Immagini AI da approvare</p>
+      <p className="text-body-sm font-medium text-fg">AI images to approve</p>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {drafts.map((a) => (
           <li key={a.id} className="space-y-2 rounded-md border border-subtle p-2">
@@ -330,7 +330,7 @@ export function AiImageDrafts({
                   disabled={a.key === selectedKey}
                   onClick={() => onUse(a)}
                 >
-                  {a.key === selectedKey ? "In uso" : "Usa"}
+                  {a.key === selectedKey ? "In use" : "Use"}
                 </Button>
               ) : null}
               <ActionButton
@@ -345,14 +345,14 @@ export function AiImageDrafts({
                 }
               >
                 <Check aria-hidden />
-                Approva
+                Approve
               </ActionButton>
               <ActionButton
                 size="sm"
                 variant="ghost"
                 confirm={
                   a.key === selectedKey
-                    ? "L'immagine è usata nella slide: rifiutarla comunque?"
+                    ? "The image is used in the slide: reject it anyway?"
                     : undefined
                 }
                 action={() =>
@@ -365,7 +365,7 @@ export function AiImageDrafts({
                 }
               >
                 <X aria-hidden />
-                Rifiuta
+                Reject
               </ActionButton>
             </div>
           </li>

@@ -6,7 +6,7 @@ import { useActionState, useId, useRef } from "react";
 import type { ActionResult } from "../_lib/types";
 import { createProductAction } from "./actions";
 
-/** «Aggiungi prodotto»: Nome (obbligatorio), SKU, Categoria → «Crea bozza». */
+/** “Add product”: Name (required), SKU, Category → “Create draft”. */
 export function AddProductButton({
   clientId,
   clientSlug,
@@ -22,19 +22,19 @@ export function AddProductButton({
     <>
       <Button variant="secondary" onClick={() => ref.current?.showModal()}>
         <Plus aria-hidden />
-        Aggiungi prodotto
+        Add product
       </Button>
       <dialog
         ref={ref}
-        aria-label="Aggiungi prodotto"
+        aria-label="Add product"
         className="m-auto w-full max-w-md rounded-lg border border-subtle bg-surface p-6 text-fg backdrop:bg-fg/40"
       >
         <form action={action} className="space-y-4">
-          <h2 className="text-heading-sm">Aggiungi prodotto</h2>
+          <h2 className="text-heading-sm">Add product</h2>
           <input type="hidden" name="clientId" value={clientId} />
           <input type="hidden" name="clientSlug" value={clientSlug} />
           <div className="space-y-2">
-            <Label htmlFor={`${id}-name`}>Nome</Label>
+            <Label htmlFor={`${id}-name`}>Name</Label>
             <Input id={`${id}-name`} name="name" required maxLength={200} />
           </div>
           <div className="space-y-2">
@@ -42,7 +42,7 @@ export function AddProductButton({
             <Input id={`${id}-sku`} name="sku" maxLength={80} className="font-mono" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${id}-category`}>Categoria</Label>
+            <Label htmlFor={`${id}-category`}>Category</Label>
             <Input id={`${id}-category`} name="category" maxLength={120} />
           </div>
           {state.error ? (
@@ -52,10 +52,10 @@ export function AddProductButton({
           ) : null}
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={() => ref.current?.close()}>
-              Annulla
+              Cancel
             </Button>
             <Button type="submit" disabled={pending}>
-              Crea bozza
+              Create draft
             </Button>
           </div>
         </form>

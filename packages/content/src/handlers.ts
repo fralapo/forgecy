@@ -87,16 +87,16 @@ async function runExport(
     .select()
     .from(contentVersions)
     .where(and(eq(contentVersions.id, payload.versionId), eq(contentVersions.contentId, c.id)));
-  if (!version) throw new NeedsAttentionError("Versione del carosello non trovata");
+  if (!version) throw new NeedsAttentionError("Carousel version not found");
   if (!payload.draft && c.approvedVersionId !== version.id)
-    throw new NeedsAttentionError("La versione non è quella approvata");
+    throw new NeedsAttentionError("This is not the approved version");
   const doc = parseDocument(version.document);
   const brand = await loadBrand(db, system, {
     clientId: c.clientId,
     clientName: client.name,
     versionId: version.brandVersionId ?? c.brandVersionId,
   });
-  if (!brand) throw new NeedsAttentionError("Versione della Brand Identity non disponibile");
+  if (!brand) throw new NeedsAttentionError("Brand Identity version not available");
   const meta = version.meta as { templateVersion?: string | null; models?: string[] };
   const [approval] = payload.draft
     ? []

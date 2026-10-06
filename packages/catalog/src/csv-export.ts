@@ -5,11 +5,11 @@ import type { CatalogRow } from "./queries";
 const BOM = "\uFEFF";
 
 const statusLabels: Record<string, string> = {
-  draft: "Bozza",
-  proposed: "Proposto",
-  approved: "Approvato",
-  rejected: "Rifiutato",
-  archived: "Archiviato",
+  draft: "Draft",
+  proposed: "Proposed",
+  approved: "Approved",
+  rejected: "Rejected",
+  archived: "Archived",
 };
 
 /** Quote a CSV cell; neutralize formulas so the file is safe to open in a spreadsheet. */
@@ -19,9 +19,9 @@ export function csvCell(value: string): string {
   return /[",;\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 }
 
-/** "Esporta CSV" of the filtered products (UTF-8 with BOM, semicolon, opens in Excel Italia). */
+/** "Export CSV" of the filtered products (UTF-8 with BOM, semicolon, opens in Excel with Italian locale settings). */
 export function productsToCsv(rows: CatalogRow[]): string {
-  const header = ["Stato", ...fieldDefs.map((f) => f.label), "Fonte"];
+  const header = ["Status", ...fieldDefs.map((f) => f.label), "Source"];
   const lines = [header.map(csvCell).join(";")];
   for (const r of rows)
     lines.push(
@@ -36,9 +36,9 @@ export function productsToCsv(rows: CatalogRow[]): string {
   return `${BOM}${lines.join("\r\n")}\r\n`;
 }
 
-/** "Scarica rapporto degli scarti". */
+/** "Download rejected rows report". */
 export function discardsToCsv(rows: Array<{ reason: string; source: string }>): string {
-  const lines = [["Motivo", "Fonte"].map(csvCell).join(";")];
+  const lines = [["Reason", "Source"].map(csvCell).join(";")];
   for (const r of rows) lines.push([r.reason, r.source].map(csvCell).join(";"));
   return `${BOM}${lines.join("\r\n")}\r\n`;
 }

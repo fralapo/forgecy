@@ -12,7 +12,7 @@ export const brandFontSchema = z.object({
     .string()
     .min(1)
     .max(80)
-    .regex(/^[\p{L}\p{N} _-]+$/u, "Nome del font: lettere, cifre, spazi e trattini"),
+    .regex(/^[\p{L}\p{N} _-]+$/u, "Font name: letters, digits, spaces and dashes"),
   /** Storage key of the font file (WOFF2/WOFF/TTF/OTF); omit to use a font of the template. */
   key: z.string().min(1).max(1024).optional(),
   weight: z
@@ -36,5 +36,5 @@ export const brandThemeSchema = z.object({
 export type BrandTheme = z.infer<typeof brandThemeSchema>;
 export type BrandThemeInput = z.input<typeof brandThemeSchema>;
 
-/** «Brand neutro di anteprima»: the template's own fallbacks, nothing else. */
-export const NEUTRAL_BRAND: BrandTheme = brandThemeSchema.parse({ name: "Anteprima" });
+/** “Neutral preview brand”: the template's own fallbacks, nothing else. */
+export const NEUTRAL_BRAND: BrandTheme = brandThemeSchema.parse({ name: "Preview" });

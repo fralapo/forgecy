@@ -42,7 +42,7 @@ export function StrategyProposalCard({
       <div className="space-y-3">
         {children}
         <div className="space-y-1">
-          <Label htmlFor={noteId}>Nota (facoltativa)</Label>
+          <Label htmlFor={noteId}>Note (optional)</Label>
           <Input
             id={noteId}
             maxLength={1000}

@@ -27,16 +27,16 @@ describe("renderSlideHtml", () => {
     const pkg = packageFromFiles(miniPackage());
     const { html } = renderSlideHtml({
       pkg,
-      slide: slide({ title: "Uno ==due== tre", items: ["a", "b", "c"] }),
+      slide: slide({ title: "One ==two== three", items: ["a", "b", "c"] }),
     });
-    expect(html).toContain(`Uno <mark class="fc-hl">due</mark> tre`);
+    expect(html).toContain(`One <mark class="fc-hl">two</mark> three`);
     expect(html.match(/<li>/g)).toHaveLength(3);
     expect(html).toContain('data-count="3"');
   });
 
   it("marks empty slots so the layout can hide them", () => {
     const pkg = packageFromFiles(miniPackage());
-    const { html } = renderSlideHtml({ pkg, slide: slide({ title: "Solo titolo" }) });
+    const { html } = renderSlideHtml({ pkg, slide: slide({ title: "Title only" }) });
     expect(dom(html).querySelector('[data-slot="items"]')?.hasAttribute("data-empty")).toBe(true);
   });
 
@@ -84,9 +84,9 @@ describe("renderSlideHtml", () => {
     const draft = renderSlideHtml({
       pkg,
       slide: slide({ title: "x" }),
-      options: { watermark: "Bozza", showSafeZone: true },
+      options: { watermark: "Draft", showSafeZone: true },
     }).html;
-    expect(draft).toContain(">Bozza</span>");
+    expect(draft).toContain(">Draft</span>");
     expect(draft).toContain('class="fc-safe"');
   });
 
@@ -98,7 +98,7 @@ describe("renderSlideHtml", () => {
           layouts: [
             {
               id: "only",
-              name: "Unico",
+              name: "Only",
               role: "text",
               file: "layouts/only.html",
               slots: [
@@ -123,7 +123,7 @@ describe("renderSlideHtml", () => {
       pkg,
       slide: slide({
         title: "x",
-        photo: { key: "clients/a/assets/b.png", alt: "Foto", focalX: 0.2 },
+        photo: { key: "clients/a/assets/b.png", alt: "Photo", focalX: 0.2 },
       }),
       assets: new Map([["clients/a/assets/b.png", "data:image/png;base64,AAAA"]]),
     });

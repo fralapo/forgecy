@@ -2,10 +2,10 @@ import type { FieldChange } from "@forgecy/brand";
 import { Badge } from "@forgecy/ui";
 import { formatValue } from "../_lib/labels";
 
-const kindLabel = { added: "Aggiunto", removed: "Rimosso", changed: "Modificato" } as const;
+const kindLabel = { added: "Added", removed: "Removed", changed: "Changed" } as const;
 
 export function DiffList({ changes }: { changes: FieldChange[] }) {
-  if (!changes.length) return <p className="text-body-sm text-fg-muted">Nessuna differenza.</p>;
+  if (!changes.length) return <p className="text-body-sm text-fg-muted">No differences.</p>;
   return (
     <ul className="divide-y divide-subtle">
       {changes.map((c, i) => (
@@ -17,15 +17,15 @@ export function DiffList({ changes }: { changes: FieldChange[] }) {
             <p className="text-fg">{c.label}</p>
             <div className="flex flex-wrap gap-1">
               <Badge>{kindLabel[c.kind]}</Badge>
-              {c.sensitive ? <Badge variant="warning">Sensibile</Badge> : null}
+              {c.sensitive ? <Badge variant="warning">Sensitive</Badge> : null}
             </div>
           </div>
           <p className="whitespace-pre-wrap text-fg-muted">
-            <span className="sr-only">Prima: </span>
+            <span className="sr-only">Before: </span>
             {formatValue(c.before)}
           </p>
           <p className="whitespace-pre-wrap text-fg">
-            <span className="sr-only">Dopo: </span>
+            <span className="sr-only">After: </span>
             {formatValue(c.after)}
           </p>
         </li>

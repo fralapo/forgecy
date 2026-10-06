@@ -69,14 +69,14 @@ async function lockItem(
       ),
     )
     .for("update");
-  if (!item) throw new ForgecyError("not_found", "Elemento non trovato");
+  if (!item) throw new ForgecyError("not_found", "Item not found");
   return item;
 }
 
 async function assertReviewOpen(tx: Tx, clientId: string, importId: string) {
   const imp = await loadImport(tx, clientId, importId);
   if (imp.status !== "ready_for_review")
-    throw new ForgecyError("conflict", "La revisione di questo import non è aperta.", {
+    throw new ForgecyError("conflict", "The review of this import is not open.", {
       code: "CONFLICT-STATE",
     });
   return imp;
@@ -272,7 +272,7 @@ export async function decideItem(
         if (item.matchProductId && item.status === "pending")
           throw new ForgecyError(
             "validation",
-            "Decidi prima il duplicato: unisci, tieni entrambi o sostituisci i campi.",
+            "Decide on the duplicate first: merge, keep both or replace the fields.",
           );
         const blockers = approvalBlockers(draftOf(item), metaOfItem(item));
         if (blockers.length) throw new ForgecyError("validation", blockers[0]!);
@@ -318,7 +318,7 @@ export async function decideItem(
           .update(productImportItems)
           .set({
             status: "discarded",
-            discardReason: a.reason?.trim().slice(0, 300) || "Scartato in revisione",
+            discardReason: a.reason?.trim().slice(0, 300) || "Rejected in review",
             ...decided,
           })
           .where(eq(productImportItems.id, item.id));
@@ -410,7 +410,7 @@ export async function decideItem(
           productId: product.id,
           ...(proposals
             ? {
-                message: `${proposals} campi diventano proposte da accettare nella scheda del prodotto.`,
+                message: `${proposals} fields become proposals to accept on the product sheet.`,
               }
             : {}),
         };
@@ -423,7 +423,7 @@ export async function decideItem(
           incoming: unknown;
         }>;
         const conflict = conflicts.find((c) => c.field === a.field);
-        if (!conflict) throw new ForgecyError("validation", "Conflitto non trovato");
+        if (!conflict) throw new ForgecyError("validation", "Conflict not found");
         const fresh = await assertMatchFresh(tx, item);
         if (fresh?.stale) return { message: staleMessage(fresh.product.name) };
         const meta = metaOfItem(item)[a.field];
@@ -431,7 +431,7 @@ export async function decideItem(
           if (meta?.sensitive?.length && meta.confidence === "low" && !a.note?.trim())
             throw new ForgecyError(
               "validation",
-              "Campo sensibile a confidenza bassa: scrivi una nota per accettarlo.",
+              "Sensitive field with low confidence: write a note to accept it.",
             );
           await applyFields(
             tx,
@@ -512,13 +512,13 @@ export async function decideItem(
 }
 
 function staleMessage(name: string) {
-  return `"${name}" è stato modificato dopo l'analisi. Il confronto è stato aggiornato: controlla di nuovo prima di decidere.`;
+  return `"${name}" was changed after the analysis. The comparison has been updated: check again before deciding.`;
 }
 
 function stateConflict() {
   return new ForgecyError(
     "conflict",
-    "Un'altra persona ha già deciso questo elemento. Ricarica la pagina.",
+    "Someone else has already decided this item. Reload the page.",
     { code: "CONFLICT-STATE" },
   );
 }
@@ -578,7 +578,7 @@ async function applyFields(
   });
 }
 
-/** Inline edit of an extracted value: it becomes "Inserito a mano da …". */
+/** Inline edit of an extracted value: it becomes "Entered manually by …". */
 export async function editItemField(
   db: Database,
   user: ActingUser,
@@ -591,7 +591,7 @@ export async function editItemField(
     if (item.status !== "pending") throw stateConflict();
     const parsed = productFieldsSchema.shape[input.field].safeParse(input.value);
     if (!parsed.success)
-      throw new ForgecyError("validation", `${fieldDef(input.field).label}: valore non valido`);
+      throw new ForgecyError("validation", `${fieldDef(input.field).label}: invalid value`);
     const draft = { ...draftOf(item) } as Record<string, unknown>;
     let meta = { ...metaOfItem(item) };
     if (isEmptyValue(parsed.data)) {
@@ -629,13 +629,10 @@ export async function acceptItemSensitive(
     const item = await lockItem(tx, input.clientId, input.importId, input.itemId);
     const meta = { ...metaOfItem(item) };
     const m = meta[input.field];
-    if (!m?.sensitive?.length) throw new ForgecyError("validation", "Il campo non è sensibile");
+    if (!m?.sensitive?.length) throw new ForgecyError("validation", "The field is not sensitive");
     const note = input.note?.trim();
     if (m.confidence === "low" && !note)
-      throw new ForgecyError(
-        "validation",
-        "Confidenza bassa: scrivi una nota per accettare il campo.",
-      );
+      throw new ForgecyError("validation", "Low confidence: write a note to accept the field.");
     meta[input.field] = {
       ...m,
       acceptedBy: user.id,
@@ -661,7 +658,7 @@ export async function acceptItemSensitive(
 }
 
 /**
- * "Approva selezionati" in the New tab: excludes and reports the items with
+ * "Approve selected" in the New tab: excludes and reports the items with
  * sensitive fields not accepted or missing required fields.
  */
 export async function approveItems(
@@ -689,7 +686,7 @@ export async function approveItems(
       excluded.push({
         id,
         name: draft.name ?? "",
-        reason: "campi sensibili da accettare uno per uno",
+        reason: "sensitive fields to accept one by one",
       });
       continue;
     }
@@ -740,7 +737,7 @@ export async function decideImage(
           eq(productImportFiles.kind, "image"),
         ),
       );
-    if (!file) throw new ForgecyError("not_found", "Immagine non trovata");
+    if (!file) throw new ForgecyError("not_found", "Image not found");
     if (input.action === "ignore") {
       await tx
         .update(productImportFiles)
@@ -752,8 +749,7 @@ export async function decideImage(
       input.action === "assign"
         ? input.itemId
         : ((file.suggestion as { itemId?: string } | null)?.itemId ?? undefined);
-    if (!itemId)
-      throw new ForgecyError("validation", "Scegli il prodotto a cui assegnare l'immagine");
+    if (!itemId) throw new ForgecyError("validation", "Choose the product to assign the image to");
     const item = await lockItem(tx, input.clientId, input.importId, itemId);
     const ref: ImageRef = {
       fileId: file.id,
@@ -779,7 +775,7 @@ export async function decideImage(
   });
 }
 
-/** "Scarta tutti i non decisi" (recoverable while the review is open). */
+/** "Reject all undecided" (recoverable while the review is open). */
 export async function discardPending(
   db: Database,
   user: ActingUser,
@@ -792,7 +788,7 @@ export async function discardPending(
       .update(productImportItems)
       .set({
         status: "discarded",
-        discardReason: "Scartato in blocco in revisione",
+        discardReason: "Rejected in bulk in review",
         decidedBy: user.id,
         decidedAt: new Date(),
       })
@@ -816,7 +812,7 @@ export async function discardPending(
 }
 
 /**
- * "Chiudi revisione": allowed when every duplicate and conflict is decided. Items not
+ * "Close review": allowed when every duplicate and conflict is decided. Items not
  * decided enter the catalog as `proposed` with their provenance; the import ends
  * `completed`, or `partial` when discarded items or unassigned images remain.
  */
@@ -843,7 +839,7 @@ export async function closeReview(
     if (undecidedMatches.length)
       throw new ForgecyError(
         "validation",
-        `Decidi prima ${undecidedMatches.length} tra duplicati e conflitti.`,
+        `Decide on ${undecidedMatches.length} duplicates and conflicts first.`,
       );
     let proposed = 0;
     for (const item of items.filter((i) => i.status === "pending")) {

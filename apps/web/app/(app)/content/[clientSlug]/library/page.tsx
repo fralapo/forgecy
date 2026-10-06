@@ -20,9 +20,9 @@ import { loadClient, thumbnailUrls } from "../../_lib/server";
 import { importProductImageAction } from "./actions";
 
 const sourceLabel: Record<AssetRow["source"], string> = {
-  upload: "Caricata",
-  ai: "Generata con AI",
-  product: "Da prodotto",
+  upload: "Uploaded",
+  ai: "Generated with AI",
+  product: "From product",
 };
 const statusLabel = assetStatusLabels;
 const statusVariant = { draft: "warning", approved: "success", rejected: "error" } as const;
@@ -42,7 +42,7 @@ const pick = <T extends string>(all: readonly T[], v: unknown): T | undefined =>
 function formatBytes(n: number) {
   return n < 1024 * 1024
     ? `${Math.max(1, Math.round(n / 1024))} KB`
-    : `${(n / 1024 / 1024).toLocaleString("it-IT", { maximumFractionDigits: 1 })} MB`;
+    : `${(n / 1024 / 1024).toLocaleString("en-GB", { maximumFractionDigits: 1 })} MB`;
 }
 
 export default async function LibraryPage({
@@ -54,8 +54,8 @@ export default async function LibraryPage({
 }) {
   const [{ clientSlug }, sp] = await Promise.all([params, searchParams]);
   const { db, user, client } = await loadClient(clientSlug);
-  const source = pick(assetSources, sp.fonte);
-  const status = pick(assetStatuses, sp.stato);
+  const source = pick(assetSources, sp.source);
+  const status = pick(assetStatuses, sp.status);
   const canDecide = can(user.actor, "approve", client.id);
   const canUpload = can(user.actor, "assets.upload", client.id);
 
@@ -84,7 +84,7 @@ export default async function LibraryPage({
   );
 
   const base = libraryPath(client.slug);
-  const href = (q: { fonte?: string | undefined; stato?: string | undefined }) => {
+  const href = (q: { source?: string | undefined; status?: string | undefined }) => {
     const qs = new URLSearchParams(
       Object.entries(q).filter((e): e is [string, string] => Boolean(e[1])),
     ).toString();
@@ -99,18 +99,18 @@ export default async function LibraryPage({
   return (
     <div className="space-y-8">
       <section className="space-y-2">
-        <h2 className="text-heading-md text-fg">Libreria immagini</h2>
+        <h2 className="text-heading-md text-fg">Image library</h2>
         <p className="max-w-3xl text-body-sm text-fg-muted">
-          Le immagini caricate da una persona e le foto dei prodotti approvati sono subito
-          utilizzabili. Le immagini generate con l&apos;AI restano in bozza finché una persona non
-          le approva: prima di allora non entrano nell&apos;esportazione dei caroselli.
+          Images uploaded by a person and photos of approved products are usable right away.
+          AI-generated images stay in draft until a person approves them: until then they are not
+          included in carousel exports.
         </p>
       </section>
 
       {canUpload ? (
         <Card>
           <CardHeader>
-            <CardTitle>Carica un&apos;immagine</CardTitle>
+            <CardTitle>Upload an image</CardTitle>
           </CardHeader>
           <LibraryUploadForm slug={client.slug} />
         </Card>
@@ -119,8 +119,10 @@ export default async function LibraryPage({
       {productImages.length ? (
         <Card>
           <CardHeader>
-            <CardTitle>Importa da prodotto</CardTitle>
-            <CardDescription>Foto dei prodotti approvati nel catalogo del cliente.</CardDescription>
+            <CardTitle>Import from product</CardTitle>
+            <CardDescription>
+              Photos of the approved products in the client’s catalog.
+            </CardDescription>
           </CardHeader>
           <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {productImages.map(({ product, img, i }) => (
@@ -140,7 +142,7 @@ export default async function LibraryPage({
                   })}
                 >
                   <PackageOpen aria-hidden />
-                  Importa
+                  Import
                 </ActionButton>
               </li>
             ))}
@@ -148,25 +150,25 @@ export default async function LibraryPage({
         </Card>
       ) : null}
 
-      <nav aria-label="Filtri" className="flex flex-col gap-3">
+      <nav aria-label="Filters" className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="w-16 text-label text-fg-muted">Origine</span>
-          <Link href={href({ stato: status })} className={chip(!source)}>
-            Tutte
+          <span className="w-16 text-label text-fg-muted">Source</span>
+          <Link href={href({ status })} className={chip(!source)}>
+            All
           </Link>
           {assetSources.map((s) => (
-            <Link key={s} href={href({ fonte: s, stato: status })} className={chip(source === s)}>
+            <Link key={s} href={href({ source: s, status })} className={chip(source === s)}>
               {sourceLabel[s]}
             </Link>
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="w-16 text-label text-fg-muted">Stato</span>
-          <Link href={href({ fonte: source })} className={chip(!status)}>
-            Tutti
+          <span className="w-16 text-label text-fg-muted">Status</span>
+          <Link href={href({ source })} className={chip(!status)}>
+            All
           </Link>
           {assetStatuses.map((s) => (
-            <Link key={s} href={href({ fonte: source, stato: s })} className={chip(status === s)}>
+            <Link key={s} href={href({ source, status: s })} className={chip(status === s)}>
               {statusLabel[s]}
             </Link>
           ))}
@@ -175,7 +177,7 @@ export default async function LibraryPage({
 
       {rows.length === 0 ? (
         <p className="rounded-md border border-dashed border-subtle p-6 text-body-sm text-fg-muted">
-          Nessuna immagine{source || status ? " con questi filtri" : " in libreria"}.
+          No images{source || status ? " match these filters" : " in the library"}.
         </p>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -197,8 +199,8 @@ export default async function LibraryPage({
                     {gen && use !== "verified" ? (
                       <Badge variant={use === "rejected" ? "error" : "warning"}>
                         {use === "rejected"
-                          ? "Uso commerciale non consentito"
-                          : "Uso commerciale da verificare"}
+                          ? "Commercial use not allowed"
+                          : "Commercial use to be verified"}
                       </Badge>
                     ) : null}
                   </div>
@@ -208,11 +210,11 @@ export default async function LibraryPage({
                   </p>
                   {gen ? (
                     <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-body-sm">
-                      <dt className="text-fg-muted">Modello</dt>
+                      <dt className="text-fg-muted">Model</dt>
                       <dd className="text-fg">
                         {[gen.provider, gen.model].filter(Boolean).join(" · ") || "—"}
                       </dd>
-                      <dt className="text-fg-muted">Costo</dt>
+                      <dt className="text-fg-muted">Cost</dt>
                       <dd className="text-fg">
                         {typeof gen.costMicroUsd === "number" ? formatCost(gen.costMicroUsd) : "—"}
                       </dd>
@@ -223,7 +225,7 @@ export default async function LibraryPage({
                     </dl>
                   ) : null}
                   {a.status === "rejected" && a.rejectedReason ? (
-                    <p className="text-body-sm text-error">Motivo: {a.rejectedReason}</p>
+                    <p className="text-body-sm text-error">Reason: {a.rejectedReason}</p>
                   ) : null}
                   {canDecide ? <LibraryAltForm {...ref} alt={a.alt} /> : null}
                   {a.status === "draft" && canDecide ? <LibraryDecision {...ref} /> : null}
@@ -249,7 +251,7 @@ function Thumb({ url, alt }: { url: string | undefined; alt: string }) {
   ) : (
     <div className="flex aspect-square w-full items-center justify-center rounded-md border border-dashed border-subtle text-fg-muted">
       <ImageOff aria-hidden />
-      <span className="sr-only">Anteprima non disponibile</span>
+      <span className="sr-only">Preview unavailable</span>
     </div>
   );
 }

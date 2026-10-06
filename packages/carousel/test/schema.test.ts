@@ -22,10 +22,15 @@ describe("slide schemas from template.json", async () => {
     const tooLong = { ...byId("text"), slots: { ...byId("text").slots, title: "x".repeat(61) } };
     const res = one.safeParse(tooLong);
     expect(res.success).toBe(false);
-    expect(res.error?.issues[0]?.message).toBe("«Titolo»: 61 caratteri su 60");
-    expect(one.safeParse({ ...byId("text"), layout: "inventato" }).success).toBe(false);
+    const titleSlot = m.layouts
+      .find((l) => l.id === "text")!
+      .slots.find((s) => s.name === "title")!;
+    expect(res.error?.issues[0]?.message).toBe(
+      `“${titleSlot.label ?? titleSlot.name}”: 61 characters out of 60`,
+    );
+    expect(one.safeParse({ ...byId("text"), layout: "made-up" }).success).toBe(false);
     expect(
-      one.safeParse({ ...byId("text"), slots: { ...byId("text").slots, nuovo: "x" } }).success,
+      one.safeParse({ ...byId("text"), slots: { ...byId("text").slots, extra: "x" } }).success,
     ).toBe(false);
   });
 
@@ -38,11 +43,11 @@ describe("slide schemas from template.json", async () => {
     const all = buildCarouselSchema(m);
     const good = [byId("cover"), byId("text"), byId("list"), byId("data"), byId("cta")];
     expect(all.safeParse(good).success).toBe(true);
-    expect(all.safeParse(good.slice(0, 3)).error?.issues[0]?.message).toContain("da 5 a 10 slide");
+    expect(all.safeParse(good.slice(0, 3)).error?.issues[0]?.message).toContain("5 to 10 slides");
     const ctaFirst = [byId("cta"), byId("text"), byId("list"), byId("data"), byId("cover")];
     const msgs = all.safeParse(ctaFirst).error?.issues.map((i) => i.message) ?? [];
-    expect(msgs).toContain("Copertina: solo come prima slide");
-    expect(msgs).toContain("CTA: solo come ultima slide");
+    expect(msgs).toContain("Cover: only as the first slide");
+    expect(msgs).toContain("CTA: only as the last slide");
   });
 
   it("rejects empty list items", () => {
@@ -53,7 +58,7 @@ describe("slide schemas from template.json", async () => {
       ...list,
       slots: { ...list.slots, [name]: [items[0], " ", ...items.slice(1)] },
     });
-    expect(res.error?.issues.map((i) => i.message).join()).toContain("la voce 2 è vuota");
+    expect(res.error?.issues.map((i) => i.message).join()).toContain("item 2 is empty");
   });
 });
 
@@ -97,18 +102,20 @@ describe("report formats", () => {
 describe("export file names", () => {
   it("are deterministic slugs", () => {
     expect(slugify("Rossi S.r.l.")).toBe("rossi-srl");
-    expect(slugify("Fattura elettronica: perché?")).toBe("fattura-elettronica-perche");
+    expect(slugify("Electronic invoice: why?")).toBe("electronic-invoice-why");
+    // Accents are folded to ASCII.
+    expect(slugify("Perché")).toBe("perche");
     const n = exportFileNames({
       client: "Rossi S.r.l.",
-      content: "Fattura elettronica",
+      content: "Electronic invoice",
       version: 3,
       format: "ig_4x5",
       slides: 7,
     });
-    expect(n.png[0]).toBe("rossi-srl_fattura-elettronica_v3_ig-4x5_01.png");
-    expect(n.png[6]).toBe("rossi-srl_fattura-elettronica_v3_ig-4x5_07.png");
-    expect(n.pdf).toBe("rossi-srl_fattura-elettronica_v3_ig-4x5.pdf");
-    expect(n.zip).toBe("rossi-srl_fattura-elettronica_v3_ig-4x5.zip");
+    expect(n.png[0]).toBe("rossi-srl_electronic-invoice_v3_ig-4x5_01.png");
+    expect(n.png[6]).toBe("rossi-srl_electronic-invoice_v3_ig-4x5_07.png");
+    expect(n.pdf).toBe("rossi-srl_electronic-invoice_v3_ig-4x5.pdf");
+    expect(n.zip).toBe("rossi-srl_electronic-invoice_v3_ig-4x5.zip");
     const d = exportFileNames({
       client: "Rossi",
       content: "X",
@@ -117,8 +124,8 @@ describe("export file names", () => {
       slides: 2,
       draft: true,
     });
-    expect(d.png[1]).toBe("rossi_x_v1_linkedin-doc_02_bozza.png");
-    expect(d.pdf).toBe("rossi_x_v1_linkedin-doc_bozza.pdf");
+    expect(d.png[1]).toBe("rossi_x_v1_linkedin-doc_02_draft.png");
+    expect(d.pdf).toBe("rossi_x_v1_linkedin-doc_draft.pdf");
   });
 });
 
@@ -141,8 +148,8 @@ describe("export payload", async () => {
   const pkg = await loadRepoTemplate("editorial-linkedin");
   const base = {
     clientId: "00000000-0000-4000-8000-000000000001",
-    client: "Forno Rossi",
-    content: "Come nasce la pagnotta",
+    client: "Rossi Bakery",
+    content: "How a loaf is made",
     version: 1,
     templateId: pkg.manifest.id,
     slides: [sampleSlide(pkg.manifest.layouts[0]!)],

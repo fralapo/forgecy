@@ -25,7 +25,7 @@ export const IMPORT_LIMITS = {
 } as const;
 
 export const IMPORT_LIMITS_TEXT =
-  "CSV o XLSX fino a 10.000 righe · cartelle o ZIP fino a 200 MB e 2.000 file · immagini PNG, JPG, WebP fino a 20 MB · testi TXT, DOCX · PDF fino a 50 MB";
+  "CSV or XLSX up to 10,000 rows · folders or ZIP up to 200 MB and 2,000 files · PNG, JPG, WebP images up to 20 MB · TXT, DOCX texts · PDF up to 50 MB";
 
 export const MAX_UPLOAD_BYTES = Math.max(
   IMPORT_LIMITS.archiveBytes,

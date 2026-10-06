@@ -1,5 +1,5 @@
 /**
- * Per-client AI confidentiality policy (spec: "Policy di riservatezza AI").
+ * Per-client AI confidentiality policy (spec: "AI confidentiality policy").
  * The gateway checks it before every request; a job that would break it never starts.
  */
 export const aiPolicies = [

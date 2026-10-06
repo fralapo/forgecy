@@ -18,12 +18,12 @@ describe("validateTemplatePackage", () => {
     const report = (manifest: Record<string, unknown>) =>
       validateTemplatePackage(miniPackage({ manifest })).issues.map(formatIssue).join("\n");
     const a4 = { format: "report_a4", width: 1240, height: 1754 };
-    expect(report({ ...a4, kind: "report", channel: undefined })).not.toMatch(/canale|kind/);
-    expect(report({ ...a4, kind: "report" })).toContain("non ha un canale");
+    expect(report({ ...a4, kind: "report", channel: undefined })).not.toMatch(/channel|kind/);
+    expect(report({ ...a4, kind: "report" })).toContain("has no channel");
     expect(report({ ...a4, channel: undefined })).toContain('kind "report"');
     expect(report({ kind: "report" })).toContain('kind "carousel"');
-    expect(report({ channel: undefined })).toContain("canale instagram");
-    expect(report({ slides: { min: 1, max: 30, default: 2 } })).toContain("massimo ≤ 20");
+    expect(report({ channel: undefined })).toContain("channel instagram");
+    expect(report({ slides: { min: 1, max: 30, default: 2 } })).toContain("max ≤ 20");
     expect(
       report({
         ...a4,
@@ -31,7 +31,7 @@ describe("validateTemplatePackage", () => {
         channel: undefined,
         slides: { min: 1, max: 40, default: 8 },
       }),
-    ).not.toMatch(/pagine/);
+    ).not.toMatch(/pages/);
   });
 
   it("reports hardcoded colors and off-scale sizes with file and line", () => {
@@ -42,12 +42,10 @@ describe("validateTemplatePackage", () => {
     );
     const messages = report.issues.map(formatIssue);
     expect(messages).toContain(
-      "`styles.css`, riga 3: colore `#FF0000` scritto a mano. Usa un ruolo colore (variabile CSS).",
+      "`styles.css`, line 3: hand-written color `#FF0000`. Use a color role (CSS variable).",
     );
-    expect(messages).toContain(
-      "`styles.css`, riga 4: `font-size: 37px` fuori dalla scala tipografica.",
-    );
-    expect(messages.some((m) => m.includes("riga 5") && m.includes("rgb"))).toBe(true);
+    expect(messages).toContain("`styles.css`, line 4: `font-size: 37px` is off the type scale.");
+    expect(messages.some((m) => m.includes("line 5") && m.includes("rgb"))).toBe(true);
     expect(report.checks.find((c) => c.id === "hardcoded")?.status).toBe("error");
   });
 
@@ -58,8 +56,8 @@ describe("validateTemplatePackage", () => {
       }),
     );
     const text = report.issues.map(formatIssue).join("\n");
-    expect(text).toContain("`--fc-accent` non è legata");
-    expect(text).toContain(`usa "Playfair Display" ma il font non è in \`fonts/\``);
+    expect(text).toContain("`--fc-accent` is not bound");
+    expect(text).toContain(`uses "Playfair Display" but the font is not in \`fonts/\``);
     expect(report.issues.some((i) => i.code === "ASSET-MISSING")).toBe(true);
   });
 
@@ -70,9 +68,9 @@ describe("validateTemplatePackage", () => {
       }),
     );
     const text = report.issues.map(formatIssue).join("\n");
-    expect(text).toContain("`layouts/only.html`, riga 1: attributo `onclick` non ammesso.");
-    expect(text).toContain("riga 2: elemento `<script>` non ammesso");
-    expect(text).toContain("riferimento esterno `https:`");
+    expect(text).toContain("`layouts/only.html`, line 1: attribute `onclick` not allowed.");
+    expect(text).toContain("line 2: element `<script>` not allowed");
+    expect(text).toContain("external reference `https:`");
   });
 
   it("keeps HTML and metadata slots in sync", () => {
@@ -82,8 +80,8 @@ describe("validateTemplatePackage", () => {
       }),
     );
     const text = report.issues.map(formatIssue).join("\n");
-    expect(text).toContain(`lo slot "extra" è nell'HTML ma non in template.json`);
-    expect(text).toContain(`lo slot elenco "items" deve essere`);
+    expect(text).toContain(`slot "extra" is in the HTML but not in template.json`);
+    expect(text).toContain(`list slot "items" must be`);
   });
 
   it("explains a broken template.json", () => {
@@ -93,7 +91,7 @@ describe("validateTemplatePackage", () => {
     const report = validateTemplatePackage(files);
     expect(report.ok).toBe(false);
     const text = report.issues.map((i) => i.message).join("\n");
-    expect(text).toContain("minimo ≤ default ≤ massimo");
+    expect(text).toContain("min ≤ default ≤ max");
     expect(text).toContain("1080×1080");
   });
 });

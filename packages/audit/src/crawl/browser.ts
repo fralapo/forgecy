@@ -90,7 +90,7 @@ export async function createBrowserFetcher(options: {
   } catch (err) {
     throw new CrawlError(
       "AUD-BROWSER-UNAVAILABLE",
-      `Chromium non disponibile: ${err instanceof Error ? err.message.split("\n")[0] : String(err)}`,
+      `Chromium unavailable: ${err instanceof Error ? err.message.split("\n")[0] : String(err)}`,
     );
   }
 
@@ -147,9 +147,9 @@ export async function createBrowserFetcher(options: {
       await page.close().catch(() => undefined);
       const message = err instanceof Error ? err.message : String(err);
       if (/blockedbyclient/i.test(message))
-        throw new CrawlError("AUD-HOST-BLOCKED", `Indirizzo nella rete locale: ${url}`);
+        throw new CrawlError("AUD-HOST-BLOCKED", `Address on the local network: ${url}`);
       if (/timeout/i.test(message))
-        throw new CrawlError("AUD-CRAWL-TIMEOUT", `Timeout dopo ${timeoutMs / 1000} s`);
+        throw new CrawlError("AUD-CRAWL-TIMEOUT", `Timeout after ${timeoutMs / 1000} s`);
       throw new CrawlError("SOURCE-UNAVAILABLE", message.split("\n")[0] ?? message);
     }
   }

@@ -2,7 +2,7 @@
  * Client image library for slides. Files are content-addressed under
  * `clients/<id>/assets/`, so the renderer's asset resolver accepts them and the same
  * file is stored once. Uploads by a person and product photos are usable at once;
- * AI images stay drafts until a person approves them (spec "Immagini AI").
+ * AI images stay drafts until a person approves them (spec "AI images").
  */
 import type { ProviderId } from "@forgecy/core";
 import type { Actor } from "@forgecy/core";
@@ -187,11 +187,11 @@ export async function importProductImage(
 ) {
   humanOnly(actor, "assets.upload", input.clientId);
   if (!input.storageKey.startsWith(`clients/${input.clientId}/`))
-    invalid("Immagine di un altro cliente");
+    invalid("Image of another client");
   // Only images of an approved product of this client, as the catalog lists them.
   const product = await productSource().get(db, input.clientId, input.productId);
   if (!product?.images.some((i) => i.storageKey === input.storageKey))
-    invalid("L'immagine non appartiene a un prodotto approvato del cliente");
+    invalid("The image does not belong to an approved product of the client");
   const chunks: Uint8Array[] = [];
   for await (const c of await storage.get(input.storageKey)) chunks.push(c as Uint8Array);
   const bytes = new Uint8Array(Buffer.concat(chunks));
@@ -222,7 +222,7 @@ export async function decideAsset(
   humanOnly(actor, input.decision === "approved" ? "approve" : "review", input.clientId);
   const reason = input.reason?.trim().slice(0, 500) ?? "";
   if (input.decision === "rejected" && reason.length < 3)
-    invalid("Scrivi perché l'immagine non va");
+    invalid("Write why the image is not right");
   const [row] = await db
     .update(assets)
     .set({
@@ -236,7 +236,7 @@ export async function decideAsset(
       and(eq(assets.id, input.id), eq(assets.clientId, input.clientId), eq(assets.status, "draft")),
     )
     .returning();
-  if (!row) conflict("Immagine non trovata o già decisa");
+  if (!row) conflict("Image not found or already decided");
   await recordAuditEvent(db, {
     actor,
     action: `content.asset_${input.decision}`,
@@ -259,7 +259,7 @@ export async function updateAssetAlt(
     .set({ alt: input.alt.trim().slice(0, 300) })
     .where(and(eq(assets.id, input.id), eq(assets.clientId, input.clientId)))
     .returning({ id: assets.id });
-  if (!row) notFound("Immagine non trovata");
+  if (!row) notFound("Image not found");
   return row;
 }
 
@@ -314,22 +314,22 @@ const reviewInputSchema = z
     provider: z.enum(imageProviders),
     status: reviewValueSchema.shape.status,
     termsUrl: z
-      .union([z.url("Indirizzo dei termini non valido").max(500), z.literal("")])
+      .union([z.url("Invalid terms URL").max(500), z.literal("")])
       .optional()
       .transform((v) => v || null),
     consultedOn: z
-      .union([z.iso.date("Data non valida"), z.literal("")])
+      .union([z.iso.date("Invalid date"), z.literal("")])
       .optional()
       .transform((v) => v || null),
     note: z
       .string()
       .trim()
-      .max(500, "Nota troppo lunga")
+      .max(500, "Note too long")
       .optional()
       .transform((v) => v || null),
   })
   .refine((v) => v.status !== "verified" || v.termsUrl, {
-    message: "Per «Verificato» serve l'indirizzo dei termini consultati",
+    message: "“Verified” needs the URL of the terms you checked",
     path: ["termsUrl"],
   });
 
@@ -362,7 +362,7 @@ export async function getCommercialUseReviews(
   return out;
 }
 
-/** An Admin records the commercial-use status of an image provider (page «Provider AI»). */
+/** An Admin records the commercial-use status of an image provider (page “AI providers”). */
 export async function setCommercialUse(db: Database, actor: Actor, input: unknown): Promise<void> {
   humanOnly(actor, "ai.providers.manage");
   const { provider, ...value } = parseOrThrow(reviewInputSchema, input);

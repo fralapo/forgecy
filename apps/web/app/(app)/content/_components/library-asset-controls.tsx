@@ -52,7 +52,7 @@ export function LibraryAltForm({ alt, ...ref }: AssetRef & { alt: string }) {
         exec(() => updateAltAction({ ...ref, alt: value }));
       }}
     >
-      <Label htmlFor={fieldId}>Testo alternativo</Label>
+      <Label htmlFor={fieldId}>Alt text</Label>
       <textarea
         id={fieldId}
         rows={2}
@@ -63,14 +63,14 @@ export function LibraryAltForm({ alt, ...ref }: AssetRef & { alt: string }) {
       />
       <Button type="submit" size="sm" variant="secondary" disabled={pending || value === alt}>
         <Save aria-hidden />
-        Salva
+        Save
       </Button>
       <ErrorText error={error} />
     </form>
   );
 }
 
-/** «Approva» / «Rifiuta» of a draft image; rejecting asks for the reason. */
+/** “Approve” / “Reject” of a draft image; rejecting asks for the reason. */
 export function LibraryDecision(ref: AssetRef) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
@@ -89,7 +89,7 @@ export function LibraryDecision(ref: AssetRef) {
             );
           }}
         >
-          <Label htmlFor={fieldId}>Perché non va?</Label>
+          <Label htmlFor={fieldId}>What’s wrong with it?</Label>
           <textarea
             id={fieldId}
             rows={2}
@@ -103,10 +103,10 @@ export function LibraryDecision(ref: AssetRef) {
           <div className="flex flex-wrap gap-2">
             <Button type="submit" size="sm" variant="danger" disabled={pending}>
               <X aria-hidden />
-              Rifiuta
+              Reject
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setRejecting(false)}>
-              Annulla
+              Cancel
             </Button>
           </div>
         </form>
@@ -119,7 +119,7 @@ export function LibraryDecision(ref: AssetRef) {
             onClick={() => exec(() => decideAssetAction({ ...ref, decision: "approved" }))}
           >
             <Check aria-hidden />
-            Approva
+            Approve
           </Button>
           <Button
             type="button"
@@ -129,7 +129,7 @@ export function LibraryDecision(ref: AssetRef) {
             onClick={() => setRejecting(true)}
           >
             <X aria-hidden />
-            Rifiuta
+            Reject
           </Button>
         </div>
       )}

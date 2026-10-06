@@ -5,7 +5,7 @@ import { pendingByField } from "../_lib/pending";
 import { loadBrand, shownVersion, sourcesFor } from "../_lib/server";
 import { SectionEditor } from "./section-editor";
 
-/** A block page (Strategia, Verbale, Visual, Contenuti): the draft, or a version read-only. */
+/** A block page (Strategy, Verbal, Visual, Content): the draft, or a version read-only. */
 export async function BlockPage({
   slug,
   version,
@@ -35,9 +35,9 @@ export async function BlockPage({
       <p className="max-w-3xl text-body-md text-fg-muted">
         {intro}{" "}
         {shown.version && !shown.editable
-          ? `Stai guardando la v${shown.version.number} in sola lettura.`
+          ? `You’re viewing v${shown.version.number} read-only.`
           : !shown.version
-            ? "Inizia la bozza per compilare questo blocco."
+            ? "Start the draft to fill in this block."
             : ""}
       </p>
       {before?.({ ...ctx, shown })}

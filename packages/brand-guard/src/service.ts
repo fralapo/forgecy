@@ -158,8 +158,8 @@ export async function runBrandCheck(
     fail(
       "conflict",
       input.brandVersionId
-        ? "La versione della Brand Identity indicata non è approvata."
-        : "Il cliente non ha una Brand Identity pubblicata: i controlli non hanno regole approvate.",
+        ? "The given Brand Identity version is not approved."
+        : "The client has no published Brand Identity: the checks have no approved rules.",
       { code: "BRAND-NOT-PUBLISHED" },
     );
   const report = checkContent(content, brand, render, input.options);
@@ -226,7 +226,7 @@ async function findingOf(db: Executor, clientId: string, subject: BrandCheckSubj
   const [run] = await latestRuns(db, clientId, subject);
   const finding = run ? reportOf(run).findings.find((f) => f.key === key) : undefined;
   if (!finding)
-    fail("not_found", "Esito non trovato nell'ultimo controllo.", {
+    fail("not_found", "Finding not found in the latest check.", {
       code: "BRAND-CHECK-FINDING-NOT-FOUND",
     });
   return finding;
@@ -245,7 +245,7 @@ function stateWhere(
   );
 }
 
-/** «Ignora per questo contenuto»: warnings and notes only, with a reason. */
+/** “Ignore for this content”: warnings and notes only, with a reason. */
 export async function ignoreFinding(
   db: Database,
   actor: Actor,
@@ -261,9 +261,9 @@ export async function ignoreFinding(
   assertCan(actor, "edit_draft", input.clientId);
   const note = input.note?.trim() || null;
   if (input.reason === "other" && !note)
-    fail("validation", "Scrivi il motivo.", { code: "BRAND-CHECK-NOTE-REQUIRED" });
+    fail("validation", "Write the reason.", { code: "BRAND-CHECK-NOTE-REQUIRED" });
   if (note && note.length > 280)
-    fail("validation", "Il motivo può avere al massimo 280 caratteri.", {
+    fail("validation", "The reason can be at most 280 characters.", {
       code: "BRAND-CHECK-NOTE-TOO-LONG",
     });
   await db.transaction(async (tx) => {
@@ -271,7 +271,7 @@ export async function ignoreFinding(
     if (!canIgnore(finding))
       fail(
         "validation",
-        "Gli errori non si ignorano: si correggono o si confermano con «Ho visto».",
+        "Errors cannot be ignored: fix them or confirm them with “I’ve seen it”.",
         { code: "BRAND-CHECK-ERROR-NOT-IGNORABLE" },
       );
     await tx.delete(brandCheckIssueStates).where(stateWhere(input, "ignored"));
@@ -298,7 +298,7 @@ export async function ignoreFinding(
   });
 }
 
-/** «Riapri» an ignored finding. */
+/** “Reopen” an ignored finding. */
 export async function reopenFinding(
   db: Database,
   actor: Actor,
@@ -326,7 +326,7 @@ export async function reopenFinding(
 /**
  * Approval gate for the Contents module, called inside its approve transaction:
  * the latest check must be on the version being approved, no AI image may wait for
- * approval, and every open error and warning needs "Ho visto" (stored here, per
+ * approval, and every open error and warning needs “I’ve seen it” (stored here, per
  * version). Throws a ForgecyError whose `details.code` the dialog can show.
  */
 export async function confirmBrandCheckForApproval(
@@ -342,11 +342,11 @@ export async function confirmBrandCheckForApproval(
   assertCan(actor, "approve", input.clientId);
   const [run, previous] = await latestRuns(db, input.clientId, input.subject, 2);
   if (!run)
-    fail("conflict", "I controlli non sono ancora stati eseguiti.", {
+    fail("conflict", "The checks have not run yet.", {
       code: "BRAND-CHECK-NOT-RUN",
     });
   if (run.subjectVersion !== input.subject.version)
-    fail("conflict", "I controlli non sono aggiornati all'ultima versione: rieseguili.", {
+    fail("conflict", "The checks are not up to date with the latest version: run them again.", {
       code: "BRAND-CHECK-STALE",
       checkedVersion: run.subjectVersion,
     });
@@ -358,12 +358,12 @@ export async function confirmBrandCheckForApproval(
   );
   const gate = approvalGate(report, input.acknowledgedKeys);
   if (gate.blockers.length)
-    fail("conflict", "Ci sono immagini AI da approvare.", {
+    fail("conflict", "There are AI images waiting for approval.", {
       code: "AI-IMAGES-NOT-APPROVED",
       findings: gate.blockers.map((f) => f.key),
     });
   if (gate.toAcknowledge.length)
-    fail("validation", "Conferma ogni errore e avviso aperto con «Ho visto».", {
+    fail("validation", "Confirm every open error and warning with “I’ve seen it”.", {
       code: "CHECKS-NOT-ACKNOWLEDGED",
       missing: gate.toAcknowledge.map((f) => f.key),
     });

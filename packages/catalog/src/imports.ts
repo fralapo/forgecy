@@ -37,7 +37,7 @@ export interface ImportOptions {
   language: string;
   /** Match images to products (by name/SKU, then AI when allowed). */
   matchImages: boolean;
-  /** "Questi file sono materiale ufficiale del cliente": raises confidence. */
+  /** "These files are official client material": raises confidence. */
   official: boolean;
   /** external_restricted: the person confirmed sending files to the provider. */
   aiConfirmed?: boolean;
@@ -72,11 +72,11 @@ export interface CatalogClient {
 /** The catalog exists only for clients, not prospects (UXA-P6-05). */
 export async function loadCatalogClient(db: DbLike, clientId: string): Promise<CatalogClient> {
   const [c] = await db.select().from(clients).where(eq(clients.id, clientId));
-  if (!c) throw new ForgecyError("not_found", "Cliente non trovato");
+  if (!c) throw new ForgecyError("not_found", "Client not found");
   if (c.status !== "active")
     throw new ForgecyError(
       "conflict",
-      "Il catalogo prodotti è disponibile dopo la conversione in cliente.",
+      "The product catalog is available after conversion to a client.",
     );
   return { id: c.id, name: c.name, slug: c.slug, aiPolicy: c.aiPolicy };
 }
@@ -90,7 +90,7 @@ export async function loadImport(
     .select()
     .from(productImports)
     .where(and(eq(productImports.id, importId), eq(productImports.clientId, clientId)));
-  if (!row) throw new ForgecyError("not_found", "Import non trovato");
+  if (!row) throw new ForgecyError("not_found", "Import not found");
   return row;
 }
 
@@ -218,7 +218,7 @@ export async function addUploadedFile(
 ): Promise<ImportFileRow> {
   assertCan(user.actor, "products.manage", input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["uploading"], "L'analisi è in corso: aggiungi i file in un nuovo import.");
+  assertStatus(imp, ["uploading"], "The analysis is running: add the files in a new import.");
   const count = (
     await db
       .select({ id: productImportFiles.id })
@@ -228,7 +228,7 @@ export async function addUploadedFile(
   if (count >= IMPORT_LIMITS.filesPerImport)
     throw new ImportError(
       "IMPORT-TOO-LARGE",
-      `Un import può contenere al massimo ${IMPORT_LIMITS.filesPerImport} file.`,
+      `An import can contain at most ${IMPORT_LIMITS.filesPerImport} files.`,
     );
 
   const relativePath = sanitizePath(input.relativePath);
@@ -304,7 +304,7 @@ export async function removeImportFile(
 ): Promise<void> {
   assertCan(user.actor, "products.manage", input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["uploading"], "I file si rimuovono solo prima dell'avvio dell'analisi.");
+  assertStatus(imp, ["uploading"], "Files can be removed only before the analysis starts.");
   await db
     .delete(productImportFiles)
     .where(and(eq(productImportFiles.id, input.fileId), eq(productImportFiles.importId, imp.id)));
@@ -323,19 +323,19 @@ export async function setFileRoute(
 ): Promise<void> {
   assertCan(user.actor, "products.manage", input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["uploading"], "Il percorso si cambia solo prima dell'avvio dell'analisi.");
+  assertStatus(imp, ["uploading"], "The route can be changed only before the analysis starts.");
   const [file] = await db
     .select()
     .from(productImportFiles)
     .where(and(eq(productImportFiles.id, input.fileId), eq(productImportFiles.importId, imp.id)));
-  if (!file) throw new ForgecyError("not_found", "File non trovato");
+  if (!file) throw new ForgecyError("not_found", "File not found");
   if (
     !file.valid ||
     !routesFor(file.kind, input.aiAvailable && !(file.meta as FileMeta).textless).includes(
       input.route,
     )
   )
-    throw new ForgecyError("validation", "Percorso non disponibile per questo file");
+    throw new ForgecyError("validation", "Route not available for this file");
   await db
     .update(productImportFiles)
     .set({ route: input.route })
@@ -357,13 +357,13 @@ export async function rereadCsv(
 ): Promise<ImportFileRow> {
   assertCan(user.actor, "products.manage", input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["uploading", "needs_mapping"], "Il file non si può più rileggere.");
+  assertStatus(imp, ["uploading", "needs_mapping"], "The file can no longer be re-read.");
   const [file] = await db
     .select()
     .from(productImportFiles)
     .where(and(eq(productImportFiles.id, input.fileId), eq(productImportFiles.importId, imp.id)));
   if (!file?.storageKey || file.format !== "csv")
-    throw new ForgecyError("not_found", "File CSV non trovato");
+    throw new ForgecyError("not_found", "CSV file not found");
   const { readStored } = await import("./storage");
   const data = await readStored(storage, file.storageKey, IMPORT_LIMITS.sheetBytes);
   const delimiter =
@@ -408,7 +408,7 @@ export async function setImportOptions(
 ): Promise<void> {
   assertCan(user.actor, "products.manage", input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["uploading"], "Le opzioni si cambiano solo prima dell'avvio dell'analisi.");
+  assertStatus(imp, ["uploading"], "Options can be changed only before the analysis starts.");
   const options = importOptionsSchema.parse(input.options);
   await db
     .update(productImports)
@@ -451,7 +451,7 @@ export function plannedAiSteps(
 }
 
 /**
- * "Avvia analisi". With external_restricted the person must confirm sending the
+ * "Start analysis". With external_restricted the person must confirm sending the
  * files to the provider first. The job never starts if the policy blocks it.
  */
 export async function startImport(
@@ -463,12 +463,12 @@ export async function startImport(
   assertCan(user.actor, "products.manage", input.clientId);
   const client = await loadCatalogClient(db, input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["uploading"], "L'import è già stato avviato.");
+  assertStatus(imp, ["uploading"], "The import has already started.");
   const files = await importFiles(db, imp.id);
   if (!files.some((f) => f.valid && f.route !== "ignore"))
     throw new ForgecyError(
       "validation",
-      "Carica almeno un file valido prima di avviare l'analisi.",
+      "Upload at least one valid file before starting the analysis.",
     );
   const running = await db
     .select({ id: productImports.id })
@@ -479,14 +479,14 @@ export async function startImport(
   if (running.length)
     throw new ForgecyError(
       "conflict",
-      "C'è già un import in analisi per questo cliente: attendi che finisca.",
+      "An import is already being analyzed for this client: wait for it to finish.",
     );
   const options = importOptions(imp);
   const plan = plannedAiSteps(files, options, input.aiAvailable);
   if (plan.usesAi && client.aiPolicy === "external_restricted" && !input.aiConfirmed)
     throw new ForgecyError(
       "validation",
-      "Conferma l'invio dei file al provider AI esterno prima di avviare l'analisi.",
+      "Confirm sending the files to the external AI provider before starting the analysis.",
     );
   await db.transaction(async (tx) => {
     await tx
@@ -522,7 +522,7 @@ export async function startImport(
 }
 
 /**
- * "Conferma mappatura": a person confirms (and can save) the mapping of one sheet.
+ * "Confirm mapping": a person confirms (and can save) the mapping of one sheet.
  * When every sheet is mapped the analysis resumes.
  */
 export async function confirmMapping(
@@ -539,21 +539,18 @@ export async function confirmMapping(
 ): Promise<{ resumed: boolean }> {
   assertCan(user.actor, "products.manage", input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["needs_mapping"], "Questo import non aspetta una mappatura.");
+  assertStatus(imp, ["needs_mapping"], "This import is not waiting for a mapping.");
   const [file] = await db
     .select()
     .from(productImportFiles)
     .where(and(eq(productImportFiles.id, input.fileId), eq(productImportFiles.importId, imp.id)));
   const headers = (file?.meta as FileMeta | undefined)?.headers;
-  if (!file || !headers) throw new ForgecyError("not_found", "Foglio non trovato");
+  if (!file || !headers) throw new ForgecyError("not_found", "Sheet not found");
   const mapping = columnMappingSchema.parse(input.mapping);
   if (mapping.columns.length !== headers.length)
-    throw new ForgecyError("validation", "La mappatura non corrisponde alle colonne del file");
+    throw new ForgecyError("validation", "The mapping does not match the file's columns");
   if (!mapping.columns.includes("name"))
-    throw new ForgecyError(
-      "validation",
-      "Mappa la colonna con il nome del prodotto: è obbligatoria.",
-    );
+    throw new ForgecyError("validation", "Map the column with the product name: it is required.");
   const resumed = await db.transaction(async (tx) => {
     await tx
       .update(productImportFiles)
@@ -622,7 +619,7 @@ export async function confirmMapping(
   return { resumed };
 }
 
-/** "Riprova dal passo" after IMPORT-FAILED. */
+/** "Retry from step" after IMPORT-FAILED. */
 export async function retryImport(
   db: Database,
   enqueue: EnqueueImportStep,
@@ -631,7 +628,7 @@ export async function retryImport(
 ): Promise<void> {
   assertCan(user.actor, "products.manage", input.clientId);
   const imp = await loadImport(db, input.clientId, input.importId);
-  assertStatus(imp, ["failed"], "Solo un import non riuscito si può riprovare.");
+  assertStatus(imp, ["failed"], "Only a failed import can be retried.");
   const phase: ImportPhase = imp.failedStep === "scan" ? "scan" : "extract";
   await db
     .update(productImports)
@@ -646,7 +643,7 @@ export async function retryImport(
   await db.update(productImports).set({ jobId }).where(eq(productImports.id, imp.id));
 }
 
-/** "Annulla import": nothing enters the catalog; the files stay in the import's storage. */
+/** "Cancel import": nothing enters the catalog; the files stay in the import's storage. */
 export async function cancelImport(
   db: Database,
   user: ActingUser,
@@ -658,7 +655,7 @@ export async function cancelImport(
   assertStatus(
     imp,
     ["uploading", "analyzing", "needs_mapping", "failed"],
-    "Questo import non si può più annullare.",
+    "This import can no longer be cancelled.",
   );
   await db.transaction(async (tx) => {
     await tx

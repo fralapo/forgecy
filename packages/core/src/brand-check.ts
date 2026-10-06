@@ -9,7 +9,7 @@ export type BrandCheckSeverity = (typeof brandCheckSeverities)[number];
 export const brandCheckOrigins = ["json", "render"] as const;
 export type BrandCheckOrigin = (typeof brandCheckOrigins)[number];
 
-/** `ignored`: "Ignora per questo contenuto" (warnings and notes only); `acknowledged`: "Ho visto" in approval. */
+/** `ignored`: "Ignore for this content" (warnings and notes only); `acknowledged`: "I’ve seen it" in approval. */
 export const brandCheckIssueStatuses = ["ignored", "acknowledged"] as const;
 export type BrandCheckIssueStatus = (typeof brandCheckIssueStatuses)[number];
 

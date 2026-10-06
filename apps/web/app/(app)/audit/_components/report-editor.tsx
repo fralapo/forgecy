@@ -105,7 +105,7 @@ export function ReportEditor({
       });
       if (!res.ok) return setState({ error: res.error });
       setDirty(false);
-      setState({ ok: "Modifiche salvate" });
+      setState({ ok: "Changes saved" });
       router.refresh();
     });
 
@@ -122,18 +122,18 @@ export function ReportEditor({
               <div className="flex flex-wrap items-center gap-3 p-4">
                 <input
                   type="checkbox"
-                  aria-label={`Includi «${s.title}» nel report`}
+                  aria-label={`Include “${s.title}” in the report`}
                   checked={s.enabled}
                   disabled={fixed}
                   onChange={(e) => change(s.key, "enabled", e.target.checked)}
                 />
                 <span className="font-mono text-body-sm text-fg-muted">{i + 1}</span>
                 <span className="flex-1 text-heading-sm text-fg">{s.title}</span>
-                {s.byAgent ? <Badge variant="highlight">Testo proposto dall&apos;AI</Badge> : null}
-                {fixed ? <span className="text-body-sm text-fg-muted">Sempre inclusa</span> : null}
+                {s.byAgent ? <Badge variant="highlight">Text proposed by AI</Badge> : null}
+                {fixed ? <span className="text-body-sm text-fg-muted">Always included</span> : null}
                 {!NO_FINDINGS.has(s.key) ? (
                   <span className="text-body-sm text-fg-muted">
-                    {list.filter((f) => !excluded.has(f.id)).length} elementi
+                    {list.filter((f) => !excluded.has(f.id)).length} items
                   </span>
                 ) : null}
                 <span className="flex gap-1">
@@ -143,7 +143,7 @@ export function ReportEditor({
                     size="sm"
                     disabled={i === 0}
                     onClick={() => move(i, -1)}
-                    aria-label={`Sposta su «${s.title}»`}
+                    aria-label={`Move “${s.title}” up`}
                   >
                     <ArrowUp aria-hidden />
                   </Button>
@@ -153,7 +153,7 @@ export function ReportEditor({
                     size="sm"
                     disabled={i === sections.length - 1}
                     onClick={() => move(i, 1)}
-                    aria-label={`Sposta giù «${s.title}»`}
+                    aria-label={`Move “${s.title}” down`}
                   >
                     <ArrowDown aria-hidden />
                   </Button>
@@ -162,11 +162,11 @@ export function ReportEditor({
               {s.enabled && s.key !== "cover" ? (
                 <details className="border-t border-subtle px-4 py-3">
                   <summary className="cursor-pointer text-body-sm text-link">
-                    Modifica testi{list.length && !NO_FINDINGS.has(s.key) ? " ed elementi" : ""}
+                    Edit texts{list.length && !NO_FINDINGS.has(s.key) ? " and items" : ""}
                   </summary>
                   <div className="mt-3 flex flex-col gap-3">
                     <div className="flex flex-col gap-1">
-                      <Label htmlFor={`title-${s.key}`}>Titolo</Label>
+                      <Label htmlFor={`title-${s.key}`}>Title</Label>
                       <Input
                         id={`title-${s.key}`}
                         value={s.title}
@@ -176,7 +176,7 @@ export function ReportEditor({
                     </div>
                     {s.key !== "method" ? (
                       <div className="flex flex-col gap-1">
-                        <Label htmlFor={`intro-${s.key}`}>Introduzione</Label>
+                        <Label htmlFor={`intro-${s.key}`}>Introduction</Label>
                         <textarea
                           id={`intro-${s.key}`}
                           value={s.intro}
@@ -185,20 +185,19 @@ export function ReportEditor({
                           onChange={(e) => change(s.key, "intro", e.target.value)}
                         />
                         <span className="text-body-sm text-fg-muted">
-                          {s.intro.length}/{introMax} caratteri
+                          {s.intro.length}/{introMax} characters
                         </span>
                       </div>
                     ) : (
                       <p className="text-body-sm text-fg-muted">
-                        Il metodo elenca da solo le fonti usate: canali, pagine lette, competitor e
-                        piano.
+                        The method section lists the sources used on its own: channels, pages read,
+                        competitors and plan.
                       </p>
                     )}
                     {WITH_BULLETS.has(s.key) ? (
                       <div className="flex flex-col gap-1">
                         <Label htmlFor={`bullets-${s.key}`}>
-                          {s.key === "overview" ? "Messaggi chiave" : "Prossimi passi"} (uno per
-                          riga)
+                          {s.key === "overview" ? "Key messages" : "Next steps"} (one per line)
                         </Label>
                         <textarea
                           id={`bullets-${s.key}`}
@@ -213,15 +212,15 @@ export function ReportEditor({
                               : "text-body-sm text-fg-muted"
                           }
                         >
-                          {bulletCount}/{LIMITS.bullets} righe, al massimo {LIMITS.bullet} caratteri
-                          l&apos;una
+                          {bulletCount}/{LIMITS.bullets} lines, at most {LIMITS.bullet} characters
+                          each
                         </span>
                       </div>
                     ) : null}
                     {list.length && !NO_FINDINGS.has(s.key) ? (
                       <fieldset className="flex flex-col gap-2">
                         <legend className="mb-1 text-label text-fg-muted">
-                          Elementi nel report
+                          Items in the report
                         </legend>
                         {list.map((f) => (
                           <label key={f.id} className="flex items-start gap-2 text-body-sm">
@@ -234,7 +233,7 @@ export function ReportEditor({
                             <span>
                               {f.title}
                               {f.kind === "comparison" ? (
-                                <span className="text-fg-muted"> · confronto</span>
+                                <span className="text-fg-muted"> · comparison</span>
                               ) : null}
                             </span>
                           </label>
@@ -251,19 +250,19 @@ export function ReportEditor({
 
       <section className="flex flex-col gap-3 rounded-lg border border-subtle bg-surface p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-heading-sm text-fg">Email di accompagnamento</h3>
+          <h3 className="text-heading-sm text-fg">Cover email</h3>
           {report.emailByAgent && !dirty ? (
-            <Badge variant="highlight">Proposta dal Copywriter</Badge>
+            <Badge variant="highlight">Proposed by the Copywriter</Badge>
           ) : null}
         </div>
         <p className="text-body-sm text-fg-muted">
-          Forgecy non invia email: copia il testo nel tuo programma di posta.
+          Forgecy does not send emails: copy the text into your email client.
           {!report.emailBody
-            ? " Ancora vuota: scrivila qui oppure usa «Proponi i testi con l'AI», che prepara anche l'email."
+            ? " Still empty: write it here or use “Propose texts with AI”, which also drafts the email."
             : ""}
         </p>
         <div className="flex flex-col gap-1">
-          <Label htmlFor="email-subject">Oggetto</Label>
+          <Label htmlFor="email-subject">Subject</Label>
           <Input
             id="email-subject"
             value={subject}
@@ -275,7 +274,7 @@ export function ReportEditor({
           />
         </div>
         <div className="flex flex-col gap-1">
-          <Label htmlFor="email-body">Testo</Label>
+          <Label htmlFor="email-body">Body</Label>
           <textarea
             id="email-body"
             value={body}
@@ -296,12 +295,12 @@ export function ReportEditor({
             onClick={() => {
               void navigator.clipboard
                 .writeText(subject ? `${subject}\n\n${body}` : body)
-                .then(() => setState({ ok: "Testo copiato" }))
-                .catch(() => setState({ error: "Copia non riuscita: seleziona il testo a mano." }));
+                .then(() => setState({ ok: "Text copied" }))
+                .catch(() => setState({ error: "Copy failed: select the text by hand." }));
             }}
           >
             <Copy aria-hidden />
-            Copia testo
+            Copy text
           </Button>
         </div>
       </section>
@@ -309,9 +308,9 @@ export function ReportEditor({
       <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-subtle bg-app py-3">
         <Button type="button" variant="primary" disabled={pending || !dirty} onClick={save}>
           <Save aria-hidden />
-          {pending ? "Salvataggio…" : "Salva le modifiche"}
+          {pending ? "Saving…" : "Save changes"}
         </Button>
-        {dirty ? <span className="text-body-sm text-fg-muted">Modifiche non salvate</span> : null}
+        {dirty ? <span className="text-body-sm text-fg-muted">Unsaved changes</span> : null}
         {state.error ? (
           <span role="alert" className="text-body-sm text-error">
             {state.error}

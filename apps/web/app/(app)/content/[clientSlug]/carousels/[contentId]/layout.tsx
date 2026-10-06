@@ -56,11 +56,11 @@ export default async function CarouselLayout({
   const base = carouselPath(client.slug, c.id);
   const tabs = [
     { href: base, label: "Brief" },
-    { href: `${base}/outline`, label: "Scaletta" },
+    { href: `${base}/outline`, label: "Outline" },
     { href: `${base}/editor`, label: "Editor" },
-    { href: `${base}/review`, label: "Revisione" },
-    { href: `${base}/export`, label: "Esporta" },
-    { href: `${base}/versions`, label: "Versioni" },
+    { href: `${base}/review`, label: "Review" },
+    { href: `${base}/export`, label: "Export" },
+    { href: `${base}/versions`, label: "Versions" },
   ];
 
   return (
@@ -68,7 +68,7 @@ export default async function CarouselLayout({
       <RefreshWhile active={active.length > 0 || ws.locked} />
       <header className="mb-4">
         <p className="text-body-sm text-fg-muted">
-          <Link href={carouselsPath(client.slug) as Route}>Caroselli</Link> › {c.title}
+          <Link href={carouselsPath(client.slug) as Route}>Carousels</Link> › {c.title}
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <h2 className="mr-2 text-heading-md text-fg">{c.title}</h2>
@@ -76,30 +76,29 @@ export default async function CarouselLayout({
           <Badge>
             {ws.template
               ? `${ws.template.name} · v${ws.template.version}`
-              : `Template ${c.templateKey} non disponibile`}
+              : `Template ${c.templateKey} unavailable`}
           </Badge>
           {usedBrand ? <Badge>Brand Identity v{usedBrand.number}</Badge> : null}
-          {ws.locked ? <Badge variant="highlight">AI al lavoro</Badge> : null}
+          {ws.locked ? <Badge variant="highlight">AI at work</Badge> : null}
         </div>
         {productChanged || productMissing || brandChanged ? (
           <ul className="mt-3 grid gap-1">
             {productChanged ? (
               <li>
                 <Badge variant="warning">
-                  Il prodotto è cambiato nel catalogo dopo la scrittura dei testi
+                  The product changed in the catalog after the copy was written
                 </Badge>
               </li>
             ) : null}
             {productMissing ? (
               <li>
-                <Badge variant="warning">Il prodotto collegato non è più approvato</Badge>
+                <Badge variant="warning">The linked product is no longer approved</Badge>
               </li>
             ) : null}
             {brandChanged && brand ? (
               <li>
                 <Badge variant="warning">
-                  È stata pubblicata la Brand Identity v{brand.number} dopo la creazione del
-                  carosello
+                  Brand Identity v{brand.number} was published after the carousel was created
                 </Badge>
               </li>
             ) : null}
@@ -114,13 +113,13 @@ export default async function CarouselLayout({
               className="flex flex-wrap items-center gap-2 rounded-md border border-subtle bg-surface px-4 py-2 text-body-sm text-fg"
             >
               <LoaderCircle aria-hidden className="size-4 animate-spin" />
-              {jobLabel(j.kind)}: {j.status === "queued" ? "in coda" : "in corso"}
+              {jobLabel(j.kind)}: {j.status === "queued" ? "queued" : "in progress"}
               {j.progress > 0 ? ` · ${j.progress}%` : ""}
               <progress
                 className="ml-auto h-2 w-32"
                 max={100}
                 value={j.progress}
-                aria-label={`Avanzamento: ${jobLabel(j.kind)}`}
+                aria-label={`Progress: ${jobLabel(j.kind)}`}
               />
             </li>
           ))}
@@ -133,8 +132,7 @@ export default async function CarouselLayout({
               <CircleAlert aria-hidden className="size-4 text-error" />
               <span>
                 <strong className="font-medium">
-                  {jobLabel(j.kind)}{" "}
-                  {j.status === "needs_attention" ? "richiede attenzione" : "non riuscita"}
+                  {jobLabel(j.kind)} {j.status === "needs_attention" ? "needs attention" : "failed"}
                 </strong>{" "}
                 ({formatDate(j.endedAt ?? j.createdAt)})
                 {j.error ? <span className="block text-fg-muted">{j.error}</span> : null}

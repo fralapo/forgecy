@@ -74,10 +74,10 @@ function PlanItemFields({
   const formats = options.formats.filter((f) => f.channel === v.channel);
   const rubrics = options.rubrics.filter((r) => r.pillarId === v.pillarId);
   if (!options.pillars.length)
-    return <p className="text-body-sm text-fg-muted">Crea prima un pilastro nella Strategia.</p>;
+    return <p className="text-body-sm text-fg-muted">Create a pillar in Strategy first.</p>;
   return (
     <form
-      aria-label={id ? "Modifica elemento del piano" : "Nuovo elemento del piano"}
+      aria-label={id ? "Edit plan item" : "New plan item"}
       className={formClass}
       onSubmit={(e) => {
         e.preventDefault();
@@ -85,7 +85,7 @@ function PlanItemFields({
       }}
     >
       <div className="grid gap-4 md:grid-cols-3">
-        <Field label="Giorno (1–30)">
+        <Field label="Day (1–30)">
           {(fid) => (
             <Input
               id={fid}
@@ -98,7 +98,7 @@ function PlanItemFields({
             />
           )}
         </Field>
-        <Field label="Canale">
+        <Field label="Channel">
           {(fid) => (
             <select
               id={fid}
@@ -118,7 +118,7 @@ function PlanItemFields({
             </select>
           )}
         </Field>
-        <Field label="Formato">
+        <Field label="Format">
           {(fid) => (
             <select
               id={fid}
@@ -134,7 +134,7 @@ function PlanItemFields({
             </select>
           )}
         </Field>
-        <Field label="Pilastro">
+        <Field label="Pillar">
           {(fid) => (
             <select
               id={fid}
@@ -150,7 +150,7 @@ function PlanItemFields({
             </select>
           )}
         </Field>
-        <Field label="Rubrica">
+        <Field label="Rubric">
           {(fid) => (
             <select
               id={fid}
@@ -158,7 +158,7 @@ function PlanItemFields({
               value={v.rubricId ?? ""}
               onChange={(e) => set({ rubricId: e.target.value || null })}
             >
-              <option value="">Nessuna</option>
+              <option value="">None</option>
               {rubrics.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
@@ -167,7 +167,7 @@ function PlanItemFields({
             </select>
           )}
         </Field>
-        <Field label="Tema">
+        <Field label="Theme">
           {(fid) => (
             <Input
               id={fid}
@@ -178,7 +178,7 @@ function PlanItemFields({
             />
           )}
         </Field>
-        <Field label="Angolo / hook">
+        <Field label="Angle / hook">
           {(fid) => (
             <Input
               id={fid}
@@ -189,7 +189,7 @@ function PlanItemFields({
           )}
         </Field>
         <div className="md:col-span-2">
-          <Field label="Note">
+          <Field label="Notes">
             {(fid) => (
               <textarea
                 id={fid}
@@ -204,7 +204,7 @@ function PlanItemFields({
         </div>
       </div>
       <Checks
-        legend="Prodotti collegati"
+        legend="Linked products"
         options={options.products.map((p) => ({ value: p.id, label: p.name }))}
         value={v.productIds ?? []}
         onChange={(productIds) => set({ productIds })}
@@ -215,7 +215,7 @@ function PlanItemFields({
   );
 }
 
-// ---- «Proponi piano» ----
+// ---- “Propose plan” ----
 
 export function AskPlanForm({
   slug,
@@ -234,7 +234,7 @@ export function AskPlanForm({
   const { pending, error, run } = useSave();
   return (
     <form
-      aria-label="Proponi piano"
+      aria-label="Propose plan"
       className="space-y-3"
       onSubmit={(e) => {
         e.preventDefault();
@@ -250,15 +250,15 @@ export function AskPlanForm({
         );
       }}
     >
-      <Checks legend="Canali" options={channels} value={chosen} onChange={setChosen} />
+      <Checks legend="Channels" options={channels} value={chosen} onChange={setChosen} />
       <div className="space-y-1">
-        <Label htmlFor={id}>Istruzione per il Planner (facoltativa)</Label>
+        <Label htmlFor={id}>Instruction for the Planner (optional)</Label>
         <textarea
           id={id}
           rows={2}
           maxLength={500}
           className={controlClass}
-          placeholder="Es. lancio della nuova collezione nella seconda settimana"
+          placeholder="E.g. launch of the new collection in the second week"
           value={instruction}
           onChange={(e) => setInstruction(e.target.value)}
         />
@@ -268,7 +268,7 @@ export function AskPlanForm({
         disabled={pending || running || !chosen.length || Boolean(disabledReason)}
       >
         <Sparkles aria-hidden />
-        Proponi piano
+        Propose plan
       </Button>
       {disabledReason ? <p className="text-body-sm text-fg-muted">{disabledReason}</p> : null}
       <FormError error={error} />
@@ -276,7 +276,7 @@ export function AskPlanForm({
   );
 }
 
-// ---- Proposed plan: «Attiva piano» / «Scarta» ----
+// ---- Proposed plan: “Activate plan” / “Discard” ----
 
 export function PlanProposal({
   slug,
@@ -299,8 +299,8 @@ export function PlanProposal({
   const decide = (decision: "activate" | "discard") => {
     const question =
       decision === "activate"
-        ? "Attivare questo piano? Il piano in uso sarà sostituito; gli elementi ancora da decidere saranno accettati."
-        : "Scartare il piano proposto?";
+        ? "Activate this plan? The current plan will be replaced; items still pending will be accepted."
+        : "Discard the proposed plan?";
     if (!window.confirm(question)) return;
     run(() => planDecisionAction({ slug, clientId, planId, decision }));
   };
@@ -310,8 +310,8 @@ export function PlanProposal({
       agent={agent}
       sources={sources}
       pending={pending}
-      acceptLabel="Attiva piano"
-      rejectLabel="Scarta"
+      acceptLabel="Activate plan"
+      rejectLabel="Discard"
       onAccept={() => decide("activate")}
       onReject={() => decide("discard")}
     >
@@ -323,7 +323,7 @@ export function PlanProposal({
   );
 }
 
-// ---- «Crea carosello» from a plan item ----
+// ---- “Create carousel” from a plan item ----
 
 export function CreateCarouselButton({
   slug,
@@ -357,7 +357,7 @@ export function CreateCarouselButton({
         }
       >
         <LayoutTemplate aria-hidden />
-        Crea carosello
+        Create carousel
       </Button>
       {disabledReason ? (
         <span className="max-w-xs text-body-sm text-fg-muted">{disabledReason}</span>

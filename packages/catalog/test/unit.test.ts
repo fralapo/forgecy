@@ -58,8 +58,8 @@ describe("sniffFile", () => {
     expect(sniffFile("a.xlsx", 10, Buffer.from([0x50, 0x4b, 0x03, 0x04])).kind).toBe("sheet");
   });
   it("refuses renamed or unknown files with a code", () => {
-    expect(sniffFile("catalogo.rar", 10, Buffer.from("Rar!")).code).toBe("IMPORT-INVALID");
-    expect(sniffFile("foto.pdf", 10, PNG).code).toBe("IMPORT-INVALID");
+    expect(sniffFile("catalog.rar", 10, Buffer.from("Rar!")).code).toBe("IMPORT-INVALID");
+    expect(sniffFile("photo.pdf", 10, PNG).code).toBe("IMPORT-INVALID");
     expect(sniffFile("virus.csv", 10, Buffer.from([0x4d, 0x5a, 0, 0])).code).toBe("IMPORT-INVALID");
   });
   it("enforces per-kind limits", () => {
@@ -71,6 +71,7 @@ describe("sniffFile", () => {
 });
 
 describe("CSV and XLSX", () => {
+  // Italian headers and an accented Italian word: the Windows-1252 path exists for Italian Excel exports.
   it("reads semicolon CSV in Windows-1252", () => {
     const bytes = Buffer.from([
       ...Buffer.from("Nome;Prezzo\nCaff"),
@@ -84,23 +85,23 @@ describe("CSV and XLSX", () => {
   });
   it("strips the BOM and handles quoted commas", () => {
     const sheet = parseCsv(
-      Buffer.from('\uFEFFName,Description\n"Crema, 50 ml","Idrata"\n'),
+      Buffer.from('\uFEFFName,Description\n"Cream, 50 ml","Moisturizes"\n'),
       "x.csv",
     );
     expect(sheet.headers).toEqual(["Name", "Description"]);
-    expect(sheet.rows[0]![0]).toBe("Crema, 50 ml");
+    expect(sheet.rows[0]![0]).toBe("Cream, 50 ml");
   });
-  it("refuses more than 10.000 rows", () => {
-    const body = "Nome\n" + Array.from({ length: 10_050 }, (_, i) => `P${i}`).join("\n");
-    expect(() => parseCsv(Buffer.from(body), "big.csv")).toThrow(/limite è 10\.000/);
+  it("refuses more than 10,000 rows", () => {
+    const body = "Name\n" + Array.from({ length: 10_050 }, (_, i) => `P${i}`).join("\n");
+    expect(() => parseCsv(Buffer.from(body), "big.csv")).toThrow(/limit is 10,000/);
   });
   it("reads the first sheet of an XLSX", async () => {
     const data = await makeXlsx([
-      ["Nome", "SKU"],
-      ["Crema viso", "RS-CV-050"],
+      ["Name", "SKU"],
+      ["Face cream", "RS-CV-050"],
     ]);
     const sheet = await parseXlsx(data, "p.xlsx");
-    expect(sheet.rows).toEqual([["Crema viso", "RS-CV-050"]]);
+    expect(sheet.rows).toEqual([["Face cream", "RS-CV-050"]]);
   });
 });
 
@@ -126,23 +127,23 @@ describe("mapping", () => {
           ID: "10",
           Type: "variable",
           SKU: "RS-CV",
-          Name: "Crema viso",
-          "Short description": "<p>Idrata <strong>a fondo</strong></p>",
-          Categories: "Viso > Creme, Offerte",
-          "Attribute 1 name": "Formato",
+          Name: "Face cream",
+          "Short description": "<p>Deeply <strong>moisturizing</strong></p>",
+          Categories: "Face > Creams, Offers",
+          "Attribute 1 name": "Size",
           "Attribute 1 value(s)": "50 ml, 75 ml",
         }),
         row({
           ID: "11",
           Type: "variation",
           SKU: "RS-CV-050",
-          Name: "Crema viso - 50 ml",
+          Name: "Face cream - 50 ml",
           Parent: "id:10",
           "Regular price": "19,90",
-          "Attribute 1 name": "Formato",
+          "Attribute 1 name": "Size",
           "Attribute 1 value(s)": "50 ml",
         }),
-        row({ ID: "12", Type: "simple", SKU: "RS-SV", Name: "", Categories: "Viso" }),
+        row({ ID: "12", Type: "simple", SKU: "RS-SV", Name: "", Categories: "Face" }),
       ],
     };
     const { rows, rejected } = applyMapping(sheet, suggestMapping(WOO_HEADERS), {
@@ -150,11 +151,11 @@ describe("mapping", () => {
       fileName: "wc.csv",
     });
     expect(rows).toHaveLength(1);
-    expect(rows[0]!.draft.shortDescription).toBe("Idrata a fondo");
-    expect(rows[0]!.draft.category).toBe("Creme");
+    expect(rows[0]!.draft.shortDescription).toBe("Deeply moisturizing");
+    expect(rows[0]!.draft.category).toBe("Creams");
     expect(rows[0]!.draft.price).toBeUndefined();
     expect(rows[0]!.draft.variants).toContainEqual({
-      attribute: "Formato",
+      attribute: "Size",
       value: "50 ml",
       sku: "RS-CV-050",
     });
@@ -162,11 +163,11 @@ describe("mapping", () => {
       row: 2,
       column: "Short description",
     });
-    expect(rejected).toEqual([{ row: 4, reason: "Riga 4: nome mancante" }]);
+    expect(rejected).toEqual([{ row: 4, reason: "Row 4: missing name" }]);
   });
   it("keeps the price only when it is in the file, normalized", () => {
     expect(sanitizeDraft({ price: "1.234,50 €" }).price).toBe("1234.50");
-    expect(sanitizeDraft({ price: "su richiesta" }).price).toBeUndefined();
+    expect(sanitizeDraft({ price: "on request" }).price).toBeUndefined();
     expect(sanitizeDraft({ currency: "€" }).currency).toBe("EUR");
   });
 });
@@ -174,12 +175,12 @@ describe("mapping", () => {
 describe("ZIP guard", () => {
   it("lists entries, skips junk and refuses path traversal", async () => {
     const zip = await makeZip([
-      { path: "crema/foto.png", data: PNG },
-      { path: "__MACOSX/crema/._foto.png", data: "x" },
+      { path: "cream/photo.png", data: PNG },
+      { path: "__MACOSX/cream/._photo.png", data: "x" },
       { path: ".DS_Store", data: "x" },
     ]);
     const listing = await readZip(zip);
-    expect(listing.entries.map((e) => e.path)).toEqual(["crema/foto.png"]);
+    expect(listing.entries.map((e) => e.path)).toEqual(["cream/photo.png"]);
     expect(safeEntryPath("../../etc/passwd")).toBeNull();
     expect(safeEntryPath("/abs/x")).toBeNull();
     expect(safeEntryPath("C:/x")).toBeNull();
@@ -205,14 +206,14 @@ describe("ZIP guard", () => {
   it("summarizes an archive for the file list", async () => {
     const zip = await makeZip([
       { path: "a/1.png", data: PNG },
-      { path: "a/info.txt", data: "Nome: Crema" },
-      { path: "listino.csv", data: "Nome\nCrema" },
+      { path: "a/info.txt", data: "Name: Cream" },
+      { path: "price-list.csv", data: "Name\nCream" },
       { path: "virus.exe", data: "MZ" },
     ]);
-    const res = await inspectFile("zip", "foto.zip", { data: zip });
+    const res = await inspectFile("zip", "photos.zip", { data: zip });
     expect(res.valid).toBe(true);
     expect(res.summary).toBe(
-      "ZIP: 1 fogli, 1 immagini, 1 testi · 1 file ignorati: formati non ammessi",
+      "ZIP: 1 sheets, 1 images, 1 texts · 1 files ignored: formats not allowed",
     );
   });
 });
@@ -220,8 +221,8 @@ describe("ZIP guard", () => {
 describe("PDF", () => {
   it("reads text per page and chunks it with page numbers", async () => {
     const pdf = await readPdfText(
-      makePdf(["Crema viso 50 ml\nCodice RS-CV-050", "Siero notte"]),
-      "listino.pdf",
+      makePdf(["Face cream 50 ml\nCode RS-CV-050", "Night serum"]),
+      "price-list.pdf",
     );
     expect(pdf.totalPages).toBe(2);
     expect(pdf.pages[0]).toContain("RS-CV-050");
@@ -239,7 +240,7 @@ describe("folders and texts", () => {
   it("pairs images by folder, SKU and name, leaving the rest to assign", () => {
     const known: Candidate[] = [
       {
-        draft: { name: "Crema viso", sku: "RS-CV-050" },
+        draft: { name: "Face cream", sku: "RS-CV-050" },
         sources: {},
         confidence: {},
         images: [],
@@ -248,16 +249,16 @@ describe("folders and texts", () => {
     ];
     const res = matchMaterial(
       [
-        { id: "1", path: "RS-CV-050_fronte.jpg", kind: "image" },
-        { id: "2", path: "foto/siero/1.jpg", kind: "image" },
+        { id: "1", path: "RS-CV-050_front.jpg", kind: "image" },
+        { id: "2", path: "photos/serum/1.jpg", kind: "image" },
         {
           id: "3",
-          path: "foto/siero/info.txt",
+          path: "photos/serum/info.txt",
           kind: "text",
-          textFields: { name: "Siero notte", category: "Viso" },
+          textFields: { name: "Night serum", category: "Face" },
         },
         { id: "4", path: "IMG_0231.jpg", kind: "image" },
-        { id: "5", path: "crema viso.png", kind: "image" },
+        { id: "5", path: "face cream.png", kind: "image" },
       ],
       known,
       (m) => ({ kind: "text", fileName: m.path }),
@@ -267,10 +268,11 @@ describe("folders and texts", () => {
       ["5", "filename"],
     ]);
     expect(res.candidates).toHaveLength(1);
-    expect(res.candidates[0]!.draft.name).toBe("Siero notte");
+    expect(res.candidates[0]!.draft.name).toBe("Night serum");
     expect(res.candidates[0]!.images[0]).toMatchObject({ fileId: "2", method: "folder" });
     expect(res.unassigned).toEqual(["4"]);
   });
+  // Italian labels: product text files from Italian clients.
   it("reads 'Label: value' product texts", () => {
     const t = parseProductText(
       "Nome: Crema viso\nCodice: RS-CV-050\nIngredienti: acqua; glicerina\n\nUna crema leggera.",
@@ -285,7 +287,7 @@ describe("folders and texts", () => {
   it("merges sources by SKU without overwriting the first value", () => {
     const merged = mergeCandidates([
       {
-        draft: { name: "Crema", sku: "rs-cv-050", shortDescription: "Dal foglio" },
+        draft: { name: "Cream", sku: "rs-cv-050", shortDescription: "From the sheet" },
         sources: {},
         confidence: {},
         images: [],
@@ -293,10 +295,10 @@ describe("folders and texts", () => {
       },
       {
         draft: {
-          name: "Crema viso",
+          name: "Face cream",
           sku: "RS CV 050",
-          shortDescription: "Dal PDF",
-          usage: ["Mattina"],
+          shortDescription: "From the PDF",
+          usage: ["Morning"],
         },
         sources: {},
         confidence: {},
@@ -305,17 +307,21 @@ describe("folders and texts", () => {
       },
     ]);
     expect(merged).toHaveLength(1);
-    expect(merged[0]!.draft).toMatchObject({ shortDescription: "Dal foglio", usage: ["Mattina"] });
+    expect(merged[0]!.draft).toMatchObject({
+      shortDescription: "From the sheet",
+      usage: ["Morning"],
+    });
   });
 });
 
 describe("rules", () => {
+  // Italian claim wording: the keyword lists match Italian client texts.
   it("detects claims and blocks approval until accepted", () => {
     expect(detectClaims("Dermatologicamente testato, garanzia 2 anni")).toEqual([
       "health",
       "warranty",
     ]);
-    const draft = { name: "Crema", category: "Viso", shortDescription: "Biodegradabile al 100%" };
+    const draft = { name: "Cream", category: "Face", shortDescription: "Biodegradabile al 100%" };
     const flags = sensitiveFields(draft);
     expect(flags.shortDescription).toEqual(["environmental"]);
     const meta = {
@@ -326,26 +332,26 @@ describe("rules", () => {
         sensitive: flags.shortDescription,
       },
     };
-    expect(approvalBlockers(draft, meta)[0]).toContain("campo sensibile");
+    expect(approvalBlockers(draft, meta)[0]).toContain("sensitive field");
     expect(
       approvalBlockers(draft, { shortDescription: { ...meta.shortDescription, acceptedBy: "u1" } }),
     ).toEqual([]);
-    expect(approvalBlockers({ name: "Crema", price: "10" }, {})[0]).toBe(
-      "Completa categoria, descrizione breve",
+    expect(approvalBlockers({ name: "Cream", price: "10" }, {})[0]).toBe(
+      "Fill in category, short description",
     );
   });
   it("never counts price for completeness", () => {
-    const base = { name: "Crema", category: "Viso", shortDescription: "x", usage: ["Sera"] };
+    const base = { name: "Cream", category: "Face", shortDescription: "x", usage: ["Evening"] };
     expect(completenessOf(base, 1).level).toBe("complete");
-    expect(completenessOf({ name: "Crema" }, 0).level).toBe("minimal");
+    expect(completenessOf({ name: "Cream" }, 0).level).toBe("minimal");
   });
   it("treats client text as text: strips HTML and shortcodes", () => {
     expect(
-      htmlToText('<script>alert(1)</script><p>Ciao&nbsp;<b>mondo</b></p>[gallery ids="1"]'),
-    ).toBe("Ciao mondo");
+      htmlToText('<script>alert(1)</script><p>Hello&nbsp;<b>world</b></p>[gallery ids="1"]'),
+    ).toBe("Hello world");
   });
   it("neutralizes formulas in CSV exports", () => {
     expect(csvCell("=HYPERLINK(1)")).toBe("'=HYPERLINK(1)");
-    expect(productsToCsv([]).startsWith("\uFEFFStato;Nome")).toBe(true);
+    expect(productsToCsv([]).startsWith("\uFEFFStatus;Name")).toBe(true);
   });
 });

@@ -8,17 +8,17 @@ import { EmptyState } from "../_components/ui";
 export function NotAClient({ name }: { name: string }) {
   return (
     <>
-      <PageHeader title="Prodotti" description={name} />
+      <PageHeader title="Products" description={name} />
       <Card className="p-0">
         <EmptyState
           icon={Package}
           actions={
             <Button asChild variant="secondary">
-              <Link href="/clients">Torna al prospect</Link>
+              <Link href="/clients">Back to prospect</Link>
             </Button>
           }
         >
-          Il catalogo prodotti è disponibile dopo la conversione in cliente.
+          The product catalog becomes available once the prospect is converted into a client.
         </EmptyState>
       </Card>
     </>

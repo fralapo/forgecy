@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { saveSectionAction } from "../actions";
 import type { Ctl, FieldUi, SectionUi } from "../_lib/editor-config";
+import { plural } from "@/lib/plural";
 
 type Obj = Record<string, unknown>;
 type SourceOption = { id: string; title: string };
@@ -158,7 +159,7 @@ function Control({
           disabled={disabled}
           onChange={(e) => put(e.target.value || undefined)}
         >
-          <option value="">Nessun file</option>
+          <option value="">No file</option>
           {sources.map((s) => (
             <option key={s.id} value={s.id}>
               {s.title}
@@ -289,7 +290,7 @@ function ObjectList({
                 onClick={() => onChange(items.filter((_, j) => j !== i))}
               >
                 <Trash2 aria-hidden />
-                Rimuovi
+                Remove
               </Button>
             ) : null}
           </div>
@@ -318,10 +319,10 @@ function Provenance({ item }: { item: Obj }) {
   if (!("sourceIds" in item)) return null;
   return (
     <p className="mb-2 text-body-sm text-fg-muted">
-      {n ? `Da ${n === 1 ? "una fonte" : `${n} fonti`}` : "Inserito a mano"}
-      {item.acceptedFromProposalId ? " · da una proposta accettata" : ""}
+      {n ? `From ${n === 1 ? "one source" : `${n} sources`}` : "Entered by hand"}
+      {item.acceptedFromProposalId ? " · from an accepted proposal" : ""}
       {item.confidence && item.confidence !== "high"
-        ? ` · confidenza ${item.confidence === "medium" ? "media" : "bassa"}`
+        ? ` · ${item.confidence === "medium" ? "medium" : "low"} confidence`
         : ""}
     </p>
   );
@@ -352,7 +353,7 @@ function Field({
       </Label>
       {pending ? (
         <Link href={pendingHref as Route} className="text-body-sm">
-          <Badge variant="info">{pending} proposte</Badge>
+          <Badge variant="info">{plural(pending, "proposal", "proposals")}</Badge>
         </Link>
       ) : null}
     </div>
@@ -386,7 +387,7 @@ function Field({
                 words > field.maxWords ? "text-body-sm text-warning" : "text-body-sm text-fg-muted"
               }
             >
-              {words} parole{words > field.maxWords ? `: oltre ${field.maxWords}` : ""}
+              {words} words{words > field.maxWords ? `: over ${field.maxWords}` : ""}
             </p>
           ) : null}
         </div>
@@ -521,7 +522,7 @@ export function SectionEditor({
       }
       setRev(r);
       setDirty(new Set());
-      setMessage({ kind: "ok", text: "Bozza salvata." });
+      setMessage({ kind: "ok", text: "Draft saved." });
       router.refresh();
     });
 
@@ -576,11 +577,9 @@ export function SectionEditor({
         <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-subtle bg-app py-4">
           <Button onClick={save} disabled={saving || dirty.size === 0}>
             <Save aria-hidden />
-            {saving ? "Salvataggio…" : "Salva la bozza"}
+            {saving ? "Saving…" : "Save draft"}
           </Button>
-          {dirty.size ? (
-            <span className="text-body-sm text-fg-muted">Modifiche non salvate</span>
-          ) : null}
+          {dirty.size ? <span className="text-body-sm text-fg-muted">Unsaved changes</span> : null}
           {message ? (
             <span
               role={message.kind === "error" ? "alert" : "status"}

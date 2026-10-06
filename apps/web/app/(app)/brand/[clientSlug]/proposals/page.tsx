@@ -14,7 +14,7 @@ import { ProposalList, type ProposalView } from "../../_components/proposal-list
 import { agentRoleLabel, brandPath, formatDate, proposalStatusLabel } from "../../_lib/labels";
 import { loadBrand, openConflicts, shownVersion, sourcesFor, userNames } from "../../_lib/server";
 
-export const metadata = { title: "Proposte · Brand Identity" };
+export const metadata = { title: "Proposals · Brand Identity" };
 
 const statuses = ["proposed", "accepted", "rejected", "stale"] as const;
 
@@ -56,14 +56,14 @@ export default async function ProposalsPage({
       return {
         id: p.id,
         title: p.title,
-        block: match ? blocks[match.field.block] : "Altro",
+        block: match ? blocks[match.field.block] : "Other",
         fieldPath: p.fieldPath,
         status: p.status,
         statusLabel: proposalStatusLabel[p.status],
         author:
           p.authorType === "agent"
-            ? (agentRoleLabel[p.agentRole ?? ""] ?? p.agentRole ?? "Agente")
-            : (names.get(p.authorUserId ?? "") ?? "Persona"),
+            ? (agentRoleLabel[p.agentRole ?? ""] ?? p.agentRole ?? "Agent")
+            : (names.get(p.authorUserId ?? "") ?? "Person"),
         authorType: p.authorType,
         createdAt: formatDate(p.createdAt),
         rationale: p.rationale,
@@ -81,7 +81,7 @@ export default async function ProposalsPage({
         sensitive: p.sensitive,
         checks: p.checks.filter((c) => c.level === "warning").map((c) => c.message),
         evidence: p.evidence.map((e) => ({
-          title: sourceById.get(e.sourceId)?.title ?? "Fonte rimossa",
+          title: sourceById.get(e.sourceId)?.title ?? "Removed source",
           locator: e.locator ?? null,
           quote: e.quote ?? null,
         })),
@@ -101,7 +101,7 @@ export default async function ProposalsPage({
 
   return (
     <div className="space-y-6">
-      <nav aria-label="Filtra per stato" className="flex flex-wrap gap-2 text-body-sm">
+      <nav aria-label="Filter by status" className="flex flex-wrap gap-2 text-body-sm">
         {statuses.map((s) => (
           <Link
             key={s}
@@ -124,21 +124,19 @@ export default async function ProposalsPage({
             href={`${base}?conflicts=1` as Route}
             className="rounded-md border border-warning-fill bg-surface px-3 py-1 text-fg"
           >
-            Solo conflitti ({conflicts.length})
+            Conflicts only ({conflicts.length})
           </Link>
         ) : null}
         {field || onlyConflicts ? (
           <Link href={base as Route} className="px-3 py-1">
-            Togli i filtri
+            Clear filters
           </Link>
         ) : null}
       </nav>
       {views.length === 0 ? (
         <Card className="p-6">
           <p className="text-body-md text-fg-muted">
-            {status === "proposed"
-              ? "Nessuna proposta in attesa."
-              : "Nessuna proposta in questo stato."}
+            {status === "proposed" ? "No pending proposals." : "No proposals with this status."}
           </p>
         </Card>
       ) : (

@@ -31,9 +31,7 @@ export function MappingStep(props: {
   if (props.sheets.length === 0)
     return (
       <Card>
-        <p className="text-body-md text-fg-muted">
-          Tutti i fogli sono mappati: l&apos;analisi riprende.
-        </p>
+        <p className="text-body-md text-fg-muted">All sheets are mapped: the analysis resumes.</p>
       </Card>
     );
   return (
@@ -62,7 +60,8 @@ function SheetMapping({
   const [touched, setTouched] = useState<Set<number>>(new Set());
   const [save, setSave] = useState(!sheet.savedName);
   const [saveName, setSaveName] = useState(
-    sheet.savedName ?? (sheet.preset === "woocommerce" ? "Export WooCommerce" : "Listino standard"),
+    sheet.savedName ??
+      (sheet.preset === "woocommerce" ? "Export WooCommerce" : "Standard price list"),
   );
   const action = useCatalogAction();
   const hasName = columns.includes("name");
@@ -72,36 +71,35 @@ function SheetMapping({
   return (
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-heading-sm">Mappatura · {sheet.name}</h2>
+        <h2 className="text-heading-sm">Mapping · {sheet.name}</h2>
         {sheet.savedName ? (
-          <Badge variant="info">Mappatura «{sheet.savedName}» applicata</Badge>
+          <Badge variant="info">Mapping “{sheet.savedName}” applied</Badge>
         ) : sheet.preset === "woocommerce" ? (
-          <Badge variant="info">Mappatura predefinita «WooCommerce»</Badge>
+          <Badge variant="info">Default “WooCommerce” mapping</Badge>
         ) : fromAi ? (
           <Badge variant="info" icon={Sparkles}>
-            Proposto da Brand Analyst
+            Proposed by Brand Analyst
           </Badge>
         ) : null}
       </div>
       {!sheet.savedName ? (
         <p className="text-body-sm text-fg-muted">
-          Prima volta per {clientName}: controlla la mappatura proposta e salvala per i prossimi
-          import.
+          First time for {clientName}: check the proposed mapping and save it for future imports.
         </p>
       ) : null}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-body-sm">
-          <caption className="sr-only">Colonne del file e campi prodotto</caption>
+          <caption className="sr-only">File columns and product fields</caption>
           <thead className="border-b border-subtle text-label text-fg-muted">
             <tr>
               <th scope="col" className="py-2 pr-4 font-medium">
-                Colonna del file
+                File column
               </th>
               <th scope="col" className="py-2 pr-4 font-medium">
-                Campo prodotto
+                Product field
               </th>
               <th scope="col" className="py-2 font-medium">
-                Anteprima
+                Preview
               </th>
             </tr>
           </thead>
@@ -109,11 +107,11 @@ function SheetMapping({
             {sheet.headers.map((h, i) => (
               <tr key={i} className="border-b border-subtle last:border-0 align-top">
                 <th scope="row" className="py-2 pr-4 font-normal text-fg">
-                  {h || `Colonna ${i + 1}`}
+                  {h || `Column ${i + 1}`}
                 </th>
                 <td className="py-2 pr-4">
                   <select
-                    aria-label={`Campo per la colonna "${h}"`}
+                    aria-label={`Field for column "${h}"`}
                     className={cn(selectClass, "w-60")}
                     value={columns[i] ?? "ignore"}
                     onChange={(e) => {
@@ -129,8 +127,8 @@ function SheetMapping({
                   </select>
                   {sheet.confidence[i] && columns[i] !== "ignore" && !touched.has(i) ? (
                     <span className="mt-1 block text-fg-muted">
-                      {fromAi ? "Proposto da Brand Analyst · " : ""}confidenza{" "}
-                      {confidenceText[sheet.confidence[i]!]}
+                      {fromAi ? "Proposed by Brand Analyst · " : ""}
+                      {confidenceText[sheet.confidence[i]!]} confidence
                     </span>
                   ) : null}
                 </td>
@@ -152,12 +150,12 @@ function SheetMapping({
       </div>
       {!hasName ? (
         <p role="alert" className="text-body-sm text-error">
-          Mappa la colonna con il nome del prodotto: è obbligatoria.
+          Map the column with the product name: it is required.
         </p>
       ) : null}
       {hasName && !hasSku ? (
         <p className="text-body-sm text-warning">
-          Senza SKU i duplicati si riconoscono solo per nome e categoria.
+          Without an SKU, duplicates are detected only by name and category.
         </p>
       ) : null}
       <div className="flex flex-wrap items-center gap-3">
@@ -168,11 +166,11 @@ function SheetMapping({
             onChange={(e) => setSave(e.target.checked)}
             className="size-4"
           />
-          Salva questa mappatura per i prossimi import di {clientName}
+          Save this mapping for future {clientName} imports
         </label>
         {save ? (
           <input
-            aria-label="Nome della mappatura"
+            aria-label="Mapping name"
             value={saveName}
             onChange={(e) => setSaveName(e.target.value)}
             maxLength={80}
@@ -200,7 +198,7 @@ function SheetMapping({
             )
           }
         >
-          Conferma mappatura
+          Confirm mapping
         </Button>
       </div>
     </Card>

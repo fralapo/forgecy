@@ -104,74 +104,74 @@ export function buildBrandContext(
   // ---- Stable part ----
   const identityLines = [
     s.oneLiner && `One-liner: ${s.oneLiner.value}`,
-    s.positioning && `Posizionamento: ${s.positioning.value}`,
-    s.promise && `Promessa: ${s.promise.value}`,
-    s.differentiation && `Differenziazione: ${s.differentiation.value}`,
+    s.positioning && `Positioning: ${s.positioning.value}`,
+    s.promise && `Promise: ${s.promise.value}`,
+    s.differentiation && `Differentiation: ${s.differentiation.value}`,
     s.insight && `Insight: ${s.insight.value}`,
   ].filter(Boolean) as string[];
 
   const voiceLines: string[] = [];
-  if (v.voice) voiceLines.push(`Voce: ${v.voice.value}`);
+  if (v.voice) voiceLines.push(`Voice: ${v.voice.value}`);
   const weAre = live(v.weAreWeAreNot);
   if (weAre.length)
     voiceLines.push(
-      "Siamo / Non siamo:",
-      ...weAre.map((w) => `  - Siamo ${w.value.weAre}, non ${w.value.weAreNot}`),
+      "We are / We are not:",
+      ...weAre.map((w) => `  - We are ${w.value.weAre}, not ${w.value.weAreNot}`),
     );
   for (const a of live(v.toneAxes)) {
     const def = toneAxes.find((t) => t.key === a.value.axis);
     if (!def) continue;
     voiceLines.push(
-      `Asse ${def.left}/${def.right}: ${a.value.value} su 5 (1 = ${def.left.toLowerCase()}, 5 = ${def.right.toLowerCase()}). Giusto: «${a.value.goodExample}». Sbagliato: «${a.value.badExample}».`,
+      `Axis ${def.left}/${def.right}: ${a.value.value} out of 5 (1 = ${def.left.toLowerCase()}, 5 = ${def.right.toLowerCase()}). Right: “${a.value.goodExample}”. Wrong: “${a.value.badExample}”.`,
     );
   }
 
   const rules: string[] = [];
   const w = v.writingRules?.value;
   if (w) {
-    if (w.person) rules.push(`Rivolgiti al lettore con: ${w.person}`);
+    if (w.person) rules.push(`Address the reader as: ${w.person}`);
     if (w.emoji)
-      rules.push(`Emoji: ${{ no: "mai", limited: "con moderazione", yes: "ammesse" }[w.emoji]}`);
-    if (w.maxSentenceWords) rules.push(`Frasi di al massimo ${w.maxSentenceWords} parole`);
-    if (w.maxHashtags !== undefined) rules.push(`Al massimo ${w.maxHashtags} hashtag`);
+      rules.push(`Emoji: ${{ no: "never", limited: "sparingly", yes: "allowed" }[w.emoji]}`);
+    if (w.maxSentenceWords) rules.push(`Sentences of at most ${w.maxSentenceWords} words`);
+    if (w.maxHashtags !== undefined) rules.push(`At most ${w.maxHashtags} hashtags`);
     if (w.anglicisms)
       rules.push(
-        `Anglicismi: ${{ avoid: "da evitare", limited: "pochi", allowed: "ammessi" }[w.anglicisms]}`,
+        `Anglicisms: ${{ avoid: "avoid", limited: "few", allowed: "allowed" }[w.anglicisms]}`,
       );
     if (w.exclamations)
       rules.push(
-        `Punti esclamativi: ${{ no: "mai", limited: "rari", yes: "ammessi" }[w.exclamations]}`,
+        `Exclamation marks: ${{ no: "never", limited: "rare", yes: "allowed" }[w.exclamations]}`,
       );
     for (const [label, val] of [
-      ["Maiuscole", w.capitalization],
-      ["Numeri", w.numbers],
+      ["Capitalization", w.capitalization],
+      ["Numbers", w.numbers],
       ["CTA", w.ctaStyle],
       ["Headline", w.headlineStyle],
       ["Caption", w.captionStyle],
-      ["Note", w.notes],
+      ["Notes", w.notes],
     ] as const)
       if (val) rules.push(`${label}: ${val}`);
   }
   if (v.forbiddenWords.length)
-    rules.push(`Parole vietate (mai usarle): ${v.forbiddenWords.join(", ")}`);
-  if (v.preferredWords.length) rules.push(`Parole preferite: ${v.preferredWords.join(", ")}`);
+    rules.push(`Forbidden words (never use them): ${v.forbiddenWords.join(", ")}`);
+  if (v.preferredWords.length) rules.push(`Preferred words: ${v.preferredWords.join(", ")}`);
   if (v.spellings.length)
-    rules.push(`Grafia corretta: ${v.spellings.map((x) => x.term).join(", ")}`);
+    rules.push(`Correct spelling: ${v.spellings.map((x) => x.term).join(", ")}`);
   const avoid = live(s.avoidTopics);
-  if (avoid.length) rules.push(`Temi da evitare: ${avoid.map((t) => t.value).join("; ")}`);
+  if (avoid.length) rules.push(`Topics to avoid: ${avoid.map((t) => t.value).join("; ")}`);
   const values = live(s.values);
-  if (values.length) rules.push(`Valori: ${values.map((x) => x.value.name).join(", ")}`);
+  if (values.length) rules.push(`Values: ${values.map((x) => x.value.name).join(", ")}`);
 
   const roles = tokenRoleNames(identity.tokens);
   const stable = [
     `# Brand Identity v${identity.number}`,
-    section("Identità", identityLines.length ? identityLines.join("\n") : undefined),
-    section("Voce e tono", voiceLines.length ? voiceLines.join("\n") : undefined),
-    section("Regole vincolanti", rules.length ? bullet(rules) : undefined),
+    section("Identity", identityLines.length ? identityLines.join("\n") : undefined),
+    section("Voice and tone", voiceLines.length ? voiceLines.join("\n") : undefined),
+    section("Binding rules", rules.length ? bullet(rules) : undefined),
     section(
-      "Ruoli visivi disponibili",
+      "Available visual roles",
       roles.length
-        ? `Scegli layout e ruoli per nome; i valori li applica il renderer.\n${roles.join(", ")}`
+        ? `Choose layouts and roles by name; the renderer applies the values.\n${roles.join(", ")}`
         : undefined,
     ),
   ]
@@ -197,13 +197,13 @@ export function buildBrandContext(
     const a = audience.value;
     fixed.push(
       section(
-        "Pubblico",
+        "Audience",
         [
-          `Segmento: ${a.name}${a.role ? ` (${a.role})` : ""}`,
-          a.problems && `Problemi: ${a.problems}`,
-          a.goals && `Obiettivi: ${a.goals}`,
-          a.objections && `Obiezioni: ${a.objections}`,
-          a.language && `Linguaggio: ${a.language}`,
+          `Segment: ${a.name}${a.role ? ` (${a.role})` : ""}`,
+          a.problems && `Problems: ${a.problems}`,
+          a.goals && `Goals: ${a.goals}`,
+          a.objections && `Objections: ${a.objections}`,
+          a.language && `Language: ${a.language}`,
         ]
           .filter(Boolean)
           .join("\n"),
@@ -214,12 +214,12 @@ export function buildBrandContext(
     const p = pillar.value;
     fixed.push(
       section(
-        "Pilastro",
+        "Pillar",
         [
           `${p.name}: ${p.goal}`,
-          p.emotion && `Emozione da suscitare: ${p.emotion}`,
+          p.emotion && `Emotion to evoke: ${p.emotion}`,
           p.cta && `CTA: ${p.cta}`,
-          p.forbidden.length && `Vietato: ${p.forbidden.join("; ")}`,
+          p.forbidden.length && `Forbidden: ${p.forbidden.join("; ")}`,
         ]
           .filter(Boolean)
           .join("\n"),
@@ -230,10 +230,10 @@ export function buildBrandContext(
     const c = channel.value;
     fixed.push(
       section(
-        `Canale ${c.channel}`,
+        `Channel ${c.channel}`,
         [
-          c.toneShift && `Spostamento del tono: ${c.toneShift}`,
-          c.goal && `Obiettivo: ${c.goal}`,
+          c.toneShift && `Tone shift: ${c.toneShift}`,
+          c.goal && `Goal: ${c.goal}`,
           c.hashtags.length && `Hashtag: ${c.hashtags.join(" ")}`,
           c.cta && `CTA: ${c.cta}`,
         ]
@@ -245,12 +245,12 @@ export function buildBrandContext(
   if (format) {
     fixed.push(
       section(
-        `Formato ${format.name}`,
+        `Format ${format.name}`,
         [
-          format.goal && `Obiettivo: ${format.goal}`,
+          format.goal && `Goal: ${format.goal}`,
           format.steps.length &&
-            `Sequenza:\n${format.steps.map((st, i) => `${i + 1}. ${st.step}${st.layout ? ` (layout ${st.layout})` : ""}`).join("\n")}`,
-          format.maxWordsPerSlide && `Al massimo ${format.maxWordsPerSlide} parole per slide`,
+            `Sequence:\n${format.steps.map((st, i) => `${i + 1}. ${st.step}${st.layout ? ` (layout ${st.layout})` : ""}`).join("\n")}`,
+          format.maxWordsPerSlide && `At most ${format.maxWordsPerSlide} words per slide`,
           format.cta && `CTA: ${format.cta}`,
         ]
           .filter(Boolean)
@@ -258,8 +258,7 @@ export function buildBrandContext(
       ),
     );
   }
-  if (options.memoryRules?.length)
-    fixed.push(section("Regole di memoria", bullet(options.memoryRules)));
+  if (options.memoryRules?.length) fixed.push(section("Memory rules", bullet(options.memoryRules)));
 
   const approved = pickExamples(
     options.examples ?? [],
@@ -277,13 +276,13 @@ export function buildBrandContext(
     [
       a.length &&
         section(
-          "Esempi approvati",
-          a.map((e) => `«${e.body}»\nPerché funziona: ${e.reason}`).join("\n\n"),
+          "Approved examples",
+          a.map((e) => `“${e.body}”\nWhy it works: ${e.reason}`).join("\n\n"),
         ),
       r.length &&
         section(
-          "Esempi rifiutati",
-          r.map((e) => `«${e.body}»\nPerché no: ${e.reason}`).join("\n\n"),
+          "Rejected examples",
+          r.map((e) => `“${e.body}”\nWhy not: ${e.reason}`).join("\n\n"),
         ),
     ]
       .filter(Boolean)

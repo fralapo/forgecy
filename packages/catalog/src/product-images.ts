@@ -6,7 +6,7 @@ import { attachImages, loadProduct } from "./products";
 import { sniffFile } from "./sniff";
 import { storeTempFile, type TempFile } from "./storage";
 
-/** «Aggiungi immagine» on the product page: a photo uploaded by a person, kept as a draft asset. */
+/** “Add image” on the product page: a photo uploaded by a person, kept as a draft asset. */
 export async function addProductImage(
   db: Database,
   storage: StorageDriver,
@@ -17,7 +17,7 @@ export async function addProductImage(
   const product = await loadProduct(db, input.clientId, input.productId);
   const sniff = sniffFile(input.fileName, input.temp.size, input.temp.head);
   if (!sniff.ok || sniff.kind !== "image")
-    throw new ForgecyError("validation", sniff.message ?? "Carica un'immagine PNG, JPG o WebP.");
+    throw new ForgecyError("validation", sniff.message ?? "Upload a PNG, JPG or WebP image.");
   const key = await storeTempFile(storage, {
     clientId: input.clientId,
     temp: input.temp,
@@ -41,7 +41,7 @@ export async function addProductImage(
       createdBy: user.id,
     });
     if (added === 0)
-      throw new ForgecyError("conflict", "Questa immagine è già collegata al prodotto.");
+      throw new ForgecyError("conflict", "This image is already linked to the product.");
     await recordAuditEvent(tx, {
       actor: user.actor,
       action: "product.image_add",

@@ -46,7 +46,7 @@ const commands: Record<string, () => unknown> = {
     await restore(file);
     console.log("Restore completed");
   },
-  // Backup first, then rebuild, migrate and restart (spec: "Aggiornamenti").
+  // Backup first, then rebuild, migrate and restart (spec: "Upgrades").
   upgrade: async () => {
     const file = await backup();
     console.log(`Pre-upgrade backup: ${file}`);

@@ -19,7 +19,7 @@ import { AddProductButton } from "./add-product";
 import { CatalogView, type CatalogViewRow } from "./catalog-view";
 import { NotAClient } from "./not-a-client";
 
-export const metadata = { title: "Prodotti" };
+export const metadata = { title: "Products" };
 
 type Search = Promise<Record<string, string | string[] | undefined>>;
 
@@ -85,16 +85,16 @@ export default async function CatalogPage({
     <>
       <Breadcrumb
         items={[
-          { label: "Clienti", href: "/clients" },
+          { label: "Clients", href: "/clients" },
           { label: client.name, href: "/products" },
-          { label: "Prodotti" },
+          { label: "Products" },
         ]}
       />
       <PageHeader
-        title="Prodotti"
+        title="Products"
         description={
           totalProducts
-            ? `${plural(totalProducts, "prodotto", "prodotti")} · ${counts.approved ?? 0} approvati · ${counts.proposed ?? 0} da rivedere · ${counts.draft ?? 0} bozze`
+            ? `${plural(totalProducts, "product", "products")} · ${counts.approved ?? 0} approved · ${counts.proposed ?? 0} to review · ${counts.draft ?? 0} drafts`
             : undefined
         }
         actions={
@@ -103,7 +103,7 @@ export default async function CatalogPage({
             <Button asChild>
               <Link href={paths.importNew(client.slug)}>
                 <FileUp aria-hidden />
-                Importa prodotti
+                Import products
               </Link>
             </Button>
           </div>
@@ -111,12 +111,12 @@ export default async function CatalogPage({
       />
       <div className="mb-6 space-y-3">
         <p className="text-body-sm text-fg-muted">
-          <span className="font-medium text-fg">Prossima azione: </span>
+          <span className="font-medium text-fg">Next action: </span>
           {toReview[0]
-            ? `tu · Rivedi ${plural(pendingFromImports, "prodotto proposto", "prodotti proposti")} dall'${importTitle(toReview[0].createdAt).toLowerCase()}`
+            ? `you · Review ${plural(pendingFromImports, "proposed product", "proposed products")} from the ${importTitle(toReview[0].createdAt).replace(/^I/, "i")}`
             : counts.proposed
-              ? `tu · Approva o rifiuta ${plural(counts.proposed, "prodotto proposto", "prodotti proposti")}`
-              : "Nessuna azione in sospeso"}
+              ? `you · Approve or reject ${plural(counts.proposed, "proposed product", "proposed products")}`
+              : "No pending actions"}
         </p>
         {!ai.available ? <p className="text-body-sm text-fg-muted">{ai.reason}</p> : null}
         {imports.map((imp, i) => {
@@ -128,11 +128,11 @@ export default async function CatalogPage({
                 key={imp.id}
                 action={
                   <Button asChild variant="secondary" size="sm">
-                    <Link href={paths.importOpen(client.slug, imp.id)}>Apri</Link>
+                    <Link href={paths.importOpen(client.slug, imp.id)}>Open</Link>
                   </Button>
                 }
               >
-                Import «{names}» · Analisi in corso
+                Import “{names}” · Analyzing
               </Banner>
             );
           if (imp.status === "needs_mapping")
@@ -142,11 +142,11 @@ export default async function CatalogPage({
                 tone="warning"
                 action={
                   <Button asChild size="sm">
-                    <Link href={paths.importOpen(client.slug, imp.id)}>Completa mappatura</Link>
+                    <Link href={paths.importOpen(client.slug, imp.id)}>Complete mapping</Link>
                   </Button>
                 }
               >
-                Serve la mappatura delle colonne per «{names}»
+                Column mapping needed for “{names}”
               </Banner>
             );
           if (imp.status === "ready_for_review")
@@ -156,12 +156,12 @@ export default async function CatalogPage({
                 tone="warning"
                 action={
                   <Button asChild size="sm">
-                    <Link href={paths.review(client.slug, imp.id)}>Rivedi import</Link>
+                    <Link href={paths.review(client.slug, imp.id)}>Review import</Link>
                   </Button>
                 }
               >
-                {plural(summary?.found ?? 0, "prodotto da rivedere", "prodotti da rivedere")}{" "}
-                dall&apos;{importTitle(imp.createdAt).toLowerCase()}
+                {plural(summary?.found ?? 0, "product to review", "products to review")} from the{" "}
+                {importTitle(imp.createdAt).replace(/^I/, "i")}
               </Banner>
             );
           return (
@@ -170,12 +170,12 @@ export default async function CatalogPage({
               tone="error"
               action={
                 <Button asChild variant="secondary" size="sm">
-                  <Link href={paths.importOpen(client.slug, imp.id)}>Apri dettagli</Link>
+                  <Link href={paths.importOpen(client.slug, imp.id)}>Open details</Link>
                 </Button>
               }
             >
-              Import «{names}» non riuscito
-              {imp.failedStep ? ` al passo «${imp.failedStep}»` : ""}. (
+              Import “{names}” failed
+              {imp.failedStep ? ` at step “${imp.failedStep}”` : ""}. (
               {imp.errorCode ?? "IMPORT-FAILED"})
             </Banner>
           );
@@ -184,23 +184,23 @@ export default async function CatalogPage({
 
       <form method="get" className="mb-4 flex flex-wrap items-end gap-3" role="search">
         <label className="flex min-w-64 flex-1 flex-col gap-1 text-body-sm text-fg-muted">
-          Cerca
+          Search
           <input
             name="q"
             type="search"
             defaultValue={filters.q ?? ""}
-            placeholder="Cerca per nome, SKU o tag"
+            placeholder="Search by name, SKU or tag"
             className={`${selectClass} w-full`}
           />
         </label>
         <label className="flex flex-col gap-1 text-body-sm text-fg-muted">
-          Stato
+          Status
           <select
             name="status"
             defaultValue={filters.status?.join(",") ?? ""}
             className={selectClass}
           >
-            <option value="">Tutti tranne archiviati e rifiutati</option>
+            <option value="">All except archived and rejected</option>
             {(["draft", "proposed", "approved", "rejected", "archived"] as const).map((s) => (
               <option key={s} value={s}>
                 {productStatusLabels[s]}
@@ -209,9 +209,9 @@ export default async function CatalogPage({
           </select>
         </label>
         <label className="flex flex-col gap-1 text-body-sm text-fg-muted">
-          Categoria
+          Category
           <select name="category" defaultValue={filters.category ?? ""} className={selectClass}>
-            <option value="">Tutte</option>
+            <option value="">All</option>
             {cats.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -220,9 +220,9 @@ export default async function CatalogPage({
           </select>
         </label>
         <label className="flex flex-col gap-1 text-body-sm text-fg-muted">
-          Fonte
+          Source
           <select name="source" defaultValue={filters.source ?? ""} className={selectClass}>
-            <option value="">Tutte</option>
+            <option value="">All</option>
             {Object.entries(sourceFilterLabels).map(([k, v]) => (
               <option key={k} value={k}>
                 {v}
@@ -231,22 +231,22 @@ export default async function CatalogPage({
           </select>
         </label>
         <label className="flex flex-col gap-1 text-body-sm text-fg-muted">
-          Completezza
+          Completeness
           <select
             name="completeness"
             defaultValue={filters.completeness ?? ""}
             className={selectClass}
           >
-            <option value="">Tutte</option>
-            <option value="complete">Completo</option>
-            <option value="partial">Parziale</option>
-            <option value="minimal">Minimo</option>
+            <option value="">All</option>
+            <option value="complete">Complete</option>
+            <option value="partial">Partial</option>
+            <option value="minimal">Minimal</option>
           </select>
         </label>
         {filters.importId ? <input type="hidden" name="import" value={filters.importId} /> : null}
         <input type="hidden" name="view" value={filters.view} />
         <Button type="submit" variant="secondary">
-          Filtra
+          Filter
         </Button>
       </form>
 
@@ -257,25 +257,25 @@ export default async function CatalogPage({
             actions={
               <>
                 <Button asChild>
-                  <Link href={paths.importNew(client.slug)}>Importa prodotti</Link>
+                  <Link href={paths.importNew(client.slug)}>Import products</Link>
                 </Button>
                 <AddProductButton clientId={client.id} clientSlug={client.slug} />
               </>
             }
           >
-            Nessun prodotto per {client.name}. Importa un CSV, uno ZIP, immagini o un PDF, oppure
-            aggiungi un prodotto a mano.
+            No products for {client.name}. Import a CSV, a ZIP, images or a PDF, or add a product by
+            hand.
           </EmptyState>
         ) : rows.length === 0 ? (
           <EmptyState
             icon={SearchX}
             actions={
               <Button asChild variant="secondary">
-                <Link href={paths.catalog(client.slug)}>Azzera filtri</Link>
+                <Link href={paths.catalog(client.slug)}>Clear filters</Link>
               </Button>
             }
           >
-            Nessun prodotto corrisponde ai filtri.
+            No products match the filters.
           </EmptyState>
         ) : (
           <CatalogView

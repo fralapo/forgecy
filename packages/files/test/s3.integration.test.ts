@@ -18,15 +18,15 @@ describe.skipIf(!endpoint)("S3Driver (integration)", () => {
     });
     await driver.client.send(new CreateBucketCommand({ Bucket: bucket })).catch(() => undefined);
     const key = `system/test/${Date.now()}.txt`;
-    await driver.put(key, Readable.from([Buffer.from("ciao")]), { contentType: "text/plain" });
-    expect((await driver.head(key))?.size).toBe(4);
+    await driver.put(key, Readable.from([Buffer.from("hello")]), { contentType: "text/plain" });
+    expect((await driver.head(key))?.size).toBe(5);
     const url = await driver.signedUrl(key, {
       expiresInSeconds: 60,
       disposition: "attachment",
       filename: "a.txt",
     });
     const res = await fetch(url);
-    expect(await res.text()).toBe("ciao");
+    expect(await res.text()).toBe("hello");
     const put = await driver.signedUploadUrl(key, {
       contentType: "text/plain",
       expiresInSeconds: 60,
@@ -35,7 +35,7 @@ describe.skipIf(!endpoint)("S3Driver (integration)", () => {
       (
         await fetch(put, {
           method: "PUT",
-          body: "nuovo",
+          body: "new",
           headers: { "Content-Type": "text/plain" },
         })
       ).ok,

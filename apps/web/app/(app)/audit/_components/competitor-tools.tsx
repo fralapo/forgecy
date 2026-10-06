@@ -34,7 +34,7 @@ function useRun() {
     start(async () => {
       setError(null);
       const res = await fn();
-      if (!res.ok) return setError(res.error ?? "Operazione non riuscita");
+      if (!res.ok) return setError(res.error ?? "Operation failed");
       after?.();
       router.refresh();
     });
@@ -82,7 +82,7 @@ export function CompetitorItem({ c, readOnly }: { c: CompetitorView; readOnly: b
                   {c.websiteUrl}
                 </a>
               ) : (
-                <p className="text-body-sm text-fg-muted">Nessun sito</p>
+                <p className="text-body-sm text-fg-muted">No website</p>
               )}
             </div>
             <div className="flex flex-wrap gap-2">
@@ -96,14 +96,14 @@ export function CompetitorItem({ c, readOnly }: { c: CompetitorView; readOnly: b
                 }
               >
                 {c.status === "confirmed"
-                  ? "Confermato"
+                  ? "Confirmed"
                   : c.status === "removed"
-                    ? "Rimosso"
-                    : "Da confermare"}
+                    ? "Removed"
+                    : "To confirm"}
               </Badge>
               {c.status !== "removed" ? (
                 <Badge variant={sourceStatusVariant[c.sourceStatus]}>
-                  Sito: {sourceStatusLabel[c.sourceStatus].toLowerCase()}
+                  Website: {sourceStatusLabel[c.sourceStatus].toLowerCase()}
                 </Badge>
               ) : null}
             </div>
@@ -115,12 +115,12 @@ export function CompetitorItem({ c, readOnly }: { c: CompetitorView; readOnly: b
               <User aria-hidden className="size-4" />
             )}
             {isAi
-              ? `Proposto dallo Strategist · confidenza ${levelLabel[c.confidence].toLowerCase()}`
-              : "Aggiunto da una persona"}
+              ? `Proposed by the Strategist · ${levelLabel[c.confidence].toLowerCase()} confidence`
+              : "Added by a person"}
           </p>
           {c.reason ? <p className="text-body-sm">{c.reason}</p> : null}
           {c.removedReason ? (
-            <p className="text-body-sm text-fg-muted">Motivo: {c.removedReason}</p>
+            <p className="text-body-sm text-fg-muted">Reason: {c.removedReason}</p>
           ) : null}
           {c.sourceError ? <p className="text-body-sm text-fg-muted">{c.sourceError}</p> : null}
         </>
@@ -138,14 +138,14 @@ export function CompetitorItem({ c, readOnly }: { c: CompetitorView; readOnly: b
           }}
         >
           <label className="flex min-w-56 flex-1 flex-col gap-1 text-label text-fg-muted">
-            Perché lo rimuovi?
-            <Input name="reason" required maxLength={200} placeholder="Es. settore diverso" />
+            Why are you removing it?
+            <Input name="reason" required maxLength={200} placeholder="E.g. different sector" />
           </label>
           <Button type="submit" variant="danger" size="sm" disabled={pending}>
-            Rimuovi
+            Remove
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={() => setMode("view")}>
-            Annulla
+            Cancel
           </Button>
         </form>
       ) : null}
@@ -158,7 +158,7 @@ export function CompetitorItem({ c, readOnly }: { c: CompetitorView; readOnly: b
               onClick={() => run(() => reviewCompetitorAction({ id: c.id, decision: "confirm" }))}
             >
               <Check aria-hidden />
-              Conferma
+              Confirm
             </Button>
           ) : null}
           {c.status !== "removed" ? (
@@ -169,12 +169,12 @@ export function CompetitorItem({ c, readOnly }: { c: CompetitorView; readOnly: b
               onClick={() => setMode("remove")}
             >
               <X aria-hidden />
-              Rimuovi
+              Remove
             </Button>
           ) : null}
           <Button variant="ghost" size="sm" disabled={pending} onClick={() => setMode("edit")}>
             <Pencil aria-hidden />
-            Modifica
+            Edit
           </Button>
         </div>
       ) : null}
@@ -215,7 +215,7 @@ function CompetitorForm({
     >
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="flex flex-col gap-1">
-          <Label htmlFor={`c-name-${key}`}>Nome</Label>
+          <Label htmlFor={`c-name-${key}`}>Name</Label>
           <Input
             id={`c-name-${key}`}
             name="name"
@@ -225,7 +225,7 @@ function CompetitorForm({
           />
         </div>
         <div className="flex flex-col gap-1">
-          <Label htmlFor={`c-url-${key}`}>Sito</Label>
+          <Label htmlFor={`c-url-${key}`}>Website</Label>
           <Input
             id={`c-url-${key}`}
             name="websiteUrl"
@@ -235,7 +235,7 @@ function CompetitorForm({
         </div>
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor={`c-reason-${key}`}>Perché è un competitor</Label>
+        <Label htmlFor={`c-reason-${key}`}>Why it is a competitor</Label>
         <Input
           id={`c-reason-${key}`}
           name="reason"
@@ -245,10 +245,10 @@ function CompetitorForm({
       </div>
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={pending}>
-          Salva
+          Save
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Annulla
+          Cancel
         </Button>
       </div>
     </form>
@@ -275,7 +275,7 @@ export function AddCompetitor({ auditId }: { auditId: string }) {
         <div>
           <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
             <Plus aria-hidden />
-            Aggiungi competitor
+            Add competitor
           </Button>
         </div>
       )}
@@ -306,12 +306,12 @@ export function ProposalRequest({
       }}
     >
       <label className="flex min-w-64 flex-1 flex-col gap-1 text-label text-fg-muted">
-        Indicazione per lo Strategist (facoltativa)
-        <Input name="instruction" maxLength={500} placeholder="Es. solo aziende della Lombardia" />
+        Instruction for the Strategist (optional)
+        <Input name="instruction" maxLength={500} placeholder="E.g. only companies in Lombardy" />
       </label>
       <Button type="submit" variant="secondary" size="sm" disabled={pending}>
         <Sparkles aria-hidden />
-        {hasProposals ? "Nuove proposte" : "Proponi competitor"}
+        {hasProposals ? "New proposals" : "Propose competitors"}
       </Button>
       {error ? (
         <p role="alert" className="w-full text-body-sm text-error">

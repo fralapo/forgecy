@@ -19,7 +19,7 @@ import { effectiveSafeZone } from "../src/template-schema";
 import { readTemplateDir } from "../src/node";
 
 const [dir, out = "preview-out"] = process.argv.slice(2);
-if (!dir) throw new Error("Uso: preview <cartella-template> [cartella-output]");
+if (!dir) throw new Error("Usage: preview <template-folder> [output-folder]");
 const files = await readTemplateDir(path.resolve(dir));
 const report = validateTemplatePackage(files);
 if (!report.manifest) {

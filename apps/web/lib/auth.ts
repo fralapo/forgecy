@@ -44,7 +44,7 @@ export const auth = betterAuth({
       if (!isAllowedDomain(typeof user.email === "string" ? user.email : undefined)) {
         return {
           error: "domain_not_allowed",
-          errorDescription: "Questo indirizzo non è autorizzato ad accedere a Forgecy.",
+          errorDescription: "This address is not allowed to sign in to Forgecy.",
         };
       }
     },
@@ -85,7 +85,7 @@ export const auth = betterAuth({
           const user = await db.query.users.findFirst({
             where: (u, { eq }) => eq(u.id, session.userId),
           });
-          if (!user?.active) throw new APIError("FORBIDDEN", { message: "Account disattivato." });
+          if (!user?.active) throw new APIError("FORBIDDEN", { message: "Account deactivated." });
           return { data: session };
         },
       },

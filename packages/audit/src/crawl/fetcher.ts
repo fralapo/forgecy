@@ -39,6 +39,7 @@ export function auditUserAgent(baseUrl = "https://github.com/fralapo/forgecy"): 
   return `Mozilla/5.0 (compatible; ${AUDIT_USER_AGENT_TOKEN}/1.0; +${baseUrl})`;
 }
 
+// Italian and English CTA stems: client websites are mostly Italian.
 const CTA_WORDS =
   /\b(contatt|preventiv|richied|prenot|scopri|acquist|compra|iscriv|scaric|chiama|scrivi|inizia|prova|registr|ordina|contact|quote|book|buy|shop|sign ?up|subscribe|download|call|get started|try|request|demo)/i;
 
@@ -127,7 +128,7 @@ export function extractFromHtml(
 
 /**
  * Markup-only fetcher, used when no Chromium is available: no screenshots, no
- * computed colors or fonts (the scan is then "Raccolta in parte").
+ * computed colors or fonts (the scan is then "Partially collected").
  */
 export function createHtmlFetcher(options: {
   userAgent: string;
@@ -143,7 +144,7 @@ export function createHtmlFetcher(options: {
       let res: Response | undefined;
       for (let hop = 0; hop < 5; hop++) {
         if (!(await options.hostCheck(current)))
-          throw new CrawlError("AUD-HOST-BLOCKED", `Indirizzo nella rete locale: ${current}`);
+          throw new CrawlError("AUD-HOST-BLOCKED", `Address on the local network: ${current}`);
         res = await doFetch(current, {
           redirect: "manual",
           headers: { "user-agent": options.userAgent, accept: "text/html,*/*;q=0.8" },
@@ -156,7 +157,7 @@ export function createHtmlFetcher(options: {
         }
         break;
       }
-      if (!res) throw new CrawlError("SOURCE-UNAVAILABLE", `Nessuna risposta da ${url}`);
+      if (!res) throw new CrawlError("SOURCE-UNAVAILABLE", `No response from ${url}`);
       const type = res.headers.get("content-type") ?? "";
       const html = type.includes("html") ? await res.text() : "";
       const extracted = extractFromHtml(html, current);

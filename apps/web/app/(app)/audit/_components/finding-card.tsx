@@ -51,7 +51,7 @@ export interface FindingView {
   rev: number;
   rejectedReason: string | null;
   stale: boolean;
-  /** "Da lettura precedente" for website observations of an older scan. */
+  /** "From an earlier reading" for website observations of an older scan. */
   olderReading?: boolean;
 }
 
@@ -80,7 +80,7 @@ export function FindingCard({
     start(async () => {
       setError(null);
       const res = await fn();
-      if (!res.ok) setError(res.error ?? "Operazione non riuscita");
+      if (!res.ok) setError(res.error ?? "Operation failed");
       else {
         setMode("view");
         router.refresh();
@@ -99,15 +99,15 @@ export function FindingCard({
         <div className="flex min-w-0 flex-col gap-1">
           <p className="flex flex-wrap items-center gap-2 text-label text-fg-muted">
             <span className="uppercase">{areaLabel[finding.area]}</span>
-            {finding.olderReading ? <Badge>Da lettura precedente</Badge> : null}
-            {finding.stale ? <Badge variant="warning">Da ricontrollare</Badge> : null}
+            {finding.olderReading ? <Badge>From an earlier reading</Badge> : null}
+            {finding.stale ? <Badge variant="warning">To recheck</Badge> : null}
           </p>
           <h3 className="text-heading-sm text-fg">{finding.title}</h3>
           <p className="flex items-center gap-1 text-body-sm text-fg-muted">
             {isAi ? (
               <>
                 <Bot aria-hidden className="size-4" />
-                Proposta da {agentLabel[finding.authorAgent!] ?? finding.authorAgent}
+                Proposed by {agentLabel[finding.authorAgent!] ?? finding.authorAgent}
                 {finding.model ? (
                   <code className="ml-1 font-mono text-fg-muted">{finding.model}</code>
                 ) : null}
@@ -115,7 +115,7 @@ export function FindingCard({
             ) : (
               <>
                 <User aria-hidden className="size-4" />
-                Scritta da una persona
+                Written by a person
               </>
             )}
           </p>
@@ -134,7 +134,7 @@ export function FindingCard({
             }
             title={finding.confidenceReason ?? undefined}
           >
-            Confidenza {levelLabel[finding.confidence].toLowerCase()}
+            {levelLabel[finding.confidence]} confidence
           </Badge>
         </div>
       </header>
@@ -153,13 +153,13 @@ export function FindingCard({
           {finding.description ? <p>{finding.description}</p> : null}
           {finding.impact ? (
             <p className="text-body-sm">
-              <span className="font-medium">Perché conta: </span>
+              <span className="font-medium">Why it matters: </span>
               {finding.impact}
             </p>
           ) : null}
           {finding.recommendation ? (
             <p className="text-body-sm">
-              <span className="font-medium">Cosa fare: </span>
+              <span className="font-medium">What to do: </span>
               {finding.recommendation}
             </p>
           ) : null}
@@ -168,14 +168,14 @@ export function FindingCard({
           ) : null}
           {finding.rejectedReason ? (
             <p className="text-body-sm text-fg-muted">
-              Motivo dello scarto: {finding.rejectedReason}
+              Reason for rejection: {finding.rejectedReason}
             </p>
           ) : null}
         </div>
       )}
 
       <div className="flex flex-col gap-2">
-        <p className="text-label uppercase text-fg-muted">Prove</p>
+        <p className="text-label uppercase text-fg-muted">Evidence</p>
         {finding.evidence.length ? (
           <ul className="flex flex-col gap-1">
             {finding.evidence.map((e, i) => {
@@ -196,10 +196,10 @@ export function FindingCard({
                         rel="noreferrer noopener"
                         className="text-link underline underline-offset-2"
                       >
-                        {e.label ?? link?.label ?? "Fonte"}
+                        {e.label ?? link?.label ?? "Source"}
                       </a>
                     ) : (
-                      <span>{e.label ?? link?.label ?? "Fonte"}</span>
+                      <span>{e.label ?? link?.label ?? "Source"}</span>
                     )}
                     {e.quote ? <q className="ml-1 text-fg-muted">{e.quote}</q> : null}
                     {e.capturedAt ? (
@@ -211,7 +211,7 @@ export function FindingCard({
             })}
           </ul>
         ) : (
-          <p className="text-body-sm text-warning">Nessuna prova: verifica prima di accettare.</p>
+          <p className="text-body-sm text-warning">No evidence: verify before accepting.</p>
         )}
       </div>
 
@@ -227,7 +227,7 @@ export function FindingCard({
           }}
         >
           <Label htmlFor={`reason-${finding.id}`}>
-            Perché la scarti?{finding.kind === "problem" ? "" : " (facoltativo)"}
+            Why are you rejecting it?{finding.kind === "problem" ? "" : " (optional)"}
           </Label>
           <Input
             id={`reason-${finding.id}`}
@@ -237,10 +237,10 @@ export function FindingCard({
           />
           <div className="flex gap-2">
             <Button type="submit" variant="danger" size="sm" disabled={pending}>
-              Scarta
+              Reject
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={() => setMode("view")}>
-              Annulla
+              Cancel
             </Button>
           </div>
         </form>
@@ -260,7 +260,7 @@ export function FindingCard({
                 }
               >
                 <Check aria-hidden />
-                Accetta
+                Accept
               </Button>
               <Button
                 variant="secondary"
@@ -269,7 +269,7 @@ export function FindingCard({
                 onClick={() => setMode("reject")}
               >
                 <X aria-hidden />
-                Scarta
+                Reject
               </Button>
             </>
           ) : (
@@ -280,15 +280,15 @@ export function FindingCard({
               onClick={() => run(() => reopenFindingAction(finding.id, finding.rev))}
             >
               <RotateCcw aria-hidden />
-              Rimetti da rivedere
+              Mark as to review
             </Button>
           )}
           <Button variant="ghost" size="sm" disabled={pending} onClick={() => setMode("edit")}>
             <Pencil aria-hidden />
-            Modifica
+            Edit
           </Button>
           <label className="ml-auto flex items-center gap-2 text-body-sm text-fg-muted">
-            Priorità
+            Priority
             <select
               className={cn(selectClass, "h-8 w-auto")}
               value={finding.priority}
@@ -306,7 +306,7 @@ export function FindingCard({
               {(["high", "medium", "low"] as const).map((l) => (
                 <option key={l} value={l}>
                   {levelLabel[l]}
-                  {finding.suggestedPriority === l && isAi ? " (suggerita)" : ""}
+                  {finding.suggestedPriority === l && isAi ? " (suggested)" : ""}
                 </option>
               ))}
             </select>
@@ -317,12 +317,11 @@ export function FindingCard({
               size="sm"
               disabled={pending}
               onClick={() => {
-                if (window.confirm("Eliminare questo elemento?"))
-                  run(() => deleteFindingAction(finding.id));
+                if (window.confirm("Delete this item?")) run(() => deleteFindingAction(finding.id));
               }}
             >
               <Trash2 aria-hidden />
-              Elimina
+              Delete
             </Button>
           ) : null}
         </footer>
@@ -369,7 +368,7 @@ function EditForm({
       }}
     >
       <div className="flex flex-col gap-1">
-        <Label htmlFor={`title-${id}`}>Titolo</Label>
+        <Label htmlFor={`title-${id}`}>Title</Label>
         <Input
           id={`title-${id}`}
           name="title"
@@ -380,9 +379,9 @@ function EditForm({
       </div>
       {(
         [
-          ["description", "Descrizione", finding.description],
-          ["impact", "Perché conta", finding.impact],
-          ["recommendation", "Cosa fare", finding.recommendation],
+          ["description", "Description", finding.description],
+          ["impact", "Why it matters", finding.impact],
+          ["recommendation", "What to do", finding.recommendation],
         ] as const
       ).map(([name, label, value]) => (
         <div key={name} className="flex flex-col gap-1">
@@ -398,10 +397,10 @@ function EditForm({
       ))}
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={pending}>
-          Salva
+          Save
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Annulla
+          Cancel
         </Button>
       </div>
     </form>

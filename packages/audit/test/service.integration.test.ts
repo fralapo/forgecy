@@ -53,7 +53,7 @@ describe.skipIf(!dbUrl || !redisUrl)("audit services (integration)", () => {
     clientId = created.id;
     expect(created.slug).toBe(`forno-test-${suffix}`);
     const dupes = await findDuplicates(db, {
-      name: "Altro",
+      name: "Other",
       websiteUrl: `https://www.forno-${suffix}.example/`,
     });
     expect(dupes.map((d) => d.id)).toContain(clientId);
@@ -61,7 +61,7 @@ describe.skipIf(!dbUrl || !redisUrl)("audit services (integration)", () => {
 
   it("shows no API cost when the audit runs on the local model", async () => {
     const p = await createProspect({ db }, human, {
-      name: `Stima ${suffix}`,
+      name: `Estimate ${suffix}`,
       objectives: [],
       aiPolicy: "external_allowed",
     });
@@ -69,12 +69,12 @@ describe.skipIf(!dbUrl || !redisUrl)("audit services (integration)", () => {
     expect(paid).toMatchObject({ localModel: false, costRangeUsd: { min: 1.5, max: 2.5 } });
     const local = await estimateAudit(db, p.id, "local");
     expect(local).toMatchObject({ localModel: true, costRangeUsd: null, budgetBlocked: false });
-    await deleteProspect({ db }, human, p.id, `Stima ${suffix}`);
+    await deleteProspect({ db }, human, p.id, `Estimate ${suffix}`);
   });
 
   it("does not let an agent create prospects", async () => {
     await expect(
-      createProspect({ db }, agent, { name: "Da agente", objectives: [] }),
+      createProspect({ db }, agent, { name: "From an agent", objectives: [] }),
     ).rejects.toMatchObject({ code: "permission_denied" });
   });
 
@@ -95,7 +95,7 @@ describe.skipIf(!dbUrl || !redisUrl)("audit services (integration)", () => {
       kind: "observation",
       area: "message",
       channel: "website",
-      title: "La home non dice cosa vendete",
+      title: "The home page does not say what you sell",
     });
     expect(obs.status).toBe("accepted");
     await expect(
@@ -107,7 +107,7 @@ describe.skipIf(!dbUrl || !redisUrl)("audit services (integration)", () => {
         auditId,
         kind: "problem",
         area: "message",
-        title: "Senza prove",
+        title: "No evidence",
       }),
     ).rejects.toMatchObject({ code: "validation" });
 
@@ -115,18 +115,20 @@ describe.skipIf(!dbUrl || !redisUrl)("audit services (integration)", () => {
       auditId,
       kind: "problem",
       area: "message",
-      title: "Offerta poco chiara",
+      title: "Unclear offer",
       parentIds: [obs.id],
     });
     // Its linked observation is its evidence.
-    expect(problem.evidence).toEqual([{ type: "note", label: "La home non dice cosa vendete" }]);
+    expect(problem.evidence).toEqual([
+      { type: "note", label: "The home page does not say what you sell" },
+    ]);
     await expect(
       reviewFinding({ db }, human, { id: problem.id, decision: "reject", rev: problem.rev }),
     ).rejects.toMatchObject({ code: "validation" });
     const rejected = await reviewFinding({ db }, human, {
       id: problem.id,
       decision: "reject",
-      reason: "Già coperto",
+      reason: "Already covered",
       rev: problem.rev,
     });
     expect(rejected.status).toBe("rejected");

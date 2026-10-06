@@ -119,7 +119,7 @@ function scanDeclarations(
         check: "hardcoded",
         file,
         line,
-        message: `colore \`${color}\` scritto a mano. Usa un ruolo colore (variabile CSS).`,
+        message: `hand-written color \`${color}\`. Use a color role (CSS variable).`,
       });
     if (prop === "font-size" && m.typeScale.length) {
       const px = value.match(/^(\d+(?:\.\d+)?)px$/);
@@ -129,7 +129,7 @@ function scanDeclarations(
           check: "hardcoded",
           file,
           line,
-          message: `\`font-size: ${value}\` fuori dalla scala tipografica.`,
+          message: `\`font-size: ${value}\` is off the type scale.`,
         });
     }
     if (prop === "font-family" || prop === "font") {
@@ -150,9 +150,9 @@ function checkCss(pkg: TemplatePackage, path: string, issues: ValidationIssue[],
   const css = readText(pkg, path) ?? "";
   const clean = stripCssComments(css);
   const bad: [RegExp, string][] = [
-    [/@import/gi, "`@import` non ammesso: tutto deve stare nel pacchetto."],
-    [/@font-face/gi, "`@font-face` non ammesso: dichiara i font in template.json."],
-    [/expression\s*\(/gi, "`expression()` non ammesso."],
+    [/@import/gi, "`@import` not allowed: everything must be inside the package."],
+    [/@font-face/gi, "`@font-face` not allowed: declare fonts in template.json."],
+    [/expression\s*\(/gi, "`expression()` not allowed."],
   ];
   for (const [re, message] of bad)
     for (const match of clean.matchAll(re))
@@ -173,7 +173,7 @@ function checkCss(pkg: TemplatePackage, path: string, issues: ValidationIssue[],
         check: "markup",
         file: path,
         line,
-        message: `\`url(${ref})\` esterno: usa un file di \`assets/\`.`,
+        message: `external \`url(${ref})\`: use a file from \`assets/\`.`,
       });
     else if (!pkg.files.has(target))
       issues.push({
@@ -181,7 +181,7 @@ function checkCss(pkg: TemplatePackage, path: string, issues: ValidationIssue[],
         check: "files",
         file: path,
         line,
-        message: `\`${ref}\` non è nel pacchetto.`,
+        message: `\`${ref}\` is not in the package.`,
       });
   }
   scanDeclarations(css, path, pkg.manifest, issues, facts);
@@ -214,23 +214,23 @@ function checkLayoutHtml(
       push(
         "TEMPLATE-INVALID",
         "markup",
-        `elemento \`<${tag}>\` non ammesso nei layout.`,
+        `element \`<${tag}>\` not allowed in layouts.`,
         match.index,
       );
   }
   for (const match of html.matchAll(/\s(on[a-z]+)\s*=/gi))
-    push("TEMPLATE-INVALID", "markup", `attributo \`${match[1]}\` non ammesso.`, match.index);
+    push("TEMPLATE-INVALID", "markup", `attribute \`${match[1]}\` not allowed.`, match.index);
   for (const match of html.matchAll(/\s(?:src|href)\s*=\s*["']?\s*([a-z][a-z0-9+.-]*:|\/\/)/gi))
     push(
       "TEMPLATE-INVALID",
       "markup",
-      `riferimento esterno \`${match[1]}\`: usa un file di \`assets/\`.`,
+      `external reference \`${match[1]}\`: use a file from \`assets/\`.`,
       match.index,
     );
   for (const match of html.matchAll(/\ssrc\s*=\s*["']([^"']+)["']/gi)) {
     const target = resolvePackagePath(file, match[1]!);
     if (target && !pkg.files.has(target))
-      push("ASSET-MISSING", "files", `\`${match[1]}\` non è nel pacchetto.`, match.index);
+      push("ASSET-MISSING", "files", `\`${match[1]}\` is not in the package.`, match.index);
   }
   for (const match of html.matchAll(/\sstyle\s*=\s*"([^"]*)"/gi))
     scanDeclarations(match[1]!, file, m, issues, facts, lineOf(html, match.index) - 1);
@@ -240,7 +240,7 @@ function checkLayoutHtml(
       push(
         "TEMPLATE-INVALID",
         "hardcoded",
-        `colore \`${c}\` scritto a mano. Usa un ruolo colore (variabile CSS).`,
+        `hand-written color \`${c}\`. Use a color role (CSS variable).`,
         match.index,
       );
   }
@@ -253,7 +253,7 @@ function checkLayoutHtml(
       push(
         "TEMPLATE-INVALID",
         "slots",
-        `slot "${name}" presente due volte.`,
+        `slot "${name}" appears twice.`,
         html.indexOf(`data-slot="${name}"`),
       );
     found.set(name, el);
@@ -264,40 +264,30 @@ function checkLayoutHtml(
       push(
         "TEMPLATE-INVALID",
         "slots",
-        `lo slot "${slot.name}" è in template.json ma non nell'HTML.`,
+        `slot "${slot.name}" is in template.json but not in the HTML.`,
       );
       continue;
     }
     const at = html.indexOf(`data-slot="${slot.name}"`);
     const tag = el.localName.toLowerCase();
     if (slot.type === "image" && tag !== "img")
-      push(
-        "TEMPLATE-INVALID",
-        "slots",
-        `lo slot immagine "${slot.name}" deve essere un \`<img>\`.`,
-        at,
-      );
+      push("TEMPLATE-INVALID", "slots", `image slot "${slot.name}" must be an \`<img>\`.`, at);
     if (slot.type === "list" && (!["ul", "ol"].includes(tag) || !el.querySelector("li")))
       push(
         "TEMPLATE-INVALID",
         "slots",
-        `lo slot elenco "${slot.name}" deve essere \`<ul>\` o \`<ol>\` con un \`<li>\` di esempio.`,
+        `list slot "${slot.name}" must be a \`<ul>\` or \`<ol>\` with a sample \`<li>\`.`,
         at,
       );
     if (slot.type === "text" && tag === "img")
-      push(
-        "TEMPLATE-INVALID",
-        "slots",
-        `lo slot di testo "${slot.name}" non può essere un \`<img>\`.`,
-        at,
-      );
+      push("TEMPLATE-INVALID", "slots", `text slot "${slot.name}" cannot be an \`<img>\`.`, at);
   }
   for (const name of found.keys())
     if (!layout.slots.some((s) => s.name === name))
       push(
         "TEMPLATE-INVALID",
         "slots",
-        `lo slot "${name}" è nell'HTML ma non in template.json.`,
+        `slot "${name}" is in the HTML but not in template.json.`,
         html.indexOf(`data-slot="${name}"`),
       );
   return found.size;
@@ -327,7 +317,7 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
         code: "TEMPLATE-INVALID",
         check: "manifest",
         file: path,
-        message: "percorso non ammesso nel pacchetto.",
+        message: "path not allowed in the package.",
       });
 
   const parsed = parseManifest(readText({ files }, MANIFEST_FILE));
@@ -339,12 +329,12 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
         file: MANIFEST_FILE,
         message: `${e.path}: ${e.message}`,
       });
-    add("manifest", "`template.json` valido");
+    add("manifest", "`template.json` is valid");
     return { ok: false, checks, issues };
   }
   const m = parsed.manifest;
   const pkg: TemplatePackage = { manifest: m, files };
-  add("manifest", "`template.json` valido");
+  add("manifest", "`template.json` is valid");
 
   for (const p of [...m.styles, ...m.layouts.map((l) => l.file), ...m.fonts.map((f) => f.file)])
     if (!files.has(p))
@@ -352,7 +342,7 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
         code: "ASSET-MISSING",
         check: "files",
         file: p,
-        message: `\`${p}\` dichiarato in template.json ma assente.`,
+        message: `\`${p}\` declared in template.json but missing.`,
       });
 
   const facts: CssFacts = { usedVars: [], definedVars: new Set(), families: [] };
@@ -368,7 +358,7 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
         code: "TEMPLATE-INVALID",
         check: "hardcoded",
         line,
-        message: `la variabile \`${name}\` non è legata a un ruolo colore o font.`,
+        message: `variable \`${name}\` is not bound to a color or font role.`,
       });
 
   // Fonts: real font files, and every family used is shipped in fonts/.
@@ -382,7 +372,7 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
         code: "ASSET-MISSING",
         check: "fonts",
         file: f.file,
-        message: "il file non è un font WOFF2, WOFF, TTF o OTF.",
+        message: "the file is not a WOFF2, WOFF, TTF or OTF font.",
       });
     else kinds.add(kind);
   }
@@ -393,7 +383,7 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
       issues.push({
         code: "ASSET-MISSING",
         check: "fonts",
-        message: `il template usa "${name}" ma il font non è in \`fonts/\`.`,
+        message: `the template uses "${name}" but the font is not in \`fonts/\`.`,
       });
 
   // Samples must be valid slides: they feed the catalog cover, previews and the test render.
@@ -405,7 +395,7 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
         check: "samples",
         file: MANIFEST_FILE,
         layout: layout.id,
-        message: `esempio del layout "${layout.id}" non valido.`,
+        message: `invalid sample for layout "${layout.id}".`,
       });
       continue;
     }
@@ -420,7 +410,7 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
           check: "samples",
           file: MANIFEST_FILE,
           layout: layout.id,
-          message: `esempio "${layout.id}": ${i.message}`,
+          message: `sample "${layout.id}": ${i.message}`,
         });
     for (const v of Object.values(layout.sample))
       if (v && typeof v === "object" && !Array.isArray(v) && !files.has(v.asset))
@@ -429,36 +419,39 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
           check: "samples",
           file: MANIFEST_FILE,
           layout: layout.id,
-          message: `\`${v.asset}\` non è nel pacchetto.`,
+          message: `\`${v.asset}\` is not in the package.`,
         });
   }
 
-  add("files", "File dichiarati presenti nel pacchetto");
+  add("files", "Declared files present in the package");
   add(
     "slots",
-    `Slot dichiarati: ${m.layouts.reduce((n, l) => n + l.slots.length, 0)} in ${m.layouts.length} layout`,
+    `Declared slots: ${m.layouts.reduce((n, l) => n + l.slots.length, 0)} in ${m.layouts.length} layouts`,
   );
   checks.push({
     id: "slots-html",
-    label: `Slot coerenti tra HTML e metadati (${slotCount} nell'HTML)`,
+    label: `Slots consistent between HTML and metadata (${slotCount} in the HTML)`,
     status: issues.some((i) => i.check === "slots") ? "error" : "ok",
   });
-  add("fonts", `Font inclusi: ${m.fonts.length}${kinds.size ? ` (${[...kinds].join(", ")})` : ""}`);
+  add(
+    "fonts",
+    `Fonts included: ${m.fonts.length}${kinds.size ? ` (${[...kinds].join(", ")})` : ""}`,
+  );
   add(
     "hardcoded",
     issues.some((i) => i.check === "hardcoded")
-      ? "Valori hardcoded presenti"
-      : "Valori hardcoded: nessuno",
+      ? "Hardcoded values found"
+      : "Hardcoded values: none",
   );
-  add("markup", "Markup senza script né riferimenti esterni");
-  add("samples", "Dati di esempio validi");
-  checks.push({ id: "formats", label: `Formati: ${FORMATS[m.format].label}`, status: "ok" });
+  add("markup", "Markup without scripts or external references");
+  add("samples", "Valid sample data");
+  checks.push({ id: "formats", label: `Formats: ${FORMATS[m.format].label}`, status: "ok" });
 
   return { ok: !issues.length, checks, issues, manifest: m };
 }
 
-/** «`layouts/cover.html`, riga 14: colore `#FF0000` scritto a mano.» */
+/** “`layouts/cover.html`, line 14: hand-written color `#FF0000`.” */
 export function formatIssue(i: ValidationIssue): string {
-  const where = i.file ? `\`${i.file}\`${i.line ? `, riga ${i.line}` : ""}: ` : "";
+  const where = i.file ? `\`${i.file}\`${i.line ? `, line ${i.line}` : ""}: ` : "";
   return `${where}${i.message}`;
 }

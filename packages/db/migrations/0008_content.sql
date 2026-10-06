@@ -342,7 +342,7 @@ CREATE UNIQUE INDEX "content_versions_number_uq" ON "content_versions" USING btr
 CREATE INDEX "contents_client_idx" ON "contents" USING btree ("client_id","status");--> statement-breakpoint
 CREATE INDEX "contents_plan_item_idx" ON "contents" USING btree ("plan_item_id");--> statement-breakpoint
 CREATE INDEX "contents_product_idx" ON "contents" USING btree ("product_id");--> statement-breakpoint
--- Custom SQL: a content version is an immutable snapshot (spec: "Output approvati mai sovrascritti").
+-- Custom SQL: a content version is an immutable snapshot (spec: "Approved outputs never overwritten").
 -- Only foreign keys may be cleared (ON DELETE SET NULL of a user or brand version).
 CREATE OR REPLACE FUNCTION content_versions_immutable() RETURNS trigger AS $$
 BEGIN

@@ -1,6 +1,6 @@
 import type { FieldDef, ProductVariant } from "@forgecy/catalog/fields";
 
-/** Field value → editable text: lists one item per line, variants "attributo | valore | SKU". */
+/** Field value → editable text: lists one item per line, variants "attribute | value | SKU". */
 export function toText(def: FieldDef, v: unknown): string {
   if (def.kind === "variants")
     return ((v ?? []) as ProductVariant[])

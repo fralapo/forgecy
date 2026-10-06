@@ -36,7 +36,7 @@ export function decodeCsv(
     if (/[\u0000-\u0008\u000e-\u001f]/.test(text.slice(0, 4096)))
       throw new ImportError(
         "IMPORT-CSV-ENCODING",
-        "Non riconosco la codifica del file. Salvalo in UTF-8 con separatore virgola o punto e virgola.",
+        "Unrecognized file encoding. Save it as UTF-8 with a comma or semicolon delimiter.",
       );
     return { text, encoding: "windows-1252" };
   }
@@ -77,13 +77,13 @@ function countOutsideQuotes(line: string, d: string): number {
 function finalize(table: unknown[][], name: string): SheetData {
   const nonEmpty = table.filter((r) => r.some((c) => String(c ?? "").trim() !== ""));
   const [head, ...body] = nonEmpty;
-  if (!head) throw new ImportError("IMPORT-INVALID", `"${name}" non contiene righe.`);
+  if (!head) throw new ImportError("IMPORT-INVALID", `"${name}" contains no rows.`);
   if (body.length > IMPORT_LIMITS.sheetRows)
     throw new ImportError(
       "IMPORT-TOO-LARGE",
-      `"${name}" ha ${body.length.toLocaleString("it-IT")} righe: il limite è ${IMPORT_LIMITS.sheetRows.toLocaleString("it-IT")}. Dividi il file.`,
+      `"${name}" has ${body.length.toLocaleString("en-GB")} rows: the limit is ${IMPORT_LIMITS.sheetRows.toLocaleString("en-GB")}. Split the file.`,
     );
-  const headers = head.map((h, i) => String(h ?? "").trim() || `Colonna ${i + 1}`);
+  const headers = head.map((h, i) => String(h ?? "").trim() || `Column ${i + 1}`);
   const width = headers.length;
   const rows = body.map((r) => Array.from({ length: width }, (_, i) => cellToString(r[i])));
   return { headers, rows };
@@ -112,7 +112,7 @@ export function parseCsv(data: Uint8Array, name: string, opts: CsvOptions = {}):
   } catch {
     throw new ImportError(
       "IMPORT-CSV-ENCODING",
-      `Non riconosco codifica o separatore di "${name}". Salvalo in UTF-8 con separatore virgola o punto e virgola, oppure scegli qui codifica e separatore.`,
+      `Unrecognized encoding or delimiter in "${name}". Save it as UTF-8 with a comma or semicolon delimiter, or choose the encoding and delimiter here.`,
     );
   }
   if (table.length > IMPORT_LIMITS.sheetRows + 1) {
@@ -120,14 +120,14 @@ export function parseCsv(data: Uint8Array, name: string, opts: CsvOptions = {}):
     const lines = text.split(/\r?\n/).filter((l) => l.trim()).length - 1;
     throw new ImportError(
       "IMPORT-TOO-LARGE",
-      `"${name}" ha ${lines.toLocaleString("it-IT")} righe: il limite è ${IMPORT_LIMITS.sheetRows.toLocaleString("it-IT")}. Dividi il file.`,
+      `"${name}" has ${lines.toLocaleString("en-GB")} rows: the limit is ${IMPORT_LIMITS.sheetRows.toLocaleString("en-GB")}. Split the file.`,
     );
   }
   const sheet = finalize(table, name);
   if (sheet.headers.length < 2 && delimiter === ",")
     throw new ImportError(
       "IMPORT-CSV-ENCODING",
-      `Non riconosco codifica o separatore di "${name}". Salvalo in UTF-8 con separatore virgola o punto e virgola, oppure scegli qui codifica e separatore.`,
+      `Unrecognized encoding or delimiter in "${name}". Save it as UTF-8 with a comma or semicolon delimiter, or choose the encoding and delimiter here.`,
     );
   return { ...sheet, encoding, delimiter };
 }
@@ -139,7 +139,7 @@ export async function parseXlsx(data: Buffer, name: string): Promise<SheetData> 
   try {
     table = (await readSheet(data)) as unknown[][];
   } catch {
-    throw new ImportError("IMPORT-INVALID", `"${name}" non è un file XLSX leggibile.`);
+    throw new ImportError("IMPORT-INVALID", `"${name}" is not a readable XLSX file.`);
   }
   return finalize(table, name);
 }

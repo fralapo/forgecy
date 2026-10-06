@@ -9,8 +9,8 @@ import { type CaptureInput, captureSlides } from "./capture";
 import { slotLimits } from "./carousel";
 
 /**
- * Render checks of the Template editor: every layout with its sample data ("Render di
- * prova") and with every text slot at its limit ("Testo lungo: nessun overflow").
+ * Render checks of the Template editor: every layout with its sample data ("Test
+ * render") and with every text slot at its limit ("Long text: no overflow").
  */
 export async function renderCheckTemplate(
   browser: Browser,
@@ -44,7 +44,7 @@ export async function renderCheckTemplate(
           check: "render",
           file: m.layouts[i]!.file,
           layout: m.layouts[i]!.id,
-          message: `esempio: ${issue.message}`,
+          message: `sample: ${issue.message}`,
         });
       }
   } catch (err) {
@@ -52,14 +52,14 @@ export async function renderCheckTemplate(
     issues.push({
       code: "TEMPLATE-INVALID",
       check: "render",
-      message: `render di prova fallito: ${(err as Error).message}`,
+      message: `test render failed: ${(err as Error).message}`,
     });
   }
   checks.push({
     id: "render",
     label: renderErrors
-      ? `Render di prova: ${renderErrors} problemi`
-      : `Render di prova: ${m.layouts.length} layout senza errori`,
+      ? `Test render: ${renderErrors} problems`
+      : `Test render: ${m.layouts.length} layouts without errors`,
     status: renderErrors ? "error" : "ok",
   });
 
@@ -75,17 +75,17 @@ export async function renderCheckTemplate(
             check: "overflow",
             file: m.layouts[i]!.file,
             layout: m.layouts[i]!.id,
-            message: `testo lungo: ${issue.message}`,
+            message: `long text: ${issue.message}`,
           });
         }
   }
   checks.push({
     id: "overflow",
     label: renderErrors
-      ? "Testo lungo: non verificato"
+      ? "Long text: not checked"
       : overflow
-        ? `Testo lungo: ${overflow} overflow`
-        : "Testo lungo: nessun overflow",
+        ? `Long text: ${overflow} overflows`
+        : "Long text: no overflow",
     status: renderErrors ? "skipped" : overflow ? "error" : "ok",
   });
   return { ...report, ok: !issues.length, issues, checks };

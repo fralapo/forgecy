@@ -6,4 +6,4 @@ import { templateManifestSchema } from "../src/template-schema";
 const out = new URL("../../../templates/template.schema.json", import.meta.url);
 const schema = z.toJSONSchema(templateManifestSchema, { io: "input", unrepresentable: "any" });
 await writeFile(out, JSON.stringify({ ...schema, title: "Forgecy template.json" }, null, 2) + "\n");
-console.log(`scritto ${out.pathname}`);
+console.log(`wrote ${out.pathname}`);

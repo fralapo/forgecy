@@ -63,6 +63,7 @@ describe("url", () => {
   });
 });
 
+// Italian paths on purpose: the page ranking matches Italian and English path stems.
 describe("page selection", () => {
   it("canonicalizes urls", () => {
     expect(canonicalUrl("https://Example.it/servizi/?utm=1#x")).toBe("https://example.it/servizi");
@@ -129,7 +130,7 @@ describe("page selection", () => {
     const page = extractFromHtml(
       `<html><head><title>Forno Rossi</title></head><body>
         <nav><a href="/servizi">Servizi</a></nav>
-        <h1>Pane ogni giorno</h1><a href="https://other.it">x</a>
+        <h1>Fresh bread every day</h1><a href="https://other.it">x</a>
         <form><input type="password"></form></body></html>`,
       "https://forno.it/",
     );
@@ -167,13 +168,14 @@ describe("tables", () => {
   });
 
   it("maps columns and skips rows without a date", () => {
+    // Italian headers on purpose: exported analytics files are often in Italian.
     const mapping = suggestMapping(["Data", "Tipo", "Mi piace", "Commenti", "Colonna X"]);
     expect(mapping).toEqual({ 0: "date", 1: "post_type", 2: "likes", 3: "comments", 4: "ignore" });
     const result = interpretRows(
       {
         rows: [
           ["01/09/2026", "Reel", "1.200", "30", "?"],
-          ["ieri", "Post", "10", "1", ""],
+          ["yesterday", "Post", "10", "1", ""],
         ],
       },
       mapping,
@@ -187,7 +189,7 @@ describe("tables", () => {
         metrics: { likes: 1200, comments: 30 },
       },
     ]);
-    expect(result.invalid).toEqual([{ rowNumber: 3, reason: "Data non valida" }]);
+    expect(result.invalid).toEqual([{ rowNumber: 3, reason: "Invalid date" }]);
   });
 });
 
@@ -198,7 +200,7 @@ describe("channel metrics", () => {
 
   it("shows missing values as not available, never zero", () => {
     const cards = computeChannelMetrics({ channel: "instagram", metrics: [], posts: [], today });
-    expect(card(cards, "followers")).toMatchObject({ value: null, display: "Non disponibile" });
+    expect(card(cards, "followers")).toMatchObject({ value: null, display: "Unavailable" });
     expect(card(cards, "frequency").value).toBeNull();
     expect(card(cards, "interaction_rate").value).toBeNull();
   });
@@ -246,23 +248,23 @@ describe("evidence", () => {
         type: "page",
         label: "Home",
         sourceId: "s1",
-        text: "Il pane più buono di Milano, dal 1950.",
+        text: "The best bread in Milan, since 1950.",
       },
     ],
-    ["P2", { type: "page", label: "Contatti", sourceId: "s2", text: "Scrivici" }],
-    ["CHECK:h1", { type: "technical", label: "Titolo H1" }],
+    ["P2", { type: "page", label: "Contact", sourceId: "s2", text: "Write to us" }],
+    ["CHECK:h1", { type: "technical", label: "H1 heading" }],
   ]);
 
   it("matches quotes verbatim modulo spacing", () => {
-    expect(quoteFound("pane  più buono", "Il pane più buono")).toBe(true);
-    expect(quoteFound("pane migliore", "Il pane più buono")).toBe(false);
+    expect(quoteFound("best  bread", "The best bread")).toBe(true);
+    expect(quoteFound("better bread", "The best bread")).toBe(false);
   });
 
   it("drops invented refs and unverified quotes", () => {
     const v = verifyEvidence(
       [
-        { ref: "p1", quote: "più buono di Milano" },
-        { ref: "P2", quote: "Chiamaci subito" },
+        { ref: "p1", quote: "best bread in Milan" },
+        { ref: "P2", quote: "Call us now" },
         { ref: "P9" },
         { ref: "check:H1" },
       ],
@@ -276,7 +278,7 @@ describe("evidence", () => {
   });
 
   it("derives confidence from distinct elements", () => {
-    const one = verifyEvidence([{ ref: "P1" }, { ref: "P1", quote: "dal 1950" }], index);
+    const one = verifyEvidence([{ ref: "P1" }, { ref: "P1", quote: "since 1950" }], index);
     expect(one.distinct).toBe(1);
     expect(confidenceOf(one).confidence).toBe("low");
   });

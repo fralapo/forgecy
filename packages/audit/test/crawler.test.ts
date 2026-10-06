@@ -7,25 +7,26 @@ import { CrawlError } from "../src/errors";
 import { createHostCheck } from "../src/url";
 
 const page = (title: string, body: string) =>
-  `<!doctype html><html lang="it"><head><title>${title}</title><meta name="description" content="${title}"></head><body>${body}</body></html>`;
+  `<!doctype html><html lang="en"><head><title>${title}</title><meta name="description" content="${title}"></head><body>${body}</body></html>`;
 
+// Italian paths for services and contacts on purpose: the crawler ranks Italian path stems.
 const routes: Record<string, { status?: number; type?: string; body: string; location?: string }> =
   {
-    "/robots.txt": { type: "text/plain", body: "User-agent: *\nDisallow: /riservato\n" },
+    "/robots.txt": { type: "text/plain", body: "User-agent: *\nDisallow: /private\n" },
     "/": {
       body: page(
         "Forno Rossi",
-        `<header><nav><a href="/servizi">Servizi</a><a href="/contatti">Contatti</a><a href="/riservato">Area</a><a href="/account">Accedi</a></nav></header>
-       <h1>Pane ogni giorno</h1><a href="/vecchia">Vecchia</a><a href="/rotta">Rotta</a>`,
+        `<header><nav><a href="/servizi">Services</a><a href="/contatti">Contact</a><a href="/private">Area</a><a href="/account">Log in</a></nav></header>
+       <h1>Fresh bread every day</h1><a href="/old">Old</a><a href="/broken">Broken</a>`,
       ),
     },
-    "/servizi": { body: page("Servizi", "<h1>Catering</h1>") },
-    "/contatti": { body: page("Contatti", "<h1>Scrivici</h1><form><input name=email></form>") },
-    "/riservato": { body: page("Riservato", "<h1>No</h1>") },
-    "/account": { body: page("Accedi", '<form><input type="password"></form>') },
+    "/servizi": { body: page("Services", "<h1>Catering</h1>") },
+    "/contatti": { body: page("Contact", "<h1>Write to us</h1><form><input name=email></form>") },
+    "/private": { body: page("Private", "<h1>No</h1>") },
+    "/account": { body: page("Log in", '<form><input type="password"></form>') },
     // Same server under another host name: a different site for the crawler.
-    "/vecchia": { status: 301, location: "http://localhost:{port}/servizi", body: "" },
-    "/rotta": { status: 500, body: "boom" },
+    "/old": { status: 301, location: "http://localhost:{port}/servizi", body: "" },
+    "/broken": { status: 500, body: "boom" },
   };
 
 let server: Server;
@@ -94,9 +95,9 @@ describe("crawlSite", () => {
       result.skipped.map((s) => [new URL(s.url).pathname, s.reason]),
     );
     expect(skipped).toMatchObject({
-      "/riservato": "Esclusa da robots.txt",
-      "/vecchia": "Reindirizza a un altro sito",
-      "/rotta": "Errore 500",
+      "/private": "Excluded by robots.txt",
+      "/old": "Redirects to another website",
+      "/broken": "Error 500",
     });
     // Login pages are never even picked.
     expect(skipped["/account"]).toBeUndefined();

@@ -35,12 +35,12 @@ function slotText(v: unknown): string[] {
   if (Array.isArray(v)) return v.map((i) => `- ${String(i).replace(/==/g, "")}`);
   if (v && typeof v === "object" && "alt" in v) {
     const alt = String((v as { alt?: string }).alt ?? "");
-    return alt ? [`Testo alternativo immagine: ${alt}`] : [];
+    return alt ? [`Image alt text: ${alt}`] : [];
   }
   return [];
 }
 
-/** `testi.md`: the copy of every slide, alt texts included, in slide order. */
+/** `texts.md`: the copy of every slide, alt texts included, in slide order. */
 export function slidesMarkdown(
   pkg: TemplatePackage,
   slides: Slide[],
@@ -50,7 +50,7 @@ export function slidesMarkdown(
   const out = [
     `# ${meta.content}`,
     "",
-    `${meta.client} · versione ${meta.version} · ${FORMATS[pkg.manifest.format].label}`,
+    `${meta.client} · version ${meta.version} · ${FORMATS[pkg.manifest.format].label}`,
     "",
   ];
   slides.forEach((s, i) => {

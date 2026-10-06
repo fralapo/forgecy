@@ -32,7 +32,7 @@ export interface PlanSeed {
   briefText: string;
 }
 
-/** «Nuovo carosello»: parameters and the first lines of the brief. */
+/** “New carousel”: parameters and the first lines of the brief. */
 export function CarouselNewForm({
   slug,
   clientId,
@@ -83,8 +83,8 @@ export function CarouselNewForm({
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!template) return setError("Scegli un template");
-    if (!audienceIds.length) return setError("Scegli almeno un pubblico");
+    if (!template) return setError("Choose a template");
+    if (!audienceIds.length) return setError("Choose at least one audience");
     setError(null);
     start(async () => {
       const r = await createCarouselAction({
@@ -104,7 +104,7 @@ export function CarouselNewForm({
           language,
           planItemId: plan?.id ?? null,
         },
-        // Untouched plan text goes empty: the server copies it and marks it «Dal piano».
+        // Untouched plan text goes empty: the server copies it and marks it as coming from the plan.
         brief: { text: plan && briefText === plan.briefText ? "" : briefText },
       });
       if (!r.ok) setError(r.error);
@@ -116,18 +116,18 @@ export function CarouselNewForm({
     <form onSubmit={submit} className="grid max-w-3xl gap-5">
       <fieldset disabled={disabled || pending} className="grid gap-5">
         <div className="grid gap-2">
-          <Label htmlFor="nc-title">Titolo</Label>
+          <Label htmlFor="nc-title">Title</Label>
           <Input
             id="nc-title"
             value={title}
             maxLength={160}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Si può lasciare vuoto: lo propone la scaletta"
+            placeholder="Can be left empty: the outline suggests one"
           />
         </div>
         <div className="grid gap-5 md:grid-cols-2">
           <div className="grid gap-2">
-            <Label htmlFor="nc-channel">Canale</Label>
+            <Label htmlFor="nc-channel">Channel</Label>
             <select
               id="nc-channel"
               className={controlClass}
@@ -146,7 +146,7 @@ export function CarouselNewForm({
             </select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nc-template">Formato e template</Label>
+            <Label htmlFor="nc-template">Format and template</Label>
             <select
               id="nc-template"
               className={controlClass}
@@ -166,7 +166,7 @@ export function CarouselNewForm({
             ) : null}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nc-slides">Numero di slide</Label>
+            <Label htmlFor="nc-slides">Number of slides</Label>
             <Input
               id="nc-slides"
               type="number"
@@ -177,12 +177,12 @@ export function CarouselNewForm({
             />
             {template ? (
               <p className="text-body-sm text-fg-muted">
-                Da {template.slides.min} a {template.slides.max} per questo template
+                From {template.slides.min} to {template.slides.max} for this template
               </p>
             ) : null}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nc-objective">Obiettivo</Label>
+            <Label htmlFor="nc-objective">Goal</Label>
             <select
               id="nc-objective"
               className={controlClass}
@@ -197,7 +197,7 @@ export function CarouselNewForm({
             </select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nc-pillar">Pilastro</Label>
+            <Label htmlFor="nc-pillar">Pillar</Label>
             <select
               id="nc-pillar"
               className={controlClass}
@@ -207,7 +207,7 @@ export function CarouselNewForm({
                 setRubricId("");
               }}
             >
-              <option value="">Nessuno</option>
+              <option value="">None</option>
               {options.pillars.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -216,7 +216,7 @@ export function CarouselNewForm({
             </select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nc-rubric">Rubrica</Label>
+            <Label htmlFor="nc-rubric">Rubric</Label>
             <select
               id="nc-rubric"
               className={controlClass}
@@ -232,7 +232,7 @@ export function CarouselNewForm({
                 }
               }}
             >
-              <option value="">Nessuna</option>
+              <option value="">None</option>
               {rubrics.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
@@ -241,14 +241,14 @@ export function CarouselNewForm({
             </select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nc-product">Prodotto (facoltativo)</Label>
+            <Label htmlFor="nc-product">Product (optional)</Label>
             <select
               id="nc-product"
               className={controlClass}
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
             >
-              <option value="">Nessun prodotto</option>
+              <option value="">No product</option>
               {options.products.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -257,11 +257,11 @@ export function CarouselNewForm({
               ))}
             </select>
             {options.products.length === 0 ? (
-              <p className="text-body-sm text-fg-muted">Nessun prodotto approvato nel catalogo.</p>
+              <p className="text-body-sm text-fg-muted">No approved products in the catalog.</p>
             ) : null}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nc-language">Lingua</Label>
+            <Label htmlFor="nc-language">Language</Label>
             <select
               id="nc-language"
               className={controlClass}
@@ -277,14 +277,14 @@ export function CarouselNewForm({
           </div>
         </div>
         <fieldset className="grid gap-2">
-          <legend className="mb-2 text-label text-fg">Pubblico</legend>
+          <legend className="mb-2 text-label text-fg">Audience</legend>
           {options.audience.length === 0 ? (
             <p className="text-body-sm text-fg-muted">
-              La Brand Identity pubblicata non ha segmenti di pubblico: aggiungine almeno uno in{" "}
+              The published Brand Identity has no audience segments: add at least one in{" "}
               <Link href={`/brand/${slug}/strategy` as Route} className="text-link underline">
-                Brand Identity › Strategia
+                Brand Identity › Strategy
               </Link>{" "}
-              e pubblica la nuova versione per creare caroselli.
+              and publish the new version to create carousels.
             </p>
           ) : (
             <div className="flex flex-wrap gap-4">
@@ -314,16 +314,16 @@ export function CarouselNewForm({
             className={controlClass}
             value={briefText}
             onChange={(e) => setBriefText(e.target.value)}
-            placeholder="Di cosa parla il carosello, per chi e perché. Si completa dopo nella scheda Brief."
+            placeholder="What the carousel is about, for whom and why. You can complete it later in the Brief tab."
           />
           {plan && briefText === plan.briefText ? (
-            <p className="text-body-sm text-fg-muted">Testo copiato dal piano editoriale.</p>
+            <p className="text-body-sm text-fg-muted">Text copied from the editorial plan.</p>
           ) : null}
         </div>
       </fieldset>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={disabled || pending}>
-          {pending ? "Creazione…" : "Crea carosello"}
+          {pending ? "Creating…" : "Create carousel"}
         </Button>
         {error ? (
           <span role="alert" className="text-body-sm text-error">

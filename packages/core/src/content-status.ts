@@ -1,6 +1,6 @@
 /**
- * Content state machine (spec: "Modello dati e API"): Bozza → In revisione interna →
- * Approvato → Esportato, with "Modifiche richieste" sending it back to Bozza.
+ * Content state machine (spec: "Data model and API"): Draft → In internal review →
+ * Approved → Exported, with "Changes requested" sending it back to Draft.
  */
 import type { Permission } from "./permissions";
 

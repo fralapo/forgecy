@@ -29,14 +29,14 @@ export default async function ProspectLayout({
         className="mb-4 inline-flex items-center gap-1 text-body-sm text-link underline-offset-2 hover:underline"
       >
         <ArrowLeft aria-hidden className="size-4" />
-        Tutti i prospect
+        All prospects
       </Link>
       <header className="mb-6 flex flex-wrap items-center gap-3">
         <h1 className="font-display text-heading-lg text-fg">{client.name}</h1>
         {audit ? (
           <Badge variant={auditStatusVariant[audit.status]}>{auditStatusLabel[audit.status]}</Badge>
         ) : null}
-        {client.archivedAt ? <Badge>Prospect archiviato</Badge> : null}
+        {client.archivedAt ? <Badge>Prospect archived</Badge> : null}
       </header>
       {audit ? <SectionTabs slug={slug} /> : null}
       {jobs.length ? (

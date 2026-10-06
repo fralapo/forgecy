@@ -9,7 +9,7 @@ import { EmptyState } from "./_components/ui";
 import { plural } from "./_lib/labels";
 import { paths } from "./_lib/paths";
 
-export const metadata = { title: "Prodotti" };
+export const metadata = { title: "Products" };
 
 /** Entry from the sidebar: pick the client whose catalog to open (only clients, not prospects). */
 export default async function ProductsIndexPage() {
@@ -33,14 +33,14 @@ export default async function ProductsIndexPage() {
   return (
     <>
       <PageHeader
-        title="Prodotti"
-        description="Il catalogo di ogni cliente: descrizioni, scheda tecnica e foto da riusare nella strategia e nei caroselli."
+        title="Products"
+        description="Each client’s catalog: descriptions, product sheets and photos to reuse in strategy and carousels."
       />
       <Card className="p-0">
         {active.length === 0 ? (
           <EmptyState icon={Package}>
-            Nessun cliente attivo. Il catalogo prodotti è disponibile dopo la conversione in
-            cliente.
+            No active clients. The product catalog becomes available once a prospect is converted
+            into a client.
           </EmptyState>
         ) : (
           <ul className="divide-y divide-subtle">
@@ -55,8 +55,8 @@ export default async function ProductsIndexPage() {
                     <span className="text-body-md text-fg">{c.name}</span>
                     <span className="text-body-sm text-fg-muted">
                       {n?.total
-                        ? `${plural(n.total, "prodotto", "prodotti")} · ${n.approved} approvati · ${n.proposed} da rivedere`
-                        : "Nessun prodotto"}
+                        ? `${plural(n.total, "product", "products")} · ${n.approved} approved · ${n.proposed} to review`
+                        : "No products"}
                     </span>
                   </Link>
                 </li>
@@ -67,8 +67,8 @@ export default async function ProductsIndexPage() {
       </Card>
       {prospects > 0 ? (
         <p className="mt-4 text-body-sm text-fg-muted">
-          {plural(prospects, "prospect non compare", "prospect non compaiono")}: il catalogo si apre
-          dopo la conversione in cliente.
+          {plural(prospects, "prospect is", "prospects are")} not shown: the catalog opens once a
+          prospect is converted into a client.
         </p>
       ) : null}
     </>

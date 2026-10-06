@@ -53,12 +53,15 @@ export default async function BrandOverviewPage({
   });
 
   const next = pending
-    ? { label: `Rivedi ${pending} proposte`, href: `${base}/proposals` }
+    ? { label: `Review ${plural(pending, "proposal", "proposals")}`, href: `${base}/proposals` }
     : conflicts.length
-      ? { label: `Risolvi ${conflicts.length} conflitti`, href: `${base}/proposals?conflicts=1` }
+      ? {
+          label: `Resolve ${plural(conflicts.length, "conflict", "conflicts")}`,
+          href: `${base}/proposals?conflicts=1`,
+        }
       : ws.draft
         ? {
-            label: `Approva e pubblica la v${ws.draft.number}`,
+            label: `Approve and publish v${ws.draft.number}`,
             href: `${base}/versions/${ws.draft.number}/approve`,
           }
         : null;
@@ -66,26 +69,26 @@ export default async function BrandOverviewPage({
   if (empty)
     return (
       <Card className="p-8">
-        <h2 className="text-heading-md text-fg">La Brand Identity di {client.name} è vuota.</h2>
-        <p className="mt-2 text-body-md text-fg-muted">Scegli da dove partire.</p>
+        <h2 className="text-heading-md text-fg">{client.name}’s Brand Identity is empty.</h2>
+        <p className="mt-2 text-body-md text-fg-muted">Choose where to start.</p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-body-sm font-medium text-primary-foreground"
             href={`${base}/sources?import=1` as Route}
           >
-            Importa brand book
+            Import brand book
           </Link>
           <Link
             className="inline-flex h-10 items-center rounded-md border border-control bg-surface px-4 text-body-sm text-fg"
             href={`${base}/sources` as Route}
           >
-            Aggiungi fonte
+            Add source
           </Link>
           <Link
             className="inline-flex h-10 items-center rounded-md border border-control bg-surface px-4 text-body-sm text-fg"
             href={`${base}/strategy` as Route}
           >
-            Compila a mano
+            Fill in by hand
           </Link>
         </div>
       </Card>
@@ -96,43 +99,43 @@ export default async function BrandOverviewPage({
   return (
     <div className="space-y-6">
       <p className="text-body-md text-fg">
-        <span className="text-fg-muted">Prossima azione: </span>
+        <span className="text-fg-muted">Next action: </span>
         {next ? (
           <Link href={next.href as Route}>{next.label}</Link>
         ) : ws.published ? (
-          `Nessuna azione in sospeso · v${ws.published.number} pubblicata il ${formatDate(ws.published.publishedAt)}`
+          `No pending actions · v${ws.published.number} published on ${formatDate(ws.published.publishedAt)}`
         ) : (
-          "Compila i blocchi e pubblica la prima versione"
+          "Fill in the blocks and publish the first version"
         )}
       </p>
 
       <section aria-labelledby="pipeline" className="grid gap-3 md:grid-cols-4">
         <h2 id="pipeline" className="sr-only">
-          Stato della Brand Identity
+          Brand Identity status
         </h2>
         {[
           {
-            label: "Fonti",
+            label: "Sources",
             value: `${sources}`,
-            detail: ws.sourceCounts.failed ? `${ws.sourceCounts.failed} non riuscite` : "",
+            detail: ws.sourceCounts.failed ? `${ws.sourceCounts.failed} failed` : "",
             href: "sources",
           },
           {
-            label: "Proposte in attesa",
+            label: "Pending proposals",
             value: `${pending}`,
-            detail: `${ws.proposalCounts.accepted ?? 0} accettate`,
+            detail: `${ws.proposalCounts.accepted ?? 0} accepted`,
             href: "proposals",
           },
           {
-            label: "Bozza",
+            label: "Draft",
             value: ws.draft ? `v${ws.draft.number}` : "—",
             detail: ws.draft
-              ? `${plural(draftChanges.length, "modifica", "modifiche")} rispetto alla pubblicata`
+              ? `${plural(draftChanges.length, "change", "changes")} from the published version`
               : "",
             href: "versions",
           },
           {
-            label: "Pubblicata",
+            label: "Published",
             value: ws.published ? `v${ws.published.number}` : "—",
             detail: ws.published ? formatDate(ws.published.publishedAt) : "",
             href: "versions",
@@ -152,7 +155,7 @@ export default async function BrandOverviewPage({
 
       <section aria-labelledby="blocks" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <h2 id="blocks" className="sr-only">
-          Blocchi
+          Blocks
         </h2>
         {(["strategy", "verbal", "visual", "content"] as const).map((b) => {
           const m = missing.get(b) ?? [];
@@ -161,17 +164,17 @@ export default async function BrandOverviewPage({
             <Card key={b} className="flex flex-col gap-3 p-5">
               <h3 className="text-heading-sm text-fg">{blocks[b]}</h3>
               {m.length ? (
-                <p className="text-body-sm text-fg-muted">Manca: {m.join(", ")}</p>
+                <p className="text-body-sm text-fg-muted">Missing: {m.join(", ")}</p>
               ) : (
-                <Badge variant="success">Completo</Badge>
+                <Badge variant="success">Complete</Badge>
               )}
               {changes ? (
                 <p className="text-body-sm text-fg">
-                  {plural(changes, "modifica", "modifiche")} nella bozza
+                  {plural(changes, "change", "changes")} in the draft
                 </p>
               ) : null}
               {b === "strategy" && shown.document.strategy.oneLiner ? (
-                <p className="text-body-sm text-fg">«{shown.document.strategy.oneLiner.value}»</p>
+                <p className="text-body-sm text-fg">“{shown.document.strategy.oneLiner.value}”</p>
               ) : null}
               {b === "visual" && palette.length ? (
                 <ul className="flex gap-1" aria-label="Palette">
@@ -186,7 +189,7 @@ export default async function BrandOverviewPage({
                 </ul>
               ) : null}
               <Link href={`${base}/${blockPage[b]}` as Route} className="mt-auto text-body-sm">
-                Apri blocco
+                Open block
               </Link>
             </Card>
           );
@@ -194,22 +197,22 @@ export default async function BrandOverviewPage({
       </section>
 
       <Card className="p-5">
-        <h2 className="text-heading-sm text-fg">Pronto per la pubblicazione?</h2>
+        <h2 className="text-heading-sm text-fg">Ready to publish?</h2>
         {checks.length ? (
           <>
             <ul className="mt-3 space-y-1 text-body-sm text-fg">
               {checks.map((c) => (
                 <li key={c.key}>
-                  <span className="text-warning">Da confermare:</span> {c.message}
+                  <span className="text-warning">To confirm:</span> {c.message}
                 </li>
               ))}
             </ul>
             <p className="mt-3 text-body-sm text-fg-muted">
-              Potrai pubblicare confermando ogni punto aperto.
+              You can publish by confirming each open point.
             </p>
           </>
         ) : (
-          <p className="mt-3 text-body-sm text-success">Nessun controllo aperto.</p>
+          <p className="mt-3 text-body-sm text-success">No open checks.</p>
         )}
       </Card>
     </div>

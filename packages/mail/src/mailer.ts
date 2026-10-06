@@ -100,7 +100,7 @@ export function createMailer(env: MailEnv, options: CreateMailerOptions = {}): M
   return {
     configured: transporter !== null,
     async sendMail(message) {
-      if (!transporter) throw new ForgecyError("unavailable", "SMTP non configurato (SMTP_HOST)");
+      if (!transporter) throw new ForgecyError("unavailable", "SMTP is not configured (SMTP_HOST)");
       try {
         const info = (await transporter.sendMail({
           to: message.to,
@@ -116,7 +116,7 @@ export function createMailer(env: MailEnv, options: CreateMailerOptions = {}): M
           { err: (err as Error).message, toDomains: domainsOf(message.to) },
           "mail send failed",
         );
-        throw new ForgecyError("unavailable", "Invio email non riuscito", {
+        throw new ForgecyError("unavailable", "Sending the email failed", {
           cause: (err as Error).message,
         });
       }

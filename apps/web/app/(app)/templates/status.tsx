@@ -19,10 +19,12 @@ export function StatusBadge({ status }: { status: string }) {
 export function ValidationBadge({ validation }: { validation: StoredValidation }) {
   if (!validation.ok) {
     const n = validation.issues.length;
-    return <Badge variant="error">{n === 1 ? "1 errore" : `${n} errori`} di validazione</Badge>;
+    return (
+      <Badge variant="error">{n === 1 ? "1 validation error" : `${n} validation errors`}</Badge>
+    );
   }
-  if (!validation.rendered) return <Badge variant="warning">Render di prova in corso</Badge>;
-  return <Badge variant="success">Validazione superata</Badge>;
+  if (!validation.rendered) return <Badge variant="warning">Test render in progress</Badge>;
+  return <Badge variant="success">Validation passed</Badge>;
 }
 
 export function ErrorNotice({ message }: { message: string }) {

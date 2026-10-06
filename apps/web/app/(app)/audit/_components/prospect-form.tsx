@@ -42,10 +42,10 @@ const empty: ProspectFormValues = {
 };
 
 const policyLabel: Record<AiPolicy, string> = {
-  external_allowed: "AI esterna ammessa",
-  external_restricted: "AI esterna limitata",
-  local_only: "Solo AI locale",
-  no_ai: "Nessuna AI",
+  external_allowed: "External AI allowed",
+  external_restricted: "External AI restricted",
+  local_only: "Local AI only",
+  no_ai: "No AI",
 };
 
 type Duplicate = { id: string; name: string; slug: string; reason: "domain" | "name" };
@@ -118,35 +118,35 @@ export function ProspectForm(
       }}
     >
       <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-2 text-heading-sm text-fg">Azienda</legend>
+        <legend className="mb-2 text-heading-sm text-fg">Company</legend>
         <div className="flex flex-col gap-2 sm:col-span-2">
-          <Label htmlFor="name">Nome</Label>
+          <Label htmlFor="name">Name</Label>
           <Input id="name" name="name" required maxLength={120} defaultValue={initial.name} />
         </div>
         <div className="flex flex-col gap-2 sm:col-span-2">
-          <Label htmlFor="websiteUrl">Sito web</Label>
+          <Label htmlFor="websiteUrl">Website</Label>
           <Input
             id="websiteUrl"
             name="websiteUrl"
             inputMode="url"
-            placeholder="esempio.it"
+            placeholder="example.com"
             defaultValue={initial.websiteUrl}
           />
           <p className="text-body-sm text-fg-muted">
-            Forgecy legge fino a 10 pagine pubbliche rispettando robots.txt.
+            Forgecy reads up to 10 public pages, respecting robots.txt.
           </p>
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="sector">Settore</Label>
+          <Label htmlFor="sector">Sector</Label>
           <Input id="sector" name="sector" maxLength={80} defaultValue={initial.sector} />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="area">Area geografica</Label>
+          <Label htmlFor="area">Geographic area</Label>
           <Input
             id="area"
             name="area"
             maxLength={120}
-            placeholder="Es. Bergamo e provincia"
+            placeholder="E.g. Bergamo and province"
             defaultValue={initial.area}
           />
         </div>
@@ -159,23 +159,23 @@ export function ProspectForm(
         >
           <TriangleAlert aria-hidden className="size-4 shrink-0 text-warning" />
           <div>
-            Esiste già un prospect o cliente simile:{" "}
+            A similar prospect or client already exists:{" "}
             {duplicates.map((d, i) => (
               <span key={d.id}>
                 {i ? ", " : ""}
                 <Link href={`/audit/${d.slug}`} className="text-link underline">
                   {d.name}
                 </Link>{" "}
-                ({d.reason === "domain" ? "stesso sito" : "nome simile"})
+                ({d.reason === "domain" ? "same website" : "similar name"})
               </span>
             ))}
-            . Puoi comunque proseguire.
+            . You can continue anyway.
           </div>
         </div>
       ) : null}
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-2 text-heading-sm text-fg">Obiettivi</legend>
+        <legend className="mb-2 text-heading-sm text-fg">Goals</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {prospectObjectives.map((o) => (
             <label key={o} className="flex items-center gap-2 text-body-sm text-fg">
@@ -194,7 +194,7 @@ export function ProspectForm(
         </div>
         {objectives.includes("other") ? (
           <div className="flex flex-col gap-2">
-            <Label htmlFor="otherObjective">Altro obiettivo</Label>
+            <Label htmlFor="otherObjective">Other goal</Label>
             <Input
               id="otherObjective"
               name="otherObjective"
@@ -205,23 +205,23 @@ export function ProspectForm(
           </div>
         ) : null}
         <div className="flex flex-col gap-2">
-          <Label htmlFor="notes">Note</Label>
+          <Label htmlFor="notes">Notes</Label>
           <textarea
             id="notes"
             name="notes"
             maxLength={4000}
             className={textareaClass}
-            placeholder="Cosa sai già: contatto, esigenze, concorrenti che hanno citato…"
+            placeholder="What you already know: contact, needs, competitors they mentioned…"
             defaultValue={initial.notes}
           />
         </div>
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-2 text-heading-sm text-fg">Profili social</legend>
+        <legend className="mb-2 text-heading-sm text-fg">Social profiles</legend>
         <p className="text-body-sm text-fg-muted sm:col-span-2">
-          Solo il link al profilo. I dati si aggiungono dopo con screenshot, export CSV/XLSX o
-          valori inseriti a mano.
+          Only the profile link. Data is added later with screenshots, CSV/XLSX exports or values
+          entered by hand.
         </p>
         {socialChannels.map((c) => (
           <div key={c} className="flex flex-col gap-2">
@@ -238,22 +238,22 @@ export function ProspectForm(
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-2 text-heading-sm text-fg">Report e AI</legend>
+        <legend className="mb-2 text-heading-sm text-fg">Report and AI</legend>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="reportLanguage">Lingua del report</Label>
+          <Label htmlFor="reportLanguage">Report language</Label>
           <select
             id="reportLanguage"
             name="reportLanguage"
             className={selectClass}
             defaultValue={initial.reportLanguage}
           >
-            <option value="it">Italiano</option>
-            <option value="en">Inglese</option>
+            <option value="it">Italian</option>
+            <option value="en">English</option>
           </select>
         </div>
         {props.mode === "create" ? (
           <div className="flex flex-col gap-2">
-            <Label htmlFor="aiPolicy">Policy AI</Label>
+            <Label htmlFor="aiPolicy">AI policy</Label>
             {props.isAdmin ? (
               <select
                 id="aiPolicy"
@@ -269,7 +269,7 @@ export function ProspectForm(
               </select>
             ) : (
               <p className="text-body-sm text-fg-muted">
-                AI esterna ammessa. Solo un Admin può cambiarla.
+                External AI allowed. Only an Admin can change it.
               </p>
             )}
           </div>
@@ -283,13 +283,13 @@ export function ProspectForm(
       ) : null}
       {saved ? (
         <p role="status" className="text-body-sm text-success">
-          Dati salvati.
+          Data saved.
         </p>
       ) : null}
       <div>
         <Button type="submit" disabled={pending}>
           <Save aria-hidden />
-          {props.mode === "create" ? "Crea prospect" : "Salva modifiche"}
+          {props.mode === "create" ? "Create prospect" : "Save changes"}
         </Button>
       </div>
     </form>

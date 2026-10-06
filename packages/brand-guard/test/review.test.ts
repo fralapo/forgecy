@@ -66,7 +66,7 @@ describe("people's decisions on findings", () => {
       status: "ignored",
       reason: "creative_choice",
     });
-    const after = report("Altro testo con ecommerce");
+    const after = report("Other text with ecommerce");
     const again = after.findings.find((f) => f.check === "spelling")!;
     expect(again.key).toBe(warning.key);
     expect(
@@ -83,7 +83,7 @@ describe("people's decisions on findings", () => {
 });
 
 describe("approval and export gates", () => {
-  it("needs «Ho visto» on every open error and warning of this version", () => {
+  it("needs “I’ve seen it” on every open error and warning of this version", () => {
     const r = report();
     const keys = r.findings.map((f) => f.key);
     const reviewed = applyIssueStates(r, [], { subjectVersion: 2 });
@@ -123,7 +123,7 @@ describe("approval and export gates", () => {
 
   it("copies the findings as plain text", () => {
     const text = findingsAsText(applyIssueStates(report(), []));
-    expect(text.split("\n")[0]).toMatch(/^Errore · Slide 2 · Titolo: «economico»/);
+    expect(text.split("\n")[0]).toMatch(/^Error · Slide 2 · Title: “economico”/);
     expect(text).toContain("[spelling]");
   });
 });

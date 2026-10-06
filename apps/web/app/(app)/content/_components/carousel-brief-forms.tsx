@@ -68,7 +68,7 @@ function Status({ error, saved }: { error: string | null; saved: boolean }) {
     );
   return saved ? (
     <span role="status" className="text-body-sm text-fg-muted">
-      Salvato
+      Saved
     </span>
   ) : null;
 }
@@ -145,7 +145,7 @@ function ParamsForm({
       changed &&
       hasSlides &&
       !window.confirm(
-        "Cambiare template o formato ricrea le slide: il testo attuale delle slide si perde (resta nelle versioni salvate). Continuare?",
+        "Changing the template or format recreates the slides: the current slide copy is lost (it stays in the saved versions). Continue?",
       )
     )
       return;
@@ -175,7 +175,7 @@ function ParamsForm({
           },
         });
       let r = await call(changed && hasSlides);
-      if (!r.ok && r.code === "TEMPLATE-CHANGE-RESETS" && window.confirm(`${r.error}. Continuare?`))
+      if (!r.ok && r.code === "TEMPLATE-CHANGE-RESETS" && window.confirm(`${r.error}. Continue?`))
         r = await call(true);
       if (!r.ok) return setError(r.error);
       setRev(r.briefRev);
@@ -189,9 +189,9 @@ function ParamsForm({
       onSubmit={save}
       className="grid content-start gap-4 rounded-lg border border-subtle bg-surface p-5"
     >
-      <h3 className="text-heading-sm text-fg">Parametri</h3>
+      <h3 className="text-heading-sm text-fg">Parameters</h3>
       <fieldset disabled={!editable || pending} className="grid gap-4">
-        <Field id="cp-title" label="Titolo">
+        <Field id="cp-title" label="Title">
           <Input
             id="cp-title"
             value={title}
@@ -202,8 +202,8 @@ function ParamsForm({
         <div className="grid gap-4 md:grid-cols-2">
           <Field
             id="cp-template"
-            label="Formato e template"
-            hint={hasSlides ? "Cambiarlo ricrea le slide." : undefined}
+            label="Format and template"
+            hint={hasSlides ? "Changing it recreates the slides." : undefined}
           >
             <select
               id="cp-template"
@@ -216,7 +216,7 @@ function ParamsForm({
               }}
             >
               {template ? null : (
-                <option value={params.templateKey}>{params.templateKey} (non disponibile)</option>
+                <option value={params.templateKey}>{params.templateKey} (unavailable)</option>
               )}
               {templates.map((t) => (
                 <option key={t.key} value={t.key}>
@@ -227,8 +227,8 @@ function ParamsForm({
           </Field>
           <Field
             id="cp-slides"
-            label="Numero di slide"
-            hint={template ? `Da ${template.slides.min} a ${template.slides.max}` : undefined}
+            label="Number of slides"
+            hint={template ? `From ${template.slides.min} to ${template.slides.max}` : undefined}
           >
             <Input
               id="cp-slides"
@@ -239,7 +239,7 @@ function ParamsForm({
               onChange={(e) => setSlideCount(Number(e.target.value))}
             />
           </Field>
-          <Field id="cp-objective" label="Obiettivo">
+          <Field id="cp-objective" label="Goal">
             <select
               id="cp-objective"
               className={controlClass}
@@ -253,7 +253,7 @@ function ParamsForm({
               ))}
             </select>
           </Field>
-          <Field id="cp-language" label="Lingua">
+          <Field id="cp-language" label="Language">
             <select
               id="cp-language"
               className={controlClass}
@@ -267,7 +267,7 @@ function ParamsForm({
               ))}
             </select>
           </Field>
-          <Field id="cp-pillar" label="Pilastro">
+          <Field id="cp-pillar" label="Pillar">
             <select
               id="cp-pillar"
               className={controlClass}
@@ -277,7 +277,7 @@ function ParamsForm({
                 setRubricId("");
               }}
             >
-              <option value="">Nessuno</option>
+              <option value="">None</option>
               {options.pillars.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -285,14 +285,14 @@ function ParamsForm({
               ))}
             </select>
           </Field>
-          <Field id="cp-rubric" label="Rubrica">
+          <Field id="cp-rubric" label="Rubric">
             <select
               id="cp-rubric"
               className={controlClass}
               value={rubricId}
               onChange={(e) => setRubricId(e.target.value)}
             >
-              <option value="">Nessuna</option>
+              <option value="">None</option>
               {rubrics.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
@@ -300,16 +300,16 @@ function ParamsForm({
               ))}
             </select>
           </Field>
-          <Field id="cp-product" label="Prodotto (facoltativo)">
+          <Field id="cp-product" label="Product (optional)">
             <select
               id="cp-product"
               className={controlClass}
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
             >
-              <option value="">Nessun prodotto</option>
+              <option value="">No product</option>
               {productId && !options.products.some((p) => p.id === productId) ? (
-                <option value={productId}>Prodotto non più approvato</option>
+                <option value={productId}>Product no longer approved</option>
               ) : null}
               {options.products.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -320,7 +320,7 @@ function ParamsForm({
           </Field>
         </div>
         <fieldset className="grid gap-2">
-          <legend className="mb-2 text-label text-fg">Pubblico</legend>
+          <legend className="mb-2 text-label text-fg">Audience</legend>
           <div className="flex flex-wrap gap-4">
             {options.audience.map((a) => (
               <label key={a.id} className="flex items-center gap-2 text-body-sm text-fg">
@@ -341,7 +341,7 @@ function ParamsForm({
       </fieldset>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={!editable || pending || !audienceIds.length}>
-          Salva parametri
+          Save parameters
         </Button>
         <Status error={error} saved={saved} />
       </div>
@@ -375,7 +375,7 @@ function BriefForm({
       fromPlan: cur.fromPlan.filter((f) => f !== key),
     }));
   const fromPlan = (f: PlanField) =>
-    b.fromPlan.includes(f) ? <Badge variant="info">Dal piano</Badge> : null;
+    b.fromPlan.includes(f) ? <Badge variant="info">From the plan</Badge> : null;
   const toneOf = (axis: string) => b.toneShift.find((t) => t.axis === axis)?.delta ?? 0;
   const setTone = (axis: string, delta: -1 | 0 | 1) =>
     set("toneShift", [
@@ -424,10 +424,12 @@ function BriefForm({
       <fieldset disabled={!editable || pending} className="grid gap-4">
         <Field
           id="cb-text"
-          label={<span className="flex items-center gap-2">Di cosa parla {fromPlan("text")}</span>}
+          label={
+            <span className="flex items-center gap-2">What it’s about {fromPlan("text")}</span>
+          }
           hint={
             textLen < BRIEF_MIN_CHARS
-              ? `Almeno ${BRIEF_MIN_CHARS} caratteri per generare la scaletta (ora ${textLen}).`
+              ? `At least ${BRIEF_MIN_CHARS} characters to generate the outline (now ${textLen}).`
               : undefined
           }
         >
@@ -443,9 +445,7 @@ function BriefForm({
         <Field
           id="cb-problem"
           label={
-            <span className="flex items-center gap-2">
-              Problema del pubblico {fromPlan("problem")}
-            </span>
+            <span className="flex items-center gap-2">Audience problem {fromPlan("problem")}</span>
           }
         >
           <textarea
@@ -457,7 +457,7 @@ function BriefForm({
             onChange={(e) => set("problem", e.target.value)}
           />
         </Field>
-        <Field id="cb-audience" label="Nota sul pubblico">
+        <Field id="cb-audience" label="Audience note">
           <textarea
             id="cb-audience"
             rows={2}
@@ -469,9 +469,7 @@ function BriefForm({
         </Field>
         <Field
           id="cb-promise"
-          label={
-            <span className="flex items-center gap-2">Messaggio chiave {fromPlan("promise")}</span>
-          }
+          label={<span className="flex items-center gap-2">Key message {fromPlan("promise")}</span>}
         >
           <Input
             id="cb-promise"
@@ -493,8 +491,10 @@ function BriefForm({
         </Field>
         <Field
           id="cb-constraints"
-          label={<span className="flex items-center gap-2">Vincoli {fromPlan("constraints")}</span>}
-          hint="Uno per riga (massimo 20)."
+          label={
+            <span className="flex items-center gap-2">Constraints {fromPlan("constraints")}</span>
+          }
+          hint="One per line (up to 20)."
         >
           <textarea
             id="cb-constraints"
@@ -505,9 +505,9 @@ function BriefForm({
           />
         </Field>
         <fieldset className="grid gap-2">
-          <legend className="mb-1 text-label text-fg">Spostamento di tono</legend>
+          <legend className="mb-1 text-label text-fg">Tone shift</legend>
           <p className="text-body-sm text-fg-muted">
-            Al massimo un passo rispetto alla Brand Identity.
+            At most one step away from the Brand Identity.
           </p>
           {toneAxes.map((a) => (
             <div key={a.key} className="flex flex-wrap items-center gap-3 text-body-sm text-fg">
@@ -523,10 +523,10 @@ function BriefForm({
                     onChange={() => setTone(a.key, d)}
                   />
                   {d === -1
-                    ? `Più ${a.left.toLowerCase()}`
+                    ? `More ${a.left.toLowerCase()}`
                     : d === 1
-                      ? `Più ${a.right.toLowerCase()}`
-                      : "Come da Brand Identity"}
+                      ? `More ${a.right.toLowerCase()}`
+                      : "As in the Brand Identity"}
                 </label>
               ))}
             </div>
@@ -539,18 +539,18 @@ function BriefForm({
               checked={b.usePrice}
               onChange={(e) => set("usePrice", e.target.checked)}
             />
-            Cita il prezzo del prodotto ({productPrice})
+            Mention the product price ({productPrice})
           </label>
         ) : null}
         <fieldset className="grid gap-2">
-          <legend className="mb-1 text-label text-fg">Da preparare</legend>
+          <legend className="mb-1 text-label text-fg">To prepare</legend>
           <label className="flex items-center gap-2 text-body-sm text-fg">
             <input
               type="checkbox"
               checked={b.outputs.caption}
               onChange={(e) => set("outputs", { ...b.outputs, caption: e.target.checked })}
             />
-            Didascalia
+            Caption
           </label>
           <label className="flex items-center gap-2 text-body-sm text-fg">
             <input
@@ -558,7 +558,7 @@ function BriefForm({
               checked={b.outputs.altText}
               onChange={(e) => set("outputs", { ...b.outputs, altText: e.target.checked })}
             />
-            Testo alternativo delle immagini
+            Image alt text
           </label>
           <label className="flex items-center gap-2 text-body-sm text-fg">
             <input
@@ -566,10 +566,10 @@ function BriefForm({
               checked={b.outputs.designerNotes}
               onChange={(e) => set("outputs", { ...b.outputs, designerNotes: e.target.checked })}
             />
-            Note per il grafico
+            Notes for the designer
           </label>
           <label className="flex items-center gap-2 text-body-sm text-fg">
-            Hashtag
+            Hashtags
             <Input
               type="number"
               min={0}
@@ -588,7 +588,7 @@ function BriefForm({
       </fieldset>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={!editable || pending}>
-          Salva brief
+          Save brief
         </Button>
         <Status error={error} saved={saved} />
       </div>

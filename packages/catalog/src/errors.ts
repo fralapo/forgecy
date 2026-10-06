@@ -1,4 +1,4 @@
-/** Error codes of the import (spec section 17), shown with message, action and "Guida". */
+/** Error codes of the import (spec section 17), shown with message, action and "Guide". */
 export const importErrorCodes = [
   "IMPORT-INVALID",
   "IMPORT-TOO-LARGE",

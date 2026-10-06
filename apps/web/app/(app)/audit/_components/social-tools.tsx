@@ -40,34 +40,34 @@ interface Preview {
 }
 
 const fieldLabel: Record<string, string> = {
-  ignore: "Ignora",
-  date: "Data",
-  post_type: "Tipo di post",
-  format: "Formato",
-  text: "Testo",
-  views: "Visualizzazioni",
-  reach: "Copertura",
-  interactions: "Interazioni",
-  likes: "Mi piace / reazioni",
-  comments: "Commenti",
-  saves: "Salvataggi",
-  shares: "Condivisioni",
-  followers: "Follower",
-  impressions: "Impressioni",
-  clicks: "Clic",
+  ignore: "Ignore",
+  date: "Date",
+  post_type: "Post type",
+  format: "Format",
+  text: "Text",
+  views: "Views",
+  reach: "Reach",
+  interactions: "Interactions",
+  likes: "Likes / reactions",
+  comments: "Comments",
+  saves: "Saves",
+  shares: "Shares",
+  followers: "Followers",
+  impressions: "Impressions",
+  clicks: "Clicks",
   ctr: "CTR",
-  followers_gained: "Follower acquisiti",
-  followers_lost: "Follower persi",
-  page_visits: "Visite alla pagina",
-  leads: "Lead",
+  followers_gained: "Followers gained",
+  followers_lost: "Followers lost",
+  page_visits: "Page visits",
+  leads: "Leads",
 };
 
 const sourceLabel: Record<MetricSource, string> = {
-  provided_by_prospect: "Fornito dal prospect",
-  agency_tool: "Strumento dell'agenzia",
-  public_profile: "Letto dal profilo pubblico",
-  file_import: "File importato",
-  other: "Altro (descrivi)",
+  provided_by_prospect: "Provided by the prospect",
+  agency_tool: "Agency tool",
+  public_profile: "Read from the public profile",
+  file_import: "Imported file",
+  other: "Other (describe)",
 };
 
 async function upload(
@@ -75,8 +75,7 @@ async function upload(
 ): Promise<{ ok: true; data: Record<string, unknown> } | { ok: false; error: string }> {
   const res = await fetch("/audit/upload", { method: "POST", body: form });
   const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!res.ok)
-    return { ok: false, error: String(body.message ?? body.error ?? "Caricamento non riuscito") };
+  if (!res.ok) return { ok: false, error: String(body.message ?? body.error ?? "Upload failed") };
   return { ok: true, data: body };
 }
 
@@ -104,13 +103,13 @@ export function ScreenshotUpload({
         start(async () => {
           const res = await upload(form);
           if (!res.ok) return setMessage({ error: res.error });
-          setMessage({ ok: `${String(res.data.added)} screenshot caricati.` });
+          setMessage({ ok: `${String(res.data.added)} screenshots uploaded.` });
           el.reset();
           router.refresh();
         });
       }}
     >
-      <Label htmlFor={`shots-${channel}`}>Screenshot del profilo e dei post</Label>
+      <Label htmlFor={`shots-${channel}`}>Screenshots of the profile and posts</Label>
       <input
         id={`shots-${channel}`}
         name="files"
@@ -121,13 +120,13 @@ export function ScreenshotUpload({
         className="text-body-sm"
       />
       <p className="text-body-sm text-fg-muted">
-        PNG, JPEG o WebP, massimo 20 MB l&apos;uno e 60 per canale. L&apos;AI li usa per stile, tono
-        e call to action; i numeri che leggi li inserisci qui sotto con la fonte.
+        PNG, JPEG or WebP, up to 20 MB each and 60 per channel. The AI uses them for style, tone and
+        calls to action; enter the numbers you read below, with their source.
       </p>
       <div>
         <Button type="submit" variant="secondary" size="sm" disabled={pending}>
           <ImageUp aria-hidden />
-          Carica screenshot
+          Upload screenshots
         </Button>
       </div>
       {message.error ? (
@@ -187,7 +186,7 @@ export function TableImport({
           });
         }}
       >
-        <Label htmlFor={`table-${channel}`}>Export dei post (CSV o XLSX)</Label>
+        <Label htmlFor={`table-${channel}`}>Post export (CSV or XLSX)</Label>
         <input
           id={`table-${channel}`}
           name="files"
@@ -199,7 +198,7 @@ export function TableImport({
         <div className="flex flex-wrap gap-2">
           <Button type="submit" variant="secondary" size="sm" disabled={pending}>
             <Upload aria-hidden />
-            Carica e mappa le colonne
+            Upload and map the columns
           </Button>
           {pendingSourceId ? (
             <Button
@@ -210,7 +209,7 @@ export function TableImport({
               onClick={() => load({ sourceId: pendingSourceId })}
             >
               <FileSpreadsheet aria-hidden />
-              Riprendi il file caricato
+              Resume the uploaded file
             </Button>
           ) : null}
         </div>
@@ -239,12 +238,12 @@ export function TableImport({
   return (
     <div className="flex flex-col gap-4">
       <p className="text-body-sm text-fg">
-        <strong>{preview.fileName}</strong> · {preview.totalRows} righe
+        <strong>{preview.fileName}</strong> · {preview.totalRows} rows
       </p>
       <div className="flex flex-wrap gap-4">
         {preview.sheets.length > 1 ? (
           <label className="flex flex-col gap-1 text-label text-fg-muted">
-            Foglio
+            Sheet
             <select
               className={selectClass}
               value={preview.sheet}
@@ -257,7 +256,7 @@ export function TableImport({
           </label>
         ) : null}
         <label className="flex flex-col gap-1 text-label text-fg-muted">
-          Formato data
+          Date format
           <select
             className={selectClass}
             value={preview.dateFormat}
@@ -270,15 +269,15 @@ export function TableImport({
               })
             }
           >
-            <option value="dd/mm/yyyy">gg/mm/aaaa</option>
-            <option value="mm/dd/yyyy">mm/gg/aaaa</option>
-            <option value="yyyy-mm-dd">aaaa-mm-gg</option>
+            <option value="dd/mm/yyyy">dd/mm/yyyy</option>
+            <option value="mm/dd/yyyy">mm/dd/yyyy</option>
+            <option value="yyyy-mm-dd">yyyy-mm-dd</option>
           </select>
         </label>
       </div>
       <div className="overflow-x-auto rounded-md border border-subtle">
         <table className="w-full text-left text-body-sm">
-          <caption className="sr-only">Mappatura delle colonne e prime righe</caption>
+          <caption className="sr-only">Column mapping and first rows</caption>
           <thead>
             <tr className="border-b border-subtle">
               {preview.headers.map((h, i) => (
@@ -287,9 +286,9 @@ export function TableImport({
                   scope="col"
                   className="min-w-40 px-3 py-2 align-top font-medium"
                 >
-                  <span className="block truncate">{h || `Colonna ${i + 1}`}</span>
+                  <span className="block truncate">{h || `Column ${i + 1}`}</span>
                   <select
-                    aria-label={`Campo per la colonna ${h || i + 1}`}
+                    aria-label={`Field for column ${h || i + 1}`}
                     className={`${selectClass} mt-1 h-8`}
                     value={preview.mapping[i] ?? "ignore"}
                     disabled={pending}
@@ -323,11 +322,11 @@ export function TableImport({
           <span className="text-error">{preview.error}</span>
         ) : (
           <>
-            {preview.validRows} righe valide
+            {preview.validRows} valid rows
             {preview.invalid.length
-              ? ` · ${preview.invalid.length} saltate (es. riga ${preview.invalid[0]!.rowNumber}: ${preview.invalid[0]!.reason})`
+              ? ` · ${preview.invalid.length} skipped (e.g. row ${preview.invalid[0]!.rowNumber}: ${preview.invalid[0]!.reason})`
               : ""}
-            . I numeri non esatti (intervalli, “circa”) restano vuoti, non stimati.
+            . Inexact numbers (ranges, “about”) stay empty, never estimated.
           </>
         )}
       </p>
@@ -350,15 +349,15 @@ export function TableImport({
               });
               if (!res.ok) return setError(res.error);
               setPreview(null);
-              setDone(`Importate ${res.data?.imported ?? 0} righe.`);
+              setDone(`Imported ${res.data?.imported ?? 0} rows.`);
               router.refresh();
             })
           }
         >
-          Importa {preview.validRows} righe
+          Import {preview.validRows} rows
         </Button>
         <Button variant="ghost" size="sm" onClick={() => setPreview(null)}>
-          Annulla
+          Cancel
         </Button>
       </div>
     </div>
@@ -406,7 +405,7 @@ export function MetricForm({ auditId, channel }: { auditId: string; channel: Soc
       }}
     >
       <div className="flex flex-col gap-1">
-        <Label htmlFor={`metric-${channel}`}>Valore</Label>
+        <Label htmlFor={`metric-${channel}`}>Metric</Label>
         <select id={`metric-${channel}`} name="metric" className={selectClass}>
           {metrics.map((m) => (
             <option key={m} value={m}>
@@ -416,17 +415,17 @@ export function MetricForm({ auditId, channel }: { auditId: string; channel: Soc
         </select>
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor={`value-${channel}`}>Numero esatto</Label>
+        <Label htmlFor={`value-${channel}`}>Exact number</Label>
         <Input
           id={`value-${channel}`}
           name="value"
           inputMode="decimal"
           required
-          placeholder="1.240"
+          placeholder="1,240"
         />
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor={`date-${channel}`}>Rilevato il</Label>
+        <Label htmlFor={`date-${channel}`}>Observed on</Label>
         <Input
           id={`date-${channel}`}
           name="observedOn"
@@ -437,7 +436,7 @@ export function MetricForm({ auditId, channel }: { auditId: string; channel: Soc
         />
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor={`source-${channel}`}>Fonte</Label>
+        <Label htmlFor={`source-${channel}`}>Source</Label>
         <select
           id={`source-${channel}`}
           className={selectClass}
@@ -455,14 +454,14 @@ export function MetricForm({ auditId, channel }: { auditId: string; channel: Soc
       </div>
       <div className="flex flex-col gap-1 sm:col-span-2">
         <Label htmlFor={`note-${channel}`}>
-          Nota sulla fonte{source === "other" ? "" : " (facoltativa)"}
+          Source note{source === "other" ? "" : " (optional)"}
         </Label>
         <Input
           id={`note-${channel}`}
           name="sourceNote"
           maxLength={200}
           required={source === "other"}
-          placeholder="Es. screenshot del 3 ottobre, Meta Business Suite"
+          placeholder="E.g. screenshot from 3 October, Meta Business Suite"
         />
       </div>
       {error ? (
@@ -473,14 +472,14 @@ export function MetricForm({ auditId, channel }: { auditId: string; channel: Soc
       <div className="sm:col-span-2">
         <Button type="submit" variant="secondary" size="sm" disabled={pending}>
           <Plus aria-hidden />
-          Aggiungi valore
+          Add value
         </Button>
       </div>
     </form>
   );
 }
 
-/** Profile link, "Dati non disponibili" (with reason) or "Salta canale". */
+/** Profile link, "Data unavailable" (with reason) or "Skip channel". */
 export function ChannelSettings({
   auditId,
   channel,
@@ -500,7 +499,7 @@ export function ChannelSettings({
     start(async () => {
       setError(null);
       const res = await fn();
-      if (!res.ok) return setError(res.error ?? "Operazione non riuscita");
+      if (!res.ok) return setError(res.error ?? "Operation failed");
       setMode("view");
       router.refresh();
     });
@@ -516,11 +515,11 @@ export function ChannelSettings({
         }}
       >
         <label className="flex min-w-64 flex-1 flex-col gap-1 text-label text-fg-muted">
-          Link al profilo (non viene aperto da Forgecy)
+          Profile link (Forgecy does not open it)
           <Input name="profileUrl" inputMode="url" defaultValue={profileUrl ?? ""} />
         </label>
         <Button type="submit" variant="secondary" size="sm" disabled={pending}>
-          Salva link
+          Save link
         </Button>
       </form>
       {closed ? (
@@ -531,7 +530,7 @@ export function ChannelSettings({
             disabled={pending}
             onClick={() => run(() => reopenChannelAction(auditId, channel))}
           >
-            Riapri il canale
+            Reopen channel
           </Button>
         </div>
       ) : mode === "unavailable" ? (
@@ -546,19 +545,19 @@ export function ChannelSettings({
           }}
         >
           <label className="flex min-w-64 flex-1 flex-col gap-1 text-label text-fg-muted">
-            Perché i dati non sono disponibili?
+            Why is the data unavailable?
             <Input
               name="reason"
               required
               maxLength={200}
-              placeholder="Es. il prospect non ha dato accesso"
+              placeholder="E.g. the prospect did not grant access"
             />
           </label>
           <Button type="submit" size="sm" disabled={pending}>
-            Conferma
+            Confirm
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={() => setMode("view")}>
-            Annulla
+            Cancel
           </Button>
         </form>
       ) : (
@@ -569,7 +568,7 @@ export function ChannelSettings({
             disabled={pending}
             onClick={() => setMode("unavailable")}
           >
-            Dati non disponibili
+            Data unavailable
           </Button>
           <Button
             variant="ghost"
@@ -579,7 +578,7 @@ export function ChannelSettings({
               run(() => setChannelUnavailableAction({ auditId, channel, mode: "skipped" }))
             }
           >
-            Salta canale
+            Skip channel
           </Button>
         </div>
       )}

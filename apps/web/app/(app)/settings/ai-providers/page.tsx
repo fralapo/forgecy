@@ -7,29 +7,29 @@ import { env } from "@/lib/env";
 import { requireUser } from "@/lib/session";
 import { CommercialUseForm } from "./commercial-use-form";
 
-export const metadata = { title: "Provider AI" };
+export const metadata = { title: "AI providers" };
 
 const providerInfo: Record<ImageProvider, { name: string; role: string; ready: boolean }> = {
-  openai: { name: "OpenAI Images", role: "Principale", ready: Boolean(env.OPENAI_API_KEY) },
-  google: { name: "Google Gemini", role: "Secondo", ready: Boolean(env.GOOGLE_AI_API_KEY) },
+  openai: { name: "OpenAI Images", role: "Primary", ready: Boolean(env.OPENAI_API_KEY) },
+  google: { name: "Google Gemini", role: "Secondary", ready: Boolean(env.GOOGLE_AI_API_KEY) },
 };
 
 const statusBadge = {
-  pending_verification: { label: "In verifica", variant: "warning", icon: Hourglass },
-  verified: { label: "Verificato", variant: "success", icon: BadgeCheck },
-  rejected: { label: "Non ammesso", variant: "error", icon: XCircle },
+  pending_verification: { label: "Pending verification", variant: "warning", icon: Hourglass },
+  verified: { label: "Verified", variant: "success", icon: BadgeCheck },
+  rejected: { label: "Not allowed", variant: "error", icon: XCircle },
 } as const;
 
-const dateFormat = new Intl.DateTimeFormat("it-IT", { dateStyle: "long" });
+const dateFormat = new Intl.DateTimeFormat("en-GB", { dateStyle: "long" });
 
 export default async function AiProvidersPage() {
   const user = await requireUser();
   if (!user.isAdmin)
     return (
       <>
-        <PageHeader title="Provider AI" />
+        <PageHeader title="AI providers" />
         <p role="alert" className="text-body text-fg">
-          Questa impostazione è riservata agli utenti Admin.
+          This setting is reserved for Admin users.
         </p>
       </>
     );
@@ -38,8 +38,8 @@ export default async function AiProvidersPage() {
   return (
     <>
       <PageHeader
-        title="Provider AI"
-        description="Uso commerciale delle immagini generate: lo verifica un Admin leggendo i termini del provider."
+        title="AI providers"
+        description="Commercial use of generated images: an Admin verifies it by reading the provider’s terms."
       />
       <div className="grid gap-6 lg:grid-cols-2">
         {imageProviders.map((p) => {
@@ -56,7 +56,7 @@ export default async function AiProvidersPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant={info.ready ? "success" : "neutral"}>
-                    {info.ready ? "Configurato" : "Non configurato"}
+                    {info.ready ? "Configured" : "Not configured"}
                   </Badge>
                   <Badge variant={badge.variant} icon={badge.icon}>
                     {badge.label}
@@ -65,19 +65,19 @@ export default async function AiProvidersPage() {
               </div>
               <p className="text-body-sm text-fg">
                 {status === "verified"
-                  ? "Disponibile per i clienti con policy che lo ammette."
-                  : "Non si usa con clienti reali: la generazione di immagini è spenta per tutti i clienti."}
+                  ? "Available for clients whose policy allows it."
+                  : "Not used with real clients: image generation is off for every client."}
               </p>
               <dl className="grid grid-cols-[9rem_1fr] gap-y-2 text-body-sm">
-                <dt className="text-fg-muted">Verificato da</dt>
+                <dt className="text-fg-muted">Verified by</dt>
                 <dd className="text-fg">{review?.updatedBy?.name ?? "—"}</dd>
-                <dt className="text-fg-muted">Termini consultati il</dt>
+                <dt className="text-fg-muted">Terms consulted on</dt>
                 <dd className="text-fg">
                   {review?.consultedOn
                     ? dateFormat.format(new Date(`${review.consultedOn}T12:00:00`))
                     : "—"}
                 </dd>
-                <dt className="text-fg-muted">Termini</dt>
+                <dt className="text-fg-muted">Terms</dt>
                 <dd className="min-w-0 break-all text-fg">
                   {review?.termsUrl ? (
                     <a
@@ -92,7 +92,7 @@ export default async function AiProvidersPage() {
                     "—"
                   )}
                 </dd>
-                <dt className="text-fg-muted">Nota</dt>
+                <dt className="text-fg-muted">Note</dt>
                 <dd className="text-fg">{review?.note ?? "—"}</dd>
               </dl>
               <CommercialUseForm

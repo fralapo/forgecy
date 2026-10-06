@@ -28,15 +28,15 @@ export async function readPdfText(data: Uint8Array, name: string): Promise<PdfTe
     throw new ImportError(
       "IMPORT-PDF-UNREADABLE",
       n === "PasswordException"
-        ? `"${name}" è protetto da password. Carica una versione senza password.`
-        : `"${name}" non è un PDF leggibile.`,
+        ? `"${name}" is password-protected. Upload a version without a password.`
+        : `"${name}" is not a readable PDF.`,
     );
   }
   try {
     if (pdf.numPages > IMPORT_LIMITS.pdfPages)
       throw new ImportError(
         "IMPORT-TOO-LARGE",
-        `"${name}" ha ${pdf.numPages} pagine: il limite è ${IMPORT_LIMITS.pdfPages}. Dividi il file.`,
+        `"${name}" has ${pdf.numPages} pages: the limit is ${IMPORT_LIMITS.pdfPages}. Split the file.`,
       );
     const { totalPages, text } = await extractText(pdf, { mergePages: false });
     const pages = (text as string[]).map((t) =>
@@ -49,7 +49,7 @@ export async function readPdfText(data: Uint8Array, name: string): Promise<PdfTe
     return { totalPages, pages, textless: chars < Math.max(10, totalPages * 8) };
   } catch (err) {
     if (err instanceof ImportError) throw err;
-    throw new ImportError("IMPORT-PDF-UNREADABLE", `"${name}" non è un PDF leggibile.`);
+    throw new ImportError("IMPORT-PDF-UNREADABLE", `"${name}" is not a readable PDF.`);
   } finally {
     await pdf.loadingTask.destroy().catch(() => undefined);
   }

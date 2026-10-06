@@ -17,7 +17,7 @@ import {
 import { fileUrl } from "../../_lib/server";
 import { plural } from "@/lib/plural";
 
-export const metadata = { title: "Audit · Sito" };
+export const metadata = { title: "Audit · Website" };
 
 export default async function SitePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -44,8 +44,8 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
     return (
       <Card>
         <p className="text-body-md text-fg-muted">
-          Questo audit non ha un sito. Aggiungilo nei dati del prospect e avvia un nuovo audit,
-          oppure prosegui con social e competitor.
+          This audit has no website. Add it to the prospect details and start a new audit, or
+          continue with social channels and competitors.
         </p>
       </Card>
     );
@@ -55,7 +55,7 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center gap-3">
-            <CardTitle>Lettura del sito</CardTitle>
+            <CardTitle>Website reading</CardTitle>
             {scan ? (
               <Badge variant={sourceStatusVariant[scan.status]}>
                 {sourceStatusLabel[scan.status]}
@@ -63,8 +63,8 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
             ) : null}
           </div>
           <CardDescription>
-            {audit.inputs.websiteUrl} · fino a {scan?.maxPages ?? 10} pagine pubbliche, robots.txt
-            rispettato{scan?.finishedAt ? ` · letto il ${formatDateTime(scan.finishedAt)}` : ""}
+            {audit.inputs.websiteUrl} · up to {scan?.maxPages ?? 10} public pages, robots.txt
+            respected{scan?.finishedAt ? ` · read on ${formatDateTime(scan.finishedAt)}` : ""}
           </CardDescription>
         </CardHeader>
         {scan ? (
@@ -93,7 +93,7 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
             {scan.error}
             {scan.errorCode ? (
               <span className="mt-1 block text-fg-muted">
-                Codice: <code className="font-mono">{scan.errorCode}</code>
+                Code: <code className="font-mono">{scan.errorCode}</code>
               </span>
             ) : null}
           </p>
@@ -105,22 +105,22 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
                 action={cancelScanAction.bind(null, scan.id)}
                 icon={<Square aria-hidden />}
               >
-                Ferma la lettura
+                Stop the reading
               </ActionButton>
             ) : scan && scan.status === "failed" ? (
               <ActionButton
                 action={retryScanAction.bind(null, scan.id)}
                 icon={<RefreshCw aria-hidden />}
               >
-                Riprova questo passo
+                Retry this step
               </ActionButton>
             ) : (
               <ActionButton
                 action={rescanSiteAction.bind(null, audit.id)}
                 icon={<RefreshCw aria-hidden />}
-                confirm="Rileggere il sito? Le osservazioni già rivedute restano, segnate come lettura precedente."
+                confirm="Read the website again? Observations already reviewed stay, marked as from an earlier reading."
               >
-                Rileggi il sito
+                Read the website again
               </ActionButton>
             )}
           </div>
@@ -131,12 +131,12 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Elementi osservati</CardTitle>
-              <CardDescription>Misurati sulle pagine lette, non interpretati.</CardDescription>
+              <CardTitle>Observed elements</CardTitle>
+              <CardDescription>Measured on the pages read, not interpreted.</CardDescription>
             </CardHeader>
             {ex.colors?.length ? (
               <div>
-                <p className="mb-2 text-label text-fg-muted">Colori dominanti</p>
+                <p className="mb-2 text-label text-fg-muted">Dominant colors</p>
                 <ul className="flex flex-wrap gap-3">
                   {ex.colors.map((c) => (
                     <li key={c.hex} className="flex items-center gap-2 text-body-sm">
@@ -153,7 +153,7 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
               </div>
             ) : (
               <p className="text-body-sm text-fg-muted">
-                Colori e font non misurati: Chromium non era disponibile.
+                Colors and fonts not measured: Chromium was not available.
               </p>
             )}
             {ex.fonts?.length ? (
@@ -166,10 +166,10 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
                       <span className="text-fg-muted">
                         ·{" "}
                         {f.usage === "headings"
-                          ? "titoli"
+                          ? "headings"
                           : f.usage === "body"
-                            ? "testo"
-                            : "titoli e testo"}
+                            ? "body text"
+                            : "headings and body text"}
                       </span>
                     </li>
                   ))}
@@ -184,25 +184,25 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
                     <li key={c.text}>
                       “{c.text}”{" "}
                       <span className="text-fg-muted">
-                        · {plural(c.pages.length, "pagina", "pagine")}
+                        · {plural(c.pages.length, "page", "pages")}
                       </span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-body-sm text-fg-muted">Nessuna call to action trovata.</p>
+                <p className="text-body-sm text-fg-muted">No calls to action found.</p>
               )}
             </div>
             <p className="text-body-sm">
-              Modulo di contatto: {ex.contactForm ? "presente" : "non trovato"} · Social collegati:{" "}
-              {ex.socialLinks?.length ? ex.socialLinks.map((s) => s.channel).join(", ") : "nessuno"}
+              Contact form: {ex.contactForm ? "present" : "not found"} · Linked social channels:{" "}
+              {ex.socialLinks?.length ? ex.socialLinks.map((s) => s.channel).join(", ") : "none"}
             </p>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Controlli tecnici</CardTitle>
+              <CardTitle>Technical checks</CardTitle>
               <CardDescription>
-                Calcolati senza AI. Nessun punteggio: solo cosa va e cosa no.
+                Computed without AI. No score: only what works and what doesn’t.
               </CardDescription>
             </CardHeader>
             <ul className="flex flex-col gap-2">
@@ -229,7 +229,7 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
 
       {read.length ? (
         <section className="flex flex-col gap-4">
-          <h2 className="text-heading-md font-display text-fg">Pagine lette ({read.length})</h2>
+          <h2 className="text-heading-md font-display text-fg">Pages read ({read.length})</h2>
           <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {read.map((p) => {
               const s = shotsById.get(p.id);
@@ -243,7 +243,7 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
                       {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
                       <img
                         src={s.desktop}
-                        alt={`Screenshot desktop di ${p.url ?? "pagina"}`}
+                        alt={`Desktop screenshot of ${p.url ?? "page"}`}
                         className="h-40 w-full rounded-sm border border-subtle object-cover object-top"
                         loading="lazy"
                       />
@@ -265,7 +265,7 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
                       rel="noreferrer noopener"
                       className="text-body-sm text-link"
                     >
-                      Screenshot mobile
+                      Mobile screenshot
                     </a>
                   ) : null}
                 </li>
@@ -275,7 +275,7 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
           {skipped.length ? (
             <details className="text-body-sm">
               <summary className="cursor-pointer text-fg-muted">
-                {plural(skipped.length, "pagina non letta", "pagine non lette")}
+                {plural(skipped.length, "page not read", "pages not read")}
               </summary>
               <ul className="mt-2 flex flex-col gap-1">
                 {skipped.map((p) => (
@@ -291,7 +291,7 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-heading-md font-display text-fg">Osservazioni</h2>
+          <h2 className="text-heading-md font-display text-fg">Observations</h2>
           {!readOnly ? (
             <AddFinding
               auditId={audit.id}
@@ -299,7 +299,7 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
               areas={[...WEBSITE_AREAS] as FindingArea[]}
               sources={read.map((p) => ({
                 id: p.id,
-                label: p.title || p.url || "Pagina",
+                label: p.title || p.url || "Page",
                 url: p.url,
               }))}
             />
@@ -308,8 +308,8 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
         {findings.length === 0 ? (
           <p className="text-body-md text-fg-muted">
             {scan && (scan.status === "collected" || scan.status === "partial")
-              ? "Nessuna osservazione ancora. Se l'AI è attiva arrivano a fine analisi, altrimenti aggiungile tu."
-              : "Le osservazioni arrivano dopo la lettura del sito."}
+              ? "No observations yet. If AI is on they arrive when the analysis ends, otherwise add them yourself."
+              : "Observations arrive after the website is read."}
           </p>
         ) : (
           WEBSITE_AREAS.map((area) => {

@@ -1,5 +1,5 @@
 /**
- * Prospect audit (spec: "Audit dei potenziali clienti", UX section 12). The values
+ * Prospect audit (spec: "Prospect audits", UX section 12). The values
  * live here so the database enums, the Zod schemas and the UI never drift.
  */
 
@@ -199,7 +199,7 @@ export interface AuditEvidence {
   /** Short human label, e.g. "Home · H1". */
   label?: string;
   note?: string;
-  /** Channel of the source, for the "Fonte" chips. */
+  /** Channel of the source, for the "Source" chips. */
   channel?: AuditChannel;
   /** ISO date the source was captured. */
   capturedAt?: string;
@@ -217,13 +217,13 @@ export const prospectObjectives = [
 ] as const;
 export type ProspectObjective = (typeof prospectObjectives)[number];
 export const prospectObjectiveLabels: Record<ProspectObjective, string> = {
-  more_leads: "Più contatti e preventivi",
-  brand_awareness: "Farsi conoscere",
-  social_growth: "Crescere sui social",
-  new_market: "Entrare in un nuovo mercato",
-  rebranding: "Rinnovare l'immagine",
-  online_sales: "Vendere online",
-  other: "Altro",
+  more_leads: "More leads and quote requests",
+  brand_awareness: "Build awareness",
+  social_growth: "Grow on social media",
+  new_market: "Enter a new market",
+  rebranding: "Refresh the brand image",
+  online_sales: "Sell online",
+  other: "Other",
 };
 
 // ---------------------------------------------------------------- Report (UX Page 12–13)

@@ -101,12 +101,12 @@ export interface ProductViewData {
 }
 
 const methodLabels: Record<string, string> = {
-  folder: "abbinata per cartella",
-  filename: "abbinata per nome file",
-  sku: "abbinata per SKU",
-  sheet: "indicata nel foglio",
-  ai: "abbinata da Brand Analyst",
-  manual: "aggiunta a mano",
+  folder: "matched by folder",
+  filename: "matched by file name",
+  sku: "matched by SKU",
+  sheet: "listed in the sheet",
+  ai: "matched by Brand Analyst",
+  manual: "added by hand",
 };
 
 type Tab = "sources" | "proposals" | "history" | "usage";
@@ -136,30 +136,30 @@ export function ProductView({ data }: { data: ProductViewData }) {
     .filter((f) => ["shortDescription", "benefits", "materials", "usage"].includes(f.key))
     .filter((f) => isEmptyValue(data.fields[f.key]))
     .map((f) => f.label.toLowerCase());
-  if (data.images.length === 0) missing.push("immagini");
+  if (data.images.length === 0) missing.push("images");
 
   const nextAction = open.length
-    ? `tu · Accetta o rifiuta ${open.length === 1 ? "1 campo proposto" : `${open.length} campi proposti`}`
+    ? `you · Accept or reject ${open.length === 1 ? "1 proposed field" : `${open.length} proposed fields`}`
     : data.pendingSensitive.length
-      ? `tu · Accetta ${data.pendingSensitive.length === 1 ? "il campo sensibile" : `${data.pendingSensitive.length} campi sensibili`}`
+      ? `you · Accept ${data.pendingSensitive.length === 1 ? "the sensitive field" : `${data.pendingSensitive.length} sensitive fields`}`
       : missing.length
-        ? `tu · Completa i campi mancanti: ${missing.join(", ")}`
+        ? `you · Fill in the missing fields: ${missing.join(", ")}`
         : data.status === "approved"
-          ? "Nessuna azione in sospeso"
-          : "tu · Approva il prodotto";
+          ? "No pending actions"
+          : "you · Approve the product";
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-body-sm text-fg-muted">
-          <span className="font-medium text-fg">Prossima azione: </span>
+          <span className="font-medium text-fg">Next action: </span>
           {nextAction}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           {data.status === "draft" || data.status === "proposed" ? (
             <ConfirmDialog
-              title={`Approvare «${data.name}»?`}
-              confirmLabel="Approva prodotto"
+              title={`Approve “${data.name}”?`}
+              confirmLabel="Approve product"
               disabled={data.blockers.length > 0}
               onConfirm={(f) => transition("approve", String(f.get("note") ?? ""))}
               trigger={(openDialog) => (
@@ -169,16 +169,16 @@ export function ProductView({ data }: { data: ProductViewData }) {
                   title={data.blockers[0]}
                 >
                   <BadgeCheck aria-hidden />
-                  Approva prodotto
+                  Approve product
                 </Button>
               )}
             >
               <p>
-                Descrizione, scheda tecnica e foto approvate diventano utilizzabili nella strategia
-                e nei caroselli di {data.clientName}.
+                The approved description, product sheet and photos become usable in{" "}
+                {data.clientName}’s strategy and carousels.
               </p>
               <label className="block text-body-sm text-fg">
-                Nota (facoltativa)
+                Note (optional)
                 <textarea
                   name="note"
                   rows={2}
@@ -189,31 +189,31 @@ export function ProductView({ data }: { data: ProductViewData }) {
             </ConfirmDialog>
           ) : null}
           {data.status === "approved" && open.length ? (
-            <Button onClick={() => setTab("proposals")}>Rivedi proposte</Button>
+            <Button onClick={() => setTab("proposals")}>Review proposals</Button>
           ) : null}
           {data.status === "rejected" ? (
             <Button onClick={() => transition("to_draft")} disabled={action.pending}>
-              Riporta in bozza
+              Move back to draft
             </Button>
           ) : null}
           {data.status === "archived" ? (
             <Button onClick={() => transition("restore")} disabled={action.pending}>
-              Ripristina prodotto
+              Restore product
             </Button>
           ) : null}
           {data.status === "draft" || data.status === "proposed" ? (
             <ConfirmDialog
-              title={`Rifiutare «${data.name}»?`}
-              confirmLabel="Rifiuta prodotto"
+              title={`Reject “${data.name}”?`}
+              confirmLabel="Reject product"
               onConfirm={(f) => transition("reject", String(f.get("note") ?? ""))}
               trigger={(openDialog) => (
                 <Button variant="secondary" onClick={openDialog} disabled={action.pending}>
-                  Rifiuta prodotto
+                  Reject product
                 </Button>
               )}
             >
               <label className="block text-body-sm text-fg">
-                Motivo (facoltativo)
+                Reason (optional)
                 <textarea
                   name="note"
                   rows={2}
@@ -232,33 +232,31 @@ export function ProductView({ data }: { data: ProductViewData }) {
               )
             }
           >
-            Duplica prodotto
+            Duplicate product
           </Button>
           {data.sourceImportHref ? (
             <Button asChild variant="ghost">
-              <Link href={data.sourceImportHref}>Apri import d&apos;origine</Link>
+              <Link href={data.sourceImportHref}>Open source import</Link>
             </Button>
           ) : null}
           {data.status !== "archived" ? (
             <ConfirmDialog
-              title={`Archiviare «${data.name}»?`}
-              confirmLabel="Archivia prodotto"
+              title={`Archive “${data.name}”?`}
+              confirmLabel="Archive product"
               danger
               onConfirm={() => transition("archive")}
               trigger={(openDialog) => (
                 <Button variant="ghost" onClick={openDialog} disabled={action.pending}>
-                  Archivia prodotto
+                  Archive product
                 </Button>
               )}
             >
-              <p>
-                Non sarà più selezionabile nei brief. I caroselli che lo usano restano invariati.
-              </p>
+              <p>It can no longer be selected in briefs. Carousels that use it stay unchanged.</p>
             </ConfirmDialog>
           ) : null}
           <ConfirmDialog
-            title={`Eliminare «${data.name}»?`}
-            confirmLabel="Elimina prodotto"
+            title={`Delete “${data.name}”?`}
+            confirmLabel="Delete product"
             danger
             onConfirm={(f) =>
               action.run(() =>
@@ -272,18 +270,18 @@ export function ProductView({ data }: { data: ProductViewData }) {
             }
             trigger={(openDialog) => (
               <Button variant="ghost" onClick={openDialog} disabled={action.pending}>
-                Elimina definitivamente
+                Delete permanently
               </Button>
             )}
           >
             <p>
-              Campi, cronologia e collegamenti alle immagini vengono cancellati; le immagini restano
-              negli asset. Digita il nome del prodotto per confermare.
+              Fields, history and image links are deleted; the images stay in the assets. Type the
+              product name to confirm.
             </p>
             <input
               name="typedName"
               required
-              aria-label="Nome del prodotto"
+              aria-label="Product name"
               autoComplete="off"
               className={textareaClass}
             />
@@ -293,12 +291,12 @@ export function ProductView({ data }: { data: ProductViewData }) {
       <ActionMessage result={action.result} />
       {data.status === "draft" && data.blockers.length ? (
         <Banner tone="warning">
-          Bozza: completa nome, categoria e descrizione breve per poterla approvare.
+          Draft: fill in name, category and short description to approve it.
         </Banner>
       ) : null}
-      {data.status === "approved" && action.result?.message === "Salvato" ? (
+      {data.status === "approved" && action.result?.message === "Saved" ? (
         <Banner tone="warning">
-          Hai modificato un prodotto approvato. Controlla i caroselli e le rubriche che lo usano.
+          You edited an approved product. Check the carousels and rubrics that use it.
         </Banner>
       ) : null}
 
@@ -309,14 +307,14 @@ export function ProductView({ data }: { data: ProductViewData }) {
             <Section key={section} section={section} data={data} />
           ))}
         </div>
-        <aside aria-label="Dettagli" className="space-y-3">
-          <div role="tablist" aria-label="Pannello" className="flex flex-wrap gap-1">
+        <aside aria-label="Details" className="space-y-3">
+          <div role="tablist" aria-label="Panel" className="flex flex-wrap gap-1">
             {(
               [
-                ["sources", "Fonti"],
-                ["proposals", `Proposte${open.length ? ` (${open.length})` : ""}`],
-                ["history", "Cronologia"],
-                ["usage", "Usato in"],
+                ["sources", "Sources"],
+                ["proposals", `Proposals${open.length ? ` (${open.length})` : ""}`],
+                ["history", "History"],
+                ["usage", "Used in"],
               ] as const
             ).map(([id, label]) => (
               <Button
@@ -335,15 +333,15 @@ export function ProductView({ data }: { data: ProductViewData }) {
             {tab === "sources" ? (
               <ul className="space-y-2 text-body-sm">
                 {data.createdBy ? (
-                  <li className="text-fg-muted">Creato da {data.createdBy}</li>
+                  <li className="text-fg-muted">Created by {data.createdBy}</li>
                 ) : null}
                 {data.approvedBy ? (
                   <li className="text-fg-muted">
-                    Approvato da {data.approvedBy} · {data.approvedAt}
+                    Approved by {data.approvedBy} · {data.approvedAt}
                   </li>
                 ) : null}
                 {data.sources.length === 0 ? (
-                  <li className="text-fg-muted">Inserito a mano.</li>
+                  <li className="text-fg-muted">Entered by hand.</li>
                 ) : null}
                 {data.sources.map((s) => (
                   <li key={s.href}>
@@ -368,7 +366,7 @@ export function ProductView({ data }: { data: ProductViewData }) {
             ) : null}
             {tab === "proposals" ? (
               data.proposals.length === 0 ? (
-                <p className="text-body-sm text-fg-muted">Nessuna proposta di campo.</p>
+                <p className="text-body-sm text-fg-muted">No field proposals.</p>
               ) : (
                 <ul className="space-y-3">
                   {data.proposals.map((p) => (
@@ -390,14 +388,14 @@ export function ProductView({ data }: { data: ProductViewData }) {
                     <span className="block text-fg-muted">
                       {h.who} · {h.when}
                     </span>
-                    {h.note ? <span className="block text-fg-muted">«{h.note}»</span> : null}
+                    {h.note ? <span className="block text-fg-muted">“{h.note}”</span> : null}
                   </li>
                 ))}
               </ol>
             ) : null}
             {tab === "usage" ? (
               <p className="text-body-sm text-fg-muted">
-                Nessuna voce della strategia e nessun carosello usa ancora questo prodotto.
+                No strategy item or carousel uses this product yet.
               </p>
             ) : null}
           </Card>
@@ -424,7 +422,7 @@ function Gallery({ data, onChanged }: { data: ProductViewData; onChanged: () => 
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { message?: string };
-        setError(body.message ?? `«${file.name}» non è stata caricata.`);
+        setError(body.message ?? `“${file.name}” was not uploaded.`);
       }
     }
     setUploading(false);
@@ -436,7 +434,7 @@ function Gallery({ data, onChanged }: { data: ProductViewData; onChanged: () => 
   return (
     <Card className="gap-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-heading-sm">Foto</h2>
+        <h2 className="text-heading-sm">Photos</h2>
         <Button
           variant="secondary"
           size="sm"
@@ -444,7 +442,7 @@ function Gallery({ data, onChanged }: { data: ProductViewData; onChanged: () => 
           disabled={uploading}
         >
           <ImagePlus aria-hidden />
-          {uploading ? "Caricamento…" : "Aggiungi immagine"}
+          {uploading ? "Uploading…" : "Add image"}
         </Button>
         <input
           ref={input}
@@ -462,24 +460,24 @@ function Gallery({ data, onChanged }: { data: ProductViewData; onChanged: () => 
       ) : null}
       <ActionMessage result={action.result} />
       {data.images.length === 0 ? (
-        <p className="text-body-sm text-fg-muted">Nessuna immagine collegata.</p>
+        <p className="text-body-sm text-fg-muted">No linked images.</p>
       ) : (
         <ul className="grid grid-cols-2 gap-4 md:grid-cols-3 2xl:grid-cols-4">
           {data.images.map((i) => (
             <li key={i.id} className="space-y-2">
               <Thumb url={i.url} alt={i.alt} size="lg" />
               <div className="flex flex-wrap gap-1">
-                {i.isPrimary ? <Badge variant="info">Principale</Badge> : null}
+                {i.isPrimary ? <Badge variant="info">Primary</Badge> : null}
                 <Badge variant={i.status === "approved" ? "success" : "neutral"}>
-                  {i.status === "approved" ? "Approvato" : "Bozza"}
+                  {i.status === "approved" ? "Approved" : "Draft"}
                 </Badge>
               </div>
               <p className="text-body-sm text-fg-muted">
                 {i.fileName} · {methodLabels[i.method] ?? i.method}
-                {i.method === "ai" ? ` · confidenza ${confidenceText[i.confidence]}` : ""}
+                {i.method === "ai" ? ` · ${confidenceText[i.confidence]} confidence` : ""}
               </p>
               {i.status === "draft" ? (
-                <p className="text-body-sm text-fg-muted">Approvala per usarla nei caroselli.</p>
+                <p className="text-body-sm text-fg-muted">Approve it to use it in carousels.</p>
               ) : null}
               <div className="flex flex-wrap gap-1">
                 {i.status === "draft" ? (
@@ -489,7 +487,7 @@ function Gallery({ data, onChanged }: { data: ProductViewData; onChanged: () => 
                     onClick={() => img(i.id, "approve")}
                     disabled={action.pending}
                   >
-                    Approva
+                    Approve
                   </Button>
                 ) : null}
                 {!i.isPrimary ? (
@@ -499,7 +497,7 @@ function Gallery({ data, onChanged }: { data: ProductViewData; onChanged: () => 
                     onClick={() => img(i.id, "primary")}
                     disabled={action.pending}
                   >
-                    Imposta come principale
+                    Set as primary
                   </Button>
                 ) : null}
                 <Button
@@ -508,7 +506,7 @@ function Gallery({ data, onChanged }: { data: ProductViewData; onChanged: () => 
                   onClick={() => img(i.id, "unlink")}
                   disabled={action.pending}
                 >
-                  Scollega
+                  Unlink
                 </Button>
               </div>
             </li>
@@ -526,13 +524,14 @@ function Section({ section, data }: { section: FieldDef["section"]; data: Produc
     <div className="space-y-4">
       {section === "specs" && empty ? (
         <p className="text-body-sm text-fg-muted">
-          Aggiungi ingredienti o materiali, formati e istruzioni d&apos;uso: il Copywriter li usa
-          per descrivere il prodotto.
+          Add ingredients or materials, formats and usage instructions: the Copywriter uses them to
+          describe the product.
         </p>
       ) : null}
       {section === "commercial" ? (
         <p className="text-body-sm text-fg-muted">
-          Il Copywriter usa il prezzo solo se è in questo prodotto approvato e il brief lo chiede.
+          The Copywriter uses the price only if it is in this approved product and the brief asks
+          for it.
         </p>
       ) : null}
       {defs.map((def) => (
@@ -547,7 +546,7 @@ function Section({ section, data }: { section: FieldDef["section"]; data: Produc
           <summary className="cursor-pointer text-heading-sm">
             {sectionLabels[section]}
             {empty ? (
-              <span className="ml-2 text-body-sm text-fg-muted">Nessun dato commerciale</span>
+              <span className="ml-2 text-body-sm text-fg-muted">No commercial data</span>
             ) : null}
           </summary>
           <div className="mt-4">{body}</div>
@@ -600,17 +599,17 @@ function FieldRow({ def, data }: { def: FieldDef; data: ProductViewData }) {
         <label htmlFor={`${id}-input`} className="text-label font-medium text-fg">
           {def.label}
           {def.kind === "list" || def.kind === "tags" ? (
-            <span className="ml-1 font-normal text-fg-muted">(una voce per riga)</span>
+            <span className="ml-1 font-normal text-fg-muted">(one item per line)</span>
           ) : null}
           {def.kind === "variants" ? (
             <span className="ml-1 font-normal text-fg-muted">
-              (attributo | valore | SKU, una per riga)
+              (attribute | value | SKU, one per line)
             </span>
           ) : null}
         </label>
         {!editing ? (
           <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-            Modifica<span className="sr-only"> {def.label}</span>
+            Edit<span className="sr-only"> {def.label}</span>
           </Button>
         ) : null}
       </div>
@@ -643,10 +642,10 @@ function FieldRow({ def, data }: { def: FieldDef; data: ProductViewData }) {
           ) : null}
           <div className="flex gap-2">
             <Button size="sm" onClick={save} disabled={action.pending}>
-              {action.pending ? "Salvataggio…" : "Salva"}
+              {action.pending ? "Saving…" : "Save"}
             </Button>
             <Button size="sm" variant="secondary" onClick={() => setEditing(false)}>
-              Annulla
+              Cancel
             </Button>
           </div>
         </div>
@@ -658,9 +657,9 @@ function FieldRow({ def, data }: { def: FieldDef; data: ProductViewData }) {
       <ActionMessage result={action.result} />
       {meta && !isEmptyValue(value) ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-body-sm text-fg-muted">
-          <TruthBadge truth={meta.truth} byAgent={meta.source.startsWith("Proposto da")} />
+          <TruthBadge truth={meta.truth} byAgent={meta.source.startsWith("Proposed by")} />
           <span>{meta.source}</span>
-          <span>· confidenza {confidenceText[meta.confidence]}</span>
+          <span>· {confidenceText[meta.confidence]} confidence</span>
           {pdfSource && meta.page ? (
             <a
               href={`${pdfSource.href}#page=${meta.page}`}
@@ -668,7 +667,7 @@ function FieldRow({ def, data }: { def: FieldDef; data: ProductViewData }) {
               rel="noreferrer"
               className="text-link hover:underline"
             >
-              Apri fonte
+              Open source
             </a>
           ) : null}
         </div>
@@ -676,12 +675,12 @@ function FieldRow({ def, data }: { def: FieldDef; data: ProductViewData }) {
       {meta?.sensitive.length && !isEmptyValue(value) ? (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Badge variant="warning" icon={ShieldAlert}>
-            Sensibile · {meta.sensitive.map((k) => claimLabels[k]).join(", ")}
+            Sensitive · {meta.sensitive.map((k) => claimLabels[k]).join(", ")}
           </Badge>
           {pendingSensitive ? (
             <ConfirmDialog
-              title={`Accettare «${def.label}»?`}
-              confirmLabel="Accetta campo"
+              title={`Accept “${def.label}”?`}
+              confirmLabel="Accept field"
               onConfirm={(f) =>
                 action.run(() =>
                   acceptSensitiveAction({
@@ -699,14 +698,13 @@ function FieldRow({ def, data }: { def: FieldDef; data: ProductViewData }) {
                   onClick={openDialog}
                   disabled={action.pending}
                 >
-                  Accetta campo sensibile
+                  Accept sensitive field
                 </Button>
               )}
             >
-              <p>Confermi che il valore è corretto e si può usare nei contenuti.</p>
+              <p>Confirm that the value is correct and can be used in content.</p>
               <label className="block text-body-sm text-fg">
-                Nota{" "}
-                {meta.confidence === "low" ? "(obbligatoria: confidenza Bassa)" : "(facoltativa)"}
+                Note {meta.confidence === "low" ? "(required: Low confidence)" : "(optional)"}
                 <textarea
                   name="note"
                   rows={2}
@@ -717,7 +715,7 @@ function FieldRow({ def, data }: { def: FieldDef; data: ProductViewData }) {
               </label>
             </ConfirmDialog>
           ) : (
-            <span className="text-body-sm text-fg-muted">Accettato</span>
+            <span className="text-body-sm text-fg-muted">Accepted</span>
           )}
         </div>
       ) : null}
@@ -737,13 +735,13 @@ function FieldValue({ def, value }: { def: FieldDef; value: unknown }) {
         <thead className="text-fg-muted">
           <tr>
             <th scope="col" className="pr-4 text-left font-medium">
-              Attributo
+              Attribute
             </th>
             <th scope="col" className="pr-4 text-left font-medium">
-              Valore
+              Value
             </th>
             <th scope="col" className="text-left font-medium">
-              SKU variante
+              Variant SKU
             </th>
           </tr>
         </thead>
@@ -782,18 +780,18 @@ function TruthBadge({ truth, byAgent }: { truth: FieldMetaView["truth"]; byAgent
   if (truth === "approved")
     return (
       <Badge variant="success" icon={BadgeCheck}>
-        Approvato
+        Approved
       </Badge>
     );
   if (truth === "proposed")
     return (
       <Badge variant="info" icon={byAgent ? Sparkles : User} className="border-dashed">
-        Proposto
+        Proposed
       </Badge>
     );
   return (
     <Badge variant="neutral" icon={ScanEye} className="border-dashed">
-      Estratto, non rivisto
+      Extracted, not reviewed
     </Badge>
   );
 }
@@ -820,9 +818,9 @@ function ProposalDiff({
         </span>
       </p>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-        <dt className="text-fg-muted">Valore attuale</dt>
+        <dt className="text-fg-muted">Current value</dt>
         <dd className="text-fg">{p.current || "—"}</dd>
-        <dt className="text-fg-muted">Valore proposto</dt>
+        <dt className="text-fg-muted">Proposed value</dt>
         <dd className="text-fg">{p.proposed || "—"}</dd>
       </dl>
       {p.status === "proposed" ? (
@@ -832,7 +830,7 @@ function ProposalDiff({
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={3}
-              aria-label={`Valore da accettare per ${p.label}`}
+              aria-label={`Value to accept for ${p.label}`}
               className={textareaClass}
             />
           ) : null}
@@ -846,7 +844,7 @@ function ProposalDiff({
                   : decide("accept")
               }
             >
-              Accetta<span className="sr-only"> {p.label}</span>
+              Accept<span className="sr-only"> {p.label}</span>
             </Button>
             <Button
               size="sm"
@@ -854,11 +852,11 @@ function ProposalDiff({
               disabled={action.pending}
               onClick={() => decide("reject")}
             >
-              Rifiuta<span className="sr-only"> {p.label}</span>
+              Reject<span className="sr-only"> {p.label}</span>
             </Button>
             {!editing ? (
               <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-                Modifica e accetta<span className="sr-only"> {p.label}</span>
+                Edit and accept<span className="sr-only"> {p.label}</span>
               </Button>
             ) : null}
           </div>
@@ -867,11 +865,11 @@ function ProposalDiff({
       ) : (
         <p className="text-fg-muted">
           {p.status === "accepted"
-            ? "Accettata"
+            ? "Accepted"
             : p.status === "rejected"
-              ? "Rifiutata"
-              : "Superata"}
-          {p.decidedBy ? ` da ${p.decidedBy}` : ""}
+              ? "Rejected"
+              : "Superseded"}
+          {p.decidedBy ? ` by ${p.decidedBy}` : ""}
         </p>
       )}
     </div>

@@ -7,13 +7,13 @@ import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: { default: "Forgecy", template: "%s · Forgecy" },
-  description: "Il motore creativo dell'agenzia.",
+  description: "The agency's creative engine.",
   robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="it">
+    <html lang="en">
       <body className="min-h-dvh bg-app font-body text-fg antialiased">{children}</body>
     </html>
   );

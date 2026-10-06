@@ -44,12 +44,12 @@ const carousel = (title: string): GuardContent => ({
   slides: [
     {
       layout: "cover",
-      slots: [{ kind: "text", name: "title", label: "Titolo", role: "title", text: title }],
+      slots: [{ kind: "text", name: "title", label: "Title", role: "title", text: title }],
     },
     {
       layout: "cta",
       role: "cta",
-      slots: [{ kind: "text", name: "cta", role: "cta", text: "Salva il post" }],
+      slots: [{ kind: "text", name: "cta", role: "cta", text: "Save the post" }],
     },
   ],
 });
@@ -68,7 +68,7 @@ describe.skipIf(!dbUrl)("brand guard service (integration)", () => {
       .insert(clients)
       .values([
         { name: `Guard ${suffix}`, slug: `guard-test-${suffix}` },
-        { name: `Guard senza BI ${suffix}`, slug: `guard-test-nobi-${suffix}` },
+        { name: `Guard without BI ${suffix}`, slug: `guard-test-nobi-${suffix}` },
       ])
       .returning();
     clientId = c!.id;
@@ -168,7 +168,7 @@ describe.skipIf(!dbUrl)("brand guard service (integration)", () => {
     expect(reopened.report.findings.find((f) => f.key === warning.key)?.status).toBe("open");
   });
 
-  it("gates approval on a fresh check and «Ho visto» from a person", async () => {
+  it("gates approval on a fresh check and “I’ve seen it” from a person", async () => {
     const confirm = (actor: Actor, version: number, keys: string[]) =>
       confirmBrandCheckForApproval(db, actor, {
         clientId,

@@ -25,7 +25,7 @@ export const imageRefSchema = z
   })
   .refine(
     (r) => Boolean(r.key) !== Boolean(r.asset),
-    "Indica un asset (key) oppure un file del template",
+    "Give either an asset (key) or a template file",
   );
 export type ImageRef = z.infer<typeof imageRefSchema>;
 
@@ -64,23 +64,23 @@ function checkText(
   path: (string | number)[],
 ) {
   if (CONTROL.test(text))
-    ctx.addIssue({ code: "custom", path, message: "Caratteri di controllo non ammessi" });
+    ctx.addIssue({ code: "custom", path, message: "Control characters are not allowed" });
   const len = visibleLength(text);
   if (len > slot.maxChars)
     ctx.addIssue({
       code: "custom",
       path,
-      message: `«${slot.label ?? slot.name}»: ${len} caratteri su ${slot.maxChars}`,
+      message: `“${slot.label ?? slot.name}”: ${len} characters out of ${slot.maxChars}`,
       params: { reason: "too_long", length: len, max: slot.maxChars },
     });
   if (slot.type === "text" && slot.maxLines && text.split("\n").length > slot.maxLines)
     ctx.addIssue({
       code: "custom",
       path,
-      message: `«${slot.label ?? slot.name}»: massimo ${slot.maxLines} righe`,
+      message: `“${slot.label ?? slot.name}”: at most ${slot.maxLines} lines`,
     });
   if (!slot.highlight && text.includes("=="))
-    ctx.addIssue({ code: "custom", path, message: "Evidenziazione non ammessa in questo slot" });
+    ctx.addIssue({ code: "custom", path, message: "Highlighting is not allowed in this slot" });
 }
 
 /** Check one slide against its layout; issues land on `ctx` with paths relative to the slide. */
@@ -96,7 +96,7 @@ export function checkSlideAgainstLayout(
       ctx.addIssue({
         code: "custom",
         path: [...base, "slots", name],
-        message: `Lo slot "${name}" non esiste nel layout ${layout.id}`,
+        message: `Slot "${name}" does not exist in layout ${layout.id}`,
       });
   }
   for (const slot of layout.slots) {
@@ -111,26 +111,26 @@ export function checkSlideAgainstLayout(
         ctx.addIssue({
           code: "custom",
           path,
-          message: `«${slot.label ?? slot.name}» è obbligatorio`,
+          message: `“${slot.label ?? slot.name}” is required`,
         });
       continue;
     }
     if (slot.type === "text") {
       if (typeof value !== "string") {
-        ctx.addIssue({ code: "custom", path, message: "Atteso un testo" });
+        ctx.addIssue({ code: "custom", path, message: "Expected a text" });
         continue;
       }
       checkText(slot, value, ctx, path);
     } else if (slot.type === "list") {
       if (!Array.isArray(value)) {
-        ctx.addIssue({ code: "custom", path, message: "Attesa una lista di testi" });
+        ctx.addIssue({ code: "custom", path, message: "Expected a list of texts" });
         continue;
       }
       if (value.length > slot.maxItems || value.length < slot.minItems)
         ctx.addIssue({
           code: "custom",
           path,
-          message: `«${slot.label ?? slot.name}»: da ${slot.minItems} a ${slot.maxItems} voci`,
+          message: `“${slot.label ?? slot.name}”: ${slot.minItems} to ${slot.maxItems} items`,
         });
       value.forEach((item, i) => {
         // An empty item would export as a blank numbered row.
@@ -138,12 +138,12 @@ export function checkSlideAgainstLayout(
           ctx.addIssue({
             code: "custom",
             path: [...path, i],
-            message: `«${slot.label ?? slot.name}»: la voce ${i + 1} è vuota`,
+            message: `“${slot.label ?? slot.name}”: item ${i + 1} is empty`,
           });
         else checkText(slot, item, ctx, [...path, i]);
       });
     } else if (typeof value !== "object" || Array.isArray(value)) {
-      ctx.addIssue({ code: "custom", path, message: "Attesa un'immagine" });
+      ctx.addIssue({ code: "custom", path, message: "Expected an image" });
     }
   }
 }
@@ -166,7 +166,7 @@ export function buildCarouselSchema(template: TemplateManifest) {
       ctx.addIssue({
         code: "custom",
         path: [],
-        message: `Il template prevede da ${min} a ${max} slide (ora ${slides.length})`,
+        message: `The template allows ${min} to ${max} slides (now ${slides.length})`,
       });
     slides.forEach((s, i) => {
       const layout = findLayout(template, s.layout);
@@ -176,26 +176,26 @@ export function buildCarouselSchema(template: TemplateManifest) {
         ctx.addIssue({
           code: "custom",
           path: [i, "layout"],
-          message: `${label}: solo come prima slide`,
+          message: `${label}: only as the first slide`,
         });
       if (layout.position === "last" && i !== slides.length - 1)
         ctx.addIssue({
           code: "custom",
           path: [i, "layout"],
-          message: `${label}: solo come ultima slide`,
+          message: `${label}: only as the last slide`,
         });
       if (template.rules.ctaOnlyLast && layout.role === "cta" && i !== slides.length - 1)
         ctx.addIssue({
           code: "custom",
           path: [i, "layout"],
-          message: "La CTA va solo nell'ultima slide",
+          message: "The CTA goes only on the last slide",
         });
       const images = layout.slots.filter((sl) => sl.type === "image" && s.slots[sl.name]).length;
       if (images > template.rules.maxImagesPerSlide)
         ctx.addIssue({
           code: "custom",
           path: [i, "slots"],
-          message: `Massimo ${template.rules.maxImagesPerSlide} immagini per slide`,
+          message: `At most ${template.rules.maxImagesPerSlide} images per slide`,
         });
     });
   });
@@ -206,8 +206,7 @@ export function sampleSlide(layout: LayoutDef): Slide {
   return slideSchema.parse({ id: `sample-${layout.id}`, layout: layout.id, slots: layout.sample });
 }
 
-const FILLER =
-  "Testo di prova lungo quanto il limite dello slot per verificare che non esca dal riquadro ";
+const FILLER = "Sample text as long as the slot limit to check that it does not overflow its box ";
 
 function fill(max: number): string {
   let s = "";
@@ -215,7 +214,7 @@ function fill(max: number): string {
   return [...s].slice(0, max).join("").trimEnd();
 }
 
-/** «Testi lunghi»: every text slot filled up to its limit, every list to its max items. */
+/** “Long texts”: every text slot filled up to its limit, every list to its max items. */
 export function longTextSlide(layout: LayoutDef): Slide {
   const slots: Record<string, unknown> = { ...layout.sample };
   for (const slot of layout.slots) {

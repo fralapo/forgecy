@@ -5,7 +5,7 @@ import { z } from "zod";
 /**
  * Audit pipeline (spec: audit_crawl, audit_social_ingest, audit_competitors,
  * audit_analyze, audit_diagnose, audit_plan). Each step is its own job, so a
- * failed step is retried alone ("Riprova questo passo") without redoing the others.
+ * failed step is retried alone ("Retry this step") without redoing the others.
  */
 
 /** Read up to 10 pages of the prospect site (or 3 of a competitor) with Playwright. */
@@ -66,7 +66,7 @@ export const auditPlanJob = defineJob({
 
 /**
  * Strategist and Copywriter: section texts and the email text of a report draft.
- * `sections` limits the run to some sections ("Ricomponi sezione"); `email` only the email.
+ * `sections` limits the run to some sections ("Recompose section"); `email` only the email.
  */
 export const auditReportTextsJob = defineJob({
   kind: "audit.report_texts",
@@ -79,7 +79,7 @@ export const auditReportTextsJob = defineJob({
   }),
 });
 
-/** PDF of a report version with the «Report di audit» template (renderer of M3). */
+/** PDF of a report version with the “Audit report” template (renderer of M3). */
 export const auditReportExportJob = defineJob({
   kind: "audit.report_export",
   queue: "export",

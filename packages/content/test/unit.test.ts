@@ -23,13 +23,13 @@ const manifest = templateManifestSchema.parse(
 const doc = (slides: unknown[], extra: Record<string, unknown> = {}) =>
   carouselDocumentSchema.parse({ title: "T", slides, ...extra });
 
-const cover = { id: "s1", layout: "cover", slots: { title: "Come scegliere" } };
+const cover = { id: "s1", layout: "cover", slots: { title: "How to choose" } };
 const text = (id: string) => ({
   id,
   layout: "text",
-  slots: { title: "Punto", body: "Spiegazione breve." },
+  slots: { title: "Point", body: "Short explanation." },
 });
-const cta = { id: "s9", layout: "cta", slots: { title: "Scrivici", action: "Contattaci" } };
+const cta = { id: "s9", layout: "cta", slots: { title: "Write to us", action: "Contact us" } };
 const body = [text("s2"), text("s3"), text("s4")];
 
 describe("templates", () => {
@@ -84,19 +84,19 @@ describe("checks", () => {
     const priced = {
       id: "s5",
       layout: "text",
-      slots: { title: "Offerta", body: "Solo 19,90 € e gratis la spedizione" },
+      slots: { title: "Offer", body: "Only €19.90 and free shipping" },
     };
     const checks = computeChecks({
       document: doc([cover, priced, ...body]),
       manifest,
       channel: "instagram",
-      forbiddenWords: ["gratis"],
+      forbiddenWords: ["free"],
     });
     const ids = checks.map((c) => c.id);
-    expect(ids).toContain("forbidden:s5:gratis");
+    expect(ids).toContain("forbidden:s5:free");
     expect(ids).toContain("price:s5");
     expect(ids).toContain("cta:last");
-    expect(checks.find((c) => c.id === "forbidden:s5:gratis")?.severity).toBe("warning");
+    expect(checks.find((c) => c.id === "forbidden:s5:free")?.severity).toBe("warning");
     // Allowed by the brief: no price warning.
     const allowed = computeChecks({
       document: doc([cover, priced, ...body, cta]),
@@ -111,7 +111,7 @@ describe("checks", () => {
     const withImage = {
       id: "s1",
       layout: "cover",
-      slots: { title: "Ciao", image: { key: "clients/x/assets/a.png", alt: "" } },
+      slots: { title: "Hello", image: { key: "clients/x/assets/a.png", alt: "" } },
     };
     const checks = computeChecks({
       document: doc([withImage, ...body, cta]),
@@ -136,15 +136,15 @@ describe("pipeline helpers", () => {
   it("maps flat model slots onto the layout, keeping protected ones", () => {
     const layout = findLayout(manifest, "list")!;
     const slots = slotsFromOutput(layout, [
-      { name: "title", text: "Tre motivi", items: [] },
-      { name: "items", text: "", items: ["Uno", " ", "Due"] },
-      { name: "ghost", text: "ignorato", items: [] },
+      { name: "title", text: "Three reasons", items: [] },
+      { name: "items", text: "", items: ["One", " ", "Two"] },
+      { name: "ghost", text: "ignored", items: [] },
     ]);
-    expect(slots).toEqual({ title: "Tre motivi", items: ["Uno", "Due"] });
-    const kept = slotsFromOutput(layout, [{ name: "title", text: "Nuovo", items: [] }], {
-      title: "Vecchio",
+    expect(slots).toEqual({ title: "Three reasons", items: ["One", "Two"] });
+    const kept = slotsFromOutput(layout, [{ name: "title", text: "New", items: [] }], {
+      title: "Old",
     });
-    expect(kept.title).toBe("Vecchio");
+    expect(kept.title).toBe("Old");
   });
 });
 
@@ -213,10 +213,10 @@ describe("brand guard mapping", () => {
     const withImage = {
       id: "s1",
       layout: "cover",
-      slots: { title: "Ciao", image: { key: "clients/x/assets/a.png", alt: "" } },
+      slots: { title: "Hello", image: { key: "clients/x/assets/a.png", alt: "" } },
     };
     const content = toGuardContent({
-      document: doc([withImage, ...body, cta], { caption: "Testo", hashtags: ["#a"] }),
+      document: doc([withImage, ...body, cta], { caption: "Text", hashtags: ["#a"] }),
       manifest,
       channel: "instagram",
       assets: new Map([
@@ -227,12 +227,12 @@ describe("brand guard mapping", () => {
       ]),
       product: {
         id: "p1",
-        name: "Borraccia",
+        name: "Water bottle",
         sku: null,
         category: null,
-        price: "19,90 €",
-        description: "Acciaio inox, 750 ml",
-        highlights: ["Tiene il freddo 24 ore"],
+        price: "€19.90",
+        description: "Stainless steel, 750 ml",
+        highlights: ["Keeps drinks cold for 24 hours"],
         revision: 1,
         images: [],
       },
@@ -241,15 +241,15 @@ describe("brand guard mapping", () => {
     expect(content.slides[0]!.role).toBe("cover");
     expect(content.slides.at(-1)!.role).toBe("cta");
     const title = content.slides[0]!.slots.find((x) => x.name === "title");
-    expect(title).toMatchObject({ kind: "text", role: "title", text: "Ciao" });
+    expect(title).toMatchObject({ kind: "text", role: "title", text: "Hello" });
     expect(title && "maxChars" in title && title.maxChars).toBeGreaterThan(0);
     const image = content.slides[0]!.slots.find((x) => x.kind === "image");
     expect(image).toMatchObject({ asset: { id: "a1", origin: "ai", approval: "draft" } });
-    expect(content.product).toMatchObject({ name: "Borraccia", price: "19,90 €" });
+    expect(content.product).toMatchObject({ name: "Water bottle", price: "€19.90" });
     expect(content.brief).toEqual({ asksPrice: false });
   });
 
-  it("asks «Ho visto» only on open errors and warnings", () => {
+  it("asks for “Seen” only on open errors and warnings", () => {
     const f = (
       key: string,
       severity: "error" | "warning" | "note",

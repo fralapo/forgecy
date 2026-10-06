@@ -11,21 +11,21 @@ export const dynamic = "force-dynamic";
 
 const MAX = 50 * 1024 * 1024;
 
-/** «Importa template»: a ZIP of the package (max 50 MB) becomes a draft, then the worker validates it. */
+/** “Import template”: a ZIP of the package (max 50 MB) becomes a draft, then the worker validates it. */
 export async function POST(request: Request) {
   const back = (path: string, error?: string) =>
     NextResponse.redirect(
-      new URL(error ? `${path}?errore=${encodeURIComponent(error)}` : path, request.url),
+      new URL(error ? `${path}?error=${encodeURIComponent(error)}` : path, request.url),
       303,
     );
   const user = await getCurrentUser();
   if (!user) return back("/login");
   const declared = Number(request.headers.get("content-length") ?? 0);
-  if (declared > MAX + 1024 * 1024) return back("/templates", "Il file supera 50 MB");
+  if (declared > MAX + 1024 * 1024) return back("/templates", "The file exceeds 50 MB");
   const file = (await request.formData()).get("package");
   if (!(file instanceof File) || file.size === 0)
-    return back("/templates", "Scegli lo ZIP del template");
-  if (file.size > MAX) return back("/templates", "Il file supera 50 MB");
+    return back("/templates", "Choose the template ZIP");
+  if (file.size > MAX) return back("/templates", "The file exceeds 50 MB");
   try {
     const files = unzipTemplatePackage(new Uint8Array(await file.arrayBuffer()));
     const { row } = await importTemplate({
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     )
       return back("/templates", err.message);
     if (err instanceof Error && /zip|invalid/i.test(err.message))
-      return back("/templates", "Lo ZIP non è leggibile");
+      return back("/templates", "The ZIP can’t be read");
     throw err;
   }
 }

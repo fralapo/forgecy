@@ -37,8 +37,8 @@ export function AiProposal({
   children,
   onAccept,
   onReject,
-  acceptLabel = "Accetta",
-  rejectLabel = "Rifiuta",
+  acceptLabel = "Accept",
+  rejectLabel = "Reject",
   pending = false,
   className,
   ...props
@@ -46,7 +46,7 @@ export function AiProposal({
   return (
     <section
       data-slot="ai-proposal"
-      aria-label="Proposta AI"
+      aria-label="AI proposal"
       className={cn(
         "flex flex-col gap-4 rounded-lg border-2 border-dashed border-primary bg-surface p-6 text-fg",
         className,
@@ -56,12 +56,12 @@ export function AiProposal({
       <header className="flex items-start gap-3">
         <Sparkles aria-hidden="true" strokeWidth={1.5} className="mt-1 size-5 shrink-0 text-link" />
         <div className="flex min-w-0 flex-col gap-1">
-          <p className="text-label uppercase text-link">Proposta AI</p>
+          <p className="text-label uppercase text-link">AI proposal</p>
           <h3 className="font-body text-heading-sm text-fg">{title}</h3>
           <p className="flex items-center gap-1 text-body-sm text-fg-muted">
             <Bot aria-hidden="true" strokeWidth={1.5} className="size-4 shrink-0" />
             <span>
-              Proposta da <code className="font-mono text-mono-md text-fg">{agent}</code>
+              Proposed by <code className="font-mono text-mono-md text-fg">{agent}</code>
             </span>
           </p>
         </div>
@@ -70,7 +70,7 @@ export function AiProposal({
       {children ? <div className="text-body-md text-fg">{children}</div> : null}
 
       <div className="flex flex-col gap-2">
-        <p className="text-label uppercase text-fg-muted">Fonti</p>
+        <p className="text-label uppercase text-fg-muted">Sources</p>
         {sources.length > 0 ? (
           <ul className="flex flex-col gap-1">
             {sources.map((s) => (
@@ -94,9 +94,7 @@ export function AiProposal({
             ))}
           </ul>
         ) : (
-          <p className="text-body-sm text-warning">
-            Nessuna fonte indicata: verifica prima di accettare.
-          </p>
+          <p className="text-body-sm text-warning">No sources given: check before accepting.</p>
         )}
       </div>
 

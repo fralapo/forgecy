@@ -28,8 +28,8 @@ describe("confidence from sources", () => {
     expect(computeConfidence(["agent_observation"])).toBe("low");
     expect(computeConfidence([])).toBe("low");
     expect(computeConfidence(["brand_book"], { conflicting: true })).toBe("low");
-    expect(confidenceReason(["website", "instagram"])).toBe("Due fonti osservate");
-    expect(confidenceReason(["agent_observation"])).toBe("Solo inferenza AI");
+    expect(confidenceReason(["website", "instagram"])).toBe("Two observed sources");
+    expect(confidenceReason(["agent_observation"])).toBe("AI inference only");
   });
 });
 
@@ -37,9 +37,9 @@ describe("fields", () => {
   it("knows sensitive categories", () => {
     expect(isSensitivePath("/document/strategy/positioning")).toBe(true);
     expect(isSensitivePath("/document/verbal/toneAxes/2")).toBe(true);
-    expect(isSensitivePath("/tokens/color/reference/blu")).toBe(true);
+    expect(isSensitivePath("/tokens/color/reference/blue")).toBe(true);
     expect(isSensitivePath("/document/verbal/forbiddenWords/-")).toBe(false);
-    expect(fieldLabel("/document/verbal/toneAxes")).toBe("Verbale › Assi del tono");
+    expect(fieldLabel("/document/verbal/toneAxes")).toBe("Verbal › Tone axes");
     expect(matchField("/document/nope")).toBeNull();
   });
 });
@@ -49,21 +49,21 @@ describe("buildProposalPatch", () => {
     const s = fresh();
     const add = buildProposalPatch(
       s,
-      { path: "/document/strategy/oneLiner", op: "set", value: "Il caffè per chi lavora" },
+      { path: "/document/strategy/oneLiner", op: "set", value: "Coffee for people who work" },
       meta,
     );
     expect(add.patch).toHaveLength(1);
     expect(add.patch[0]).toMatchObject({ op: "add", path: "/document/strategy/oneLiner" });
     const after = applyProposalPatch(s, add.patch);
     expect(after.document.strategy.oneLiner).toMatchObject({
-      value: "Il caffè per chi lavora",
+      value: "Coffee for people who work",
       sourceIds: ["s1"],
       confidence: "high",
       acceptedFromProposalId: "p1",
     });
     const rep = buildProposalPatch(
       after,
-      { path: "/document/strategy/oneLiner", op: "set", value: "Altro" },
+      { path: "/document/strategy/oneLiner", op: "set", value: "Other" },
       { ...meta, proposalId: "p2" },
     );
     expect(rep.patch.map((o) => o.op)).toEqual(["test", "replace"]);
@@ -111,8 +111,8 @@ describe("buildProposalPatch", () => {
     const axis = {
       axis: "formal",
       value: 2,
-      goodExample: "Ciao, ecco come",
-      badExample: "Egregio Signore",
+      goodExample: "Hi, here’s how",
+      badExample: "Dear Sir",
     };
     const a = buildProposalPatch(
       s,
@@ -141,19 +141,19 @@ describe("buildProposalPatch", () => {
         { path: "/document/verbal/toneAxes", op: "append", value: { axis: "formal", value: 2 } },
         meta,
       ),
-    ).toThrow(/Valore non valido/);
+    ).toThrow(/Invalid value/);
   });
 
   it("refuses duplicate words", () => {
     const s = fresh();
-    s.document.verbal.forbiddenWords = ["gratis"];
+    s.document.verbal.forbiddenWords = ["free"];
     expect(() =>
       buildProposalPatch(
         s,
-        { path: "/document/verbal/forbiddenWords", op: "append", value: "Gratis" },
+        { path: "/document/verbal/forbiddenWords", op: "append", value: "Free" },
         meta,
       ),
-    ).toThrow(/già presente/);
+    ).toThrow(/already in/);
   });
 
   it("proposes tokens with provenance in $extensions.forgecy, creating missing groups", () => {
@@ -161,7 +161,7 @@ describe("buildProposalPatch", () => {
     const p = buildProposalPatch(
       s,
       {
-        path: "/tokens/color/reference/blu-rossi",
+        path: "/tokens/color/reference/rossi-blue",
         op: "set",
         value: { $value: hexToDtcg("#0044CC") },
       },
@@ -169,7 +169,7 @@ describe("buildProposalPatch", () => {
     );
     const out = applyProposalPatch(s, p.patch);
     const tok = (out.tokens.color as { reference: Record<string, { $extensions: unknown }> })
-      .reference["blu-rossi"];
+      .reference["rossi-blue"];
     expect(tok?.$extensions).toEqual({
       forgecy: { sourceIds: ["s1"], confidence: "high", acceptedFromProposalId: "p1" },
     });
@@ -190,11 +190,11 @@ describe("buildProposalPatch", () => {
     const s = fresh();
     const p = buildProposalPatch(
       s,
-      { path: "/document/strategy/vision", op: "set", value: "Prima" },
+      { path: "/document/strategy/vision", op: "set", value: "Before" },
       meta,
     );
-    const edited = withEditedValue(p.patch, "Dopo", p.field);
-    expect(proposedValue(edited, p.field)).toBe("Dopo");
+    const edited = withEditedValue(p.patch, "After", p.field);
+    expect(proposedValue(edited, p.field)).toBe("After");
     expect(currentValue(s, p.patch, p.field)).toBeUndefined();
   });
 });
@@ -205,7 +205,7 @@ describe("conflicts", () => {
     const a = buildProposalPatch(
       s,
       {
-        path: "/tokens/color/reference/primario",
+        path: "/tokens/color/reference/primary",
         op: "set",
         value: { $value: hexToDtcg("#0044CC") },
       },
@@ -214,7 +214,7 @@ describe("conflicts", () => {
     const b = buildProposalPatch(
       s,
       {
-        path: "/tokens/color/reference/primario",
+        path: "/tokens/color/reference/primary",
         op: "set",
         value: { $value: hexToDtcg("#1155DD") },
       },
@@ -232,7 +232,7 @@ describe("conflicts", () => {
     ]);
     expect(groups).toEqual([
       {
-        fieldPath: "/tokens/color/reference/primario",
+        fieldPath: "/tokens/color/reference/primary",
         proposalIds: ["site", "book"],
         suggestedId: "book",
       },
@@ -243,14 +243,14 @@ describe("conflicts", () => {
 describe("automatic checks", () => {
   it("flags forbidden words, long one-liners and low contrast", () => {
     const s = fresh();
-    s.document.verbal.forbiddenWords = ["gratis"];
+    s.document.verbal.forbiddenWords = ["free"];
     const f = matchField("/document/strategy/oneLiner")!.field;
     const long =
-      "una due tre quattro cinque sei sette otto nove dieci undici dodici tredici quattordici quindici sedici diciassette diciotto diciannove venti ventuno gratis";
+      "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone free";
     const msgs = checksFor(s, f, long).map((c) => c.message);
-    expect(msgs).toContain('Parola vietata: "gratis"');
-    expect(msgs.some((m) => m.startsWith("One-liner di 22 parole"))).toBe(true);
-    const tf = matchField("/tokens/color/reference/giallo")!.field;
+    expect(msgs).toContain('Forbidden word: "free"');
+    expect(msgs.some((m) => m.startsWith("One-liner of 22 words"))).toBe(true);
+    const tf = matchField("/tokens/color/reference/yellow")!.field;
     expect(checksFor(s, tf, { $value: hexToDtcg("#FFE600") })[0]).toMatchObject({
       level: "warning",
     });

@@ -67,7 +67,7 @@ export async function runCrawl(
 ) {
   const { db } = deps;
   const scan = await db.query.siteScans.findFirst({ where: eq(siteScans.id, payload.scanId) });
-  if (!scan?.auditId) throw new UnrecoverableError("Lettura non trovata");
+  if (!scan?.auditId) throw new UnrecoverableError("Scan not found");
   if (scan.jobId && scan.jobId !== ctx.jobId) return { skipped: "another job owns this scan" };
   const { audit } = await loadAudit(db, scan.auditId);
   if (audit.status === "archived") return { skipped: "audit archived" };
@@ -153,7 +153,7 @@ export async function runCrawl(
       ? err instanceof Error
         ? err.message
         : String(err)
-      : "Errore interno durante la lettura del sito. Il dettaglio è nei log del worker.";
+      : "Internal error while reading the website. The details are in the worker logs.";
     steps = steps.map((s) =>
       s.status === "pending" || s.status === "running" ? { ...s, status: "skipped" } : s,
     );
@@ -188,7 +188,7 @@ export async function runCrawl(
   await setStep({
     step: "checks",
     status: "completed",
-    detail: `${checks.filter((c) => !c.ok).length} controlli da migliorare su ${checks.length}`,
+    detail: `${checks.filter((c) => !c.ok).length} of ${checks.length} checks to improve`,
   });
   const status =
     result.pages.length === 0
@@ -198,9 +198,9 @@ export async function runCrawl(
         : "collected";
   const stopped =
     result.stoppedEarly === "timeout"
-      ? "Tempo massimo raggiunto: tenute le pagine già lette"
+      ? "Time limit reached: pages already read were kept"
       : result.stoppedEarly === "cancelled"
-        ? "Lettura interrotta: tenute le pagine già lette"
+        ? "Scan stopped: pages already read were kept"
         : null;
   await db
     .update(siteScans)
@@ -231,7 +231,7 @@ async function afterScan(deps: AuditHandlerDeps, scan: ScanRow, pages: number) {
       .update(auditChannelStates)
       .set({
         status: scan.status === "failed" ? "failed" : "collected",
-        unavailableReason: scan.status === "failed" ? (scan.error ?? "Sito non leggibile") : null,
+        unavailableReason: scan.status === "failed" ? (scan.error ?? "Website not readable") : null,
       })
       .where(
         and(eq(auditChannelStates.auditId, audit.id), eq(auditChannelStates.channel, "website")),
@@ -243,13 +243,11 @@ async function afterScan(deps: AuditHandlerDeps, scan: ScanRow, pages: number) {
         .where(eq(audits.id, audit.id));
     const analysis: ScanStep =
       ai && pages
-        ? { key: "analysis", status: "pending", detail: "Osservazioni in preparazione" }
+        ? { key: "analysis", status: "pending", detail: "Observations in progress" }
         : {
             key: "analysis",
             status: "skipped",
-            detail: ai
-              ? "Nessuna pagina letta"
-              : "AI non consentita dalla policy: osservazioni a mano",
+            detail: ai ? "No pages read" : "AI not allowed by the policy: observations by hand",
           };
     const fresh = await db.query.siteScans.findFirst({ where: eq(siteScans.id, scan.id) });
     await db
@@ -288,7 +286,7 @@ async function afterScan(deps: AuditHandlerDeps, scan: ScanRow, pages: number) {
     .set({
       sourceStatus:
         scan.status === "failed" ? "failed" : scan.status === "partial" ? "partial" : "collected",
-      sourceError: scan.status === "failed" ? (scan.error ?? "Sito non leggibile") : null,
+      sourceError: scan.status === "failed" ? (scan.error ?? "Website not readable") : null,
     })
     .where(eq(auditCompetitors.id, scan.competitorId));
   const open = await db

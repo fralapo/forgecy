@@ -27,8 +27,8 @@ describe("checkContrast", () => {
     expect(checkContrast("#245BFF", "#F6F4EF")).toBe(checkContrast("#F6F4EF", "#245BFF"));
   });
 
-  it("formats ratios in Italian", () => {
-    expect(formatRatio(5.234)).toBe("5,2:1");
+  it("formats ratios for display", () => {
+    expect(formatRatio(5.234)).toBe("5.2:1");
   });
 });
 

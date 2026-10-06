@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/session";
 import { contentPath } from "./_lib/paths";
 
-export const metadata = { title: "Contenuti" };
+export const metadata = { title: "Content" };
 
 export default async function ContentPickerPage() {
   await requireUser();
@@ -28,13 +28,13 @@ export default async function ContentPickerPage() {
   return (
     <>
       <PageHeader
-        title="Contenuti"
-        description="Strategia editoriale, piano a 30 giorni e caroselli di ogni cliente."
+        title="Content"
+        description="Editorial strategy, 30-day plan and carousels for every client."
       />
       {rows.length === 0 ? (
         <Card className="p-6">
           <p className="text-body-md text-fg-muted">
-            Nessun cliente. <Link href="/clients">Aggiungi il primo cliente</Link>.
+            No clients yet. <Link href="/clients">Add the first client</Link>.
           </p>
         </Card>
       ) : (
@@ -47,9 +47,9 @@ export default async function ContentPickerPage() {
               >
                 <span className="text-heading-sm">{c.name}</span>
                 <span className="flex flex-wrap gap-2">
-                  {c.inReview ? <Badge variant="warning">{c.inReview} in revisione</Badge> : null}
-                  {c.drafts ? <Badge variant="info">{c.drafts} in lavorazione</Badge> : null}
-                  {!c.inReview && !c.drafts ? <Badge>Nessun carosello aperto</Badge> : null}
+                  {c.inReview ? <Badge variant="warning">{c.inReview} in review</Badge> : null}
+                  {c.drafts ? <Badge variant="info">{c.drafts} in progress</Badge> : null}
+                  {!c.inReview && !c.drafts ? <Badge>No open carousels</Badge> : null}
                 </span>
               </Link>
             </li>

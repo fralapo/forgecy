@@ -6,12 +6,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const sections = [
-  { path: "", label: "Panoramica" },
-  { path: "/website", label: "Sito" },
+  { path: "", label: "Overview" },
+  { path: "/website", label: "Website" },
   { path: "/social", label: "Social" },
-  { path: "/competitors", label: "Competitor" },
-  { path: "/comparison", label: "Confronto" },
-  { path: "/diagnosis", label: "Diagnosi" },
+  { path: "/competitors", label: "Competitors" },
+  { path: "/comparison", label: "Comparison" },
+  { path: "/diagnosis", label: "Diagnosis" },
   { path: "/report", label: "Report" },
 ] as const;
 
@@ -19,7 +19,7 @@ export function SectionTabs({ slug }: { slug: string }) {
   const pathname = usePathname();
   const base = `/audit/${slug}`;
   return (
-    <nav aria-label="Sezioni dell'audit" className="mb-6 border-b border-subtle">
+    <nav aria-label="Audit sections" className="mb-6 border-b border-subtle">
       <ul className="-mb-px flex flex-wrap gap-1">
         {sections.map((s) => {
           const href = `${base}${s.path}`;

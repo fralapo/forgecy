@@ -63,7 +63,7 @@ export const DEFAULTS = {
 const hash = (...parts: unknown[]) =>
   createHash("sha256").update(JSON.stringify(parts)).digest("hex").slice(0, 16);
 
-/** `==parola==` marks a highlight in the renderer; it is not part of the text. */
+/** `==word==` marks a highlight in the renderer; it is not part of the text. */
 export const plainText = (s: string) => s.replace(/==/g, "");
 
 export function countWords(s: string): number {
@@ -164,7 +164,7 @@ function checkLengths(ctx: Ctx) {
             origin: "json",
             slide: i,
             slot: slot.name,
-            message: `${slotLabel(slot)}: ${n}/${slot.maxChars} caratteri. Accorcia a ${slot.maxChars}.`,
+            message: `${slotLabel(slot)}: ${n}/${slot.maxChars} characters. Shorten to ${slot.maxChars}.`,
             measured: n,
             threshold: slot.maxChars,
             blockHash: h,
@@ -179,7 +179,7 @@ function checkLengths(ctx: Ctx) {
           origin: "json",
           slide: i,
           slot: slot.name,
-          message: `${slotLabel(slot)}: ${slot.items.length} voci su ${slot.maxItems}.`,
+          message: `${slotLabel(slot)}: ${slot.items.length} items out of ${slot.maxItems}.`,
           measured: slot.items.length,
           threshold: slot.maxItems,
           blockHash: h,
@@ -197,7 +197,7 @@ function checkLengths(ctx: Ctx) {
               slide: i,
               slot: slot.name,
               discriminator: String(j),
-              message: `${slotLabel(slot)}, voce ${j + 1}: ${n}/${max} caratteri. Accorcia a ${max}.`,
+              message: `${slotLabel(slot)}, item ${j + 1}: ${n}/${max} characters. Shorten to ${max}.`,
               measured: n,
               threshold: max,
               blockHash: h,
@@ -223,7 +223,7 @@ function checkDensity(ctx: Ctx) {
     fmt && fmt.maxWordsPerSlide === limit
       ? {
           path: `/document/content/formats/${ctx.doc.content.formats.indexOf(fmt)}/maxWordsPerSlide`,
-          text: `Formato «${fmt.name}»: massimo ${limit} parole per slide.`,
+          text: `Format “${fmt.name}”: at most ${limit} words per slide.`,
         }
       : undefined;
   ctx.content.slides.forEach((slide, i) => {
@@ -238,11 +238,11 @@ function checkDensity(ctx: Ctx) {
         slot: null,
         message:
           words > limit
-            ? `${slideLabel(i)}: ${words} parole, oltre il limite di ${limit}.`
-            : `${slideLabel(i)}: ${words} parole, vicino al limite di ${limit}.`,
+            ? `${slideLabel(i)}: ${words} words, over the limit of ${limit}.`
+            : `${slideLabel(i)}: ${words} words, close to the limit of ${limit}.`,
         measured: words,
         threshold: limit,
-        suggestion: "Sposta una parte del testo in un'altra slide o nella caption.",
+        suggestion: "Move part of the text to another slide or to the caption.",
         rule,
         blockHash: hash(slide.slots.map(blockText)),
       });
@@ -267,11 +267,11 @@ function checkHook(ctx: Ctx) {
       origin: "json",
       slide: 0,
       slot: title.name,
-      message: `Hook della prima slide: ${words} parole, consigliate al massimo ${max}.`,
+      message: `First slide hook: ${words} words, at most ${max} recommended.`,
       measured: words,
       threshold: max,
       suggestion:
-        "Tieni nella copertina solo la promessa o la domanda; il resto va nelle slide successive.",
+        "Keep only the promise or the question on the cover; the rest goes on the following slides.",
       blockHash: hash(title),
     });
 }
@@ -292,8 +292,8 @@ function checkCta(ctx: Ctx) {
     origin: "json",
     slide: i,
     slot: null,
-    message: "L'ultima slide non ha una CTA.",
-    suggestion: "Usa un layout di chiusura con CTA o compila lo slot CTA.",
+    message: "The last slide has no CTA.",
+    suggestion: "Use a closing layout with a CTA or fill in the CTA slot.",
     rule: ctaStyle
       ? { path: "/document/verbal/writingRules/value/ctaStyle", text: ctaStyle }
       : undefined,
@@ -312,7 +312,7 @@ function checkStructure(ctx: Ctx) {
       origin: "json",
       slide: null,
       slot: null,
-      message: `Il formato «${fmt.name}» prevede ${fmt.steps.length} passi (${fmt.steps.map((s) => s.step).join(", ")}); il carosello ha ${slides.length} slide.`,
+      message: `The “${fmt.name}” format has ${fmt.steps.length} steps (${fmt.steps.map((s) => s.step).join(", ")}); the carousel has ${slides.length} slides.`,
       measured: slides.length,
       threshold: fmt.steps.length,
       rule: {
@@ -331,7 +331,7 @@ function checkStructure(ctx: Ctx) {
       slide: 0,
       slot: null,
       discriminator: "cover",
-      message: "La prima slide non usa un layout di apertura.",
+      message: "The first slide does not use an opening layout.",
       blockHash: hash(first.layout, first.role),
     });
 }
@@ -352,10 +352,10 @@ function checkForbiddenWords(ctx: Ctx, blocks: Block[]) {
           slide: b.slide,
           slot: b.slot,
           discriminator: word.toLowerCase(),
-          message: `${slideLabel(b.slide)} · ${b.label}: «${hits[0]}» è tra le parole vietate della Brand Identity.`,
+          message: `${slideLabel(b.slide)} · ${b.label}: “${hits[0]}” is among the forbidden words of the Brand Identity.`,
           measured: hits[0],
           suggestion: preferred.length
-            ? `Parole preferite: ${preferred.slice(0, 8).join(", ")}.`
+            ? `Preferred words: ${preferred.slice(0, 8).join(", ")}.`
             : undefined,
           rule: { path: `/document/verbal/forbiddenWords/${wi}`, text: word },
           blockHash: b.hash,
@@ -363,6 +363,7 @@ function checkForbiddenWords(ctx: Ctx, blocks: Block[]) {
     }
 }
 
+// Italian locale on purpose: it capitalizes client content, which is mostly Italian.
 const capitalize = (s: string) => s.charAt(0).toLocaleUpperCase("it") + s.slice(1);
 
 function checkSpellings(ctx: Ctx, blocks: Block[]) {
@@ -382,9 +383,9 @@ function checkSpellings(ctx: Ctx, blocks: Block[]) {
           slide: b.slide,
           slot: b.slot,
           discriminator: `${term}|${found}`,
-          message: `${slideLabel(b.slide)} · ${b.label}: scrivi «${term}», non «${found}».`,
+          message: `${slideLabel(b.slide)} · ${b.label}: write “${term}”, not “${found}”.`,
           measured: found,
-          suggestion: `Sostituisci con «${term}».`,
+          suggestion: `Replace with “${term}”.`,
           rule: { path: `/document/verbal/spellings/${si}`, text: term },
           blockHash: b.hash,
         });
@@ -407,7 +408,7 @@ function checkAvoidTopics(ctx: Ctx, blocks: Block[]) {
           slide: b.slide,
           slot: b.slot,
           discriminator: topic.value.toLowerCase(),
-          message: `${slideLabel(b.slide)} · ${b.label}: cita «${hits[0]}», un tema da evitare per questo brand.`,
+          message: `${slideLabel(b.slide)} · ${b.label}: mentions “${hits[0]}”, a topic to avoid for this brand.`,
           measured: hits[0],
           rule: { path: `/document/strategy/avoidTopics/${ti}`, text: topic.value },
           blockHash: b.hash,
@@ -436,12 +437,12 @@ function checkWritingRules(ctx: Ctx, blocks: Block[]) {
           origin: "json",
           slide: b.slide,
           slot: b.slot,
-          message: `${where}: una frase ha ${longest} parole, il brand ne vuole al massimo ${wr.maxSentenceWords}.`,
+          message: `${where}: a sentence has ${longest} words, the brand wants at most ${wr.maxSentenceWords}.`,
           measured: longest,
           threshold: wr.maxSentenceWords,
           rule: {
             path: `${rulePath}/maxSentenceWords`,
-            text: `Frasi di massimo ${wr.maxSentenceWords} parole.`,
+            text: `Sentences of at most ${wr.maxSentenceWords} words.`,
           },
           blockHash: b.hash,
         });
@@ -455,12 +456,12 @@ function checkWritingRules(ctx: Ctx, blocks: Block[]) {
         origin: "json",
         slide: b.slide,
         slot: b.slot,
-        message: `${where}: ${emoji} emoji; ${wr.emoji === "no" ? "il brand non le usa" : "il brand le usa con misura"}.`,
+        message: `${where}: ${emoji} emoji; ${wr.emoji === "no" ? "the brand does not use them" : "the brand uses them sparingly"}.`,
         measured: emoji,
         threshold: wr.emoji === "no" ? 0 : 1,
         rule: {
           path: `${rulePath}/emoji`,
-          text: wr.emoji === "no" ? "Niente emoji." : "Emoji con misura.",
+          text: wr.emoji === "no" ? "No emoji." : "Emoji used sparingly.",
         },
         blockHash: b.hash,
       });
@@ -473,15 +474,15 @@ function checkWritingRules(ctx: Ctx, blocks: Block[]) {
         origin: "json",
         slide: b.slide,
         slot: b.slot,
-        message: `${where}: ${bangs} punti esclamativi; ${wr.exclamations === "no" ? "il brand non li usa" : "il brand li usa con misura"}.`,
+        message: `${where}: ${bangs} exclamation marks; ${wr.exclamations === "no" ? "the brand does not use them" : "the brand uses them sparingly"}.`,
         measured: bangs,
         threshold: wr.exclamations === "no" ? 0 : 1,
         rule: {
           path: `${rulePath}/exclamations`,
           text:
             wr.exclamations === "no"
-              ? "Niente punti esclamativi."
-              : "Punti esclamativi con misura.",
+              ? "No exclamation marks."
+              : "Exclamation marks used sparingly.",
         },
         blockHash: b.hash,
       });
@@ -501,10 +502,10 @@ function checkWritingRules(ctx: Ctx, blocks: Block[]) {
         origin: "json",
         slide: null,
         slot: "caption",
-        message: `Caption: ${tags.size} hashtag, il brand ne usa al massimo ${wr.maxHashtags}.`,
+        message: `Caption: ${tags.size} hashtags, the brand uses at most ${wr.maxHashtags}.`,
         measured: tags.size,
         threshold: wr.maxHashtags,
-        rule: { path: `${rulePath}/maxHashtags`, text: `Massimo ${wr.maxHashtags} hashtag.` },
+        rule: { path: `${rulePath}/maxHashtags`, text: `At most ${wr.maxHashtags} hashtags.` },
         blockHash: hash(ctx.content.caption, ctx.content.hashtags),
       });
   }
@@ -516,27 +517,28 @@ function checkWritingRules(ctx: Ctx, blocks: Block[]) {
  * Wording that makes a claim someone may have to prove (superlatives, guarantees,
  * certifications, health and environmental claims). A match is a warning unless the
  * sentence repeats an approved message of the brand that carries its proof.
+ * The patterns match Italian wording on purpose: client content is mostly Italian.
  */
 export const SENSITIVE_CLAIMS: ReadonlyArray<{ pattern: RegExp; label: string }> = [
-  { pattern: /(?:\b(?:il|la|i|le)\s+|\bl')miglior[ei]?\b/giu, label: "superlativo" },
-  { pattern: /\bnumero\s*(?:1|uno)\b|\bn[.°º]?\s?1\b/giu, label: "primato" },
-  { pattern: /\bleader\b/giu, label: "primato" },
-  { pattern: /\bpiù\s+vendut[oaie]\b|\bbest\s?seller\b/giu, label: "primato" },
-  { pattern: /\bl'unic[oa]\b/giu, label: "esclusività" },
-  { pattern: /\bgarantit[oaie]\b|\bgaranzia\b/giu, label: "garanzia" },
-  { pattern: /\b100\s?%/gu, label: "assoluto" },
-  { pattern: /\b(?:senza|zero)\s+rischi\b/giu, label: "assoluto" },
-  { pattern: /\bcertificat[oaie]\b|\bcertificazion[ei]\b/giu, label: "certificazione" },
-  { pattern: /\bgratis\b|\bgratuit[oaie]\b/giu, label: "gratuità" },
+  { pattern: /(?:\b(?:il|la|i|le)\s+|\bl')miglior[ei]?\b/giu, label: "superlative" },
+  { pattern: /\bnumero\s*(?:1|uno)\b|\bn[.°º]?\s?1\b/giu, label: "ranking" },
+  { pattern: /\bleader\b/giu, label: "ranking" },
+  { pattern: /\bpiù\s+vendut[oaie]\b|\bbest\s?seller\b/giu, label: "ranking" },
+  { pattern: /\bl'unic[oa]\b/giu, label: "exclusivity" },
+  { pattern: /\bgarantit[oaie]\b|\bgaranzia\b/giu, label: "guarantee" },
+  { pattern: /\b100\s?%/gu, label: "absolute" },
+  { pattern: /\b(?:senza|zero)\s+rischi\b/giu, label: "absolute" },
+  { pattern: /\bcertificat[oaie]\b|\bcertificazion[ei]\b/giu, label: "certification" },
+  { pattern: /\bgratis\b|\bgratuit[oaie]\b/giu, label: "free" },
   {
     pattern:
       /\bclinicamente\b|\bscientificamente\s+provat[oaie]\b|\bdermatologicamente\b|\bguarisc[eo]\b/giu,
-    label: "salute",
+    label: "health",
   },
   {
     pattern:
       /\becologic[oaie]\b|\bsostenibil[ei]\b|\beco-?friendly\b|\bimpatto\s+zero\b|\bcarbon\s+neutral\b|\bbiodegradabil[ei]\b/giu,
-    label: "ambientale",
+    label: "environmental",
   },
 ];
 
@@ -560,12 +562,12 @@ function checkClaims(ctx: Ctx, blocks: Block[]) {
           slide: b.slide,
           slot: b.slot,
           discriminator: found.toLowerCase(),
-          message: `${slideLabel(b.slide)} · ${b.label}: «${found}» è un claim (${label}) senza una prova approvata.`,
+          message: `${slideLabel(b.slide)} · ${b.label}: “${found}” is a claim (${label}) without approved proof.`,
           measured: found,
-          suggestion: "Usa un claim approvato con la sua prova, o riformula senza assoluti.",
+          suggestion: "Use an approved claim with its proof, or rephrase without absolutes.",
           rule: {
             path: "/document/strategy/messages",
-            text: "Ogni claim porta la sua prova o la sua fonte.",
+            text: "Every claim carries its proof or its source.",
           },
           blockHash: b.hash,
         });
@@ -573,6 +575,7 @@ function checkClaims(ctx: Ctx, blocks: Block[]) {
   }
 }
 
+// Italian units and words on purpose: product facts are read from Italian client content.
 const FACT_RE =
   /(\d+(?:[.,]\d+)*)\s?(%|€|euro|eur|anni|anno|mesi|mese|giorni|ore|kwh|kw|w|kg|g|cm|mm|m²|mq|m|litri|l|db|°c|gradi|bar|v|mah|gb|tb|pollici)(?![\p{L}\p{N}])/giu;
 
@@ -607,7 +610,7 @@ export function extractFacts(text: string): Array<{ raw: string; value: number; 
 function checkProductFacts(ctx: Ctx, blocks: Block[]) {
   const product = ctx.content.product;
   if (!product) {
-    ctx.notRun.push({ check: "product_fact", reason: "Nessun prodotto collegato." });
+    ctx.notRun.push({ check: "product_fact", reason: "No linked product." });
     return;
   }
   const known = extractFacts([product.name, ...product.facts].join("\n"));
@@ -630,20 +633,20 @@ function checkProductFacts(ctx: Ctx, blocks: Block[]) {
           ctx.out.add({
             ...base,
             check: "product_fact",
-            message: `${where}: il prezzo «${f.raw}» non è nella scheda di «${product.name}».`,
+            message: `${where}: the price “${f.raw}” is not in the product sheet of “${product.name}”.`,
           });
         else if (!ctx.content.brief?.asksPrice)
           ctx.out.add({
             ...base,
             check: "price_not_requested",
-            message: `${where}: il brief non chiede il prezzo.`,
-            suggestion: "Togli il prezzo o chiedilo nel brief.",
+            message: `${where}: the brief does not ask for the price.`,
+            suggestion: "Remove the price or ask for it in the brief.",
           });
         else if (!price.some((p) => p.value === f.value))
           ctx.out.add({
             ...base,
             check: "product_fact",
-            message: `${where}: «${f.raw}» non corrisponde al prezzo della scheda (${product.price}).`,
+            message: `${where}: “${f.raw}” does not match the price in the product sheet (${product.price}).`,
             threshold: product.price,
           });
         continue;
@@ -652,8 +655,8 @@ function checkProductFacts(ctx: Ctx, blocks: Block[]) {
         ctx.out.add({
           ...base,
           check: "product_fact",
-          message: `${where}: «${f.raw}» non è nella scheda di «${product.name}».`,
-          suggestion: "Usa solo i dati del prodotto approvato.",
+          message: `${where}: “${f.raw}” is not in the product sheet of “${product.name}”.`,
+          suggestion: "Use only the data of the approved product.",
         });
     }
 }
@@ -731,7 +734,7 @@ function checkColors(ctx: Ctx, pal: Palette) {
           slide: i,
           slot: where,
           discriminator: use.token,
-          message: `${slideLabel(i)} · ${where}: il ruolo colore «${use.token}» non esiste nella Brand Identity.`,
+          message: `${slideLabel(i)} · ${where}: the color role “${use.token}” does not exist in the Brand Identity.`,
           measured: use.token,
           blockHash: h,
         });
@@ -750,15 +753,15 @@ function checkColors(ctx: Ctx, pal: Palette) {
       slide: i,
       slot: where,
       discriminator: hex,
-      message: `${slideLabel(i)} · ${where}: il colore ${hex} non appartiene alla palette del brand.`,
+      message: `${slideLabel(i)} · ${where}: the color ${hex} is not in the brand palette.`,
       measured: hex,
-      suggestion: nearest ? `Usa il ruolo «${nearest.label}» (${nearest.hex}).` : undefined,
-      rule: { path: "/tokens/color", text: "Colori solo dai ruoli della Brand Identity." },
+      suggestion: nearest ? `Use the “${nearest.label}” role (${nearest.hex}).` : undefined,
+      rule: { path: "/tokens/color", text: "Colors only from the Brand Identity roles." },
       blockHash: h,
     });
   };
   ctx.content.slides.forEach((slide, i) => {
-    visit(i, "Sfondo", slide.background, hash(slide.background));
+    visit(i, "Background", slide.background, hash(slide.background));
     for (const s of slide.slots) {
       if (s.kind === "image") continue;
       visit(i, slotLabel(s), s.color, hash(s));
@@ -784,12 +787,12 @@ function checkFonts(ctx: Ctx, pal: Palette) {
         slide: i,
         slot: s.name,
         discriminator: first,
-        message: `${slideLabel(i)} · ${slotLabel(s)}: il font «${shown}» non è nella tipografia del brand.`,
+        message: `${slideLabel(i)} · ${slotLabel(s)}: the font “${shown}” is not in the brand typography.`,
         measured: s.fontFamily,
-        suggestion: brandFonts.length ? `Font del brand: ${brandFonts.join(", ")}.` : undefined,
+        suggestion: brandFonts.length ? `Brand fonts: ${brandFonts.join(", ")}.` : undefined,
         rule: {
           path: "/document/visual/typography",
-          text: "Font solo dalla scala tipografica della Brand Identity.",
+          text: "Fonts only from the Brand Identity type scale.",
         },
         blockHash: hash(s),
       });
@@ -819,7 +822,7 @@ function betterTextRole(pal: Palette, bgHex: string, min: number) {
 
 const contrastRule = {
   path: "/tokens/color/semantic",
-  text: `Testo ${formatRatio(WCAG.text)}, testo grande ${formatRatio(WCAG.largeText)}.`,
+  text: `Text ${formatRatio(WCAG.text)}, large text ${formatRatio(WCAG.largeText)}.`,
 };
 
 function checkTokenContrast(ctx: Ctx, pal: Palette) {
@@ -846,10 +849,10 @@ function checkTokenContrast(ctx: Ctx, pal: Palette) {
         origin: "json",
         slide: i,
         slot: s.name,
-        message: `${slideLabel(i)} · ${slotLabel(s)}: contrasto ${formatRatio(ratio)} tra ${fg} e ${bg}; minimo ${formatRatio(min)}.`,
+        message: `${slideLabel(i)} · ${slotLabel(s)}: contrast ${formatRatio(ratio)} between ${fg} and ${bg}; minimum ${formatRatio(min)}.`,
         measured: Number(ratio.toFixed(2)),
         threshold: min,
-        suggestion: better ? `Usa il ruolo «${better.label}».` : undefined,
+        suggestion: better ? `Use the “${better.label}” role.` : undefined,
         rule: contrastRule,
         blockHash: hash(s, slide.background),
       });
@@ -869,10 +872,10 @@ function checkThumbnail(ctx: Ctx) {
       origin: "json",
       slide: 0,
       slot: title.name,
-      message: `Nella miniatura del feed il titolo è alto ${px.toFixed(1).replace(".", ",")} px; servono almeno ${ctx.options.thumbnailMinPx} px.`,
+      message: `In the feed thumbnail the title is ${px.toFixed(1)} px tall; at least ${ctx.options.thumbnailMinPx} px are needed.`,
       measured: Number(px.toFixed(1)),
       threshold: ctx.options.thumbnailMinPx,
-      suggestion: "Accorcia il titolo della copertina e usa un corpo più grande.",
+      suggestion: "Shorten the cover title and use a larger font size.",
       blockHash: hash(title),
     });
 }
@@ -894,10 +897,10 @@ function lowRes(
     origin,
     slide,
     slot,
-    message: `${slideLabel(slide)} · ${label}: immagine ${size.w}×${size.h} px per uno slot di ${Math.round(size.slotWidth)} px.`,
+    message: `${slideLabel(slide)} · ${label}: ${size.w}×${size.h} px image for a ${Math.round(size.slotWidth)} px slot.`,
     measured: `${size.w}×${size.h}`,
     threshold: Math.round(size.slotWidth),
-    suggestion: "Usa un'immagine più grande o uno slot più piccolo.",
+    suggestion: "Use a larger image or a smaller slot.",
     blockHash,
   };
 }
@@ -922,11 +925,9 @@ function checkImages(ctx: Ctx) {
           slide: i,
           slot: s.name,
           message: rejected
-            ? `${slideLabel(i)} · ${slotLabel(s)}: l'immagine AI è stata rifiutata.`
-            : `${slideLabel(i)} · ${slotLabel(s)}: immagine AI da approvare.`,
-          suggestion: rejected
-            ? "Scegli un'altra immagine."
-            : "Approva l'immagine o sostituiscila.",
+            ? `${slideLabel(i)} · ${slotLabel(s)}: the AI image was rejected.`
+            : `${slideLabel(i)} · ${slotLabel(s)}: AI image waiting for approval.`,
+          suggestion: rejected ? "Choose another image." : "Approve the image or replace it.",
           blocksApproval: true,
           blockHash: h,
         });
@@ -957,7 +958,7 @@ function checkImages(ctx: Ctx) {
         origin: "json",
         slide: i,
         slot: null,
-        message: `${slideLabel(i)}: affianca un'immagine AI a una foto reale: richiede revisione umana.`,
+        message: `${slideLabel(i)}: puts an AI image next to a real photo: needs human review.`,
         blockHash: hash(images.map((s) => s.asset.id)),
       });
   });
@@ -973,7 +974,7 @@ function intersects(a: RenderSlot["rect"], b: RenderSlot["rect"]) {
 
 function checkRender(ctx: Ctx, pal: Palette) {
   if (!ctx.render) {
-    ctx.notRun.push({ check: "render", reason: "Controlli sul render non eseguiti." });
+    ctx.notRun.push({ check: "render", reason: "Render checks not run." });
     return;
   }
   for (const rs of ctx.render.slides) {
@@ -1007,32 +1008,32 @@ function checkRender(ctx: Ctx, pal: Palette) {
       const s = bySlot.get(m.name);
       if (m.kind === "text") {
         if (m.overflow)
-          add(m, "text_overflow", "error", "nel render il testo esce dal suo riquadro.", {
-            suggestion: "Accorcia il testo o scegli un layout con più spazio.",
+          add(m, "text_overflow", "error", "in the render the text overflows its box.", {
+            suggestion: "Shorten the text or choose a layout with more space.",
           });
-        if (m.outsideSlide) add(m, "outside_slide", "error", "esce dalla slide.");
+        if (m.outsideSlide) add(m, "outside_slide", "error", "goes outside the slide.");
         else if (m.outsideSafe)
           add(
             m,
             "outside_safe_zone",
             s?.decorative ? "warning" : "error",
-            "è fuori dalla safe zone del formato.",
+            "is outside the format safe zone.",
           );
         const maxLines = s?.kind === "text" ? s.maxLines : undefined;
         if (maxLines && m.lines > maxLines)
-          add(m, "too_many_lines", "error", `occupa ${m.lines} righe su ${maxLines}.`, {
+          add(m, "too_many_lines", "error", `takes ${m.lines} lines out of ${maxLines}.`, {
             measured: m.lines,
             threshold: maxLines,
           });
         continue;
       }
       if (!m.naturalWidth) {
-        add(m, "image_missing", "error", "l'immagine non si è caricata.", { category: "images" });
+        add(m, "image_missing", "error", "the image did not load.", { category: "images" });
         continue;
       }
       const asset = s?.kind === "image" ? s.asset : undefined;
       if (asset?.origin === "logo" && (m.outsideSafe || m.outsideSlide))
-        add(m, "outside_safe_zone", "error", "il logo è fuori dalla safe zone del formato.");
+        add(m, "outside_safe_zone", "error", "the logo is outside the format safe zone.");
       if (m.rect.width > 0 && m.rect.height > 0) {
         const ratio = Math.min(m.naturalWidth / m.rect.width, m.naturalHeight / m.rect.height);
         if (ratio < 1)
@@ -1052,7 +1053,7 @@ function checkRender(ctx: Ctx, pal: Palette) {
     for (let a = 0; a < texts.length; a++)
       for (let b = a + 1; b < texts.length; b++)
         if (intersects(texts[a]!.rect, texts[b]!.rect))
-          add(texts[a]!, "overlap", "error", `si sovrappone a «${label(texts[b]!.name)}».`, {
+          add(texts[a]!, "overlap", "error", `overlaps “${label(texts[b]!.name)}”.`, {
             discriminator: texts[b]!.name,
           });
     for (const c of rs.contrast ?? []) {
@@ -1071,12 +1072,12 @@ function checkRender(ctx: Ctx, pal: Palette) {
         origin: "render",
         slide: i,
         slot: c.slot,
-        message: `${slideLabel(i)} · ${slotLabel(s)}: contrasto ${formatRatio(ratio)}${onImage ? " su immagine" : ""}; minimo ${formatRatio(min)}.`,
+        message: `${slideLabel(i)} · ${slotLabel(s)}: contrast ${formatRatio(ratio)}${onImage ? " over an image" : ""}; minimum ${formatRatio(min)}.`,
         measured: Number(ratio.toFixed(2)),
         threshold: min,
         suggestion: better
-          ? `Usa il ruolo «${better.label}»${onImage ? " o aggiungi la velatura del layout" : ""}.`
-          : "Aggiungi la velatura del layout o cambia immagine.",
+          ? `Use the “${better.label}” role${onImage ? " or add the layout overlay" : ""}.`
+          : "Add the layout overlay or change the image.",
         rule: contrastRule,
         blockHash: hash(s, c.fgHex, c.bgHex),
       });
@@ -1140,7 +1141,7 @@ export function checkContent(
   ctx.notRun.push({
     check: "reviewer_judgement",
     reason:
-      "Hook poco specifico, tono, temi da evitare come argomento e fatti di prodotto senza numeri richiedono l'agente Reviewer.",
+      "Vague hook, tone, topics to avoid as a theme and product facts without numbers need the Reviewer agent.",
   });
 
   const order = (s: number | null) => (s === null ? Number.MAX_SAFE_INTEGER : s);

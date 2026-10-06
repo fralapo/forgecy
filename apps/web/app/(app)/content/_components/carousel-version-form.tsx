@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { saveVersionAction } from "../actions";
 
-/** «Salva versione»: snapshot of the current draft with an optional note. */
+/** “Save version”: snapshot of the current draft with an optional note. */
 export function CarouselVersionForm({
   slug,
   clientId,
@@ -39,23 +39,23 @@ export function CarouselVersionForm({
           });
           if (!r.ok) return setMessage({ error: true, text: r.error });
           setNote("");
-          setMessage({ error: false, text: `Salvata la versione ${r.number}` });
+          setMessage({ error: false, text: `Saved version ${r.number}` });
           router.refresh();
         });
       }}
     >
-      <Label htmlFor="cv-note">Nota (facoltativa)</Label>
+      <Label htmlFor="cv-note">Note (optional)</Label>
       <Input
         id="cv-note"
         maxLength={300}
         value={note}
         disabled={disabled || pending}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="Es. prima della revisione con il cliente"
+        placeholder="E.g. before the review with the client"
       />
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={disabled || pending}>
-          Salva versione
+          Save version
         </Button>
         {message ? (
           <span

@@ -117,7 +117,7 @@ export async function runImportPhase(
   ctx: PipelineContext = {},
 ) {
   const [imp] = await deps.db.select().from(productImports).where(eq(productImports.id, importId));
-  if (!imp) throw new ForgecyError("not_found", "Import non trovato");
+  if (!imp) throw new ForgecyError("not_found", "Import not found");
   if (imp.status !== "analyzing") return { skipped: true, status: imp.status };
   const client = await loadCatalogClient(deps.db, imp.clientId);
   const options = importOptions(imp);
@@ -133,7 +133,7 @@ export async function runImportPhase(
       ai.reason ??
       (deps.ai
         ? undefined
-        : "Nessun provider AI configurato: si usano mappatura manuale, abbinamento per nome file e SKU e PDF come fonte."),
+        : "No AI provider configured: using manual mapping, matching by file name and SKU, and PDFs as sources."),
     createdBy: imp.createdBy,
     warnings: [],
     costMicroUsd: 0,
@@ -203,10 +203,10 @@ async function callAi<T>(
             : "PROVIDER-UNAVAILABLE";
       const message =
         code === "POLICY-BLOCKED"
-          ? `La policy di ${run.client.name} non consente l'analisi AI di questi file.`
+          ? `${run.client.name}'s policy does not allow AI analysis of these files.`
           : code === "BUDGET-EXCEEDED"
-            ? `Budget AI di ${run.client.name} esaurito: il resto dell'import prosegue senza analisi AI.`
-            : "Il provider AI non risponde. Le righe dei fogli già lette sono salve; riprova l'analisi di PDF e immagini.";
+            ? `${run.client.name}'s AI budget is used up: the rest of the import continues without AI analysis.`
+            : "The AI provider is not responding. Sheet rows already read are saved; retry the analysis of PDFs and images.";
       run.warnings.push({ code, message, ...(req.fileId ? { fileId: req.fileId } : {}) });
       // After a policy or budget block, stop calling: every next call would fail the same way.
       if (code !== "PROVIDER-UNAVAILABLE") run.aiAllowed = false;
@@ -295,7 +295,7 @@ async function expandArchive(run: Run, archive: ImportFileRow) {
         const needsInspect = sniff.kind !== "image";
         const inspection = needsInspect
           ? await inspectFile(sniff.format, name, { data })
-          : { valid: true, meta: {} as FileMeta, summary: "Valido" };
+          : { valid: true, meta: {} as FileMeta, summary: "Valid" };
         const { key, sha256 } = await storeBuffer(storage, {
           clientId: run.client.id,
           data,
@@ -409,7 +409,7 @@ async function extract(run: Run) {
     if (!run.aiAllowed) {
       run.warnings.push({
         code: "POLICY-BLOCKED",
-        message: run.aiReason ?? "Analisi AI non disponibile: il PDF resta come fonte.",
+        message: run.aiReason ?? "AI analysis not available: the PDF stays as a source.",
         fileId: f.id,
       });
       continue;
@@ -421,7 +421,7 @@ async function extract(run: Run) {
       if (pdf.textless) {
         run.warnings.push({
           code: "IMPORT-PDF-UNREADABLE",
-          message: `"${f.name}" è una scansione senza testo leggibile: resta come fonte per l'inserimento manuale.`,
+          message: `"${f.name}" is a scan without readable text: it stays as a source for manual entry.`,
           fileId: f.id,
         });
         continue;
@@ -457,7 +457,7 @@ async function extract(run: Run) {
       }
       for (const s of res.skippedPages)
         discarded.push({
-          reason: `Pagina ${s.page}: ${s.reason.slice(0, 160)}`,
+          reason: `Page ${s.page}: ${s.reason.slice(0, 160)}`,
           origin: { kind: "pdf", fileId: f.id, fileName: f.name, page: s.page },
           draft: {},
         });
@@ -526,7 +526,7 @@ async function extract(run: Run) {
   const assignedImages = new Set<string>();
   for (const c of candidates) {
     if (!c.draft.name) {
-      discarded.push({ reason: "Prodotto senza nome", origin: c.origin, draft: c.draft });
+      discarded.push({ reason: "Product without a name", origin: c.origin, draft: c.draft });
       continue;
     }
     const fieldMeta = buildFieldMeta(c, run);
@@ -572,8 +572,8 @@ async function extract(run: Run) {
         matchProductId: match?.id ?? null,
         matchReason: match
           ? c.draft.sku && match.sku && normalizeSku(match.sku) === normalizeSku(c.draft.sku)
-            ? `Stesso SKU ${match.sku}`
-            : "Stesso nome e categoria"
+            ? `Same SKU ${match.sku}`
+            : "Same name and category"
           : null,
         matchRevision: match?.revision ?? null,
         conflicts: conflictList as unknown as Record<string, unknown>[],
@@ -593,7 +593,7 @@ async function extract(run: Run) {
       confidence: "low",
     });
 
-  // 5. Images: assigned or "Da assegnare", with Brand Analyst suggestions when allowed.
+  // 5. Images: assigned or "Unassigned", with Brand Analyst suggestions when allowed.
   const imageFiles = all.filter((f) => f.kind === "image");
   if (imageFiles.length) {
     const assigned = imageFiles.filter((f) => assignedImages.has(f.id)).map((f) => f.id);

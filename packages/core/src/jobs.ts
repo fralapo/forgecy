@@ -1,4 +1,4 @@
-/** Persistent job states (spec: "Stato dei job"). The UI reads only these, never file presence. */
+/** Persistent job states (spec: "Job status"). The UI reads only these, never file presence. */
 export const jobStatuses = [
   "queued",
   "running",

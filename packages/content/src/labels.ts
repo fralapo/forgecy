@@ -1,4 +1,4 @@
-/** Italian labels of the content module, shared by pages and server messages. */
+/** Labels of the content module, shared by pages and server messages. */
 import type {
   AssetStatus,
   ContentObjective,
@@ -10,46 +10,46 @@ import type {
 import type { ContentChannel } from "./document";
 
 export const objectiveLabels: Record<ContentObjective, string> = {
-  awareness: "Notorietà",
-  education: "Educazione",
-  conversion: "Conversione",
+  awareness: "Awareness",
+  education: "Education",
+  conversion: "Conversion",
   community: "Community",
 };
 
 export const funnelLabels: Record<FunnelStage, string> = {
-  awareness: "Consapevolezza",
-  consideration: "Considerazione",
-  conversion: "Conversione",
-  loyalty: "Fidelizzazione",
+  awareness: "Awareness",
+  consideration: "Consideration",
+  conversion: "Conversion",
+  loyalty: "Loyalty",
 };
 
 export const strategyStatusLabels: Record<StrategyItemStatus, string> = {
-  proposed: "Proposto",
-  accepted: "Accettato",
-  rejected: "Rifiutato",
-  stale: "Da rivedere",
-  archived: "Archiviato",
+  proposed: "Proposed",
+  accepted: "Accepted",
+  rejected: "Rejected",
+  stale: "Needs review",
+  archived: "Archived",
 };
 
 export const planStatusLabels: Record<ContentPlanStatus, string> = {
-  proposed: "Proposto",
-  active: "In uso",
-  superseded: "Sostituito",
+  proposed: "Proposed",
+  active: "In use",
+  superseded: "Superseded",
 };
 
 export const contentStatusLabels: Record<ContentStatus, string> = {
-  draft: "Bozza",
-  in_review: "In revisione",
-  changes_requested: "Modifiche richieste",
-  approved: "Approvato",
-  exported: "Esportato",
-  archived: "Archiviato",
+  draft: "Draft",
+  in_review: "In review",
+  changes_requested: "Changes requested",
+  approved: "Approved",
+  exported: "Exported",
+  archived: "Archived",
 };
 
 export const assetStatusLabels: Record<AssetStatus, string> = {
-  draft: "Da approvare",
-  approved: "Approvata",
-  rejected: "Rifiutata",
+  draft: "To approve",
+  approved: "Approved",
+  rejected: "Rejected",
 };
 
 export const channelLabels: Record<ContentChannel, string> = {
@@ -57,7 +57,7 @@ export const channelLabels: Record<ContentChannel, string> = {
   linkedin: "LinkedIn",
 };
 
-export const frequencyUnitLabels = { week: "a settimana", month: "al mese" } as const;
+export const frequencyUnitLabels = { week: "per week", month: "per month" } as const;
 
 export const agentLabels = {
   planner: "Planner",
@@ -74,9 +74,9 @@ export const guardBandLabels: Record<
   "critico" | "debole" | "discreto" | "buono" | "eccellente",
   string
 > = {
-  critico: "Critica",
-  debole: "Debole",
-  discreto: "Discreta",
-  buono: "Buona",
-  eccellente: "Eccellente",
+  critico: "Critical",
+  debole: "Weak",
+  discreto: "Fair",
+  buono: "Good",
+  eccellente: "Excellent",
 };

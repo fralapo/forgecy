@@ -58,9 +58,9 @@ function paletteSwatches(): Swatch[] {
 
 /** Allowed use derived from the computed ratio (never from a hardcoded table). */
 function usage(ratio: number) {
-  if (ratio >= WCAG.text) return <Badge variant="success">Testo</Badge>;
-  if (ratio >= WCAG.nonText) return <Badge variant="warning">Testo grande e controlli</Badge>;
-  return <Badge variant="neutral">Solo decorativo</Badge>;
+  if (ratio >= WCAG.text) return <Badge variant="success">Text</Badge>;
+  if (ratio >= WCAG.nonText) return <Badge variant="warning">Large text and controls</Badge>;
+  return <Badge variant="neutral">Decorative only</Badge>;
 }
 
 // Literal class names so Tailwind can detect them when scanning this package.
@@ -68,31 +68,31 @@ const TYPE_SCALE = [
   {
     token: "heading-xl",
     className: "font-display text-heading-xl",
-    sample: "Brand system per l'agenzia",
+    sample: "A brand system for the agency",
   },
-  { token: "heading-lg", className: "font-display text-heading-lg", sample: "Audit del cliente" },
+  { token: "heading-lg", className: "font-display text-heading-lg", sample: "Client audit" },
   {
     token: "heading-md",
     className: "font-display text-heading-md",
-    sample: "Strategia dei contenuti",
+    sample: "Content strategy",
   },
-  { token: "heading-sm", className: "font-body text-heading-sm", sample: "Versione in revisione" },
+  { token: "heading-sm", className: "font-body text-heading-sm", sample: "Version in review" },
   {
     token: "body-lg",
     className: "font-body text-body-lg",
-    sample: "Ogni contenuto nasce da un processo con regole, versioni e controlli.",
+    sample: "Every piece of content comes from a process with rules, versions and checks.",
   },
   {
     token: "body-md",
     className: "font-body text-body-md",
-    sample: "Le persone decidono, l'AI propone. Ogni dato ha la sua fonte.",
+    sample: "People decide, the AI proposes. Every data point has its source.",
   },
   {
     token: "body-sm",
     className: "font-body text-body-sm",
-    sample: "Ultima modifica 5 ottobre 2026 alle 14:32.",
+    sample: "Last edited 5 October 2026 at 14:32.",
   },
-  { token: "label", className: "font-body text-label uppercase", sample: "Etichetta di sezione" },
+  { token: "label", className: "font-body text-label uppercase", sample: "Section label" },
   {
     token: "mono-md",
     className: "font-mono text-mono-md",
@@ -144,19 +144,19 @@ function GuardTable({ caption, rows }: { caption: string; rows: ContrastResult[]
         <thead>
           <tr className="border-y border-subtle">
             <th scope="col" className="px-4 py-2 font-medium">
-              Coppia
+              Pair
             </th>
             <th scope="col" className="px-4 py-2 font-medium">
-              Colori
+              Colors
             </th>
             <th scope="col" className="px-4 py-2 font-medium">
-              Contrasto
+              Contrast
             </th>
             <th scope="col" className="px-4 py-2 font-medium">
-              Minimo
+              Minimum
             </th>
             <th scope="col" className="px-4 py-2 font-medium">
-              Esito
+              Result
             </th>
           </tr>
         </thead>
@@ -178,9 +178,9 @@ function GuardTable({ caption, rows }: { caption: string; rows: ContrastResult[]
               </td>
               <td className="px-4 py-2">
                 {r.pass ? (
-                  <Badge variant="success">Superato</Badge>
+                  <Badge variant="success">Passed</Badge>
                 ) : (
-                  <Badge variant="error">Non superato</Badge>
+                  <Badge variant="error">Failed</Badge>
                 )}
               </td>
             </tr>
@@ -195,47 +195,47 @@ function ComponentShowcase({ idPrefix }: { idPrefix: string }) {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-center gap-3">
-        <Button variant="primary">Approva versione</Button>
-        <Button variant="secondary">Apri confronto</Button>
-        <Button variant="ghost">Annulla modifica</Button>
-        <Button variant="danger">Elimina bozza</Button>
-        <Button variant="secondary" size="icon" aria-label="Esporta" title="Esporta">
+        <Button variant="primary">Approve version</Button>
+        <Button variant="secondary">Open comparison</Button>
+        <Button variant="ghost">Undo change</Button>
+        <Button variant="danger">Delete draft</Button>
+        <Button variant="secondary" size="icon" aria-label="Export" title="Export">
           <Download aria-hidden="true" strokeWidth={1.5} />
         </Button>
         <Button variant="primary" disabled>
-          Pubblica (bloccato)
+          Publish (blocked)
         </Button>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Badge variant="neutral">Bozza</Badge>
+        <Badge variant="neutral">Draft</Badge>
         <Badge variant="info" icon={Eye}>
-          In revisione
+          In review
         </Badge>
-        <Badge variant="success">Approvato</Badge>
-        <Badge variant="warning">Da verificare</Badge>
+        <Badge variant="success">Approved</Badge>
+        <Badge variant="warning">To check</Badge>
         <Badge variant="error" icon={Lock}>
-          Bloccato
+          Blocked
         </Badge>
         <Badge variant="error" icon={GitMerge}>
-          Conflitto
+          Conflict
         </Badge>
-        <Badge variant="highlight">Novità</Badge>
+        <Badge variant="highlight">New</Badge>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Nuovo cliente</CardTitle>
-            <CardDescription>I campi con asterisco sono obbligatori.</CardDescription>
+            <CardTitle>New client</CardTitle>
+            <CardDescription>Fields marked with an asterisk are required.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor={`${idPrefix}-name`}>Nome del cliente *</Label>
-              <Input id={`${idPrefix}-name`} placeholder="Es. Rossi Arredamenti" />
+              <Label htmlFor={`${idPrefix}-name`}>Client name *</Label>
+              <Input id={`${idPrefix}-name`} placeholder="E.g. Rossi Arredamenti" />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor={`${idPrefix}-site`}>Sito web</Label>
+              <Label htmlFor={`${idPrefix}-site`}>Website</Label>
               <Input
                 id={`${idPrefix}-site`}
                 type="url"
@@ -244,29 +244,28 @@ function ComponentShowcase({ idPrefix }: { idPrefix: string }) {
                 defaultValue="rossi-arredamenti"
               />
               <p id={`${idPrefix}-site-error`} className="text-body-sm text-error">
-                Indirizzo non valido: inserisci un URL completo, per esempio https://rossi.it.
+                Invalid address: enter a full URL, for example https://rossi.it.
               </p>
             </div>
           </CardContent>
           <CardFooter>
-            <Button variant="primary">Crea cliente</Button>
-            <Button variant="ghost">Annulla</Button>
+            <Button variant="primary">Create client</Button>
+            <Button variant="ghost">Cancel</Button>
           </CardFooter>
         </Card>
 
         <AiProposal
-          title="Scurisci il colore dei link"
+          title="Darken the link color"
           agent="brand-guard/contrast"
           sources={[
             {
-              label: "WCAG 2.2, criterio 1.4.3",
+              label: "WCAG 2.2, criterion 1.4.3",
               href: "https://www.w3.org/TR/WCAG22/#contrast-minimum",
             },
             { label: "tokens/forgecy.tokens.json" },
           ]}
         >
-          Il link su porcellana arriva a 4,8:1. Propongo di usare Forge Blue 700 per tutto il testo
-          blu.
+          Links on porcelain reach 4.8:1. I propose using Forge Blue 700 for all blue text.
         </AiProposal>
       </div>
     </div>
@@ -285,28 +284,26 @@ export function DesignPage({ className }: DesignPageProps) {
   return (
     <main className={cn("mx-auto flex max-w-6xl flex-col gap-12 px-6 py-12 text-fg", className)}>
       <header className="flex flex-col gap-4">
-        <p className="text-label uppercase text-fg-muted">Identità visiva di Forgecy</p>
-        <h1 className="font-display text-heading-xl">Sistema di design</h1>
+        <p className="text-label uppercase text-fg-muted">Forgecy visual identity</p>
+        <h1 className="font-display text-heading-xl">Design system</h1>
         <p className="max-w-prose text-body-lg text-fg-muted">
-          Colori, tipografia e componenti generati da{" "}
-          <code className="font-mono text-mono-md text-fg">tokens/forgecy.tokens.json</code>. I
-          contrasti sono calcolati dai token secondo WCAG 2.2.
+          Colors, typography and components generated from{" "}
+          <code className="font-mono text-mono-md text-fg">tokens/forgecy.tokens.json</code>.
+          Contrast ratios are computed from the tokens according to WCAG 2.2.
         </p>
         <div>
           {failed === 0 ? (
-            <Badge variant="success">
-              Brand Guard: tutte le {guard.length} coppie superano il controllo
-            </Badge>
+            <Badge variant="success">Brand Guard: all {guard.length} pairs pass the check</Badge>
           ) : (
-            <Badge variant="error">Brand Guard: {failed} coppie non superano il controllo</Badge>
+            <Badge variant="error">Brand Guard: {failed} pairs fail the check</Badge>
           )}
         </div>
       </header>
 
       <Section
-        id="design-colori"
-        title="Colori"
-        description="Palette di riferimento con il contrasto calcolato su bianco e su porcellana."
+        id="design-colors"
+        title="Colors"
+        description="Reference palette with the contrast computed on white and on porcelain."
       >
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {swatches.map((s) => (
@@ -326,10 +323,10 @@ export function DesignPage({ className }: DesignPageProps) {
                   {s.hex} · {s.cssVar}
                 </p>
                 <dl className="grid grid-cols-[auto_auto_1fr] items-center gap-x-3 gap-y-2 text-body-sm">
-                  <dt className="text-fg-muted">Bianco</dt>
+                  <dt className="text-fg-muted">White</dt>
                   <dd data-numeric>{formatRatio(s.onWhite)}</dd>
                   <dd>{usage(s.onWhite)}</dd>
-                  <dt className="text-fg-muted">Porcellana</dt>
+                  <dt className="text-fg-muted">Porcelain</dt>
                   <dd data-numeric>{formatRatio(s.onPorcelain)}</dd>
                   <dd>{usage(s.onPorcelain)}</dd>
                 </dl>
@@ -342,16 +339,16 @@ export function DesignPage({ className }: DesignPageProps) {
       <Section
         id="design-brand-guard"
         title="Brand Guard"
-        description="Coppie di token semantici verificate a ogni modifica dei token, in tema chiaro e scuro. Un esito negativo blocca il merge."
+        description="Semantic token pairs checked on every token change, in the light and dark themes. A failure blocks the merge."
       >
-        <GuardTable caption="Tema chiaro" rows={guard.filter((r) => r.theme === "light")} />
-        <GuardTable caption="Tema scuro (v1)" rows={guard.filter((r) => r.theme === "dark")} />
+        <GuardTable caption="Light theme" rows={guard.filter((r) => r.theme === "light")} />
+        <GuardTable caption="Dark theme (v1)" rows={guard.filter((r) => r.theme === "dark")} />
       </Section>
 
       <Section
-        id="design-tipografia"
-        title="Tipografia"
-        description="Space Grotesk per i titoli, Inter per testo e interfaccia, JetBrains Mono per i nomi tecnici."
+        id="design-typography"
+        title="Typography"
+        description="Space Grotesk for headings, Inter for text and interface, JetBrains Mono for technical names."
       >
         <ul className="flex flex-col divide-y divide-subtle rounded-lg border border-subtle bg-surface">
           {TYPE_SCALE.map((t) => (
@@ -370,17 +367,17 @@ export function DesignPage({ className }: DesignPageProps) {
       </Section>
 
       <Section
-        id="design-componenti"
-        title="Componenti"
-        description="Componenti shadcn/ui personalizzati solo tramite token."
+        id="design-components"
+        title="Components"
+        description="shadcn/ui components customized only through tokens."
       >
         <ComponentShowcase idPrefix="design-light" />
       </Section>
 
       <Section
-        id="design-tema-scuro"
-        title="Tema scuro (v1)"
-        description='Gli stessi componenti dentro data-theme="dark": cambiano solo i token semantici.'
+        id="design-dark-theme"
+        title="Dark theme (v1)"
+        description='The same components inside data-theme="dark": only the semantic tokens change.'
       >
         <div data-theme="dark" className="rounded-xl bg-app p-6 text-fg">
           <ComponentShowcase idPrefix="design-dark" />

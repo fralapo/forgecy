@@ -9,10 +9,10 @@ import { deleteProspectAction, setPolicyAction } from "../actions";
 import { selectClass } from "../_lib/styles";
 
 const policyLabel: Record<AiPolicy, string> = {
-  external_allowed: "AI esterna ammessa",
-  external_restricted: "AI esterna limitata",
-  local_only: "Solo AI locale",
-  no_ai: "Nessuna AI",
+  external_allowed: "External AI allowed",
+  external_restricted: "External AI restricted",
+  local_only: "Local AI only",
+  no_ai: "No AI",
 };
 
 /** Admin only (checked again on the server): changing it stops waiting AI jobs. */
@@ -22,7 +22,7 @@ export function PolicySelect({ clientId, policy }: { clientId: string; policy: A
   const [message, setMessage] = useState<{ error?: string; ok?: string }>({});
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor="policy">Policy AI</Label>
+      <Label htmlFor="policy">AI policy</Label>
       <select
         id="policy"
         className={selectClass}
@@ -35,7 +35,7 @@ export function PolicySelect({ clientId, policy }: { clientId: string; policy: A
             if (!res.ok) return setMessage({ error: res.error });
             const n = res.data?.cancelledJobs ?? 0;
             setMessage({
-              ok: n ? `Policy cambiata: ${n} passi AI in attesa annullati.` : "Policy cambiata.",
+              ok: n ? `Policy changed: ${n} waiting AI steps cancelled.` : "Policy changed.",
             });
             router.refresh();
           });
@@ -78,8 +78,8 @@ export function DeleteProspect({ clientId, name }: { clientId: string; name: str
       }}
     >
       <Label htmlFor="confirm">
-        Elimina il prospect e tutti i dati raccolti (screenshot e file compresi). Scrivi{" "}
-        <strong>{name}</strong> per confermare.
+        Delete the prospect and all collected data (screenshots and files included). Type{" "}
+        <strong>{name}</strong> to confirm.
       </Label>
       <Input id="confirm" name="confirm" autoComplete="off" />
       {error ? (
@@ -90,7 +90,7 @@ export function DeleteProspect({ clientId, name }: { clientId: string; name: str
       <div>
         <Button type="submit" variant="danger" size="sm" disabled={pending}>
           <Trash2 aria-hidden />
-          Elimina definitivamente
+          Delete permanently
         </Button>
       </div>
     </form>

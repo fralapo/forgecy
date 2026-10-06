@@ -2,7 +2,7 @@ import { JOB_LOCK_TTL_MS } from "@forgecy/core";
 import { sql, type Database } from "@forgecy/db";
 
 /**
- * Content lock (spec "Lock sul contenuto"): columns `locked_by_job_id` (uuid) and
+ * Content lock (spec "Content lock"): columns `locked_by_job_id` (uuid) and
  * `lock_expires_at` (timestamptz) on the target table. Acquire is a single conditional
  * UPDATE, so two jobs can never hold the same row.
  */
@@ -67,7 +67,7 @@ export class LockUnavailableError extends Error {
     readonly table: string,
     readonly id: string,
   ) {
-    super(`Contenuto bloccato da un altro job (${table}/${id})`);
+    super(`Content locked by another job (${table}/${id})`);
     this.name = "LockUnavailableError";
   }
 }

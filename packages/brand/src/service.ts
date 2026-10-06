@@ -93,7 +93,7 @@ async function requireClient(db: Executor, clientId: string) {
     })
     .from(clients)
     .where(eq(clients.id, clientId));
-  if (!client) notFound("Cliente non trovato");
+  if (!client) notFound("Client not found");
   return client;
 }
 
@@ -180,7 +180,7 @@ async function refreshStale(
   tx: Tx,
   identityId: string,
   state: DraftState,
-  reason = "Il campo è cambiato dopo la proposta",
+  reason = "The field changed after the proposal",
   alsoFieldPath?: { fieldPath: string; exceptId: string },
 ): Promise<number> {
   const pending = await tx
@@ -234,7 +234,7 @@ async function writeDraft(
     .where(and(eq(brandIdentityVersions.id, draft.id), eq(brandIdentityVersions.rev, draft.rev)))
     .returning();
   if (!row)
-    conflict("La bozza è stata modificata da qualcun altro. Ricarica la pagina.", {
+    conflict("Someone else changed the draft. Reload the page.", {
       code: "CONFLICT-DRAFT-REV",
     });
   return row;
@@ -310,20 +310,20 @@ export async function saveDraftSection(
   humanOnly(actor, "edit_draft");
   assertCan(actor, "edit_draft", input.clientId);
   const schema = documentSections[input.section];
-  if (!schema) invalid("Sezione sconosciuta");
+  if (!schema) invalid("Unknown section");
   return db.transaction(async (tx) => {
     const draft = await lockOpenDraft(tx, input.clientId);
     if (!draft || draft.id !== input.versionId)
-      conflict("Questa bozza non è più aperta.", { code: "DRAFT-CLOSED" });
+      conflict("This draft is no longer open.", { code: "DRAFT-CLOSED" });
     if (draft.rev !== input.rev)
-      conflict("La bozza è stata modificata da qualcun altro. Ricarica la pagina.", {
+      conflict("Someone else changed the draft. Reload the page.", {
         code: "CONFLICT-DRAFT-REV",
       });
     const state = stateOf(draft);
     const normalized = normalizeHumanEdit(state.document[input.section], input.value);
     const parsed = schema.safeParse(normalized);
     if (!parsed.success)
-      invalid(parsed.error.issues[0]?.message ?? "Dati non validi", {
+      invalid(parsed.error.issues[0]?.message ?? "Invalid data", {
         issues: parsed.error.issues
           .slice(0, 10)
           .map((i) => ({ path: i.path.join("."), message: i.message })),
@@ -356,13 +356,13 @@ export async function saveDraftTokens(
   assertCan(actor, "edit_draft", input.clientId);
   const issues = validateTokens(input.tokens);
   if (issues.length)
-    invalid(`Token non validi: ${issues[0]!.path} ${issues[0]!.message}`, { issues });
+    invalid(`Invalid tokens: ${issues[0]!.path} ${issues[0]!.message}`, { issues });
   return db.transaction(async (tx) => {
     const draft = await lockOpenDraft(tx, input.clientId);
     if (!draft || draft.id !== input.versionId)
-      conflict("Questa bozza non è più aperta.", { code: "DRAFT-CLOSED" });
+      conflict("This draft is no longer open.", { code: "DRAFT-CLOSED" });
     if (draft.rev !== input.rev)
-      conflict("La bozza è stata modificata da qualcun altro. Ricarica la pagina.", {
+      conflict("Someone else changed the draft. Reload the page.", {
         code: "CONFLICT-DRAFT-REV",
       });
     const state = stateOf(draft);
@@ -417,7 +417,7 @@ export async function proposeChange(
     const sourceIds = [...new Set(evidence.map((e) => e.sourceId))];
     const kinds = await sourceKinds(tx, input.clientId, sourceIds);
     if (kinds.size !== sourceIds.length)
-      invalid("Una delle fonti citate non esiste per questo cliente");
+      invalid("One of the cited sources does not exist for this client");
     const evidenceKinds = sourceIds.map((id) => kinds.get(id)!);
     if (actor.type === "agent" && !evidenceKinds.length) evidenceKinds.push("agent_observation");
 
@@ -433,13 +433,13 @@ export async function proposeChange(
       },
     );
     if (!stillApplies(state, built.patch))
-      conflict("La proposta non si applica alla bozza attuale");
+      conflict("The proposal does not apply to the current draft");
     const value = proposedValue(built.patch, built.field);
     if (
       built.written !== undefined &&
       deepEqual(value, currentValue(state, built.patch, built.field))
     )
-      invalid("Il valore proposto è già nella bozza", { code: "NO-CHANGE" });
+      invalid("The proposed value is already in the draft", { code: "NO-CHANGE" });
     const [row] = await tx
       .insert(brandIdentityProposals)
       .values({
@@ -529,7 +529,7 @@ export interface AcceptInput {
   clientId: string;
   proposalId: string;
   note?: string;
-  /** "Accetta con modifiche": the corrected raw value. */
+  /** "Accept with changes": the corrected raw value. */
   editedValue?: unknown;
 }
 
@@ -556,9 +556,9 @@ async function acceptOne(
       ),
     )
     .for("update");
-  if (!p) notFound("Proposta non trovata");
-  if (p.status !== "proposed") conflict("La proposta è già stata decisa.");
-  if (bulk && p.sensitive) invalid("Le proposte sensibili si accettano una per una.");
+  if (!p) notFound("Proposal not found");
+  if (p.status !== "proposed") conflict("The proposal has already been decided.");
+  if (bulk && p.sensitive) invalid("Sensitive proposals are accepted one by one.");
 
   const conflicting = (await conflictsFor(tx, input.clientId)).some((c) =>
     c.proposalIds.includes(p.id),
@@ -567,7 +567,7 @@ async function acceptOne(
   const note = input.note?.trim() ?? "";
   if (p.sensitive && effectiveLow && note.length < 10)
     invalid(
-      "Perché accetti nonostante la confidenza bassa? Scrivi una nota di almeno 10 caratteri.",
+      "Why are you accepting despite the low confidence? Write a note of at least 10 characters.",
       {
         code: "NOTE-REQUIRED",
       },
@@ -575,9 +575,9 @@ async function acceptOne(
 
   const draft = await openDraft(tx, input.clientId, actor.id);
   const match = matchField(p.fieldPath.replace(/\[.*\]$/, "").replace(/\/-$/, ""));
-  if (!match) invalid("Campo della proposta sconosciuto");
+  if (!match) invalid("Unknown proposal field");
   let patch = p.changes as JsonPatch;
-  if (!isJsonPatch(patch)) invalid("Proposta malformata");
+  if (!isJsonPatch(patch)) invalid("Malformed proposal");
   if (input.editedValue !== undefined)
     patch = withEditedValue(patch, input.editedValue, match.field);
 
@@ -589,17 +589,17 @@ async function acceptOne(
     if (!(err instanceof JsonPatchError)) throw err;
     await tx
       .update(brandIdentityProposals)
-      .set({ status: "stale", staleReason: "Il campo è cambiato dopo la proposta" })
+      .set({ status: "stale", staleReason: "The field changed after the proposal" })
       .where(eq(brandIdentityProposals.id, p.id));
     return { status: "stale", staled: 0 };
   }
   const parsed = brandIdentityDocumentSchema.safeParse(next.document);
   if (!parsed.success)
-    invalid(`Il valore proposto non è valido: ${parsed.error.issues[0]?.message ?? ""}`);
+    invalid(`The proposed value is not valid: ${parsed.error.issues[0]?.message ?? ""}`);
   if (p.fieldPath.startsWith("/tokens/")) {
     const issues = validateTokens(next.tokens);
     if (issues.length)
-      invalid(`Il token proposto non si risolve: ${issues[0]!.path} ${issues[0]!.message}`);
+      invalid(`The proposed token does not resolve: ${issues[0]!.path} ${issues[0]!.message}`);
   }
   next = { document: parsed.data, tokens: next.tokens };
   const row = await writeDraft(tx, draft, next, actor.id);
@@ -618,7 +618,7 @@ async function acceptOne(
     tx,
     draft.brandIdentityId,
     next,
-    "Il campo è cambiato dopo la proposta",
+    "The field changed after the proposal",
     {
       fieldPath: p.fieldPath,
       exceptId: p.id,
@@ -654,7 +654,7 @@ export async function acceptProposal(
   return db.transaction((tx) => acceptOne(tx, actor, input, false));
 }
 
-/** "Accetta selezionate": non-sensitive proposals only, at most 50 at a time. */
+/** "Accept selected": non-sensitive proposals only, at most 50 at a time. */
 export async function acceptProposals(
   db: Database,
   actor: Actor,
@@ -663,7 +663,7 @@ export async function acceptProposals(
   humanOnly(actor, "review");
   assertCan(actor, "review", input.clientId);
   assertCan(actor, "edit_draft", input.clientId);
-  if (input.proposalIds.length > 50) invalid("Al massimo 50 proposte per volta");
+  if (input.proposalIds.length > 50) invalid("At most 50 proposals at a time");
   return db.transaction(async (tx) => {
     let accepted = 0;
     let stale = 0;
@@ -688,7 +688,7 @@ export async function rejectProposals(
 ): Promise<{ rejected: number }> {
   humanOnly(actor, "review");
   assertCan(actor, "review", input.clientId);
-  if (input.proposalIds.length > 50) invalid("Al massimo 50 proposte per volta");
+  if (input.proposalIds.length > 50) invalid("At most 50 proposals at a time");
   return db.transaction(async (tx) => {
     const rows = await tx
       .update(brandIdentityProposals)
@@ -730,10 +730,10 @@ export async function submitForReview(
   assertCan(actor, "edit_draft", input.clientId);
   await db.transaction(async (tx) => {
     const draft = await lockOpenDraft(tx, input.clientId);
-    if (!draft || draft.id !== input.versionId) conflict("Questa bozza non è più aperta.");
-    if (draft.status !== "draft") conflict("La bozza è già in revisione.");
+    if (!draft || draft.id !== input.versionId) conflict("This draft is no longer open.");
+    if (draft.status !== "draft") conflict("The draft is already in review.");
     if (draft.rev !== input.rev)
-      conflict("La bozza è stata modificata da qualcun altro. Ricarica la pagina.", {
+      conflict("Someone else changed the draft. Reload the page.", {
         code: "CONFLICT-DRAFT-REV",
       });
     const conflicts = await conflictsFor(tx, input.clientId);
@@ -742,7 +742,7 @@ export async function submitForReview(
     );
     if (sensitiveConflicts.length)
       conflict(
-        `Risolvi ${sensitiveConflicts.length} conflitti sui campi sensibili prima di inviare.`,
+        `Resolve ${sensitiveConflicts.length} conflicts on sensitive fields before submitting.`,
         {
           code: "CONFLICTS-OPEN",
         },
@@ -767,7 +767,7 @@ export async function submitForReview(
   });
 }
 
-/** "Rimanda con commento" (comment required) or "Ritira dalla revisione" (no comment). */
+/** "Send back with comment" (comment required) or "Withdraw from review" (no comment). */
 export async function returnToDraft(
   db: Database,
   actor: Actor,
@@ -778,7 +778,7 @@ export async function returnToDraft(
   await db.transaction(async (tx) => {
     const draft = await lockOpenDraft(tx, input.clientId);
     if (!draft || draft.id !== input.versionId || draft.status !== "in_review")
-      conflict("Questa versione non è in revisione.");
+      conflict("This version is not in review.");
     await tx
       .update(brandIdentityVersions)
       .set({ status: "draft", reviewComment: input.comment?.trim() || null })
@@ -805,7 +805,7 @@ export interface PublishInput {
   changelog: string;
   /** Required when the approver prepared or submitted the draft. */
   note?: string;
-  /** Keys of the open checks confirmed with "Ho visto". */
+  /** Keys of the open checks confirmed with "I've seen it". */
   acknowledged: string[];
 }
 
@@ -827,7 +827,7 @@ export function isSelfApproval(
 }
 
 /**
- * "Approva e pubblica": one person approves and publishes in one step (MVP).
+ * "Approve and publish": one person approves and publishes in one step (MVP).
  * The previous published version is archived; the new one becomes immutable.
  */
 export async function approveAndPublish(
@@ -840,32 +840,30 @@ export async function approveAndPublish(
   assertCan(actor, "publish", input.clientId);
   const changelog = input.changelog.trim();
   if (changelog.length < CHANGELOG_MIN)
-    invalid(`Scrivi un changelog di almeno ${CHANGELOG_MIN} caratteri.`, {
+    invalid(`Write a changelog of at least ${CHANGELOG_MIN} characters.`, {
       code: "CHANGELOG-REQUIRED",
     });
 
   return db.transaction(async (tx) => {
     const draft = await lockOpenDraft(tx, input.clientId);
-    if (!draft || draft.id !== input.versionId) conflict("Questa bozza non è più aperta.");
+    if (!draft || draft.id !== input.versionId) conflict("This draft is no longer open.");
     if (draft.rev !== input.rev)
-      conflict("La bozza è cambiata dopo che l'hai rivista. Ricontrolla le modifiche.", {
+      conflict("The draft changed after you reviewed it. Check the changes again.", {
         code: "CONFLICT-DRAFT-REV",
       });
     const note = input.note?.trim() ?? "";
     if (isSelfApproval(draft, actor.id) && note.length < SELF_APPROVAL_NOTE_MIN)
-      invalid(
-        "Stai approvando una bozza che hai preparato tu. Scrivi una nota per la cronologia.",
-        {
-          code: "SELF-APPROVAL-NOTE",
-        },
-      );
+      invalid("You are approving a draft you prepared yourself. Write a note for the history.", {
+        code: "SELF-APPROVAL-NOTE",
+      });
 
     const parsed = brandIdentityDocumentSchema.safeParse(draft.document);
-    if (!parsed.success) invalid(`La bozza non è valida: ${parsed.error.issues[0]?.message ?? ""}`);
+    if (!parsed.success)
+      invalid(`The draft is not valid: ${parsed.error.issues[0]?.message ?? ""}`);
     const tokens = draft.tokens as TokenTree;
     const tokenIssues = validateTokens(tokens);
     if (tokenIssues.length)
-      invalid(`Token non validi: ${tokenIssues[0]!.path}`, { code: "TOKENS-INVALID" });
+      invalid(`Invalid tokens: ${tokenIssues[0]!.path}`, { code: "TOKENS-INVALID" });
 
     const previous = await publishedRow(tx, input.clientId);
     const pending = await tx
@@ -885,7 +883,7 @@ export async function approveAndPublish(
     });
     const missing = checks.filter((c) => !input.acknowledged.includes(c.key));
     if (missing.length)
-      invalid(`Conferma i controlli aperti: ${missing.map((m) => m.message).join("; ")}`, {
+      invalid(`Confirm the open checks: ${missing.map((m) => m.message).join("; ")}`, {
         code: "CHECKS-NOT-ACKNOWLEDGED",
         missing: missing.map((m) => m.key),
       });
@@ -936,7 +934,7 @@ export async function approveAndPublish(
 }
 
 /**
- * "Ripristina come bozza": a new draft with the content of an older version. The
+ * "Restore as draft": a new draft with the content of an older version. The
  * history is never rewritten; the restored draft goes through review like any other.
  * With `replaceDraft` an open draft is archived and its accepted proposals become stale.
  */
@@ -957,13 +955,13 @@ export async function restoreAsDraft(
           eq(brandIdentityVersions.clientId, input.clientId),
         ),
       );
-    if (!source) notFound("Versione non trovata");
+    if (!source) notFound("Version not found");
     if (source.status !== "published" && source.status !== "archived")
-      invalid("Si ripristinano solo versioni pubblicate o archiviate.");
+      invalid("Only published or archived versions can be restored.");
     const open = await lockOpenDraft(tx, input.clientId);
     if (open) {
       if (!input.replaceDraft)
-        conflict(`Esiste già la bozza v${open.number}. Conferma per sostituirla.`, {
+        conflict(`Draft v${open.number} already exists. Confirm to replace it.`, {
           code: "DRAFT-EXISTS",
           draftNumber: open.number,
         });
@@ -975,7 +973,7 @@ export async function restoreAsDraft(
         .update(brandIdentityProposals)
         .set({
           status: "stale",
-          staleReason: `La bozza v${open.number} è stata sostituita da un ripristino`,
+          staleReason: `Draft v${open.number} was replaced by a restore`,
         })
         .where(
           and(
@@ -1046,7 +1044,7 @@ export async function addSource(
   );
   await requireClient(db, input.clientId);
   if (input.url && !/^https?:\/\//i.test(input.url))
-    invalid("Indirizzo non valido: solo http e https");
+    invalid("Invalid address: only http and https");
   return db.transaction(async (tx) => {
     if (input.sha256) {
       const [dup] = await tx
@@ -1060,7 +1058,7 @@ export async function addSource(
           ),
         );
       if (dup)
-        conflict(`Il file è già tra le fonti: ${dup.title}`, {
+        conflict(`The file is already among the sources: ${dup.title}`, {
           code: "SOURCE-DUPLICATE",
           sourceId: dup.id,
         });
@@ -1115,10 +1113,10 @@ export async function removeSource(
         ),
       )
       .returning({ id: brandSources.id });
-    if (!row) notFound("Fonte non trovata");
+    if (!row) notFound("Source not found");
     const stale = await tx
       .update(brandIdentityProposals)
-      .set({ status: "stale", staleReason: "La fonte della proposta è stata rimossa" })
+      .set({ status: "stale", staleReason: "The proposal's source was removed" })
       .where(
         and(
           eq(brandIdentityProposals.clientId, input.clientId),

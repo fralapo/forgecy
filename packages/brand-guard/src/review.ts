@@ -1,7 +1,7 @@
 /**
  * Brand Guard in the review flow (spec Page 46 and 47): findings signal, they do not
  * block sending to review. A person may ignore a warning or a note for this content
- * with a reason; errors are never ignored, they are fixed or confirmed with "Ho visto".
+ * with a reason; errors are never ignored, they are fixed or confirmed with “I’ve seen it”.
  * The approver confirms every open error and warning; the only findings that block
  * approval are AI images not approved by a person.
  */
@@ -16,17 +16,17 @@ export interface IssueState {
   status: BrandCheckIssueStatus;
   reason?: BrandCheckIgnoreReason | null;
   note?: string | null;
-  /** "Ho visto" is per content version; ignores hold across versions (null). */
+  /** “I’ve seen it” is per content version; ignores hold across versions (null). */
   subjectVersion: number | null;
   userId: string;
   createdAt: Date | string;
 }
 
 export const IGNORE_REASON_LABELS: Record<BrandCheckIgnoreReason, string> = {
-  client_request: "Richiesto dal cliente",
-  creative_choice: "Scelta creativa voluta",
-  false_positive: "Falso positivo",
-  other: "Altro",
+  client_request: "Requested by the client",
+  creative_choice: "Deliberate creative choice",
+  false_positive: "False positive",
+  other: "Other",
 };
 
 export interface ReviewedFinding extends BrandCheckFinding {
@@ -37,10 +37,10 @@ export interface ReviewedFinding extends BrandCheckFinding {
 
 export interface ReviewedReport extends Omit<BrandCheckReport, "findings"> {
   findings: ReviewedFinding[];
-  /** Open findings only (what the summary cards show as "aperti"). */
+  /** Open findings only (what the summary cards show as "open"). */
   open: BrandCheckReport["counts"];
   ignoredCount: BrandCheckReport["counts"];
-  /** Findings of the previous run that are gone ("Risolto dalla modifica delle 14:40"). */
+  /** Findings of the previous run that are gone ("Resolved by the 14:40 edit"). */
   resolved: BrandCheckFinding[];
 }
 
@@ -51,7 +51,7 @@ const iso = (d: Date | string) => (typeof d === "string" ? d : d.toISOString());
 /**
  * Merges what people decided into a report. An ignore holds while the block is
  * unchanged (same `blockHash`); when the block changes the finding reopens. A
- * "Ho visto" counts only for the content version it was given on.
+ * “I’ve seen it” counts only for the content version it was given on.
  */
 export function applyIssueStates(
   report: BrandCheckReport,
@@ -87,16 +87,16 @@ export function applyIssueStates(
 }
 
 export interface ApprovalGate {
-  /** True when nothing blocks approval and every open error and warning has "Ho visto". */
+  /** True when nothing blocks approval and every open error and warning has “I’ve seen it”. */
   ready: boolean;
   /** Unapproved or rejected AI images: approval stays blocked until they change. */
   blockers: ReviewedFinding[];
-  /** Open errors and warnings still waiting for "Ho visto" on this version. */
+  /** Open errors and warnings still waiting for “I’ve seen it” on this version. */
   toAcknowledge: ReviewedFinding[];
 }
 
 /**
- * What the approval dialog needs. `acknowledgedKeys` are the "Ho visto" ticked in the
+ * What the approval dialog needs. `acknowledgedKeys` are the “I’ve seen it” ticked in the
  * dialog being submitted, on top of those already stored for this version.
  */
 export function approvalGate(
@@ -132,13 +132,13 @@ export function exportGate(
   };
 }
 
-/** Plain-text list for «Copia elenco esiti». */
+/** Plain-text list for “Copy findings list”. */
 export function findingsAsText(reviewed: ReviewedReport): string {
-  const sev = { error: "Errore", warning: "Avviso", note: "Nota" } as const;
+  const sev = { error: "Error", warning: "Warning", note: "Note" } as const;
   return reviewed.findings
     .map(
       (f) =>
-        `${sev[f.severity]}${f.status === "ignored" ? " (ignorato)" : ""} · ${f.message}${f.suggestion ? ` ${f.suggestion}` : ""} [${f.check}]`,
+        `${sev[f.severity]}${f.status === "ignored" ? " (ignored)" : ""} · ${f.message}${f.suggestion ? ` ${f.suggestion}` : ""} [${f.check}]`,
     )
     .join("\n");
 }

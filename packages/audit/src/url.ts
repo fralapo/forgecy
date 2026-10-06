@@ -55,7 +55,7 @@ export function isPlatformUrl(channel: SocialChannel, url: string): boolean {
   return PLATFORM_HOSTS[channel].test(new URL(normalized).hostname.toLowerCase());
 }
 
-/** Which social channel a link points to, if any (used for "Presenza social"). */
+/** Which social channel a link points to, if any (used for "Social presence"). */
 export function socialChannelOf(url: string): SocialChannel | null {
   let host: string;
   try {

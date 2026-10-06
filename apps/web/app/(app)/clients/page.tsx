@@ -6,9 +6,9 @@ import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/session";
 import { NewClientForm } from "./new-client-form";
 
-export const metadata = { title: "Clienti" };
+export const metadata = { title: "Clients" };
 
-const statusLabel = { prospect: "Prospect", active: "Attivo", archived: "Archiviato" } as const;
+const statusLabel = { prospect: "Prospect", active: "Active", archived: "Archived" } as const;
 const linkClass = "text-link underline-offset-2 hover:underline";
 
 /** Where each client's work lives: the audit for prospects, the three modules for clients. */
@@ -16,16 +16,16 @@ function areaLinks(c: { slug: string; status: keyof typeof statusLabel }) {
   if (c.status === "prospect") return [{ label: "Audit", href: `/audit/${c.slug}` }];
   return [
     { label: "Brand", href: `/brand/${c.slug}` },
-    { label: "Contenuti", href: `/content/${c.slug}` },
-    { label: "Prodotti", href: `/products/${c.slug}` },
+    { label: "Content", href: `/content/${c.slug}` },
+    { label: "Products", href: `/products/${c.slug}` },
   ];
 }
 
 const policyLabel = {
-  external_allowed: "AI esterna ammessa",
-  external_restricted: "AI esterna limitata",
-  local_only: "Solo AI locale",
-  no_ai: "Nessuna AI",
+  external_allowed: "External AI allowed",
+  external_restricted: "External AI restricted",
+  local_only: "Local AI only",
+  no_ai: "No AI",
 } as const;
 
 export default async function ClientsPage() {
@@ -38,34 +38,34 @@ export default async function ClientsPage() {
   return (
     <>
       <PageHeader
-        title="Clienti"
-        description="Prospect e clienti dell'agenzia, ognuno con la sua policy AI."
+        title="Clients"
+        description="The agency's prospects and clients, each with its own AI policy."
       />
       <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
         <Card className="overflow-hidden p-0">
           {rows.length === 0 ? (
             <p className="p-6 text-body-md text-fg-muted">
-              Nessun cliente. Aggiungi il primo prospect.
+              No clients yet. Add the first prospect.
             </p>
           ) : (
             <table className="w-full text-left text-body-sm">
-              <caption className="sr-only">Elenco clienti</caption>
+              <caption className="sr-only">Client list</caption>
               <thead className="border-b border-subtle text-label text-fg-muted">
                 <tr>
                   <th scope="col" className="px-6 py-3 font-medium">
-                    Nome
+                    Name
                   </th>
                   <th scope="col" className="px-6 py-3 font-medium">
-                    Stato
+                    Status
                   </th>
                   <th scope="col" className="px-6 py-3 font-medium">
-                    Settore
+                    Industry
                   </th>
                   <th scope="col" className="px-6 py-3 font-medium">
-                    Policy AI
+                    AI policy
                   </th>
                   <th scope="col" className="px-6 py-3 font-medium">
-                    Apri
+                    Open
                   </th>
                 </tr>
               </thead>
@@ -89,7 +89,7 @@ export default async function ClientsPage() {
                           <li key={l.label}>
                             <Link href={l.href as Route} className={linkClass}>
                               {l.label}
-                              <span className="sr-only"> di {c.name}</span>
+                              <span className="sr-only"> for {c.name}</span>
                             </Link>
                           </li>
                         ))}
@@ -102,7 +102,7 @@ export default async function ClientsPage() {
           )}
         </Card>
         <Card className="p-6">
-          <h2 className="text-heading-sm text-fg">Nuovo cliente</h2>
+          <h2 className="text-heading-sm text-fg">New client</h2>
           <NewClientForm />
         </Card>
       </div>

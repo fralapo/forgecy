@@ -2,7 +2,7 @@ import { BlockPage } from "../../_components/block-page";
 import { channelsUi, contentUi } from "../../_lib/editor-config";
 import { versionParam } from "../../_lib/server";
 
-export const metadata = { title: "Contenuti · Brand Identity" };
+export const metadata = { title: "Content · Brand Identity" };
 
 export default async function ContentPage({
   params,
@@ -17,7 +17,7 @@ export default async function ContentPage({
       slug={clientSlug}
       version={versionParam(sp.version)}
       sections={[contentUi, channelsUi]}
-      intro="Pilastri editoriali, format con la loro sequenza di slide e regole per canale."
+      intro="Editorial pillars, formats with their slide sequence, and rules per channel."
     />
   );
 }

@@ -46,7 +46,7 @@ const FORMAT_INFO: Record<SniffedFormat, { kind: ImportFileKind; mime: string; m
 const MB = 1024 * 1024;
 
 /** Formats people recognize, used in error messages. */
-export const ACCEPTED_FORMATS_TEXT = "ZIP, CSV, XLSX, PNG, JPG, WebP, TXT, DOCX o PDF";
+export const ACCEPTED_FORMATS_TEXT = "ZIP, CSV, XLSX, PNG, JPG, WebP, TXT, DOCX or PDF";
 
 /**
  * Recognize a file from its name and first bytes. The extension picks the candidate,
@@ -60,7 +60,7 @@ export function sniffFile(name: string, size: number, head: Uint8Array): SniffRe
     code,
     message,
   });
-  if (size <= 0) return fail("IMPORT-INVALID", `"${name}" è vuoto.`);
+  if (size <= 0) return fail("IMPORT-INVALID", `"${name}" is empty.`);
 
   let format: SniffedFormat | undefined;
   if (at(head, 0, ascii("%PDF-"))) format = "pdf";
@@ -77,7 +77,7 @@ export function sniffFile(name: string, size: number, head: Uint8Array): SniffRe
   if (!format) {
     return fail(
       "IMPORT-INVALID",
-      `"${name}" non è un formato ammesso. Usa ${ACCEPTED_FORMATS_TEXT}.`,
+      `"${name}" is not an allowed format. Use ${ACCEPTED_FORMATS_TEXT}.`,
     );
   }
   // Extension and content must agree for binary formats (e.g. a PNG renamed .pdf is refused).
@@ -93,7 +93,7 @@ export function sniffFile(name: string, size: number, head: Uint8Array): SniffRe
   if (allowedExt && !allowedExt.includes(ext)) {
     return fail(
       "IMPORT-INVALID",
-      `"${name}" ha un'estensione che non corrisponde al contenuto. Usa ${ACCEPTED_FORMATS_TEXT}.`,
+      `"${name}" has an extension that does not match its content. Use ${ACCEPTED_FORMATS_TEXT}.`,
     );
   }
   const info = FORMAT_INFO[format];
@@ -101,8 +101,8 @@ export function sniffFile(name: string, size: number, head: Uint8Array): SniffRe
     return fail(
       "IMPORT-TOO-LARGE",
       format === "zip"
-        ? `"${name}" supera 200 MB (o 2.000 file). Dividilo in più ZIP.`
-        : `"${name}" supera ${Math.round(info.max / MB)} MB.`,
+        ? `"${name}" exceeds 200 MB (or 2,000 files). Split it into several ZIPs.`
+        : `"${name}" exceeds ${Math.round(info.max / MB)} MB.`,
     );
   }
   return { ok: true, kind: info.kind, format, mime: info.mime, ext: format };
@@ -123,13 +123,13 @@ export function aiAvailability(
     return {
       available: false,
       reason:
-        "AI disattivata per questo cliente: PDF e immagini non possono essere analizzati. Le immagini vengono abbinate solo per nome file e SKU.",
+        "AI is turned off for this client: PDFs and images cannot be analyzed. Images are matched only by file name and SKU.",
     };
   if (policy === "local_only" && !localModelConfigured)
     return {
       available: false,
       reason:
-        "Il cliente ammette solo AI locale e nessun modello locale è configurato: si usano mappatura manuale, abbinamento per nome file e SKU e PDF come fonte.",
+        "The client allows only local AI and no local model is configured: using manual mapping, matching by file name and SKU, and PDFs as sources.",
     };
   return { available: true };
 }
@@ -151,20 +151,20 @@ export function proposeRoute(kind: ImportFileKind, aiAvailable: boolean): Import
 }
 
 export const routeLabels: Record<ImportFileRoute, string> = {
-  map: "Mappa le colonne",
-  match: "Abbina immagini e testi",
-  extract: "Estrai prodotti",
-  source: "Usa come fonte",
-  ignore: "Ignora",
+  map: "Map the columns",
+  match: "Match images and texts",
+  extract: "Extract products",
+  source: "Use as source",
+  ignore: "Ignore",
 };
 
 export const kindLabels: Record<ImportFileKind, string> = {
-  sheet: "Foglio prodotti",
-  pdf: "PDF del cliente",
-  image: "Immagine",
-  text: "Testo",
-  archive: "Cartella o ZIP",
-  ignored: "Non ammesso",
+  sheet: "Product sheet",
+  pdf: "Client PDF",
+  image: "Image",
+  text: "Text",
+  archive: "Folder or ZIP",
+  ignored: "Not allowed",
 };
 
 /** Routes the user can pick for a kind. */

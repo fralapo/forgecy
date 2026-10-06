@@ -33,12 +33,12 @@ export default async function BrandPickerPage() {
     <>
       <PageHeader
         title="Brand Identity"
-        description="Scegli un cliente per vedere la sua Brand Identity."
+        description="Choose a client to see their Brand Identity."
       />
       {rows.length === 0 ? (
         <Card className="p-6">
           <p className="text-body-md text-fg-muted">
-            Nessun cliente. <Link href="/clients">Aggiungi il primo cliente</Link>.
+            No clients yet. <Link href="/clients">Add the first client</Link>.
           </p>
         </Card>
       ) : (
@@ -52,11 +52,11 @@ export default async function BrandPickerPage() {
                 <span className="text-heading-sm">{c.name}</span>
                 <span className="flex flex-wrap gap-2">
                   {c.published ? (
-                    <Badge variant="success">v{c.published} · Pubblicata</Badge>
+                    <Badge variant="success">v{c.published} · Published</Badge>
                   ) : (
-                    <Badge>Nessuna versione pubblicata</Badge>
+                    <Badge>No published version</Badge>
                   )}
-                  {c.draft ? <Badge variant="info">Bozza v{c.draft}</Badge> : null}
+                  {c.draft ? <Badge variant="info">Draft v{c.draft}</Badge> : null}
                 </span>
               </Link>
             </li>

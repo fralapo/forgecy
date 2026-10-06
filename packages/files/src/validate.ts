@@ -4,7 +4,7 @@ export type UploadKind = "image" | "font" | "document";
 
 const MB = 1024 * 1024;
 
-/** Size caps per kind. Images: 20 MB (spec "Sicurezza"). */
+/** Size caps per kind. Images: 20 MB (spec "Security"). */
 export const UPLOAD_LIMITS: Record<UploadKind, number> = {
   image: 20 * MB,
   font: 10 * MB,
@@ -143,12 +143,12 @@ export type ValidateUploadResult =
 export function validateUpload(input: ValidateUploadInput): ValidateUploadResult {
   const limit = UPLOAD_LIMITS[input.kind];
   if (!Number.isFinite(input.size) || input.size <= 0)
-    return { ok: false, reason: "empty", message: "File vuoto" };
+    return { ok: false, reason: "empty", message: "Empty file" };
   if (input.size > limit) {
     return {
       ok: false,
       reason: "too_large",
-      message: `File troppo grande (max ${Math.round(limit / MB)} MB)`,
+      message: `File too large (max ${Math.round(limit / MB)} MB)`,
     };
   }
   const declared = (input.mime ?? "").split(";")[0]!.trim().toLowerCase();
@@ -162,7 +162,7 @@ export function validateUpload(input: ValidateUploadInput): ValidateUploadResult
       return {
         ok: false,
         reason: "mime_mismatch",
-        message: `Il contenuto non corrisponde al tipo dichiarato (${declared})`,
+        message: `The content does not match the declared type (${declared})`,
       };
     }
     return { ok: true, ...sig.type };
@@ -191,7 +191,7 @@ export function validateUpload(input: ValidateUploadInput): ValidateUploadResult
   return {
     ok: false,
     reason: "unsupported_type",
-    message: `Tipo di file non supportato (ammessi: ${allowed})`,
+    message: `Unsupported file type (allowed: ${allowed})`,
   };
 }
 

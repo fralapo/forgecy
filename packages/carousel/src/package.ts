@@ -34,14 +34,14 @@ export type ParseManifestResult =
 
 export function parseManifest(text: string | undefined): ParseManifestResult {
   if (text === undefined)
-    return { ok: false, errors: [{ path: MANIFEST_FILE, message: "template.json mancante" }] };
+    return { ok: false, errors: [{ path: MANIFEST_FILE, message: "template.json missing" }] };
   let json: unknown;
   try {
     json = JSON.parse(text);
   } catch (err) {
     return {
       ok: false,
-      errors: [{ path: MANIFEST_FILE, message: `JSON non valido: ${(err as Error).message}` }],
+      errors: [{ path: MANIFEST_FILE, message: `Invalid JSON: ${(err as Error).message}` }],
     };
   }
   const parsed = templateManifestSchema.safeParse(json);
@@ -49,7 +49,7 @@ export function parseManifest(text: string | undefined): ParseManifestResult {
   return {
     ok: false,
     errors: parsed.error.issues.map((i) => ({
-      path: i.path.length ? i.path.join(".") : "(radice)",
+      path: i.path.length ? i.path.join(".") : "(root)",
       message: i.message,
     })),
   };
@@ -62,7 +62,7 @@ export function packageFromFiles(files: ReadonlyMap<string, Uint8Array>): Templa
     const first = parsed.errors[0];
     throw new ForgecyError(
       "validation",
-      `template.json non valido: ${first ? `${first.path}: ${first.message}` : "errore"}`,
+      `Invalid template.json: ${first ? `${first.path}: ${first.message}` : "error"}`,
       { errors: parsed.errors },
     );
   }

@@ -62,9 +62,8 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
         <CardHeader>
           <CardTitle>Report</CardTitle>
           <CardDescription>
-            Il report raccoglie i problemi, le osservazioni accettate e i prossimi passi. Lo componi
-            da qui, lo mandi in revisione e lo esporti in PDF dopo l&apos;approvazione di una
-            persona.
+            The report gathers the problems, the accepted observations and the next steps. You
+            compose it here, send it to review and export it as a PDF after a person approves it.
           </CardDescription>
         </CardHeader>
         <ul className="flex flex-col gap-2">
@@ -89,18 +88,18 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
               icon={<FilePlus2 aria-hidden />}
               variant="primary"
             >
-              Componi report
+              Compose report
             </ActionButton>
             {aiAllowed ? (
               <p className="mt-2 text-body-sm text-fg-muted">
-                Strategist e Copywriter propongono i testi e l&apos;email: li rivedi tu prima della
-                revisione.
+                The Strategist and the Copywriter propose the texts and the email: you check them
+                before the review.
               </p>
             ) : null}
           </div>
         ) : (
           <p className="text-body-sm text-fg-muted">
-            Completa i passi qui sopra per comporre il report.
+            Complete the steps above to compose the report.
           </p>
         )}
       </Card>
@@ -150,12 +149,12 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
       <div className="flex flex-col gap-6">
         {current.changesRequested && draft ? (
           <p role="status" className="rounded-md border border-warning-fill p-3 text-body-sm">
-            Modifiche richieste: {current.changesRequested}
+            Changes requested: {current.changesRequested}
           </p>
         ) : null}
         {outdated && draft ? (
           <p role="status" className="rounded-md border border-warning-fill p-3 text-body-sm">
-            Le osservazioni sono cambiate dopo la composizione: controlla elementi e testi.
+            The observations changed after the report was composed: check items and texts.
           </p>
         ) : null}
         {draft && !closed ? (
@@ -168,9 +167,9 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                     email: true,
                   })}
                   icon={<Sparkles aria-hidden />}
-                  confirm="Strategist e Copywriter riscrivono i testi non modificati a mano e l'email. Continuare?"
+                  confirm="The Strategist and the Copywriter rewrite the texts not edited by hand and the email. Continue?"
                 >
-                  Proponi i testi con l&apos;AI
+                  Propose texts with AI
                 </ActionButton>
               </div>
             ) : null}
@@ -191,10 +190,10 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle>Contenuto del report</CardTitle>
+              <CardTitle>Report content</CardTitle>
               <CardDescription>
-                Questa versione non si modifica più
-                {current.status === "in_review" ? ": ritirala dalla revisione per cambiarla." : "."}
+                This version can no longer be edited
+                {current.status === "in_review" ? ": withdraw it from review to change it." : "."}
               </CardDescription>
             </CardHeader>
             <ol className="flex flex-col gap-6">
@@ -216,7 +215,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                           <p className="text-body-md text-fg">
                             {it.title}{" "}
                             <span className="text-body-sm text-fg-muted">
-                              · priorità {levelLabel[it.priority].toLowerCase()}
+                              · {levelLabel[it.priority].toLowerCase()} priority
                             </span>
                           </p>
                           {it.description ? <p className="text-body-sm">{it.description}</p> : null}
@@ -232,16 +231,12 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
             </ol>
             {current.emailBody ? (
               <details>
-                <summary className="cursor-pointer text-body-sm text-link">
-                  Email di accompagnamento
-                </summary>
+                <summary className="cursor-pointer text-body-sm text-link">Cover email</summary>
                 <p className="mt-2 text-body-sm font-medium">{current.emailSubject}</p>
                 <p className="whitespace-pre-line text-body-sm">{current.emailBody}</p>
               </details>
             ) : (
-              <p className="text-body-sm text-fg-muted">
-                Nessuna email di accompagnamento in questa versione.
-              </p>
+              <p className="text-body-sm text-fg-muted">No cover email in this version.</p>
             )}
           </Card>
         )}
@@ -250,19 +245,19 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
       <aside className="flex flex-col gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Versione {current.version}</CardTitle>
+            <CardTitle>Version {current.version}</CardTitle>
           </CardHeader>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={reportStatusVariant[current.status]}>
               {reportStatusLabel[current.status]}
             </Badge>
             <span className="text-body-sm text-fg-muted">
-              Aggiornata il {formatDateTime(current.updatedAt)}
+              Updated on {formatDateTime(current.updatedAt)}
             </span>
           </div>
           {current.approvedAt ? (
             <p className="text-body-sm">
-              Approvata il {formatDateTime(current.approvedAt)}
+              Approved on {formatDateTime(current.approvedAt)}
               {current.approvalNote ? ` · ${current.approvalNote}` : ""}
             </p>
           ) : null}
@@ -273,16 +268,16 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                 icon={<Send aria-hidden />}
                 variant="primary"
               >
-                Invia in revisione
+                Send to review
               </ActionButton>
               {!current.submittedAt ? (
                 <ActionButton
                   action={deleteReportDraftAction.bind(null, current.id)}
                   icon={<Trash2 aria-hidden />}
                   variant="ghost"
-                  confirm="Eliminare questa bozza del report?"
+                  confirm="Delete this report draft?"
                 >
-                  Elimina bozza
+                  Delete draft
                 </ActionButton>
               ) : null}
             </div>
@@ -299,7 +294,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                 icon={<Undo2 aria-hidden />}
                 variant="ghost"
               >
-                Ritira dalla revisione
+                Withdraw from review
               </ActionButton>
             </>
           ) : null}
@@ -309,7 +304,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
               icon={<RefreshCw aria-hidden />}
               variant="secondary"
             >
-              Crea una nuova versione
+              Create a new version
             </ActionButton>
           ) : null}
         </Card>
@@ -318,13 +313,13 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
           <CardHeader>
             <CardTitle>PDF</CardTitle>
             <CardDescription>
-              Il PDF usa il template «Report di audit». Le prove hanno la filigrana «Bozza»; il PDF
-              finale si esporta dopo l&apos;approvazione e consegna l&apos;audit.
+              The PDF uses the “Audit report” template. Proofs carry the “Draft” watermark; the
+              final PDF is exported after approval and delivers the audit.
             </CardDescription>
           </CardHeader>
           {exportFailure ? (
             <p role="alert" className="text-body-sm text-error">
-              L&apos;ultimo PDF non è stato creato
+              The last PDF was not created
               {exportFailure.error ? `: ${exportFailure.error}` : "."}
             </p>
           ) : null}
@@ -342,7 +337,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                   variant="ghost"
                   size="sm"
                 >
-                  {variant === "full" ? "Prova completa" : "Prova compatta"}
+                  {variant === "full" ? "Full proof" : "Compact proof"}
                 </ActionButton>
               ))}
             </div>
@@ -362,11 +357,11 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                   size="sm"
                   confirm={
                     current.status === "approved" && variant === "full"
-                      ? "Il PDF finale consegna l'audit: dopo non si modifica più. Continuare?"
+                      ? "The final PDF delivers the audit: after that it can no longer be edited. Continue?"
                       : undefined
                   }
                 >
-                  {variant === "full" ? "PDF finale completo" : "PDF finale compatto"}
+                  {variant === "full" ? "Final full PDF" : "Final compact PDF"}
                 </ActionButton>
               ))}
             </div>
@@ -383,7 +378,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                     <span>{d.fileName}</span>
                   )}
                   <span className="text-fg-muted">
-                    {d.final ? "Finale" : "Bozza"} · {plural(d.pages, "pagina", "pagine")} ·{" "}
+                    {d.final ? "Final" : "Draft"} · {plural(d.pages, "page", "pages")} ·{" "}
                     {formatDateTime(d.createdAt)}
                   </span>
                 </li>
@@ -394,15 +389,15 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
 
         <Card>
           <CardHeader>
-            <CardTitle>Verifica delle evidenze</CardTitle>
+            <CardTitle>Evidence check</CardTitle>
             <CardDescription>
-              Ogni elemento incluso deve avere una fonte che esiste ancora.
+              Every included item must have a source that still exists.
             </CardDescription>
           </CardHeader>
           {check.ok ? (
             <p className="flex items-center gap-2 text-body-sm">
               <Check aria-hidden className="size-4 text-success" />
-              {plural(check.included, "elemento", "elementi")}, tutti con evidenza
+              {plural(check.included, "item", "items")}, all with evidence
             </p>
           ) : (
             <ul className="flex flex-col gap-2">
@@ -431,7 +426,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
         {reports.length > 1 ? (
           <Card>
             <CardHeader>
-              <CardTitle>Versioni precedenti</CardTitle>
+              <CardTitle>Previous versions</CardTitle>
             </CardHeader>
             <ul className="flex flex-col gap-2">
               {reports.slice(1).map((r) => (

@@ -100,10 +100,10 @@ export const audits = pgTable(
       onDelete: "set null",
     }),
     competitorsConfirmedAt: timestamp("competitors_confirmed_at", { withTimezone: true }),
-    /** "Prosegui senza competitor": the report has no competitor section. */
+    /** "Continue without competitors": the report has no competitor section. */
     competitorsSkipped: boolean("competitors_skipped").notNull().default(false),
     diagnosisAt: timestamp("diagnosis_at", { withTimezone: true }),
-    /** Last accept/edit/reject of an observation: drives the "Aggiorna diagnosi" banner. */
+    /** Last accept/edit/reject of an observation: drives the "Update diagnosis" banner. */
     findingsChangedAt: timestamp("findings_changed_at", { withTimezone: true }),
     reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
@@ -399,7 +399,7 @@ export const auditFindings = pgTable(
     competitorId: uuid("competitor_id").references(() => auditCompetitors.id, {
       onDelete: "cascade",
     }),
-    /** Reading the observation came from ("Da lettura precedente" after a new scan). */
+    /** Reading the observation came from ("From previous reading" after a new scan). */
     scanId: uuid("scan_id").references(() => siteScans.id, { onDelete: "set null" }),
     channel: auditChannelEnum("channel"),
     /** Agent role that proposed it, null for findings written by a person. */
@@ -518,7 +518,7 @@ export const auditReportExports = pgTable(
       .notNull()
       .references(() => auditReports.id, { onDelete: "cascade" }),
     variant: reportVariantEnum("variant").notNull(),
-    /** false: draft PDF with the "Bozza" watermark. */
+    /** false: draft PDF with the "Draft" watermark. */
     final: boolean("final").notNull(),
     storageKey: text("storage_key").notNull(),
     fileName: text("file_name").notNull(),

@@ -15,10 +15,10 @@ export type TemplateRow = typeof templates.$inferSelect;
 export type TemplateStatus = "draft" | "in_review" | "published" | "archived";
 
 export const templateStatusLabels: Record<TemplateStatus, string> = {
-  draft: "Bozza",
-  in_review: "In revisione",
-  published: "Pubblicato",
-  archived: "Archiviato",
+  draft: "Draft",
+  in_review: "In review",
+  published: "Published",
+  archived: "Archived",
 };
 
 /** Stored validation: the report plus whether the worker already ran the render checks. */
@@ -77,7 +77,7 @@ export interface ImportTemplateResult {
 
 /**
  * Import a package as a draft. Re-importing the same version replaces the draft's
- * package (page 37 «Carica nuovo pacchetto»); a version already in review, published or
+ * package (page 37 “Upload new package”); a version already in review, published or
  * archived is never overwritten.
  */
 export async function importTemplate(input: ImportTemplateInput): Promise<ImportTemplateResult> {
@@ -85,8 +85,7 @@ export async function importTemplate(input: ImportTemplateInput): Promise<Import
   assertCan(actor, "templates.manage");
   const report = validateTemplatePackage(files);
   const m = report.manifest;
-  if (!m)
-    throw new ForgecyError("validation", "template.json non valido", { issues: report.issues });
+  if (!m) throw new ForgecyError("validation", "Invalid template.json", { issues: report.issues });
 
   const zip = packTemplateZip(files);
   const hash = sha256(zip);
@@ -100,7 +99,7 @@ export async function importTemplate(input: ImportTemplateInput): Promise<Import
   if (existing && existing.status !== "draft")
     throw new ForgecyError(
       "conflict",
-      `La versione ${m.version} di «${m.name}» è ${templateStatusLabels[existing.status as TemplateStatus].toLowerCase()}: aumenta "version" in template.json.`,
+      `Version ${m.version} of “${m.name}” is ${templateStatusLabels[existing.status as TemplateStatus].toLowerCase()}: bump "version" in template.json.`,
     );
 
   const validation: StoredValidation = {
@@ -182,18 +181,18 @@ export async function transitionTemplate(input: TransitionInput): Promise<Templa
   const { db, actor, id, to } = input;
   assertCan(actor, "templates.manage");
   const row = await db.query.templates.findFirst({ where: eq(templates.id, id) });
-  if (!row) throw new ForgecyError("not_found", "Template non trovato");
+  if (!row) throw new ForgecyError("not_found", "Template not found");
   const from = row.status as TemplateStatus;
   if (!TRANSITIONS[from]?.includes(to))
     throw new ForgecyError(
       "conflict",
-      `Da «${templateStatusLabels[from]}» non si può passare a «${templateStatusLabels[to]}»`,
+      `Cannot move from “${templateStatusLabels[from]}” to “${templateStatusLabels[to]}”`,
     );
   const notes = input.notes?.trim() ?? "";
   if ((to === "in_review" || (to === "published" && from !== "archived")) && notes.length < 3)
-    throw new ForgecyError("validation", "Scrivi cosa cambia in questa versione");
+    throw new ForgecyError("validation", "Describe what changes in this version");
   if ((to === "in_review" || to === "published") && !isPublishable(row))
-    throw new ForgecyError("validation", "La validazione del template non è superata");
+    throw new ForgecyError("validation", "The template has not passed validation");
 
   const now = new Date();
   const set: Partial<typeof templates.$inferInsert> = { status: to };
@@ -242,7 +241,7 @@ export async function loadTemplatePackage(
   for await (const c of await storage.get(row.packageKey)) chunks.push(c as Uint8Array);
   const bytes = new Uint8Array(Buffer.concat(chunks));
   if (sha256(bytes) !== row.packageSha256)
-    throw new ForgecyError("conflict", `Pacchetto del template alterato: ${row.packageKey}`);
+    throw new ForgecyError("conflict", `Template package altered: ${row.packageKey}`);
   const pkg = packageFromFiles(unzipTemplatePackage(bytes));
   if (cache.size >= 32) cache.delete(cache.keys().next().value!);
   cache.set(row.packageSha256, pkg);

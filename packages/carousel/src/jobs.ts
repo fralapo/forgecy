@@ -25,9 +25,9 @@ export const carouselExportPayloadSchema = z.object({
   /** The longest channel limit (LinkedIn); the content module checks each channel's own limit. */
   caption: z.string().max(3000).default(""),
   hashtags: z.array(z.string().max(100)).max(30).default([]),
-  /** "zip" includes PNG, PDF, caption.txt, testi.md and slides.json. */
+  /** "zip" includes PNG, PDF, caption.txt, texts.md and slides.json. */
   outputs: z.array(z.enum(exportOutputs)).min(1).default(["zip"]),
-  /** Before approval: watermark «Bozza» and `_bozza` file names. */
+  /** Before approval: “Draft” watermark and `_draft` file names. */
   draft: z.boolean().default(false),
   metadata: z
     .object({

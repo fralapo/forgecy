@@ -43,7 +43,7 @@ type FindingRow = typeof auditFindings.$inferSelect;
 
 async function loadFinding(db: Database | Tx, id: string): Promise<FindingRow> {
   const [row] = await db.select().from(auditFindings).where(eq(auditFindings.id, id));
-  if (!row) throw new ForgecyError("not_found", "Elemento non trovato");
+  if (!row) throw new ForgecyError("not_found", "Item not found");
   return row;
 }
 
@@ -57,10 +57,10 @@ async function loadEditable(deps: AuditDeps, id: string) {
 const conflict = () =>
   new ForgecyError(
     "conflict",
-    "Qualcuno ha modificato questo elemento nel frattempo. Ricarica per vedere la versione aggiornata.",
+    "Someone changed this item in the meantime. Reload to see the updated version.",
   );
 
-/** Observation changes after a diagnosis show the "Aggiorna diagnosi" banner. */
+/** Observation changes after a diagnosis show the "Update diagnosis" banner. */
 async function touchFindings(tx: Tx, finding: FindingRow) {
   if (finding.kind === "problem") return;
   await tx
@@ -92,13 +92,13 @@ export async function reviewFinding(
   const { finding, audit } = await loadEditable(deps, input.id);
   assertCan(actor, "review", audit.clientId);
   if (input.decision === "reject" && finding.kind === "problem" && !input.reason?.trim())
-    throw new ForgecyError("validation", "Scrivi perché scarti questo problema.");
+    throw new ForgecyError("validation", "Write why you are rejecting this problem.");
   if (input.decision === "accept" && finding.kind === "problem") {
     const count = await usableProblemCount(deps.db, finding.auditId, finding.id);
     if (count >= AUDIT_LIMITS.maxProblems)
       throw new ForgecyError(
         "validation",
-        `La diagnosi ha già ${AUDIT_LIMITS.maxProblems} problemi: scartane uno prima.`,
+        `The diagnosis already has ${AUDIT_LIMITS.maxProblems} problems: reject one first.`,
       );
   }
   const status: FindingStatus =
@@ -128,7 +128,7 @@ export async function reviewFinding(
   });
 }
 
-/** Undo a decision: back to "Da rivedere". */
+/** Undo a decision: back to "To review". */
 export async function reopenFinding(deps: AuditDeps, actor: Actor, id: string, rev: number) {
   const { finding, audit } = await loadEditable(deps, id);
   assertCan(actor, "review", audit.clientId);
@@ -153,14 +153,14 @@ const evidenceSchema = z.object({
 });
 
 export const findingEditSchema = z.object({
-  title: z.string().trim().min(1, "Scrivi un titolo").max(160),
+  title: z.string().trim().min(1, "Enter a title").max(160),
   description: z.string().trim().max(1000).optional(),
   impact: z.string().trim().max(600).optional(),
   recommendation: z.string().trim().max(1000).optional(),
   priority: z.enum(levels).optional(),
 });
 
-/** Edit the text or priority: the finding becomes "Modificata" and regeneration keeps it. */
+/** Edit the text or priority: the finding becomes "Edited" and regeneration keeps it. */
 export async function editFinding(
   deps: AuditDeps,
   actor: Actor,
@@ -247,7 +247,7 @@ export async function addFinding(
   let evidence = data.evidence as AuditEvidence[];
   if (data.kind === "problem") {
     if (!data.parentIds.length)
-      throw new ForgecyError("validation", "Collega almeno un'osservazione accettata.");
+      throw new ForgecyError("validation", "Link at least one accepted observation.");
     const parents = await deps.db
       .select({ id: auditFindings.id, title: auditFindings.title })
       .from(auditFindings)
@@ -260,7 +260,7 @@ export async function addFinding(
         ),
       );
     if (parents.length !== data.parentIds.length)
-      throw new ForgecyError("validation", "Puoi collegare solo osservazioni accettate.");
+      throw new ForgecyError("validation", "You can only link accepted observations.");
     evidence = [
       ...parents.map((p): AuditEvidence => ({ type: "note", label: p.title.slice(0, 120) })),
       ...evidence,
@@ -268,7 +268,7 @@ export async function addFinding(
     if ((await usableProblemCount(deps.db, data.auditId)) >= AUDIT_LIMITS.maxProblems)
       throw new ForgecyError(
         "validation",
-        `La diagnosi ha già ${AUDIT_LIMITS.maxProblems} problemi: scartane uno prima.`,
+        `The diagnosis already has ${AUDIT_LIMITS.maxProblems} problems: reject one first.`,
       );
   }
   const userId = userIdOf(actor);
@@ -290,8 +290,8 @@ export async function addFinding(
         priority: data.priority ?? "medium",
         confidence: confidenceFromEvidence(evidence.length),
         confidenceReason: evidence.length
-          ? `${evidence.length} ${data.kind === "problem" ? "elementi collegati" : "prove indicate"} da una persona`
-          : "Nessuna prova allegata",
+          ? `${evidence.length} ${data.kind === "problem" ? "linked items" : "evidence items"} given by a person`
+          : "No evidence attached",
         status: "accepted",
         evidence,
         parentIds: data.parentIds,
@@ -321,7 +321,7 @@ export async function deleteFinding(deps: AuditDeps, actor: Actor, id: string) {
   const { finding, audit } = await loadEditable(deps, id);
   assertCan(actor, "edit_draft", audit.clientId);
   if (finding.authorAgent)
-    throw new ForgecyError("validation", "Le proposte dell'AI si scartano, non si eliminano.");
+    throw new ForgecyError("validation", "AI proposals are rejected, not deleted.");
   await deps.db.transaction(async (tx) => {
     await tx.delete(auditFindings).where(eq(auditFindings.id, id));
     await touchFindings(tx, finding);
@@ -382,10 +382,9 @@ export async function linkObservations(
 ) {
   const { finding, audit } = await loadEditable(deps, input.id);
   assertCan(actor, "edit_draft", audit.clientId);
-  if (finding.kind !== "problem") throw new ForgecyError("validation", "Non è un problema.");
+  if (finding.kind !== "problem") throw new ForgecyError("validation", "This is not a problem.");
   const ids = [...new Set(input.observationIds)];
-  if (!ids.length)
-    throw new ForgecyError("validation", "Collega almeno un'osservazione accettata.");
+  if (!ids.length) throw new ForgecyError("validation", "Link at least one accepted observation.");
   const ok = await deps.db
     .select({ id: auditFindings.id })
     .from(auditFindings)
@@ -398,7 +397,7 @@ export async function linkObservations(
       ),
     );
   if (ok.length !== ids.length)
-    throw new ForgecyError("validation", "Puoi collegare solo osservazioni accettate.");
+    throw new ForgecyError("validation", "You can only link accepted observations.");
   const [row] = await deps.db
     .update(auditFindings)
     .set({
@@ -427,11 +426,14 @@ export async function setComparisonOutcome(
   const { finding, audit } = await loadEditable(deps, input.id);
   assertCan(actor, "review", audit.clientId);
   if (finding.kind !== "comparison" || !finding.comparison)
-    throw new ForgecyError("validation", "Non è una riga del confronto.");
+    throw new ForgecyError("validation", "This is not a comparison row.");
   const proposed = finding.comparison.proposedOutcome ?? finding.comparison.outcome;
   const note = input.note?.trim();
   if (input.outcome !== proposed && !note)
-    throw new ForgecyError("validation", "Scrivi una nota: l'esito è diverso da quello proposto.");
+    throw new ForgecyError(
+      "validation",
+      "Write a note: the outcome differs from the proposed one.",
+    );
   return deps.db.transaction(async (tx) => {
     const [row] = await tx
       .update(auditFindings)
@@ -457,7 +459,7 @@ export async function setComparisonOutcome(
 
 async function assertNotRunning(deps: AuditDeps, auditId: string, kind: string) {
   if (await hasActiveJob(deps.db, auditId, kind))
-    throw new ForgecyError("conflict", "Questo passo è già in corso.");
+    throw new ForgecyError("conflict", "This step is already in progress.");
 }
 
 /** Website vs Instagram vs Facebook: needs data on at least two of them. */
@@ -476,7 +478,7 @@ export async function requestChannelComparison(
   if (compared.length < 2)
     throw new ForgecyError(
       "validation",
-      "Servono dati su almeno due canali tra sito, Instagram e Facebook.",
+      "Data is needed on at least two channels among website, Instagram and Facebook.",
     );
   return enqueueAuditJob(deps, {
     def: auditCompareChannelsJob,
@@ -489,7 +491,7 @@ export async function requestChannelComparison(
   });
 }
 
-/** Strategist diagnosis from the accepted observations ("Genera" / "Aggiorna diagnosi"). */
+/** Strategist diagnosis from the accepted observations ("Generate" / "Update diagnosis"). */
 export async function requestDiagnosis(deps: AuditDeps, actor: Actor, auditId: string) {
   const { audit, client } = await loadAudit(deps.db, auditId);
   assertCan(actor, "project.edit", audit.clientId);
@@ -509,7 +511,7 @@ export async function requestDiagnosis(deps: AuditDeps, actor: Actor, auditId: s
   if (!row?.n)
     throw new ForgecyError(
       "validation",
-      "Accetta almeno un'osservazione prima di generare la diagnosi.",
+      "Accept at least one observation before generating the diagnosis.",
     );
   return enqueueAuditJob(deps, {
     def: auditDiagnoseJob,
@@ -527,7 +529,7 @@ export async function requestPlan(deps: AuditDeps, actor: Actor, auditId: string
   assertAiAllowed(client);
   await assertNotRunning(deps, audit.id, auditPlanJob.kind);
   if ((await usableProblemCount(deps.db, auditId)) < 1)
-    throw new ForgecyError("validation", "Accetta almeno un problema della diagnosi.");
+    throw new ForgecyError("validation", "Accept at least one problem of the diagnosis.");
   return enqueueAuditJob(deps, {
     def: auditPlanJob,
     payload: { auditId },
@@ -553,7 +555,7 @@ export async function reviewPlan(
       })
       .where(eq(auditPlans.auditId, input.auditId))
       .returning({ id: auditPlans.id });
-    if (!row) throw new ForgecyError("not_found", "Nessun piano da rivedere");
+    if (!row) throw new ForgecyError("not_found", "No plan to review");
     await recordAuditEvent(tx, {
       actor,
       action: `audit.plan.${input.decision}`,
@@ -586,27 +588,27 @@ export async function reportReadiness(db: Database, auditId: string): Promise<Re
   return [
     {
       key: "observations",
-      label: "Osservazioni rivedute",
+      label: "Observations reviewed",
       ok: pending === 0,
-      ...(pending ? { detail: `${pending} ancora da rivedere` } : {}),
+      ...(pending ? { detail: `${pending} still to review` } : {}),
     },
     {
       key: "competitors",
-      label: "Lista dei competitor confermata",
+      label: "Competitor list confirmed",
       ok: Boolean(audit.competitorsConfirmedAt) || audit.competitorsSkipped,
     },
     {
       key: "problems",
-      label: `Da ${AUDIT_LIMITS.minProblems} a ${AUDIT_LIMITS.maxProblems} problemi accettati`,
+      label: `${AUDIT_LIMITS.minProblems} to ${AUDIT_LIMITS.maxProblems} accepted problems`,
       ok:
         problems.length >= AUDIT_LIMITS.minProblems && problems.length <= AUDIT_LIMITS.maxProblems,
-      detail: `${problems.length} accettati`,
+      detail: `${problems.length} accepted`,
     },
     {
       key: "stale",
-      label: "Diagnosi aggiornata",
+      label: "Diagnosis up to date",
       ok: stale === 0,
-      ...(stale ? { detail: `${stale} problemi da ricontrollare` } : {}),
+      ...(stale ? { detail: `${stale} problems to recheck` } : {}),
     },
   ];
 }

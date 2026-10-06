@@ -17,14 +17,14 @@ type Status =
 
 const label: Record<Status, string> = {
   idle: "",
-  queued: "In coda",
-  running: "In corso",
-  retrying: "Nuovo tentativo",
-  completed: "Il worker risponde",
-  failed: "Fallito",
-  cancelled: "Annullato",
-  needs_attention: "Richiede intervento",
-  error: "Coda non raggiungibile",
+  queued: "Queued",
+  running: "Running",
+  retrying: "Retrying",
+  completed: "The worker responds",
+  failed: "Failed",
+  cancelled: "Cancelled",
+  needs_attention: "Needs attention",
+  error: "Queue unreachable",
 };
 
 /** Enqueues a `system.ping` job and follows it over SSE: proves web → Redis → worker → Postgres. */
@@ -60,7 +60,7 @@ export function WorkerCheck() {
         disabled={status === "queued" || status === "running"}
       >
         <Activity aria-hidden />
-        Verifica il worker
+        Check the worker
       </Button>
       <span aria-live="polite">
         {status !== "idle" ? <Badge variant={variant}>{label[status]}</Badge> : null}

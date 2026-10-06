@@ -32,7 +32,7 @@ export const POST = withUser(
     const declared = Number(request.headers.get("content-length") ?? "0");
     if (declared > MAX_UPLOAD_BYTES)
       return NextResponse.json(
-        { error: "IMPORT-TOO-LARGE", message: "Il file supera il limite di 200 MB." },
+        { error: "IMPORT-TOO-LARGE", message: "The file exceeds the 200 MB limit." },
         { status: 413 },
       );
     const relativePath = decodeURIComponent(request.headers.get("x-file-path") ?? "file").slice(

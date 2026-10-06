@@ -92,9 +92,9 @@ export function SlideList({
     });
 
   return (
-    <nav aria-label="Slide del carosello" className="space-y-3">
+    <nav aria-label="Carousel slides" className="space-y-3">
       <p className="text-body-sm text-fg-muted">
-        {n} slide · il template ne prevede da {min} a {max}
+        {plural(n, "slide", "slides")} · the template allows {min} to {max}
       </p>
       <ol className="space-y-2">
         {doc.slides.map((s, i) => {
@@ -121,7 +121,7 @@ export function SlideList({
                   {i + 1}. {layout ? layout.name : s.layout}
                 </span>
                 <span className="block text-label text-fg-muted">
-                  {layout ? slideRoleLabels[layout.role] : "Layout non presente nel template"}
+                  {layout ? slideRoleLabels[layout.role] : "Layout not in the template"}
                 </span>
               </button>
               {errors || warnings ? (
@@ -135,7 +135,7 @@ export function SlideList({
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`Sposta in su la slide ${i + 1}`}
+                    aria-label={`Move slide ${i + 1} up`}
                     disabled={i === 0}
                     onClick={() => move(i, -1)}
                   >
@@ -144,7 +144,7 @@ export function SlideList({
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`Sposta in giù la slide ${i + 1}`}
+                    aria-label={`Move slide ${i + 1} down`}
                     disabled={i === n - 1}
                     onClick={() => move(i, 1)}
                   >
@@ -153,7 +153,7 @@ export function SlideList({
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`Duplica la slide ${i + 1}`}
+                    aria-label={`Duplicate slide ${i + 1}`}
                     disabled={n >= max}
                     onClick={() => {
                       const copy = { ...structuredClone(s), id: newSlideId() };
@@ -170,10 +170,10 @@ export function SlideList({
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`Elimina la slide ${i + 1}`}
+                    aria-label={`Delete slide ${i + 1}`}
                     disabled={n <= min}
                     onClick={() => {
-                      if (!window.confirm(`Eliminare la slide ${i + 1}?`)) return;
+                      if (!window.confirm(`Delete slide ${i + 1}?`)) return;
                       update((d) => ({ ...d, slides: d.slides.filter((x) => x.id !== s.id) }));
                       const next = doc.slides[i + 1] ?? doc.slides[i - 1];
                       if (next) onSelect(next.id);
@@ -189,7 +189,7 @@ export function SlideList({
       </ol>
       {!readOnly ? (
         <div className="space-y-2 rounded-md border border-dashed border-subtle p-2">
-          <Label htmlFor="add-layout">Nuova slide dopo la selezionata</Label>
+          <Label htmlFor="add-layout">New slide after the selected one</Label>
           <select
             id="add-layout"
             className={controlClass}
@@ -226,10 +226,10 @@ export function SlideList({
             }}
           >
             <Plus aria-hidden />
-            Aggiungi slide
+            Add slide
           </Button>
           {n >= max ? (
-            <p className="text-body-sm text-fg-muted">Raggiunto il massimo del template.</p>
+            <p className="text-body-sm text-fg-muted">Template maximum reached.</p>
           ) : null}
         </div>
       ) : null}
@@ -300,9 +300,7 @@ export function SlidePanel({
               if (to) patch((s) => moveSlots(s, layout, to));
             }}
           >
-            {!layout ? (
-              <option value={slide.layout}>{slide.layout} (non disponibile)</option>
-            ) : null}
+            {!layout ? <option value={slide.layout}>{slide.layout} (unavailable)</option> : null}
             {layouts.map((l) => (
               <option key={l.id} value={l.id}>
                 {layoutLabel(l)}
@@ -311,7 +309,7 @@ export function SlidePanel({
           </select>
         </div>
         <div className="space-y-1">
-          <Label htmlFor="slide-tone">Variante di colore</Label>
+          <Label htmlFor="slide-tone">Color variant</Label>
           <select
             id="slide-tone"
             className={controlClass}
@@ -323,7 +321,7 @@ export function SlidePanel({
             }}
           >
             <option value="default">Standard</option>
-            <option value="inverse">Invertita</option>
+            <option value="inverse">Inverted</option>
           </select>
         </div>
       </div>
@@ -346,12 +344,12 @@ export function SlidePanel({
         ))
       ) : (
         <p className="text-body-sm text-error">
-          Il layout «{slide.layout}» non è nel template: scegline un altro.
+          The layout “{slide.layout}” is not in the template: choose another one.
         </p>
       )}
 
       <div className="space-y-1">
-        <Label htmlFor="slide-note">Nota per chi revisiona</Label>
+        <Label htmlFor="slide-note">Note for the reviewer</Label>
         <Input
           id="slide-note"
           value={slide.note ?? ""}
@@ -414,12 +412,12 @@ function SlotField({
         {def.type === "text" ? (
           <label id={`${id}-name`} htmlFor={id} className="text-body-sm font-medium text-fg">
             {label}
-            {def.required ? <span className="text-fg-muted"> · obbligatorio</span> : null}
+            {def.required ? <span className="text-fg-muted"> · required</span> : null}
           </label>
         ) : (
           <span id={`${id}-name`} className="text-body-sm font-medium text-fg">
             {label}
-            {def.required ? <span className="text-fg-muted"> · obbligatorio</span> : null}
+            {def.required ? <span className="text-fg-muted"> · required</span> : null}
           </span>
         )}
         <label className="flex items-center gap-2 text-body-sm text-fg">
@@ -431,7 +429,7 @@ function SlotField({
             onChange={(e) => onProtect(e.target.checked)}
           />
           <ShieldCheck aria-hidden className="size-4" />
-          Proteggi dall&apos;AI<span className="sr-only">: {label}</span>
+          Protect from AI<span className="sr-only">: {label}</span>
         </label>
       </div>
 
@@ -501,8 +499,8 @@ function TextSlot({
       )}
       <p className="flex flex-wrap justify-between gap-2 text-label text-fg-muted">
         <span>
-          {def.maxLines ? `Massimo ${plural(def.maxLines, "riga", "righe")}. ` : ""}
-          {def.highlight ? "Evidenzia una parola con ==parola==." : ""}
+          {def.maxLines ? `Up to ${plural(def.maxLines, "line", "lines")}. ` : ""}
+          {def.highlight ? "Highlight a word with ==word==." : ""}
         </span>
         <Counter id={`${id}-count`} len={visibleLength(value)} max={def.maxChars} />
       </p>
@@ -532,7 +530,7 @@ function ListSlot({
             <Input
               value={item}
               disabled={readOnly}
-              aria-label={`${def.label ?? def.name}, voce ${i + 1}`}
+              aria-label={`${def.label ?? def.name}, item ${i + 1}`}
               aria-describedby={`${id}-${i}-count`}
               onChange={(e) => set(value.map((x, j) => (j === i ? e.target.value : x)))}
             />
@@ -541,7 +539,7 @@ function ListSlot({
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label={`Rimuovi la voce ${i + 1}`}
+                aria-label={`Remove item ${i + 1}`}
                 onClick={() => set(value.filter((_, j) => j !== i))}
               >
                 <X aria-hidden />
@@ -559,11 +557,11 @@ function ListSlot({
             onClick={() => set([...value, ""])}
           >
             <Plus aria-hidden />
-            Aggiungi voce
+            Add item
           </Button>
         ) : null}
         <span className="text-label text-fg-muted">
-          {plural(value.length, "voce", "voci")} · da {def.minItems} a {def.maxItems}
+          {plural(value.length, "item", "items")} · {def.minItems} to {def.maxItems}
         </span>
       </div>
     </div>
@@ -608,20 +606,20 @@ function ImageSlot({
             <Thumb url={current?.thumb ?? null} alt={value.alt} />
           ) : (
             <div className="flex aspect-square w-full items-center justify-center rounded-md border border-dashed border-subtle text-body-sm text-fg-muted">
-              Nessuna immagine
+              No image
             </div>
           )}
         </div>
         <div className="min-w-48 flex-1 space-y-2">
           {value?.asset ? (
-            <p className="text-body-sm text-fg-muted">Immagine di esempio del template.</p>
+            <p className="text-body-sm text-fg-muted">Template sample image.</p>
           ) : null}
           {current && current.status !== "approved" ? (
-            <Badge variant="warning">Immagine da approvare</Badge>
+            <Badge variant="warning">Image to approve</Badge>
           ) : null}
           {value ? (
             <div className="space-y-1">
-              <Label htmlFor={`alt-${slideId}-${slot}`}>Testo alternativo</Label>
+              <Label htmlFor={`alt-${slideId}-${slot}`}>Alt text</Label>
               <Input
                 id={`alt-${slideId}-${slot}`}
                 value={value.alt}
@@ -642,7 +640,7 @@ function ImageSlot({
                     })
                   }
                 >
-                  Usa questo testo anche in libreria
+                  Use this text in the library too
                 </ActionButton>
               ) : null}
             </div>
@@ -650,11 +648,11 @@ function ImageSlot({
           {!readOnly ? (
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" size="sm" onClick={() => setPicking((p) => !p)}>
-                {picking ? "Chiudi la libreria" : "Scegli dalla libreria"}
+                {picking ? "Close the library" : "Choose from the library"}
               </Button>
               {value ? (
                 <Button variant="ghost" size="sm" onClick={() => onChange(undefined)}>
-                  Rimuovi immagine
+                  Remove image
                 </Button>
               ) : null}
             </div>
@@ -679,16 +677,14 @@ function ImageSlot({
                 >
                   <Thumb url={a.thumb} alt={a.alt} />
                   <span className="mt-1 block truncate text-label text-fg-muted">
-                    {a.alt || "Senza testo alternativo"}
+                    {a.alt || "No alt text"}
                   </span>
                 </button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-body-sm text-fg-muted">
-            Nessuna immagine approvata nella libreria del cliente.
-          </p>
+          <p className="text-body-sm text-fg-muted">No approved images in the client’s library.</p>
         )
       ) : null}
 

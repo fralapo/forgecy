@@ -15,9 +15,9 @@ import type { AuditHandlerDeps } from "./context";
 export const REPORT_TEMPLATE_KEY = "report-audit-a4";
 
 /**
- * «audit.report_export»: the report document becomes the pages of the published
- * «Report di audit» template, rendered by the carousel renderer (PDF only). A draft
- * PDF carries the «Bozza» watermark; the final one moves the audit to delivered.
+ * “audit.report_export”: the report document becomes the pages of the published
+ * “Audit report” template, rendered by the carousel renderer (PDF only). A draft
+ * PDF carries the “Draft” watermark; the final one moves the audit to delivered.
  */
 export async function runReportExport(
   deps: Pick<AuditHandlerDeps, "db" | "storage"> & { renderBrowser: () => Promise<Browser> },
@@ -28,18 +28,18 @@ export async function runReportExport(
   const report = await db.query.auditReports.findFirst({
     where: eq(auditReports.id, payload.reportId),
   });
-  if (!report) throw new UnrecoverableError("Report non trovato");
+  if (!report) throw new UnrecoverableError("Report not found");
   if (payload.final && report.status !== "approved" && report.status !== "exported")
     throw new UnrecoverableError(
-      "La versione non è più approvata: il PDF finale non è stato creato.",
+      "The version is no longer approved: the final PDF was not created.",
     );
-  if (!ctx.row.createdBy) throw new UnrecoverableError("Export senza una persona che l'ha chiesto");
+  if (!ctx.row.createdBy) throw new UnrecoverableError("Export without a person who requested it");
   const { audit, client } = await loadAudit(db, report.auditId);
 
   const pkg = await dbTemplateSource({ db, storage }).get(REPORT_TEMPLATE_KEY);
   if (!pkg)
     throw new NeedsAttentionError(
-      "Il template «Report di audit» non è pubblicato: importalo e pubblicalo dal catalogo dei template.",
+      "The “Audit report” template is not published: import and publish it from the template catalog.",
     );
   await ctx.progress(5);
 
@@ -49,13 +49,13 @@ export async function runReportExport(
     built = reportSlides(doc, pkg.manifest);
   } catch (err) {
     throw new NeedsAttentionError(
-      `Il template pubblicato non va bene per un report: ${(err as Error).message}`,
+      `The published template does not fit a report: ${(err as Error).message}`,
     );
   }
   const check = buildCarouselSchema(pkg.manifest).safeParse(built.slides);
   if (!check.success)
     throw new NeedsAttentionError(
-      `Il report non entra nel template: ${check.error.issues[0]?.message ?? "errore"}`,
+      `The report does not fit the template: ${check.error.issues[0]?.message ?? "error"}`,
       { issues: check.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) },
     );
 
@@ -81,7 +81,7 @@ export async function runReportExport(
     throw err;
   }
   const pdf = result.files.find((f) => f.kind === "pdf");
-  if (!pdf) throw new UnrecoverableError("Il renderer non ha prodotto il PDF");
+  if (!pdf) throw new UnrecoverableError("The renderer did not produce the PDF");
 
   const hash = sha256(pdf.data);
   const key = contentKey({ clientId: client.id, scope: "exports", sha256: hash, ext: "pdf" });

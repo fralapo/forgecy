@@ -7,7 +7,7 @@ import { getStorage } from "../../../../_lib/server";
 import { outputLabels } from "../../_lib/labels";
 import { isActiveJob, loadCarousel } from "../../_lib/workspace";
 
-export const metadata = { title: "Esporta · Carosello" };
+export const metadata = { title: "Export · Carousel" };
 
 interface ExportFile {
   name: string;
@@ -28,7 +28,7 @@ function parseFiles(raw: unknown[]): ExportFile[] {
 
 const formatSize = (bytes: number) =>
   bytes >= 1_000_000
-    ? `${(bytes / 1_000_000).toLocaleString("it-IT", { maximumFractionDigits: 1 })} MB`
+    ? `${(bytes / 1_000_000).toLocaleString("en-GB", { maximumFractionDigits: 1 })} MB`
     : `${Math.max(1, Math.round(bytes / 1000))} kB`;
 
 export default async function ExportPage({
@@ -71,7 +71,7 @@ export default async function ExportPage({
     <div className="grid gap-6 xl:grid-cols-[1fr_2fr]">
       <div className="grid content-start gap-6">
         <Card className="grid gap-3 p-5">
-          <h3 className="text-heading-sm text-fg">Nuova esportazione</h3>
+          <h3 className="text-heading-sm text-fg">New export</h3>
           <CarouselExportForm
             slug={client.slug}
             clientId={client.id}
@@ -81,21 +81,21 @@ export default async function ExportPage({
             disabled={ws.document.slides.length === 0 || exportRunning}
           />
           {ws.document.slides.length === 0 ? (
-            <p className="text-body-sm text-fg-muted">Il carosello non ha ancora slide.</p>
+            <p className="text-body-sm text-fg-muted">The carousel has no slides yet.</p>
           ) : null}
         </Card>
         {guard ? (
           <Card className="grid gap-3 p-5">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-heading-sm text-fg">Brand Guard</h3>
-              <Badge>Coerenza {guardBandLabels[guard.coherence.band].toLowerCase()}</Badge>
+              <Badge>Coherence: {guardBandLabels[guard.coherence.band].toLowerCase()}</Badge>
             </div>
             {openFindings.length === 0 ? (
-              <p className="text-body-sm text-fg-muted">Nessuna segnalazione aperta.</p>
+              <p className="text-body-sm text-fg-muted">No open findings.</p>
             ) : (
               <>
                 <p className="text-body-sm text-fg-muted">
-                  Segnalazioni ancora aperte: non bloccano l&apos;esportazione.
+                  Findings still open: they don’t block the export.
                 </p>
                 <ul className="grid gap-2">
                   {openFindings.map((f) => (
@@ -109,11 +109,11 @@ export default async function ExportPage({
                               : "neutral"
                         }
                       >
-                        {f.slide ? `Slide ${f.slide}` : "Generale"}
+                        {f.slide ? `Slide ${f.slide}` : "General"}
                       </Badge>{" "}
                       {f.message}
                       {f.suggestion ? (
-                        <span className="block text-fg-muted">Suggerimento: {f.suggestion}</span>
+                        <span className="block text-fg-muted">Suggestion: {f.suggestion}</span>
                       ) : null}
                     </li>
                   ))}
@@ -124,16 +124,16 @@ export default async function ExportPage({
         ) : null}
       </div>
       <Card className="grid content-start gap-3 p-5">
-        <h3 className="text-heading-sm text-fg">Esportazioni</h3>
+        <h3 className="text-heading-sm text-fg">Exports</h3>
         {exports.length === 0 ? (
-          <p className="text-body-sm text-fg-muted">Ancora nessuna esportazione.</p>
+          <p className="text-body-sm text-fg-muted">No exports yet.</p>
         ) : (
           <ul className="grid gap-4">
             {exports.map((e) => (
               <li key={e.id} className="grid gap-2 border-b border-subtle pb-4 last:border-0">
                 <div className="flex flex-wrap items-center gap-2 text-body-sm">
                   <Badge variant={e.draft ? "neutral" : "success"}>
-                    {e.draft ? "Bozza" : "Finale"}
+                    {e.draft ? "Draft" : "Final"}
                   </Badge>
                   <span className="text-fg">v{versionNumber.get(e.versionId) ?? "?"}</span>
                   <span className="text-fg-muted">{formatDate(e.createdAt)}</span>
@@ -161,7 +161,7 @@ export default async function ExportPage({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-body-sm text-fg-muted">Nessun file disponibile.</p>
+                  <p className="text-body-sm text-fg-muted">No files available.</p>
                 )}
               </li>
             ))}

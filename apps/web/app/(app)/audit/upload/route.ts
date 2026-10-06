@@ -16,12 +16,12 @@ const MAX_TOTAL_BYTES = 200 * 1024 * 1024;
 export const POST = withUser(async (user, request: Request) => {
   const length = Number(request.headers.get("content-length") ?? 0);
   if (length > MAX_TOTAL_BYTES)
-    throw new ForgecyError("validation", "Caricamento troppo grande: dividilo in più parti.");
+    throw new ForgecyError("validation", "Upload too large: split it into several parts.");
   const form = await request.formData();
   const auditId = String(form.get("auditId") ?? "");
   const channel = String(form.get("channel") ?? "") as SocialChannel;
   const kind = String(form.get("kind") ?? "");
-  if (!socialChannels.includes(channel)) throw new ForgecyError("validation", "Canale non valido");
+  if (!socialChannels.includes(channel)) throw new ForgecyError("validation", "Invalid channel");
   const files: UploadedFile[] = [];
   for (const entry of form.getAll("files")) {
     if (typeof entry === "string") continue;
@@ -32,7 +32,7 @@ export const POST = withUser(async (user, request: Request) => {
     });
   }
   if (files.length > AUDIT_LIMITS.maxScreenshotsPerChannel)
-    throw new ForgecyError("validation", "Troppi file in un solo caricamento.");
+    throw new ForgecyError("validation", "Too many files in a single upload.");
   const deps = await auditDeps();
   if (kind === "screenshots") {
     const res = await uploadScreenshots(deps, user.actor, { auditId, channel, files });
@@ -41,10 +41,10 @@ export const POST = withUser(async (user, request: Request) => {
   }
   if (kind === "table") {
     const file = files[0];
-    if (!file) throw new ForgecyError("validation", "Scegli un file CSV o XLSX.");
+    if (!file) throw new ForgecyError("validation", "Choose a CSV or XLSX file.");
     const res = await uploadTable(deps, user.actor, { auditId, channel, file });
     revalidatePath("/audit", "layout");
     return NextResponse.json(res);
   }
-  throw new ForgecyError("validation", "Tipo di caricamento non valido");
+  throw new ForgecyError("validation", "Invalid upload type");
 });

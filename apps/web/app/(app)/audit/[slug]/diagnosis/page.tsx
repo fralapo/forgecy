@@ -15,7 +15,7 @@ import { sectionContext, sourceLinks, toView } from "../../_lib/findings";
 import { channelLabel, findingStatusLabel, findingStatusVariant } from "../../_lib/labels";
 import { plural } from "@/lib/plural";
 
-export const metadata = { title: "Audit · Diagnosi" };
+export const metadata = { title: "Audit · Diagnosis" };
 
 export default async function DiagnosisPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -34,27 +34,27 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
     <div className="flex flex-col gap-8">
       <Card>
         <CardHeader>
-          <CardTitle>Problemi principali</CardTitle>
+          <CardTitle>Main problems</CardTitle>
           <CardDescription>
-            Da {AUDIT_LIMITS.minProblems} a {AUDIT_LIMITS.maxProblems} problemi, ognuno legato alle
-            osservazioni accettate che lo provano. L&apos;ordine è quello del report.
+            From {AUDIT_LIMITS.minProblems} to {AUDIT_LIMITS.maxProblems} problems, each linked to
+            the accepted observations that prove it. The order is the one used in the report.
           </CardDescription>
         </CardHeader>
         <p className="text-body-sm">
-          {plural(observations.length, "osservazione utilizzabile", "osservazioni utilizzabili")} ·{" "}
-          {plural(usable.length, "problema accettato", "problemi accettati")}
+          {plural(observations.length, "usable observation", "usable observations")} ·{" "}
+          {plural(usable.length, "accepted problem", "accepted problems")}
         </p>
         {outdated ? (
           <p role="status" className="rounded-md border border-warning-fill p-3 text-body-sm">
-            Le osservazioni sono cambiate dopo l&apos;ultima diagnosi: i problemi segnati “Da
-            ricontrollare” vanno rivisti.
+            The observations changed after the last diagnosis: problems marked “To recheck” need
+            reviewing.
           </p>
         ) : null}
         {outcome && outcome.withoutEvidence > 0 ? (
           <p role="status" className="rounded-md border border-warning-fill p-3 text-body-sm">
-            Scartati perché non collegati a osservazioni accettate: {outcome.withoutEvidence} su{" "}
-            {plural(outcome.proposed, "problema proposto", "problemi proposti")} dall&apos;ultima
-            diagnosi.
+            Rejected because not linked to accepted observations: {outcome.withoutEvidence} of{" "}
+            {plural(outcome.proposed, "problem proposed", "problems proposed")} by the last
+            diagnosis.
           </p>
         ) : null}
         {canEdit && aiAllowed ? (
@@ -66,31 +66,31 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
                 variant="primary"
                 confirm={
                   audit.diagnosisAt
-                    ? "I problemi proposti e non ancora rivisti vengono sostituiti. Continuare?"
+                    ? "Proposed problems not yet reviewed will be replaced. Continue?"
                     : undefined
                 }
               >
-                {audit.diagnosisAt ? "Aggiorna la diagnosi" : "Genera la diagnosi"}
+                {audit.diagnosisAt ? "Update the diagnosis" : "Generate the diagnosis"}
               </ActionButton>
             </div>
           ) : (
             <p className="text-body-sm text-fg-muted">
-              Accetta almeno un&apos;osservazione su sito, social o competitor per chiedere la
-              diagnosi.
+              Accept at least one observation on the website, social channels or competitors to
+              request the diagnosis.
             </p>
           )
         ) : null}
         {!aiAllowed ? (
           <p className="text-body-sm text-fg-muted">
-            La policy di questo prospect non permette l&apos;AI: scrivi tu i problemi collegandoli
-            alle osservazioni accettate.
+            This prospect’s policy does not allow AI: write the problems yourself, linking them to
+            the accepted observations.
           </p>
         ) : null}
       </Card>
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-heading-md text-fg">Problemi</h2>
+          <h2 className="font-display text-heading-md text-fg">Problems</h2>
           {canEdit && live.length < AUDIT_LIMITS.maxProblems && observations.length ? (
             <AddFinding
               auditId={audit.id}
@@ -107,10 +107,10 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
               <div className="flex flex-wrap items-center justify-between gap-2 px-1">
                 <p className="text-body-sm text-fg-muted">
                   {p.parentIds.length
-                    ? `Collegato a: ${p.parentIds
-                        .map((id) => titles.get(id) ?? "osservazione non più utilizzabile")
+                    ? `Linked to: ${p.parentIds
+                        .map((id) => titles.get(id) ?? "observation no longer usable")
                         .join(" · ")}`
-                    : "Nessuna osservazione collegata"}
+                    : "No linked observations"}
                 </p>
                 {canEdit && p.status !== "rejected" ? (
                   <div className="flex gap-1">
@@ -121,7 +121,7 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
                         variant="ghost"
                         size="sm"
                       >
-                        Su
+                        Up
                       </ActionButton>
                     ) : null}
                     {i < problems.length - 1 ? (
@@ -131,7 +131,7 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
                         variant="ghost"
                         size="sm"
                       >
-                        Giù
+                        Down
                       </ActionButton>
                     ) : null}
                   </div>
@@ -142,20 +142,20 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
         ) : (
           <p className="text-body-md text-fg-muted">
             {outcome && outcome.proposed > 0
-              ? "Nessun problema utilizzabile dall'ultima diagnosi. Puoi aggiornarla o scrivere tu i problemi."
+              ? "No usable problems from the last diagnosis. You can update it or write the problems yourself."
               : outcome
-                ? "L'ultima diagnosi non ha proposto problemi. Puoi aggiornarla o scrivere tu i problemi."
-                : "Nessun problema ancora."}
+                ? "The last diagnosis proposed no problems. You can update it or write the problems yourself."
+                : "No problems yet."}
           </p>
         )}
       </section>
 
       <Card>
         <CardHeader>
-          <CardTitle>Piano di 30 giorni</CardTitle>
+          <CardTitle>30-day plan</CardTitle>
           <CardDescription>
-            Una proposta di pilastri e contenuti che risponde ai problemi accettati. Resta una
-            proposta finché non la accetti.
+            A proposal of pillars and content that addresses the accepted problems. It stays a
+            proposal until you accept it.
           </CardDescription>
         </CardHeader>
         {canEdit && aiAllowed ? (
@@ -165,14 +165,14 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
                 action={requestPlanAction.bind(null, audit.id)}
                 icon={plan ? <RefreshCw aria-hidden /> : <Sparkles aria-hidden />}
                 variant={plan ? "secondary" : "primary"}
-                confirm={plan ? "Il piano attuale viene sostituito. Continuare?" : undefined}
+                confirm={plan ? "The current plan will be replaced. Continue?" : undefined}
               >
-                {plan ? "Rigenera il piano" : "Genera il piano"}
+                {plan ? "Regenerate the plan" : "Generate the plan"}
               </ActionButton>
             </div>
           ) : (
             <p className="text-body-sm text-fg-muted">
-              Accetta almeno un problema per chiedere il piano.
+              Accept at least one problem to request the plan.
             </p>
           )
         ) : null}
@@ -183,7 +183,7 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
                 {findingStatusLabel[plan.status]}
               </Badge>
               {plan.authorAgent ? (
-                <span className="text-body-sm text-fg-muted">Proposto dallo Strategist</span>
+                <span className="text-body-sm text-fg-muted">Proposed by the Strategist</span>
               ) : null}
             </div>
             {plan.pillars.length ? (
@@ -199,23 +199,23 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
             {plan.items.length ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-body-sm">
-                  <caption className="sr-only">Calendario dei contenuti proposti</caption>
+                  <caption className="sr-only">Calendar of proposed content</caption>
                   <thead className="border-b border-subtle text-label text-fg-muted">
                     <tr>
                       <th scope="col" className="px-3 py-2 font-medium">
-                        Giorno
+                        Day
                       </th>
                       <th scope="col" className="px-3 py-2 font-medium">
-                        Canale
+                        Channel
                       </th>
                       <th scope="col" className="px-3 py-2 font-medium">
-                        Formato
+                        Format
                       </th>
                       <th scope="col" className="px-3 py-2 font-medium">
-                        Pilastro
+                        Pillar
                       </th>
                       <th scope="col" className="px-3 py-2 font-medium">
-                        Tema e gancio
+                        Topic and hook
                       </th>
                     </tr>
                   </thead>
@@ -248,7 +248,7 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
                   icon={<Check aria-hidden />}
                   variant="primary"
                 >
-                  Accetta il piano
+                  Accept the plan
                 </ActionButton>
                 {plan.status !== "rejected" ? (
                   <ActionButton
@@ -256,7 +256,7 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
                     icon={<X aria-hidden />}
                     variant="ghost"
                   >
-                    Scarta
+                    Reject
                   </ActionButton>
                 ) : null}
               </div>

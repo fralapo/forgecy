@@ -47,7 +47,7 @@ export interface ExportCarouselResult {
 
 export class ExportCancelledError extends Error {
   constructor() {
-    super("Export annullato");
+    super("Export cancelled");
     this.name = "ExportCancelledError";
   }
 }
@@ -74,10 +74,10 @@ export async function exportCarousel(
   const m = pkg.manifest;
   const texts = input.texts ?? {};
   const progress = input.onProgress ?? (() => undefined);
-  const options: RenderOptions = draft ? { watermark: "Bozza" } : {};
+  const options: RenderOptions = draft ? { watermark: "Draft" } : {};
   const warnings: string[] = [];
 
-  await progress(5, "Preparazione");
+  await progress(5, "Preparing");
   const captureInputs: CaptureInput[] = slides.map((slide, index) => {
     const layout = findLayout(m, slide.layout);
     const rendered = renderSlideHtml({
@@ -97,7 +97,7 @@ export async function exportCarousel(
     if (await input.isCancelled?.()) throw new ExportCancelledError();
     await progress(
       10 + Math.round(((i + 1) / slides.length) * 70),
-      `Render slide ${i + 1} di ${slides.length}`,
+      `Rendering slide ${i + 1} of ${slides.length}`,
     );
   });
   const pngs = captures.map((c) => c.png);
@@ -119,7 +119,7 @@ export async function exportCarousel(
 
   let pdf: Uint8Array | undefined;
   if (input.outputs.includes("pdf") || wantZip) {
-    await progress(85, "Composizione PDF");
+    await progress(85, "Composing PDF");
     const page = pdfPageSize(m.format);
     pdf = await pngsToPdf(pngs, page.width, page.height, {
       title: `${meta.content} · v${meta.version}`,
@@ -138,12 +138,12 @@ export async function exportCarousel(
   }
 
   if (wantZip) {
-    await progress(95, "Creazione ZIP");
+    await progress(95, "Creating ZIP");
     const enc = new TextEncoder();
     const entries = [
       ...files.map((f) => ({ name: f.name, data: f.data })),
       { name: "caption.txt", data: enc.encode(captionText(texts)) },
-      { name: "testi.md", data: enc.encode(slidesMarkdown(pkg, slides, meta, texts)) },
+      { name: "texts.md", data: enc.encode(slidesMarkdown(pkg, slides, meta, texts)) },
       { name: "slides.json", data: enc.encode(slidesJson(pkg, slides, meta, texts, brand)) },
     ];
     files.push({
@@ -154,6 +154,6 @@ export async function exportCarousel(
     });
   }
 
-  await progress(100, "Pronto");
+  await progress(100, "Done");
   return { files, issues: captures.flatMap((c) => c.issues), warnings };
 }

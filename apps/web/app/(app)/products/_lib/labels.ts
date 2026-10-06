@@ -6,58 +6,58 @@ import type {
 } from "@forgecy/core";
 
 export const productStatusLabels: Record<ProductStatus, string> = {
-  draft: "Bozza",
-  proposed: "Proposto",
-  approved: "Approvato",
-  rejected: "Rifiutato",
-  archived: "Archiviato",
+  draft: "Draft",
+  proposed: "Proposed",
+  approved: "Approved",
+  rejected: "Rejected",
+  archived: "Archived",
 };
 
 export const importStatusLabels: Record<ProductImportStatus, string> = {
-  uploading: "Caricamento",
-  analyzing: "Analisi in corso",
-  needs_mapping: "Serve la mappatura",
-  ready_for_review: "Da rivedere",
-  completed: "Completato",
-  partial: "Completato in parte",
-  failed: "Non riuscito",
-  cancelled: "Annullato",
+  uploading: "Uploading",
+  analyzing: "Analyzing",
+  needs_mapping: "Needs mapping",
+  ready_for_review: "To review",
+  completed: "Completed",
+  partial: "Partially completed",
+  failed: "Failed",
+  cancelled: "Cancelled",
 };
 
 export const itemStatusLabels: Record<ImportItemStatus, string> = {
-  pending: "Da decidere",
-  accepted: "Accettato (Proposto)",
-  approved: "Approvato",
-  merged: "Unito",
-  discarded: "Scartato",
+  pending: "Undecided",
+  accepted: "Accepted (Proposed)",
+  approved: "Approved",
+  merged: "Merged",
+  discarded: "Rejected",
 };
 
 export const confidenceText: Record<ConfidenceLevel, string> = {
-  high: "Alta",
-  medium: "Media",
-  low: "Bassa",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
 };
 
 export const sourceFilterLabels = {
   csv: "CSV/XLSX",
-  manual: "Manuale",
+  manual: "Manual",
   pdf: "PDF",
   zip: "ZIP",
-  image: "Immagine",
+  image: "Image",
 } as const;
 
-const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" });
-const timeFmt = new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" });
-const dayFmt = new Intl.DateTimeFormat("it-IT", {
+const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long" });
+const timeFmt = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
+const dayFmt = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "short",
   year: "numeric",
 });
 
-/** «oggi 10:42», «3 ottobre», used for last-modified and import names. */
+/** “today 10:42”, “3 October”, used for last-modified and import names. */
 export function shortWhen(d: Date): string {
   const now = new Date();
-  if (d.toDateString() === now.toDateString()) return `oggi ${timeFmt.format(d)}`;
+  if (d.toDateString() === now.toDateString()) return `today ${timeFmt.format(d)}`;
   return dateFmt.format(d);
 }
 
@@ -66,10 +66,10 @@ export function longDate(d: Date): string {
 }
 
 export function importTitle(createdAt: Date): string {
-  return `Import del ${dateFmt.format(createdAt)}`;
+  return `Import of ${dateFmt.format(createdAt)}`;
 }
 
-const usd = new Intl.NumberFormat("it-IT", {
+const usd = new Intl.NumberFormat("en-GB", {
   style: "currency",
   currency: "USD",
   maximumFractionDigits: 2,
@@ -78,7 +78,7 @@ export function formatUsd(v: number): string {
   return usd.format(v);
 }
 
-const bytes = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 1 });
+const bytes = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
 export function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${bytes.format(n / 1024)} KB`;
@@ -86,4 +86,4 @@ export function formatBytes(n: number): string {
 }
 
 export const plural = (n: number, one: string, many: string) =>
-  `${n.toLocaleString("it-IT")} ${n === 1 ? one : many}`;
+  `${n.toLocaleString("en-GB")} ${n === 1 ? one : many}`;

@@ -1,6 +1,6 @@
 // Public API of @forgecy/brand-guard (M6). The Contents module builds a GuardContent
 // from its carousel (plus the renderer's measures), calls runBrandCheck on save and on
-// «Riesegui controlli», shows getBrandCheck on the check page and calls
+// “Rerun checks”, shows getBrandCheck on the check page and calls
 // confirmBrandCheckForApproval inside its approve transaction.
 export * from "./types";
 export {

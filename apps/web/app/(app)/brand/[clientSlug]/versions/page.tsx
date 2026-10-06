@@ -8,7 +8,7 @@ import { restoreAction } from "../../actions";
 import { brandPath, formatDate, versionStatusLabel, versionStatusVariant } from "../../_lib/labels";
 import { loadBrand, userNames, versionParam } from "../../_lib/server";
 
-export const metadata = { title: "Versioni · Brand Identity" };
+export const metadata = { title: "Versions · Brand Identity" };
 
 const stateOf = (v: VersionRow) => ({
   document: parseDocument(v.document),
@@ -43,20 +43,20 @@ export default async function VersionsPage({
     <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
       <Card className="overflow-hidden p-0">
         {ws.versions.length === 0 ? (
-          <p className="p-6 text-body-md text-fg-muted">Ancora nessuna versione.</p>
+          <p className="p-6 text-body-md text-fg-muted">No versions yet.</p>
         ) : (
           <table className="w-full text-left text-body-sm">
-            <caption className="sr-only">Cronologia delle versioni</caption>
+            <caption className="sr-only">Version history</caption>
             <thead className="border-b border-subtle text-label text-fg-muted">
               <tr>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Versione
+                  Version
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
                   Changelog
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  <span className="sr-only">Azioni</span>
+                  <span className="sr-only">Actions</span>
                 </th>
               </tr>
             </thead>
@@ -73,7 +73,7 @@ export default async function VersionsPage({
                     <span className="mt-1 block">
                       <Badge variant={versionStatusVariant[v.status]}>
                         {versionStatusLabel[v.status]}
-                        {v.status === "published" ? " · Corrente" : ""}
+                        {v.status === "published" ? " · Current" : ""}
                       </Badge>
                     </span>
                   </td>
@@ -81,14 +81,14 @@ export default async function VersionsPage({
                     {v.changelog ?? <span className="text-fg-muted">—</span>}
                     <span className="block text-fg-muted">
                       {v.publishedAt
-                        ? `Pubblicata da ${names.get(v.publishedBy ?? "") ?? "—"}, ${formatDate(v.publishedAt)}`
-                        : `Creata da ${names.get(v.createdBy ?? "") ?? "—"}, ${formatDate(v.createdAt)}`}
+                        ? `Published by ${names.get(v.publishedBy ?? "") ?? "—"}, ${formatDate(v.publishedAt)}`
+                        : `Created by ${names.get(v.createdBy ?? "") ?? "—"}, ${formatDate(v.createdAt)}`}
                       {v.restoredFromVersionId
-                        ? ` · ripristino della v${ws.versions.find((x) => x.id === v.restoredFromVersionId)?.number ?? "?"}`
+                        ? ` · restored from v${ws.versions.find((x) => x.id === v.restoredFromVersionId)?.number ?? "?"}`
                         : ""}
                     </span>
                     {v.approvalNote ? (
-                      <span className="block text-fg-muted">Nota: {v.approvalNote}</span>
+                      <span className="block text-fg-muted">Note: {v.approvalNote}</span>
                     ) : null}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -98,8 +98,8 @@ export default async function VersionsPage({
                         size="sm"
                         confirm={
                           ws.draft
-                            ? `Esiste già la bozza v${ws.draft.number}: verrà archiviata e sostituita da una copia della v${v.number}. Continuare?`
-                            : `Creare una nuova bozza con il contenuto della v${v.number}? La cronologia non cambia.`
+                            ? `Draft v${ws.draft.number} already exists: it will be archived and replaced by a copy of v${v.number}. Continue?`
+                            : `Create a new draft with the content of v${v.number}? The history doesn’t change.`
                         }
                         action={restoreAction.bind(null, {
                           slug: client.slug,
@@ -109,11 +109,11 @@ export default async function VersionsPage({
                         })}
                         redirectTo={`${base}/versions`}
                       >
-                        Ripristina come bozza
+                        Restore as draft
                       </ActionButton>
                     ) : (
                       <Link href={`${base}/versions/${v.number}/approve` as Route}>
-                        Apri approvazione
+                        Open approval
                       </Link>
                     )}
                   </td>
@@ -126,14 +126,14 @@ export default async function VersionsPage({
       {viewed ? (
         <Card className="p-6">
           <h2 className="text-heading-md text-fg">
-            v{viewed.number} {previous ? `rispetto alla v${previous.number}` : "· prima versione"}
+            v{viewed.number} {previous ? `compared with v${previous.number}` : "· first version"}
           </h2>
           <p className="mt-1 text-body-sm text-fg-muted">
-            Apri i blocchi in sola lettura:{" "}
-            <Link href={`${base}/strategy?version=${viewed.number}` as Route}>Strategia</Link>,{" "}
-            <Link href={`${base}/verbal?version=${viewed.number}` as Route}>Verbale</Link>,{" "}
+            Open the blocks read-only:{" "}
+            <Link href={`${base}/strategy?version=${viewed.number}` as Route}>Strategy</Link>,{" "}
+            <Link href={`${base}/verbal?version=${viewed.number}` as Route}>Verbal</Link>,{" "}
             <Link href={`${base}/visual?version=${viewed.number}` as Route}>Visual</Link>,{" "}
-            <Link href={`${base}/content?version=${viewed.number}` as Route}>Contenuti</Link>.
+            <Link href={`${base}/content?version=${viewed.number}` as Route}>Content</Link>.
           </p>
           <div className="mt-4">
             <DiffList

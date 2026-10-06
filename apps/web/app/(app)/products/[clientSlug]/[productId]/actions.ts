@@ -32,7 +32,7 @@ export async function saveFieldAction(input: {
   const user = await requireUser();
   const field = fieldKey.parse(input.field);
   const parsed = productFieldsSchema.shape[field].safeParse(input.value);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Valore non valido" };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid value" };
   return attempt(async () => {
     await updateProductFields(getDb(), actingUser(user), {
       clientId: z.uuid().parse(input.clientId),
@@ -40,7 +40,7 @@ export async function saveFieldAction(input: {
       revision: z.number().int().parse(input.revision),
       patch: { [field]: parsed.data },
     });
-    return "Salvato";
+    return "Saved";
   });
 }
 
@@ -58,7 +58,7 @@ export async function acceptSensitiveAction(input: {
       field: fieldKey.parse(input.field),
       note: input.note?.slice(0, 1000),
     });
-    return "Campo sensibile accettato.";
+    return "Sensitive field accepted.";
   });
 }
 
@@ -76,7 +76,7 @@ export async function decideProposalAction(input: {
       decision: z.enum(["accept", "reject"]).parse(input.decision),
       editedValue: input.editedValue,
     });
-    return input.decision === "accept" ? "Proposta accettata." : "Proposta rifiutata.";
+    return input.decision === "accept" ? "Proposal accepted." : "Proposal rejected.";
   });
 }
 
