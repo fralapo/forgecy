@@ -35,7 +35,7 @@ export default async function AuditListPage({
         description="Analizza sito, social e competitor di un potenziale cliente prima del primo incontro. L'AI propone, tu decidi cosa entra nel report."
         actions={
           <Button asChild>
-            <Link href="/audit/nuovo">
+            <Link href="/audit/new">
               <Plus aria-hidden />
               Nuovo prospect
             </Link>

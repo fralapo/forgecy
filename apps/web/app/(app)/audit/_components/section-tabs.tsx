@@ -7,11 +7,11 @@ import { usePathname } from "next/navigation";
 
 const sections = [
   { path: "", label: "Panoramica" },
-  { path: "/sito", label: "Sito" },
+  { path: "/website", label: "Sito" },
   { path: "/social", label: "Social" },
-  { path: "/competitor", label: "Competitor" },
-  { path: "/confronto", label: "Confronto" },
-  { path: "/diagnosi", label: "Diagnosi" },
+  { path: "/competitors", label: "Competitor" },
+  { path: "/comparison", label: "Confronto" },
+  { path: "/diagnosis", label: "Diagnosi" },
   { path: "/report", label: "Report" },
 ] as const;
 

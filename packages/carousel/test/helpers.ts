@@ -2,7 +2,7 @@ import path from "node:path";
 import { readTemplateDir } from "../src/node";
 import { packageFromFiles, type TemplatePackage } from "../src/package";
 
-export const TEMPLATES = path.resolve(import.meta.dirname, "../../../templates/agency");
+export const TEMPLATES = path.resolve(import.meta.dirname, "../../../templates");
 
 export async function loadRepoTemplate(folder: string): Promise<TemplatePackage> {
   return packageFromFiles(await readTemplateDir(path.join(TEMPLATES, folder)));

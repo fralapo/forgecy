@@ -38,7 +38,7 @@ export default async function BrandPickerPage() {
       {rows.length === 0 ? (
         <Card className="p-6">
           <p className="text-body-md text-fg-muted">
-            Nessun cliente. <Link href="/clienti">Aggiungi il primo cliente</Link>.
+            Nessun cliente. <Link href="/clients">Aggiungi il primo cliente</Link>.
           </p>
         </Card>
       ) : (

@@ -11,7 +11,7 @@ import {
 import { loadRepoTemplate } from "./helpers";
 
 describe("slide schemas from template.json", async () => {
-  const pkg = await loadRepoTemplate("editoriale-ig-4x5");
+  const pkg = await loadRepoTemplate("editorial-ig-4x5");
   const m = pkg.manifest;
   const byId = (id: string) => sampleSlide(m.layouts.find((l) => l.id === id)!);
 
@@ -138,7 +138,7 @@ describe("Docker worker image", () => {
 
 describe("export payload", async () => {
   const { carouselExportPayloadSchema } = await import("../src/jobs");
-  const pkg = await loadRepoTemplate("editoriale-linkedin");
+  const pkg = await loadRepoTemplate("editorial-linkedin");
   const base = {
     clientId: "00000000-0000-4000-8000-000000000001",
     client: "Forno Rossi",

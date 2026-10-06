@@ -10,7 +10,7 @@ const steps = [
     text: "Analizza sito, social e competitor di un prospect e consegna il report in PDF.",
   },
   {
-    href: "/template",
+    href: "/templates",
     title: "Template",
     text: "Importa e pubblica i template dell'agenzia: report e caroselli usano solo quelli pubblicati.",
   },
@@ -20,12 +20,12 @@ const steps = [
     text: "Strategia, voce e identità visiva del cliente, approvate da una persona.",
   },
   {
-    href: "/prodotti",
+    href: "/products",
     title: "Prodotti",
     text: "Il catalogo del cliente: solo i prodotti approvati entrano nei contenuti.",
   },
   {
-    href: "/contenuti",
+    href: "/content",
     title: "Contenuti",
     text: "Strategia, piano, caroselli, revisione ed export in PNG, PDF e ZIP.",
   },

@@ -405,6 +405,6 @@ export async function deleteReportDraftAction(id: string) {
 export async function convertToClientAction(clientId: string) {
   const res = await act((u, d) => convertToClient(d, u.actor, clientId), { queues: false });
   if (!res.ok) return res;
-  revalidatePath("/clienti");
-  redirect("/clienti");
+  revalidatePath("/clients");
+  redirect("/clients");
 }
