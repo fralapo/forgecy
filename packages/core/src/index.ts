@@ -4,6 +4,7 @@ export * from "./content";
 export * from "./audit";
 export * from "./automation";
 export * from "./catalog";
+export * from "./client-transfer";
 export * from "./content-status";
 export * from "./env";
 export * from "./errors";

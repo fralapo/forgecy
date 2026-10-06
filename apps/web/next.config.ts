@@ -20,6 +20,7 @@ const nextConfig: NextConfig = {
     "@forgecy/ai",
     "@forgecy/brand",
     "@forgecy/automations",
+    "@forgecy/client-transfer",
     "@forgecy/brand-book",
     "@forgecy/content",
     "@forgecy/catalog",

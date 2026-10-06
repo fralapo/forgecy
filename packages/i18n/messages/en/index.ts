@@ -5,6 +5,7 @@ import auth from "./auth.json";
 import automations from "./automations.json";
 import brand from "./brand.json";
 import clients from "./clients.json";
+import clientTransfer from "./clientTransfer.json";
 import common from "./common.json";
 import content from "./content.json";
 import deliverable from "./deliverable.json";
@@ -31,6 +32,7 @@ export default {
   automations,
   brand,
   clients,
+  clientTransfer,
   common,
   content,
   deliverable,
