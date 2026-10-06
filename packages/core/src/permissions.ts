@@ -31,6 +31,7 @@ export const adminPermissions = [
   "system.backup",
   "system.update",
   "clients.transfer",
+  "agents.configure",
 ] as const;
 
 export type ContentPermission = (typeof contentPermissions)[number];

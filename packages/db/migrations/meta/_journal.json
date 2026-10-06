@@ -148,6 +148,13 @@
       "when": 1791316739357,
       "tag": "0022_client_imports",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791318111123,
+      "tag": "0023_agent_config",
+      "breakpoints": true
     }
   ]
 }

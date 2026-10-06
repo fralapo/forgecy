@@ -1,5 +1,13 @@
 import type { z } from "zod";
-import { checkAiPolicy, ForgecyError, type AiPolicy, type ProviderId } from "@forgecy/core";
+import {
+  checkAiPolicy,
+  ForgecyError,
+  type AgentRole,
+  type AiPolicy,
+  type ProviderId,
+} from "@forgecy/core";
+import { messageRef } from "@forgecy/i18n";
+import { agentForTask, agentInstructionsBlock, type AgentRuntime } from "./agent-tasks";
 import { AiProviderError, classifyError } from "./errors";
 import { monthKey, type AiLedger, type BudgetScope, type LedgerEntry } from "./ledger";
 import { computeCost } from "./pricing";
@@ -50,6 +58,8 @@ export interface Routing {
   local?: ModelRef;
   /** Image model for local_only clients (ComfyUI and similar behind an ImageProvider). */
   localImage?: ModelRef;
+  /** Agent configuration (v1): switched off, model per task, published instructions. */
+  agents?: Partial<Record<AgentRole, AgentRuntime>>;
 }
 
 /** Minimal pino-compatible logger. */
@@ -88,6 +98,8 @@ interface CommonRequest {
   timeoutMs?: number;
   /** Per-call override of the configured route. */
   route?: TaskRoute;
+  /** The agent making the call; by default the one that owns the task. */
+  agent?: AgentRole;
 }
 
 export interface GenerateObjectRequest<T> extends CommonRequest {
@@ -320,6 +332,37 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
     return usable;
   }
 
+  /**
+   * Agent configuration: an agent switched off by an Admin is refused before anything
+   * is sent (with a `blocked` row), for every client.
+   */
+  async function agentGate(
+    kind: string,
+    req: CommonRequest,
+    agent: AgentRole | undefined,
+    runtime: AgentRuntime | undefined,
+    summary: Record<string, unknown>,
+  ): Promise<void> {
+    if (!agent || !runtime || runtime.active) return;
+    const message = `The ${agent} agent is switched off`;
+    await ledger.record({
+      ...baseEntry(kind, req),
+      provider: null,
+      model: null,
+      status: "blocked",
+      inputSummary: { ...summary, blockedReason: "agent_disabled" },
+      error: message,
+      startedAt: now(),
+      endedAt: now(),
+    });
+    throw new ForgecyError(
+      "policy_blocked",
+      message,
+      { reason: "agent_disabled", agent },
+      messageRef("agents.errors.disabled", { agent }),
+    );
+  }
+
   /** Month-to-date spend vs budgets for agency and client. Blocks at 100%, warns at warn_at_percent. */
   async function checkBudget(
     kind: string,
@@ -388,13 +431,28 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
   return {
     async generateObject<T>(req: GenerateObjectRequest<T>): Promise<GenerateObjectResult<T>> {
       const routing = await currentRouting();
-      const route = req.route ?? routing.tasks?.[req.task] ?? routing.default;
+      const agent = req.agent ?? agentForTask(req.task);
+      const runtime = agent ? routing.agents?.[agent] : undefined;
+      const route =
+        req.route ?? runtime?.tasks?.[req.task] ?? routing.tasks?.[req.task] ?? routing.default;
+      // Published instructions of the agent go after the module's own prompt, which wins.
+      const system = runtime?.instructions
+        ? `${req.system}\n\n${agentInstructionsBlock(runtime.instructions)}`
+        : req.system;
       const jsonSchema = zodToJsonSchema(req.schema);
       const schemaName = req.schemaName ?? req.task;
       const images = req.images ?? [];
       validateInputImages(images);
       const summary = {
-        ...summarize(req.task, req, { system: req.system, input: req.input }),
+        ...summarize(req.task, req, { system, input: req.input }),
+        ...(agent
+          ? {
+              agent: {
+                key: agent,
+                instructionsVersion: runtime?.instructions?.version ?? null,
+              },
+            }
+          : {}),
         schema: { name: schemaName, sha256: sha256(JSON.stringify(jsonSchema)) },
         ...(images.length
           ? {
@@ -407,6 +465,7 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
             }
           : {}),
       };
+      await agentGate(req.task, req, agent, runtime, summary);
       const candidates = await resolveCandidates(
         req.task,
         req,
@@ -477,7 +536,7 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
           try {
             res = await provider.generateObject({
               model: cand.model,
-              system: req.system,
+              system,
               messages,
               jsonSchema,
               schemaName,
@@ -579,8 +638,15 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
       const routing = await currentRouting();
       const route = req.route ?? routing.image;
       if (!route) throw new ForgecyError("unavailable", "No image provider route configured");
+      // Images are the Art Director's work: switched off, no image is generated.
+      const agent = req.agent ?? "art_director";
       const summary = summarize(kind, req, { prompt: req.prompt });
-      Object.assign(summary, { size: req.size, variants: req.variants });
+      Object.assign(summary, {
+        size: req.size,
+        variants: req.variants,
+        agent: { key: agent, instructionsVersion: null },
+      });
+      await agentGate(kind, req, agent, routing.agents?.[agent], summary);
       const candidates = await resolveCandidates(
         kind,
         req,

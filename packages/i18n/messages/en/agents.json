@@ -1,0 +1,236 @@
+{
+  "title": "Agents",
+  "description": "Who does what in the pipeline, with which models, and what it costs.",
+  "activeCount": "{count, plural, one {# agent active} other {# agents active}}",
+  "banner": "Agents propose, generate and check. They never approve, publish or archive.",
+  "bannerAdmin": "As an Admin you can configure each agent from its page.",
+  "name": {
+    "brand_analyst": "Brand Analyst",
+    "strategist": "Strategist",
+    "copywriter": "Copywriter",
+    "art_director": "Art Director AI",
+    "reviewer": "Reviewer"
+  },
+  "role": {
+    "brand_analyst": "Reads websites, screenshots, social exports and brand books; proposes findings and Brand Identity values.",
+    "strategist": "Reads accepted findings and the published Brand Identity; writes diagnoses, plans, reports and content strategies.",
+    "copywriter": "Writes outlines, slide texts, captions and hashtags, and edits slides on request.",
+    "art_director": "Chooses layouts among the allowed ones and writes image prompts that respect the Brand Identity.",
+    "reviewer": "Runs the Brand Guard checks on texts and renders. It does not approve."
+  },
+  "inputs": {
+    "brand_analyst": {
+      "1": "Prospect website and screenshots",
+      "2": "Social exports",
+      "3": "Uploaded brand books and catalogs"
+    },
+    "strategist": {
+      "1": "Accepted audit findings",
+      "2": "Published Brand Identity",
+      "3": "Client products"
+    },
+    "copywriter": {
+      "1": "Carousel brief",
+      "2": "Published Brand Identity",
+      "3": "Content strategy"
+    },
+    "art_director": {
+      "1": "Carousel brief and slides",
+      "2": "Published Brand Identity",
+      "3": "Template layouts"
+    },
+    "reviewer": {
+      "1": "Slide texts and renders",
+      "2": "Published Brand Identity rules",
+      "3": "Carousel captions"
+    }
+  },
+  "outputs": {
+    "brand_analyst": {
+      "1": "Findings (proposed)",
+      "2": "Brand Identity proposals",
+      "3": "Extracted catalog products"
+    },
+    "strategist": {
+      "1": "Diagnosis and plan (draft)",
+      "2": "Audit report texts (draft)",
+      "3": "Content strategy (draft)"
+    },
+    "copywriter": {
+      "1": "Outlines (draft)",
+      "2": "Slide texts and captions (draft)",
+      "3": "Hook variants (draft)"
+    },
+    "art_director": {
+      "1": "Image prompts",
+      "2": "Generated images (draft)",
+      "3": "Layout choice for each slide"
+    },
+    "reviewer": {
+      "1": "Check results",
+      "2": "Issues to fix, slide by slide",
+      "3": "Notes for the person who approves"
+    }
+  },
+  "capability": {
+    "view": "view",
+    "propose": "propose",
+    "generate": "generate",
+    "check": "check"
+  },
+  "capabilityHint": {
+    "view": "Reads the client data its tasks need.",
+    "propose": "Suggests changes that a person accepts or rejects.",
+    "generate": "Writes drafts that a person reviews.",
+    "check": "Reports problems without blocking anything."
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Off"
+  },
+  "task": {
+    "scan": "Website reading",
+    "audit_analyze": "Audit findings",
+    "audit_diagnose": "Audit diagnosis",
+    "audit_plan": "Audit plan",
+    "audit_report": "Audit report",
+    "content_strategy": "Content strategy",
+    "outline": "Carousel outline",
+    "slides": "Slide texts",
+    "edit_slide": "Slide edits",
+    "image_prompt": "Image prompts",
+    "brand_propose": "Brand Identity proposals",
+    "catalog_extract": "Catalog extraction",
+    "image": "Images",
+    "test": "Test call"
+  },
+  "list": {
+    "agent": "Agent",
+    "roleColumn": "Role",
+    "permissions": "Permissions",
+    "model": "Model",
+    "instructions": "Instructions",
+    "runs": "Runs (30 days)",
+    "cost": "Cost this month",
+    "statusColumn": "Status",
+    "open": "Open {name}",
+    "runsValue": "{runs, plural, one {# run} other {# runs}}",
+    "failedValue": "{failed, plural, one {# failed} other {# failed}}",
+    "variesByTask": "Varies by task",
+    "noTasks": "No language model",
+    "noInstructions": "None",
+    "version": "v{version}"
+  },
+  "detail": {
+    "back": "All agents",
+    "tabsLabel": "Agent sections",
+    "tabs": {
+      "overview": "Overview",
+      "tasks": "Tasks and models",
+      "instructions": "Instructions",
+      "runs": "Runs"
+    },
+    "roleTitle": "Role",
+    "inputsTitle": "What it reads",
+    "outputsTitle": "What it produces",
+    "permissionsTitle": "Permissions",
+    "never": "This agent cannot approve, publish or archive.",
+    "limitsTitle": "Limits",
+    "limits": {
+      "1": "Uses only approved or published Brand Identity elements.",
+      "2": "Follows the client's AI policy.",
+      "3": "Never overrides binding rules: banned words, claims that are not allowed, logo use."
+    },
+    "statsRuns": "Runs in the last 30 days",
+    "statsFailed": "Failed",
+    "statsCost": "Cost this month"
+  },
+  "tasks": {
+    "intro": "The model each task of this agent uses. A task without its own choice follows the AI settings.",
+    "none": "This agent does not call a language model: it runs checks inside Forgecy.",
+    "task": "Task",
+    "inUse": "Model in use",
+    "source": "Chosen in",
+    "fallback": "Fallback",
+    "sourceAgent": "This page",
+    "sourceSettings": "AI settings",
+    "noFallback": "None",
+    "edit": "Change the models",
+    "provider": "Service",
+    "model": "Model",
+    "default": "Follow the AI settings",
+    "notReady": "{name} (not configured)",
+    "modelHint": "Leave the model empty to use the service's default. A service without a key is skipped and the AI settings apply.",
+    "saved": "Models saved. New runs use them.",
+    "settingsLink": "Open the AI settings"
+  },
+  "instructions": {
+    "intro": "Instructions the agency adds to this agent's prompt, after its built-in rules. The built-in rules always win. Every run records the version it used.",
+    "published": "Version in use",
+    "publishedOn": "Version {version}, published on {date} by {name}",
+    "nonePublished": "No instructions published: the agent uses only its built-in prompt.",
+    "emptyPublished": "Version {version} removed the instructions.",
+    "historyTitle": "Versions",
+    "version": "Version",
+    "statusColumn": "Status",
+    "date": "Date",
+    "author": "Author",
+    "changelog": "Changes",
+    "statusValue": {
+      "draft": "Draft",
+      "published": "Published"
+    },
+    "draftTitle": "Draft of version {version}",
+    "newDraft": "New version",
+    "text": "Instructions",
+    "textHint": "Up to {max} characters. Write rules the agent should follow for every client, for example tone or words to avoid.",
+    "saveDraft": "Save draft",
+    "draftSaved": "Draft saved.",
+    "changelogLabel": "What changes in this version",
+    "changelogHint": "Required, at least 3 characters.",
+    "publish": "Publish version {version}",
+    "published_ok": "Version {version} published. New runs use it.",
+    "discard": "Discard draft",
+    "discarded": "Draft discarded.",
+    "unknownAuthor": "Removed user"
+  },
+  "runs": {
+    "empty": "This agent has not worked yet.",
+    "date": "Date",
+    "task": "Task",
+    "client": "Client",
+    "startedBy": "Started by",
+    "statusColumn": "Status",
+    "model": "Model",
+    "instructions": "Instructions",
+    "cost": "Cost",
+    "noClient": "—",
+    "statusValue": {
+      "ok": "Done",
+      "error": "Failed",
+      "blocked": "Blocked"
+    },
+    "limitNote": "The latest {count} runs."
+  },
+  "activation": {
+    "title": "Agent status",
+    "activeBody": "The agent is active: its functions are available for every client.",
+    "inactiveBody": "The agent is off: its functions stop for every client until you switch it on again.",
+    "deactivate": "Deactivate agent",
+    "activate": "Activate agent",
+    "confirmTitle": "Deactivate {name}?",
+    "confirmBody": "The functions that use it will not be available for any client until you switch it on again.",
+    "typeKey": "Type {key} to confirm",
+    "cancel": "Cancel",
+    "deactivated": "{name} is off.",
+    "activated": "{name} is active again."
+  },
+  "errors": {
+    "disabled": "{agent, select, brand_analyst {The Brand Analyst agent} strategist {The Strategist agent} copywriter {The Copywriter agent} art_director {The Art Director AI agent} reviewer {The Reviewer agent} other {This agent}} is switched off. An Admin can switch it on from the Agents page.",
+    "typedKeyMismatch": "Type {key} exactly to confirm.",
+    "invalidRoutes": "The models could not be saved: check the services and tasks.",
+    "tooLong": "The instructions are too long: at most {max} characters.",
+    "changelogRequired": "Describe what changes in this version (3 to 500 characters).",
+    "noDraft": "There is no draft to publish: save one first."
+  }
+}

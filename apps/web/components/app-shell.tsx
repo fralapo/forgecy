@@ -1,6 +1,7 @@
 import { getDb, unreadNotificationCount } from "@forgecy/db";
 import {
   Bell,
+  Bot,
   Building2,
   Fingerprint,
   GalleryHorizontal,
@@ -28,6 +29,7 @@ const nav = [
   { href: "/templates", label: "templates", icon: LayoutTemplate },
   { href: "/brand", label: "brand", icon: Fingerprint },
   { href: "/content", label: "content", icon: GalleryHorizontal },
+  { href: "/agents", label: "agents", icon: Bot },
   { href: "/automations", label: "automations", icon: Layers },
   { href: "/settings", label: "settings", icon: Settings },
   { href: "/design", label: "design", icon: Palette },

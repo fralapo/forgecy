@@ -1,6 +1,7 @@
 import { assertCan, ForgecyError, type Actor, type ProviderId } from "@forgecy/core";
 import { appSettings, eq, recordAuditEvent, type Database } from "@forgecy/db";
 import { z } from "zod";
+import { loadAgentConfigs, withAgents } from "./agents";
 import type { Routing } from "./gateway";
 import { connectedMcpProviders, isMcpImageProvider, type McpEnv } from "./mcp/registry";
 import {
@@ -150,13 +151,16 @@ export function createRoutingSource(
     const now = Date.now();
     if (!cached || now - cached.at > cacheMs) {
       const value = (async () => {
-        const [settings, connected] = await Promise.all([
+        const [settings, connected, agents] = await Promise.all([
           loadAiRoutingSettings(db),
           env.FORGECY_ENCRYPTION_KEY
             ? connectedMcpProviders(db)
             : Promise.resolve(new Set<ProviderId>()),
+          loadAgentConfigs(db),
         ]);
-        return resolveRouting(env, providers, settings, connected);
+        const resolved = resolveRouting(env, providers, settings, connected);
+        // Agent configuration (switched off, model per task, instructions) on top.
+        return { ...resolved, routing: withAgents(resolved.routing, agents, providers, env) };
       })();
       cached = { at: now, value };
       value.catch(() => {
