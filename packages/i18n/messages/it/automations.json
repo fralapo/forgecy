@@ -1,0 +1,33 @@
+{
+  "errors": {
+    "notFound": "Questa automazione non esiste o non puoi vederla.",
+    "runNotFound": "Questa esecuzione non esiste o non puoi vederla.",
+    "clientNotEligible": "Le automazioni richiedono un cliente attivo con una Brand Identity pubblicata e l'AI consentita.",
+    "failedFinal": "Questa automazione è fallita in modo definitivo. Duplicala per ripartire.",
+    "runningReadOnly": "L'automazione è in esecuzione. Mettila in pausa prima di cambiare la configurazione.",
+    "planItemInBriefs": "Un'automazione da brief non può contenere elementi del piano.",
+    "revConflict": "Qualcun altro ha salvato questa automazione nel frattempo. Ricarica per vedere le sue modifiche.",
+    "deleteRan": "Si può eliminare solo una bozza mai eseguita. I suoi caroselli rimandano a essa.",
+    "alreadyRunning": "L'automazione ha già un'esecuzione in corso.",
+    "notReady": "L'automazione non può ancora partire: completa gli elementi segnati come incompleti.",
+    "nothingToRetry": "L'ultima esecuzione non ha elementi falliti da riprovare.",
+    "notRunning": "L'automazione non è in esecuzione.",
+    "notPaused": "L'automazione non è in pausa.",
+    "budgetExhausted": "Il budget AI mensile è esaurito. Aumentalo o attendi il mese prossimo.",
+    "confirmCost": "Il costo stimato usa gran parte del budget rimasto. Confermalo per partire.",
+    "policy": {
+      "noAi": "La policy AI del cliente non consente l'AI.",
+      "localOnlyNoModel": "Il cliente consente solo modelli locali e nessuno è configurato."
+    }
+  },
+  "status": {
+    "policyChanged": "Fallita: la policy AI del cliente è passata a nessuna AI.",
+    "budgetPaused": "In pausa: il budget AI mensile è esaurito."
+  },
+  "itemErrors": {
+    "starterInactive": "La persona che ha avviato l'esecuzione non è più attiva.",
+    "noTemplate": "Nessun template pubblicato per questo formato.",
+    "interrupted": "Il worker si è fermato mentre questo elemento era in corso.",
+    "invalidItem": "Non è stato possibile leggere la configurazione dell'elemento."
+  }
+}

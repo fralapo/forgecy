@@ -1,4 +1,5 @@
 import { createAuditHandlers } from "@forgecy/audit/handlers";
+import { automationHandlers } from "@forgecy/automations/handlers";
 import { backupHandlers } from "@forgecy/backup";
 import { loadEnv } from "@forgecy/core";
 import { resolveMediaRoot } from "@forgecy/files";
@@ -26,6 +27,7 @@ export const handlers: JobHandlers = {
   ...brandHandlers,
   ...brandBookHandlers(),
   ...contentHandlers,
+  ...automationHandlers(),
   ...catalogHandlers,
   ...backupHandlers({
     dataDir: resolveMediaRoot(env.FORGECY_DATA_DIR),

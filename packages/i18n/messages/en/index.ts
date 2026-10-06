@@ -2,6 +2,7 @@
 import admin from "./admin.json";
 import audit from "./audit.json";
 import auth from "./auth.json";
+import automations from "./automations.json";
 import brand from "./brand.json";
 import clients from "./clients.json";
 import common from "./common.json";
@@ -26,6 +27,7 @@ export default {
   admin,
   audit,
   auth,
+  automations,
   brand,
   clients,
   common,

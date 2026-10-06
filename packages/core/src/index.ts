@@ -2,6 +2,7 @@ export * from "./ai-policy";
 export * from "./brand";
 export * from "./content";
 export * from "./audit";
+export * from "./automation";
 export * from "./catalog";
 export * from "./content-status";
 export * from "./env";

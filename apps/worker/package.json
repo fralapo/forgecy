@@ -13,6 +13,7 @@
   "dependencies": {
     "@forgecy/ai": "workspace:*",
     "@forgecy/audit": "workspace:*",
+    "@forgecy/automations": "workspace:*",
     "@forgecy/backup": "workspace:*",
     "@forgecy/brand": "workspace:*",
     "@forgecy/brand-book": "workspace:*",

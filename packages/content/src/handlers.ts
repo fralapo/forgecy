@@ -49,7 +49,8 @@ registerContentPorts();
 
 let deps: Omit<PipelineDeps, "db"> | undefined;
 
-function depsFor(db: Database, logger: JobContext["logger"]): PipelineDeps {
+/** Pipeline dependencies built from the environment; also used by batch automations. */
+export function pipelineDepsFor(db: Database, logger: JobContext["logger"]): PipelineDeps {
   if (!deps) {
     const env = loadEnv();
     const providers = createProvidersFromEnv(env);
@@ -168,22 +169,22 @@ async function runExport(
 
 export const contentHandlers: JobHandlers = {
   ...handle(proposeStrategyJob, (p, ctx) =>
-    runProposeStrategy(depsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+    runProposeStrategy(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
   ...handle(proposePlanJob, (p, ctx) =>
-    runProposePlan(depsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+    runProposePlan(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
   ...handle(generateOutlineJob, (p, ctx) =>
-    runGenerateOutline(depsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+    runGenerateOutline(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
   ...handle(generateSlidesJob, (p, ctx) =>
-    runGenerateSlides(depsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+    runGenerateSlides(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
   ...handle(editSlideJob, (p, ctx) =>
-    runEditSlide(depsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+    runEditSlide(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
   ...handle(generateImageJob, (p, ctx) =>
-    runGenerateImage(depsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+    runGenerateImage(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
   ...handle(exportContentJob, (p, ctx) => runExport(p, ctx)),
 };
