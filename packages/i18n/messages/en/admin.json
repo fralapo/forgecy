@@ -5,7 +5,8 @@
     "aiProviders": "AI providers",
     "aiPolicies": "AI policies and budgets",
     "smtp": "Email (SMTP)",
-    "storage": "Storage"
+    "storage": "Storage",
+    "health": "System health"
   },
   "adminOnly": "This setting is reserved for Admin users.",
   "aiPolicies": {
@@ -159,6 +160,81 @@
       "gb": "{value} GB",
       "mb": "{value} MB",
       "kb": "{value} KB"
+    }
+  },
+  "health": {
+    "title": "System health",
+    "description": "Whether the installation works and is ready for an upgrade. Restarts and upgrades are run on the server.",
+    "checkNow": "Check now",
+    "lastCheck": "Last check: {time} · refreshes every 30 seconds",
+    "overall": {
+      "ok": "All services operational",
+      "problems": "{count, plural, one {# service with problems} other {# services with problems}}"
+    },
+    "ms": "{value} ms",
+    "mb": "{value} MB",
+    "state": {
+      "healthy": "Operational",
+      "degraded": "Slow",
+      "down": "Unreachable",
+      "not_configured": "Not configured"
+    },
+    "services": {
+      "title": "Services",
+      "database": "Database",
+      "pgvector": "pgvector",
+      "redis": "Redis",
+      "worker": "Worker",
+      "storage": "Storage",
+      "smtp": "Email (SMTP)",
+      "open": "Open settings"
+    },
+    "details": {
+      "postgres": "PostgreSQL {version}",
+      "version": "Version {version}",
+      "latency": "Latency {value}",
+      "connections": "Connections {used} of {max}",
+      "size": "Size {value}",
+      "memory": "Memory used {value}",
+      "workers": "{count, plural, =0 {No worker connected} one {# worker connected} other {# workers connected}}",
+      "localDisk": "Local disk",
+      "s3": "S3-compatible"
+    },
+    "hint": {
+      "database": "Check that the postgres container is running: docker compose ps.",
+      "pgvector": "The vector extension is missing: run pnpm forgecy migrate.",
+      "redis": "Check that the redis container is running: docker compose ps.",
+      "worker": "No worker is listening: jobs stay queued. Restart it with docker compose restart worker.",
+      "storage": "Open the storage settings and run the write test.",
+      "smtp": "Set SMTP_HOST in .env."
+    },
+    "queue": {
+      "title": "Job queue",
+      "queued": "Queued",
+      "running": "Running",
+      "retrying": "Retrying",
+      "failed": "Failed",
+      "needs_attention": "Needs attention",
+      "name": "Queue",
+      "waiting": "Waiting",
+      "active": "Active",
+      "workers": "Workers"
+    },
+    "version": {
+      "title": "Version and upgrade",
+      "installed": "Installed version",
+      "migrations": "Migrations",
+      "migrationsApplied": "{applied} of {total} applied",
+      "lastMigration": "Last migration",
+      "pending": "{count, plural, one {# migration to apply:} other {# migrations to apply:}}",
+      "upgradeHint": "Upgrades take a backup first and run on the server:"
+    },
+    "failures": {
+      "title": "Recent failed jobs",
+      "empty": "No failed jobs.",
+      "when": "When",
+      "kind": "Job",
+      "error": "Error"
     }
   }
 }

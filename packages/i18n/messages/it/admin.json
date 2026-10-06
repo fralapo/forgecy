@@ -5,7 +5,8 @@
     "aiProviders": "Provider AI",
     "aiPolicies": "Policy AI e budget",
     "smtp": "Email (SMTP)",
-    "storage": "Storage"
+    "storage": "Storage",
+    "health": "Stato del sistema"
   },
   "adminOnly": "Questa impostazione è riservata agli utenti Admin.",
   "aiPolicies": {
@@ -159,6 +160,81 @@
       "gb": "{value} GB",
       "mb": "{value} MB",
       "kb": "{value} KB"
+    }
+  },
+  "health": {
+    "title": "Stato del sistema",
+    "description": "Se l’installazione funziona ed è pronta per un aggiornamento. Riavvii e aggiornamenti si lanciano sul server.",
+    "checkNow": "Controlla ora",
+    "lastCheck": "Ultimo controllo: {time} · aggiornamento automatico ogni 30 secondi",
+    "overall": {
+      "ok": "Tutti i servizi operativi",
+      "problems": "{count, plural, one {# servizio con problemi} other {# servizi con problemi}}"
+    },
+    "ms": "{value} ms",
+    "mb": "{value} MB",
+    "state": {
+      "healthy": "Operativo",
+      "degraded": "Rallentato",
+      "down": "Non raggiungibile",
+      "not_configured": "Non configurato"
+    },
+    "services": {
+      "title": "Servizi",
+      "database": "Database",
+      "pgvector": "pgvector",
+      "redis": "Redis",
+      "worker": "Worker",
+      "storage": "Storage",
+      "smtp": "Email (SMTP)",
+      "open": "Apri impostazioni"
+    },
+    "details": {
+      "postgres": "PostgreSQL {version}",
+      "version": "Versione {version}",
+      "latency": "Latenza {value}",
+      "connections": "Connessioni {used} su {max}",
+      "size": "Dimensione {value}",
+      "memory": "Memoria usata {value}",
+      "workers": "{count, plural, =0 {Nessun worker collegato} one {# worker collegato} other {# worker collegati}}",
+      "localDisk": "Disco locale",
+      "s3": "Compatibile S3"
+    },
+    "hint": {
+      "database": "Controlla che il container postgres sia attivo: docker compose ps.",
+      "pgvector": "Manca l’estensione vector: esegui pnpm forgecy migrate.",
+      "redis": "Controlla che il container redis sia attivo: docker compose ps.",
+      "worker": "Nessun worker in ascolto: i job restano in coda. Riavvialo con docker compose restart worker.",
+      "storage": "Apri le impostazioni dello storage ed esegui la prova di scrittura.",
+      "smtp": "Imposta SMTP_HOST in .env."
+    },
+    "queue": {
+      "title": "Coda dei job",
+      "queued": "In coda",
+      "running": "In corso",
+      "retrying": "In nuovo tentativo",
+      "failed": "Falliti",
+      "needs_attention": "Da controllare",
+      "name": "Coda",
+      "waiting": "In attesa",
+      "active": "Attivi",
+      "workers": "Worker"
+    },
+    "version": {
+      "title": "Versione e aggiornamento",
+      "installed": "Versione installata",
+      "migrations": "Migrazioni",
+      "migrationsApplied": "{applied} su {total} applicate",
+      "lastMigration": "Ultima migrazione",
+      "pending": "{count, plural, one {# migrazione da applicare:} other {# migrazioni da applicare:}}",
+      "upgradeHint": "Gli aggiornamenti fanno prima un backup e si lanciano sul server:"
+    },
+    "failures": {
+      "title": "Job falliti di recente",
+      "empty": "Nessun job fallito.",
+      "when": "Quando",
+      "kind": "Job",
+      "error": "Errore"
     }
   }
 }
