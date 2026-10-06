@@ -305,7 +305,7 @@
     },
     "versionShort": "v{number}",
     "templateVersion": "{name} · v{version}",
-    "templateChannel": "{name} · {channel, select, linkedin {LinkedIn} other {Instagram}}"
+    "templateChannel": "{name} · {channel, select, linkedin {LinkedIn} facebook {Facebook} tiktok {TikTok} other {Instagram}}"
   },
   "strategy": {
     "metaTitle": "Content strategy",

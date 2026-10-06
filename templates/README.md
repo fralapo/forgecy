@@ -2,11 +2,17 @@
 
 Starter templates in Forgecy's canonical format: grouped by kind (`carousels/`, `reports/`), one folder per template with `template.json` (slots, text limits, color and font roles, safe zone, rules), `layouts/*.html`, `styles.css`, `locales/` (printed labels per language), `fonts/` and `assets/`. Figma, Canva, PDF and PNG are only references: every template is rebuilt here in HTML and CSS.
 
-| Folder                         | Format                    | Layouts |
-| ------------------------------ | ------------------------- | ------- |
-| `carousels/editorial-ig-4x5`   | Instagram 4:5 · 1080×1350 | 8       |
-| `carousels/editorial-linkedin` | LinkedIn document · PDF   | 8       |
-| `reports/report-audit-a4`      | A4 report · PDF 150 dpi   | 6       |
+| Folder                             | Format                    | Layouts |
+| ---------------------------------- | ------------------------- | ------- |
+| `carousels/editorial-ig-4x5`       | Instagram 4:5 · 1080×1350 | 8       |
+| `carousels/editorial-linkedin`     | LinkedIn document · PDF   | 8       |
+| `carousels/editorial-ig-1x1`       | Instagram 1:1 · 1080×1080 | 8       |
+| `carousels/editorial-stories-9x16` | Stories 9:16 · 1080×1920  | 8       |
+| `carousels/editorial-fb-4x5`       | Facebook 4:5 · 1080×1350  | 8       |
+| `carousels/editorial-tiktok-photo` | TikTok photo · 1080×1920  | 8       |
+| `reports/report-audit-a4`          | A4 report · PDF 150 dpi   | 6       |
+
+The Instagram 1:1, Stories, Facebook and TikTok templates share the editorial structure; each adapts type sizes to its format, and Stories says “Tap” instead of “Swipe”. A format becomes selectable in contents once a published template declares it.
 
 `report-audit-a4` is the audit report (`kind: "report"`, no `channel`): cover, section, finding with evidence and recommendation, problem, next steps, method. The PDF comes out in true A4 format; there is also the `report_16x9` format (1920×1080) for reports to be projected.
 

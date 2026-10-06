@@ -51,6 +51,7 @@ import {
   type BriefInput,
   type CarouselDocumentInput,
   type CarouselParamsInput,
+  type ContentChannel,
   type OutlineInput,
   type PillarInputRaw,
   type PlanItemInputRaw,
@@ -243,7 +244,7 @@ export async function askPlanAction(input: {
   slug: string;
   clientId: string;
   instruction: string;
-  channels: ("instagram" | "linkedin")[];
+  channels: ContentChannel[];
 }) {
   return run(input.slug, async (ctx) => {
     const clientId = uuid.parse(input.clientId);

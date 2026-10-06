@@ -6,7 +6,7 @@ import {
   planItemRowToInput,
   proposePlanJob,
   provenanceSchema,
-  releasedFormats,
+  offeredFormats,
   type CarouselParamsInput,
   type ContentChannel,
   type StrategyOverview,
@@ -87,7 +87,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
     rubrics: o.rubrics
       .filter((r) => r.status === "accepted")
       .map((r) => ({ id: r.id, name: r.name, pillarId: r.pillarId })),
-    formats: releasedFormats.map((id) => ({
+    formats: offeredFormats(newOptions.templates.map((t) => t.format)).map((id) => ({
       id,
       label: FORMATS[id].label,
       channel: FORMATS[id].channel as ContentChannel,
@@ -209,6 +209,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
           <AskPlanForm
             {...base}
             running={running}
+            formats={options.formats}
             disabledReason={
               !o.brand ? t("reason.brand") : !options.pillars.length ? t("reason.pillar") : null
             }

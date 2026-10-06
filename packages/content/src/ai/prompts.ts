@@ -13,7 +13,7 @@ import {
 } from "@forgecy/carousel";
 import { z } from "zod";
 import { funnelLabels, objectiveLabels } from "../labels";
-import type { Brief, Outline } from "../document";
+import { contentChannels, type Brief, type Outline } from "../document";
 import type { ProductSummary } from "../products";
 
 export const CONTENT_PROMPT_VERSION = "content-2026-10-06d";
@@ -67,7 +67,7 @@ export const strategyOutputSchema = z.object({
         hookFormula: z.string().max(200),
         hookExample: z.string().max(200),
         cta: z.string().max(200),
-        channels: z.array(z.enum(["instagram", "linkedin"])).max(2),
+        channels: z.array(z.enum(contentChannels)).max(contentChannels.length),
       }),
     )
     .max(24),
@@ -91,7 +91,7 @@ export const planOutputSchema = z.object({
     .array(
       z.object({
         day: z.number().int().min(1).max(30),
-        channel: z.enum(["instagram", "linkedin"]),
+        channel: z.enum(contentChannels),
         pillarId: z.string().max(40),
         rubricId: z.string().max(40),
         theme: z.string().max(120),

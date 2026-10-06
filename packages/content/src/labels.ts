@@ -55,6 +55,8 @@ export const assetStatusLabels: Record<AssetStatus, string> = {
 export const channelLabels: Record<ContentChannel, string> = {
   instagram: "Instagram",
   linkedin: "LinkedIn",
+  facebook: "Facebook",
+  tiktok: "TikTok",
 };
 
 export const frequencyUnitLabels = { week: "per week", month: "per month" } as const;

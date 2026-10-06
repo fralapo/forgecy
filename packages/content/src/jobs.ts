@@ -2,6 +2,7 @@
 import { exportOutputs } from "@forgecy/carousel";
 import { defineJob } from "@forgecy/jobs";
 import { z } from "zod";
+import { contentChannels } from "./document";
 
 const base = {
   clientId: z.uuid(),
@@ -25,9 +26,9 @@ export const proposePlanJob = defineJob({
     ...base,
     instruction,
     channels: z
-      .array(z.enum(["instagram", "linkedin"]))
+      .array(z.enum(contentChannels))
       .min(1)
-      .max(2)
+      .max(contentChannels.length)
       .default(["instagram"]),
   }),
 });
