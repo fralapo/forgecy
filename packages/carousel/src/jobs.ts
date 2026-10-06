@@ -22,7 +22,8 @@ export const carouselExportPayloadSchema = z.object({
   templateVersion: z.string().max(20).optional(),
   slides: z.array(slideSchema).min(1).max(20),
   brand: brandThemeSchema.default({ name: "", handle: "", colors: {}, fonts: {} }),
-  caption: z.string().max(2200).default(""),
+  /** The longest channel limit (LinkedIn); the content module checks each channel's own limit. */
+  caption: z.string().max(3000).default(""),
   hashtags: z.array(z.string().max(100)).max(30).default([]),
   /** "zip" includes PNG, PDF, caption.txt, testi.md and slides.json. */
   outputs: z.array(z.enum(exportOutputs)).min(1).default(["zip"]),

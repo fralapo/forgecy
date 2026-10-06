@@ -91,10 +91,6 @@ async function runExport(
   if (!payload.draft && c.approvedVersionId !== version.id)
     throw new NeedsAttentionError("La versione non è quella approvata");
   const doc = parseDocument(version.document);
-  if (doc.caption.length > 2200)
-    throw new NeedsAttentionError(
-      "La didascalia supera i 2.200 caratteri: l'export del renderer non la accetta ancora. Accorciala o esporta senza didascalia.",
-    );
   const brand = await loadBrand(db, system, {
     clientId: c.clientId,
     clientName: client.name,
