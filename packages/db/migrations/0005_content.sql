@@ -343,9 +343,23 @@ CREATE INDEX "contents_client_idx" ON "contents" USING btree ("client_id","statu
 CREATE INDEX "contents_plan_item_idx" ON "contents" USING btree ("plan_item_id");--> statement-breakpoint
 CREATE INDEX "contents_product_idx" ON "contents" USING btree ("product_id");--> statement-breakpoint
 -- Custom SQL: a content version is an immutable snapshot (spec: "Output approvati mai sovrascritti").
+-- Only foreign keys may be cleared (ON DELETE SET NULL of a user or brand version).
 CREATE OR REPLACE FUNCTION content_versions_immutable() RETURNS trigger AS $$
 BEGIN
-  RAISE EXCEPTION 'content_versions are immutable (version %)', OLD.id USING ERRCODE = 'check_violation';
+  IF NEW.id IS DISTINCT FROM OLD.id
+    OR NEW.content_id IS DISTINCT FROM OLD.content_id
+    OR NEW.number IS DISTINCT FROM OLD.number
+    OR NEW.document IS DISTINCT FROM OLD.document
+    OR NEW.caption IS DISTINCT FROM OLD.caption
+    OR NEW.hashtags IS DISTINCT FROM OLD.hashtags
+    OR NEW.created_from IS DISTINCT FROM OLD.created_from
+    OR NEW.meta IS DISTINCT FROM OLD.meta
+    OR NEW.created_at IS DISTINCT FROM OLD.created_at
+    OR (NEW.created_by IS DISTINCT FROM OLD.created_by AND NEW.created_by IS NOT NULL)
+    OR (NEW.brand_version_id IS DISTINCT FROM OLD.brand_version_id AND NEW.brand_version_id IS NOT NULL) THEN
+    RAISE EXCEPTION 'content_versions are immutable (version %)', OLD.id USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;--> statement-breakpoint
 CREATE TRIGGER content_versions_guard BEFORE UPDATE ON "content_versions"
