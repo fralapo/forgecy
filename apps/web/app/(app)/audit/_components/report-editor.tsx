@@ -4,6 +4,7 @@ import { FIXED_REPORT_SECTIONS, type ReportSection, type ReportSectionKey } from
 import { Badge, Button, Input, Label } from "@forgecy/ui";
 import { ArrowDown, ArrowUp, Copy, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { saveReportDraftAction } from "../actions";
 import { textareaClass } from "../_lib/styles";
@@ -45,6 +46,7 @@ export function ReportEditor({
   findings: Partial<Record<ReportSectionKey, ReportFindingView[]>>;
 }) {
   const router = useRouter();
+  const t = useTranslations("audit.editor");
   const [pending, start] = useTransition();
   const [sections, setSections] = useState(() =>
     report.sections.map((s) => ({ ...s, bulletsText: s.bullets.join("\n") })),
@@ -105,7 +107,7 @@ export function ReportEditor({
       });
       if (!res.ok) return setState({ error: res.error });
       setDirty(false);
-      setState({ ok: "Changes saved" });
+      setState({ ok: t("saved") });
       router.refresh();
     });
 
@@ -122,18 +124,20 @@ export function ReportEditor({
               <div className="flex flex-wrap items-center gap-3 p-4">
                 <input
                   type="checkbox"
-                  aria-label={`Include “${s.title}” in the report`}
+                  aria-label={t("include", { title: s.title })}
                   checked={s.enabled}
                   disabled={fixed}
                   onChange={(e) => change(s.key, "enabled", e.target.checked)}
                 />
                 <span className="font-mono text-body-sm text-fg-muted">{i + 1}</span>
                 <span className="flex-1 text-heading-sm text-fg">{s.title}</span>
-                {s.byAgent ? <Badge variant="highlight">Text proposed by AI</Badge> : null}
-                {fixed ? <span className="text-body-sm text-fg-muted">Always included</span> : null}
+                {s.byAgent ? <Badge variant="highlight">{t("aiText")}</Badge> : null}
+                {fixed ? (
+                  <span className="text-body-sm text-fg-muted">{t("alwaysIncluded")}</span>
+                ) : null}
                 {!NO_FINDINGS.has(s.key) ? (
                   <span className="text-body-sm text-fg-muted">
-                    {list.filter((f) => !excluded.has(f.id)).length} items
+                    {t("items", { count: list.filter((f) => !excluded.has(f.id)).length })}
                   </span>
                 ) : null}
                 <span className="flex gap-1">
@@ -143,7 +147,7 @@ export function ReportEditor({
                     size="sm"
                     disabled={i === 0}
                     onClick={() => move(i, -1)}
-                    aria-label={`Move “${s.title}” up`}
+                    aria-label={t("moveUp", { title: s.title })}
                   >
                     <ArrowUp aria-hidden />
                   </Button>
@@ -153,7 +157,7 @@ export function ReportEditor({
                     size="sm"
                     disabled={i === sections.length - 1}
                     onClick={() => move(i, 1)}
-                    aria-label={`Move “${s.title}” down`}
+                    aria-label={t("moveDown", { title: s.title })}
                   >
                     <ArrowDown aria-hidden />
                   </Button>
@@ -162,11 +166,13 @@ export function ReportEditor({
               {s.enabled && s.key !== "cover" ? (
                 <details className="border-t border-subtle px-4 py-3">
                   <summary className="cursor-pointer text-body-sm text-link">
-                    Edit texts{list.length && !NO_FINDINGS.has(s.key) ? " and items" : ""}
+                    {list.length && !NO_FINDINGS.has(s.key)
+                      ? t("editTextsAndItems")
+                      : t("editTexts")}
                   </summary>
                   <div className="mt-3 flex flex-col gap-3">
                     <div className="flex flex-col gap-1">
-                      <Label htmlFor={`title-${s.key}`}>Title</Label>
+                      <Label htmlFor={`title-${s.key}`}>{t("title")}</Label>
                       <Input
                         id={`title-${s.key}`}
                         value={s.title}
@@ -176,7 +182,7 @@ export function ReportEditor({
                     </div>
                     {s.key !== "method" ? (
                       <div className="flex flex-col gap-1">
-                        <Label htmlFor={`intro-${s.key}`}>Introduction</Label>
+                        <Label htmlFor={`intro-${s.key}`}>{t("introduction")}</Label>
                         <textarea
                           id={`intro-${s.key}`}
                           value={s.intro}
@@ -185,19 +191,16 @@ export function ReportEditor({
                           onChange={(e) => change(s.key, "intro", e.target.value)}
                         />
                         <span className="text-body-sm text-fg-muted">
-                          {s.intro.length}/{introMax} characters
+                          {t("characters", { count: s.intro.length, max: introMax })}
                         </span>
                       </div>
                     ) : (
-                      <p className="text-body-sm text-fg-muted">
-                        The method section lists the sources used on its own: channels, pages read,
-                        competitors and plan.
-                      </p>
+                      <p className="text-body-sm text-fg-muted">{t("methodHint")}</p>
                     )}
                     {WITH_BULLETS.has(s.key) ? (
                       <div className="flex flex-col gap-1">
                         <Label htmlFor={`bullets-${s.key}`}>
-                          {s.key === "overview" ? "Key messages" : "Next steps"} (one per line)
+                          {s.key === "overview" ? t("keyMessages") : t("nextSteps")}
                         </Label>
                         <textarea
                           id={`bullets-${s.key}`}
@@ -212,15 +215,18 @@ export function ReportEditor({
                               : "text-body-sm text-fg-muted"
                           }
                         >
-                          {bulletCount}/{LIMITS.bullets} lines, at most {LIMITS.bullet} characters
-                          each
+                          {t("lines", {
+                            count: bulletCount,
+                            max: LIMITS.bullets,
+                            chars: LIMITS.bullet,
+                          })}
                         </span>
                       </div>
                     ) : null}
                     {list.length && !NO_FINDINGS.has(s.key) ? (
                       <fieldset className="flex flex-col gap-2">
                         <legend className="mb-1 text-label text-fg-muted">
-                          Items in the report
+                          {t("itemsInReport")}
                         </legend>
                         {list.map((f) => (
                           <label key={f.id} className="flex items-start gap-2 text-body-sm">
@@ -233,7 +239,7 @@ export function ReportEditor({
                             <span>
                               {f.title}
                               {f.kind === "comparison" ? (
-                                <span className="text-fg-muted"> · comparison</span>
+                                <span className="text-fg-muted">{t("comparison")}</span>
                               ) : null}
                             </span>
                           </label>
@@ -250,19 +256,16 @@ export function ReportEditor({
 
       <section className="flex flex-col gap-3 rounded-lg border border-subtle bg-surface p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-heading-sm text-fg">Cover email</h3>
+          <h3 className="text-heading-sm text-fg">{t("coverEmail")}</h3>
           {report.emailByAgent && !dirty ? (
-            <Badge variant="highlight">Proposed by the Copywriter</Badge>
+            <Badge variant="highlight">{t("proposedByCopywriter")}</Badge>
           ) : null}
         </div>
         <p className="text-body-sm text-fg-muted">
-          Forgecy does not send emails: copy the text into your email client.
-          {!report.emailBody
-            ? " Still empty: write it here or use “Propose texts with AI”, which also drafts the email."
-            : ""}
+          {report.emailBody ? t("noEmailClient") : t("emailEmpty")}
         </p>
         <div className="flex flex-col gap-1">
-          <Label htmlFor="email-subject">Subject</Label>
+          <Label htmlFor="email-subject">{t("subject")}</Label>
           <Input
             id="email-subject"
             value={subject}
@@ -274,7 +277,7 @@ export function ReportEditor({
           />
         </div>
         <div className="flex flex-col gap-1">
-          <Label htmlFor="email-body">Body</Label>
+          <Label htmlFor="email-body">{t("body")}</Label>
           <textarea
             id="email-body"
             value={body}
@@ -295,12 +298,12 @@ export function ReportEditor({
             onClick={() => {
               void navigator.clipboard
                 .writeText(subject ? `${subject}\n\n${body}` : body)
-                .then(() => setState({ ok: "Text copied" }))
-                .catch(() => setState({ error: "Copy failed: select the text by hand." }));
+                .then(() => setState({ ok: t("copied") }))
+                .catch(() => setState({ error: t("copyFailed") }));
             }}
           >
             <Copy aria-hidden />
-            Copy text
+            {t("copy")}
           </Button>
         </div>
       </section>
@@ -308,9 +311,9 @@ export function ReportEditor({
       <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-subtle bg-app py-3">
         <Button type="button" variant="primary" disabled={pending || !dirty} onClick={save}>
           <Save aria-hidden />
-          {pending ? "Saving…" : "Save changes"}
+          {pending ? t("saving") : t("save")}
         </Button>
-        {dirty ? <span className="text-body-sm text-fg-muted">Unsaved changes</span> : null}
+        {dirty ? <span className="text-body-sm text-fg-muted">{t("unsaved")}</span> : null}
         {state.error ? (
           <span role="alert" className="text-body-sm text-error">
             {state.error}

@@ -1,28 +1,24 @@
 "use client";
 
-import type { AiPolicy } from "@forgecy/core";
+import { aiPolicies, type AiPolicy } from "@forgecy/core";
 import { Button, Input, Label } from "@forgecy/ui";
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { deleteProspectAction, setPolicyAction } from "../actions";
 import { selectClass } from "../_lib/styles";
 
-const policyLabel: Record<AiPolicy, string> = {
-  external_allowed: "External AI allowed",
-  external_restricted: "External AI restricted",
-  local_only: "Local AI only",
-  no_ai: "No AI",
-};
-
 /** Admin only (checked again on the server): changing it stops waiting AI jobs. */
 export function PolicySelect({ clientId, policy }: { clientId: string; policy: AiPolicy }) {
   const router = useRouter();
+  const t = useTranslations("audit.policy");
+  const te = useTranslations("enums.aiPolicy");
   const [pending, start] = useTransition();
   const [message, setMessage] = useState<{ error?: string; ok?: string }>({});
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor="policy">AI policy</Label>
+      <Label htmlFor="policy">{t("label")}</Label>
       <select
         id="policy"
         className={selectClass}
@@ -35,15 +31,15 @@ export function PolicySelect({ clientId, policy }: { clientId: string; policy: A
             if (!res.ok) return setMessage({ error: res.error });
             const n = res.data?.cancelledJobs ?? 0;
             setMessage({
-              ok: n ? `Policy changed: ${n} waiting AI steps cancelled.` : "Policy changed.",
+              ok: n ? t("changedCancelled", { count: n }) : t("changed"),
             });
             router.refresh();
           });
         }}
       >
-        {(Object.keys(policyLabel) as AiPolicy[]).map((p) => (
+        {aiPolicies.map((p) => (
           <option key={p} value={p}>
-            {policyLabel[p]}
+            {te(p)}
           </option>
         ))}
       </select>
@@ -62,6 +58,7 @@ export function PolicySelect({ clientId, policy }: { clientId: string; policy: A
 
 export function DeleteProspect({ clientId, name }: { clientId: string; name: string }) {
   const router = useRouter();
+  const t = useTranslations("audit.deleteProspect");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   return (
@@ -78,8 +75,7 @@ export function DeleteProspect({ clientId, name }: { clientId: string; name: str
       }}
     >
       <Label htmlFor="confirm">
-        Delete the prospect and all collected data (screenshots and files included). Type{" "}
-        <strong>{name}</strong> to confirm.
+        {t.rich("label", { name, strong: (chunks) => <strong>{chunks}</strong> })}
       </Label>
       <Input id="confirm" name="confirm" autoComplete="off" />
       {error ? (
@@ -90,7 +86,7 @@ export function DeleteProspect({ clientId, name }: { clientId: string; name: str
       <div>
         <Button type="submit" variant="danger" size="sm" disabled={pending}>
           <Trash2 aria-hidden />
-          Delete permanently
+          {t("submit")}
         </Button>
       </div>
     </form>

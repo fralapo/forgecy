@@ -2,13 +2,16 @@ import { channelsWithData, getComparisonView } from "@forgecy/audit";
 import { comparisonChannels } from "@forgecy/core";
 import { Card, CardDescription, CardHeader, CardTitle } from "@forgecy/ui";
 import { Sparkles } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { requestComparisonAction } from "../../actions";
 import { ActionButton } from "../../_components/action-button";
 import { ComparisonRow } from "../../_components/comparison-row";
 import { sectionContext } from "../../_lib/findings";
-import { channelLabel } from "../../_lib/labels";
 
-export const metadata = { title: "Audit · Channel comparison" };
+export async function generateMetadata() {
+  const t = await getTranslations("audit.comparison");
+  return { title: t("metaTitle") };
+}
 
 export default async function ComparisonPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -19,23 +22,26 @@ export default async function ComparisonPage({ params }: { params: Promise<{ slu
   ]);
   const ready = comparisonChannels.filter((c) => withData.includes(c));
   const missing = comparisonChannels.filter((c) => !withData.includes(c));
+  const t = await getTranslations("audit");
 
   return (
     <div className="flex flex-col gap-8">
       <Card>
         <CardHeader>
-          <CardTitle>Website, Instagram and Facebook compared</CardTitle>
-          <CardDescription>
-            Five criteria: color, tone, call to action, audience and visual style. Every outcome is
-            a proposal: if you change it, write why.
-          </CardDescription>
+          <CardTitle>{t("comparison.title")}</CardTitle>
+          <CardDescription>{t("comparison.description")}</CardDescription>
         </CardHeader>
         <p className="text-body-sm">
-          Channels with data: {ready.length ? ready.map((c) => channelLabel[c]).join(", ") : "none"}
+          {t("comparison.withData", {
+            channels: ready.length
+              ? ready.map((c) => t(`channel.${c}`)).join(", ")
+              : t("comparison.none"),
+          })}
           {missing.length ? (
             <span className="text-fg-muted">
-              {" "}
-              · without data: {missing.map((c) => channelLabel[c]).join(", ")}
+              {t("comparison.withoutData", {
+                channels: missing.map((c) => t(`channel.${c}`)).join(", "),
+              })}
             </span>
           ) : null}
         </p>
@@ -47,21 +53,14 @@ export default async function ComparisonPage({ params }: { params: Promise<{ slu
                 icon={<Sparkles aria-hidden />}
                 variant="primary"
               >
-                {rows.length ? "Update the comparison" : "Generate the comparison"}
+                {rows.length ? t("comparison.update") : t("comparison.generate")}
               </ActionButton>
             </div>
           ) : (
-            <p className="text-body-sm text-fg-muted">
-              Data from at least two channels is needed: read the website or import the social data.
-            </p>
+            <p className="text-body-sm text-fg-muted">{t("comparison.needTwoChannels")}</p>
           )
         ) : null}
-        {!aiAllowed ? (
-          <p className="text-body-sm text-fg-muted">
-            This prospect’s policy does not allow AI: write the comparison as an “Across channels”
-            observation in the diagnosis.
-          </p>
-        ) : null}
+        {!aiAllowed ? <p className="text-body-sm text-fg-muted">{t("comparison.noAi")}</p> : null}
       </Card>
       {rows.length ? (
         <div className="flex flex-col gap-4">

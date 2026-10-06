@@ -14,6 +14,7 @@ import {
   type ComparisonChannel,
   type ComparisonCriterion,
   type ComparisonOutcome,
+  type MessageRef,
   type ReportSection,
   type SocialChannel,
 } from "@forgecy/core";
@@ -126,6 +127,8 @@ export interface ScanStep {
   key: "robots" | "discovery" | "screenshots" | "extraction" | "checks" | "analysis";
   status: "pending" | "running" | "completed" | "failed" | "skipped";
   detail?: string;
+  /** `detail` as a message reference, shown in the user's language. */
+  detailRef?: MessageRef;
   startedAt?: string;
   endedAt?: string;
 }
@@ -138,7 +141,15 @@ export interface ScanExtraction {
   socialLinks?: Array<{ channel: string; url: string }>;
   contactForm?: boolean;
   /** Accessibility and performance checks computed without AI. */
-  checks?: Array<{ key: string; label: string; ok: boolean; detail: string; pages: string[] }>;
+  checks?: Array<{
+    key: string;
+    label: string;
+    ok: boolean;
+    detail: string;
+    /** `detail` as a message reference, shown in the user's language. */
+    detailRef?: MessageRef;
+    pages: string[];
+  }>;
   /** Competitor benchmark (written by the Brand Analyst, quote verified on the pages). */
   offer?: string;
   tone?: string;

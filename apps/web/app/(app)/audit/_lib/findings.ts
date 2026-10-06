@@ -2,6 +2,7 @@ import "server-only";
 import { getProspectBySlug, sourcesById, type FindingRow } from "@forgecy/audit";
 import type { Database } from "@forgecy/db";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import type { FindingView, SourceLinks } from "../_components/finding-card";
 import { fileUrl, readDeps } from "./server";
 
@@ -46,11 +47,12 @@ export async function sourceLinks(db: Database, findings: FindingRow[]): Promise
     ...new Set(findings.flatMap((f) => f.evidence.map((e) => e.sourceId)).filter(Boolean)),
   ] as string[];
   const rows = await sourcesById(db, ids);
+  const t = await getTranslations("audit.finding");
   const out: SourceLinks = {};
   for (const [id, s] of rows) {
     out[id] = {
       href: s.kind === "page" ? (s.url ?? null) : await fileUrl(s.storageKey),
-      label: s.title ?? s.fileName ?? s.url ?? "Source",
+      label: s.title ?? s.fileName ?? s.url ?? t("source"),
     };
   }
   return out;

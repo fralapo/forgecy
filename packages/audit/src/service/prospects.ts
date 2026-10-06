@@ -1,13 +1,13 @@
 import {
   aiPolicies,
   assertCan,
-  ForgecyError,
   prospectObjectives,
   socialChannels,
   type Actor,
   type AiPolicy,
   type SocialChannel,
 } from "@forgecy/core";
+import { localizedError } from "@forgecy/i18n";
 import {
   and,
   auditSources,
@@ -27,7 +27,7 @@ import {
 import { cancelJob } from "@forgecy/jobs";
 import { z } from "zod";
 import { domainOf, isPlatformUrl, normalizeSiteUrl } from "../url";
-import { requireQueues, userIdOf, type AuditDeps } from "./common";
+import { issueKey, requireQueues, userIdOf, type AuditDeps } from "./common";
 
 /** URL-safe slug from a display name ("Caffè Rossi & Co." → "caffe-rossi-co"). */
 export function slugify(input: string): string {
@@ -56,7 +56,7 @@ const siteUrl = z
     if (!v) return undefined;
     const url = normalizeSiteUrl(v);
     if (!url) {
-      ctx.addIssue({ code: "custom", message: "Invalid website address" });
+      ctx.addIssue({ code: "custom", message: issueKey("audit.validation.websiteInvalid") });
       return z.NEVER;
     }
     return url;
@@ -75,7 +75,7 @@ const socialUrlsSchema = z
         ctx.addIssue({
           code: "custom",
           path: [channel],
-          message: `The link is not a ${channelLabel[channel]} profile`,
+          message: issueKey("audit.validation.notAProfile", { channel: channelLabel[channel] }),
         });
         continue;
       }
@@ -94,7 +94,7 @@ export const channelLabel: Record<SocialChannel | "website", string> = {
 
 export const prospectInputSchema = z
   .object({
-    name: z.string().trim().min(1, "Enter the name").max(120),
+    name: z.string().trim().min(1, issueKey("audit.validation.nameRequired")).max(120),
     websiteUrl: siteUrl,
     sector: optionalText(80),
     area: optionalText(120),
@@ -111,7 +111,7 @@ export const prospectInputSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["otherObjective"],
-        message: "Describe the objective",
+        message: issueKey("audit.validation.objectiveRequired"),
       });
   });
 export type ProspectInput = z.input<typeof prospectInputSchema>;
@@ -248,11 +248,7 @@ export async function updateProspect(
       })
       .where(and(eq(prospectProfiles.clientId, clientId), eq(prospectProfiles.rev, rev)))
       .returning({ rev: prospectProfiles.rev });
-    if (!profile)
-      throw new ForgecyError(
-        "conflict",
-        "Someone changed this data in the meantime. Reload the page to see the updated version.",
-      );
+    if (!profile) throw localizedError("conflict", "audit.errors.dataConflict");
     await tx
       .update(clients)
       .set({
@@ -288,7 +284,7 @@ export async function setProspectPolicy(
     .select({ aiPolicy: clients.aiPolicy })
     .from(clients)
     .where(eq(clients.id, clientId));
-  if (!before) throw new ForgecyError("not_found", "Prospect not found");
+  if (!before) throw localizedError("not_found", "audit.errors.prospectNotFound");
   await deps.db.transaction(async (tx) => {
     await tx.update(clients).set({ aiPolicy: policy }).where(eq(clients.id, clientId));
     await recordAuditEvent(tx, {
@@ -358,22 +354,21 @@ export async function convertToClient(
 ): Promise<{ id: string; slug: string; name: string }> {
   assertCan(actor, "approve", clientId);
   const client = await deps.db.query.clients.findFirst({ where: eq(clients.id, clientId) });
-  if (!client) throw new ForgecyError("not_found", "Prospect not found");
+  if (!client) throw localizedError("not_found", "audit.errors.prospectNotFound");
   if (client.status !== "prospect")
-    throw new ForgecyError("conflict", `${client.name} is already a client.`);
-  if (client.archivedAt)
-    throw new ForgecyError("conflict", "The prospect is archived: restore it first.");
+    throw localizedError("conflict", "audit.errors.alreadyClient", { name: client.name });
+  if (client.archivedAt) throw localizedError("conflict", "audit.errors.prospectArchivedRestore");
   const delivered = await deps.db.query.audits.findFirst({
     where: and(eq(audits.clientId, clientId), eq(audits.status, "delivered")),
   });
-  if (!delivered) throw new ForgecyError("conflict", "Deliver the report first.");
+  if (!delivered) throw localizedError("conflict", "audit.errors.deliverFirst");
   return deps.db.transaction(async (tx) => {
     const [row] = await tx
       .update(clients)
       .set({ status: "active", updatedAt: new Date() })
       .where(and(eq(clients.id, clientId), eq(clients.status, "prospect")))
       .returning({ id: clients.id, slug: clients.slug, name: clients.name });
-    if (!row) throw new ForgecyError("conflict", `${client.name} is already a client.`);
+    if (!row) throw localizedError("conflict", "audit.errors.alreadyClient", { name: client.name });
     await recordAuditEvent(tx, {
       actor,
       action: "prospect.convert",
@@ -398,11 +393,11 @@ export async function deleteProspect(
 ): Promise<void> {
   assertCan(actor, "archive", clientId);
   const client = await deps.db.query.clients.findFirst({ where: eq(clients.id, clientId) });
-  if (!client) throw new ForgecyError("not_found", "Prospect not found");
+  if (!client) throw localizedError("not_found", "audit.errors.prospectNotFound");
   if (client.status !== "prospect")
-    throw new ForgecyError("conflict", "Only prospects can be deleted.");
+    throw localizedError("conflict", "audit.errors.onlyProspectsDeletable");
   if (confirmName.trim() !== client.name)
-    throw new ForgecyError("validation", "Type the exact prospect name to confirm.");
+    throw localizedError("validation", "audit.errors.confirmName");
   const files = await deps.db
     .select({ key: auditSources.storageKey, mobile: auditSources.storageKeyMobile })
     .from(auditSources)

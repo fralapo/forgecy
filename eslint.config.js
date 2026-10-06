@@ -75,6 +75,7 @@ export default tseslint.config(
       "apps/web/app/(app)/layout.tsx",
       "apps/web/app/(app)/page.tsx",
       "apps/web/app/(app)/brand/**/*.tsx",
+      "apps/web/app/(app)/audit/**/*.tsx",
       "apps/web/app/(app)/clients/**/*.tsx",
       "apps/web/app/(app)/settings/**/*.tsx",
       "apps/web/app/(app)/templates/**/*.tsx",

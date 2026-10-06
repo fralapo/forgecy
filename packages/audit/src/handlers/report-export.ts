@@ -4,12 +4,12 @@ import { ExportCancelledError, exportCarousel } from "@forgecy/carousel/export";
 import type { Actor, ReportVariant } from "@forgecy/core";
 import { auditReports, eq } from "@forgecy/db";
 import { contentKey, sha256 } from "@forgecy/files";
-import { NeedsAttentionError, UnrecoverableError, type JobContext } from "@forgecy/jobs";
+import { UnrecoverableError, type JobContext } from "@forgecy/jobs";
 import type { Browser } from "playwright-core";
 import { reportSlides } from "../report/slides";
 import { loadAudit } from "../service/common";
 import { buildReportDocument, recordReportExport, reportFileName } from "../service/reports";
-import type { AuditHandlerDeps } from "./context";
+import { needsAttention, unrecoverable, type AuditHandlerDeps } from "./context";
 
 /** Key of the agency template in the catalog (templates/reports/report-audit-a4). */
 export const REPORT_TEMPLATE_KEY = "report-audit-a4";
@@ -30,17 +30,12 @@ export async function runReportExport(
   });
   if (!report) throw new UnrecoverableError("Report not found");
   if (payload.final && report.status !== "approved" && report.status !== "exported")
-    throw new UnrecoverableError(
-      "The version is no longer approved: the final PDF was not created.",
-    );
+    throw unrecoverable("audit.jobErrors.noLongerApproved");
   if (!ctx.row.createdBy) throw new UnrecoverableError("Export without a person who requested it");
   const { audit, client } = await loadAudit(db, report.auditId);
 
   const pkg = await dbTemplateSource({ db, storage }).get(REPORT_TEMPLATE_KEY);
-  if (!pkg)
-    throw new NeedsAttentionError(
-      "The “Audit report” template is not published: import and publish it from the template catalog.",
-    );
+  if (!pkg) throw needsAttention("audit.jobErrors.templateMissing");
   await ctx.progress(5);
 
   const doc = await buildReportDocument(db, report.id, payload.variant);
@@ -48,14 +43,13 @@ export async function runReportExport(
   try {
     built = reportSlides(doc, pkg.manifest);
   } catch (err) {
-    throw new NeedsAttentionError(
-      `The published template does not fit a report: ${(err as Error).message}`,
-    );
+    throw needsAttention("audit.jobErrors.templateUnfit", { detail: (err as Error).message });
   }
   const check = buildCarouselSchema(pkg.manifest).safeParse(built.slides);
   if (!check.success)
-    throw new NeedsAttentionError(
-      `The report does not fit the template: ${check.error.issues[0]?.message ?? "error"}`,
+    throw needsAttention(
+      "audit.jobErrors.reportUnfit",
+      { detail: check.error.issues[0]?.message ?? "error" },
       { issues: check.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) },
     );
 
@@ -82,7 +76,7 @@ export async function runReportExport(
     throw err;
   }
   const pdf = result.files.find((f) => f.kind === "pdf");
-  if (!pdf) throw new UnrecoverableError("The renderer did not produce the PDF");
+  if (!pdf) throw unrecoverable("audit.jobErrors.noPdf");
 
   const hash = sha256(pdf.data);
   const key = contentKey({ clientId: client.id, scope: "exports", sha256: hash, ext: "pdf" });

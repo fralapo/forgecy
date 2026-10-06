@@ -3,6 +3,7 @@ import {
   comparisonChannels,
   type comparisonCriteria,
   confidenceFromEvidence,
+  messageRefOf,
   prospectObjectiveLabels,
   socialChannels,
   USABLE_FINDING_STATUSES,
@@ -10,6 +11,7 @@ import {
   type AuditEvidence,
   type ComparisonChannel,
   type FindingArea,
+  type MessageRef,
   type ProspectObjective,
   type SocialChannel,
 } from "@forgecy/core";
@@ -37,7 +39,8 @@ import {
   type PageData,
   type PlanItem,
 } from "@forgecy/db";
-import { NeedsAttentionError, UnrecoverableError, type JobContext } from "@forgecy/jobs";
+import { englishMessage, messageRef } from "@forgecy/i18n";
+import { UnrecoverableError, type JobContext } from "@forgecy/jobs";
 import {
   BRAND_ANALYST_CHANNELS,
   BRAND_ANALYST_COMPETITORS,
@@ -61,7 +64,7 @@ import { loadAudit, type AuditRow, type ClientRow } from "../service/common";
 import { channelLabel } from "../service/prospects";
 import { computeChannelMetrics } from "../social/metrics";
 import { domainOf, normalizeSiteUrl } from "../url";
-import { oneLine, runAgent, type AuditHandlerDeps } from "./context";
+import { needsAttention, oneLine, runAgent, unrecoverable, type AuditHandlerDeps } from "./context";
 import { screenshotImages } from "./images";
 
 type SourceRow = typeof auditSources.$inferSelect;
@@ -234,6 +237,7 @@ async function setAnalysisStep(
   scanId: string,
   status: "running" | "completed" | "failed",
   detail?: string,
+  detailRef?: MessageRef | null,
 ) {
   const scan = await db.query.siteScans.findFirst({ where: eq(siteScans.id, scanId) });
   if (!scan) return;
@@ -247,6 +251,7 @@ async function setAnalysisStep(
               ...s,
               status,
               ...(detail ? { detail } : {}),
+              ...(detailRef ? { detailRef } : {}),
               ...(status === "running" ? { startedAt: at } : { endedAt: at }),
             }
           : s,
@@ -258,7 +263,7 @@ async function setAnalysisStep(
 function load(deps: AuditHandlerDeps, auditId: string) {
   return loadAudit(deps.db, auditId).then((r) => {
     if (r.audit.status === "archived" || r.audit.status === "delivered")
-      throw new UnrecoverableError("The audit is closed.");
+      throw unrecoverable("audit.jobErrors.auditClosed");
     return r;
   });
 }
@@ -276,7 +281,13 @@ export async function runAnalyzeSite(
   if (!scan || scan.auditId !== audit.id) throw new UnrecoverableError("Scan not found");
   const pages = await collectedPages(db, scan.id);
   if (!pages.length) return { observations: 0 };
-  await setAnalysisStep(db, scan.id, "running", "Brand Analyst at work");
+  await setAnalysisStep(
+    db,
+    scan.id,
+    "running",
+    englishMessage("audit.scan.analysisRunning"),
+    messageRef("audit.scan.analysisRunning"),
+  );
   await ctx.progress(10);
 
   const checks = scan.extracted?.checks ?? [];
@@ -337,7 +348,13 @@ export async function runAnalyzeSite(
       entityId: audit.id,
     });
   } catch (err) {
-    await setAnalysisStep(db, scan.id, "failed", err instanceof Error ? err.message : undefined);
+    await setAnalysisStep(
+      db,
+      scan.id,
+      "failed",
+      err instanceof Error ? err.message : undefined,
+      messageRefOf(err),
+    );
     throw err;
   }
   await ctx.progress(80);
@@ -375,15 +392,15 @@ export async function runAnalyzeSite(
     if (rows.length)
       await tx.insert(auditFindings).values(rows.map((r, i) => ({ ...r, position: start + i })));
   });
+  const dropped = run.data.observations.length - rows.length;
+  const doneKey = dropped ? "audit.scan.analysisDoneDropped" : "audit.scan.analysisDone";
+  const doneValues = { count: rows.length, dropped };
   await setAnalysisStep(
     db,
     scan.id,
     "completed",
-    `${rows.length} observations to review${
-      rows.length < run.data.observations.length
-        ? ` (${run.data.observations.length - rows.length} rejected for lack of verifiable evidence)`
-        : ""
-    }`,
+    englishMessage(doneKey, doneValues),
+    messageRef(doneKey, doneValues),
   );
   return { observations: rows.length, dropped: run.data.observations.length - rows.length };
 }
@@ -527,9 +544,7 @@ export async function runAnalyzeSocial(
     .orderBy(desc(auditSources.createdAt));
   const shots = await screenshotImages(deps.storage, shotRows);
   if (!data.posts.length && !data.metrics.length && !shots.length)
-    throw new NeedsAttentionError(
-      "No data to analyze: upload screenshots, import an export or enter the values.",
-    );
+    throw needsAttention("audit.jobErrors.noSocialData");
   const shotName = new Map(shotRows.map((s) => [s.id, s]));
   const index = buildIndex([
     ...socialIndexEntries(payload.channel, data),
@@ -885,9 +900,7 @@ export async function runCompareChannels(
     facebook: social.facebook.posts.length + social.facebook.metrics.length > 0,
   };
   if (comparisonChannels.filter((c) => has[c]).length < 2)
-    throw new NeedsAttentionError(
-      "Data is needed on at least two channels among website, Instagram and Facebook.",
-    );
+    throw needsAttention("audit.jobErrors.twoChannels");
   const observations = (await usableObservations(db, audit.id)).filter(
     (o) =>
       o.kind === "observation" &&
@@ -1051,8 +1064,7 @@ export async function runDiagnose(
   const { db } = deps;
   const { audit, client } = await load(deps, payload.auditId);
   const observations = await usableObservations(db, audit.id);
-  if (!observations.length)
-    throw new NeedsAttentionError("No accepted observations: review the observations first.");
+  if (!observations.length) throw needsAttention("audit.jobErrors.noAcceptedObservations");
   const index = buildIndex(
     observations.map((o, i): [string, RefTarget] => [
       `O${i + 1}`,
@@ -1160,8 +1172,7 @@ export async function runPlan(
       ),
     )
     .orderBy(asc(auditFindings.position));
-  if (!problems.length)
-    throw new NeedsAttentionError("Accept at least one problem of the diagnosis.");
+  if (!problems.length) throw needsAttention("audit.jobErrors.acceptProblem");
   const states = await db
     .select()
     .from(auditChannelStates)
@@ -1175,8 +1186,7 @@ export async function runPlan(
   const channels = states
     .map((s) => s.channel)
     .filter((c): c is SocialChannel => (socialChannels as readonly string[]).includes(c));
-  if (!channels.length)
-    throw new NeedsAttentionError("Add at least one social channel to the prospect for the plan.");
+  if (!channels.length) throw needsAttention("audit.jobErrors.noSocialChannel");
   const run = await runAgent(deps, ctx, {
     client,
     role: "strategist",

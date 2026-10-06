@@ -1,5 +1,10 @@
 import type { MetricSource, SocialChannel } from "@forgecy/core";
 
+/** Where a value comes from, as data the interface words in the user's language. */
+export type MetricOrigin =
+  | { kind: "file"; fileName: string | null }
+  | { kind: "source"; source: MetricSource; note?: string | null };
+
 export interface MetricRow {
   metric: string;
   value: number;
@@ -7,6 +12,7 @@ export interface MetricRow {
   source: MetricSource;
   sourceNote?: string | null;
   sourceLabel?: string;
+  origin?: MetricOrigin;
 }
 
 export interface PostRow {
@@ -16,18 +22,34 @@ export interface PostRow {
   text?: string | null;
   metrics: Record<string, number>;
   sourceLabel?: string;
+  origin?: MetricOrigin;
 }
 
-/** One MetricCard: a value with its source and date, or "Unavailable" with the reason. */
+export type MetricReasonId =
+  "noData" | "noDatedPosts" | "noInteractions" | "needsSameSource" | "noFormats" | "noText";
+
+export type MetricDerivationId =
+  "sumPosts" | "datedPosts" | "averagePosts" | "rateFormula" | "postsWithText";
+
+/**
+ * One MetricCard: a value with its source and date, or "Unavailable" with the reason.
+ * `label`, `display`, `reason`, `source` and `derivedFrom` are English (prompts, logs);
+ * the ids, `shown`, `origin` and `derived` let the interface word them in any language.
+ */
 export interface MetricCard {
   key: string;
   label: string;
   value: number | null;
   display: string;
   reason?: string;
+  reasonId?: MetricReasonId;
+  /** The rounded number shown, with its unit (absent for lists such as formats). */
+  shown?: { value: number; unit?: "perWeek" | "percent" };
   source?: string;
+  origin?: MetricOrigin;
   date?: string;
   derivedFrom?: string;
+  derived?: { id: MetricDerivationId; count?: number };
 }
 
 export const metricSourceLabels: Record<MetricSource, string> = {
@@ -46,14 +68,25 @@ function latest(rows: MetricRow[], metric: string): MetricRow | undefined {
     .sort((a, b) => b.observedOn.localeCompare(a.observedOn))[0];
 }
 
+const originOfRow = (row: MetricRow): MetricOrigin =>
+  row.origin ?? { kind: "source", source: row.source, note: row.sourceNote ?? null };
+const originOfPosts = (posts: PostRow[]): MetricOrigin =>
+  posts[0]?.origin ?? { kind: "file", fileName: null };
+
+function unavailable(key: string, label: string, reason: string, reasonId: MetricReasonId) {
+  return { key, label, value: null, display: "Unavailable", reason, reasonId } as MetricCard;
+}
+
 function fromRow(key: string, label: string, row: MetricRow | undefined, reason: string) {
-  if (!row) return { key, label, value: null, display: "Unavailable", reason } as MetricCard;
+  if (!row) return unavailable(key, label, reason, "noData");
   return {
     key,
     label,
     value: row.value,
     display: fmt.format(row.value),
+    shown: { value: row.value },
     source: row.sourceLabel ?? metricSourceLabels[row.source],
+    origin: originOfRow(row),
     date: row.observedOn,
   } satisfies MetricCard;
 }
@@ -123,10 +156,13 @@ export function computeChannelMetrics(input: {
                 label,
                 value: sum,
                 display: fmt.format(sum),
+                shown: { value: sum },
                 source: posts[0]?.sourceLabel ?? "Imported file",
+                origin: originOfPosts(posts),
                 derivedFrom: `Sum of ${posts.length} imported posts`,
+                derived: { id: "sumPosts", count: posts.length },
               }
-            : { key, label, value: null, display: "Unavailable", reason: noData },
+            : unavailable(key, label, noData, "noData"),
         );
       }
     }
@@ -148,16 +184,13 @@ export function computeChannelMetrics(input: {
           label: "Frequency",
           value: recent.length / 4,
           display: `${fmt.format(recent.length / 4)} posts a week`,
+          shown: { value: recent.length / 4, unit: "perWeek" },
           source: posts[0]?.sourceLabel ?? "Imported file",
+          origin: originOfPosts(posts),
           derivedFrom: `${recent.length} dated posts in the last 4 weeks`,
+          derived: { id: "datedPosts", count: recent.length },
         }
-      : {
-          key: "frequency",
-          label: "Frequency",
-          value: null,
-          display: "Unavailable",
-          reason: "No dated posts",
-        },
+      : unavailable("frequency", "Frequency", "No dated posts", "noDatedPosts"),
   );
 
   const withInteractions = posts.map(interactionsOf).filter((v): v is number => v !== null);
@@ -171,16 +204,18 @@ export function computeChannelMetrics(input: {
           label: "Average interactions per post",
           value: avg,
           display: fmt.format(Math.round(avg * 10) / 10),
+          shown: { value: Math.round(avg * 10) / 10 },
           source: posts[0]?.sourceLabel ?? "Imported file",
+          origin: originOfPosts(posts),
           derivedFrom: `Average over ${withInteractions.length} posts`,
+          derived: { id: "averagePosts", count: withInteractions.length },
         }
-      : {
-          key: "avg_interactions",
-          label: "Average interactions per post",
-          value: null,
-          display: "Unavailable",
-          reason: "No posts with interactions",
-        },
+      : unavailable(
+          "avg_interactions",
+          "Average interactions per post",
+          "No posts with interactions",
+          "noInteractions",
+        ),
   );
 
   // Interaction rate only with followers and interactions from the same source.
@@ -193,16 +228,21 @@ export function computeChannelMetrics(input: {
           label: "Interaction rate",
           value: (avg! / followers!.value) * 100,
           display: `${fmt.format(Math.round((avg! / followers!.value) * 10000) / 100)}%`,
+          shown: {
+            value: Math.round((avg! / followers!.value) * 10000) / 100,
+            unit: "percent",
+          },
           source: followers!.sourceLabel ?? metricSourceLabels[followers!.source],
+          origin: originOfRow(followers!),
           derivedFrom: "Calculated as: interactions ÷ followers",
+          derived: { id: "rateFormula" },
         }
-      : {
-          key: "interaction_rate",
-          label: "Interaction rate",
-          value: null,
-          display: "Unavailable",
-          reason: "Needs followers and interactions from the same source and period",
-        },
+      : unavailable(
+          "interaction_rate",
+          "Interaction rate",
+          "Needs followers and interactions from the same source and period",
+          "needsSameSource",
+        ),
   );
 
   const formats = [
@@ -216,14 +256,9 @@ export function computeChannelMetrics(input: {
           value: formats.length,
           display: formats.join(", "),
           source: posts[0]?.sourceLabel ?? "Imported file",
+          origin: originOfPosts(posts),
         }
-      : {
-          key: "formats",
-          label: "Formats used",
-          value: null,
-          display: "Unavailable",
-          reason: "No formats in the data",
-        },
+      : unavailable("formats", "Formats used", "No formats in the data", "noFormats"),
   );
 
   const withText = posts.filter((p) => p.text);
@@ -234,16 +269,18 @@ export function computeChannelMetrics(input: {
           label: "Posts with a CTA",
           value: (withText.filter((p) => CTA_IN_TEXT.test(p.text!)).length / withText.length) * 100,
           display: `${Math.round((withText.filter((p) => CTA_IN_TEXT.test(p.text!)).length / withText.length) * 100)}%`,
+          shown: {
+            value: Math.round(
+              (withText.filter((p) => CTA_IN_TEXT.test(p.text!)).length / withText.length) * 100,
+            ),
+            unit: "percent",
+          },
           source: posts[0]?.sourceLabel ?? "Imported file",
+          origin: originOfPosts(posts),
           derivedFrom: `${withText.length} posts with text`,
+          derived: { id: "postsWithText", count: withText.length },
         }
-      : {
-          key: "cta_share",
-          label: "Posts with a CTA",
-          value: null,
-          display: "Unavailable",
-          reason: "No post text in the data",
-        },
+      : unavailable("cta_share", "Posts with a CTA", "No post text in the data", "noText"),
   );
 
   if (channel === "tiktok") {
@@ -262,10 +299,13 @@ export function computeChannelMetrics(input: {
                 label,
                 value: values.reduce((a, b) => a + b, 0) / values.length,
                 display: fmt.format(Math.round(values.reduce((a, b) => a + b, 0) / values.length)),
+                shown: { value: Math.round(values.reduce((a, b) => a + b, 0) / values.length) },
                 source: posts[0]?.sourceLabel ?? "Imported file",
+                origin: originOfPosts(posts),
                 derivedFrom: `Average over ${values.length} posts`,
+                derived: { id: "averagePosts", count: values.length },
               }
-            : { key, label, value: null, display: "Unavailable", reason: noData },
+            : unavailable(key, label, noData, "noData"),
       );
     }
   }

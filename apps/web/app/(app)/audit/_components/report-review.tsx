@@ -3,6 +3,7 @@
 import { Button, Label } from "@forgecy/ui";
 import { Check, MessageSquareWarning } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { approveReportAction, requestReportChangesAction } from "../actions";
 import { textareaClass } from "../_lib/styles";
@@ -21,6 +22,7 @@ export function ReportReview({
   ownSubmission: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations("audit");
   const [pending, start] = useTransition();
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -28,14 +30,14 @@ export function ReportReview({
     start(async () => {
       setError(null);
       const res = await fn();
-      if (!res.ok) return setError(res.error ?? "Operation failed");
+      if (!res.ok) return setError(res.error ?? t("operationFailed"));
       setText("");
       router.refresh();
     });
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <Label htmlFor="review-note">Note or change request</Label>
+        <Label htmlFor="review-note">{t("reportReview.note")}</Label>
         <textarea
           id="review-note"
           value={text}
@@ -44,9 +46,7 @@ export function ReportReview({
           onChange={(e) => setText(e.target.value)}
         />
         {ownSubmission ? (
-          <span className="text-body-sm text-fg-muted">
-            You submitted this version yourself: approving it requires a note for the log.
-          </span>
+          <span className="text-body-sm text-fg-muted">{t("reportReview.ownSubmission")}</span>
         ) : null}
       </div>
       <div className="flex flex-wrap gap-2">
@@ -59,7 +59,7 @@ export function ReportReview({
           }
         >
           <Check aria-hidden />
-          Mark review complete
+          {t("reportReview.approve")}
         </Button>
         <Button
           type="button"
@@ -68,7 +68,7 @@ export function ReportReview({
           onClick={() => run(() => requestReportChangesAction({ id, rev, comment: text }))}
         >
           <MessageSquareWarning aria-hidden />
-          Request changes
+          {t("reportReview.requestChanges")}
         </Button>
       </div>
       {error ? (

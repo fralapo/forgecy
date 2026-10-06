@@ -12,6 +12,7 @@ import {
   type ScanStep,
 } from "@forgecy/db";
 import { contentKey, sha256 } from "@forgecy/files";
+import { englishMessage, messageRef } from "@forgecy/i18n";
 import { UnrecoverableError, type JobContext } from "@forgecy/jobs";
 import { crawlSite, type CrawlProgress, type CrawlResult } from "../crawl/crawler";
 import { aggregateExtraction, technicalChecks } from "../crawl/extract";
@@ -30,6 +31,7 @@ type StepUpdate = {
   step: ScanStep["key"];
   status: ScanStep["status"];
   detail?: string;
+  detailRef?: ScanStep["detailRef"];
 };
 
 async function openFetcher(deps: AuditHandlerDeps, ctx: JobContext): Promise<PageFetcher> {
@@ -83,6 +85,7 @@ export async function runCrawl(
             ...s,
             status: p.status,
             ...(p.detail ? { detail: p.detail } : {}),
+            ...(p.detailRef ? { detailRef: p.detailRef } : {}),
             ...(p.status === "running" && !s.startedAt ? { startedAt: at } : {}),
             ...(p.status !== "running" ? { endedAt: at } : {}),
           }
@@ -188,7 +191,14 @@ export async function runCrawl(
   await setStep({
     step: "checks",
     status: "completed",
-    detail: `${checks.filter((c) => !c.ok).length} of ${checks.length} checks to improve`,
+    detail: englishMessage("audit.scan.checks", {
+      failed: checks.filter((c) => !c.ok).length,
+      total: checks.length,
+    }),
+    detailRef: messageRef("audit.scan.checks", {
+      failed: checks.filter((c) => !c.ok).length,
+      total: checks.length,
+    }),
   });
   const status =
     result.pages.length === 0
@@ -243,11 +253,17 @@ async function afterScan(deps: AuditHandlerDeps, scan: ScanRow, pages: number) {
         .where(eq(audits.id, audit.id));
     const analysis: ScanStep =
       ai && pages
-        ? { key: "analysis", status: "pending", detail: "Observations in progress" }
+        ? {
+            key: "analysis",
+            status: "pending",
+            detail: englishMessage("audit.scan.analysisPending"),
+            detailRef: messageRef("audit.scan.analysisPending"),
+          }
         : {
             key: "analysis",
             status: "skipped",
-            detail: ai ? "No pages read" : "AI not allowed by the policy: observations by hand",
+            detail: englishMessage(ai ? "audit.scan.analysisNoPages" : "audit.scan.analysisNoAi"),
+            detailRef: messageRef(ai ? "audit.scan.analysisNoPages" : "audit.scan.analysisNoAi"),
           };
     const fresh = await db.query.siteScans.findFirst({ where: eq(siteScans.id, scan.id) });
     await db

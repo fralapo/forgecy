@@ -1,4 +1,5 @@
-import { ForgecyError, type Actor, type AiPolicy } from "@forgecy/core";
+import type { Actor, AiPolicy } from "@forgecy/core";
+import { localizedError, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import { audits, clients, eq, jobs, and, inArray, type Database } from "@forgecy/db";
 import type { StorageDriver } from "@forgecy/files";
 import { enqueueJob, type JobDefinition, type JobQueues } from "@forgecy/jobs";
@@ -16,17 +17,25 @@ export type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 export type AuditRow = typeof audits.$inferSelect;
 export type ClientRow = typeof clients.$inferSelect;
 
+/**
+ * Zod issue message as a message key (the format of the web's `vmsg`), so the
+ * interface shows it in the user's language: `z.string().min(1, issueKey("audit.validation.x"))`.
+ */
+export function issueKey(key: MessageKey, values?: MessageValues): string {
+  return values ? `${key}|${JSON.stringify(values)}` : key;
+}
+
 export function userIdOf(actor: Actor): string | null {
   return actor.type === "user" ? actor.id : null;
 }
 
 export function requireQueues(deps: AuditDeps): JobQueues {
-  if (!deps.queues) throw new ForgecyError("unavailable", "Job queue unavailable");
+  if (!deps.queues) throw localizedError("unavailable", "audit.errors.queueUnavailable");
   return deps.queues;
 }
 
 export function requireStorage(deps: AuditDeps): StorageDriver {
-  if (!deps.storage) throw new ForgecyError("unavailable", "File storage unavailable");
+  if (!deps.storage) throw localizedError("unavailable", "audit.errors.storageUnavailable");
   return deps.storage;
 }
 
@@ -39,14 +48,14 @@ export async function loadAudit(
     .from(audits)
     .innerJoin(clients, eq(clients.id, audits.clientId))
     .where(eq(audits.id, auditId));
-  if (!row) throw new ForgecyError("not_found", "Audit not found");
+  if (!row) throw localizedError("not_found", "audit.errors.auditNotFound");
   return row;
 }
 
 /** Audits that are archived or delivered are read-only. */
 export function assertEditable(audit: AuditRow): void {
   if (audit.status === "archived" || audit.status === "delivered")
-    throw new ForgecyError("conflict", "The audit is closed and can no longer be edited.");
+    throw localizedError("conflict", "audit.errors.auditClosed");
 }
 
 export function aiAllowed(policy: AiPolicy): boolean {
@@ -55,10 +64,7 @@ export function aiAllowed(policy: AiPolicy): boolean {
 
 export function assertAiAllowed(client: ClientRow): void {
   if (!aiAllowed(client.aiPolicy))
-    throw new ForgecyError(
-      "policy_blocked",
-      "This prospect's policy does not allow AI. You can fill in the sections by hand.",
-    );
+    throw localizedError("policy_blocked", "audit.errors.policyNoAi");
 }
 
 /** Enqueue an audit job tied to the audit (jobs.entity = "audit"). */

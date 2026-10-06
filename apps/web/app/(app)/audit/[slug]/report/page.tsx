@@ -22,6 +22,8 @@ import {
   Trash2,
   Undo2,
 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
+import { getFormat, refText } from "@/lib/i18n";
 import { requireUser } from "@/lib/session";
 import {
   composeReportAction,
@@ -35,16 +37,14 @@ import { ActionButton } from "../../_components/action-button";
 import { ReportEditor, type ReportFindingView } from "../../_components/report-editor";
 import { ReportReview } from "../../_components/report-review";
 import { sectionContext } from "../../_lib/findings";
+import { readinessDetail, readinessLabel } from "../../_lib/readiness";
 import { fileUrl } from "../../_lib/server";
-import {
-  formatDateTime,
-  levelLabel,
-  reportStatusLabel,
-  reportStatusVariant,
-} from "../../_lib/labels";
-import { plural } from "@/lib/plural";
+import { reportStatusVariant } from "../../_lib/labels";
 
-export const metadata = { title: "Audit · Report" };
+export async function generateMetadata() {
+  const t = await getTranslations("audit.report");
+  return { title: t("metaTitle") };
+}
 
 export default async function ReportPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -53,6 +53,8 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
   const reports = await listReports(db, audit.id);
   const current = reports[0];
   const closed = audit.status === "archived";
+  const t = await getTranslations("audit");
+  const format = await getFormat();
 
   if (!current) {
     const readiness = await reportReadiness(db, audit.id);
@@ -60,11 +62,8 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Report</CardTitle>
-          <CardDescription>
-            The report gathers the problems, the accepted observations and the next steps. You
-            compose it here, send it to review and export it as a PDF after a person approves it.
-          </CardDescription>
+          <CardTitle>{t("report.title")}</CardTitle>
+          <CardDescription>{t("report.intro")}</CardDescription>
         </CardHeader>
         <ul className="flex flex-col gap-2">
           {readiness.map((r) => (
@@ -75,8 +74,10 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                 <CircleDashed aria-hidden className="mt-0.5 size-4 text-fg-muted" />
               )}
               <span>
-                {r.label}
-                {r.detail ? <span className="text-fg-muted"> · {r.detail}</span> : null}
+                {readinessLabel(t, r)}
+                {r.detail ? (
+                  <span className="text-fg-muted"> · {readinessDetail(t, r)}</span>
+                ) : null}
               </span>
             </li>
           ))}
@@ -88,19 +89,14 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
               icon={<FilePlus2 aria-hidden />}
               variant="primary"
             >
-              Compose report
+              {t("report.compose")}
             </ActionButton>
             {aiAllowed ? (
-              <p className="mt-2 text-body-sm text-fg-muted">
-                The Strategist and the Copywriter propose the texts and the email: you check them
-                before the review.
-              </p>
+              <p className="mt-2 text-body-sm text-fg-muted">{t("report.composeAiHint")}</p>
             ) : null}
           </div>
         ) : (
-          <p className="text-body-sm text-fg-muted">
-            Complete the steps above to compose the report.
-          </p>
+          <p className="text-body-sm text-fg-muted">{t("report.completeSteps")}</p>
         )}
       </Card>
     );
@@ -149,12 +145,12 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
       <div className="flex flex-col gap-6">
         {current.changesRequested && draft ? (
           <p role="status" className="rounded-md border border-warning-fill p-3 text-body-sm">
-            Changes requested: {current.changesRequested}
+            {t("report.changesRequested", { comment: current.changesRequested })}
           </p>
         ) : null}
         {outdated && draft ? (
           <p role="status" className="rounded-md border border-warning-fill p-3 text-body-sm">
-            The observations changed after the report was composed: check items and texts.
+            {t("report.outdated")}
           </p>
         ) : null}
         {draft && !closed ? (
@@ -167,9 +163,9 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                     email: true,
                   })}
                   icon={<Sparkles aria-hidden />}
-                  confirm="The Strategist and the Copywriter rewrite the texts not edited by hand and the email. Continue?"
+                  confirm={t("report.proposeTextsConfirm")}
                 >
-                  Propose texts with AI
+                  {t("report.proposeTexts")}
                 </ActionButton>
               </div>
             ) : null}
@@ -190,10 +186,9 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle>Report content</CardTitle>
+              <CardTitle>{t("report.content")}</CardTitle>
               <CardDescription>
-                This version can no longer be edited
-                {current.status === "in_review" ? ": withdraw it from review to change it." : "."}
+                {current.status === "in_review" ? t("report.lockedInReview") : t("report.locked")}
               </CardDescription>
             </CardHeader>
             <ol className="flex flex-col gap-6">
@@ -215,7 +210,9 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                           <p className="text-body-md text-fg">
                             {it.title}{" "}
                             <span className="text-body-sm text-fg-muted">
-                              · {levelLabel[it.priority].toLowerCase()} priority
+                              {t("report.itemPriority", {
+                                priority: t(`level.${it.priority}`).toLowerCase(),
+                              })}
                             </span>
                           </p>
                           {it.description ? <p className="text-body-sm">{it.description}</p> : null}
@@ -231,12 +228,14 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
             </ol>
             {current.emailBody ? (
               <details>
-                <summary className="cursor-pointer text-body-sm text-link">Cover email</summary>
+                <summary className="cursor-pointer text-body-sm text-link">
+                  {t("report.coverEmail")}
+                </summary>
                 <p className="mt-2 text-body-sm font-medium">{current.emailSubject}</p>
                 <p className="whitespace-pre-line text-body-sm">{current.emailBody}</p>
               </details>
             ) : (
-              <p className="text-body-sm text-fg-muted">No cover email in this version.</p>
+              <p className="text-body-sm text-fg-muted">{t("report.noCoverEmail")}</p>
             )}
           </Card>
         )}
@@ -245,20 +244,24 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
       <aside className="flex flex-col gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Version {current.version}</CardTitle>
+            <CardTitle>{t("report.version", { version: current.version })}</CardTitle>
           </CardHeader>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={reportStatusVariant[current.status]}>
-              {reportStatusLabel[current.status]}
+              {t(`reportStatus.${current.status}`)}
             </Badge>
             <span className="text-body-sm text-fg-muted">
-              Updated on {formatDateTime(current.updatedAt)}
+              {t("report.updatedOn", { date: format.date(current.updatedAt, "dateTime") })}
             </span>
           </div>
           {current.approvedAt ? (
             <p className="text-body-sm">
-              Approved on {formatDateTime(current.approvedAt)}
-              {current.approvalNote ? ` · ${current.approvalNote}` : ""}
+              {current.approvalNote
+                ? t("report.approvedOnWithNote", {
+                    date: format.date(current.approvedAt, "dateTime"),
+                    note: current.approvalNote,
+                  })
+                : t("report.approvedOn", { date: format.date(current.approvedAt, "dateTime") })}
             </p>
           ) : null}
           {!closed && draft ? (
@@ -268,16 +271,16 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                 icon={<Send aria-hidden />}
                 variant="primary"
               >
-                Send to review
+                {t("report.submit")}
               </ActionButton>
               {!current.submittedAt ? (
                 <ActionButton
                   action={deleteReportDraftAction.bind(null, current.id)}
                   icon={<Trash2 aria-hidden />}
                   variant="ghost"
-                  confirm="Delete this report draft?"
+                  confirm={t("report.deleteDraftConfirm")}
                 >
-                  Delete draft
+                  {t("report.deleteDraft")}
                 </ActionButton>
               ) : null}
             </div>
@@ -294,7 +297,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                 icon={<Undo2 aria-hidden />}
                 variant="ghost"
               >
-                Withdraw from review
+                {t("report.withdraw")}
               </ActionButton>
             </>
           ) : null}
@@ -304,23 +307,23 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
               icon={<RefreshCw aria-hidden />}
               variant="secondary"
             >
-              Create a new version
+              {t("report.newVersion")}
             </ActionButton>
           ) : null}
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>PDF</CardTitle>
-            <CardDescription>
-              The PDF uses the “Audit report” template. Proofs carry the “Draft” watermark; the
-              final PDF is exported after approval and delivers the audit.
-            </CardDescription>
+            <CardTitle>{t("report.pdf")}</CardTitle>
+            <CardDescription>{t("report.pdfDescription")}</CardDescription>
           </CardHeader>
           {exportFailure ? (
             <p role="alert" className="text-body-sm text-error">
-              The last PDF was not created
-              {exportFailure.error ? `: ${exportFailure.error}` : "."}
+              {exportFailure.error
+                ? t("report.exportFailedWithError", {
+                    error: await refText(exportFailure.errorRef, exportFailure.error),
+                  })
+                : t("report.exportFailed")}
             </p>
           ) : null}
           {current.status !== "superseded" ? (
@@ -337,7 +340,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                   variant="ghost"
                   size="sm"
                 >
-                  {variant === "full" ? "Full proof" : "Compact proof"}
+                  {t(`report.proof.${variant}`)}
                 </ActionButton>
               ))}
             </div>
@@ -357,11 +360,11 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                   size="sm"
                   confirm={
                     current.status === "approved" && variant === "full"
-                      ? "The final PDF delivers the audit: after that it can no longer be edited. Continue?"
+                      ? t("report.finalConfirm")
                       : undefined
                   }
                 >
-                  {variant === "full" ? "Final full PDF" : "Final compact PDF"}
+                  {t(`report.final.${variant}`)}
                 </ActionButton>
               ))}
             </div>
@@ -378,8 +381,11 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                     <span>{d.fileName}</span>
                   )}
                   <span className="text-fg-muted">
-                    {d.final ? "Final" : "Draft"} · {plural(d.pages, "page", "pages")} ·{" "}
-                    {formatDateTime(d.createdAt)}
+                    {t("report.exportMeta", {
+                      kind: t(d.final ? "report.exportKind.final" : "report.exportKind.draft"),
+                      pages: d.pages,
+                      date: format.date(d.createdAt, "dateTime"),
+                    })}
                   </span>
                 </li>
               ))}
@@ -389,15 +395,13 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
 
         <Card>
           <CardHeader>
-            <CardTitle>Evidence check</CardTitle>
-            <CardDescription>
-              Every included item must have a source that still exists.
-            </CardDescription>
+            <CardTitle>{t("report.evidence")}</CardTitle>
+            <CardDescription>{t("report.evidenceDescription")}</CardDescription>
           </CardHeader>
           {check.ok ? (
             <p className="flex items-center gap-2 text-body-sm">
               <Check aria-hidden className="size-4 text-success" />
-              {plural(check.included, "item", "items")}, all with evidence
+              {t("report.evidenceOk", { count: check.included })}
             </p>
           ) : (
             <ul className="flex flex-col gap-2">
@@ -405,8 +409,10 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                 <li key={e.findingId} className="text-body-sm">
                   <span className="text-error">{e.title}</span>
                   <span className="text-fg-muted">
-                    {" "}
-                    · {titleOf.get(e.section) ?? e.section}: {e.reason}
+                    {t("report.evidenceIssue", {
+                      section: titleOf.get(e.section) ?? e.section,
+                      reason: t(`report.evidenceReason.${e.code}`),
+                    })}
                   </span>
                 </li>
               ))}
@@ -415,8 +421,11 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
           {check.warnings.length ? (
             <ul className="flex flex-col gap-1">
               {check.warnings.map((w) => (
-                <li key={w.section + w.message} className="text-body-sm text-fg-muted">
-                  {titleOf.get(w.section) ?? w.section}: {w.message}
+                <li key={w.section + w.code} className="text-body-sm text-fg-muted">
+                  {t("report.warning", {
+                    section: titleOf.get(w.section) ?? w.section,
+                    message: t(`report.warningMessage.${w.code}`),
+                  })}
                 </li>
               ))}
             </ul>
@@ -426,16 +435,19 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
         {reports.length > 1 ? (
           <Card>
             <CardHeader>
-              <CardTitle>Previous versions</CardTitle>
+              <CardTitle>{t("report.previousVersions")}</CardTitle>
             </CardHeader>
             <ul className="flex flex-col gap-2">
               {reports.slice(1).map((r) => (
                 <li key={r.id} className="flex items-center justify-between gap-2 text-body-sm">
                   <span>
-                    v{r.version} · {formatDateTime(r.updatedAt)}
+                    {t("report.previousVersion", {
+                      version: r.version,
+                      date: format.date(r.updatedAt, "dateTime"),
+                    })}
                   </span>
                   <Badge variant={reportStatusVariant[r.status]}>
-                    {reportStatusLabel[r.status]}
+                    {t(`reportStatus.${r.status}`)}
                   </Badge>
                 </li>
               ))}
