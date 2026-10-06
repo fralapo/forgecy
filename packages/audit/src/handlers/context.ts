@@ -28,7 +28,7 @@ export interface AuditHandlerDeps {
   crawlTimeoutMs?: number;
 }
 
-export type AiTaskName = "audit_analyze" | "audit_diagnose" | "audit_plan";
+export type AiTaskName = "audit_analyze" | "audit_diagnose" | "audit_plan" | "audit_report";
 
 export interface AgentRun<T> {
   data: T;

@@ -22,6 +22,7 @@ import { requireUser } from "@/lib/session";
 import {
   archiveAuditAction,
   archiveProspectAction,
+  convertToClientAction,
   restoreProspectAction,
   startAuditAction,
 } from "../actions";
@@ -104,11 +105,24 @@ export default async function ProspectOverviewPage({
           </div>
         </dl>
         {user.isAdmin ? <PolicySelect clientId={client.id} policy={client.aiPolicy} /> : null}
-        <Button variant="secondary" disabled title="Consegna prima il report">
-          <UserCheck aria-hidden />
-          Converti in cliente
-        </Button>
-        <p className="text-body-sm text-fg-muted">Si attiva dopo la consegna del report.</p>
+        {audit?.status === "delivered" && !client.archivedAt ? (
+          <ActionButton
+            action={convertToClientAction.bind(null, client.id)}
+            icon={<UserCheck aria-hidden />}
+            variant="primary"
+            confirm={`${client.name} diventa un cliente attivo. Audit, fonti e osservazioni accettate restano collegati. Nessuna proposta diventa ufficiale senza l'approvazione di una persona.`}
+          >
+            Converti in cliente
+          </ActionButton>
+        ) : (
+          <>
+            <Button variant="secondary" disabled title="Consegna prima il report">
+              <UserCheck aria-hidden />
+              Converti in cliente
+            </Button>
+            <p className="text-body-sm text-fg-muted">Si attiva dopo la consegna del report.</p>
+          </>
+        )}
       </Card>
       <details className="rounded-lg border border-subtle bg-surface p-6">
         <summary className="cursor-pointer text-heading-sm text-fg">Modifica i dati</summary>
@@ -275,7 +289,14 @@ export default async function ProspectOverviewPage({
         <Card>
           <CardHeader>
             <CardTitle>Prima del report</CardTitle>
-            <CardDescription>Il report si prepara nel prossimo modulo.</CardDescription>
+            <CardDescription>
+              <Link
+                href={`${base}/report` as Route}
+                className="text-link underline-offset-2 hover:underline"
+              >
+                Vai al report
+              </Link>
+            </CardDescription>
           </CardHeader>
           <ul className="flex flex-col gap-2">
             {readiness.map((r) => (

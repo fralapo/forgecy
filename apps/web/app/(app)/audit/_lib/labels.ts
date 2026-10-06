@@ -5,6 +5,7 @@ import type {
   FindingArea,
   FindingStatus,
   Level,
+  ReportStatus,
   SourceStatus,
 } from "@forgecy/core";
 
@@ -109,6 +110,7 @@ export const outcomeVariant: Record<ComparisonOutcome, BadgeVariant> = {
 export const agentLabel: Record<string, string> = {
   brand_analyst: "Brand Analyst",
   strategist: "Strategist",
+  copywriter: "Copywriter",
 };
 
 export const jobLabel: Record<string, string> = {
@@ -120,6 +122,7 @@ export const jobLabel: Record<string, string> = {
   "audit.compare_channels": "Confronto tra i canali",
   "audit.diagnose": "Diagnosi",
   "audit.plan": "Piano di 30 giorni",
+  "audit.report_texts": "Testi del report",
 };
 
 export const stepLabel: Record<string, string> = {
@@ -159,3 +162,19 @@ export function formatDateTime(d: Date | string | null | undefined): string {
   const date = typeof d === "string" ? new Date(d) : d;
   return new Intl.DateTimeFormat("it-IT", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
+
+export const reportStatusLabel: Record<ReportStatus, string> = {
+  draft: "Bozza",
+  in_review: "In revisione",
+  approved: "Approvato",
+  exported: "Esportato",
+  superseded: "Sostituito",
+};
+
+export const reportStatusVariant: Record<ReportStatus, BadgeVariant> = {
+  draft: "neutral",
+  in_review: "info",
+  approved: "success",
+  exported: "success",
+  superseded: "neutral",
+};

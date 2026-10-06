@@ -12,3 +12,4 @@ export * from "./service/findings";
 export * from "./service/competitors";
 export * from "./service/social";
 export * from "./service/queries";
+export * from "./service/reports";

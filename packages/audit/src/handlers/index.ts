@@ -19,6 +19,7 @@ import {
   auditDiagnoseJob,
   auditPlanJob,
   auditProposeCompetitorsJob,
+  auditReportTextsJob,
 } from "../jobs";
 import { createHostCheck } from "../url";
 import {
@@ -32,6 +33,7 @@ import {
 } from "./analysis";
 import type { AuditHandlerDeps } from "./context";
 import { runCrawl } from "./crawl";
+import { runReportTexts } from "./report";
 
 export type { AuditHandlerDeps } from "./context";
 
@@ -93,5 +95,6 @@ export function createAuditHandlers(
     ...handle(auditCompareChannelsJob, async (p, ctx) => runCompareChannels(await d(), p, ctx)),
     ...handle(auditDiagnoseJob, async (p, ctx) => runDiagnose(await d(), p, ctx)),
     ...handle(auditPlanJob, async (p, ctx) => runPlan(await d(), p, ctx)),
+    ...handle(auditReportTextsJob, async (p, ctx) => runReportTexts(await d(), p, ctx)),
   };
 }

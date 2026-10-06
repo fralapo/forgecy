@@ -5,8 +5,12 @@ import {
   addFinding,
   addMetric,
   archiveAudit,
+  approveReport,
   archiveProspect,
   cancelScan,
+  composeReport,
+  convertToClient,
+  deleteReportDraft,
   confirmCompetitorList,
   createProspect,
   deleteFinding,
@@ -27,8 +31,13 @@ import {
   requestCompetitorProposal,
   requestDiagnosis,
   requestPlan,
+  requestReportChanges,
+  requestReportTexts,
   requestSocialAnalysis,
   rescanSite,
+  saveReportDraft,
+  submitReport,
+  withdrawReport,
   restoreProspect,
   retryScan,
   reviewCompetitor,
@@ -46,8 +55,15 @@ import {
   type ProspectInput,
   type TablePreview,
 } from "@forgecy/audit";
-import type { AiPolicy, ComparisonOutcome, Level, SocialChannel } from "@forgecy/core";
+import type {
+  AiPolicy,
+  ComparisonOutcome,
+  Level,
+  ReportSectionKey,
+  SocialChannel,
+} from "@forgecy/core";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireUser, type CurrentUser } from "@/lib/session";
 import { auditDeps, readDeps, toActionError, type ActionResult } from "./_lib/server";
 import type { AuditDeps } from "@forgecy/audit";
@@ -323,4 +339,62 @@ export async function requestSocialAnalysisAction(auditId: string, channel: Soci
   return act((u, d) =>
     requestSocialAnalysis(d, u.actor, { auditId, channel }).then((job) => job.id),
   );
+}
+
+// ---------------------------------------------------------------- Report
+
+export async function composeReportAction(auditId: string) {
+  return act((u, d) => composeReport(d, u.actor, auditId));
+}
+
+export async function requestReportTextsAction(input: {
+  reportId: string;
+  sections?: ReportSectionKey[];
+  email?: boolean;
+  instruction?: string;
+}) {
+  return act((u, d) => requestReportTexts(d, u.actor, input).then((job) => job.id));
+}
+
+export async function saveReportDraftAction(input: Parameters<typeof saveReportDraft>[2]) {
+  return act((u, d) => saveReportDraft(d, u.actor, input).then((r) => r.rev), {
+    queues: false,
+  });
+}
+
+export async function submitReportAction(input: { id: string; rev: number; note?: string }) {
+  return act((u, d) => submitReport(d, u.actor, input).then(() => undefined), { queues: false });
+}
+
+export async function withdrawReportAction(id: string, rev: number) {
+  return act((u, d) => withdrawReport(d, u.actor, { id, rev }).then(() => undefined), {
+    queues: false,
+  });
+}
+
+export async function approveReportAction(input: { id: string; rev: number; note?: string }) {
+  return act((u, d) => approveReport(d, u.actor, input).then(() => undefined), { queues: false });
+}
+
+export async function requestReportChangesAction(input: {
+  id: string;
+  rev: number;
+  comment: string;
+}) {
+  return act((u, d) => requestReportChanges(d, u.actor, input).then(() => undefined), {
+    queues: false,
+  });
+}
+
+export async function deleteReportDraftAction(id: string) {
+  return act((u, d) => deleteReportDraft(d, u.actor, id), { queues: false });
+}
+
+// ---------------------------------------------------------------- Conversion
+
+export async function convertToClientAction(clientId: string) {
+  const res = await act((u, d) => convertToClient(d, u.actor, clientId), { queues: false });
+  if (!res.ok) return res;
+  revalidatePath("/clienti");
+  redirect("/clienti");
 }

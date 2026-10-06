@@ -1,4 +1,4 @@
-import { socialChannels } from "@forgecy/core";
+import { reportSectionKeys, socialChannels } from "@forgecy/core";
 import { defineJob } from "@forgecy/jobs";
 import { z } from "zod";
 
@@ -64,6 +64,21 @@ export const auditPlanJob = defineJob({
   payload: z.object({ auditId: z.uuid() }),
 });
 
+/**
+ * Strategist and Copywriter: section texts and the email text of a report draft.
+ * `sections` limits the run to some sections ("Ricomponi sezione"); `email` only the email.
+ */
+export const auditReportTextsJob = defineJob({
+  kind: "audit.report_texts",
+  queue: "ai",
+  payload: z.object({
+    reportId: z.uuid(),
+    sections: z.array(z.enum(reportSectionKeys)).optional(),
+    email: z.boolean().default(true),
+    instruction: z.string().max(500).optional(),
+  }),
+});
+
 export const auditJobs = [
   auditCrawlJob,
   auditAnalyzeSiteJob,
@@ -73,6 +88,7 @@ export const auditJobs = [
   auditCompareChannelsJob,
   auditDiagnoseJob,
   auditPlanJob,
+  auditReportTextsJob,
 ] as const;
 
 /** Job kinds whose rows point at the audit (jobs.entity = "audit", jobs.entity_id = audit id). */

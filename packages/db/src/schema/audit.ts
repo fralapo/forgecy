@@ -7,11 +7,14 @@ import {
   findingStatuses,
   levels,
   metricSources,
+  reportStatuses,
+  reportVariants,
   sourceStatuses,
   type AuditEvidence,
   type ComparisonChannel,
   type ComparisonCriterion,
   type ComparisonOutcome,
+  type ReportSection,
   type SocialChannel,
 } from "@forgecy/core";
 import { sql } from "drizzle-orm";
@@ -45,6 +48,8 @@ export const findingAreaEnum = pgEnum("audit_finding_area", findingAreas);
 export const levelEnum = pgEnum("audit_level", levels);
 export const competitorStatusEnum = pgEnum("audit_competitor_status", competitorStatuses);
 export const metricSourceEnum = pgEnum("audit_metric_source", metricSources);
+export const reportStatusEnum = pgEnum("audit_report_status", reportStatuses);
+export const reportVariantEnum = pgEnum("audit_report_variant", reportVariants);
 
 /** Prospect data the audit needs beyond `clients`: area, objectives, owner, social profiles. */
 export const prospectProfiles = pgTable("prospect_profiles", {
@@ -102,6 +107,7 @@ export const audits = pgTable(
     findingsChangedAt: timestamp("findings_changed_at", { withTimezone: true }),
     reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -455,4 +461,72 @@ export const auditPlans = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [uniqueIndex("audit_plans_audit_uq").on(t.auditId)],
+);
+
+/**
+ * One version of the client-facing audit report (UX Page 12–13). Approved and
+ * exported versions never change: a correction is the next version. Only people
+ * submit, approve and export; agents propose texts.
+ */
+export const auditReports = pgTable(
+  "audit_reports",
+  {
+    id: id(),
+    auditId: uuid("audit_id")
+      .notNull()
+      .references(() => audits.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    status: reportStatusEnum("status").notNull().default("draft"),
+    /** Published "report" template row chosen for the PDF (catalog of M3); null until one exists. */
+    templateId: uuid("template_id"),
+    sections: jsonb("sections").$type<ReportSection[]>().notNull().default([]),
+    /** Accepted findings the person left out of this version. */
+    excludedFindingIds: uuid("excluded_finding_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
+    emailSubject: text("email_subject"),
+    emailBody: text("email_body"),
+    emailByAgent: boolean("email_by_agent").notNull().default(false),
+    aiMeta: jsonb("ai_meta").$type<AiMeta>(),
+    /** Diagnosis time the texts were written against (stale banner). */
+    findingsAt: timestamp("findings_at", { withTimezone: true }),
+    submittedBy: uuid("submitted_by").references(() => users.id, { onDelete: "set null" }),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    reviewerId: uuid("reviewer_id").references(() => users.id, { onDelete: "set null" }),
+    submitNote: text("submit_note"),
+    changesRequested: text("changes_requested"),
+    approvedBy: uuid("approved_by").references(() => users.id, { onDelete: "set null" }),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    approvalNote: text("approval_note"),
+    exportedAt: timestamp("exported_at", { withTimezone: true }),
+    rev: integer("rev").notNull().default(0),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("audit_reports_version_uq").on(t.auditId, t.version)],
+);
+
+/** PDFs produced from a report version; the file stays, only its link expires. */
+export const auditReportExports = pgTable(
+  "audit_report_exports",
+  {
+    id: id(),
+    reportId: uuid("report_id")
+      .notNull()
+      .references(() => auditReports.id, { onDelete: "cascade" }),
+    variant: reportVariantEnum("variant").notNull(),
+    /** false: draft PDF with the "Bozza" watermark. */
+    final: boolean("final").notNull(),
+    storageKey: text("storage_key").notNull(),
+    fileName: text("file_name").notNull(),
+    bytes: integer("bytes").notNull(),
+    pages: integer("pages").notNull(),
+    jobId: uuid("job_id").references(() => jobs.id, { onDelete: "set null" }),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("audit_report_exports_report_idx").on(t.reportId)],
 );

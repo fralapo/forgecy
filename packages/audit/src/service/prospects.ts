@@ -347,6 +347,46 @@ export async function restoreProspect(deps: AuditDeps, actor: Actor, clientId: s
 }
 
 /**
+ * «Converti in cliente»: the prospect becomes an active client once an audit was
+ * delivered (a final report exported). A person decides; agents are refused.
+ * Audit, sources and accepted findings stay linked to the same client row.
+ */
+export async function convertToClient(
+  deps: AuditDeps,
+  actor: Actor,
+  clientId: string,
+): Promise<{ id: string; slug: string; name: string }> {
+  assertCan(actor, "approve", clientId);
+  const client = await deps.db.query.clients.findFirst({ where: eq(clients.id, clientId) });
+  if (!client) throw new ForgecyError("not_found", "Prospect non trovato");
+  if (client.status !== "prospect")
+    throw new ForgecyError("conflict", `${client.name} è già un cliente.`);
+  if (client.archivedAt)
+    throw new ForgecyError("conflict", "Il prospect è archiviato: ripristinalo prima.");
+  const delivered = await deps.db.query.audits.findFirst({
+    where: and(eq(audits.clientId, clientId), eq(audits.status, "delivered")),
+  });
+  if (!delivered) throw new ForgecyError("conflict", "Consegna prima il report.");
+  return deps.db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(clients)
+      .set({ status: "active", updatedAt: new Date() })
+      .where(and(eq(clients.id, clientId), eq(clients.status, "prospect")))
+      .returning({ id: clients.id, slug: clients.slug, name: clients.name });
+    if (!row) throw new ForgecyError("conflict", `${client.name} è già un cliente.`);
+    await recordAuditEvent(tx, {
+      actor,
+      action: "prospect.convert",
+      entity: "client",
+      entityId: clientId,
+      clientId,
+      meta: { auditId: delivered.id },
+    });
+    return row;
+  });
+}
+
+/**
  * Delete a prospect and everything collected for it (only prospects, never clients).
  * Stored files go too: screenshots and uploads are personal data of the prospect.
  */

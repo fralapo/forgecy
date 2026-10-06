@@ -6,6 +6,8 @@ CREATE TYPE "public"."audit_finding_kind" AS ENUM('observation', 'problem', 'com
 CREATE TYPE "public"."audit_finding_status" AS ENUM('observed', 'accepted', 'edited', 'rejected');--> statement-breakpoint
 CREATE TYPE "public"."audit_level" AS ENUM('high', 'medium', 'low');--> statement-breakpoint
 CREATE TYPE "public"."audit_metric_source" AS ENUM('provided_by_prospect', 'agency_tool', 'public_profile', 'file_import', 'other');--> statement-breakpoint
+CREATE TYPE "public"."audit_report_status" AS ENUM('draft', 'in_review', 'approved', 'exported', 'superseded');--> statement-breakpoint
+CREATE TYPE "public"."audit_report_variant" AS ENUM('full', 'compact');--> statement-breakpoint
 CREATE TYPE "public"."audit_source_status" AS ENUM('pending', 'collecting', 'collected', 'partial', 'unavailable', 'skipped', 'failed');--> statement-breakpoint
 CREATE TABLE "audit_channels" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -100,6 +102,49 @@ CREATE TABLE "audit_plans" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "audit_report_exports" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"report_id" uuid NOT NULL,
+	"variant" "audit_report_variant" NOT NULL,
+	"final" boolean NOT NULL,
+	"storage_key" text NOT NULL,
+	"file_name" text NOT NULL,
+	"bytes" integer NOT NULL,
+	"pages" integer NOT NULL,
+	"job_id" uuid,
+	"created_by" uuid,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "audit_reports" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"audit_id" uuid NOT NULL,
+	"version" integer NOT NULL,
+	"status" "audit_report_status" DEFAULT 'draft' NOT NULL,
+	"template_id" uuid,
+	"sections" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"excluded_finding_ids" uuid[] DEFAULT '{}'::uuid[] NOT NULL,
+	"email_subject" text,
+	"email_body" text,
+	"email_by_agent" boolean DEFAULT false NOT NULL,
+	"ai_meta" jsonb,
+	"findings_at" timestamp with time zone,
+	"submitted_by" uuid,
+	"submitted_at" timestamp with time zone,
+	"reviewer_id" uuid,
+	"submit_note" text,
+	"changes_requested" text,
+	"approved_by" uuid,
+	"approved_at" timestamp with time zone,
+	"approval_note" text,
+	"exported_at" timestamp with time zone,
+	"rev" integer DEFAULT 0 NOT NULL,
+	"created_by" uuid,
+	"updated_by" uuid,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "audit_social_posts" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"audit_id" uuid NOT NULL,
@@ -154,6 +199,7 @@ CREATE TABLE "audits" (
 	"findings_changed_at" timestamp with time zone,
 	"reviewed_by" uuid,
 	"reviewed_at" timestamp with time zone,
+	"delivered_at" timestamp with time zone,
 	"archived_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -210,6 +256,15 @@ ALTER TABLE "audit_metrics" ADD CONSTRAINT "audit_metrics_created_by_users_id_fk
 ALTER TABLE "audit_plans" ADD CONSTRAINT "audit_plans_audit_id_audits_id_fk" FOREIGN KEY ("audit_id") REFERENCES "public"."audits"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "audit_plans" ADD CONSTRAINT "audit_plans_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "audit_plans" ADD CONSTRAINT "audit_plans_updated_by_users_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "audit_report_exports" ADD CONSTRAINT "audit_report_exports_report_id_audit_reports_id_fk" FOREIGN KEY ("report_id") REFERENCES "public"."audit_reports"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "audit_report_exports" ADD CONSTRAINT "audit_report_exports_job_id_jobs_id_fk" FOREIGN KEY ("job_id") REFERENCES "public"."jobs"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "audit_report_exports" ADD CONSTRAINT "audit_report_exports_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "audit_reports" ADD CONSTRAINT "audit_reports_audit_id_audits_id_fk" FOREIGN KEY ("audit_id") REFERENCES "public"."audits"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "audit_reports" ADD CONSTRAINT "audit_reports_submitted_by_users_id_fk" FOREIGN KEY ("submitted_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "audit_reports" ADD CONSTRAINT "audit_reports_reviewer_id_users_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "audit_reports" ADD CONSTRAINT "audit_reports_approved_by_users_id_fk" FOREIGN KEY ("approved_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "audit_reports" ADD CONSTRAINT "audit_reports_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "audit_reports" ADD CONSTRAINT "audit_reports_updated_by_users_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "audit_social_posts" ADD CONSTRAINT "audit_social_posts_audit_id_audits_id_fk" FOREIGN KEY ("audit_id") REFERENCES "public"."audits"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "audit_social_posts" ADD CONSTRAINT "audit_social_posts_source_id_audit_sources_id_fk" FOREIGN KEY ("source_id") REFERENCES "public"."audit_sources"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "audit_sources" ADD CONSTRAINT "audit_sources_audit_id_audits_id_fk" FOREIGN KEY ("audit_id") REFERENCES "public"."audits"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -235,6 +290,8 @@ CREATE INDEX "audit_findings_audit_idx" ON "audit_findings" USING btree ("audit_
 CREATE INDEX "audit_findings_competitor_idx" ON "audit_findings" USING btree ("competitor_id");--> statement-breakpoint
 CREATE INDEX "audit_metrics_audit_idx" ON "audit_metrics" USING btree ("audit_id","channel");--> statement-breakpoint
 CREATE UNIQUE INDEX "audit_plans_audit_uq" ON "audit_plans" USING btree ("audit_id");--> statement-breakpoint
+CREATE INDEX "audit_report_exports_report_idx" ON "audit_report_exports" USING btree ("report_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "audit_reports_version_uq" ON "audit_reports" USING btree ("audit_id","version");--> statement-breakpoint
 CREATE INDEX "audit_social_posts_audit_idx" ON "audit_social_posts" USING btree ("audit_id","channel","posted_on");--> statement-breakpoint
 CREATE INDEX "audit_sources_audit_idx" ON "audit_sources" USING btree ("audit_id","channel");--> statement-breakpoint
 CREATE INDEX "audit_sources_scan_idx" ON "audit_sources" USING btree ("scan_id");--> statement-breakpoint

@@ -225,3 +225,50 @@ export const prospectObjectiveLabels: Record<ProspectObjective, string> = {
   online_sales: "Vendere online",
   other: "Altro",
 };
+
+// ---------------------------------------------------------------- Report (UX Page 12–13)
+
+/** draft → in_review → approved → exported; a newer approved version supersedes older ones. */
+export const reportStatuses = ["draft", "in_review", "approved", "exported", "superseded"] as const;
+export type ReportStatus = (typeof reportStatuses)[number];
+
+/** Full report or the compact one for a first email; both come from the same version. */
+export const reportVariants = ["full", "compact"] as const;
+export type ReportVariant = (typeof reportVariants)[number];
+
+/** Sections in their default order. Cover and method are always in the full report. */
+export const reportSectionKeys = [
+  "cover",
+  "overview",
+  "problems",
+  "website",
+  "social",
+  "competitors",
+  "cross_channel",
+  "opportunities",
+  "next_steps",
+  "method",
+] as const;
+export type ReportSectionKey = (typeof reportSectionKeys)[number];
+export const FIXED_REPORT_SECTIONS: readonly ReportSectionKey[] = ["cover", "method"];
+/** The compact report: overview, main problems, next steps and a one-page method note. */
+export const COMPACT_REPORT_SECTIONS: readonly ReportSectionKey[] = [
+  "cover",
+  "overview",
+  "problems",
+  "next_steps",
+  "method",
+];
+
+/** One section of a report version: order, on/off and the text written for it. */
+export interface ReportSection {
+  key: ReportSectionKey;
+  enabled: boolean;
+  title: string;
+  /** Intro paragraph(s); proposed by the Strategist or written by hand. */
+  intro: string;
+  /** Bullet points (overview and next steps). */
+  bullets: string[];
+  /** Set when the text came from an agent and nobody changed it since. */
+  byAgent?: boolean;
+}

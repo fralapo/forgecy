@@ -142,7 +142,7 @@ function pageTarget(source: SourceRow, group?: string): RefTarget {
   };
 }
 
-function prospectContext(audit: AuditRow, client: ClientRow): string {
+export function prospectContext(audit: AuditRow, client: ClientRow): string {
   const i = audit.inputs;
   const objectives = (i.objectives ?? [])
     .map((o) => prospectObjectiveLabels[o as ProspectObjective] ?? o)

@@ -2,6 +2,7 @@ import {
   comparisonCriteria,
   comparisonOutcomes,
   levels,
+  reportSectionKeys,
   SOCIAL_AREAS,
   WEBSITE_AREAS,
 } from "@forgecy/core";
@@ -12,7 +13,7 @@ import { z } from "zod";
  * with Zod; the server then verifies every evidence reference against the stored
  * sources and computes confidence itself (never from the model).
  */
-export const PROMPT_VERSION = "audit-2026-10-06b";
+export const PROMPT_VERSION = "audit-2026-10-06c";
 
 const SHARED_RULES = `
 Rules you always follow:
@@ -219,6 +220,33 @@ export const planSchema = z.object({
 export type Plan = z.infer<typeof planSchema>;
 
 export const STRATEGIST_PLAN = `You are the Strategist of a communication agency. From the diagnosis, propose 3 to 5 content pillars (each answering one or more problems) and a 30-day editorial plan of static content only (no video): day, channel, format, pillar, topic and opening hook. Use only the channels the prospect has. Keep a realistic rhythm for a small team.
+${SHARED_RULES}`;
+
+// ---------------------------------------------------------------- Report
+
+export const reportTextsSchema = z.object({
+  sections: z
+    .array(
+      z.object({
+        key: z.enum(reportSectionKeys),
+        intro: z.string().trim().max(600),
+        bullets: z.array(short(200)).max(5),
+      }),
+    )
+    .max(reportSectionKeys.length),
+});
+export type ReportTexts = z.infer<typeof reportTextsSchema>;
+
+export const STRATEGIST_REPORT = `You are the Strategist of a communication agency. You write the short texts of an audit report for a prospect (a company the agency wants to win as a client). For each section requested write an intro of two or three sentences (at most 600 characters) that frames the findings listed for that section, and up to 5 bullets only where asked: "overview" gets the 3 to 5 key messages of the whole audit, "next_steps" gets concrete first steps the agency proposes. Other sections get an empty bullet list. Use only the findings provided; do not add new problems, numbers or facts. Be direct and respectful: the reader owns the business.
+${SHARED_RULES}`;
+
+export const reportEmailSchema = z.object({
+  subject: short(120),
+  body: short(1600),
+});
+export type ReportEmail = z.infer<typeof reportEmailSchema>;
+
+export const COPYWRITER_EMAIL = `You are the Copywriter of a communication agency. Write the email that accompanies the audit report sent to the prospect: a subject line and a body of 120 to 200 words. Open with what the agency looked at, name the two or three most important problems in plain words, propose a short call to talk about the next steps, and close with a greeting. Do not invent results, prices or promises. Leave "[Nome]" where the recipient's name goes and "[Firma]" for the signature. Plain text, no markdown.
 ${SHARED_RULES}`;
 
 /** Wrap untrusted content so the model treats it as data. */

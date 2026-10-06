@@ -12,6 +12,7 @@ const sections = [
   { path: "/competitor", label: "Competitor" },
   { path: "/confronto", label: "Confronto" },
   { path: "/diagnosi", label: "Diagnosi" },
+  { path: "/report", label: "Report" },
 ] as const;
 
 export function SectionTabs({ slug }: { slug: string }) {
