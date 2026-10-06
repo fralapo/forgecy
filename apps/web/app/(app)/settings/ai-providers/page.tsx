@@ -1,4 +1,5 @@
-import { getCommercialUseReviews, imageProviders, type ImageProvider } from "@forgecy/content";
+import { imageModelFor, imageProviderOrder } from "@forgecy/ai";
+import { getCommercialUseReviews, type ImageProvider } from "@forgecy/content";
 import { getDb } from "@forgecy/db";
 import { Badge, Card } from "@forgecy/ui";
 import { BadgeCheck, Hourglass, XCircle } from "lucide-react";
@@ -14,13 +15,17 @@ export async function generateMetadata() {
   return { title: t("title") };
 }
 
-const providerInfo: Record<
-  ImageProvider,
-  { name: string; role: "primary" | "secondary"; ready: boolean }
-> = {
-  openai: { name: "OpenAI Images", role: "primary", ready: Boolean(env.OPENAI_API_KEY) },
-  google: { name: "Google Gemini", role: "secondary", ready: Boolean(env.GOOGLE_AI_API_KEY) },
+const providerInfo: Record<ImageProvider, { name: string; ready: boolean }> = {
+  openai: { name: "OpenAI Images", ready: Boolean(env.OPENAI_API_KEY) },
+  google: { name: "Google Gemini", ready: Boolean(env.GOOGLE_AI_API_KEY) },
+  openrouter: { name: "OpenRouter", ready: Boolean(env.OPENROUTER_API_KEY) },
 };
+
+/** Order from IMAGE_PROVIDERS; the first two configured providers are primary and fallback. */
+const order = imageProviderOrder(env);
+const configured = order.filter((p) => providerInfo[p].ready);
+const roleOf = (p: ImageProvider) =>
+  configured[0] === p ? "primary" : configured[1] === p ? "secondary" : "unused";
 
 const statusBadge = {
   pending_verification: { variant: "warning", icon: Hourglass },
@@ -48,7 +53,7 @@ export default async function AiProvidersPage() {
     <>
       <PageHeader title={t("title")} description={t("description")} />
       <div className="grid gap-6 lg:grid-cols-2">
-        {imageProviders.map((p) => {
+        {order.map((p) => {
           const info = providerInfo[p];
           const review = reviews.get(p);
           const status = review?.status ?? "pending_verification";
@@ -58,7 +63,8 @@ export default async function AiProvidersPage() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <h2 className="text-heading-sm text-fg">{info.name}</h2>
-                  <p className="text-body-sm text-fg-muted">{t(info.role)}</p>
+                  <p className="text-body-sm text-fg-muted">{t(roleOf(p))}</p>
+                  <p className="font-mono text-body-sm text-fg-muted">{imageModelFor(p, env)}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant={info.ready ? "success" : "neutral"}>

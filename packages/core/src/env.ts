@@ -68,11 +68,21 @@ export const envSchema = z.object({
   SMTP_FROM: z.string().default("Forgecy <forgecy@localhost>"),
   SMTP_REPLY_TO: z.string().optional(),
 
-  AI_DEFAULT_PROVIDER: z.enum(["anthropic", "openai", "openrouter", "local"]).default("anthropic"),
+  AI_DEFAULT_PROVIDER: z
+    .enum(["anthropic", "openai", "openrouter", "deepseek", "local"])
+    .default("anthropic"),
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   OPENROUTER_API_KEY: z.string().optional(),
   GOOGLE_AI_API_KEY: z.string().optional(),
+  DEEPSEEK_API_KEY: z.string().optional(),
+  /** Image model used through OpenRouter (any model with image output on openrouter.ai/models). */
+  OPENROUTER_IMAGE_MODEL: z.string().optional(),
+  /**
+   * Image providers in order of preference, comma separated (the first configured one is
+   * primary, the next the fallback). Default: openai,google,openrouter.
+   */
+  IMAGE_PROVIDERS: z.string().optional(),
   LOCAL_LLM_ENABLED: bool,
   LOCAL_LLM_BASE_URL: z.string().default("http://localhost:11434/v1"),
   LOCAL_LLM_MODEL: z.string().optional(),

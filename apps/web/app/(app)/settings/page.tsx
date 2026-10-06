@@ -32,6 +32,7 @@ export default async function SettingsPage() {
     { name: "Anthropic", ready: Boolean(env.ANTHROPIC_API_KEY) },
     { name: "OpenAI", ready: Boolean(env.OPENAI_API_KEY) },
     { name: "OpenRouter", ready: Boolean(env.OPENROUTER_API_KEY) },
+    { name: "DeepSeek", ready: Boolean(env.DEEPSEEK_API_KEY) },
     { name: t("providers.googleImages"), ready: Boolean(env.GOOGLE_AI_API_KEY) },
     { name: t("providers.localModel"), ready: env.LOCAL_LLM_ENABLED },
   ];

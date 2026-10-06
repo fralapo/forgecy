@@ -10,7 +10,14 @@ export const aiPolicies = [
 ] as const;
 export type AiPolicy = (typeof aiPolicies)[number];
 
-export const providerIds = ["anthropic", "openai", "openrouter", "google", "local"] as const;
+export const providerIds = [
+  "anthropic",
+  "openai",
+  "openrouter",
+  "google",
+  "local",
+  "deepseek",
+] as const;
 export type ProviderId = (typeof providerIds)[number];
 
 export function isLocalProvider(provider: ProviderId): boolean {

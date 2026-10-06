@@ -12,3 +12,4 @@ export * from "./providers/openai-compatible";
 export * from "./providers/openai-images";
 export * from "./providers/google-images";
 export * from "./providers/fake";
+export * from "./providers/openrouter-images";

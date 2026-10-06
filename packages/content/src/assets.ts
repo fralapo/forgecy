@@ -287,7 +287,11 @@ export async function listAssets(
 export type CommercialUse = "verified" | "pending_verification" | "rejected";
 
 /** Image providers whose terms an Admin checks before use with real clients. */
-export const imageProviders = ["openai", "google"] as const satisfies readonly ProviderId[];
+export const imageProviders = [
+  "openai",
+  "google",
+  "openrouter",
+] as const satisfies readonly ProviderId[];
 export type ImageProvider = (typeof imageProviders)[number];
 
 export interface CommercialUseReview {

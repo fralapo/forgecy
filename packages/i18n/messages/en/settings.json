@@ -46,6 +46,7 @@
     "description": "Commercial use of generated images: an Admin verifies it by reading the provider’s terms.",
     "primary": "Primary",
     "secondary": "Secondary",
+    "unused": "Not used: only the first two configured providers are tried (order set by IMAGE_PROVIDERS).",
     "status": {
       "pending_verification": "Pending verification",
       "verified": "Verified",
