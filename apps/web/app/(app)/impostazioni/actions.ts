@@ -1,6 +1,7 @@
 "use server";
 
-import { assertCan } from "@forgecy/core";
+import { setCommercialUse } from "@forgecy/content";
+import { assertCan, ForgecyError, PermissionDeniedError } from "@forgecy/core";
 import { eq, getDb, users } from "@forgecy/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -31,5 +32,24 @@ export async function createUserAction(_prev: NewUserState, form: FormData): Pro
   if (exists) return { error: "Esiste già un utente con questa email." };
   await createPasswordUser({ ...parsed.data, createdBy: admin.id });
   revalidatePath("/impostazioni");
+  return { ok: true };
+}
+
+export type CommercialUseState = { error?: string; ok?: boolean };
+
+export async function setCommercialUseAction(
+  _prev: CommercialUseState,
+  form: FormData,
+): Promise<CommercialUseState> {
+  const admin = await requireUser();
+  try {
+    await setCommercialUse(getDb(), admin.actor, Object.fromEntries(form));
+  } catch (err) {
+    if (err instanceof PermissionDeniedError)
+      return { error: "Questa impostazione è riservata agli utenti Admin." };
+    if (err instanceof ForgecyError) return { error: err.message };
+    throw err;
+  }
+  revalidatePath("/impostazioni/provider-ai");
   return { ok: true };
 }

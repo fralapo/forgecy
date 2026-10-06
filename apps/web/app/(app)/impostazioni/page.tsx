@@ -1,5 +1,6 @@
 import { Badge, Card } from "@forgecy/ui";
 import { asc, getDb, users } from "@forgecy/db";
+import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { env } from "@/lib/env";
 import { requireUser } from "@/lib/session";
@@ -60,6 +61,14 @@ export default async function SettingsPage() {
               </li>
             ))}
           </ul>
+          {user.isAdmin ? (
+            <Link
+              href="/impostazioni/provider-ai"
+              className="mt-4 inline-block text-body-sm text-link underline"
+            >
+              Uso commerciale delle immagini
+            </Link>
+          ) : null}
         </Card>
         {user.isAdmin ? (
           <>

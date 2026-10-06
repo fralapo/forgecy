@@ -9,6 +9,7 @@ import type { Actor } from "@forgecy/core";
 import {
   aiConnections,
   and,
+  appSettings,
   assets,
   desc,
   eq,
@@ -17,10 +18,12 @@ import {
   or,
   recordAuditEvent,
   sql,
+  users,
   type Database,
 } from "@forgecy/db";
 import { assertValidUpload, contentKey, sha256, type StorageDriver } from "@forgecy/files";
-import { conflict, humanOnly, invalid, notFound, type Executor } from "./access";
+import { z } from "zod";
+import { conflict, humanOnly, invalid, notFound, parseOrThrow, type Executor } from "./access";
 import { productSource } from "./products";
 
 export type AssetRow = typeof assets.$inferSelect;
@@ -283,10 +286,116 @@ export async function listAssets(
 
 export type CommercialUse = "verified" | "pending_verification" | "rejected";
 
+/** Image providers whose terms an Admin checks before use with real clients. */
+export const imageProviders = ["openai", "google"] as const satisfies readonly ProviderId[];
+export type ImageProvider = (typeof imageProviders)[number];
+
+export interface CommercialUseReview {
+  status: CommercialUse;
+  termsUrl: string | null;
+  /** Day the terms were read, YYYY-MM-DD. */
+  consultedOn: string | null;
+  note: string | null;
+  updatedBy: { id: string; name: string } | null;
+  updatedAt: Date;
+}
+
+const reviewKey = (provider: ProviderId) => `ai.commercial_use.${provider}`;
+
+const reviewValueSchema = z.object({
+  status: z.enum(["verified", "pending_verification", "rejected"]),
+  termsUrl: z.url().max(500).nullable().default(null),
+  consultedOn: z.iso.date().nullable().default(null),
+  note: z.string().max(500).nullable().default(null),
+});
+
+const reviewInputSchema = z
+  .object({
+    provider: z.enum(imageProviders),
+    status: reviewValueSchema.shape.status,
+    termsUrl: z
+      .union([z.url("Indirizzo dei termini non valido").max(500), z.literal("")])
+      .optional()
+      .transform((v) => v || null),
+    consultedOn: z
+      .union([z.iso.date("Data non valida"), z.literal("")])
+      .optional()
+      .transform((v) => v || null),
+    note: z
+      .string()
+      .trim()
+      .max(500, "Nota troppo lunga")
+      .optional()
+      .transform((v) => v || null),
+  })
+  .refine((v) => v.status !== "verified" || v.termsUrl, {
+    message: "Per «Verificato» serve l'indirizzo dei termini consultati",
+    path: ["termsUrl"],
+  });
+
+/** The agency's decision for each image provider configured from `.env`, if any. */
+export async function getCommercialUseReviews(
+  db: Executor,
+): Promise<Map<ImageProvider, CommercialUseReview>> {
+  const rows = await db
+    .select({
+      key: appSettings.key,
+      value: appSettings.value,
+      updatedAt: appSettings.updatedAt,
+      userId: users.id,
+      userName: users.name,
+    })
+    .from(appSettings)
+    .leftJoin(users, eq(users.id, appSettings.updatedBy))
+    .where(inArray(appSettings.key, imageProviders.map(reviewKey)));
+  const out = new Map<ImageProvider, CommercialUseReview>();
+  for (const p of imageProviders) {
+    const row = rows.find((r) => r.key === reviewKey(p));
+    const value = row ? reviewValueSchema.safeParse(row.value) : null;
+    if (!row || !value?.success) continue;
+    out.set(p, {
+      ...value.data,
+      updatedBy: row.userId ? { id: row.userId, name: row.userName ?? "" } : null,
+      updatedAt: row.updatedAt,
+    });
+  }
+  return out;
+}
+
+/** An Admin records the commercial-use status of an image provider (page «Provider AI»). */
+export async function setCommercialUse(db: Database, actor: Actor, input: unknown): Promise<void> {
+  humanOnly(actor, "ai.providers.manage");
+  const { provider, ...value } = parseOrThrow(reviewInputSchema, input);
+  await db.transaction(async (tx) => {
+    const [before] = await tx
+      .select({ value: appSettings.value })
+      .from(appSettings)
+      .where(eq(appSettings.key, reviewKey(provider)));
+    await tx
+      .insert(appSettings)
+      .values({ key: reviewKey(provider), value, updatedBy: actor.id })
+      .onConflictDoUpdate({
+        target: appSettings.key,
+        set: { value, updatedBy: actor.id, updatedAt: new Date() },
+      });
+    await recordAuditEvent(tx, {
+      actor,
+      action: "commercial_use_status_changed",
+      entity: "ai_provider",
+      entityId: provider,
+      meta: {
+        status: value.status,
+        before: (before?.value as { status?: string } | undefined)?.status ?? null,
+      },
+    });
+  });
+}
+
 /**
- * Commercial use of an image provider for a client (ai_connections.commercial_use_status):
- * the client's own connection wins over the agency's; a provider configured only through
- * environment keys counts as not yet verified. `rejected` blocks generation.
+ * Commercial use of an image provider for a client: a BYOK connection of the client wins
+ * over the agency's (ai_connections.commercial_use_status); a provider configured only
+ * through environment keys uses the Admin's decision, else counts as not yet verified.
+ * `rejected` blocks generation.
  */
 export async function commercialUseFor(
   db: Executor,
@@ -307,5 +416,11 @@ export async function commercialUseFor(
       ),
     )
     .orderBy(sql`case when ${aiConnections.scope} = 'client' then 0 else 1 end`);
-  return rows[0]?.status ?? "pending_verification";
+  if (rows[0]) return rows[0].status;
+  const [review] = await db
+    .select({ value: appSettings.value })
+    .from(appSettings)
+    .where(eq(appSettings.key, reviewKey(provider)));
+  const parsed = review ? reviewValueSchema.safeParse(review.value) : null;
+  return parsed?.success ? parsed.data.status : "pending_verification";
 }
