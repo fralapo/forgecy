@@ -1,7 +1,8 @@
+import type { MessageRef } from "@forgecy/core";
+import { englishMessage, type MessageKey, type MessageValues, messageRef } from "@forgecy/i18n";
 import { parseHTML } from "linkedom";
 import { z } from "zod";
 import { resolvePackagePath } from "./css";
-import { FORMATS } from "./formats";
 import {
   MANIFEST_FILE,
   type TemplatePackage,
@@ -29,12 +30,18 @@ export interface ValidationIssue {
   file?: string;
   line?: number;
   layout?: string;
+  /** The message for the interface (`message` is its English text, for logs and old reports). */
+  ref?: MessageRef;
+  /** When the `detail` value of `ref` is itself a message: its reference. */
+  detailRef?: MessageRef;
 }
 
 export interface ValidationCheck {
   id: string;
   label: string;
   status: CheckStatus;
+  /** The label for the interface (`label` is its English text). */
+  ref?: MessageRef;
 }
 
 export interface ValidationReport {
@@ -78,6 +85,11 @@ function stripCssComments(css: string): string {
   return css.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "));
 }
 
+/** English text plus reference of a message: `{ message, ref }`. */
+function msg(key: MessageKey, values?: MessageValues): { message: string; ref: MessageRef } {
+  return { message: englishMessage(key, values), ref: messageRef(key, values) };
+}
+
 function lineOf(text: string, index: number): number {
   let n = 1;
   for (let i = 0; i < index && i < text.length; i++) if (text.charCodeAt(i) === 10) n++;
@@ -119,7 +131,7 @@ function scanDeclarations(
         check: "hardcoded",
         file,
         line,
-        message: `hand-written color \`${color}\`. Use a color role (CSS variable).`,
+        ...msg("templates.issues.hardcodedColor", { color }),
       });
     if (prop === "font-size" && m.typeScale.length) {
       const px = value.match(/^(\d+(?:\.\d+)?)px$/);
@@ -129,7 +141,7 @@ function scanDeclarations(
           check: "hardcoded",
           file,
           line,
-          message: `\`font-size: ${value}\` is off the type scale.`,
+          ...msg("templates.issues.offScale", { value }),
         });
     }
     if (prop === "font-family" || prop === "font") {
@@ -149,19 +161,19 @@ function scanDeclarations(
 function checkCss(pkg: TemplatePackage, path: string, issues: ValidationIssue[], facts: CssFacts) {
   const css = readText(pkg, path) ?? "";
   const clean = stripCssComments(css);
-  const bad: [RegExp, string][] = [
-    [/@import/gi, "`@import` not allowed: everything must be inside the package."],
-    [/@font-face/gi, "`@font-face` not allowed: declare fonts in template.json."],
-    [/expression\s*\(/gi, "`expression()` not allowed."],
+  const bad: [RegExp, MessageKey][] = [
+    [/@import/gi, "templates.issues.cssImport"],
+    [/@font-face/gi, "templates.issues.cssFontFace"],
+    [/expression\s*\(/gi, "templates.issues.cssExpression"],
   ];
-  for (const [re, message] of bad)
+  for (const [re, key] of bad)
     for (const match of clean.matchAll(re))
       issues.push({
         code: "TEMPLATE-INVALID",
         check: "markup",
         file: path,
         line: lineOf(clean, match.index),
-        message,
+        ...msg(key),
       });
   for (const match of clean.matchAll(/url\(\s*(['"]?)([^'")]*)\1\s*\)/gi)) {
     const ref = match[2]!.trim();
@@ -173,7 +185,7 @@ function checkCss(pkg: TemplatePackage, path: string, issues: ValidationIssue[],
         check: "markup",
         file: path,
         line,
-        message: `external \`url(${ref})\`: use a file from \`assets/\`.`,
+        ...msg("templates.issues.externalUrl", { ref }),
       });
     else if (!pkg.files.has(target))
       issues.push({
@@ -181,7 +193,7 @@ function checkCss(pkg: TemplatePackage, path: string, issues: ValidationIssue[],
         check: "files",
         file: path,
         line,
-        message: `\`${ref}\` is not in the package.`,
+        ...msg("templates.issues.notInPackage", { ref }),
       });
   }
   scanDeclarations(css, path, pkg.manifest, issues, facts);
@@ -198,13 +210,19 @@ function checkLayoutHtml(
   const file = layout.file;
   const html = readText(pkg, file);
   if (html === undefined) return 0;
-  const push = (code: IssueCode, check: string, message: string, at?: number) =>
+  const push = (
+    code: IssueCode,
+    check: string,
+    key: MessageKey,
+    values: MessageValues,
+    at?: number,
+  ) =>
     issues.push({
       code,
       check,
       file,
       layout: layout.id,
-      message,
+      ...msg(key, values),
       ...(at !== undefined ? { line: lineOf(html, at) } : {}),
     });
 
@@ -214,23 +232,37 @@ function checkLayoutHtml(
       push(
         "TEMPLATE-INVALID",
         "markup",
-        `element \`<${tag}>\` not allowed in layouts.`,
+        "templates.issues.elementNotAllowed",
+        { tag: `<${tag}>` },
         match.index,
       );
   }
   for (const match of html.matchAll(/\s(on[a-z]+)\s*=/gi))
-    push("TEMPLATE-INVALID", "markup", `attribute \`${match[1]}\` not allowed.`, match.index);
+    push(
+      "TEMPLATE-INVALID",
+      "markup",
+      "templates.issues.attributeNotAllowed",
+      { attribute: match[1]! },
+      match.index,
+    );
   for (const match of html.matchAll(/\s(?:src|href)\s*=\s*["']?\s*([a-z][a-z0-9+.-]*:|\/\/)/gi))
     push(
       "TEMPLATE-INVALID",
       "markup",
-      `external reference \`${match[1]}\`: use a file from \`assets/\`.`,
+      "templates.issues.externalReference",
+      { ref: match[1]! },
       match.index,
     );
   for (const match of html.matchAll(/\ssrc\s*=\s*["']([^"']+)["']/gi)) {
     const target = resolvePackagePath(file, match[1]!);
     if (target && !pkg.files.has(target))
-      push("ASSET-MISSING", "files", `\`${match[1]}\` is not in the package.`, match.index);
+      push(
+        "ASSET-MISSING",
+        "files",
+        "templates.issues.notInPackage",
+        { ref: match[1]! },
+        match.index,
+      );
   }
   for (const match of html.matchAll(/\sstyle\s*=\s*"([^"]*)"/gi))
     scanDeclarations(match[1]!, file, m, issues, facts, lineOf(html, match.index) - 1);
@@ -240,7 +272,8 @@ function checkLayoutHtml(
       push(
         "TEMPLATE-INVALID",
         "hardcoded",
-        `hand-written color \`${c}\`. Use a color role (CSS variable).`,
+        "templates.issues.hardcodedColor",
+        { color: c },
         match.index,
       );
   }
@@ -253,7 +286,8 @@ function checkLayoutHtml(
       push(
         "TEMPLATE-INVALID",
         "slots",
-        `slot "${name}" appears twice.`,
+        "templates.issues.slotTwice",
+        { name },
         html.indexOf(`data-slot="${name}"`),
       );
     found.set(name, el);
@@ -261,33 +295,25 @@ function checkLayoutHtml(
   for (const slot of layout.slots) {
     const el = found.get(slot.name);
     if (!el) {
-      push(
-        "TEMPLATE-INVALID",
-        "slots",
-        `slot "${slot.name}" is in template.json but not in the HTML.`,
-      );
+      push("TEMPLATE-INVALID", "slots", "templates.issues.slotMissingInHtml", { name: slot.name });
       continue;
     }
     const at = html.indexOf(`data-slot="${slot.name}"`);
     const tag = el.localName.toLowerCase();
     if (slot.type === "image" && tag !== "img")
-      push("TEMPLATE-INVALID", "slots", `image slot "${slot.name}" must be an \`<img>\`.`, at);
+      push("TEMPLATE-INVALID", "slots", "templates.issues.imageSlotTag", { name: slot.name }, at);
     if (slot.type === "list" && (!["ul", "ol"].includes(tag) || !el.querySelector("li")))
-      push(
-        "TEMPLATE-INVALID",
-        "slots",
-        `list slot "${slot.name}" must be a \`<ul>\` or \`<ol>\` with a sample \`<li>\`.`,
-        at,
-      );
+      push("TEMPLATE-INVALID", "slots", "templates.issues.listSlotTag", { name: slot.name }, at);
     if (slot.type === "text" && tag === "img")
-      push("TEMPLATE-INVALID", "slots", `text slot "${slot.name}" cannot be an \`<img>\`.`, at);
+      push("TEMPLATE-INVALID", "slots", "templates.issues.textSlotTag", { name: slot.name }, at);
   }
   for (const name of found.keys())
     if (!layout.slots.some((s) => s.name === name))
       push(
         "TEMPLATE-INVALID",
         "slots",
-        `slot "${name}" is in the HTML but not in template.json.`,
+        "templates.issues.slotMissingInManifest",
+        { name },
         html.indexOf(`data-slot="${name}"`),
       );
   return found.size;
@@ -306,9 +332,10 @@ function fontKind(bytes: Uint8Array): string | undefined {
 export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>): ValidationReport {
   const issues: ValidationIssue[] = [];
   const checks: ValidationCheck[] = [];
-  const add = (id: string, label: string, failIf = true) => {
+  const add = (id: string, key: MessageKey, values?: MessageValues) => {
     const mine = issues.filter((i) => i.check === id);
-    checks.push({ id, label, status: failIf && mine.length ? "error" : "ok" });
+    const { message: label, ref } = msg(key, values);
+    checks.push({ id, label, status: mine.length ? "error" : "ok", ref });
   };
 
   for (const path of files.keys())
@@ -317,7 +344,7 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
         code: "TEMPLATE-INVALID",
         check: "manifest",
         file: path,
-        message: "path not allowed in the package.",
+        ...msg("templates.issues.pathNotAllowed"),
       });
 
   const parsed = parseManifest(readText({ files }, MANIFEST_FILE));
@@ -327,14 +354,15 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
         code: "TEMPLATE-INVALID",
         check: "manifest",
         file: MANIFEST_FILE,
-        message: `${e.path}: ${e.message}`,
+        ...msg("templates.issues.manifestField", { path: e.path, detail: e.message }),
+        ...(e.ref ? { detailRef: e.ref } : {}),
       });
-    add("manifest", "`template.json` is valid");
+    add("manifest", "templates.checks.manifest");
     return { ok: false, checks, issues };
   }
   const m = parsed.manifest;
   const pkg: TemplatePackage = { manifest: m, files };
-  add("manifest", "`template.json` is valid");
+  add("manifest", "templates.checks.manifest");
 
   for (const p of [...m.styles, ...m.layouts.map((l) => l.file), ...m.fonts.map((f) => f.file)])
     if (!files.has(p))
@@ -342,7 +370,7 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
         code: "ASSET-MISSING",
         check: "files",
         file: p,
-        message: `\`${p}\` declared in template.json but missing.`,
+        ...msg("templates.issues.declaredMissing", { file: p }),
       });
 
   const facts: CssFacts = { usedVars: [], definedVars: new Set(), families: [] };
@@ -358,7 +386,7 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
         code: "TEMPLATE-INVALID",
         check: "hardcoded",
         line,
-        message: `variable \`${name}\` is not bound to a color or font role.`,
+        ...msg("templates.issues.unboundVariable", { name }),
       });
 
   // Fonts: real font files, and every family used is shipped in fonts/.
@@ -372,7 +400,7 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
         code: "ASSET-MISSING",
         check: "fonts",
         file: f.file,
-        message: "the file is not a WOFF2, WOFF, TTF or OTF font.",
+        ...msg("templates.issues.notAFont"),
       });
     else kinds.add(kind);
   }
@@ -383,7 +411,7 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
       issues.push({
         code: "ASSET-MISSING",
         check: "fonts",
-        message: `the template uses "${name}" but the font is not in \`fonts/\`.`,
+        ...msg("templates.issues.fontNotShipped", { name }),
       });
 
   // Samples must be valid slides: they feed the catalog cover, previews and the test render.
@@ -395,7 +423,7 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
         check: "samples",
         file: MANIFEST_FILE,
         layout: layout.id,
-        message: `invalid sample for layout "${layout.id}".`,
+        ...msg("templates.issues.invalidSample", { layout: layout.id }),
       });
       continue;
     }
@@ -410,7 +438,7 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
           check: "samples",
           file: MANIFEST_FILE,
           layout: layout.id,
-          message: `sample "${layout.id}": ${i.message}`,
+          ...msg("templates.issues.sampleProblem", { layout: layout.id, detail: i.message }),
         });
     for (const v of Object.values(layout.sample))
       if (v && typeof v === "object" && !Array.isArray(v) && !files.has(v.asset))
@@ -419,33 +447,38 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
           check: "samples",
           file: MANIFEST_FILE,
           layout: layout.id,
-          message: `\`${v.asset}\` is not in the package.`,
+          ...msg("templates.issues.notInPackage", { ref: v.asset }),
         });
   }
 
-  add("files", "Declared files present in the package");
-  add(
-    "slots",
-    `Declared slots: ${m.layouts.reduce((n, l) => n + l.slots.length, 0)} in ${m.layouts.length} layouts`,
-  );
+  add("files", "templates.checks.files");
+  add("slots", "templates.checks.slots", {
+    slots: m.layouts.reduce((n, l) => n + l.slots.length, 0),
+    layouts: m.layouts.length,
+  });
+  const slotsHtml = msg("templates.checks.slotsHtml", { count: slotCount });
   checks.push({
     id: "slots-html",
-    label: `Slots consistent between HTML and metadata (${slotCount} in the HTML)`,
+    label: slotsHtml.message,
     status: issues.some((i) => i.check === "slots") ? "error" : "ok",
+    ref: slotsHtml.ref,
   });
-  add(
-    "fonts",
-    `Fonts included: ${m.fonts.length}${kinds.size ? ` (${[...kinds].join(", ")})` : ""}`,
-  );
+  if (kinds.size)
+    add("fonts", "templates.checks.fontsWithKinds", {
+      count: m.fonts.length,
+      kinds: [...kinds].join(", "),
+    });
+  else add("fonts", "templates.checks.fonts", { count: m.fonts.length });
   add(
     "hardcoded",
     issues.some((i) => i.check === "hardcoded")
-      ? "Hardcoded values found"
-      : "Hardcoded values: none",
+      ? "templates.checks.hardcodedFound"
+      : "templates.checks.hardcodedNone",
   );
-  add("markup", "Markup without scripts or external references");
-  add("samples", "Valid sample data");
-  checks.push({ id: "formats", label: `Formats: ${FORMATS[m.format].label}`, status: "ok" });
+  add("markup", "templates.checks.markup");
+  add("samples", "templates.checks.samples");
+  const formats = msg("templates.checks.formats", { format: m.format });
+  checks.push({ id: "formats", label: formats.message, status: "ok", ref: formats.ref });
 
   return { ok: !issues.length, checks, issues, manifest: m };
 }

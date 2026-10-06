@@ -1,0 +1,139 @@
+{
+  "title": "Design system",
+  "kicker": "Identità visiva di Forgecy",
+  "intro": "Colori, tipografia e componenti generati da <code>tokens/forgecy.tokens.json</code>. I rapporti di contrasto sono calcolati dai token secondo le WCAG 2.2.",
+  "guard": {
+    "allPass": "Brand Guard: tutte le {count} coppie superano il controllo",
+    "someFail": "Brand Guard: {count, plural, one {# coppia non supera} other {# coppie non superano}} il controllo"
+  },
+  "ratio": "{value}:1",
+  "usage": {
+    "text": "Testo",
+    "largeText": "Testo grande e controlli",
+    "decorative": "Solo decorativo"
+  },
+  "colors": {
+    "title": "Colori",
+    "description": "Palette di riferimento con il contrasto calcolato su bianco e su porcellana.",
+    "onWhite": "Bianco",
+    "onPorcelain": "Porcellana",
+    "role": {
+      "forgeBlue": "pulsanti principali, selezione, focus",
+      "forgeBlue700": "testo blu, link, stato premuto",
+      "porcelain": "sfondo dell’app",
+      "white": "superfici",
+      "graphite900": "testo principale, sfondo scuro",
+      "graphite70": "testo secondario",
+      "graphite50": "bordi di campi e controlli",
+      "grayGrid": "solo divisori",
+      "amber": "riempimento di evidenziazione, sempre con testo Deep Graphite",
+      "green": "riempimenti e icone di successo",
+      "green700": "testo di successo",
+      "orange": "riempimenti e icone di avviso",
+      "orange700": "testo di avviso",
+      "red": "riempimenti e icone di errore",
+      "red700": "testo di errore, pulsanti distruttivi"
+    },
+    "darkName": {
+      "graphite800": "Superficie scura",
+      "graphite700": "Divisori scuri (decorativi)",
+      "graphite30": "Testo secondario scuro",
+      "blue300": "Testo dei link e anello di focus scuri",
+      "green300": "Testo di successo scuro",
+      "orange300": "Testo di avviso scuro",
+      "red300": "Testo di errore scuro"
+    }
+  },
+  "brandGuard": {
+    "title": "Brand Guard",
+    "description": "Coppie di token semantici verificate a ogni modifica dei token, nel tema chiaro e in quello scuro. Un errore blocca il merge.",
+    "lightCaption": "Tema chiaro",
+    "darkCaption": "Tema scuro (v1)",
+    "pair": "Coppia",
+    "colors": "Colori",
+    "contrast": "Contrasto",
+    "minimum": "Minimo",
+    "result": "Esito",
+    "passed": "Superato",
+    "failed": "Non superato",
+    "onSurface": "{subject} su {surface, select, app {sfondo dell’app} other {superficie}}",
+    "subject": {
+      "primaryText": "Testo principale",
+      "secondaryText": "Testo secondario",
+      "link": "Link",
+      "successText": "Testo di successo",
+      "warningText": "Testo di avviso",
+      "errorText": "Testo di errore",
+      "controlBorder": "Bordo dei controlli",
+      "focusRing": "Anello di focus"
+    },
+    "special": {
+      "primaryButton": "Pulsante principale",
+      "primaryButtonPressed": "Pulsante principale premuto",
+      "destructiveButton": "Pulsante distruttivo",
+      "textOnHighlight": "Testo su evidenziazione"
+    }
+  },
+  "typography": {
+    "title": "Tipografia",
+    "description": "Space Grotesk per i titoli, Inter per il testo e l’interfaccia, JetBrains Mono per i nomi tecnici.",
+    "sample": {
+      "headingXl": "Un sistema di brand per l’agenzia",
+      "headingLg": "Audit del cliente",
+      "headingMd": "Strategia dei contenuti",
+      "headingSm": "Versione in revisione",
+      "bodyLg": "Ogni contenuto nasce da un processo con regole, versioni e controlli.",
+      "bodyMd": "Le persone decidono, l’AI propone. Ogni dato ha la sua fonte.",
+      "bodySm": "Ultima modifica il {date} alle {time}.",
+      "label": "Etichetta di sezione"
+    }
+  },
+  "components": {
+    "title": "Componenti",
+    "description": "Componenti shadcn/ui personalizzati solo tramite i token."
+  },
+  "darkTheme": {
+    "title": "Tema scuro (v1)",
+    "description": "Gli stessi componenti dentro data-theme=\"dark\": cambiano solo i token semantici."
+  },
+  "showcase": {
+    "approve": "Approva versione",
+    "compare": "Apri confronto",
+    "undo": "Annulla modifica",
+    "deleteDraft": "Elimina bozza",
+    "export": "Esporta",
+    "publishBlocked": "Pubblica (bloccato)",
+    "badge": {
+      "draft": "Bozza",
+      "inReview": "In revisione",
+      "approved": "Approvato",
+      "toCheck": "Da verificare",
+      "blocked": "Bloccato",
+      "conflict": "Conflitto",
+      "new": "Nuovo"
+    },
+    "form": {
+      "title": "Nuovo cliente",
+      "description": "I campi contrassegnati da asterisco sono obbligatori.",
+      "name": "Nome del cliente *",
+      "namePlaceholder": "Es. Rossi Arredamenti",
+      "website": "Sito web",
+      "websiteError": "Indirizzo non valido: inserisci un URL completo, per esempio https://rossi.it.",
+      "create": "Crea cliente",
+      "cancel": "Annulla"
+    },
+    "proposal": {
+      "title": "Scurisci il colore dei link",
+      "body": "I link su porcellana raggiungono {ratio}. Propongo di usare Forge Blue 700 per tutto il testo blu.",
+      "wcagSource": "WCAG 2.2, criterio 1.4.3"
+    }
+  },
+  "aiProposal": {
+    "kicker": "Proposta AI",
+    "byline": "Proposta da <code>{agent}</code>",
+    "sources": "Fonti",
+    "noSources": "Nessuna fonte indicata: verifica prima di accettare.",
+    "accept": "Accetta",
+    "reject": "Rifiuta"
+  }
+}

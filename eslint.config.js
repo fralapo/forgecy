@@ -76,6 +76,8 @@ export default tseslint.config(
       "apps/web/app/(app)/page.tsx",
       "apps/web/app/(app)/clients/**/*.tsx",
       "apps/web/app/(app)/settings/**/*.tsx",
+      "apps/web/app/(app)/templates/**/*.tsx",
+      "apps/web/app/design/**/*.tsx",
     ],
     rules: { "forgecy/no-hardcoded-text": "error" },
   },

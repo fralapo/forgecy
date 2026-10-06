@@ -3,6 +3,8 @@ import { unzipTemplatePackage } from "@forgecy/carousel/node";
 import { ForgecyError } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { errorMessage } from "@/lib/i18n";
 import { getCurrentUser } from "@/lib/session";
 import { getStorage } from "../../../render/_lib/templates";
 import { enqueueTemplateValidation } from "../enqueue";
@@ -20,12 +22,12 @@ export async function POST(request: Request) {
     );
   const user = await getCurrentUser();
   if (!user) return back("/login");
+  const t = await getTranslations("templates.errors");
   const declared = Number(request.headers.get("content-length") ?? 0);
-  if (declared > MAX + 1024 * 1024) return back("/templates", "The file exceeds 50 MB");
+  if (declared > MAX + 1024 * 1024) return back("/templates", t("fileTooLarge"));
   const file = (await request.formData()).get("package");
-  if (!(file instanceof File) || file.size === 0)
-    return back("/templates", "Choose the template ZIP");
-  if (file.size > MAX) return back("/templates", "The file exceeds 50 MB");
+  if (!(file instanceof File) || file.size === 0) return back("/templates", t("chooseZip"));
+  if (file.size > MAX) return back("/templates", t("fileTooLarge"));
   try {
     const files = unzipTemplatePackage(new Uint8Array(await file.arrayBuffer()));
     const { row } = await importTemplate({
@@ -41,9 +43,9 @@ export async function POST(request: Request) {
       err instanceof ForgecyError ||
       (err instanceof Error && err.name === "PermissionDeniedError")
     )
-      return back("/templates", err.message);
+      return back("/templates", (await errorMessage(err)) ?? err.message);
     if (err instanceof Error && /zip|invalid/i.test(err.message))
-      return back("/templates", "The ZIP can’t be read");
+      return back("/templates", t("unreadableZip"));
     throw err;
   }
 }

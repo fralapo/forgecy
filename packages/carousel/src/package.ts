@@ -1,5 +1,6 @@
-import { ForgecyError } from "@forgecy/core";
-import { type TemplateManifest, templateManifestSchema } from "./template-schema";
+import type { MessageRef } from "@forgecy/core";
+import { englishMessage, localizedError, messageRef } from "@forgecy/i18n";
+import { manifestIssueRef, type TemplateManifest, templateManifestSchema } from "./template-schema";
 
 /**
  * A template package in the canonical format: `template.json`, `layouts/*.html`,
@@ -28,30 +29,56 @@ export function readText(pkg: Pick<TemplatePackage, "files">, path: string): str
   return bytes ? decoder.decode(bytes) : undefined;
 }
 
+/** A problem in template.json: `message` is English; `ref`, when known, is for the interface. */
+export interface ManifestError {
+  path: string;
+  message: string;
+  ref?: MessageRef;
+}
+
 export type ParseManifestResult =
-  | { ok: true; manifest: TemplateManifest }
-  | { ok: false; errors: { path: string; message: string }[] };
+  { ok: true; manifest: TemplateManifest } | { ok: false; errors: ManifestError[] };
 
 export function parseManifest(text: string | undefined): ParseManifestResult {
   if (text === undefined)
-    return { ok: false, errors: [{ path: MANIFEST_FILE, message: "template.json missing" }] };
+    return {
+      ok: false,
+      errors: [
+        {
+          path: MANIFEST_FILE,
+          message: englishMessage("templates.manifest.missing"),
+          ref: messageRef("templates.manifest.missing"),
+        },
+      ],
+    };
   let json: unknown;
   try {
     json = JSON.parse(text);
   } catch (err) {
+    const values = { detail: (err as Error).message };
     return {
       ok: false,
-      errors: [{ path: MANIFEST_FILE, message: `Invalid JSON: ${(err as Error).message}` }],
+      errors: [
+        {
+          path: MANIFEST_FILE,
+          message: englishMessage("templates.manifest.invalidJson", values),
+          ref: messageRef("templates.manifest.invalidJson", values),
+        },
+      ],
     };
   }
   const parsed = templateManifestSchema.safeParse(json);
   if (parsed.success) return { ok: true, manifest: parsed.data };
   return {
     ok: false,
-    errors: parsed.error.issues.map((i) => ({
-      path: i.path.length ? i.path.join(".") : "(root)",
-      message: i.message,
-    })),
+    errors: parsed.error.issues.map((i) => {
+      const ref = manifestIssueRef(i);
+      return {
+        path: i.path.length ? i.path.join(".") : "(root)",
+        message: i.message,
+        ...(ref ? { ref } : {}),
+      };
+    }),
   };
 }
 
@@ -60,11 +87,16 @@ export function packageFromFiles(files: ReadonlyMap<string, Uint8Array>): Templa
   const parsed = parseManifest(readText({ files }, MANIFEST_FILE));
   if (!parsed.ok) {
     const first = parsed.errors[0];
-    throw new ForgecyError(
-      "validation",
-      `Invalid template.json: ${first ? `${first.path}: ${first.message}` : "error"}`,
-      { errors: parsed.errors },
-    );
+    throw first
+      ? localizedError(
+          "validation",
+          "templates.errors.invalidPackage",
+          { path: first.path, detail: first.message },
+          { errors: parsed.errors },
+        )
+      : localizedError("validation", "templates.errors.invalidPackageUnknown", undefined, {
+          errors: parsed.errors,
+        });
   }
   return { manifest: parsed.manifest, files };
 }

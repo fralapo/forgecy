@@ -12,6 +12,23 @@ export interface AiProposalSource {
   href?: string;
 }
 
+/**
+ * Texts of the proposal frame, in the viewer's language. No English is built in: the app
+ * passes its translations (until it does, the missing texts are simply not shown).
+ */
+export interface AiProposalTexts {
+  /** Heading above the title and accessible name of the section ("AI proposal"). */
+  kicker?: string;
+  /** Author line; include the agent yourself, e.g. "Proposed by <code>{agent}</code>". */
+  byline?: ReactNode;
+  /** Heading of the sources list ("Sources"). */
+  sources?: string;
+  /** Warning shown when there are no sources. */
+  noSources?: string;
+  accept?: string;
+  reject?: string;
+}
+
 export interface AiProposalProps extends Omit<ComponentProps<"section">, "title"> {
   title: ReactNode;
   /** Agent that authored the proposal (e.g. skill name). Shown in mono. */
@@ -20,7 +37,10 @@ export interface AiProposalProps extends Omit<ComponentProps<"section">, "title"
   children?: ReactNode;
   onAccept?: () => void;
   onReject?: () => void;
+  texts?: AiProposalTexts;
+  /** Overrides `texts.accept`. */
   acceptLabel?: string;
+  /** Overrides `texts.reject`. */
   rejectLabel?: string;
   /** Disables both actions, e.g. while a decision is being saved. */
   pending?: boolean;
@@ -37,8 +57,9 @@ export function AiProposal({
   children,
   onAccept,
   onReject,
-  acceptLabel = "Accept",
-  rejectLabel = "Reject",
+  texts = {},
+  acceptLabel = texts.accept,
+  rejectLabel = texts.reject,
   pending = false,
   className,
   ...props
@@ -46,7 +67,7 @@ export function AiProposal({
   return (
     <section
       data-slot="ai-proposal"
-      aria-label="AI proposal"
+      aria-label={texts.kicker}
       className={cn(
         "flex flex-col gap-4 rounded-lg border-2 border-dashed border-primary bg-surface p-6 text-fg",
         className,
@@ -56,12 +77,12 @@ export function AiProposal({
       <header className="flex items-start gap-3">
         <Sparkles aria-hidden="true" strokeWidth={1.5} className="mt-1 size-5 shrink-0 text-link" />
         <div className="flex min-w-0 flex-col gap-1">
-          <p className="text-label uppercase text-link">AI proposal</p>
+          {texts.kicker ? <p className="text-label uppercase text-link">{texts.kicker}</p> : null}
           <h3 className="font-body text-heading-sm text-fg">{title}</h3>
           <p className="flex items-center gap-1 text-body-sm text-fg-muted">
             <Bot aria-hidden="true" strokeWidth={1.5} className="size-4 shrink-0" />
             <span>
-              Proposed by <code className="font-mono text-mono-md text-fg">{agent}</code>
+              {texts.byline ?? <code className="font-mono text-mono-md text-fg">{agent}</code>}
             </span>
           </p>
         </div>
@@ -70,7 +91,9 @@ export function AiProposal({
       {children ? <div className="text-body-md text-fg">{children}</div> : null}
 
       <div className="flex flex-col gap-2">
-        <p className="text-label uppercase text-fg-muted">Sources</p>
+        {texts.sources ? (
+          <p className="text-label uppercase text-fg-muted">{texts.sources}</p>
+        ) : null}
         {sources.length > 0 ? (
           <ul className="flex flex-col gap-1">
             {sources.map((s) => (
@@ -94,7 +117,7 @@ export function AiProposal({
             ))}
           </ul>
         ) : (
-          <p className="text-body-sm text-warning">No sources given: check before accepting.</p>
+          <p className="text-body-sm text-warning">{texts.noSources}</p>
         )}
       </div>
 

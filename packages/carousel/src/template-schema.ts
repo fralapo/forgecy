@@ -1,3 +1,5 @@
+import type { MessageRef } from "@forgecy/core";
+import { englishMessage, type MessageKey, type MessageValues, messageRef } from "@forgecy/i18n";
 import { z } from "zod";
 import { channels, FORMATS, formatIdSchema, safeZoneSchema } from "./formats";
 
@@ -65,19 +67,56 @@ export type ColorRole = (typeof colorRoles)[number];
 export const fontRoles = ["heading", "body"] as const;
 export type FontRole = (typeof fontRoles)[number];
 
+/** Fixed messages of the manifest schema, recognised by their English text. */
+const STATIC_MESSAGES = [
+  "templates.manifest.hexColor",
+  "templates.manifest.cssVariable",
+  "templates.manifest.relativePath",
+  "templates.manifest.id",
+  "templates.manifest.semver",
+  "templates.manifest.duplicateLayout",
+  "templates.manifest.minItems",
+  "templates.manifest.colorAndFont",
+] as const satisfies readonly MessageKey[];
+const staticKeys = new Map<string, MessageKey>(STATIC_MESSAGES.map((k) => [englishMessage(k), k]));
+const en = (key: (typeof STATIC_MESSAGES)[number]) => englishMessage(key);
+
+/** A custom issue whose English message carries its reference in `params.ref`. */
+function issue(
+  ctx: z.RefinementCtx,
+  path: (string | number)[],
+  key: MessageKey,
+  values?: MessageValues,
+): void {
+  ctx.addIssue({
+    code: "custom",
+    path,
+    message: englishMessage(key, values),
+    params: { ref: messageRef(key, values) },
+  });
+}
+
+/** The interface message of a manifest schema issue, when it is one of ours (Zod's own stay English). */
+export function manifestIssueRef(i: z.core.$ZodIssue): MessageRef | undefined {
+  const ref = (i as { params?: { ref?: MessageRef } }).params?.ref;
+  if (ref && typeof ref.key === "string") return ref;
+  const key = staticKeys.get(i.message);
+  return key ? messageRef(key) : undefined;
+}
+
 const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 export const MAX_CAROUSEL_SLIDES = 20;
 export const MAX_REPORT_PAGES = 40;
 
-export const hexColorSchema = z.string().regex(HEX, "Hex color (#RRGGBB)");
+export const hexColorSchema = z.string().regex(HEX, en("templates.manifest.hexColor"));
 
 /** CSS custom property the template uses, e.g. `--fc-bg`. */
-const cssVarName = z.string().regex(/^--fc-[a-z0-9-]{1,40}$/, "CSS variable --fc-...");
+const cssVarName = z.string().regex(/^--fc-[a-z0-9-]{1,40}$/, en("templates.manifest.cssVariable"));
 const SLOT_NAME = /^[a-z][a-z0-9_]{0,31}$/;
 const relPath = z
   .string()
-  .regex(/^[a-z0-9][a-z0-9._-]*(\/[a-z0-9][a-z0-9._-]*)*$/i, "Relative path inside the package")
-  .refine((p) => !p.split("/").includes(".."), "Relative path inside the package");
+  .regex(/^[a-z0-9][a-z0-9._-]*(\/[a-z0-9][a-z0-9._-]*)*$/i, en("templates.manifest.relativePath"))
+  .refine((p) => !p.split("/").includes(".."), en("templates.manifest.relativePath"));
 
 const textSlotSchema = z.object({
   name: z.string().regex(SLOT_NAME),
@@ -164,10 +203,10 @@ export const compositionRulesSchema = z.object({
 export const templateManifestSchema = z
   .object({
     $schema: z.string().optional(),
-    id: z.string().regex(/^[a-z][a-z0-9-]{2,63}$/, "id: lowercase letters, digits and dashes"),
+    id: z.string().regex(/^[a-z][a-z0-9-]{2,63}$/, en("templates.manifest.id")),
     name: z.string().min(1).max(60),
     description: z.string().max(240).default(""),
-    version: z.string().regex(/^\d+\.\d+\.\d+$/, "Semver version (e.g. 1.0.0)"),
+    version: z.string().regex(/^\d+\.\d+\.\d+$/, en("templates.manifest.semver")),
     kind: z.enum(["carousel", "report"]).default("carousel"),
     /** Required for social formats, absent for reports. */
     channel: z.enum(channels).optional(),
@@ -205,67 +244,45 @@ export const templateManifestSchema = z
   })
   .superRefine((t, ctx) => {
     const f = FORMATS[t.format];
+    // The format's label is a product name ("Instagram 4:5") kept as is in every language.
+    const format = f.label;
     if (f.kind !== t.kind)
-      ctx.addIssue({
-        code: "custom",
-        path: ["kind"],
-        message: `The ${f.label} format is for ${f.kind === "report" ? "reports" : "carousels"}: kind "${f.kind}"`,
-      });
+      issue(ctx, ["kind"], "templates.manifest.formatKind", { format, kind: f.kind });
     if (f.channel && f.channel !== t.channel)
-      ctx.addIssue({
-        code: "custom",
-        path: ["channel"],
-        message: `The ${f.label} format belongs to channel ${f.channel}`,
-      });
+      issue(ctx, ["channel"], "templates.manifest.formatChannel", { format, channel: f.channel });
     if (!f.channel && t.channel)
-      ctx.addIssue({
-        code: "custom",
-        path: ["channel"],
-        message: `The ${f.label} format has no channel: remove "channel"`,
-      });
+      issue(ctx, ["channel"], "templates.manifest.formatNoChannel", { format });
     if (t.width !== f.width || t.height !== f.height)
-      ctx.addIssue({
-        code: "custom",
-        path: ["width"],
-        message: `${f.label} is ${f.width}×${f.height} px`,
+      issue(ctx, ["width"], "templates.manifest.formatSize", {
+        format,
+        width: String(f.width),
+        height: String(f.height),
       });
     const { min, max, default: def } = t.slides;
     const limit = t.kind === "report" ? MAX_REPORT_PAGES : MAX_CAROUSEL_SLIDES;
     if (!(min <= def && def <= max && max <= limit))
-      ctx.addIssue({
-        code: "custom",
-        path: ["slides"],
-        message: `Number of ${t.kind === "report" ? "pages" : "slides"}: must satisfy min ≤ default ≤ max ≤ ${limit}`,
+      issue(ctx, ["slides"], "templates.manifest.slideCount", {
+        kind: t.kind,
+        limit: String(limit),
       });
     const ids = new Set<string>();
     t.layouts.forEach((l, i) => {
-      if (ids.has(l.id))
-        ctx.addIssue({ code: "custom", path: ["layouts", i, "id"], message: "Duplicate layout" });
+      if (ids.has(l.id)) issue(ctx, ["layouts", i, "id"], "templates.manifest.duplicateLayout");
       ids.add(l.id);
       const names = new Set<string>();
       l.slots.forEach((s, j) => {
         if (names.has(s.name))
-          ctx.addIssue({
-            code: "custom",
-            path: ["layouts", i, "slots", j, "name"],
-            message: `Duplicate slot "${s.name}"`,
+          issue(ctx, ["layouts", i, "slots", j, "name"], "templates.manifest.duplicateSlot", {
+            name: s.name,
           });
         names.add(s.name);
         if (s.type === "list" && s.minItems > s.maxItems)
-          ctx.addIssue({
-            code: "custom",
-            path: ["layouts", i, "slots", j],
-            message: "minItems > maxItems",
-          });
+          issue(ctx, ["layouts", i, "slots", j], "templates.manifest.minItems");
       });
     });
     const vars = [...Object.keys(t.colorRoles), ...Object.keys(t.fontRoles)];
     if (new Set(vars).size !== vars.length)
-      ctx.addIssue({
-        code: "custom",
-        path: ["fontRoles"],
-        message: "A variable cannot be both a color and a font",
-      });
+      issue(ctx, ["fontRoles"], "templates.manifest.colorAndFont");
   });
 
 export type TemplateManifest = z.infer<typeof templateManifestSchema>;

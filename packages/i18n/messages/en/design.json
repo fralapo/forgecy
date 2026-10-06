@@ -1,0 +1,139 @@
+{
+  "title": "Design system",
+  "kicker": "Forgecy visual identity",
+  "intro": "Colors, typography and components generated from <code>tokens/forgecy.tokens.json</code>. Contrast ratios are computed from the tokens according to WCAG 2.2.",
+  "guard": {
+    "allPass": "Brand Guard: all {count} pairs pass the check",
+    "someFail": "Brand Guard: {count, plural, one {# pair fails} other {# pairs fail}} the check"
+  },
+  "ratio": "{value}:1",
+  "usage": {
+    "text": "Text",
+    "largeText": "Large text and controls",
+    "decorative": "Decorative only"
+  },
+  "colors": {
+    "title": "Colors",
+    "description": "Reference palette with the contrast computed on white and on porcelain.",
+    "onWhite": "White",
+    "onPorcelain": "Porcelain",
+    "role": {
+      "forgeBlue": "primary buttons, selection, focus",
+      "forgeBlue700": "blue text, links, pressed state",
+      "porcelain": "app background",
+      "white": "surfaces",
+      "graphite900": "primary text, dark background",
+      "graphite70": "secondary text",
+      "graphite50": "input and control borders",
+      "grayGrid": "dividers only",
+      "amber": "highlight fill, always with Deep Graphite text",
+      "green": "success fills and icons",
+      "green700": "success text",
+      "orange": "warning fills and icons",
+      "orange700": "warning text",
+      "red": "error fills and icons",
+      "red700": "error text, destructive buttons"
+    },
+    "darkName": {
+      "graphite800": "Dark surface",
+      "graphite700": "Dark dividers (decorative)",
+      "graphite30": "Dark secondary text",
+      "blue300": "Dark link text and focus ring",
+      "green300": "Dark success text",
+      "orange300": "Dark warning text",
+      "red300": "Dark error text"
+    }
+  },
+  "brandGuard": {
+    "title": "Brand Guard",
+    "description": "Semantic token pairs checked on every token change, in the light and dark themes. A failure blocks the merge.",
+    "lightCaption": "Light theme",
+    "darkCaption": "Dark theme (v1)",
+    "pair": "Pair",
+    "colors": "Colors",
+    "contrast": "Contrast",
+    "minimum": "Minimum",
+    "result": "Result",
+    "passed": "Passed",
+    "failed": "Failed",
+    "onSurface": "{subject} on {surface, select, app {app background} other {surface}}",
+    "subject": {
+      "primaryText": "Primary text",
+      "secondaryText": "Secondary text",
+      "link": "Link",
+      "successText": "Success text",
+      "warningText": "Warning text",
+      "errorText": "Error text",
+      "controlBorder": "Control border",
+      "focusRing": "Focus ring"
+    },
+    "special": {
+      "primaryButton": "Primary button",
+      "primaryButtonPressed": "Primary button pressed",
+      "destructiveButton": "Destructive button",
+      "textOnHighlight": "Text on highlight"
+    }
+  },
+  "typography": {
+    "title": "Typography",
+    "description": "Space Grotesk for headings, Inter for text and interface, JetBrains Mono for technical names.",
+    "sample": {
+      "headingXl": "A brand system for the agency",
+      "headingLg": "Client audit",
+      "headingMd": "Content strategy",
+      "headingSm": "Version in review",
+      "bodyLg": "Every piece of content comes from a process with rules, versions and checks.",
+      "bodyMd": "People decide, the AI proposes. Every data point has its source.",
+      "bodySm": "Last edited {date} at {time}.",
+      "label": "Section label"
+    }
+  },
+  "components": {
+    "title": "Components",
+    "description": "shadcn/ui components customized only through tokens."
+  },
+  "darkTheme": {
+    "title": "Dark theme (v1)",
+    "description": "The same components inside data-theme=\"dark\": only the semantic tokens change."
+  },
+  "showcase": {
+    "approve": "Approve version",
+    "compare": "Open comparison",
+    "undo": "Undo change",
+    "deleteDraft": "Delete draft",
+    "export": "Export",
+    "publishBlocked": "Publish (blocked)",
+    "badge": {
+      "draft": "Draft",
+      "inReview": "In review",
+      "approved": "Approved",
+      "toCheck": "To check",
+      "blocked": "Blocked",
+      "conflict": "Conflict",
+      "new": "New"
+    },
+    "form": {
+      "title": "New client",
+      "description": "Fields marked with an asterisk are required.",
+      "name": "Client name *",
+      "namePlaceholder": "E.g. Rossi Arredamenti",
+      "website": "Website",
+      "websiteError": "Invalid address: enter a full URL, for example https://rossi.it.",
+      "create": "Create client",
+      "cancel": "Cancel"
+    },
+    "proposal": {
+      "title": "Darken the link color",
+      "body": "Links on porcelain reach {ratio}. I propose using Forge Blue 700 for all blue text.",
+      "wcagSource": "WCAG 2.2, criterion 1.4.3"
+    }
+  },
+  "aiProposal": {
+    "kicker": "AI proposal",
+    "byline": "Proposed by <code>{agent}</code>",
+    "sources": "Sources",
+    "noSources": "No sources given: check before accepting.",
+    "accept": "Accept",
+    "reject": "Reject"
+  }
+}

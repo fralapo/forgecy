@@ -1,4 +1,4 @@
-import { FORMATS, formatIssue, slideRoleLabels, type TemplateManifest } from "@forgecy/carousel";
+import type { TemplateManifest } from "@forgecy/carousel";
 import {
   getTemplateRow,
   isPublishable,
@@ -12,20 +12,24 @@ import { Badge, Button, Card, Input, Label } from "@forgecy/ui";
 import { CircleCheck, CircleMinus, CircleX, LoaderCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/session";
 import { revalidateAction, transitionAction } from "../actions";
 import { SlideFrame } from "../slide-frame";
 import { ErrorNotice, StatusBadge, ValidationBadge } from "../status";
+import { checkText, issueText } from "../validation-text";
 
 const CHECK = {
-  ok: { icon: CircleCheck, className: "text-success", label: "Passed" },
-  error: { icon: CircleX, className: "text-error", label: "Error" },
-  warning: { icon: CircleX, className: "text-warning", label: "Warning" },
-  skipped: { icon: CircleMinus, className: "text-fg-muted", label: "Not checked" },
+  ok: { icon: CircleCheck, className: "text-success" },
+  error: { icon: CircleX, className: "text-error" },
+  warning: { icon: CircleX, className: "text-warning" },
+  skipped: { icon: CircleMinus, className: "text-fg-muted" },
 } as const;
 
-function TransitionForm({
+const PREVIEW_OPTIONS = ["long", "safe", "slots"] as const;
+
+async function TransitionForm({
   id,
   to,
   label,
@@ -40,19 +44,20 @@ function TransitionForm({
   variant?: "primary" | "secondary" | "danger";
   disabled?: boolean;
 }) {
+  const t = await getTranslations("templates.detail.status");
   return (
     <form action={transitionAction} className="space-y-2">
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="to" value={to} />
       {notes ? (
         <div className="space-y-1">
-          <Label htmlFor={`notes-${to}`}>Version notes</Label>
+          <Label htmlFor={`notes-${to}`}>{t("versionNotes")}</Label>
           <Input
             id={`notes-${to}`}
             name="notes"
             required
             minLength={3}
-            placeholder="What changes"
+            placeholder={t("notesPlaceholder")}
           />
         </div>
       ) : null}
@@ -71,6 +76,7 @@ export default async function TemplateDetailPage({
   searchParams: Promise<{ long?: string; safe?: string; slots?: string; error?: string }>;
 }) {
   const user = await requireUser();
+  const t = await getTranslations("templates");
   const { templateId } = await params;
   const q = await searchParams;
   const db = getDb();
@@ -94,40 +100,47 @@ export default async function TemplateDetailPage({
     return qs ? `/templates/${row.id}?${qs}` : `/templates/${row.id}`;
   };
   const renderQuery = query(flags);
+  const checkTexts = await Promise.all(validation.checks.map(checkText));
+  const issueTexts = await Promise.all(validation.issues.map(issueText));
 
   return (
     <>
       <PageHeader
-        title={`${row.name} · v${row.version}`}
-        description={`${m.description} ${FORMATS[m.format].label} · ${m.width}×${m.height} px · ${m.slides.min}–${m.slides.max} slides (default ${m.slides.default})`}
+        title={t("detail.title", { name: row.name, version: row.version })}
+        description={t("detail.description", {
+          description: m.description,
+          format: t(`format.${m.format}`),
+          width: String(m.width),
+          height: String(m.height),
+          min: String(m.slides.min),
+          max: String(m.slides.max),
+          defaultCount: String(m.slides.default),
+        })}
       />
       {q.error ? <ErrorNotice message={q.error} /> : null}
       <div className="mb-6 flex flex-wrap gap-2">
         <StatusBadge status={status} />
         <ValidationBadge validation={validation} />
-        <Badge>{row.origin === "system" ? "System" : "Agency"}</Badge>
+        <Badge>{t(row.origin === "system" ? "origin.system" : "origin.agency")}</Badge>
       </div>
       <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
         <section aria-labelledby="layouts">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 id="layouts" className="text-heading-sm text-fg">
-              Layouts
+              {t("detail.layouts")}
             </h2>
-            <nav aria-label="Preview options" className="flex flex-wrap gap-2 text-body-sm">
-              {(
-                [
-                  ["long", "Long text"],
-                  ["safe", "Safe zone"],
-                  ["slots", "Slots"],
-                ] as const
-              ).map(([key, label]) => (
+            <nav
+              aria-label={t("detail.previewOptions")}
+              className="flex flex-wrap gap-2 text-body-sm"
+            >
+              {PREVIEW_OPTIONS.map((key) => (
                 <Link
                   key={key}
                   href={toggle(key)}
                   aria-pressed={flags[key]}
                   className="rounded-md border border-subtle px-3 py-1 text-fg hover:bg-surface aria-pressed:bg-surface aria-pressed:font-medium"
                 >
-                  {label}
+                  {t(`detail.preview.${key}`)}
                 </Link>
               ))}
             </nav>
@@ -145,19 +158,24 @@ export default async function TemplateDetailPage({
                 <p className="text-body-sm text-fg">
                   {layout.name}{" "}
                   <span className="text-fg-muted">
-                    · {slideRoleLabels[layout.role]}
-                    {layout.position === "first" ? " · first only" : ""}
-                    {layout.position === "last" ? " · last only" : ""}
+                    {t("detail.layoutMeta", {
+                      role: t(`slideRole.${layout.role}`),
+                      position: layout.position,
+                    })}
                   </span>
                 </p>
                 <p className="text-body-sm text-fg-muted">
                   {layout.slots
                     .map((s) =>
                       s.type === "image"
-                        ? `${s.name} (image)`
+                        ? t("detail.slot.image", { name: s.name })
                         : s.type === "list"
-                          ? `${s.name} · ${s.maxItems}×${s.maxChars}`
-                          : `${s.name} · ${s.maxChars}`,
+                          ? t("detail.slot.list", {
+                              name: s.name,
+                              items: String(s.maxItems),
+                              chars: String(s.maxChars),
+                            })
+                          : t("detail.slot.text", { name: s.name, chars: String(s.maxChars) }),
                     )
                     .join(", ")}
                 </p>
@@ -168,18 +186,18 @@ export default async function TemplateDetailPage({
         <aside className="space-y-6">
           {manage ? (
             <Card className="space-y-4 p-5">
-              <h2 className="text-heading-sm text-fg">Status</h2>
+              <h2 className="text-heading-sm text-fg">{t("detail.status.title")}</h2>
               {row.versionNotes ? (
                 <p className="text-body-sm text-fg">
-                  <span className="text-fg-muted">Note: </span>
-                  {row.versionNotes}
+                  {t.rich("detail.status.versionNote", {
+                    notes: row.versionNotes,
+                    muted: (chunks) => <span className="text-fg-muted">{chunks}</span>,
+                  })}
                 </p>
               ) : null}
               {(status === "draft" || status === "in_review") && !publishable ? (
                 <p className="text-body-sm text-fg-muted">
-                  {validation.ok
-                    ? "It can be published once the test render has finished."
-                    : "Fix the validation errors and import the package again."}
+                  {validation.ok ? t("detail.status.waitingRender") : t("detail.status.fixErrors")}
                 </p>
               ) : null}
               {status === "draft" ? (
@@ -187,7 +205,7 @@ export default async function TemplateDetailPage({
                   <TransitionForm
                     id={row.id}
                     to="in_review"
-                    label="Send for review"
+                    label={t("detail.status.sendForReview")}
                     notes
                     variant="secondary"
                     disabled={!publishable}
@@ -195,7 +213,7 @@ export default async function TemplateDetailPage({
                   <TransitionForm
                     id={row.id}
                     to="published"
-                    label="Publish"
+                    label={t("detail.status.publish")}
                     notes
                     disabled={!publishable}
                   />
@@ -206,26 +224,31 @@ export default async function TemplateDetailPage({
                   <TransitionForm
                     id={row.id}
                     to="published"
-                    label="Publish"
+                    label={t("detail.status.publish")}
                     notes
                     disabled={!publishable}
                   />
                   <TransitionForm
                     id={row.id}
                     to="draft"
-                    label="Back to draft"
+                    label={t("detail.status.backToDraft")}
                     variant="secondary"
                   />
                 </>
               ) : null}
               {status === "published" ? (
-                <TransitionForm id={row.id} to="archived" label="Archive" variant="secondary" />
+                <TransitionForm
+                  id={row.id}
+                  to="archived"
+                  label={t("detail.status.archive")}
+                  variant="secondary"
+                />
               ) : null}
               {status === "archived" ? (
                 <TransitionForm
                   id={row.id}
                   to="published"
-                  label="Republish"
+                  label={t("detail.status.republish")}
                   variant="secondary"
                   disabled={!publishable}
                 />
@@ -233,24 +256,24 @@ export default async function TemplateDetailPage({
             </Card>
           ) : null}
           <Card className="p-5">
-            <h2 className="text-heading-sm text-fg">Validation</h2>
+            <h2 className="text-heading-sm text-fg">{t("detail.validation.title")}</h2>
             <ul className="mt-4 space-y-2">
-              {validation.checks.map((c) => {
+              {validation.checks.map((c, n) => {
                 const s = CHECK[c.status];
                 return (
                   <li key={c.id} className="flex items-start gap-2 text-body-sm text-fg">
                     <s.icon
-                      aria-label={s.label}
+                      aria-label={t(`detail.validation.check.${c.status}`)}
                       className={`mt-0.5 size-4 shrink-0 ${s.className}`}
                     />
-                    <span>{c.label}</span>
+                    <span>{checkTexts[n]}</span>
                   </li>
                 );
               })}
               {!validation.rendered && validation.ok ? (
                 <li className="flex items-start gap-2 text-body-sm text-fg-muted">
                   <LoaderCircle aria-hidden className="mt-0.5 size-4 shrink-0" />
-                  <span>Test render in progress in the worker</span>
+                  <span>{t("detail.validation.renderPending")}</span>
                 </li>
               ) : null}
             </ul>
@@ -258,7 +281,7 @@ export default async function TemplateDetailPage({
               <ul className="mt-4 space-y-2 border-t border-subtle pt-4 text-body-sm text-error">
                 {validation.issues.map((i, n) => (
                   <li key={n}>
-                    {formatIssue(i)} <span className="text-fg-muted">{i.code}</span>
+                    {issueTexts[n]} <span className="text-fg-muted">{i.code}</span>
                   </li>
                 ))}
               </ul>
@@ -267,22 +290,24 @@ export default async function TemplateDetailPage({
               <form action={revalidateAction} className="mt-4">
                 <input type="hidden" name="id" value={row.id} />
                 <Button type="submit" variant="ghost" size="sm">
-                  Run validation again
+                  {t("detail.validation.rerun")}
                 </Button>
               </form>
             ) : null}
           </Card>
           {versions.length > 1 ? (
             <Card className="p-5">
-              <h2 className="text-heading-sm text-fg">Versions</h2>
+              <h2 className="text-heading-sm text-fg">{t("detail.versions.title")}</h2>
               <ul className="mt-4 space-y-2 text-body-sm">
                 {versions.map((v) => (
                   <li key={v.id} className="flex items-center justify-between gap-2">
                     {v.id === row.id ? (
-                      <span className="font-medium text-fg">v{v.version}</span>
+                      <span className="font-medium text-fg">
+                        {t("detail.versions.version", { version: v.version })}
+                      </span>
                     ) : (
                       <Link href={`/templates/${v.id}`} className="text-link hover:underline">
-                        v{v.version}
+                        {t("detail.versions.version", { version: v.version })}
                       </Link>
                     )}
                     <StatusBadge status={v.status} />
@@ -292,7 +317,7 @@ export default async function TemplateDetailPage({
             </Card>
           ) : null}
           <Card className="p-5">
-            <h2 className="text-heading-sm text-fg">Color and font roles</h2>
+            <h2 className="text-heading-sm text-fg">{t("detail.roles.title")}</h2>
             <ul className="mt-4 space-y-1 text-body-sm">
               {Object.entries(m.colorRoles).map(([name, r]) => (
                 <li key={name} className="flex justify-between gap-2">
@@ -303,13 +328,17 @@ export default async function TemplateDetailPage({
               {Object.entries(m.fontRoles).map(([name, r]) => (
                 <li key={name} className="flex justify-between gap-2">
                   <code className="text-fg">{name}</code>
-                  <span className="text-fg-muted">font {r.role}</span>
+                  <span className="text-fg-muted">{t("detail.roles.font", { role: r.role })}</span>
                 </li>
               ))}
             </ul>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Badge>{m.rules.ctaOnlyLast ? "CTA on the last slide only" : "CTA anywhere"}</Badge>
-              <Badge>{m.rules.pageNumbers ? "Page numbers" : "No page numbers"}</Badge>
+              <Badge>
+                {t(m.rules.ctaOnlyLast ? "detail.roles.ctaOnlyLast" : "detail.roles.ctaAnywhere")}
+              </Badge>
+              <Badge>
+                {t(m.rules.pageNumbers ? "detail.roles.pageNumbers" : "detail.roles.noPageNumbers")}
+              </Badge>
             </div>
           </Card>
         </aside>
