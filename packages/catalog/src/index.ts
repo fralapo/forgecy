@@ -1,0 +1,27 @@
+// Product catalog (spec pages 71–74): mixed import, human review, approved products
+// reusable in strategy and carousels. See README.md.
+export * from "./ai";
+export * from "./candidates";
+export * from "./completeness";
+export * from "./csv-export";
+export * from "./db";
+export * from "./documents";
+export * from "./errors";
+export * from "./fields";
+export * from "./imports";
+export * from "./inspect";
+export * from "./jobs";
+export * from "./limits";
+export * from "./mapping";
+export * from "./meta";
+export * from "./pdf";
+export * from "./pipeline";
+export * from "./products";
+export * from "./queries";
+export * from "./review";
+export * from "./sensitive";
+export * from "./sheet";
+export * from "./sniff";
+export * from "./storage";
+export * from "./text";
+export * from "./zip";
