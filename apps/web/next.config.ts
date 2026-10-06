@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
     "@forgecy/core",
     "@forgecy/db",
     "@forgecy/ai",
+    "@forgecy/brand",
     "@forgecy/catalog",
     "@forgecy/files",
     "@forgecy/jobs",
@@ -23,7 +24,8 @@ const nextConfig: NextConfig = {
   ],
   serverExternalPackages: ["pg", "bullmq", "nodemailer"],
   poweredByHeader: false,
-  experimental: { proxyClientMaxBodySize: "210mb" }, // product import uploads (ZIP up to 200 MB)
+  // Uploads through the proxy (default 10 MB): brand books up to 50 MB, product imports (ZIP) up to 200 MB.
+  experimental: { proxyClientMaxBodySize: "210mb" },
   typedRoutes: true,
 };
 

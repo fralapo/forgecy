@@ -1,4 +1,3 @@
-CREATE TYPE "public"."confidence_level" AS ENUM('high', 'medium', 'low');--> statement-breakpoint
 CREATE TYPE "public"."image_match_method" AS ENUM('folder', 'filename', 'sku', 'sheet', 'ai', 'manual');--> statement-breakpoint
 CREATE TYPE "public"."import_file_kind" AS ENUM('sheet', 'pdf', 'image', 'text', 'archive', 'ignored');--> statement-breakpoint
 CREATE TYPE "public"."import_file_route" AS ENUM('map', 'match', 'extract', 'source', 'ignore');--> statement-breakpoint

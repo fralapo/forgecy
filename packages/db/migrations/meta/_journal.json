@@ -26,8 +26,22 @@
     {
       "idx": 3,
       "version": "7",
-      "when": 1791271139245,
-      "tag": "0003_catalog",
+      "when": 1791271191290,
+      "tag": "0003_brand_identity",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791271192630,
+      "tag": "0004_brand_identity_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791271935439,
+      "tag": "0005_catalog",
       "breakpoints": true
     }
   ]

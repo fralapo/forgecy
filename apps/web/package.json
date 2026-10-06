@@ -16,6 +16,7 @@
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@fontsource-variable/space-grotesk": "^5.3.0",
     "@forgecy/ai": "workspace:*",
+    "@forgecy/brand": "workspace:*",
     "@forgecy/carousel": "workspace:*",
     "@forgecy/catalog": "workspace:*",
     "@forgecy/core": "workspace:*",

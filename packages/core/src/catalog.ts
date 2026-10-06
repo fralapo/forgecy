@@ -42,10 +42,6 @@ export type ImportItemStatus = (typeof importItemStatuses)[number];
 export const productSourceKinds = ["csv", "xlsx", "pdf", "image", "text", "manual", "ai"] as const;
 export type ProductSourceKind = (typeof productSourceKinds)[number];
 
-/** Shown as Alta / Media / Bassa, never as a percentage. */
-export const confidenceLevels = ["high", "medium", "low"] as const;
-export type ConfidenceLevel = (typeof confidenceLevels)[number];
-
 /** How an image ended up attached to a product. */
 export const imageMatchMethods = ["folder", "filename", "sku", "sheet", "ai", "manual"] as const;
 export type ImageMatchMethod = (typeof imageMatchMethods)[number];

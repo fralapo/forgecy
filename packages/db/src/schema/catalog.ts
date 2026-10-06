@@ -1,5 +1,4 @@
 import {
-  confidenceLevels,
   imageMatchMethods,
   importFileKinds,
   importFileRoutes,
@@ -24,6 +23,7 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { users } from "./auth";
+import { confidenceEnum } from "./brand";
 import { clients } from "./clients";
 import { jobs } from "./jobs";
 import { createdAt, id, updatedAt } from "./_common";
@@ -38,7 +38,6 @@ export const productImportStatusEnum = pgEnum("product_import_status", productIm
 export const importFileKindEnum = pgEnum("import_file_kind", importFileKinds);
 export const importFileRouteEnum = pgEnum("import_file_route", importFileRoutes);
 export const importItemStatusEnum = pgEnum("import_item_status", importItemStatuses);
-export const confidenceEnum = pgEnum("confidence_level", confidenceLevels);
 export const imageMatchMethodEnum = pgEnum("image_match_method", imageMatchMethods);
 export const productImageStatusEnum = pgEnum("product_image_status", productImageStatuses);
 export const importImageStateEnum = pgEnum("import_image_state", importImageStates);
