@@ -1,0 +1,99 @@
+"use client";
+
+import type { CommercialUse, ImageProvider } from "@forgecy/content";
+import { Button, Input, Label } from "@forgecy/ui";
+import { Save } from "lucide-react";
+import { useActionState } from "react";
+import { setCommercialUseAction, type CommercialUseState } from "../actions";
+import { controlClass } from "../../contenuti/_components/action-button";
+
+const statusOptions: { value: CommercialUse; label: string }[] = [
+  { value: "pending_verification", label: "In verifica" },
+  { value: "verified", label: "Verificato" },
+  { value: "rejected", label: "Non ammesso" },
+];
+
+/** «Aggiorna stato d'uso commerciale»: status, terms consulted, date and note. */
+export function CommercialUseForm({
+  provider,
+  initial,
+}: {
+  provider: ImageProvider;
+  initial: { status: CommercialUse; termsUrl: string; consultedOn: string; note: string };
+}) {
+  const [state, action, pending] = useActionState<CommercialUseState, FormData>(
+    setCommercialUseAction,
+    {},
+  );
+  const id = (field: string) => `cu-${provider}-${field}`;
+  return (
+    <details className="rounded-md border border-subtle p-4">
+      <summary className="cursor-pointer text-label text-fg">
+        Aggiorna stato d&apos;uso commerciale
+      </summary>
+      <form action={action} className="mt-4 grid gap-4">
+        <input type="hidden" name="provider" value={provider} />
+        <div className="grid gap-2">
+          <Label htmlFor={id("status")}>Stato</Label>
+          <select
+            id={id("status")}
+            name="status"
+            defaultValue={initial.status}
+            className={controlClass}
+          >
+            {statusOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor={id("terms")}>Indirizzo dei termini consultati</Label>
+          <Input
+            id={id("terms")}
+            name="termsUrl"
+            type="url"
+            defaultValue={initial.termsUrl}
+            placeholder="https://"
+          />
+          <p className="text-body-sm text-fg-muted">Obbligatorio per «Verificato».</p>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor={id("date")}>Data di consultazione</Label>
+          <Input
+            id={id("date")}
+            name="consultedOn"
+            type="date"
+            defaultValue={initial.consultedOn}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor={id("note")}>Nota</Label>
+          <textarea
+            id={id("note")}
+            name="note"
+            rows={3}
+            maxLength={500}
+            defaultValue={initial.note}
+            className={controlClass}
+          />
+        </div>
+        {state.error ? (
+          <p role="alert" className="text-body-sm text-error">
+            {state.error}
+          </p>
+        ) : null}
+        {state.ok ? (
+          <p role="status" className="text-body-sm text-success">
+            Stato aggiornato.
+          </p>
+        ) : null}
+        <Button type="submit" disabled={pending} className="w-fit">
+          <Save aria-hidden />
+          Salva
+        </Button>
+      </form>
+    </details>
+  );
+}
