@@ -65,6 +65,9 @@ importers:
       '@forgecy/carousel':
         specifier: workspace:*
         version: link:../../packages/carousel
+      '@forgecy/content':
+        specifier: workspace:*
+        version: link:../../packages/content
       '@forgecy/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -141,6 +144,9 @@ importers:
       '@forgecy/carousel':
         specifier: workspace:*
         version: link:../../packages/carousel
+      '@forgecy/content':
+        specifier: workspace:*
+        version: link:../../packages/content
       '@forgecy/core':
         specifier: workspace:*
         version: link:../../packages/core

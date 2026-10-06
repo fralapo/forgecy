@@ -13,6 +13,7 @@
     "@forgecy/ai": "workspace:*",
     "@forgecy/carousel": "workspace:*",
     "@forgecy/brand": "workspace:*",
+    "@forgecy/content": "workspace:*",
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",
     "@forgecy/files": "workspace:*",

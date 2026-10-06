@@ -16,6 +16,7 @@ COPY packages/db/package.json packages/db/
 COPY packages/ai/package.json packages/ai/
 COPY packages/carousel/package.json packages/carousel/
 COPY packages/brand/package.json packages/brand/
+COPY packages/content/package.json packages/content/
 COPY packages/files/package.json packages/files/
 COPY packages/jobs/package.json packages/jobs/
 COPY packages/mail/package.json packages/mail/

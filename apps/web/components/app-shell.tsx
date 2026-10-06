@@ -1,4 +1,12 @@
-import { Building2, Fingerprint, LayoutDashboard, LayoutTemplate, Palette, Settings } from "lucide-react";
+import {
+  Building2,
+  Fingerprint,
+  GalleryHorizontal,
+  LayoutDashboard,
+  LayoutTemplate,
+  Palette,
+  Settings,
+} from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { CurrentUser } from "@/lib/session";
@@ -10,6 +18,7 @@ const nav = [
   { href: "/clienti", label: "Clienti", icon: Building2 },
   { href: "/template", label: "Template", icon: LayoutTemplate },
   { href: "/brand", label: "Brand Identity", icon: Fingerprint },
+  { href: "/contenuti", label: "Contenuti", icon: GalleryHorizontal },
   { href: "/impostazioni", label: "Impostazioni", icon: Settings },
   { href: "/design", label: "Design system", icon: Palette },
 ] as const;

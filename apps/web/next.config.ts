@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
     "@forgecy/db",
     "@forgecy/ai",
     "@forgecy/brand",
+    "@forgecy/content",
     "@forgecy/files",
     "@forgecy/jobs",
     "@forgecy/mail",
