@@ -15,6 +15,7 @@ COPY packages/core/package.json packages/core/
 COPY packages/db/package.json packages/db/
 COPY packages/ai/package.json packages/ai/
 COPY packages/audit/package.json packages/audit/
+COPY packages/backup/package.json packages/backup/
 COPY packages/carousel/package.json packages/carousel/
 COPY packages/brand/package.json packages/brand/
 COPY packages/content/package.json packages/content/
@@ -57,6 +58,15 @@ CMD ["node", "apps/web/server.js"]
 # system libraries. Keep the tag equal to playwright-core in packages/carousel/package.json.
 FROM mcr.microsoft.com/playwright:v1.63.0-noble AS worker
 ENV NODE_ENV=production PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+# pg_dump and psql of the server's major version (17) for backups and restores run by the worker.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl \
+ && install -d /usr/share/postgresql-common/pgdg \
+ && curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+ && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends postgresql-client-17 \
+ && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 # uid 1000 (`ubuntu` here, `node` in the web image): web and worker share ./data/media.
 COPY --from=workspace --chown=1000:1000 /app /app
