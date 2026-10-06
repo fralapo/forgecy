@@ -62,3 +62,6 @@ export async function databaseInfo(db: Pick<Database, "execute">): Promise<Datab
     latencyMs,
   };
 }
+
+/** Shipped migration tags in order. */
+export const shippedMigrations: readonly { tag: string; when: number }[] = journal.entries;

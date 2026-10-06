@@ -305,7 +305,43 @@
     },
     "restore": {
       "title": "Ripristino",
-      "cli": "Il ripristino sostituisce database e file. Per ora si lancia sul server, con i container web e worker fermi:"
+      "intro": "Il ripristino sostituisce tutto il database (compresi utenti, sessioni e impostazioni) con quello del backup e ricopia i suoi file. I file aggiunti dopo il backup restano. Prima Forgecy fa un backup dello stato attuale, così puoi tornare indietro.",
+      "choose": "Backup da ripristinare",
+      "choosePlaceholder": "Scegli un backup",
+      "option": "{date} · {kind} · {size}",
+      "check": "Controlla backup",
+      "checking": "Controllo del backup…",
+      "valid": "Il backup si può ripristinare.",
+      "summary": "Creato il {date} · {scope} · Forgecy {version} · ultima migrazione {migration}",
+      "unknown": "sconosciuta",
+      "migrations": "{count, plural, =0 {Nessuna migrazione da applicare dopo.} one {Dopo verrà applicata # migrazione.} other {Dopo verranno applicate # migrazioni.}}",
+      "impact": "Cosa viene sostituito: tutti i dati attuali ({size} di database) lasciano il posto a quelli del backup. Tutti escono dall’account e i job in corso vengono annullati.",
+      "problem": {
+        "unreadable": "L’archivio non si legge: il file è danneggiato o non è un backup di Forgecy.",
+        "format": "Questo backup usa un formato che questa versione non conosce.",
+        "newer_version": "Questo backup viene da una versione più recente di Forgecy. Aggiorna Forgecy prima di ripristinarlo."
+      },
+      "confirmLabel": "Per confermare, digita il nome dell’agenzia: {name}",
+      "confirmMismatch": "Il nome non corrisponde.",
+      "submit": "Ripristina questo backup",
+      "queued": "Ripristino avviato. La pagina ne segue l’avanzamento.",
+      "busy": "C’è già un backup o un ripristino in corso: aspetta che finisca.",
+      "notFound": "Backup non trovato.",
+      "status": {
+        "queued": "Ripristino di {backup} in coda, chiesto da {name} il {date}. In attesa del worker…",
+        "running": "Ripristino di {backup} in corso, avviato da {name} il {date}. Le altre persone vedono «Ripristino in corso» finché non finisce.",
+        "preRestore": "Backup dello stato precedente: {backup}",
+        "completed": "Ripristino di {backup} completato il {date}.",
+        "restart": "Riavvia i servizi perché ogni parte legga i dati ripristinati, poi accedi di nuovo:",
+        "failed": "Ripristino di {backup} non riuscito il {date}: {error}",
+        "failedHint": "Se il database è stato sostituito in parte, ripristina dall’elenco il backup dello stato precedente."
+      },
+      "upload": "Per ripristinare un file creato altrove, copialo nella cartella data/backups del server: compare così nell’elenco.",
+      "maintenance": {
+        "title": "Ripristino in corso",
+        "body": "Un utente Admin sta ripristinando un backup. Forgecy torna disponibile quando finisce; dovrai accedere di nuovo.",
+        "since": "Avviato il {date}."
+      }
     }
   }
 }

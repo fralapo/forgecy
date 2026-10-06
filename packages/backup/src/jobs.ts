@@ -3,6 +3,7 @@ import {
   appSettings,
   eq,
   gte,
+  inArray,
   jobs,
   ne,
   migrationStatus,
@@ -10,9 +11,19 @@ import {
   sql,
   type Database,
 } from "@forgecy/db";
-import { defineJob, enqueueJob, handle, type JobHandlers, type JobQueues } from "@forgecy/jobs";
+import { applyMigrations } from "@forgecy/db/migrator";
+import {
+  defineJob,
+  enqueueJob,
+  errorMessage,
+  handle,
+  UnrecoverableError,
+  type JobHandlers,
+  type JobQueues,
+} from "@forgecy/jobs";
 import { z } from "zod";
-import { createBackupArchive, pgDumpTo, pruneExpiredBackups } from "./archive";
+import { createBackupArchive, isBackupName, pgDumpTo, pruneExpiredBackups } from "./archive";
+import { psqlLoadInto, readRestoreStatus, restoreArchive, writeRestoreStatus } from "./restore";
 
 /** Backup started from Settings › Backup (manual) or by the worker every night. */
 export const systemBackupJob = defineJob({
@@ -31,32 +42,117 @@ export interface BackupEnv {
   appVersion?: string | null;
 }
 
+/** Restore started from Settings › Backup, after validation and the typed confirmation. */
+export const systemRestoreJob = defineJob({
+  kind: "system.restore",
+  queue: "default",
+  payload: z.object({
+    backup: z.string().refine(isBackupName),
+    requestedBy: z.string().max(200),
+  }),
+});
+
+const ACTIVE_JOB_STATUSES = ["queued", "running", "retrying"] as const;
+
 export function backupHandlers(env: BackupEnv): JobHandlers {
-  return handle(systemBackupJob, async (payload, ctx) => {
-    await ctx.progress(5);
-    const migrations = await migrationStatus(ctx.db).catch(() => null);
-    const file = await createBackupArchive({
-      dataDir: env.dataDir,
-      mediaDir: env.mediaDir,
-      dump: pgDumpTo(env.databaseUrl),
-      kind: payload.kind,
-      includeMedia: payload.includeMedia,
-      createdBy: ctx.row.createdBy,
-      appVersion: env.appVersion ?? null,
-      lastMigration: migrations?.lastApplied ?? null,
-    });
-    await ctx.progress(90);
-    const pruned = await pruneExpiredBackups(env.dataDir);
-    await recordAuditEvent(ctx.db, {
-      actor: "system",
-      action: "backup_created",
-      entity: "backup",
-      entityId: file.name,
-      meta: { kind: payload.kind, sizeBytes: file.sizeBytes, media: file.media, pruned },
-    });
-    await ctx.progress(100);
-    return { name: file.name, sizeBytes: file.sizeBytes, pruned };
-  });
+  return {
+    ...handle(systemBackupJob, async (payload, ctx) => {
+      await ctx.progress(5);
+      const migrations = await migrationStatus(ctx.db).catch(() => null);
+      const file = await createBackupArchive({
+        dataDir: env.dataDir,
+        mediaDir: env.mediaDir,
+        dump: pgDumpTo(env.databaseUrl),
+        kind: payload.kind,
+        includeMedia: payload.includeMedia,
+        createdBy: ctx.row.createdBy,
+        appVersion: env.appVersion ?? null,
+        lastMigration: migrations?.lastApplied ?? null,
+      });
+      await ctx.progress(90);
+      const pruned = await pruneExpiredBackups(env.dataDir);
+      await recordAuditEvent(ctx.db, {
+        actor: "system",
+        action: "backup_created",
+        entity: "backup",
+        entityId: file.name,
+        meta: { kind: payload.kind, sizeBytes: file.sizeBytes, media: file.media, pruned },
+      });
+      await ctx.progress(100);
+      return { name: file.name, sizeBytes: file.sizeBytes, pruned };
+    }),
+    ...handle(systemRestoreJob, async (payload, ctx) => {
+      const started = await readRestoreStatus(env.dataDir);
+      const base = {
+        backup: payload.backup,
+        requestedBy: payload.requestedBy,
+        requestedAt: started?.requestedAt ?? new Date().toISOString(),
+      };
+      let preRestoreBackup: string | undefined;
+      try {
+        await writeRestoreStatus(env.dataDir, { ...base, state: "running" });
+        await ctx.progress(5);
+        // Safe default (spec): the current state is saved before anything is replaced.
+        const migrations = await migrationStatus(ctx.db).catch(() => null);
+        const pre = await createBackupArchive({
+          dataDir: env.dataDir,
+          mediaDir: env.mediaDir,
+          dump: pgDumpTo(env.databaseUrl),
+          kind: "pre_restore",
+          includeMedia: true,
+          createdBy: ctx.row.createdBy,
+          appVersion: env.appVersion ?? null,
+          lastMigration: migrations?.lastApplied ?? null,
+        });
+        preRestoreBackup = pre.name;
+        await writeRestoreStatus(env.dataDir, { ...base, state: "running", preRestoreBackup });
+        await ctx.progress(40);
+        // From here the jobs table is the backup's: this job's row is gone.
+        const { media } = await restoreArchive({
+          dataDir: env.dataDir,
+          mediaDir: env.mediaDir,
+          name: payload.backup,
+          load: psqlLoadInto(env.databaseUrl),
+        });
+        await applyMigrations(env.databaseUrl);
+        // Jobs that were active when the backup was made are not in the queue any more.
+        const cancelled = await ctx.db
+          .update(jobs)
+          .set({ status: "cancelled", endedAt: new Date() })
+          .where(inArray(jobs.status, [...ACTIVE_JOB_STATUSES]))
+          .returning({ id: jobs.id });
+        await recordAuditEvent(ctx.db, {
+          actor: "system",
+          action: "backup_restored",
+          entity: "backup",
+          entityId: payload.backup,
+          meta: {
+            requestedBy: payload.requestedBy,
+            preRestoreBackup,
+            media,
+            cancelledJobs: cancelled.length,
+          },
+        });
+        await writeRestoreStatus(env.dataDir, {
+          ...base,
+          state: "completed",
+          preRestoreBackup,
+          finishedAt: new Date().toISOString(),
+        });
+        return { backup: payload.backup, preRestoreBackup, media };
+      } catch (err) {
+        await writeRestoreStatus(env.dataDir, {
+          ...base,
+          state: "failed",
+          ...(preRestoreBackup ? { preRestoreBackup } : {}),
+          finishedAt: new Date().toISOString(),
+          error: errorMessage(err),
+        }).catch(() => undefined);
+        // Never retried on its own: a half restore needs a person to look at it.
+        throw new UnrecoverableError(errorMessage(err));
+      }
+    }),
+  };
 }
 
 export const NIGHTLY_SETTING_KEY = "backup.nightly";

@@ -1,0 +1,139 @@
+/**
+ * Restore from a backup archive (spec: Flow K). Validation reads only the manifest;
+ * the restore itself replaces the database and copies the media files back. Because
+ * the jobs table is replaced too, progress is kept in `data/backups/restore-status.json`.
+ */
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, join, resolve } from "node:path";
+import { appSettings, eq, type Database } from "@forgecy/db";
+import { BACKUP_FORMAT, backupPath, backupsDir, runTool, type BackupManifest } from "./archive";
+
+export type RestoreProblem = "unreadable" | "format" | "newer_version";
+
+export interface BackupInspection {
+  name: string;
+  manifest: BackupManifest | null;
+  problems: RestoreProblem[];
+  /** Migrations this version will apply after the restore. */
+  migrationsToApply: number;
+}
+
+/**
+ * Checks a backup before restoring it: readable manifest, known format, and not made by
+ * a newer Forgecy (its last migration must be one this version ships).
+ */
+export async function inspectBackup(
+  dataDir: string,
+  name: string,
+  shipped: readonly { tag: string }[],
+): Promise<BackupInspection> {
+  const file = backupPath(dataDir, name);
+  const work = await mkdtemp(join(tmpdir(), "forgecy-inspect-"));
+  try {
+    let manifest: BackupManifest;
+    try {
+      await runTool("tar", ["-xzf", file, "-C", work, "manifest.json"]);
+      manifest = JSON.parse(await readFile(join(work, "manifest.json"), "utf8")) as BackupManifest;
+    } catch {
+      return { name, manifest: null, problems: ["unreadable"], migrationsToApply: 0 };
+    }
+    const problems: RestoreProblem[] = [];
+    if (manifest.format !== BACKUP_FORMAT) problems.push("format");
+    const index = manifest.lastMigration
+      ? shipped.findIndex((m) => m.tag === manifest.lastMigration)
+      : -1;
+    if (manifest.lastMigration && index === -1) problems.push("newer_version");
+    // Archives from older CLIs carry no migration: everything is checked again after the restore.
+    const migrationsToApply = index === -1 ? 0 : shipped.length - 1 - index;
+    return { name, manifest, problems, migrationsToApply };
+  } finally {
+    await rm(work, { recursive: true, force: true });
+  }
+}
+
+/** Loads a SQL file into the database at `databaseUrl` with the local `psql`. */
+export function psqlLoadInto(databaseUrl: string): (file: string) => Promise<void> {
+  return (file) => runTool("psql", ["-v", "ON_ERROR_STOP=1", "-q", "-f", file, databaseUrl]);
+}
+
+export async function restoreArchive(opts: {
+  dataDir: string;
+  mediaDir: string;
+  name: string;
+  load: (sqlFile: string) => Promise<void>;
+}): Promise<{ media: boolean }> {
+  const file = backupPath(opts.dataDir, opts.name);
+  const work = await mkdtemp(join(tmpdir(), "forgecy-restore-"));
+  try {
+    await runTool("tar", ["-xzf", file, "-C", work]);
+    const manifest = JSON.parse(
+      await readFile(join(work, "manifest.json"), "utf8"),
+    ) as BackupManifest;
+    if (manifest.format !== BACKUP_FORMAT)
+      throw new Error(`Unsupported backup format ${manifest.format}`);
+    await opts.load(join(work, "db.sql"));
+    const mediaDir = resolve(opts.mediaDir);
+    const extracted = join(work, basename(mediaDir));
+    const media = manifest.media && existsSync(extracted);
+    if (media) {
+      await mkdir(mediaDir, { recursive: true });
+      await runTool("cp", ["-a", `${extracted}/.`, mediaDir]);
+    }
+    return { media };
+  } finally {
+    await rm(work, { recursive: true, force: true });
+  }
+}
+
+export type RestoreState = "queued" | "running" | "completed" | "failed";
+
+export interface RestoreStatus {
+  state: RestoreState;
+  backup: string;
+  /** Name of the person who started it: the users table may change with the restore. */
+  requestedBy: string;
+  requestedAt: string;
+  updatedAt?: string;
+  preRestoreBackup?: string;
+  finishedAt?: string;
+  error?: string;
+}
+
+const statusFile = (dataDir: string) => join(backupsDir(dataDir), "restore-status.json");
+
+export async function readRestoreStatus(dataDir: string): Promise<RestoreStatus | null> {
+  try {
+    return JSON.parse(await readFile(statusFile(dataDir), "utf8")) as RestoreStatus;
+  } catch {
+    return null;
+  }
+}
+
+export async function writeRestoreStatus(dataDir: string, status: RestoreStatus): Promise<void> {
+  await mkdir(backupsDir(dataDir), { recursive: true });
+  const value = { ...status, updatedAt: new Date().toISOString() };
+  await writeFile(statusFile(dataDir), JSON.stringify(value, null, 2));
+}
+
+/** Fallback when no agency name was ever saved. */
+export const DEFAULT_AGENCY_NAME = "Forgecy";
+
+/** The name the Admin types to confirm a restore. */
+export async function agencyName(db: Pick<Database, "select">): Promise<string> {
+  const [row] = await db
+    .select({ value: appSettings.value })
+    .from(appSettings)
+    .where(eq(appSettings.key, "agency"));
+  const name = (row?.value as { name?: unknown } | undefined)?.name;
+  return typeof name === "string" && name.trim() ? name.trim() : DEFAULT_AGENCY_NAME;
+}
+
+/** A restore still in progress, unless it has been silent too long (the worker died). */
+export function restoreInProgress(status: RestoreStatus | null, now: Date = new Date()): boolean {
+  if (!status || (status.state !== "queued" && status.state !== "running")) return false;
+  return now.getTime() - new Date(status.updatedAt ?? status.requestedAt).getTime() < STALE_MS;
+}
+
+const STALE_MS = 2 * 60 * 60 * 1000;
