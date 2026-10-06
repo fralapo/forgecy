@@ -299,8 +299,10 @@ export default async function AgentPage({
               <tbody>
                 {runs.map((r) => (
                   <tr key={r.id} className="border-b border-subtle align-top last:border-0">
-                    <td className="whitespace-nowrap px-4 py-3 text-fg">
-                      {format.date(r.startedAt, "dateTime")}
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <Link href={`/agents/runs/${r.id}` as Route} className="text-link">
+                        {format.date(r.startedAt, "dateTime")}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-fg">{taskLabel(r.kind)}</td>
                     <td className="px-4 py-3 text-fg">{r.clientName ?? t("runs.noClient")}</td>
