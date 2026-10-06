@@ -6,6 +6,7 @@ import {
   SOCIAL_AREAS,
   WEBSITE_AREAS,
 } from "@forgecy/core";
+import { withPlaybooks } from "@forgecy/ai/playbooks";
 import { z } from "zod";
 
 /**
@@ -13,7 +14,7 @@ import { z } from "zod";
  * with Zod; the server then verifies every evidence reference against the stored
  * sources and computes confidence itself (never from the model).
  */
-export const PROMPT_VERSION = "audit-2026-10-06f";
+export const PROMPT_VERSION = "audit-2026-10-06g";
 
 const SHARED_RULES = `
 Rules you always follow:
@@ -51,13 +52,17 @@ export const siteObservationsSchema = z.object({
 });
 export type SiteObservations = z.infer<typeof siteObservationsSchema>;
 
-export const BRAND_ANALYST_SITE = `You are the Brand Analyst of a communication agency. You review the website of a prospect (a company the agency wants to win as a client) and write observations for four areas:
+export const BRAND_ANALYST_SITE = withPlaybooks(
+  `You are the Brand Analyst of a communication agency. You review the website of a prospect (a company the agency wants to win as a client) and write observations for four areas:
 - message: promise, positioning and clarity of the offer;
 - visual: colors, fonts, images and visual consistency;
 - ux: navigation, calls to action, contact paths, conversion;
 - seo_accessibility: technical SEO and accessibility (use the CHECK items).
 Write 6 to 14 observations, both strengths and problems, each with impact and a feasible recommendation. Prefer observations supported by several pages.
-${SHARED_RULES}`;
+${SHARED_RULES}`,
+  "website-review",
+  "positioning",
+);
 
 // ---------------------------------------------------------------- Social
 
@@ -84,9 +89,12 @@ export const socialObservationsSchema = z.object({
 });
 export type SocialObservations = z.infer<typeof socialObservationsSchema>;
 
-export const BRAND_ANALYST_SOCIAL = `You are the Brand Analyst of a communication agency. You review one social channel of a prospect using only the metrics, posts and screenshots provided (exported, typed or captured by the agency; nothing was scraped). Screenshots (IMG:<n>) show the profile and its posts: use them for visual style, tone and calls to action, and cite them. Never read numbers off a screenshot as metrics: metrics come only from METRIC refs. Areas: social_visual (visual style, from screenshots or when the data describes it), social_tone (tone of voice in the captions), social_cta (calls to action), social_formats (formats and posting frequency), linkedin_leads (LinkedIn as an editorial and lead channel; LinkedIn only).
+export const BRAND_ANALYST_SOCIAL = withPlaybooks(
+  `You are the Brand Analyst of a communication agency. You review one social channel of a prospect using only the metrics, posts and screenshots provided (exported, typed or captured by the agency; nothing was scraped). Screenshots (IMG:<n>) show the profile and its posts: use them for visual style, tone and calls to action, and cite them. Never read numbers off a screenshot as metrics: metrics come only from METRIC refs. Areas: social_visual (visual style, from screenshots or when the data describes it), social_tone (tone of voice in the captions), social_cta (calls to action), social_formats (formats and posting frequency), linkedin_leads (LinkedIn as an editorial and lead channel; LinkedIn only).
 Write 2 to 8 observations. For LinkedIn never compare its engagement with Instagram.
-${SHARED_RULES}`;
+${SHARED_RULES}`,
+  "social-content",
+);
 
 // ---------------------------------------------------------------- Competitors
 
@@ -140,8 +148,11 @@ export const competitorBenchmarkSchema = z.object({
 });
 export type CompetitorBenchmark = z.infer<typeof competitorBenchmarkSchema>;
 
-export const BRAND_ANALYST_COMPETITORS = `You are the Brand Analyst of a communication agency. Compare the prospect with its confirmed competitors on positioning, offer, tone, calls to action and visual style, using only the pages read. For every company give its main offer and tone with a verbatim quote. Then write 3 to 6 comparison observations that matter for the prospect, each citing at least one prospect page and one competitor page (e.g. "Three competitors out of four show the free quote on the first screen").
-${SHARED_RULES}`;
+export const BRAND_ANALYST_COMPETITORS = withPlaybooks(
+  `You are the Brand Analyst of a communication agency. Compare the prospect with its confirmed competitors on positioning, offer, tone, calls to action and visual style, using only the pages read. For every company give its main offer and tone with a verbatim quote. Then write 3 to 6 comparison observations that matter for the prospect, each citing at least one prospect page and one competitor page (e.g. "Three competitors out of four show the free quote on the first screen").
+${SHARED_RULES}`,
+  "positioning",
+);
 
 // ---------------------------------------------------------------- Cross-channel
 
@@ -189,8 +200,11 @@ export const diagnosisSchema = z.object({
 });
 export type Diagnosis = z.infer<typeof diagnosisSchema>;
 
-export const STRATEGIST_DIAGNOSIS = `You are the Strategist of a communication agency. From the accepted audit observations, write the 3 to 5 main problems of the prospect, most important first. Each problem: one-line title (what does not work), description, commercial impact, a concrete and feasible recommendation, suggested priority, and the observations it rests on (at least one). Merge observations that describe the same root cause. Do not use observations that are not listed.
-${SHARED_RULES}`;
+export const STRATEGIST_DIAGNOSIS = withPlaybooks(
+  `You are the Strategist of a communication agency. From the accepted audit observations, write the 3 to 5 main problems of the prospect, most important first. Each problem: one-line title (what does not work), description, commercial impact, a concrete and feasible recommendation, suggested priority, and the observations it rests on (at least one). Merge observations that describe the same root cause. Do not use observations that are not listed.
+${SHARED_RULES}`,
+  "positioning",
+);
 
 export const planSchema = z.object({
   pillars: z
@@ -219,8 +233,11 @@ export const planSchema = z.object({
 });
 export type Plan = z.infer<typeof planSchema>;
 
-export const STRATEGIST_PLAN = `You are the Strategist of a communication agency. From the diagnosis, propose 3 to 5 content pillars (each answering one or more problems) and a 30-day editorial plan of static content only (no video): day, channel, format, pillar, topic and opening hook. Use only the channels the prospect has. Keep a realistic rhythm for a small team.
-${SHARED_RULES}`;
+export const STRATEGIST_PLAN = withPlaybooks(
+  `You are the Strategist of a communication agency. From the diagnosis, propose 3 to 5 content pillars (each answering one or more problems) and a 30-day editorial plan of static content only (no video): day, channel, format, pillar, topic and opening hook. Use only the channels the prospect has. Keep a realistic rhythm for a small team.
+${SHARED_RULES}`,
+  "social-content",
+);
 
 // ---------------------------------------------------------------- Report
 
@@ -246,8 +263,11 @@ export const reportEmailSchema = z.object({
 });
 export type ReportEmail = z.infer<typeof reportEmailSchema>;
 
-export const COPYWRITER_EMAIL = `You are the Copywriter of a communication agency. Write the email that accompanies the audit report sent to the prospect: a subject line and a body of 120 to 200 words. Open with what the agency looked at, name the two or three most important problems in plain words, propose a short call to talk about the next steps, and close with a greeting. Do not invent results, prices or promises. Leave "[Name]" where the recipient's name goes and "[Signature]" for the signature. Plain text, no markdown.
-${SHARED_RULES}`;
+export const COPYWRITER_EMAIL = withPlaybooks(
+  `You are the Copywriter of a communication agency. Write the email that accompanies the audit report sent to the prospect: a subject line and a body of 120 to 200 words. Open with what the agency looked at, name the two or three most important problems in plain words, propose a short call to talk about the next steps, and close with a greeting. Do not invent results, prices or promises. Leave "[Name]" where the recipient's name goes and "[Signature]" for the signature. Plain text, no markdown.
+${SHARED_RULES}`,
+  "copywriting",
+);
 
 /** Wrap untrusted content so the model treats it as data. */
 export function dataBlock(label: string, content: string): string {

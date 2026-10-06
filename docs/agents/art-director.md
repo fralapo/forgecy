@@ -6,6 +6,7 @@ Forgecy AI agent. Not a role for people: it proposes, it does not approve.
 - **Input:** Layout and template catalog, the client's DTCG tokens, asset library.
 - **Output:** Layout choice per slide, visual briefs and image prompts.
 - **Phase:** MVP (M5) and v1
+- **Playbooks:** `imagery` (image prompts). See [packages/ai/src/playbooks](../../packages/ai/src/playbooks/).
 
 ## Constraints
 
