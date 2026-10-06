@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { ForgecyError } from "@forgecy/core";
+import { localizedError } from "@forgecy/i18n";
 import { unzipSync } from "fflate";
 import {
   MANIFEST_FILE,
@@ -33,7 +33,7 @@ export async function readTemplateDir(dir: string): Promise<Map<string, Uint8Arr
         const bytes = new Uint8Array(await readFile(path.join(dir, r)));
         total += bytes.length;
         if (files.size >= MAX_PACKAGE_FILES || total > MAX_PACKAGE_BYTES)
-          throw new ForgecyError("validation", `Package too large: ${dir}`);
+          throw localizedError("validation", "templates.errors.packageTooLarge", { dir });
         files.set(r, bytes);
       }
     }
@@ -47,7 +47,8 @@ export async function readTemplateDir(dir: string): Promise<Map<string, Uint8Arr
  * stripped, so both "zip of the folder" and "zip of its contents" work.
  */
 export function unzipTemplatePackage(zip: Uint8Array): Map<string, Uint8Array> {
-  if (zip.length > MAX_PACKAGE_BYTES) throw new ForgecyError("validation", "ZIP over 50 MB");
+  if (zip.length > MAX_PACKAGE_BYTES)
+    throw localizedError("validation", "templates.errors.zipTooLarge");
   let total = 0;
   let count = 0;
   const raw = unzipSync(zip, {
@@ -56,10 +57,10 @@ export function unzipTemplatePackage(zip: Uint8Array): Map<string, Uint8Array> {
       count++;
       total += f.originalSize;
       if (count > MAX_PACKAGE_FILES || total > MAX_PACKAGE_BYTES)
-        throw new ForgecyError("validation", "Package too large once extracted");
+        throw localizedError("validation", "templates.errors.extractedTooLarge");
       const parts = f.name.split("/");
       if (f.name.startsWith("/") || parts.includes(".."))
-        throw new ForgecyError("validation", `Path not allowed in the ZIP: ${f.name}`);
+        throw localizedError("validation", "templates.errors.zipPathNotAllowed", { name: f.name });
       return !parts.some((s) => s.startsWith(".") || s === "__MACOSX");
     },
   });
@@ -73,7 +74,7 @@ export function unzipTemplatePackage(zip: Uint8Array): Map<string, Uint8Array> {
   for (const name of names.sort()) {
     const rel = name.slice(strip.length);
     if (!isSafePackagePath(name) || !isSafePackagePath(rel))
-      throw new ForgecyError("validation", `Path not allowed in the ZIP: ${name}`);
+      throw localizedError("validation", "templates.errors.zipPathNotAllowed", { name });
     files.set(rel, raw[name]!);
   }
   return files;

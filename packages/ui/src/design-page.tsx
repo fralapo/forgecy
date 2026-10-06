@@ -1,9 +1,10 @@
 // Internal /design page: palette with computed contrasts, Brand Guard pairs, type scale, components.
 // Server-component safe: no hooks, no event handlers, no "use client".
+// Framework-agnostic: every text comes from the `texts` prop, built by the app in the user's language.
 import { Download, Eye, GitMerge, Lock } from "lucide-react";
 import type { ReactNode } from "react";
 import tokensJson from "../tokens/forgecy.tokens.json";
-import { AiProposal } from "./ai-proposal";
+import { AiProposal, type AiProposalTexts } from "./ai-proposal";
 import { Badge } from "./badge";
 import { Button } from "./button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./card";
@@ -15,15 +16,97 @@ import {
   checkContrast,
   evaluateBrandGuard,
   flattenTokens,
-  formatRatio,
   resolveValue,
   tokenCssVar,
   tokenHex,
+  type ContrastPair,
   type ContrastResult,
   type TokenTree,
 } from "./tokens";
 
 const tree = tokensJson as unknown as TokenTree;
+
+// Literal class names so Tailwind can detect them when scanning this package.
+const TYPE_SCALE = [
+  { token: "heading-xl", className: "font-display text-heading-xl" },
+  { token: "heading-lg", className: "font-display text-heading-lg" },
+  { token: "heading-md", className: "font-display text-heading-md" },
+  { token: "heading-sm", className: "font-body text-heading-sm" },
+  { token: "body-lg", className: "font-body text-body-lg" },
+  { token: "body-md", className: "font-body text-body-md" },
+  { token: "body-sm", className: "font-body text-body-sm" },
+  { token: "label", className: "font-body text-label uppercase" },
+  { token: "mono-md", className: "font-mono text-mono-md" },
+] as const;
+
+export type DesignTypeToken = (typeof TYPE_SCALE)[number]["token"];
+
+/** Every text of the design page, in the viewer's language. */
+export interface DesignPageTexts {
+  kicker: string;
+  title: string;
+  /** Intro paragraph (may contain markup such as the tokens file name). */
+  intro: ReactNode;
+  guardAllPass: (count: number) => string;
+  guardSomeFail: (count: number) => string;
+  /** A contrast ratio, e.g. "4.8:1". */
+  ratio: (value: number) => string;
+  usage: { text: string; largeText: string; decorative: string };
+  colors: { title: string; description: string; onWhite: string; onPorcelain: string };
+  /** Translated name and role of a color token (`color.forge-blue`); undefined keeps the token's own. */
+  swatch: (path: string) => { name?: string; role?: string };
+  brandGuard: {
+    title: string;
+    description: string;
+    lightCaption: string;
+    darkCaption: string;
+    pair: string;
+    colors: string;
+    contrast: string;
+    minimum: string;
+    result: string;
+    passed: string;
+    failed: string;
+  };
+  /** Name of a Brand Guard pair; falls back to the pair's own label when undefined. */
+  pairLabel: (pair: ContrastPair) => string | undefined;
+  typography: {
+    title: string;
+    description: string;
+    samples: Record<DesignTypeToken, string>;
+  };
+  components: { title: string; description: string };
+  darkTheme: { title: string; description: string };
+  showcase: {
+    approve: string;
+    compare: string;
+    undo: string;
+    deleteDraft: string;
+    export: string;
+    publishBlocked: string;
+    badge: {
+      draft: string;
+      inReview: string;
+      approved: string;
+      toCheck: string;
+      blocked: string;
+      conflict: string;
+      new: string;
+    };
+    form: {
+      title: string;
+      description: string;
+      name: string;
+      namePlaceholder: string;
+      website: string;
+      websiteError: string;
+      create: string;
+      cancel: string;
+    };
+    proposal: { title: string; body: string; wcagSource: string };
+  };
+  aiProposal: AiProposalTexts;
+}
 
 interface Swatch {
   path: string;
@@ -35,7 +118,7 @@ interface Swatch {
   onPorcelain: number;
 }
 
-function paletteSwatches(): Swatch[] {
+function paletteSwatches(texts: DesignPageTexts): Swatch[] {
   const tokens = flattenTokens(tree);
   const white = tokenHex(tokens, "color.white");
   const porcelain = tokenHex(tokens, "color.porcelain");
@@ -44,10 +127,11 @@ function paletteSwatches(): Swatch[] {
     .map((t) => {
       const hex = tokenHex(tokens, t.path);
       const [name = t.path, role = ""] = (t.description ?? t.path).split(/:\s*/, 2);
+      const translated = texts.swatch(t.path);
       return {
         path: t.path,
-        name,
-        role,
+        name: translated.name ?? name,
+        role: translated.role ?? role,
         hex,
         cssVar: tokenCssVar(t.path),
         onWhite: checkContrast(hex, white),
@@ -57,48 +141,11 @@ function paletteSwatches(): Swatch[] {
 }
 
 /** Allowed use derived from the computed ratio (never from a hardcoded table). */
-function usage(ratio: number) {
-  if (ratio >= WCAG.text) return <Badge variant="success">Text</Badge>;
-  if (ratio >= WCAG.nonText) return <Badge variant="warning">Large text and controls</Badge>;
-  return <Badge variant="neutral">Decorative only</Badge>;
+function usage(ratio: number, texts: DesignPageTexts["usage"]) {
+  if (ratio >= WCAG.text) return <Badge variant="success">{texts.text}</Badge>;
+  if (ratio >= WCAG.nonText) return <Badge variant="warning">{texts.largeText}</Badge>;
+  return <Badge variant="neutral">{texts.decorative}</Badge>;
 }
-
-// Literal class names so Tailwind can detect them when scanning this package.
-const TYPE_SCALE = [
-  {
-    token: "heading-xl",
-    className: "font-display text-heading-xl",
-    sample: "A brand system for the agency",
-  },
-  { token: "heading-lg", className: "font-display text-heading-lg", sample: "Client audit" },
-  {
-    token: "heading-md",
-    className: "font-display text-heading-md",
-    sample: "Content strategy",
-  },
-  { token: "heading-sm", className: "font-body text-heading-sm", sample: "Version in review" },
-  {
-    token: "body-lg",
-    className: "font-body text-body-lg",
-    sample: "Every piece of content comes from a process with rules, versions and checks.",
-  },
-  {
-    token: "body-md",
-    className: "font-body text-body-md",
-    sample: "People decide, the AI proposes. Every data point has its source.",
-  },
-  {
-    token: "body-sm",
-    className: "font-body text-body-sm",
-    sample: "Last edited 5 October 2026 at 14:32.",
-  },
-  { token: "label", className: "font-body text-label uppercase", sample: "Section label" },
-  {
-    token: "mono-md",
-    className: "font-mono text-mono-md",
-    sample: "job_7f3a2c · skills/brand-audit",
-  },
-] as const;
 
 function typeSpec(token: string): string {
   const v = resolveValue(flattenTokens(tree), `font.scale.${token}`) as {
@@ -134,7 +181,16 @@ function Section({
   );
 }
 
-function GuardTable({ caption, rows }: { caption: string; rows: ContrastResult[] }) {
+function GuardTable({
+  caption,
+  rows,
+  texts,
+}: {
+  caption: string;
+  rows: ContrastResult[];
+  texts: DesignPageTexts;
+}) {
+  const t = texts.brandGuard;
   return (
     <div className="overflow-x-auto rounded-lg border border-subtle bg-surface">
       <table className="w-full border-collapse text-left text-body-sm">
@@ -144,19 +200,19 @@ function GuardTable({ caption, rows }: { caption: string; rows: ContrastResult[]
         <thead>
           <tr className="border-y border-subtle">
             <th scope="col" className="px-4 py-2 font-medium">
-              Pair
+              {t.pair}
             </th>
             <th scope="col" className="px-4 py-2 font-medium">
-              Colors
+              {t.colors}
             </th>
             <th scope="col" className="px-4 py-2 font-medium">
-              Contrast
+              {t.contrast}
             </th>
             <th scope="col" className="px-4 py-2 font-medium">
-              Minimum
+              {t.minimum}
             </th>
             <th scope="col" className="px-4 py-2 font-medium">
-              Result
+              {t.result}
             </th>
           </tr>
         </thead>
@@ -166,21 +222,21 @@ function GuardTable({ caption, rows }: { caption: string; rows: ContrastResult[]
               key={`${r.theme}-${r.fg}-${r.bg}`}
               className="border-b border-subtle last:border-b-0"
             >
-              <td className="px-4 py-2">{r.label}</td>
+              <td className="px-4 py-2">{texts.pairLabel(r) ?? r.label}</td>
               <td className="px-4 py-2 font-mono text-mono-md">
                 {r.fgHex} / {r.bgHex}
               </td>
               <td className="px-4 py-2" data-numeric>
-                {formatRatio(r.ratio)}
+                {texts.ratio(r.ratio)}
               </td>
               <td className="px-4 py-2" data-numeric>
-                {formatRatio(r.min)}
+                {texts.ratio(r.min)}
               </td>
               <td className="px-4 py-2">
                 {r.pass ? (
-                  <Badge variant="success">Passed</Badge>
+                  <Badge variant="success">{t.passed}</Badge>
                 ) : (
-                  <Badge variant="error">Failed</Badge>
+                  <Badge variant="error">{t.failed}</Badge>
                 )}
               </td>
             </tr>
@@ -191,51 +247,52 @@ function GuardTable({ caption, rows }: { caption: string; rows: ContrastResult[]
   );
 }
 
-function ComponentShowcase({ idPrefix }: { idPrefix: string }) {
+function ComponentShowcase({ idPrefix, texts }: { idPrefix: string; texts: DesignPageTexts }) {
+  const t = texts.showcase;
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-center gap-3">
-        <Button variant="primary">Approve version</Button>
-        <Button variant="secondary">Open comparison</Button>
-        <Button variant="ghost">Undo change</Button>
-        <Button variant="danger">Delete draft</Button>
-        <Button variant="secondary" size="icon" aria-label="Export" title="Export">
+        <Button variant="primary">{t.approve}</Button>
+        <Button variant="secondary">{t.compare}</Button>
+        <Button variant="ghost">{t.undo}</Button>
+        <Button variant="danger">{t.deleteDraft}</Button>
+        <Button variant="secondary" size="icon" aria-label={t.export} title={t.export}>
           <Download aria-hidden="true" strokeWidth={1.5} />
         </Button>
         <Button variant="primary" disabled>
-          Publish (blocked)
+          {t.publishBlocked}
         </Button>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Badge variant="neutral">Draft</Badge>
+        <Badge variant="neutral">{t.badge.draft}</Badge>
         <Badge variant="info" icon={Eye}>
-          In review
+          {t.badge.inReview}
         </Badge>
-        <Badge variant="success">Approved</Badge>
-        <Badge variant="warning">To check</Badge>
+        <Badge variant="success">{t.badge.approved}</Badge>
+        <Badge variant="warning">{t.badge.toCheck}</Badge>
         <Badge variant="error" icon={Lock}>
-          Blocked
+          {t.badge.blocked}
         </Badge>
         <Badge variant="error" icon={GitMerge}>
-          Conflict
+          {t.badge.conflict}
         </Badge>
-        <Badge variant="highlight">New</Badge>
+        <Badge variant="highlight">{t.badge.new}</Badge>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>New client</CardTitle>
-            <CardDescription>Fields marked with an asterisk are required.</CardDescription>
+            <CardTitle>{t.form.title}</CardTitle>
+            <CardDescription>{t.form.description}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor={`${idPrefix}-name`}>Client name *</Label>
-              <Input id={`${idPrefix}-name`} placeholder="E.g. Rossi Arredamenti" />
+              <Label htmlFor={`${idPrefix}-name`}>{t.form.name}</Label>
+              <Input id={`${idPrefix}-name`} placeholder={t.form.namePlaceholder} />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor={`${idPrefix}-site`}>Website</Label>
+              <Label htmlFor={`${idPrefix}-site`}>{t.form.website}</Label>
               <Input
                 id={`${idPrefix}-site`}
                 type="url"
@@ -244,28 +301,29 @@ function ComponentShowcase({ idPrefix }: { idPrefix: string }) {
                 defaultValue="rossi-arredamenti"
               />
               <p id={`${idPrefix}-site-error`} className="text-body-sm text-error">
-                Invalid address: enter a full URL, for example https://rossi.it.
+                {t.form.websiteError}
               </p>
             </div>
           </CardContent>
           <CardFooter>
-            <Button variant="primary">Create client</Button>
-            <Button variant="ghost">Cancel</Button>
+            <Button variant="primary">{t.form.create}</Button>
+            <Button variant="ghost">{t.form.cancel}</Button>
           </CardFooter>
         </Card>
 
         <AiProposal
-          title="Darken the link color"
+          title={t.proposal.title}
           agent="brand-guard/contrast"
           sources={[
             {
-              label: "WCAG 2.2, criterion 1.4.3",
+              label: t.proposal.wcagSource,
               href: "https://www.w3.org/TR/WCAG22/#contrast-minimum",
             },
             { label: "tokens/forgecy.tokens.json" },
           ]}
+          texts={texts.aiProposal}
         >
-          Links on porcelain reach 4.8:1. I propose using Forge Blue 700 for all blue text.
+          {t.proposal.body}
         </AiProposal>
       </div>
     </div>
@@ -274,37 +332,30 @@ function ComponentShowcase({ idPrefix }: { idPrefix: string }) {
 
 export interface DesignPageProps {
   className?: string;
+  texts: DesignPageTexts;
 }
 
-export function DesignPage({ className }: DesignPageProps) {
-  const swatches = paletteSwatches();
+export function DesignPage({ className, texts }: DesignPageProps) {
+  const swatches = paletteSwatches(texts);
   const guard = evaluateBrandGuard(tree);
   const failed = guard.filter((r) => !r.pass).length;
 
   return (
     <main className={cn("mx-auto flex max-w-6xl flex-col gap-12 px-6 py-12 text-fg", className)}>
       <header className="flex flex-col gap-4">
-        <p className="text-label uppercase text-fg-muted">Forgecy visual identity</p>
-        <h1 className="font-display text-heading-xl">Design system</h1>
-        <p className="max-w-prose text-body-lg text-fg-muted">
-          Colors, typography and components generated from{" "}
-          <code className="font-mono text-mono-md text-fg">tokens/forgecy.tokens.json</code>.
-          Contrast ratios are computed from the tokens according to WCAG 2.2.
-        </p>
+        <p className="text-label uppercase text-fg-muted">{texts.kicker}</p>
+        <h1 className="font-display text-heading-xl">{texts.title}</h1>
+        <p className="max-w-prose text-body-lg text-fg-muted">{texts.intro}</p>
         <div>
           {failed === 0 ? (
-            <Badge variant="success">Brand Guard: all {guard.length} pairs pass the check</Badge>
+            <Badge variant="success">{texts.guardAllPass(guard.length)}</Badge>
           ) : (
-            <Badge variant="error">Brand Guard: {failed} pairs fail the check</Badge>
+            <Badge variant="error">{texts.guardSomeFail(failed)}</Badge>
           )}
         </div>
       </header>
 
-      <Section
-        id="design-colors"
-        title="Colors"
-        description="Reference palette with the contrast computed on white and on porcelain."
-      >
+      <Section id="design-colors" title={texts.colors.title} description={texts.colors.description}>
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {swatches.map((s) => (
             <li
@@ -323,12 +374,12 @@ export function DesignPage({ className }: DesignPageProps) {
                   {s.hex} · {s.cssVar}
                 </p>
                 <dl className="grid grid-cols-[auto_auto_1fr] items-center gap-x-3 gap-y-2 text-body-sm">
-                  <dt className="text-fg-muted">White</dt>
-                  <dd data-numeric>{formatRatio(s.onWhite)}</dd>
-                  <dd>{usage(s.onWhite)}</dd>
-                  <dt className="text-fg-muted">Porcelain</dt>
-                  <dd data-numeric>{formatRatio(s.onPorcelain)}</dd>
-                  <dd>{usage(s.onPorcelain)}</dd>
+                  <dt className="text-fg-muted">{texts.colors.onWhite}</dt>
+                  <dd data-numeric>{texts.ratio(s.onWhite)}</dd>
+                  <dd>{usage(s.onWhite, texts.usage)}</dd>
+                  <dt className="text-fg-muted">{texts.colors.onPorcelain}</dt>
+                  <dd data-numeric>{texts.ratio(s.onPorcelain)}</dd>
+                  <dd>{usage(s.onPorcelain, texts.usage)}</dd>
                 </dl>
               </div>
             </li>
@@ -338,17 +389,25 @@ export function DesignPage({ className }: DesignPageProps) {
 
       <Section
         id="design-brand-guard"
-        title="Brand Guard"
-        description="Semantic token pairs checked on every token change, in the light and dark themes. A failure blocks the merge."
+        title={texts.brandGuard.title}
+        description={texts.brandGuard.description}
       >
-        <GuardTable caption="Light theme" rows={guard.filter((r) => r.theme === "light")} />
-        <GuardTable caption="Dark theme (v1)" rows={guard.filter((r) => r.theme === "dark")} />
+        <GuardTable
+          caption={texts.brandGuard.lightCaption}
+          rows={guard.filter((r) => r.theme === "light")}
+          texts={texts}
+        />
+        <GuardTable
+          caption={texts.brandGuard.darkCaption}
+          rows={guard.filter((r) => r.theme === "dark")}
+          texts={texts}
+        />
       </Section>
 
       <Section
         id="design-typography"
-        title="Typography"
-        description="Space Grotesk for headings, Inter for text and interface, JetBrains Mono for technical names."
+        title={texts.typography.title}
+        description={texts.typography.description}
       >
         <ul className="flex flex-col divide-y divide-subtle rounded-lg border border-subtle bg-surface">
           {TYPE_SCALE.map((t) => (
@@ -360,7 +419,7 @@ export function DesignPage({ className }: DesignPageProps) {
                 <code className="font-mono text-mono-md">{t.token}</code>
                 <span className="text-body-sm text-fg-muted">{typeSpec(t.token)}</span>
               </div>
-              <p className={t.className}>{t.sample}</p>
+              <p className={t.className}>{texts.typography.samples[t.token]}</p>
             </li>
           ))}
         </ul>
@@ -368,19 +427,19 @@ export function DesignPage({ className }: DesignPageProps) {
 
       <Section
         id="design-components"
-        title="Components"
-        description="shadcn/ui components customized only through tokens."
+        title={texts.components.title}
+        description={texts.components.description}
       >
-        <ComponentShowcase idPrefix="design-light" />
+        <ComponentShowcase idPrefix="design-light" texts={texts} />
       </Section>
 
       <Section
         id="design-dark-theme"
-        title="Dark theme (v1)"
-        description='The same components inside data-theme="dark": only the semantic tokens change.'
+        title={texts.darkTheme.title}
+        description={texts.darkTheme.description}
       >
         <div data-theme="dark" className="rounded-xl bg-app p-6 text-fg">
-          <ComponentShowcase idPrefix="design-dark" />
+          <ComponentShowcase idPrefix="design-dark" texts={texts} />
         </div>
       </Section>
     </main>

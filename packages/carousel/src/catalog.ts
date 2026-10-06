@@ -1,6 +1,7 @@
-import { type Actor, ForgecyError, assertCan } from "@forgecy/core";
+import { type Actor, assertCan } from "@forgecy/core";
 import { type Database, and, desc, eq, inArray, recordAuditEvent, templates } from "@forgecy/db";
 import { type StorageDriver, contentKey, sha256 } from "@forgecy/files";
+import { localizedError } from "@forgecy/i18n";
 import { type Zippable, zipSync } from "fflate";
 import { type TemplateSource, unzipTemplatePackage } from "./node";
 import { type TemplatePackage, packageFromFiles } from "./package";
@@ -14,6 +15,7 @@ import { type ValidationReport, validateTemplatePackage } from "./validate";
 export type TemplateRow = typeof templates.$inferSelect;
 export type TemplateStatus = "draft" | "in_review" | "published" | "archived";
 
+/** English labels (logs, scripts); the interface uses `templates.status.*`. */
 export const templateStatusLabels: Record<TemplateStatus, string> = {
   draft: "Draft",
   in_review: "In review",
@@ -85,7 +87,10 @@ export async function importTemplate(input: ImportTemplateInput): Promise<Import
   assertCan(actor, "templates.manage");
   const report = validateTemplatePackage(files);
   const m = report.manifest;
-  if (!m) throw new ForgecyError("validation", "Invalid template.json", { issues: report.issues });
+  if (!m)
+    throw localizedError("validation", "templates.errors.invalidManifest", undefined, {
+      issues: report.issues,
+    });
 
   const zip = packTemplateZip(files);
   const hash = sha256(zip);
@@ -97,10 +102,11 @@ export async function importTemplate(input: ImportTemplateInput): Promise<Import
     where: and(eq(templates.key, m.id), eq(templates.version, m.version)),
   });
   if (existing && existing.status !== "draft")
-    throw new ForgecyError(
-      "conflict",
-      `Version ${m.version} of “${m.name}” is ${templateStatusLabels[existing.status as TemplateStatus].toLowerCase()}: bump "version" in template.json.`,
-    );
+    throw localizedError("conflict", "templates.errors.versionLocked", {
+      version: m.version,
+      name: m.name,
+      status: existing.status,
+    });
 
   const validation: StoredValidation = {
     ok: report.ok,
@@ -181,18 +187,15 @@ export async function transitionTemplate(input: TransitionInput): Promise<Templa
   const { db, actor, id, to } = input;
   assertCan(actor, "templates.manage");
   const row = await db.query.templates.findFirst({ where: eq(templates.id, id) });
-  if (!row) throw new ForgecyError("not_found", "Template not found");
+  if (!row) throw localizedError("not_found", "templates.errors.notFound");
   const from = row.status as TemplateStatus;
   if (!TRANSITIONS[from]?.includes(to))
-    throw new ForgecyError(
-      "conflict",
-      `Cannot move from “${templateStatusLabels[from]}” to “${templateStatusLabels[to]}”`,
-    );
+    throw localizedError("conflict", "templates.errors.invalidTransition", { from, to });
   const notes = input.notes?.trim() ?? "";
   if ((to === "in_review" || (to === "published" && from !== "archived")) && notes.length < 3)
-    throw new ForgecyError("validation", "Describe what changes in this version");
+    throw localizedError("validation", "templates.errors.notesRequired");
   if ((to === "in_review" || to === "published") && !isPublishable(row))
-    throw new ForgecyError("validation", "The template has not passed validation");
+    throw localizedError("validation", "templates.errors.notValidated");
 
   const now = new Date();
   const set: Partial<typeof templates.$inferInsert> = { status: to };
@@ -241,7 +244,7 @@ export async function loadTemplatePackage(
   for await (const c of await storage.get(row.packageKey)) chunks.push(c as Uint8Array);
   const bytes = new Uint8Array(Buffer.concat(chunks));
   if (sha256(bytes) !== row.packageSha256)
-    throw new ForgecyError("conflict", `Template package altered: ${row.packageKey}`);
+    throw localizedError("conflict", "templates.errors.packageAltered", { key: row.packageKey });
   const pkg = packageFromFiles(unzipTemplatePackage(bytes));
   if (cache.size >= 32) cache.delete(cache.keys().next().value!);
   cache.set(row.packageSha256, pkg);

@@ -1,0 +1,203 @@
+{
+  "title": "Templates",
+  "description": "Catalog of templates in the canonical format (HTML, CSS and template.json). Previews are drawn by the same renderer as the export; content uses only published versions.",
+  "empty": "The catalog is empty. Import a template from the agency’s folder or from a ZIP.",
+  "kind": {
+    "carousel": "Carousel",
+    "report": "Report"
+  },
+  "origin": {
+    "system": "System",
+    "agency": "Agency"
+  },
+  "status": {
+    "draft": "Draft",
+    "in_review": "In review",
+    "published": "Published",
+    "archived": "Archived"
+  },
+  "format": {
+    "ig_4x5": "Instagram 4:5",
+    "linkedin_doc": "LinkedIn document",
+    "ig_1x1": "Instagram 1:1",
+    "stories_9x16": "Stories 9:16",
+    "fb_4x5": "Facebook 4:5",
+    "tiktok_photo": "TikTok photo",
+    "report_a4": "Report A4",
+    "report_16x9": "Report 16:9"
+  },
+  "slideRole": {
+    "cover": "Cover",
+    "text": "Text",
+    "list": "List",
+    "quote": "Quote",
+    "data": "Data point",
+    "problem_solution": "Problem-solution",
+    "comparison": "Comparison",
+    "cta": "CTA",
+    "section": "Section",
+    "finding": "Finding",
+    "problem": "Problem",
+    "next_steps": "Next steps",
+    "method": "Method"
+  },
+  "badge": {
+    "validationErrors": "{count, plural, one {# validation error} other {# validation errors}}",
+    "renderPending": "Test render in progress",
+    "validationPassed": "Validation passed"
+  },
+  "catalog": {
+    "coverTitle": "{name}: cover",
+    "summary": "{kind} · {format} · {layouts, plural, one {# layout} other {# layouts}} · {min}–{max} slides · v{version}{others, plural, =0 {} one { · # other version} other { · # other versions}}"
+  },
+  "import": {
+    "title": "Import",
+    "zipLabel": "ZIP package (max 50 MB)",
+    "submit": "Import template",
+    "help": "The package becomes a draft. If the same version is already a draft, its files are replaced; for a version in review or published, bump \"version\" in template.json.",
+    "folderTitle": "To import from the agency’s folder",
+    "folderName": "{name} · v{version}",
+    "folderErrors": "{count, plural, one {# validation error} other {# validation errors}}",
+    "folderSubmit": "Import",
+    "invalidManifest": "Invalid manifest"
+  },
+  "detail": {
+    "title": "{name} · v{version}",
+    "description": "{description} {format} · {width}×{height} px · {min}–{max} slides (default {defaultCount})",
+    "layouts": "Layouts",
+    "previewOptions": "Preview options",
+    "preview": {
+      "long": "Long text",
+      "safe": "Safe zone",
+      "slots": "Slots"
+    },
+    "layoutMeta": "· {role}{position, select, first { · first only} last { · last only} other {}}",
+    "slot": {
+      "image": "{name} (image)",
+      "list": "{name} · {items}×{chars}",
+      "text": "{name} · {chars}"
+    },
+    "status": {
+      "title": "Status",
+      "versionNote": "<muted>Note:</muted> {notes}",
+      "waitingRender": "It can be published once the test render has finished.",
+      "fixErrors": "Fix the validation errors and import the package again.",
+      "versionNotes": "Version notes",
+      "notesPlaceholder": "What changes",
+      "sendForReview": "Send for review",
+      "publish": "Publish",
+      "backToDraft": "Back to draft",
+      "archive": "Archive",
+      "republish": "Republish"
+    },
+    "validation": {
+      "title": "Validation",
+      "check": {
+        "ok": "Passed",
+        "error": "Error",
+        "warning": "Warning",
+        "skipped": "Not checked"
+      },
+      "renderPending": "Test render in progress in the worker",
+      "rerun": "Run validation again",
+      "issueInFile": "`{file}`: {message}",
+      "issueInFileLine": "`{file}`, line {line}: {message}"
+    },
+    "versions": {
+      "title": "Versions",
+      "version": "v{version}"
+    },
+    "roles": {
+      "title": "Color and font roles",
+      "font": "font {role}",
+      "ctaOnlyLast": "CTA on the last slide only",
+      "ctaAnywhere": "CTA anywhere",
+      "pageNumbers": "Page numbers",
+      "noPageNumbers": "No page numbers"
+    }
+  },
+  "checks": {
+    "manifest": "`template.json` is valid",
+    "files": "Declared files present in the package",
+    "slots": "Declared slots: {slots} in {layouts, plural, one {# layout} other {# layouts}}",
+    "slotsHtml": "Slots consistent between HTML and metadata ({count} in the HTML)",
+    "fonts": "Fonts included: {count}",
+    "fontsWithKinds": "Fonts included: {count} ({kinds})",
+    "hardcodedFound": "Hardcoded values found",
+    "hardcodedNone": "Hardcoded values: none",
+    "markup": "Markup without scripts or external references",
+    "samples": "Valid sample data",
+    "formats": "Formats: {format, select, ig_4x5 {Instagram 4:5} linkedin_doc {LinkedIn document} ig_1x1 {Instagram 1:1} stories_9x16 {Stories 9:16} fb_4x5 {Facebook 4:5} tiktok_photo {TikTok photo} report_a4 {Report A4} report_16x9 {Report 16:9} other {{format}}}",
+    "renderProblems": "Test render: {count, plural, one {# problem} other {# problems}}",
+    "renderOk": "Test render: {count, plural, one {# layout} other {# layouts}} without errors",
+    "overflowNotChecked": "Long text: not checked",
+    "overflowFound": "Long text: {count, plural, one {# overflow} other {# overflows}}",
+    "overflowNone": "Long text: no overflow"
+  },
+  "issues": {
+    "hardcodedColor": "hand-written color `{color}`. Use a color role (CSS variable).",
+    "offScale": "`font-size: {value}` is off the type scale.",
+    "cssImport": "`@import` not allowed: everything must be inside the package.",
+    "cssFontFace": "`@font-face` not allowed: declare fonts in template.json.",
+    "cssExpression": "`expression()` not allowed.",
+    "externalUrl": "external `url({ref})`: use a file from `assets/`.",
+    "notInPackage": "`{ref}` is not in the package.",
+    "elementNotAllowed": "element `{tag}` not allowed in layouts.",
+    "attributeNotAllowed": "attribute `{attribute}` not allowed.",
+    "externalReference": "external reference `{ref}`: use a file from `assets/`.",
+    "slotTwice": "slot \"{name}\" appears twice.",
+    "slotMissingInHtml": "slot \"{name}\" is in template.json but not in the HTML.",
+    "imageSlotTag": "image slot \"{name}\" must be an `'<img>'`.",
+    "listSlotTag": "list slot \"{name}\" must be a `'<ul>'` or `'<ol>'` with a sample `'<li>'`.",
+    "textSlotTag": "text slot \"{name}\" cannot be an `'<img>'`.",
+    "slotMissingInManifest": "slot \"{name}\" is in the HTML but not in template.json.",
+    "pathNotAllowed": "path not allowed in the package.",
+    "manifestField": "{path}: {detail}",
+    "declaredMissing": "`{file}` declared in template.json but missing.",
+    "unboundVariable": "variable `{name}` is not bound to a color or font role.",
+    "notAFont": "the file is not a WOFF2, WOFF, TTF or OTF font.",
+    "fontNotShipped": "the template uses \"{name}\" but the font is not in `fonts/`.",
+    "invalidSample": "invalid sample for layout \"{layout}\".",
+    "sampleProblem": "sample \"{layout}\": {detail}",
+    "renderSample": "sample: {detail}",
+    "renderFailed": "test render failed: {detail}",
+    "longText": "long text: {detail}"
+  },
+  "manifest": {
+    "missing": "template.json missing",
+    "invalidJson": "Invalid JSON: {detail}",
+    "hexColor": "Hex color (#RRGGBB)",
+    "cssVariable": "CSS variable --fc-...",
+    "relativePath": "Relative path inside the package",
+    "id": "id: lowercase letters, digits and dashes",
+    "semver": "Semver version (e.g. 1.0.0)",
+    "formatKind": "The {format} format is for {kind, select, report {reports} other {carousels}}: kind \"{kind}\"",
+    "formatChannel": "The {format} format belongs to channel {channel}",
+    "formatNoChannel": "The {format} format has no channel: remove \"channel\"",
+    "formatSize": "{format} is {width}×{height} px",
+    "slideCount": "Number of {kind, select, report {pages} other {slides}}: must satisfy min ≤ default ≤ max ≤ {limit}",
+    "duplicateLayout": "Duplicate layout",
+    "duplicateSlot": "Duplicate slot \"{name}\"",
+    "minItems": "minItems > maxItems",
+    "colorAndFont": "A variable cannot be both a color and a font"
+  },
+  "errors": {
+    "invalidFolder": "Invalid folder",
+    "fileTooLarge": "The file exceeds 50 MB",
+    "chooseZip": "Choose the template ZIP",
+    "unreadableZip": "The ZIP can’t be read",
+    "invalidManifest": "Invalid template.json",
+    "invalidPackage": "Invalid template.json: {path}: {detail}",
+    "invalidPackageUnknown": "Invalid template.json: error",
+    "versionLocked": "Version {version} of “{name}” is {status, select, in_review {in review} published {published} archived {archived} other {draft}}: bump \"version\" in template.json.",
+    "invalidTransition": "Cannot move from “{from, select, draft {Draft} in_review {In review} published {Published} archived {Archived} other {{from}}}” to “{to, select, draft {Draft} in_review {In review} published {Published} archived {Archived} other {{to}}}”",
+    "notesRequired": "Describe what changes in this version",
+    "notValidated": "The template has not passed validation",
+    "notFound": "Template not found",
+    "packageAltered": "Template package altered: {key}",
+    "packageTooLarge": "Package too large: {dir}",
+    "zipTooLarge": "ZIP over 50 MB",
+    "extractedTooLarge": "Package too large once extracted",
+    "zipPathNotAllowed": "Path not allowed in the ZIP: {name}"
+  }
+}

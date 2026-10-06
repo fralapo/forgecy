@@ -1,4 +1,4 @@
-import { FORMATS, type TemplateManifest } from "@forgecy/carousel";
+import type { TemplateManifest } from "@forgecy/carousel";
 import {
   compareVersions,
   listTemplates,
@@ -10,13 +10,21 @@ import { can } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
 import { Badge, Button, Card, Input, Label } from "@forgecy/ui";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/session";
 import { importFolderAction } from "./actions";
 import { SlideFrame } from "./slide-frame";
 import { ErrorNotice, StatusBadge, ValidationBadge } from "./status";
 
-export const metadata = { title: "Templates" };
+export async function generateMetadata() {
+  const t = await getTranslations("templates");
+  return { title: t("title") };
+}
+
+const SEPARATOR = " · ";
+// Folder of the repository scanned by the import (a path, not language).
+const TEMPLATES_DIR = "templates";
 
 /** The version to show for a key: the published one, else the most recent. */
 function headline(rows: TemplateRow[]): TemplateRow {
@@ -32,6 +40,7 @@ export default async function TemplatesPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const user = await requireUser();
+  const t = await getTranslations("templates");
   const { error } = await searchParams;
   const manage = can(user.actor, "templates.manage");
   const rows = await listTemplates(getDb());
@@ -46,15 +55,10 @@ export default async function TemplatesPage({
 
   return (
     <>
-      <PageHeader
-        title="Templates"
-        description="Catalog of templates in the canonical format (HTML, CSS and template.json). Previews are drawn by the same renderer as the export; content uses only published versions."
-      />
+      <PageHeader title={t("title")} description={t("description")} />
       {error ? <ErrorNotice message={error} /> : null}
       {byKey.size === 0 ? (
-        <Card className="mb-8 p-6 text-body-md text-fg-muted">
-          The catalog is empty. Import a template from the agency’s folder or from a ZIP.
-        </Card>
+        <Card className="mb-8 p-6 text-body-md text-fg-muted">{t("empty")}</Card>
       ) : (
         <ul className="mb-10 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {[...byKey.values()].map((versions) => {
@@ -68,7 +72,7 @@ export default async function TemplatesPage({
                   {cover ? (
                     <SlideFrame
                       src={`/render/templates/${row.id}/${cover.id}`}
-                      title={`${row.name}: cover`}
+                      title={t("catalog.coverTitle", { name: row.name })}
                       width={m.width}
                       height={m.height}
                       scale={0.25}
@@ -81,18 +85,21 @@ export default async function TemplatesPage({
                       </Link>
                     </h2>
                     <p className="text-body-sm text-fg-muted">
-                      {m.kind === "carousel" ? "Carousel" : "Report"} · {FORMATS[m.format].label} ·{" "}
-                      {m.layouts.length} layouts · {m.slides.min}–{m.slides.max} slides · v
-                      {row.version}
-                      {others
-                        ? ` · ${others === 1 ? "1 other version" : `${others} other versions`}`
-                        : ""}
+                      {t("catalog.summary", {
+                        kind: t(`kind.${m.kind}`),
+                        format: t(`format.${m.format}`),
+                        layouts: m.layouts.length,
+                        min: String(m.slides.min),
+                        max: String(m.slides.max),
+                        version: row.version,
+                        others,
+                      })}
                     </p>
                   </div>
                   <div className="mt-auto flex flex-wrap gap-2">
                     <StatusBadge status={row.status} />
                     <ValidationBadge validation={storedValidation(row)} />
-                    <Badge>{row.origin === "system" ? "System" : "Agency"}</Badge>
+                    <Badge>{t(row.origin === "system" ? "origin.system" : "origin.agency")}</Badge>
                   </div>
                 </Card>
               </li>
@@ -104,7 +111,7 @@ export default async function TemplatesPage({
       {manage ? (
         <section aria-labelledby="import" className="space-y-6">
           <h2 id="import" className="text-heading-sm text-fg">
-            Import
+            {t("import.title")}
           </h2>
           <Card className="p-5">
             <form
@@ -114,7 +121,7 @@ export default async function TemplatesPage({
               className="flex flex-wrap items-end gap-4"
             >
               <div className="min-w-64 flex-1 space-y-2">
-                <Label htmlFor="package">ZIP package (max 50 MB)</Label>
+                <Label htmlFor="package">{t("import.zipLabel")}</Label>
                 <Input
                   id="package"
                   name="package"
@@ -123,43 +130,45 @@ export default async function TemplatesPage({
                   required
                 />
               </div>
-              <Button type="submit">Import template</Button>
+              <Button type="submit">{t("import.submit")}</Button>
             </form>
-            <p className="mt-3 text-body-sm text-fg-muted">
-              The package becomes a draft. If the same version is already a draft, its files are
-              replaced; for a version in review or published, bump &quot;version&quot; in
-              template.json.
-            </p>
+            <p className="mt-3 text-body-sm text-fg-muted">{t("import.help")}</p>
           </Card>
           {folders.length ? (
             <div className="space-y-3">
-              <h3 className="text-body-md font-medium text-fg">
-                To import from the agency’s folder
-              </h3>
+              <h3 className="text-body-md font-medium text-fg">{t("import.folderTitle")}</h3>
               <ul className="space-y-2">
                 {folders.map(({ folder, pkg, report }) => (
                   <li key={folder}>
                     <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
                       <div className="text-body-sm">
                         <p className="font-medium text-fg">
-                          {pkg ? `${pkg.manifest.name} · v${pkg.manifest.version}` : folder}
+                          {pkg
+                            ? t("import.folderName", {
+                                name: pkg.manifest.name,
+                                version: pkg.manifest.version,
+                              })
+                            : folder}
                         </p>
                         <p className="text-fg-muted">
-                          <code>templates/{folder}</code>
-                          {report.issues.length
-                            ? ` · ${report.issues.length === 1 ? "1 validation error" : `${report.issues.length} validation errors`}`
-                            : ""}
+                          <code>{`${TEMPLATES_DIR}/${folder}`}</code>
+                          {report.issues.length ? (
+                            <>
+                              {SEPARATOR}
+                              {t("import.folderErrors", { count: report.issues.length })}
+                            </>
+                          ) : null}
                         </p>
                       </div>
                       {pkg ? (
                         <form action={importFolderAction}>
                           <input type="hidden" name="folder" value={folder} />
                           <Button type="submit" variant="secondary" size="sm">
-                            Import
+                            {t("import.folderSubmit")}
                           </Button>
                         </form>
                       ) : (
-                        <Badge variant="error">Invalid manifest</Badge>
+                        <Badge variant="error">{t("import.invalidManifest")}</Badge>
                       )}
                     </Card>
                   </li>

@@ -1,0 +1,203 @@
+{
+  "title": "Template",
+  "description": "Catalogo dei template nel formato canonico (HTML, CSS e template.json). Le anteprime sono disegnate dallo stesso renderer dell’export; i contenuti usano solo le versioni pubblicate.",
+  "empty": "Il catalogo è vuoto. Importa un template dalla cartella dell’agenzia o da uno ZIP.",
+  "kind": {
+    "carousel": "Carosello",
+    "report": "Report"
+  },
+  "origin": {
+    "system": "Sistema",
+    "agency": "Agenzia"
+  },
+  "status": {
+    "draft": "Bozza",
+    "in_review": "In revisione",
+    "published": "Pubblicato",
+    "archived": "Archiviato"
+  },
+  "format": {
+    "ig_4x5": "Instagram 4:5",
+    "linkedin_doc": "Documento LinkedIn",
+    "ig_1x1": "Instagram 1:1",
+    "stories_9x16": "Storie 9:16",
+    "fb_4x5": "Facebook 4:5",
+    "tiktok_photo": "Foto TikTok",
+    "report_a4": "Report A4",
+    "report_16x9": "Report 16:9"
+  },
+  "slideRole": {
+    "cover": "Copertina",
+    "text": "Testo",
+    "list": "Elenco",
+    "quote": "Citazione",
+    "data": "Dato",
+    "problem_solution": "Problema-soluzione",
+    "comparison": "Confronto",
+    "cta": "CTA",
+    "section": "Sezione",
+    "finding": "Evidenza",
+    "problem": "Problema",
+    "next_steps": "Prossimi passi",
+    "method": "Metodo"
+  },
+  "badge": {
+    "validationErrors": "{count, plural, one {# errore di validazione} other {# errori di validazione}}",
+    "renderPending": "Render di prova in corso",
+    "validationPassed": "Validazione superata"
+  },
+  "catalog": {
+    "coverTitle": "{name}: copertina",
+    "summary": "{kind} · {format} · {layouts, plural, one {# layout} other {# layout}} · {min}–{max} slide · v{version}{others, plural, =0 {} one { · # altra versione} other { · # altre versioni}}"
+  },
+  "import": {
+    "title": "Importa",
+    "zipLabel": "Pacchetto ZIP (max 50 MB)",
+    "submit": "Importa template",
+    "help": "Il pacchetto diventa una bozza. Se la stessa versione è già una bozza, i suoi file vengono sostituiti; per una versione in revisione o pubblicata, incrementa \"version\" in template.json.",
+    "folderTitle": "Da importare dalla cartella dell’agenzia",
+    "folderName": "{name} · v{version}",
+    "folderErrors": "{count, plural, one {# errore di validazione} other {# errori di validazione}}",
+    "folderSubmit": "Importa",
+    "invalidManifest": "Manifest non valido"
+  },
+  "detail": {
+    "title": "{name} · v{version}",
+    "description": "{description} {format} · {width}×{height} px · {min}–{max} slide (predefinite {defaultCount})",
+    "layouts": "Layout",
+    "previewOptions": "Opzioni di anteprima",
+    "preview": {
+      "long": "Testo lungo",
+      "safe": "Area sicura",
+      "slots": "Slot"
+    },
+    "layoutMeta": "· {role}{position, select, first { · solo come prima} last { · solo come ultima} other {}}",
+    "slot": {
+      "image": "{name} (immagine)",
+      "list": "{name} · {items}×{chars}",
+      "text": "{name} · {chars}"
+    },
+    "status": {
+      "title": "Stato",
+      "versionNote": "<muted>Nota:</muted> {notes}",
+      "waitingRender": "Potrà essere pubblicato quando il render di prova sarà terminato.",
+      "fixErrors": "Correggi gli errori di validazione e importa di nuovo il pacchetto.",
+      "versionNotes": "Note di versione",
+      "notesPlaceholder": "Cosa cambia",
+      "sendForReview": "Invia in revisione",
+      "publish": "Pubblica",
+      "backToDraft": "Riporta in bozza",
+      "archive": "Archivia",
+      "republish": "Ripubblica"
+    },
+    "validation": {
+      "title": "Validazione",
+      "check": {
+        "ok": "Superato",
+        "error": "Errore",
+        "warning": "Avviso",
+        "skipped": "Non verificato"
+      },
+      "renderPending": "Render di prova in corso nel worker",
+      "rerun": "Ripeti la validazione",
+      "issueInFile": "`{file}`: {message}",
+      "issueInFileLine": "`{file}`, riga {line}: {message}"
+    },
+    "versions": {
+      "title": "Versioni",
+      "version": "v{version}"
+    },
+    "roles": {
+      "title": "Ruoli di colore e font",
+      "font": "font {role}",
+      "ctaOnlyLast": "CTA solo nell’ultima slide",
+      "ctaAnywhere": "CTA in qualsiasi slide",
+      "pageNumbers": "Numeri di pagina",
+      "noPageNumbers": "Senza numeri di pagina"
+    }
+  },
+  "checks": {
+    "manifest": "`template.json` è valido",
+    "files": "File dichiarati presenti nel pacchetto",
+    "slots": "Slot dichiarati: {slots} in {layouts, plural, one {# layout} other {# layout}}",
+    "slotsHtml": "Slot coerenti tra HTML e metadati ({count} nell’HTML)",
+    "fonts": "Font inclusi: {count}",
+    "fontsWithKinds": "Font inclusi: {count} ({kinds})",
+    "hardcodedFound": "Trovati valori scritti a mano",
+    "hardcodedNone": "Valori scritti a mano: nessuno",
+    "markup": "Markup senza script né riferimenti esterni",
+    "samples": "Dati di esempio validi",
+    "formats": "Formati: {format, select, ig_4x5 {Instagram 4:5} linkedin_doc {Documento LinkedIn} ig_1x1 {Instagram 1:1} stories_9x16 {Storie 9:16} fb_4x5 {Facebook 4:5} tiktok_photo {Foto TikTok} report_a4 {Report A4} report_16x9 {Report 16:9} other {{format}}}",
+    "renderProblems": "Render di prova: {count, plural, one {# problema} other {# problemi}}",
+    "renderOk": "Render di prova: {count, plural, one {# layout} other {# layout}} senza errori",
+    "overflowNotChecked": "Testo lungo: non verificato",
+    "overflowFound": "Testo lungo: {count, plural, one {# fuoriuscita} other {# fuoriuscite}}",
+    "overflowNone": "Testo lungo: nessuna fuoriuscita"
+  },
+  "issues": {
+    "hardcodedColor": "colore scritto a mano `{color}`. Usa un ruolo colore (variabile CSS).",
+    "offScale": "`font-size: {value}` è fuori dalla scala tipografica.",
+    "cssImport": "`@import` non consentito: tutto deve stare dentro il pacchetto.",
+    "cssFontFace": "`@font-face` non consentito: dichiara i font in template.json.",
+    "cssExpression": "`expression()` non consentito.",
+    "externalUrl": "`url({ref})` esterno: usa un file di `assets/`.",
+    "notInPackage": "`{ref}` non è nel pacchetto.",
+    "elementNotAllowed": "elemento `{tag}` non consentito nei layout.",
+    "attributeNotAllowed": "attributo `{attribute}` non consentito.",
+    "externalReference": "riferimento esterno `{ref}`: usa un file di `assets/`.",
+    "slotTwice": "lo slot \"{name}\" compare due volte.",
+    "slotMissingInHtml": "lo slot \"{name}\" è in template.json ma non nell’HTML.",
+    "imageSlotTag": "lo slot immagine \"{name}\" deve essere un `'<img>'`.",
+    "listSlotTag": "lo slot elenco \"{name}\" deve essere un `'<ul>'` o `'<ol>'` con un `'<li>'` di esempio.",
+    "textSlotTag": "lo slot di testo \"{name}\" non può essere un `'<img>'`.",
+    "slotMissingInManifest": "lo slot \"{name}\" è nell’HTML ma non in template.json.",
+    "pathNotAllowed": "percorso non consentito nel pacchetto.",
+    "manifestField": "{path}: {detail}",
+    "declaredMissing": "`{file}` dichiarato in template.json ma mancante.",
+    "unboundVariable": "la variabile `{name}` non è legata a un ruolo di colore o di font.",
+    "notAFont": "il file non è un font WOFF2, WOFF, TTF o OTF.",
+    "fontNotShipped": "il template usa \"{name}\" ma il font non è in `fonts/`.",
+    "invalidSample": "esempio non valido per il layout \"{layout}\".",
+    "sampleProblem": "esempio \"{layout}\": {detail}",
+    "renderSample": "esempio: {detail}",
+    "renderFailed": "render di prova non riuscito: {detail}",
+    "longText": "testo lungo: {detail}"
+  },
+  "manifest": {
+    "missing": "template.json mancante",
+    "invalidJson": "JSON non valido: {detail}",
+    "hexColor": "Colore esadecimale (#RRGGBB)",
+    "cssVariable": "Variabile CSS --fc-...",
+    "relativePath": "Percorso relativo dentro il pacchetto",
+    "id": "id: lettere minuscole, cifre e trattini",
+    "semver": "Versione semver (es. 1.0.0)",
+    "formatKind": "Il formato {format} è per {kind, select, report {i report} other {i caroselli}}: kind \"{kind}\"",
+    "formatChannel": "Il formato {format} appartiene al canale {channel}",
+    "formatNoChannel": "Il formato {format} non ha un canale: rimuovi \"channel\"",
+    "formatSize": "{format} misura {width}×{height} px",
+    "slideCount": "Numero di {kind, select, report {pagine} other {slide}}: deve valere min ≤ default ≤ max ≤ {limit}",
+    "duplicateLayout": "Layout duplicato",
+    "duplicateSlot": "Slot \"{name}\" duplicato",
+    "minItems": "minItems > maxItems",
+    "colorAndFont": "Una variabile non può essere sia un colore sia un font"
+  },
+  "errors": {
+    "invalidFolder": "Cartella non valida",
+    "fileTooLarge": "Il file supera i 50 MB",
+    "chooseZip": "Scegli lo ZIP del template",
+    "unreadableZip": "Impossibile leggere lo ZIP",
+    "invalidManifest": "template.json non valido",
+    "invalidPackage": "template.json non valido: {path}: {detail}",
+    "invalidPackageUnknown": "template.json non valido: errore",
+    "versionLocked": "La versione {version} di “{name}” è {status, select, in_review {in revisione} published {pubblicata} archived {archiviata} other {in bozza}}: incrementa \"version\" in template.json.",
+    "invalidTransition": "Impossibile passare da “{from, select, draft {Bozza} in_review {In revisione} published {Pubblicato} archived {Archiviato} other {{from}}}” a “{to, select, draft {Bozza} in_review {In revisione} published {Pubblicato} archived {Archiviato} other {{to}}}”",
+    "notesRequired": "Descrivi cosa cambia in questa versione",
+    "notValidated": "Il template non ha superato la validazione",
+    "notFound": "Template non trovato",
+    "packageAltered": "Pacchetto del template alterato: {key}",
+    "packageTooLarge": "Pacchetto troppo grande: {dir}",
+    "zipTooLarge": "ZIP oltre i 50 MB",
+    "extractedTooLarge": "Pacchetto troppo grande una volta estratto",
+    "zipPathNotAllowed": "Percorso non consentito nello ZIP: {name}"
+  }
+}
