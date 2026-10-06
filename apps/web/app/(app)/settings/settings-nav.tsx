@@ -14,6 +14,7 @@ const sections = [
   { href: "/settings/smtp", label: "smtp", admin: true },
   { href: "/settings/storage", label: "storage", admin: true },
   { href: "/settings/system-health", label: "health", admin: true },
+  { href: "/settings/backup", label: "backup", admin: true },
 ] as const;
 
 export function SettingsNav({ isAdmin }: { isAdmin: boolean }) {

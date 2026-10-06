@@ -6,7 +6,8 @@
     "aiPolicies": "AI policies and budgets",
     "smtp": "Email (SMTP)",
     "storage": "Storage",
-    "health": "System health"
+    "health": "System health",
+    "backup": "Backup and restore"
   },
   "adminOnly": "This setting is reserved for Admin users.",
   "aiPolicies": {
@@ -235,6 +236,76 @@
       "when": "When",
       "kind": "Job",
       "error": "Error"
+    }
+  },
+  "backup": {
+    "title": "Backup and restore",
+    "description": "Backups of the database and files, kept in the server’s data/backups folder.",
+    "latest": "Last backup: {date} · {size} · {kind}",
+    "none": "No backup yet.",
+    "stale": "No backup in the last 24 hours: create one.",
+    "nightlyFailed": "Last night’s backup did not succeed.",
+    "kind": {
+      "manual": "Manual",
+      "nightly": "Nightly",
+      "pre_restore": "Before restore",
+      "cli": "Command line"
+    },
+    "size": {
+      "gb": "{value} GB",
+      "mb": "{value} MB",
+      "kb": "{value} KB"
+    },
+    "create": {
+      "title": "New backup",
+      "scope": "The database holds clients, audits, Brand Identity, contents, users, settings, the activity log and the encrypted BYOK keys. Files are uploads, generated images, templates and exports.",
+      "dbSize": "Database: {size}.",
+      "free": "Free space: {size}.",
+      "database": "Database (always included)",
+      "databaseRequired": "The database is always part of a backup.",
+      "media": "Files",
+      "submit": "Create backup",
+      "queued": "Backup started: it appears in the list when it is done.",
+      "alreadyRunning": "A backup is already running.",
+      "running": "Backup in progress: {progress}%",
+      "envNote": "The .env file is not included. Keep it separately: without FORGECY_ENCRYPTION_KEY the BYOK keys in the backup cannot be read."
+    },
+    "nightly": {
+      "title": "Automatic backup",
+      "on": "Nightly backup: on · once a day from {hour} (installation time), or as soon as Forgecy is running after that · database and files · kept {days} days",
+      "off": "Nightly backup: off",
+      "last": "Last run: {date} · {status}",
+      "lastFailed": "Last run: {date} · failed: {error}",
+      "turnOn": "Turn on nightly backup",
+      "turnOff": "Turn off nightly backup",
+      "confirmOff": "Without the nightly backup you risk losing several days of work. Turn it off?",
+      "turnedOn": "Nightly backup turned on.",
+      "turnedOff": "Nightly backup turned off."
+    },
+    "list": {
+      "title": "Available backups",
+      "empty": "No backups yet.",
+      "date": "Date",
+      "kind": "Type",
+      "scope": "Contents",
+      "scopeFull": "Database and files",
+      "scopeDb": "Database",
+      "size": "Size",
+      "version": "Version",
+      "by": "Created by",
+      "system": "Forgecy",
+      "expires": "Expires",
+      "never": "Never",
+      "actions": "Actions",
+      "download": "Download",
+      "delete": "Delete",
+      "confirmDelete": "Delete {name}? This cannot be undone.",
+      "deleted": "Backup deleted.",
+      "notFound": "Backup not found."
+    },
+    "restore": {
+      "title": "Restore",
+      "cli": "Restoring replaces the database and the files. For now it runs on the server, with the web and worker containers stopped:"
     }
   }
 }

@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
   // Internal packages ship TypeScript source ("just-in-time" packages).
   transpilePackages: [
     "@forgecy/audit",
+    "@forgecy/backup",
     "@forgecy/carousel",
     "@forgecy/core",
     "@forgecy/db",

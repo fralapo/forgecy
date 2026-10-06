@@ -6,7 +6,8 @@
     "aiPolicies": "Policy AI e budget",
     "smtp": "Email (SMTP)",
     "storage": "Storage",
-    "health": "Stato del sistema"
+    "health": "Stato del sistema",
+    "backup": "Backup e ripristino"
   },
   "adminOnly": "Questa impostazione è riservata agli utenti Admin.",
   "aiPolicies": {
@@ -235,6 +236,76 @@
       "when": "Quando",
       "kind": "Job",
       "error": "Errore"
+    }
+  },
+  "backup": {
+    "title": "Backup e ripristino",
+    "description": "Backup del database e dei file, conservati nella cartella data/backups del server.",
+    "latest": "Ultimo backup: {date} · {size} · {kind}",
+    "none": "Ancora nessun backup.",
+    "stale": "Nessun backup nelle ultime 24 ore: creane uno.",
+    "nightlyFailed": "Il backup notturno di stanotte non è riuscito.",
+    "kind": {
+      "manual": "Manuale",
+      "nightly": "Notturno",
+      "pre_restore": "Prima del ripristino",
+      "cli": "Riga di comando"
+    },
+    "size": {
+      "gb": "{value} GB",
+      "mb": "{value} MB",
+      "kb": "{value} KB"
+    },
+    "create": {
+      "title": "Nuovo backup",
+      "scope": "Il database contiene clienti, audit, Brand Identity, contenuti, utenti, impostazioni, registro attività e chiavi BYOK cifrate. I file sono upload, immagini generate, template ed export.",
+      "dbSize": "Database: {size}.",
+      "free": "Spazio libero: {size}.",
+      "database": "Database (sempre incluso)",
+      "databaseRequired": "Il database fa sempre parte del backup.",
+      "media": "File",
+      "submit": "Crea backup",
+      "queued": "Backup avviato: compare nell’elenco quando è finito.",
+      "alreadyRunning": "C’è già un backup in corso.",
+      "running": "Backup in corso: {progress}%",
+      "envNote": "Il file .env non è incluso. Conservalo a parte: senza FORGECY_ENCRYPTION_KEY le chiavi BYOK del backup non si possono leggere."
+    },
+    "nightly": {
+      "title": "Backup automatico",
+      "on": "Backup notturno: attivo · una volta al giorno dalle {hour} (ora dell’installazione), o appena Forgecy è acceso dopo quell’ora · database e file · conservati {days} giorni",
+      "off": "Backup notturno: spento",
+      "last": "Ultima esecuzione: {date} · {status}",
+      "lastFailed": "Ultima esecuzione: {date} · non riuscita: {error}",
+      "turnOn": "Accendi il backup notturno",
+      "turnOff": "Spegni il backup notturno",
+      "confirmOff": "Senza backup notturno rischi di perdere il lavoro di più giorni. Spegnerlo?",
+      "turnedOn": "Backup notturno acceso.",
+      "turnedOff": "Backup notturno spento."
+    },
+    "list": {
+      "title": "Backup disponibili",
+      "empty": "Ancora nessun backup.",
+      "date": "Data",
+      "kind": "Tipo",
+      "scope": "Contenuto",
+      "scopeFull": "Database e file",
+      "scopeDb": "Database",
+      "size": "Dimensione",
+      "version": "Versione",
+      "by": "Creato da",
+      "system": "Forgecy",
+      "expires": "Scadenza",
+      "never": "Mai",
+      "actions": "Azioni",
+      "download": "Scarica",
+      "delete": "Elimina",
+      "confirmDelete": "Eliminare {name}? L’operazione non si può annullare.",
+      "deleted": "Backup eliminato.",
+      "notFound": "Backup non trovato."
+    },
+    "restore": {
+      "title": "Ripristino",
+      "cli": "Il ripristino sostituisce database e file. Per ora si lancia sul server, con i container web e worker fermi:"
     }
   }
 }
