@@ -258,7 +258,7 @@ export async function discardAgentInstructionsDraft(
  * The agent of a `jobs_log` row: the one the gateway recorded, or for older rows the
  * agent that owns the task.
  */
-function runAgentSql() {
+export function runAgentSql() {
   const cases = agentRoles.flatMap((a) => agentRunKinds(a).map((k) => sql`when ${k} then ${a}`));
   return sql<
     string | null

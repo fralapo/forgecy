@@ -1,4 +1,15 @@
-import { AGENT_CAPABILITIES, aiTasks, listAgentRuns, type AiTask } from "@forgecy/ai";
+import {
+  ACCEPTANCE_MIN_DECIDED,
+  AGENT_CAPABILITIES,
+  acceptanceRate,
+  agentStatistics,
+  aiTasks,
+  estimatePreviewCostMicroUsd,
+  getDefaultAiPolicy,
+  PREVIEW_EXAMPLE_MAX,
+  listAgentRuns,
+  type AiTask,
+} from "@forgecy/ai";
 import { AGENT_INSTRUCTIONS_MAX, agentKeySchema } from "@forgecy/core";
 import { getDb, inArray, users } from "@forgecy/db";
 import { Badge, Button, Card, cn } from "@forgecy/ui";
@@ -11,12 +22,17 @@ import type { ReactNode } from "react";
 import { PageHeader } from "@/components/page-header";
 import { getFormat } from "@/lib/i18n";
 import { requireUser } from "@/lib/session";
-import { loadAgentsView, modelLabel } from "../_components/data";
-import { ActivationForm, InstructionsForm, RoutesForm } from "../_components/forms";
+import { loadAgentsView, modelLabel, NO_PROPOSALS } from "../_components/data";
+import {
+  ActivationForm,
+  InstructionsForm,
+  RoutesForm,
+  type PreviewOptions,
+} from "../_components/forms";
 
 export const dynamic = "force-dynamic";
 
-const tabs = ["overview", "tasks", "instructions", "runs"] as const;
+const tabs = ["overview", "tasks", "instructions", "runs", "stats"] as const;
 type Tab = (typeof tabs)[number];
 const ITEMS = ["1", "2", "3"] as const;
 const RUNS_LIMIT = 50;
@@ -177,6 +193,28 @@ export default async function AgentPage({
     const who = (id: string | null) => (id && people.get(id)) || t("instructions.unknownAuthor");
     const pub = config.published;
     const nextVersion = config.draft?.version ?? (config.history[0]?.version ?? 0) + 1;
+    // “Try on an example”: the agent's language-model tasks, with the model and cost of a try.
+    const previewOptions = async (): Promise<PreviewOptions> => {
+      const { policy } = await getDefaultAiPolicy(getDb());
+      const tasks = taskModels(agent).filter((m) => m.task !== "image");
+      return {
+        unavailable:
+          policy === "no_ai" ? t("preview.noAi") : tasks.length === 0 ? t("preview.noTasks") : null,
+        exampleMax: PREVIEW_EXAMPLE_MAX,
+        tasks: tasks.map((m) => {
+          const cost = estimatePreviewCostMicroUsd(m.primary);
+          const model = modelLabel(m.primary);
+          return {
+            value: m.task,
+            label: taskLabel(m.task),
+            estimate:
+              cost === null
+                ? t("preview.estimateUnknown", { model })
+                : t("preview.estimate", { model, cost: money(cost, 4) }),
+          };
+        }),
+      };
+    };
     main = (
       <div className="grid gap-6">
         <Card className="grid gap-3 p-6">
@@ -218,6 +256,7 @@ export default async function AgentPage({
               initial={config.draft?.text ?? pub?.text ?? ""}
               hasDraft={!!config.draft}
               max={AGENT_INSTRUCTIONS_MAX}
+              preview={await previewOptions()}
             />
           </Card>
         ) : null}
@@ -259,6 +298,167 @@ export default async function AgentPage({
               </table>
             </div>
           </section>
+        ) : null}
+      </div>
+    );
+  } else if (tab === "stats") {
+    const st = await agentStatistics(getDb(), agent);
+    const o = st.proposals;
+    const decided = o.accepted + o.rejected;
+    const rate = acceptanceRate(o);
+    const maxRuns = Math.max(1, ...st.weeks.map((w) => w.runs));
+    const maxCost = Math.max(1, ...st.months.map((m) => m.costMicroUsd));
+    const bar = (value: number, max: number) => (
+      <div aria-hidden className="h-2 w-full min-w-24 overflow-hidden rounded-full bg-app">
+        <div className="h-full bg-primary" style={{ width: `${(value / max) * 100}%` }} />
+      </div>
+    );
+    const reasonLabel = (r: string) =>
+      r === "error"
+        ? t("stats.error")
+        : t(
+            `run.reason.${(["no_ai", "local_unavailable", "agent_disabled", "budget_exceeded"] as const).find((k) => k === r) ?? "other"}`,
+          );
+    const th = "px-4 py-2 font-medium";
+    const td = "px-4 py-2";
+    main = (
+      <div className="grid gap-6">
+        <Card className="grid gap-4 p-6">
+          <h2 className="text-heading-sm text-fg">{t("stats.proposalsTitle")}</h2>
+          {NO_PROPOSALS.includes(agent) ? (
+            <p className="text-body-md text-fg-muted">{t("stats.notApplicable")}</p>
+          ) : (
+            <>
+              <p className="text-heading-md text-fg">
+                {rate === null
+                  ? t("stats.notEnough", { min: ACCEPTANCE_MIN_DECIDED, decided })
+                  : t("stats.rate", {
+                      percent: format.number(rate, { style: "percent" }),
+                      accepted: o.accepted,
+                      decided,
+                    })}
+              </p>
+              <dl className="grid grid-cols-3 gap-4 text-body-sm">
+                {(["accepted", "rejected", "stale"] as const).map((k) => (
+                  <div key={k} className="grid gap-1">
+                    <dt className="text-fg-muted">{t(`stats.${k}`)}</dt>
+                    <dd className="text-heading-sm text-fg">{format.number(o[k])}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="text-body-sm text-fg-muted">{t("stats.sources")}</p>
+            </>
+          )}
+        </Card>
+        <Card className="grid gap-3 p-6">
+          <h2 className="text-heading-sm text-fg">{t("stats.weeksTitle")}</h2>
+          <table className="w-full text-left text-body-sm">
+            <thead className="text-label text-fg-muted">
+              <tr>
+                <th scope="col" className={th}>
+                  {t("stats.week")}
+                </th>
+                <th scope="col" className={th}>
+                  {t("stats.runs")}
+                </th>
+                <th scope="col" className={th}>
+                  {t("stats.failed")}
+                </th>
+                <th scope="col" className={cn(th, "w-1/2")}>
+                  <span className="sr-only">{t("stats.runs")}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {st.weeks.map((w) => (
+                <tr key={w.week.toISOString()} className="border-t border-subtle">
+                  <td className={cn(td, "whitespace-nowrap text-fg")}>
+                    {format.date(w.week, "date")}
+                  </td>
+                  <td className={cn(td, "text-fg")}>{format.number(w.runs)}</td>
+                  <td className={cn(td, w.failed ? "text-error" : "text-fg-muted")}>
+                    {format.number(w.failed)}
+                  </td>
+                  <td className={td}>{bar(w.runs, maxRuns)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="grid content-start gap-3 p-6">
+            <h2 className="text-heading-sm text-fg">{t("stats.failuresTitle")}</h2>
+            {st.failures.length ? (
+              <table className="w-full text-left text-body-sm">
+                <thead className="text-label text-fg-muted">
+                  <tr>
+                    <th scope="col" className={th}>
+                      {t("stats.reason")}
+                    </th>
+                    <th scope="col" className={th}>
+                      {t("stats.count")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {st.failures.map((f) => (
+                    <tr key={f.reason} className="border-t border-subtle">
+                      <td className={cn(td, "text-fg")}>{reasonLabel(f.reason)}</td>
+                      <td className={cn(td, "text-fg")}>{format.number(f.count)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-body-sm text-fg-muted">{t("stats.failuresNone")}</p>
+            )}
+          </Card>
+          <Card className="grid content-start gap-3 p-6">
+            <h2 className="text-heading-sm text-fg">{t("stats.costTitle")}</h2>
+            <table className="w-full text-left text-body-sm">
+              <thead className="text-label text-fg-muted">
+                <tr>
+                  <th scope="col" className={th}>
+                    {t("stats.month")}
+                  </th>
+                  <th scope="col" className={th}>
+                    {t("stats.cost")}
+                  </th>
+                  <th scope="col" className={cn(th, "w-1/3")}>
+                    <span className="sr-only">{t("stats.cost")}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {st.months.map((m) => (
+                  <tr key={m.month.toISOString()} className="border-t border-subtle">
+                    <td className={cn(td, "whitespace-nowrap text-fg")}>
+                      {format.date(m.month, "month")}
+                    </td>
+                    <td className={cn(td, "text-fg")}>{money(m.costMicroUsd)}</td>
+                    <td className={td}>{bar(m.costMicroUsd, maxCost)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </div>
+        {st.slideEdits ? (
+          <Card className="grid gap-3 p-6">
+            <h2 className="text-heading-sm text-fg">{t("stats.editsTitle")}</h2>
+            {st.slideEdits.kept + st.slideEdits.reverted ? (
+              <dl className="grid grid-cols-2 gap-4 text-body-sm">
+                {(["kept", "reverted"] as const).map((k) => (
+                  <div key={k} className="grid gap-1">
+                    <dt className="text-fg-muted">{t(`stats.${k}`)}</dt>
+                    <dd className="text-heading-sm text-fg">{format.number(st.slideEdits![k])}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="text-body-sm text-fg-muted">{t("stats.editsNone")}</p>
+            )}
+          </Card>
         ) : null}
       </div>
     );
@@ -332,6 +532,7 @@ export default async function AgentPage({
       );
   }
 
+  const wide = tab === "runs" || tab === "stats";
   return (
     <>
       <Link href="/agents" className="mb-4 inline-flex items-center gap-1 text-body-sm text-link">
@@ -383,10 +584,10 @@ export default async function AgentPage({
           ))}
         </ul>
       </nav>
-      {/* The runs table needs the full width: there the side cards go below it. */}
-      <div className={cn("grid gap-6", tab !== "runs" && "xl:grid-cols-[2fr_1fr]")}>
+      {/* Runs and statistics need the full width: there the side cards go below. */}
+      <div className={cn("grid gap-6", !wide && "xl:grid-cols-[2fr_1fr]")}>
         <div className="min-w-0">{main}</div>
-        <aside className={cn("grid content-start gap-6", tab === "runs" && "lg:grid-cols-3")}>
+        <aside className={cn("grid content-start gap-6", wide && "lg:grid-cols-3")}>
           <Card className="grid gap-3 p-6">
             <h2 className="text-heading-sm text-fg">{t("detail.permissionsTitle")}</h2>
             <ul className="grid gap-2">

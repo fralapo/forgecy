@@ -1,12 +1,14 @@
 "use client";
 
 import { Button, Input, Label } from "@forgecy/ui";
-import { Power, PowerOff, Save, Send, Trash2 } from "lucide-react";
+import { FlaskConical, Power, PowerOff, Save, Send, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { AdminActionResult } from "../../settings/_lib/admin-action";
 import { controlClass } from "../../content/_components/action-button";
 import {
+  previewAgentAction,
+  type PreviewActionResult,
   discardAgentDraftAction,
   publishAgentDraftAction,
   saveAgentDraftAction,
@@ -207,12 +209,14 @@ export function InstructionsForm({
   initial,
   hasDraft,
   max,
+  preview,
 }: {
   agent: string;
   version: number;
   initial: string;
   hasDraft: boolean;
   max: number;
+  preview?: PreviewOptions;
 }) {
   const t = useTranslations("agents.instructions");
   const [text, setText] = useState(initial);
@@ -294,6 +298,119 @@ export function InstructionsForm({
         <Send aria-hidden />
         {t("publish", { version })}
       </Button>
+      {preview ? (
+        <PreviewPanel agent={agent} version={version} text={text} options={preview} />
+      ) : null}
     </div>
+  );
+}
+
+export interface PreviewOptions {
+  tasks: Array<{ value: string; label: string; estimate: string }>;
+  /** Why trying is not available (no_ai, no task); null when it is. */
+  unavailable: string | null;
+  exampleMax: number;
+}
+
+/** “Try on an example”: runs the draft as it is in the editor, unsaved changes included. */
+function PreviewPanel({
+  agent,
+  version,
+  text,
+  options,
+}: {
+  agent: string;
+  version: number;
+  text: string;
+  options: PreviewOptions;
+}) {
+  const t = useTranslations("agents.preview");
+  const [task, setTask] = useState(options.tasks[0]?.value ?? "");
+  const [example, setExample] = useState("");
+  const [result, setResult] = useState<PreviewActionResult | null>(null);
+  const [pending, start] = useTransition();
+  const chosen = options.tasks.find((x) => x.value === task);
+  return (
+    <section aria-labelledby="ag-preview-title" className="grid gap-4 border-t border-subtle pt-6">
+      <h3 id="ag-preview-title" className="text-heading-sm text-fg">
+        {t("title")}
+      </h3>
+      <p className="text-body-sm text-fg-muted">{t("intro")}</p>
+      {options.unavailable ? (
+        <p className="text-body-sm text-fg">{options.unavailable}</p>
+      ) : (
+        <form
+          className="grid gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setResult(null);
+            start(async () =>
+              setResult(await previewAgentAction(agent, { task, example, text, version })),
+            );
+          }}
+        >
+          <div className="grid gap-1">
+            <Label htmlFor="ag-preview-task">{t("task")}</Label>
+            <select
+              id="ag-preview-task"
+              value={task}
+              onChange={(e) => setTask(e.target.value)}
+              className={controlClass}
+            >
+              {options.tasks.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid gap-1">
+            <Label htmlFor="ag-preview-example">{t("example")}</Label>
+            <textarea
+              id="ag-preview-example"
+              rows={5}
+              maxLength={options.exampleMax}
+              value={example}
+              onChange={(e) => setExample(e.target.value)}
+              className={controlClass}
+              aria-describedby="ag-preview-hint"
+            />
+            <p id="ag-preview-hint" className="text-body-sm text-fg-muted">
+              {t("exampleHint", { max: options.exampleMax })}
+            </p>
+          </div>
+          {chosen ? <p className="text-body-sm text-fg-muted">{chosen.estimate}</p> : null}
+          <Button
+            type="submit"
+            variant="secondary"
+            className="w-fit"
+            disabled={pending || example.trim().length < 3}
+          >
+            <FlaskConical aria-hidden />
+            {pending ? t("running") : t("run")}
+          </Button>
+        </form>
+      )}
+      <div aria-live="polite">
+        {result && !result.ok ? <p className="text-body-sm text-error">{result.error}</p> : null}
+        {result?.ok ? (
+          <div className="grid gap-3 rounded-md border border-subtle p-4">
+            <h4 className="text-label text-fg">{t("resultTitle")}</h4>
+            <p className="whitespace-pre-wrap text-body-md text-fg">{result.output}</p>
+            {result.followed.length ? (
+              <>
+                <h4 className="text-label text-fg">{t("followed")}</h4>
+                <ul className="grid list-disc gap-1 pl-5 text-body-sm text-fg">
+                  {result.followed.map((f, i) => (
+                    <li key={i}>{f}</li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+            <p className="text-body-sm text-fg-muted">{result.meta}</p>
+          </div>
+        ) : null}
+      </div>
+    </section>
   );
 }
