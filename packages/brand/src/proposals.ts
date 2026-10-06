@@ -3,9 +3,20 @@
  * `test` ops, computing confidence from the sources, detecting stale proposals
  * and conflicts. The database side lives in service.ts.
  */
-import { brandSourceKinds, type BrandSourceKind, type ConfidenceLevel } from "@forgecy/core";
+import {
+  brandSourceKinds,
+  type BrandSourceKind,
+  type ConfidenceLevel,
+  type MessageRef,
+} from "@forgecy/core";
+import {
+  englishMessage,
+  localizedError,
+  messageRef,
+  type MessageKey,
+  type MessageValues,
+} from "@forgecy/i18n";
 import { checkContrast } from "@forgecy/ui/tokens";
-import { ForgecyError } from "@forgecy/core";
 import { type BrandIdentityDocument, ONE_LINER_MAX_WORDS, wordCount } from "./document";
 import { matchField, type FieldDef } from "./fields";
 import { newItemId } from "./ids";
@@ -68,13 +79,22 @@ export function confidenceReason(
   kinds: readonly BrandSourceKind[],
   options: { conflicting?: boolean } = {},
 ): string {
-  if (options.conflicting) return "Sources in conflict";
-  if (kinds.some((k) => DIRECT.has(k))) return "Direct client source";
+  const ref = confidenceReasonRef(kinds, options);
+  return englishMessage(ref.key as MessageKey, ref.values);
+}
+
+/** The reason for the computed confidence as a message reference (brand.confidenceReason.*). */
+export function confidenceReasonRef(
+  kinds: readonly BrandSourceKind[],
+  options: { conflicting?: boolean } = {},
+): MessageRef {
+  if (options.conflicting) return messageRef("brand.confidenceReason.conflicting");
+  if (kinds.some((k) => DIRECT.has(k))) return messageRef("brand.confidenceReason.direct");
   const observed = kinds.filter((k) => k !== "agent_observation").length;
-  if (observed >= 3) return `${observed} agreeing observed sources`;
-  if (observed === 2) return "Two observed sources";
-  if (observed === 1) return "One observed source";
-  return "AI inference only";
+  if (observed >= 3) return messageRef("brand.confidenceReason.observedMany", { count: observed });
+  if (observed === 2) return messageRef("brand.confidenceReason.observedTwo");
+  if (observed === 1) return messageRef("brand.confidenceReason.observedOne");
+  return messageRef("brand.confidenceReason.aiOnly");
 }
 
 /** Lower is stronger: brand book > direct input > site > social > competitor > AI inference. */
@@ -101,22 +121,29 @@ export interface BuiltProposal {
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
-function invalid(message: string, details?: Record<string, unknown>): never {
-  throw new ForgecyError("validation", message, details);
+// Messages live in packages/i18n (brand.errors.*): the English text stays in err.message.
+function invalid(
+  key: MessageKey & `brand.errors.${string}`,
+  values?: MessageValues,
+  details?: Record<string, unknown>,
+): never {
+  throw localizedError("validation", key, values, details);
 }
 
 function parseValue(field: FieldDef, value: unknown): unknown {
   const r = field.value.safeParse(value);
   if (!r.success)
-    invalid(`Invalid value for ${field.label}: ${r.error.issues[0]?.message ?? ""}`, {
-      issues: r.error.issues.slice(0, 5),
-    });
+    invalid(
+      "brand.errors.invalidValue",
+      { field: field.label, detail: r.error.issues[0]?.message ?? "" },
+      { issues: r.error.issues.slice(0, 5) },
+    );
   return r.data;
 }
 
 function index(rest: string, path: string): number {
   const seg = rest.slice(1);
-  if (!/^(0|[1-9][0-9]*)$/.test(seg)) invalid(`Invalid index in ${path}`);
+  if (!/^(0|[1-9][0-9]*)$/.test(seg)) invalid("brand.errors.invalidIndex", { path });
   return Number(seg);
 }
 
@@ -131,7 +158,7 @@ export function buildProposalPatch(
   meta: { proposalId: string; sourceIds: string[]; confidence: ConfidenceLevel },
 ): BuiltProposal {
   const match = matchField(input.path);
-  if (!match) invalid(`Field cannot be changed with a proposal: ${input.path}`);
+  if (!match) invalid("brand.errors.fieldNotProposable", { path: input.path });
   const { field, rest } = match;
   const root: DraftState = { document: state.document, tokens: state.tokens };
   const current = (p: string) => getAt(root, p);
@@ -150,10 +177,11 @@ export function buildProposalPatch(
 
   switch (field.shape) {
     case "sourced": {
-      if (rest !== "") invalid(`${field.label} is a single value`);
-      if (input.op === "append") invalid(`${field.label} is not a list`);
+      if (rest !== "") invalid("brand.errors.singleValue", { field: field.label });
+      if (input.op === "append") invalid("brand.errors.notAList", { field: field.label });
       if (input.op === "remove") {
-        if (!hasPath(root, field.pointer)) invalid(`${field.label} is already empty`);
+        if (!hasPath(root, field.pointer))
+          invalid("brand.errors.alreadyEmpty", { field: field.label });
         return {
           patch: [test(field.pointer), { op: "remove", path: field.pointer }],
           field,
@@ -176,7 +204,8 @@ export function buildProposalPatch(
       const itemValue = (it: unknown) =>
         field.shape === "sourced-list" ? (it as { value: unknown }).value : it;
       if (input.op === "append") {
-        if (rest !== "" && rest !== "/-") invalid(`To add, use ${field.pointer}`);
+        if (rest !== "" && rest !== "/-")
+          invalid("brand.errors.useAppend", { pointer: field.pointer });
         let raw = parseValue(field, input.value);
         if (field.shape === "object-list" && isObject(raw) && !raw.id)
           raw = { ...raw, id: newItemId() };
@@ -185,7 +214,7 @@ export function buildProposalPatch(
           ? items.findIndex((it) => field.uniqueBy?.(itemValue(it)) === key)
           : -1;
         if (existing >= 0) {
-          if (plain) invalid(`"${String(raw)}" is already in ${field.label}`);
+          if (plain) invalid("brand.errors.alreadyIn", { value: String(raw), field: field.label });
           const p = `${field.pointer}/${existing}`;
           const old = items[existing] as Record<string, unknown>;
           const written =
@@ -209,7 +238,7 @@ export function buildProposalPatch(
       }
       const i = index(rest, input.path);
       const p = `${field.pointer}/${i}`;
-      if (i >= items.length) invalid(`Item ${i} does not exist in ${field.label}`);
+      if (i >= items.length) invalid("brand.errors.itemMissing", { index: i, field: field.label });
       if (input.op === "remove")
         return {
           patch: [test(p), { op: "remove", path: p }],
@@ -233,14 +262,14 @@ export function buildProposalPatch(
       };
     }
     case "token-group": {
-      if (input.op === "append") invalid("For tokens, use set with the token name");
-      if (rest === "" || rest === "/-") invalid("Give the token name");
+      if (input.op === "append") invalid("brand.errors.tokenUseSet");
+      if (rest === "" || rest === "/-") invalid("brand.errors.tokenNameMissing");
       const segs = parsePointer(rest);
       if (segs.some((s) => !/^[a-z0-9][a-z0-9-]{0,40}$/.test(s)))
-        invalid("Invalid token name: lowercase letters, digits and dashes");
+        invalid("brand.errors.tokenNameInvalid");
       const p = input.path;
       if (input.op === "remove") {
-        if (!hasPath(root, p)) invalid("Token does not exist");
+        if (!hasPath(root, p)) invalid("brand.errors.tokenMissing");
         return {
           patch: [test(p), { op: "remove", path: p }],
           field,
@@ -314,8 +343,7 @@ export function withEditedValue(patch: JsonPatch, edited: unknown, field: FieldD
   const raw = parseValue(field, edited);
   const out = structuredClone(patch);
   const last = out.at(-1);
-  if (!last || (last.op !== "add" && last.op !== "replace"))
-    invalid("This proposal has no value to edit");
+  if (!last || (last.op !== "add" && last.op !== "replace")) invalid("brand.errors.nothingToEdit");
   const v = last.value;
   if (field.shape === "sourced" || field.shape === "sourced-list") {
     (v as { value: unknown }).value = raw;
@@ -406,8 +434,21 @@ export function findConflicts(pending: readonly PendingLike[]): ConflictGroup[] 
 
 export interface ProposalCheck {
   level: "info" | "warning";
+  /** English text, also the fallback for checks stored before `ref` existed. */
   message: string;
+  /** The same text as a message reference, translated when shown. */
+  ref?: MessageRef;
 }
+
+const check = (
+  level: ProposalCheck["level"],
+  key: MessageKey & `brand.proposalChecks.${string}`,
+  values?: MessageValues,
+): ProposalCheck => ({
+  level,
+  message: englishMessage(key, values),
+  ref: messageRef(key, values),
+});
 
 function textsOf(v: unknown): string[] {
   if (typeof v === "string") return [v];
@@ -429,15 +470,17 @@ export function checksFor(state: DraftState, field: FieldDef, value: unknown): P
           "u",
         ).test(hay)
       )
-        checks.push({ level: "warning", message: `Forbidden word: "${w}"` });
+        checks.push(check("warning", "brand.proposalChecks.forbiddenWord", { word: w }));
   }
   if (field.pointer === "/document/strategy/oneLiner" && typeof value === "string") {
     const n = wordCount(value);
     if (n > ONE_LINER_MAX_WORDS)
-      checks.push({
-        level: "warning",
-        message: `One-liner of ${n} words: the maximum is ${ONE_LINER_MAX_WORDS}`,
-      });
+      checks.push(
+        check("warning", "brand.proposalChecks.oneLinerLength", {
+          count: n,
+          max: ONE_LINER_MAX_WORDS,
+        }),
+      );
   }
   if (field.pointer === "/tokens/color/reference" && isObject(value)) {
     const v = value.$value as { hex?: string } | string | undefined;
@@ -445,14 +488,14 @@ export function checksFor(state: DraftState, field: FieldDef, value: unknown): P
     const bg = tokenColorHex(state.tokens, "color.semantic.background");
     if (hex && bg) {
       const ratio = checkContrast(hex, bg);
-      checks.push({
-        level: ratio < 3 ? "warning" : "info",
-        message: `Contrast on main background: ${ratio.toFixed(1)}:1${
-          ratio >= 4.5 ? "" : ratio >= 3 ? " · Large text only" : " · Not suitable for text"
-        }`,
-      });
+      checks.push(
+        check(ratio < 3 ? "warning" : "info", "brand.proposalChecks.contrast", {
+          ratio: ratio.toFixed(1),
+          grade: ratio >= 4.5 ? "normal" : ratio >= 3 ? "large" : "fail",
+        }),
+      );
     }
   }
-  if (!checks.length) checks.push({ level: "info", message: "No issues found" });
+  if (!checks.length) checks.push(check("info", "brand.proposalChecks.noIssues"));
   return checks;
 }

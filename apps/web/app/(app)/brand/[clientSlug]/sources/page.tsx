@@ -1,25 +1,18 @@
 import { createStorageFromEnv } from "@forgecy/files";
 import { Badge, Card } from "@forgecy/ui";
+import { getTranslations } from "next-intl/server";
 import { env } from "@/lib/env";
+import { getFormat } from "@/lib/i18n";
 import { ActionButton } from "../../_components/action-button";
 import { LinkSourceForm, UploadSourceForm } from "../../_components/source-forms";
 import { importSourceAction, removeSourceAction } from "../../actions";
-import {
-  formatDate,
-  sourceKindLabel,
-  sourceStatusLabel,
-  sourceStatusVariant,
-} from "../../_lib/labels";
+import { sourceStatusVariant } from "../../_lib/labels";
 import { loadBrand, sourcesFor } from "../../_lib/server";
 
-export const metadata = { title: "Sources · Brand Identity" };
-
-const size = (n: number | null) =>
-  n === null
-    ? ""
-    : n > 1024 * 1024
-      ? `${(n / 1024 / 1024).toFixed(1)} MB`
-      : `${Math.ceil(n / 1024)} KB`;
+export async function generateMetadata() {
+  const t = await getTranslations("brand.meta");
+  return { title: t("sources") };
+}
 
 export default async function SourcesPage({
   params,
@@ -29,6 +22,18 @@ export default async function SourcesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const [{ clientSlug }, sp] = await Promise.all([params, searchParams]);
+  const t = await getTranslations("brand");
+  const format = await getFormat();
+  const size = (n: number) =>
+    n > 1024 * 1024
+      ? t("sources.size", {
+          unit: "mb",
+          value: format.number(n / 1024 / 1024, {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          }),
+        })
+      : t("sources.size", { unit: "kb", value: format.number(Math.ceil(n / 1024)) });
   const { client } = await loadBrand(clientSlug);
   const sources = await sourcesFor(client.id);
   const storage = createStorageFromEnv(env);
@@ -56,25 +61,23 @@ export default async function SourcesPage({
     <div className="grid gap-6 xl:grid-cols-[1fr_24rem]">
       <Card className="overflow-hidden p-0">
         {sources.length === 0 ? (
-          <p className="p-6 text-body-md text-fg-muted">
-            No sources yet. Import the client’s brand book or add a link.
-          </p>
+          <p className="p-6 text-body-md text-fg-muted">{t("sources.empty")}</p>
         ) : (
           <table className="w-full text-left text-body-sm">
-            <caption className="sr-only">Brand Identity sources</caption>
+            <caption className="sr-only">{t("sources.caption")}</caption>
             <thead className="border-b border-subtle text-label text-fg-muted">
               <tr>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Source
+                  {t("sources.source")}
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Status
+                  {t("sources.status")}
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Added
+                  {t("sources.added")}
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t("sources.actions")}</span>
                 </th>
               </tr>
             </thead>
@@ -92,9 +95,9 @@ export default async function SourcesPage({
                       s.title
                     )}
                     <span className="block text-fg-muted">
-                      {sourceKindLabel[s.kind]}
+                      {t(`sourceKind.${s.kind}`)}
                       {s.size ? ` · ${size(s.size)}` : ""}
-                      {s.pageCount ? ` · ${s.pageCount} parts read` : ""}
+                      {s.pageCount ? ` · ${t("sources.partsRead", { count: s.pageCount })}` : ""}
                     </span>
                     {s.statusDetail ? (
                       <span className="block text-fg-muted">{s.statusDetail}</span>
@@ -102,10 +105,12 @@ export default async function SourcesPage({
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant={sourceStatusVariant[s.status]}>
-                      {sourceStatusLabel[s.status]}
+                      {t(`sourceStatus.${s.status}`)}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-fg-muted">{formatDate(s.capturedAt)}</td>
+                  <td className="px-4 py-3 text-fg-muted">
+                    {s.capturedAt ? format.date(s.capturedAt, "dateTime") : "—"}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap justify-end gap-2">
                       {s.storageKey && s.status !== "pending" && s.status !== "extracting" ? (
@@ -118,20 +123,20 @@ export default async function SourcesPage({
                             sourceId: s.id,
                           })}
                         >
-                          Read again
+                          {t("sources.readAgain")}
                         </ActionButton>
                       ) : null}
                       <ActionButton
                         variant="ghost"
                         size="sm"
-                        confirm="Remove the source? Pending proposals that cite it become superseded. The file and the history are kept."
+                        confirm={t("sources.removeConfirm")}
                         action={removeSourceAction.bind(null, {
                           slug: client.slug,
                           clientId: client.id,
                           sourceId: s.id,
                         })}
                       >
-                        Remove
+                        {t("sources.remove")}
                       </ActionButton>
                     </div>
                   </td>
@@ -143,18 +148,16 @@ export default async function SourcesPage({
       </Card>
       <div className="space-y-6">
         <Card className="p-6">
-          <h2 className="text-heading-sm text-fg">Import brand book</h2>
+          <h2 className="text-heading-sm text-fg">{t("sources.importTitle")}</h2>
           <p className="mt-1 text-body-sm text-fg-muted">
-            {noAi
-              ? "AI features are off for this client: we only extract text, colors and fonts, without interpreted proposals."
-              : "Text, colors and fonts become proposals with the page they come from. Nothing enters the draft without a person."}
+            {noAi ? t("sources.importNoAi") : t("sources.importAi")}
           </p>
           <div className="mt-4">
             <UploadSourceForm slug={client.slug} open={sp.import === "1"} />
           </div>
         </Card>
         <Card className="p-6">
-          <h2 className="text-heading-sm text-fg">Add a link or note</h2>
+          <h2 className="text-heading-sm text-fg">{t("sources.linkTitle")}</h2>
           <div className="mt-4">
             <LinkSourceForm slug={client.slug} clientId={client.id} />
           </div>

@@ -9,13 +9,17 @@ import { and, brandIdentityProposals, eq } from "@forgecy/db";
 import { Card } from "@forgecy/ui";
 import Link from "next/link";
 import type { Route } from "next";
+import { getTranslations } from "next-intl/server";
 import { ApproveForm } from "../../../../_components/approve-form";
 import { DiffList } from "../../../../_components/diff-list";
 import { brandPath } from "../../../../_lib/labels";
 import { loadBrand, openConflicts } from "../../../../_lib/server";
-import { plural } from "@/lib/plural";
+import { refText } from "@/lib/i18n";
 
-export const metadata = { title: "Approval · Brand Identity" };
+export async function generateMetadata() {
+  const t = await getTranslations("brand.meta");
+  return { title: t("approval") };
+}
 
 export default async function ApprovePage({
   params,
@@ -23,6 +27,7 @@ export default async function ApprovePage({
   params: Promise<{ clientSlug: string; number: string }>;
 }) {
   const { clientSlug, number } = await params;
+  const t = await getTranslations("brand.approve");
   const { db, user, client, ws } = await loadBrand(clientSlug);
   const draft = ws.draft;
   const base = brandPath(client.slug);
@@ -30,8 +35,10 @@ export default async function ApprovePage({
     return (
       <Card className="p-6">
         <p className="text-body-md text-fg">
-          v{number} is not an open draft: approved versions can’t be edited.{" "}
-          <Link href={`${base}/versions` as Route}>Go to the history</Link>.
+          {t.rich("notOpen", {
+            number,
+            link: (chunks) => <Link href={`${base}/versions` as Route}>{chunks}</Link>,
+          })}
         </p>
       </Card>
     );
@@ -64,23 +71,24 @@ export default async function ApprovePage({
     <div className="grid gap-6 xl:grid-cols-[1fr_28rem]">
       <Card className="p-6">
         <h2 className="text-heading-md text-fg">
-          Changes in v{draft.number}{" "}
-          {published ? `compared with v${ws.published!.number}` : "· first publication"}
+          {published
+            ? t("changesComparedWith", { number: draft.number, previous: ws.published!.number })
+            : t("changesFirst", { number: draft.number })}
         </h2>
         <p className="mt-1 text-body-sm text-fg-muted">
-          {plural(changes.length, "field changed", "fields changed")},{" "}
-          {plural(changes.filter((c) => c.sensitive).length, "sensitive", "sensitive")}.
+          {t("summary", {
+            changed: changes.length,
+            sensitive: changes.filter((c) => c.sensitive).length,
+          })}
         </p>
         <div className="mt-4">
           <DiffList changes={changes} />
         </div>
       </Card>
       <Card className="p-6">
-        <h2 className="text-heading-md text-fg">Approve and publish</h2>
+        <h2 className="text-heading-md text-fg">{t("title")}</h2>
         <p className="mt-1 text-body-sm text-fg-muted">
-          The published version becomes the one used by content and carousels and can no longer be
-          edited.
-          {ws.published ? ` v${ws.published.number} is archived.` : ""}
+          {ws.published ? t("explainArchived", { number: ws.published.number }) : t("explain")}
         </p>
         <div className="mt-6">
           <ApproveForm
@@ -91,7 +99,9 @@ export default async function ApprovePage({
             number={draft.number}
             rev={draft.rev}
             inReview={draft.status === "in_review"}
-            checks={checks.map((c) => ({ key: c.key, message: c.message }))}
+            checks={await Promise.all(
+              checks.map(async (c) => ({ key: c.key, message: await refText(c.ref, c.message) })),
+            )}
             selfApproval={isSelfApproval(draft, user.id)}
             doneHref={`${base}/versions`}
           />

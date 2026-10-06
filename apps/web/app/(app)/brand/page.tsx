@@ -2,14 +2,19 @@ import { brandIdentityVersions, asc, clients, getDb, isNull, sql } from "@forgec
 import { Badge, Card } from "@forgecy/ui";
 import Link from "next/link";
 import type { Route } from "next";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/session";
 import { brandPath } from "./_lib/labels";
 
-export const metadata = { title: "Brand Identity" };
+export async function generateMetadata() {
+  const t = await getTranslations("brand");
+  return { title: t("title") };
+}
 
 export default async function BrandPickerPage() {
   await requireUser();
+  const t = await getTranslations("brand");
   const db = getDb();
   const rows = await db
     .select({
@@ -31,14 +36,13 @@ export default async function BrandPickerPage() {
 
   return (
     <>
-      <PageHeader
-        title="Brand Identity"
-        description="Choose a client to see their Brand Identity."
-      />
+      <PageHeader title={t("title")} description={t("picker.description")} />
       {rows.length === 0 ? (
         <Card className="p-6">
           <p className="text-body-md text-fg-muted">
-            No clients yet. <Link href="/clients">Add the first client</Link>.
+            {t.rich("picker.empty", {
+              link: (chunks) => <Link href="/clients">{chunks}</Link>,
+            })}
           </p>
         </Card>
       ) : (
@@ -52,11 +56,15 @@ export default async function BrandPickerPage() {
                 <span className="text-heading-sm">{c.name}</span>
                 <span className="flex flex-wrap gap-2">
                   {c.published ? (
-                    <Badge variant="success">v{c.published} · Published</Badge>
+                    <Badge variant="success">
+                      {t("picker.published", { number: c.published })}
+                    </Badge>
                   ) : (
-                    <Badge>No published version</Badge>
+                    <Badge>{t("picker.noPublished")}</Badge>
                   )}
-                  {c.draft ? <Badge variant="info">Draft v{c.draft}</Badge> : null}
+                  {c.draft ? (
+                    <Badge variant="info">{t("picker.draft", { number: c.draft })}</Badge>
+                  ) : null}
                 </span>
               </Link>
             </li>

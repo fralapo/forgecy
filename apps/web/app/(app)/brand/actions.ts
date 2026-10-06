@@ -21,7 +21,9 @@ import { assertCan, brandSourceKinds, ForgecyError, PermissionDeniedError } from
 import { getDb } from "@forgecy/db";
 import { enqueueJob } from "@forgecy/jobs";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
+import { errorMessage, firstIssue, vmsg } from "@/lib/i18n";
 import { getQueues } from "@/lib/queues";
 import { requireUser } from "@/lib/session";
 
@@ -45,14 +47,14 @@ async function run<T extends object>(
     if (err instanceof PermissionDeniedError)
       return {
         ok: false,
-        error: "You don't have permission for this action.",
+        error: (await errorMessage(err)) ?? err.message,
         code: "PERM-DENIED",
       };
     if (err instanceof ForgecyError) {
       const code = typeof err.details?.code === "string" ? err.details.code : err.code;
       return {
         ok: false,
-        error: err.message,
+        error: (await errorMessage(err)) ?? err.message,
         code,
         ...(err.details ? { details: err.details } : {}),
       };
@@ -225,12 +227,14 @@ export async function restoreAction(input: {
 
 const linkSourceSchema = z.object({
   kind: z.enum(brandSourceKinds),
-  title: z.string().trim().min(1, "Enter a title").max(300),
+  title: z.string().trim().min(1, vmsg("brand.validation.titleRequired")).max(300),
   url: z
     .string()
     .trim()
     .transform((v) => v || undefined)
-    .pipe(z.url({ protocol: /^https?$/, message: "Invalid address" }).optional()),
+    .pipe(
+      z.url({ protocol: /^https?$/, message: vmsg("brand.validation.addressInvalid") }).optional(),
+    ),
   note: z.string().trim().max(20_000).optional(),
 });
 
@@ -245,10 +249,12 @@ export async function addLinkSourceAction(input: {
 }) {
   slugSchema.parse(input.slug);
   const parsed = linkSourceSchema.safeParse(input);
-  if (!parsed.success)
-    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid data" };
+  if (!parsed.success) return { ok: false as const, error: await firstIssue(parsed.error) };
   if (!parsed.data.url && !parsed.data.note)
-    return { ok: false as const, error: "Enter an address or write the note." };
+    return {
+      ok: false as const,
+      error: (await getTranslations("brand.validation"))("addressOrNote"),
+    };
   return run(input.slug, async ({ actor }) => {
     const row = await addSource(getDb(), actor, {
       clientId: uuid.parse(input.clientId),

@@ -12,176 +12,157 @@ import {
   typographyRoles,
   type DocumentSectionKey,
 } from "@forgecy/brand/client";
+import type { MessageKey } from "@forgecy/i18n";
 
-export type Option = { value: string; label: string };
-const opts = (values: readonly string[], labels: Record<string, string> = {}): Option[] =>
-  values.map((v) => ({ value: v, label: labels[v] ?? v }));
+/** A message key under `brand.editor` (packages/i18n/messages/<locale>/brand.json). */
+export type EditorKey = MessageKey extends infer K
+  ? K extends `brand.editor.${infer R}`
+    ? R
+    : never
+  : never;
+
+/** `label` is a message key; without one the value itself is shown (channel names). */
+export type Option = { value: string; label?: EditorKey };
+const opts = (values: readonly string[], group?: string): Option[] =>
+  values.map((v) =>
+    group ? { value: v, label: `options.${group}.${v}` as EditorKey } : { value: v },
+  );
 
 export type Ctl =
-  | { kind: "text"; key: string; label: string; hint?: string }
-  | { kind: "textarea"; key: string; label: string; hint?: string; maxWords?: number }
-  | { kind: "number"; key: string; label: string; min?: number; max?: number }
-  | { kind: "select"; key: string; label: string; options: Option[]; required?: boolean }
-  | { kind: "scale"; key: string; label: string; min: number; max: number }
-  | { kind: "lines"; key: string; label: string; hint?: string }
-  | { kind: "numbers"; key: string; label: string; hint?: string }
-  | { kind: "list"; key: string; label: string; item: Ctl[]; withId?: boolean; addLabel: string }
-  | { kind: "source"; key: string; label: string };
+  | { kind: "text"; key: string; label: EditorKey; hint?: EditorKey }
+  | { kind: "textarea"; key: string; label: EditorKey; hint?: EditorKey; maxWords?: number }
+  | { kind: "number"; key: string; label: EditorKey; min?: number; max?: number }
+  | { kind: "select"; key: string; label: EditorKey; options: Option[]; required?: boolean }
+  | { kind: "scale"; key: string; label: EditorKey; min: number; max: number }
+  | { kind: "lines"; key: string; label: EditorKey; hint?: EditorKey }
+  | { kind: "numbers"; key: string; label: EditorKey; hint?: EditorKey }
+  | {
+      kind: "list";
+      key: string;
+      label: EditorKey;
+      item: Ctl[];
+      withId?: boolean;
+      addLabel: EditorKey;
+    }
+  | { kind: "source"; key: string; label: EditorKey };
 
 export type FieldUi =
   | {
       kind: "sourced";
       key: string;
-      label: string;
+      label: EditorKey;
       multiline?: boolean;
-      hint?: string;
+      hint?: EditorKey;
       maxWords?: number;
     }
-  | { kind: "sourced-object"; key: string; label: string; item: Ctl[] }
+  | { kind: "sourced-object"; key: string; label: EditorKey; item: Ctl[] }
   | {
       kind: "sourced-list";
       key: string;
-      label: string;
+      label: EditorKey;
       item: Ctl[] | "text";
-      addLabel: string;
-      hint?: string;
+      addLabel: EditorKey;
+      hint?: EditorKey;
     }
-  | { kind: "lines"; key: string; label: string; hint?: string }
-  | { kind: "object"; key: string; label: string; item: Ctl[] }
-  | { kind: "list"; key: string; label: string; item: Ctl[]; withId?: boolean; addLabel: string };
+  | { kind: "lines"; key: string; label: EditorKey; hint?: EditorKey }
+  | { kind: "object"; key: string; label: EditorKey; item: Ctl[] }
+  | {
+      kind: "list";
+      key: string;
+      label: EditorKey;
+      item: Ctl[];
+      withId?: boolean;
+      addLabel: EditorKey;
+    };
 
 export interface SectionUi {
   section: DocumentSectionKey;
-  title: string;
+  title: EditorKey;
   /** "list" when the section itself is an array (channels). */
   root?: "list";
   fields: FieldUi[];
 }
 
-const awarenessLabels: Record<string, string> = {
-  unaware: "Unaware",
-  problem_aware: "Problem aware",
-  solution_aware: "Solution aware",
-  product_aware: "Product aware",
-  most_aware: "Ready to buy",
-};
-const messageLabels: Record<string, string> = {
-  value_proposition: "Value proposition",
-  tagline: "Tagline",
-  claim: "Claim",
-  proof_point: "Proof point",
-  reason_to_believe: "Reason to believe",
-  elevator_pitch: "Elevator pitch",
-  objection: "Objection",
-  cta: "CTA",
-};
-const logoLabels: Record<string, string> = {
-  logo_primary: "Primary logo",
-  logo_secondary: "Secondary logo",
-  symbol: "Symbol",
-  wordmark: "Wordmark",
-  logo_mono: "Monochrome",
-  logo_negative: "Negative",
-  favicon: "Favicon",
-};
-const typoLabels: Record<string, string> = { display: "Headings", body: "Body text", data: "Data" };
-const funnelLabels: Record<string, string> = {
-  awareness: "Awareness",
-  consideration: "Consideration",
-  conversion: "Conversion",
-  loyalty: "Loyalty",
-};
 // Values are the Italian grammatical persons stored in the document; labels explain them.
-const personLabels: Record<string, string> = {
-  tu: "Informal “you” (tu)",
-  lei: "Formal “you” (Lei)",
-  voi: "Plural “you” (voi)",
-  noi: "We (noi)",
-  impersonale: "Impersonal",
-};
-const triple = (a: string, b: string, c: string) => [
-  { value: "no", label: a },
-  { value: "limited", label: b },
-  { value: "yes", label: c },
-];
+const persons = ["tu", "lei", "voi", "noi", "impersonale"];
 
 export const strategyUi: SectionUi = {
   section: "strategy",
-  title: "Strategy",
+  title: "sections.strategy",
   fields: [
     {
       kind: "sourced",
       key: "oneLiner",
-      label: "One-liner",
-      hint: "Who you are and why you matter, in under 20 words.",
+      label: "strategy.oneLiner",
+      hint: "strategy.oneLinerHint",
       maxWords: 20,
     },
-    { kind: "sourced", key: "insight", label: "Insight", multiline: true },
-    { kind: "sourced", key: "positioning", label: "Positioning", multiline: true },
-    { kind: "sourced", key: "promise", label: "Promise", multiline: true },
-    { kind: "sourced", key: "differentiation", label: "Differentiation", multiline: true },
-    { kind: "sourced", key: "mission", label: "Mission", multiline: true },
-    { kind: "sourced", key: "vision", label: "Vision", multiline: true },
-    { kind: "sourced", key: "category", label: "Category" },
+    { kind: "sourced", key: "insight", label: "strategy.insight", multiline: true },
+    { kind: "sourced", key: "positioning", label: "strategy.positioning", multiline: true },
+    { kind: "sourced", key: "promise", label: "strategy.promise", multiline: true },
+    { kind: "sourced", key: "differentiation", label: "strategy.differentiation", multiline: true },
+    { kind: "sourced", key: "mission", label: "strategy.mission", multiline: true },
+    { kind: "sourced", key: "vision", label: "strategy.vision", multiline: true },
+    { kind: "sourced", key: "category", label: "strategy.category" },
     {
       kind: "sourced-list",
       key: "values",
-      label: "Values",
-      addLabel: "Add value",
+      label: "strategy.values",
+      addLabel: "strategy.addValue",
       item: [
-        { kind: "text", key: "name", label: "Name" },
-        { kind: "textarea", key: "description", label: "What it means" },
+        { kind: "text", key: "name", label: "strategy.valueName" },
+        { kind: "textarea", key: "description", label: "strategy.valueMeaning" },
       ],
     },
     {
       kind: "sourced-list",
       key: "audience",
-      label: "Audience",
-      addLabel: "Add segment",
+      label: "strategy.audience",
+      addLabel: "strategy.addSegment",
       item: [
-        { kind: "text", key: "name", label: "Segment" },
-        { kind: "text", key: "role", label: "Role" },
-        { kind: "text", key: "sector", label: "Industry" },
+        { kind: "text", key: "name", label: "strategy.segment" },
+        { kind: "text", key: "role", label: "strategy.role" },
+        { kind: "text", key: "sector", label: "strategy.sector" },
         {
           kind: "select",
           key: "awareness",
-          label: "Awareness",
-          options: opts(awarenessLevels, awarenessLabels),
+          label: "strategy.awareness",
+          options: opts(awarenessLevels, "awareness"),
         },
-        { kind: "textarea", key: "goals", label: "Goals" },
-        { kind: "textarea", key: "problems", label: "Problems" },
-        { kind: "textarea", key: "fears", label: "Fears" },
-        { kind: "textarea", key: "objections", label: "Objections" },
-        { kind: "textarea", key: "triggers", label: "Purchase triggers" },
-        { kind: "textarea", key: "language", label: "Language" },
-        { kind: "text", key: "channels", label: "Channels" },
-        { kind: "textarea", key: "alternatives", label: "Alternatives" },
+        { kind: "textarea", key: "goals", label: "strategy.goals" },
+        { kind: "textarea", key: "problems", label: "strategy.problems" },
+        { kind: "textarea", key: "fears", label: "strategy.fears" },
+        { kind: "textarea", key: "objections", label: "strategy.objections" },
+        { kind: "textarea", key: "triggers", label: "strategy.triggers" },
+        { kind: "textarea", key: "language", label: "strategy.language" },
+        { kind: "text", key: "channels", label: "strategy.channels" },
+        { kind: "textarea", key: "alternatives", label: "strategy.alternatives" },
       ],
     },
     {
       kind: "sourced-list",
       key: "messages",
-      label: "Messages and claims",
-      addLabel: "Add message",
-      hint: "Every claim needs proof: without it, it must be confirmed before publishing.",
+      label: "strategy.messages",
+      addLabel: "strategy.addMessage",
+      hint: "strategy.messagesHint",
       item: [
         {
           kind: "select",
           key: "kind",
-          label: "Type",
-          options: opts(messageKinds, messageLabels),
+          label: "strategy.messageType",
+          options: opts(messageKinds, "messageKind"),
           required: true,
         },
-        { kind: "textarea", key: "text", label: "Text" },
-        { kind: "textarea", key: "proof", label: "Proof or source" },
-        { kind: "textarea", key: "answer", label: "Answer (for objections)" },
+        { kind: "textarea", key: "text", label: "strategy.messageText" },
+        { kind: "textarea", key: "proof", label: "strategy.proof" },
+        { kind: "textarea", key: "answer", label: "strategy.answer" },
       ],
     },
     {
       kind: "sourced-list",
       key: "avoidTopics",
-      label: "Topics to avoid",
-      addLabel: "Add topic",
+      label: "strategy.avoidTopics",
+      addLabel: "strategy.addTopic",
       item: "text",
     },
   ],
@@ -189,141 +170,146 @@ export const strategyUi: SectionUi = {
 
 export const competitorsUi: SectionUi = {
   section: "competitors",
-  title: "Competitors",
+  title: "sections.competitors",
   fields: [
     {
       kind: "sourced-list",
       key: "list",
-      label: "Competitors",
-      addLabel: "Add competitor",
+      label: "competitors.list",
+      addLabel: "competitors.add",
       item: [
-        { kind: "text", key: "name", label: "Name" },
+        { kind: "text", key: "name", label: "competitors.name" },
         {
           kind: "select",
           key: "kind",
-          label: "Type",
-          options: [
-            { value: "direct", label: "Direct" },
-            { value: "indirect", label: "Indirect" },
-            { value: "alternative", label: "Alternative" },
-          ],
+          label: "competitors.type",
+          options: opts(["direct", "indirect", "alternative"], "competitorKind"),
           required: true,
         },
-        { kind: "text", key: "url", label: "Website" },
-        { kind: "textarea", key: "notes", label: "Notes" },
+        { kind: "text", key: "url", label: "competitors.website" },
+        { kind: "textarea", key: "notes", label: "competitors.notes" },
       ],
     },
-    { kind: "lines", key: "overusedMessages", label: "Overused messages in the industry" },
-    { kind: "lines", key: "commonVisualCodes", label: "Common visual codes" },
-    { kind: "lines", key: "openSpaces", label: "Open spaces" },
+    { kind: "lines", key: "overusedMessages", label: "competitors.overusedMessages" },
+    { kind: "lines", key: "commonVisualCodes", label: "competitors.commonVisualCodes" },
+    { kind: "lines", key: "openSpaces", label: "competitors.openSpaces" },
   ],
 };
 
 export const verbalUi: SectionUi = {
   section: "verbal",
-  title: "Verbal",
+  title: "sections.verbal",
   fields: [
     {
       kind: "sourced",
       key: "voice",
-      label: "Voice",
+      label: "verbal.voice",
       multiline: true,
-      hint: "Consistent across every channel.",
+      hint: "verbal.voiceHint",
     },
     {
       kind: "sourced-list",
       key: "toneAxes",
-      label: "Tone axes",
-      addLabel: "Add axis",
-      hint: "An adjective without examples is not enough: you need one right and one wrong sentence.",
+      label: "verbal.toneAxes",
+      addLabel: "verbal.addAxis",
+      hint: "verbal.toneAxesHint",
       item: [
         {
           kind: "select",
           key: "axis",
-          label: "Axis",
-          options: toneAxes.map((a) => ({ value: a.key, label: `${a.left} / ${a.right}` })),
+          label: "verbal.axis",
+          options: opts(
+            toneAxes.map((a) => a.key),
+            "toneAxis",
+          ),
           required: true,
         },
         {
           kind: "scale",
           key: "value",
-          label: "Position (1 = left, 5 = right)",
+          label: "verbal.position",
           min: 1,
           max: 5,
         },
-        { kind: "textarea", key: "goodExample", label: "Right sentence" },
-        { kind: "textarea", key: "badExample", label: "Wrong sentence" },
+        { kind: "textarea", key: "goodExample", label: "verbal.goodExample" },
+        { kind: "textarea", key: "badExample", label: "verbal.badExample" },
       ],
     },
     {
       kind: "sourced-list",
       key: "weAreWeAreNot",
-      label: "We are / We are not",
-      addLabel: "Add row",
+      label: "verbal.weAreWeAreNot",
+      addLabel: "verbal.addRow",
       item: [
-        { kind: "text", key: "weAre", label: "We are" },
-        { kind: "text", key: "weAreNot", label: "We are not" },
+        { kind: "text", key: "weAre", label: "verbal.weAre" },
+        { kind: "text", key: "weAreNot", label: "verbal.weAreNot" },
       ],
     },
     {
       kind: "sourced-object",
       key: "writingRules",
-      label: "Writing rules",
+      label: "verbal.writingRules",
       item: [
         {
           kind: "select",
           key: "person",
-          label: "Grammatical person",
-          options: opts(["tu", "lei", "voi", "noi", "impersonale"], personLabels),
+          label: "verbal.person",
+          options: opts(persons, "person"),
         },
         {
           kind: "select",
           key: "emoji",
-          label: "Emoji",
-          options: triple("Never", "In moderation", "Allowed"),
+          label: "verbal.emoji",
+          options: opts(["no", "limited", "yes"], "emoji"),
         },
         {
           kind: "number",
           key: "maxSentenceWords",
-          label: "Max words per sentence",
+          label: "verbal.maxSentenceWords",
           min: 3,
           max: 80,
         },
-        { kind: "number", key: "maxHashtags", label: "Max hashtags", min: 0, max: 30 },
+        { kind: "number", key: "maxHashtags", label: "verbal.maxHashtags", min: 0, max: 30 },
         {
           kind: "select",
           key: "anglicisms",
-          label: "Anglicisms",
-          options: [
-            { value: "avoid", label: "Avoid" },
-            { value: "limited", label: "Few" },
-            { value: "allowed", label: "Allowed" },
-          ],
+          label: "verbal.anglicisms",
+          options: opts(["avoid", "limited", "allowed"], "anglicisms"),
         },
         {
           kind: "select",
           key: "exclamations",
-          label: "Exclamation marks",
-          options: triple("Never", "Rare", "Allowed"),
+          label: "verbal.exclamations",
+          options: opts(["no", "limited", "yes"], "exclamations"),
         },
-        { kind: "text", key: "capitalization", label: "Capitalization" },
-        { kind: "text", key: "numbers", label: "Numbers" },
-        { kind: "text", key: "ctaStyle", label: "CTA style" },
-        { kind: "text", key: "headlineStyle", label: "Headline style" },
-        { kind: "text", key: "captionStyle", label: "Caption style" },
-        { kind: "textarea", key: "notes", label: "Notes" },
+        { kind: "text", key: "capitalization", label: "verbal.capitalization" },
+        { kind: "text", key: "numbers", label: "verbal.numbers" },
+        { kind: "text", key: "ctaStyle", label: "verbal.ctaStyle" },
+        { kind: "text", key: "headlineStyle", label: "verbal.headlineStyle" },
+        { kind: "text", key: "captionStyle", label: "verbal.captionStyle" },
+        { kind: "textarea", key: "notes", label: "verbal.notes" },
       ],
     },
-    { kind: "lines", key: "preferredWords", label: "Preferred words", hint: "One per line." },
-    { kind: "lines", key: "forbiddenWords", label: "Forbidden words", hint: "One per line." },
+    {
+      kind: "lines",
+      key: "preferredWords",
+      label: "verbal.preferredWords",
+      hint: "verbal.onePerLine",
+    },
+    {
+      kind: "lines",
+      key: "forbiddenWords",
+      label: "verbal.forbiddenWords",
+      hint: "verbal.onePerLine",
+    },
     {
       kind: "list",
       key: "spellings",
-      label: "Correct spellings",
-      addLabel: "Add term",
+      label: "verbal.spellings",
+      addLabel: "verbal.addTerm",
       item: [
-        { kind: "text", key: "term", label: "Term" },
-        { kind: "text", key: "note", label: "Note" },
+        { kind: "text", key: "term", label: "verbal.term" },
+        { kind: "text", key: "note", label: "verbal.note" },
       ],
     },
   ],
@@ -331,187 +317,180 @@ export const verbalUi: SectionUi = {
 
 export const visualUi: SectionUi = {
   section: "visual",
-  title: "Visual",
+  title: "sections.visual",
   fields: [
     {
       kind: "object",
       key: "logo",
-      label: "Logo",
+      label: "visual.logo",
       item: [
         {
           kind: "list",
           key: "variants",
-          label: "Variants",
+          label: "visual.variants",
           withId: true,
-          addLabel: "Add variant",
+          addLabel: "visual.addVariant",
           item: [
             {
               kind: "select",
               key: "role",
-              label: "Role",
-              options: opts(logoRoles, logoLabels),
+              label: "visual.role",
+              options: opts(logoRoles, "logoRole"),
               required: true,
             },
-            { kind: "source", key: "sourceId", label: "File" },
+            { kind: "source", key: "sourceId", label: "visual.file" },
             {
               kind: "select",
               key: "background",
-              label: "Background",
-              options: [
-                { value: "any", label: "Any" },
-                { value: "light", label: "Light" },
-                { value: "dark", label: "Dark" },
-              ],
+              label: "visual.background",
+              options: opts(["any", "light", "dark"], "background"),
               required: true,
             },
-            { kind: "text", key: "note", label: "Note" },
+            { kind: "text", key: "note", label: "visual.note" },
           ],
         },
-        { kind: "text", key: "clearSpace", label: "Clear space" },
-        { kind: "number", key: "minSizePx", label: "Minimum size (px)", min: 4, max: 2000 },
-        { kind: "text", key: "allowedBackgrounds", label: "Allowed backgrounds" },
-        { kind: "lines", key: "forbiddenUses", label: "Forbidden uses" },
+        { kind: "text", key: "clearSpace", label: "visual.clearSpace" },
+        { kind: "number", key: "minSizePx", label: "visual.minSize", min: 4, max: 2000 },
+        { kind: "text", key: "allowedBackgrounds", label: "visual.allowedBackgrounds" },
+        { kind: "lines", key: "forbiddenUses", label: "visual.forbiddenUses" },
       ],
     },
     {
       kind: "sourced-list",
       key: "typography",
-      label: "Typography",
-      addLabel: "Add font",
+      label: "visual.typography",
+      addLabel: "visual.addFont",
       item: [
         {
           kind: "select",
           key: "role",
-          label: "Role",
-          options: opts(typographyRoles, typoLabels),
+          label: "visual.role",
+          options: opts(typographyRoles, "typographyRole"),
           required: true,
         },
-        { kind: "text", key: "family", label: "Family" },
+        { kind: "text", key: "family", label: "visual.family" },
         {
           kind: "numbers",
           key: "weights",
-          label: "Weights",
-          hint: "Comma-separated, e.g. 400, 700.",
+          label: "visual.weights",
+          hint: "visual.weightsHint",
         },
-        { kind: "text", key: "fallback", label: "Fallback" },
-        { kind: "text", key: "license", label: "License" },
+        { kind: "text", key: "fallback", label: "visual.fallback" },
+        { kind: "text", key: "license", label: "visual.license" },
         {
           kind: "select",
           key: "licenseStatus",
-          label: "License status",
-          options: [
-            { value: "to_verify", label: "To verify" },
-            { value: "verified", label: "Verified" },
-          ],
+          label: "visual.licenseStatus",
+          options: opts(["to_verify", "verified"], "licenseStatus"),
           required: true,
         },
-        { kind: "source", key: "sourceId", label: "Font file" },
+        { kind: "source", key: "sourceId", label: "visual.fontFile" },
       ],
     },
     {
       kind: "sourced-object",
       key: "imagery",
-      label: "Photography and illustration",
+      label: "visual.imagery",
       item: [
-        { kind: "lines", key: "subjects", label: "Subjects" },
-        { kind: "lines", key: "settings", label: "Locations" },
-        { kind: "lines", key: "framing", label: "Framing" },
-        { kind: "lines", key: "lighting", label: "Lighting" },
-        { kind: "lines", key: "colorMood", label: "Color and mood" },
-        { kind: "text", key: "people", label: "People" },
-        { kind: "textarea", key: "illustration", label: "Illustration" },
-        { kind: "lines", key: "forbidden", label: "Avoid" },
+        { kind: "lines", key: "subjects", label: "visual.subjects" },
+        { kind: "lines", key: "settings", label: "visual.locations" },
+        { kind: "lines", key: "framing", label: "visual.framing" },
+        { kind: "lines", key: "lighting", label: "visual.lighting" },
+        { kind: "lines", key: "colorMood", label: "visual.colorMood" },
+        { kind: "text", key: "people", label: "visual.people" },
+        { kind: "textarea", key: "illustration", label: "visual.illustration" },
+        { kind: "lines", key: "forbidden", label: "visual.avoid" },
       ],
     },
     {
       kind: "object",
       key: "layout",
-      label: "Layout",
+      label: "visual.layout",
       item: [
-        { kind: "text", key: "grid", label: "Grid" },
-        { kind: "text", key: "margins", label: "Margins" },
+        { kind: "text", key: "grid", label: "visual.grid" },
+        { kind: "text", key: "margins", label: "visual.margins" },
         {
           kind: "number",
           key: "maxElements",
-          label: "Max elements per slide",
+          label: "visual.maxElements",
           min: 1,
           max: 30,
         },
-        { kind: "text", key: "logoPosition", label: "Logo position" },
-        { kind: "text", key: "ctaPosition", label: "CTA position" },
-        { kind: "text", key: "textDensity", label: "Text density" },
-        { kind: "textarea", key: "notes", label: "Notes" },
+        { kind: "text", key: "logoPosition", label: "visual.logoPosition" },
+        { kind: "text", key: "ctaPosition", label: "visual.ctaPosition" },
+        { kind: "text", key: "textDensity", label: "visual.textDensity" },
+        { kind: "textarea", key: "notes", label: "visual.notes" },
       ],
     },
-    { kind: "lines", key: "do", label: "Do" },
-    { kind: "lines", key: "dont", label: "Don’t" },
+    { kind: "lines", key: "do", label: "visual.do" },
+    { kind: "lines", key: "dont", label: "visual.dont" },
   ],
 };
 
 export const contentUi: SectionUi = {
   section: "content",
-  title: "Content",
+  title: "sections.content",
   fields: [
     {
       kind: "sourced-list",
       key: "pillars",
-      label: "Pillars",
-      addLabel: "Add pillar",
+      label: "content.pillars",
+      addLabel: "content.addPillar",
       item: [
         {
           kind: "text",
           key: "key",
-          label: "Key",
-          hint: "Lowercase and hyphens, e.g. behind-the-scenes.",
+          label: "content.key",
+          hint: "content.keyHint",
         },
-        { kind: "text", key: "name", label: "Name" },
-        { kind: "textarea", key: "goal", label: "Goal" },
+        { kind: "text", key: "name", label: "content.name" },
+        { kind: "textarea", key: "goal", label: "content.goal" },
         {
           kind: "select",
           key: "funnel",
-          label: "Funnel stage",
-          options: opts(funnelStages, funnelLabels),
+          label: "content.funnel",
+          options: opts(funnelStages, "funnel"),
         },
-        { kind: "lines", key: "themes", label: "Themes" },
+        { kind: "lines", key: "themes", label: "content.themes" },
         {
           kind: "text",
           key: "emotion",
-          label: "Emotion",
-          hint: "Be specific: “relief”, not “positive”.",
+          label: "content.emotion",
+          hint: "content.emotionHint",
         },
-        { kind: "text", key: "frequency", label: "Frequency" },
-        { kind: "text", key: "cta", label: "CTA" },
-        { kind: "lines", key: "forbidden", label: "Forbidden" },
+        { kind: "text", key: "frequency", label: "content.frequency" },
+        { kind: "text", key: "cta", label: "content.cta" },
+        { kind: "lines", key: "forbidden", label: "content.forbidden" },
       ],
     },
     {
       kind: "list",
       key: "formats",
-      label: "Formats",
+      label: "content.formats",
       withId: true,
-      addLabel: "Add format",
+      addLabel: "content.addFormat",
       item: [
-        { kind: "text", key: "key", label: "Key" },
-        { kind: "text", key: "name", label: "Name" },
-        { kind: "textarea", key: "goal", label: "Goal" },
+        { kind: "text", key: "key", label: "content.key" },
+        { kind: "text", key: "name", label: "content.name" },
+        { kind: "textarea", key: "goal", label: "content.goal" },
         {
           kind: "list",
           key: "steps",
-          label: "Sequence",
-          addLabel: "Add step",
+          label: "content.sequence",
+          addLabel: "content.addStep",
           item: [
-            { kind: "text", key: "step", label: "Step" },
-            { kind: "text", key: "layout", label: "Layout" },
+            { kind: "text", key: "step", label: "content.step" },
+            { kind: "text", key: "layout", label: "content.layout" },
           ],
         },
         {
           kind: "number",
           key: "maxWordsPerSlide",
-          label: "Max words per slide",
+          label: "content.maxWordsPerSlide",
           min: 1,
           max: 200,
         },
-        { kind: "text", key: "cta", label: "CTA" },
+        { kind: "text", key: "cta", label: "content.cta" },
       ],
     },
   ],
@@ -519,29 +498,29 @@ export const contentUi: SectionUi = {
 
 export const channelsUi: SectionUi = {
   section: "channels",
-  title: "Channels",
+  title: "sections.channels",
   root: "list",
   fields: [
     {
       kind: "sourced-list",
       key: "",
-      label: "Rules per channel",
-      addLabel: "Add channel",
+      label: "channels.rules",
+      addLabel: "channels.addChannel",
       item: [
         {
           kind: "select",
           key: "channel",
-          label: "Channel",
+          label: "channels.channel",
           options: opts(channelKeys),
           required: true,
         },
-        { kind: "textarea", key: "goal", label: "Goal" },
-        { kind: "textarea", key: "toneShift", label: "How the tone changes" },
-        { kind: "text", key: "formats", label: "Formats" },
-        { kind: "text", key: "frequency", label: "Frequency" },
-        { kind: "lines", key: "hashtags", label: "Hashtag" },
-        { kind: "text", key: "cta", label: "CTA" },
-        { kind: "textarea", key: "notes", label: "Notes" },
+        { kind: "textarea", key: "goal", label: "channels.goal" },
+        { kind: "textarea", key: "toneShift", label: "channels.toneShift" },
+        { kind: "text", key: "formats", label: "channels.formats" },
+        { kind: "text", key: "frequency", label: "channels.frequency" },
+        { kind: "lines", key: "hashtags", label: "channels.hashtags" },
+        { kind: "text", key: "cta", label: "channels.cta" },
+        { kind: "textarea", key: "notes", label: "channels.notes" },
       ],
     },
   ],

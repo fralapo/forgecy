@@ -1,12 +1,8 @@
-import type { BrandSourceKind, BrandSourceStatus, ConfidenceLevel } from "@forgecy/core";
+import type { MessageKey } from "@forgecy/i18n";
 
-export const versionStatusLabel = {
-  draft: "Draft",
-  in_review: "In review",
-  approved: "Approved",
-  published: "Published",
-  archived: "Archived",
-} as const;
+// The labels of these values live in packages/i18n/messages/<locale>/brand.json
+// (versionStatus, proposalStatus, confidence, sourceKind, sourceStatus, agentRole):
+// here only their badge variants.
 
 export const versionStatusVariant = {
   draft: "neutral",
@@ -16,47 +12,7 @@ export const versionStatusVariant = {
   archived: "neutral",
 } as const;
 
-export const proposalStatusLabel = {
-  proposed: "Proposed",
-  accepted: "Accepted",
-  rejected: "Rejected",
-  stale: "Superseded",
-} as const;
-
-export const confidenceLabel: Record<ConfidenceLevel, string> = {
-  high: "High confidence",
-  medium: "Medium confidence",
-  low: "Low confidence",
-};
-
 export const confidenceVariant = { high: "success", medium: "warning", low: "error" } as const;
-
-export const sourceKindLabel: Record<BrandSourceKind, string> = {
-  brand_book: "Brand book",
-  document: "Client document",
-  interview: "Interview",
-  questionnaire: "Questionnaire",
-  client_approval: "Client approval",
-  manual: "Manual note",
-  internal_feedback: "Internal feedback",
-  website: "Website",
-  instagram: "Instagram",
-  facebook: "Facebook",
-  linkedin: "LinkedIn",
-  tiktok: "TikTok",
-  screenshot: "Screenshot",
-  audit: "Audit",
-  competitor: "Competitor",
-  agent_observation: "AI observation",
-};
-
-export const sourceStatusLabel: Record<BrandSourceStatus, string> = {
-  pending: "Queued",
-  extracting: "Reading",
-  extracted: "Read",
-  partial: "Partly read",
-  failed: "Failed",
-};
 
 export const sourceStatusVariant = {
   pending: "neutral",
@@ -65,18 +21,6 @@ export const sourceStatusVariant = {
   partial: "warning",
   failed: "error",
 } as const;
-
-export const agentRoleLabel: Record<string, string> = {
-  brand_analyst: "Brand Analyst",
-  strategist: "Strategist",
-  art_director: "Art Director",
-  copywriter: "Copywriter",
-  reviewer: "Reviewer",
-};
-
-const dateFmt = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" });
-export const formatDate = (d: Date | string | null | undefined) =>
-  d ? dateFmt.format(typeof d === "string" ? new Date(d) : d) : "—";
 
 /** Readable text for a proposed or current value (strings, objects, lists, DTCG colors). */
 export function formatValue(v: unknown): string {
@@ -98,3 +42,10 @@ export function formatValue(v: unknown): string {
 }
 
 export const brandPath = (slug: string, sub = "") => `/brand/${slug}${sub ? `/${sub}` : ""}`;
+
+/**
+ * Message key of the field a JSON Pointer belongs to (`brand.fields.strategy.oneLiner`),
+ * from the field's own pointer as defined in @forgecy/brand (fields.ts).
+ */
+export const fieldMessageKey = (fieldPointer: string) =>
+  `brand.fields.${fieldPointer.split("/").filter(Boolean).slice(1).join(".")}` as MessageKey;

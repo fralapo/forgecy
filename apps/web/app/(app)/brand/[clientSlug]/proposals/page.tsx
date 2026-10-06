@@ -1,7 +1,7 @@
 import {
-  blocks,
-  confidenceReason,
+  confidenceReasonRef,
   currentValue,
+  fieldLabel,
   listProposals,
   matchField,
   proposedValue,
@@ -10,11 +10,17 @@ import {
 import { Card } from "@forgecy/ui";
 import Link from "next/link";
 import type { Route } from "next";
+import type { MessageRef } from "@forgecy/core";
+import { getTranslations } from "next-intl/server";
 import { ProposalList, type ProposalView } from "../../_components/proposal-list";
-import { agentRoleLabel, brandPath, formatDate, proposalStatusLabel } from "../../_lib/labels";
+import { brandPath, fieldMessageKey } from "../../_lib/labels";
 import { loadBrand, openConflicts, shownVersion, sourcesFor, userNames } from "../../_lib/server";
+import { getFormat, refText } from "@/lib/i18n";
 
-export const metadata = { title: "Proposals · Brand Identity" };
+export async function generateMetadata() {
+  const t = await getTranslations("brand.meta");
+  return { title: t("proposals") };
+}
 
 const statuses = ["proposed", "accepted", "rejected", "stale"] as const;
 
@@ -26,6 +32,9 @@ export default async function ProposalsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const [{ clientSlug }, sp] = await Promise.all([params, searchParams]);
+  const t = await getTranslations("brand");
+  const root = await getTranslations();
+  const format = await getFormat();
   const { db, user, client, ws } = await loadBrand(clientSlug);
   const status = statuses.find((s) => s === sp.status) ?? "proposed";
   const field = typeof sp.field === "string" ? sp.field : undefined;
@@ -42,10 +51,28 @@ export default async function ProposalsPage({
   const state = { document: shown.document, tokens: shown.tokens };
   const base = brandPath(client.slug, "proposals");
 
-  const views: ProposalView[] = rows
+  // A title the service filled in from the field ("Strategy › One-liner") is shown translated.
+  const fieldTitle = (pointer: string) => {
+    const match = matchField(pointer);
+    if (!match) return null;
+    const key = fieldMessageKey(match.field.pointer);
+    if (!root.has(key)) return null;
+    const values = { block: t(`blocks.${match.field.block}`), field: root(key) };
+    return match.field.shape === "token-group" && match.rest
+      ? t("fieldPathToken", { ...values, token: match.rest.slice(1).replace(/\//g, ".") })
+      : t("fieldPath", values);
+  };
+  const agentName = (role: string | null) =>
+    role && t.has(`agentRole.${role}` as never)
+      ? t(`agentRole.${role}` as never)
+      : (role ?? t("agentRole.agent"));
+  const checkText = (c: { message: string; ref?: MessageRef }) => refText(c.ref, c.message);
+
+  const filtered = rows
     .filter((p) => !field || p.fieldPath === field || p.fieldPath.startsWith(`${field}/`))
-    .filter((p) => !onlyConflicts || conflictOf.has(p.id))
-    .map((p) => {
+    .filter((p) => !onlyConflicts || conflictOf.has(p.id));
+  const views: ProposalView[] = await Promise.all(
+    filtered.map(async (p) => {
       const match = matchField(p.fieldPath.replace(/\[.*\]$/, "").replace(/\/-$/, ""));
       const patch = p.changes as JsonPatch;
       const proposed = match ? proposedValue(patch, match.field) : undefined;
@@ -53,19 +80,20 @@ export default async function ProposalsPage({
         match && status === "proposed" ? currentValue(state, patch, match.field) : undefined;
       const kinds = p.evidence.map((e) => sourceById.get(e.sourceId)?.kind).filter((k) => !!k);
       const conflict = conflictOf.get(p.id);
+      const autoTitle = p.title === fieldLabel(p.fieldPath) ? fieldTitle(p.fieldPath) : null;
       return {
         id: p.id,
-        title: p.title,
-        block: match ? blocks[match.field.block] : "Other",
+        title: autoTitle ?? p.title,
+        block: match ? t(`blocks.${match.field.block}`) : t("blocks.other"),
         fieldPath: p.fieldPath,
         status: p.status,
-        statusLabel: proposalStatusLabel[p.status],
+        statusLabel: t(`proposalStatus.${p.status}`),
         author:
           p.authorType === "agent"
-            ? (agentRoleLabel[p.agentRole ?? ""] ?? p.agentRole ?? "Agent")
-            : (names.get(p.authorUserId ?? "") ?? "Person"),
+            ? agentName(p.agentRole)
+            : (names.get(p.authorUserId ?? "") ?? t("proposals.person")),
         authorType: p.authorType,
-        createdAt: formatDate(p.createdAt),
+        createdAt: format.date(p.createdAt, "dateTime"),
         rationale: p.rationale,
         proposed,
         current,
@@ -77,11 +105,16 @@ export default async function ProposalsPage({
             !("$value" in proposed) &&
             Object.values(proposed).every((v) => typeof v === "string" || v === undefined)),
         confidence: conflict ? "low" : p.confidence,
-        confidenceReason: confidenceReason(kinds as never, { conflicting: !!conflict }),
+        confidenceReason: await refText(
+          confidenceReasonRef(kinds as never, { conflicting: !!conflict }),
+          "",
+        ),
         sensitive: p.sensitive,
-        checks: p.checks.filter((c) => c.level === "warning").map((c) => c.message),
+        checks: await Promise.all(
+          p.checks.filter((c) => c.level === "warning").map((c) => checkText(c)),
+        ),
         evidence: p.evidence.map((e) => ({
-          title: sourceById.get(e.sourceId)?.title ?? "Removed source",
+          title: sourceById.get(e.sourceId)?.title ?? t("proposals.removedSource"),
           locator: e.locator ?? null,
           quote: e.quote ?? null,
         })),
@@ -93,15 +126,16 @@ export default async function ProposalsPage({
             ? null
             : {
                 by: names.get(p.reviewedBy ?? "") ?? null,
-                at: p.reviewedAt ? formatDate(p.reviewedAt) : null,
+                at: p.reviewedAt ? format.date(p.reviewedAt, "dateTime") : null,
                 note: p.reviewNote ?? p.staleReason ?? null,
               },
       };
-    });
+    }),
+  );
 
   return (
     <div className="space-y-6">
-      <nav aria-label="Filter by status" className="flex flex-wrap gap-2 text-body-sm">
+      <nav aria-label={t("proposals.filterLabel")} className="flex flex-wrap gap-2 text-body-sm">
         {statuses.map((s) => (
           <Link
             key={s}
@@ -113,10 +147,12 @@ export default async function ProposalsPage({
                 : "rounded-md border border-subtle bg-surface px-3 py-1 text-fg-muted"
             }
           >
-            {proposalStatusLabel[s]}
             {s === "proposed" && ws.proposalCounts.proposed
-              ? ` (${ws.proposalCounts.proposed})`
-              : ""}
+              ? t("proposals.proposedCount", {
+                  status: t(`proposalStatus.${s}`),
+                  count: ws.proposalCounts.proposed,
+                })
+              : t(`proposalStatus.${s}`)}
           </Link>
         ))}
         {conflicts.length ? (
@@ -124,19 +160,19 @@ export default async function ProposalsPage({
             href={`${base}?conflicts=1` as Route}
             className="rounded-md border border-warning-fill bg-surface px-3 py-1 text-fg"
           >
-            Conflicts only ({conflicts.length})
+            {t("proposals.conflictsOnly", { count: conflicts.length })}
           </Link>
         ) : null}
         {field || onlyConflicts ? (
           <Link href={base as Route} className="px-3 py-1">
-            Clear filters
+            {t("proposals.clearFilters")}
           </Link>
         ) : null}
       </nav>
       {views.length === 0 ? (
         <Card className="p-6">
           <p className="text-body-md text-fg-muted">
-            {status === "proposed" ? "No pending proposals." : "No proposals with this status."}
+            {status === "proposed" ? t("proposals.nonePending") : t("proposals.noneWithStatus")}
           </p>
         </Card>
       ) : (

@@ -1,5 +1,4 @@
 import {
-  blocks,
   completeness,
   diffVersions,
   parseDocument,
@@ -10,11 +9,15 @@ import {
 import { Badge, Card } from "@forgecy/ui";
 import Link from "next/link";
 import type { Route } from "next";
-import { brandPath, formatDate } from "../_lib/labels";
+import { getTranslations } from "next-intl/server";
+import { brandPath } from "../_lib/labels";
 import { loadBrand, openConflicts, shownVersion } from "../_lib/server";
-import { plural } from "@/lib/plural";
+import { getFormat, refText } from "@/lib/i18n";
 
-export const metadata = { title: "Brand Identity" };
+export async function generateMetadata() {
+  const t = await getTranslations("brand");
+  return { title: t("title") };
+}
 
 const blockPage = {
   strategy: "strategy",
@@ -30,6 +33,8 @@ export default async function BrandOverviewPage({
   params: Promise<{ clientSlug: string }>;
 }) {
   const { clientSlug } = await params;
+  const t = await getTranslations("brand");
+  const format = await getFormat();
   const { client, ws } = await loadBrand(clientSlug);
   const shown = shownVersion(ws);
   const conflicts = await openConflicts(client.id);
@@ -45,50 +50,63 @@ export default async function BrandOverviewPage({
     ? diffVersions(publishedState, { document: shown.document, tokens: shown.tokens })
     : [];
   const missing = new Map(
-    completeness(shown.document, shown.tokens).map((c) => [c.block, c.missing]),
+    await Promise.all(
+      completeness(shown.document, shown.tokens).map(
+        async (c) =>
+          [
+            c.block,
+            await Promise.all(c.missingRefs.map((r, i) => refText(r, c.missing[i]!))),
+          ] as const,
+      ),
+    ),
   );
-  const checks = publishChecks(shown.document, shown.tokens, {
-    publishedTokens: publishedState?.tokens ?? null,
-    conflicts: conflicts.length,
-  });
+  const checks = await Promise.all(
+    publishChecks(shown.document, shown.tokens, {
+      publishedTokens: publishedState?.tokens ?? null,
+      conflicts: conflicts.length,
+    }).map(async (c) => ({ key: c.key, message: await refText(c.ref, c.message) })),
+  );
 
   const next = pending
-    ? { label: `Review ${plural(pending, "proposal", "proposals")}`, href: `${base}/proposals` }
+    ? { label: t("overview.reviewProposals", { count: pending }), href: `${base}/proposals` }
     : conflicts.length
       ? {
-          label: `Resolve ${plural(conflicts.length, "conflict", "conflicts")}`,
+          label: t("overview.resolveConflicts", { count: conflicts.length }),
           href: `${base}/proposals?conflicts=1`,
         }
       : ws.draft
         ? {
-            label: `Approve and publish v${ws.draft.number}`,
+            label: t("overview.approveAndPublish", { number: ws.draft.number }),
             href: `${base}/versions/${ws.draft.number}/approve`,
           }
         : null;
+  const publishedOn = (d: Date | null) => (d ? format.date(d, "dateTime") : "—");
 
   if (empty)
     return (
       <Card className="p-8">
-        <h2 className="text-heading-md text-fg">{client.name}’s Brand Identity is empty.</h2>
-        <p className="mt-2 text-body-md text-fg-muted">Choose where to start.</p>
+        <h2 className="text-heading-md text-fg">
+          {t("overview.emptyTitle", { client: client.name })}
+        </h2>
+        <p className="mt-2 text-body-md text-fg-muted">{t("overview.emptyHint")}</p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-body-sm font-medium text-primary-foreground"
             href={`${base}/sources?import=1` as Route}
           >
-            Import brand book
+            {t("overview.importBrandBook")}
           </Link>
           <Link
             className="inline-flex h-10 items-center rounded-md border border-control bg-surface px-4 text-body-sm text-fg"
             href={`${base}/sources` as Route}
           >
-            Add source
+            {t("overview.addSource")}
           </Link>
           <Link
             className="inline-flex h-10 items-center rounded-md border border-control bg-surface px-4 text-body-sm text-fg"
             href={`${base}/strategy` as Route}
           >
-            Fill in by hand
+            {t("overview.fillByHand")}
           </Link>
         </div>
       </Card>
@@ -99,45 +117,48 @@ export default async function BrandOverviewPage({
   return (
     <div className="space-y-6">
       <p className="text-body-md text-fg">
-        <span className="text-fg-muted">Next action: </span>
+        <span className="text-fg-muted">{t("overview.nextAction")} </span>
         {next ? (
           <Link href={next.href as Route}>{next.label}</Link>
         ) : ws.published ? (
-          `No pending actions · v${ws.published.number} published on ${formatDate(ws.published.publishedAt)}`
+          t("overview.nothingPending", {
+            number: ws.published.number,
+            date: publishedOn(ws.published.publishedAt),
+          })
         ) : (
-          "Fill in the blocks and publish the first version"
+          t("overview.fillAndPublish")
         )}
       </p>
 
       <section aria-labelledby="pipeline" className="grid gap-3 md:grid-cols-4">
         <h2 id="pipeline" className="sr-only">
-          Brand Identity status
+          {t("overview.statusHeading")}
         </h2>
         {[
           {
-            label: "Sources",
-            value: `${sources}`,
-            detail: ws.sourceCounts.failed ? `${ws.sourceCounts.failed} failed` : "",
+            label: t("overview.sources"),
+            value: format.number(sources),
+            detail: ws.sourceCounts.failed
+              ? t("overview.sourcesFailed", { count: ws.sourceCounts.failed })
+              : "",
             href: "sources",
           },
           {
-            label: "Pending proposals",
-            value: `${pending}`,
-            detail: `${ws.proposalCounts.accepted ?? 0} accepted`,
+            label: t("overview.pendingProposals"),
+            value: format.number(pending),
+            detail: t("overview.accepted", { count: ws.proposalCounts.accepted ?? 0 }),
             href: "proposals",
           },
           {
-            label: "Draft",
-            value: ws.draft ? `v${ws.draft.number}` : "—",
-            detail: ws.draft
-              ? `${plural(draftChanges.length, "change", "changes")} from the published version`
-              : "",
+            label: t("overview.draft"),
+            value: ws.draft ? t("overview.version", { number: ws.draft.number }) : "—",
+            detail: ws.draft ? t("overview.draftChanges", { count: draftChanges.length }) : "",
             href: "versions",
           },
           {
-            label: "Published",
-            value: ws.published ? `v${ws.published.number}` : "—",
-            detail: ws.published ? formatDate(ws.published.publishedAt) : "",
+            label: t("overview.published"),
+            value: ws.published ? t("overview.version", { number: ws.published.number }) : "—",
+            detail: ws.published ? publishedOn(ws.published.publishedAt) : "",
             href: "versions",
           },
         ].map((n) => (
@@ -155,29 +176,31 @@ export default async function BrandOverviewPage({
 
       <section aria-labelledby="blocks" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <h2 id="blocks" className="sr-only">
-          Blocks
+          {t("overview.blocksHeading")}
         </h2>
         {(["strategy", "verbal", "visual", "content"] as const).map((b) => {
           const m = missing.get(b) ?? [];
           const changes = draftChanges.filter((c) => c.block === b).length;
           return (
             <Card key={b} className="flex flex-col gap-3 p-5">
-              <h3 className="text-heading-sm text-fg">{blocks[b]}</h3>
+              <h3 className="text-heading-sm text-fg">{t(`blocks.${b}`)}</h3>
               {m.length ? (
-                <p className="text-body-sm text-fg-muted">Missing: {m.join(", ")}</p>
+                <p className="text-body-sm text-fg-muted">
+                  {t("overview.missing", { items: format.list([...m], "unit") })}
+                </p>
               ) : (
-                <Badge variant="success">Complete</Badge>
+                <Badge variant="success">{t("overview.complete")}</Badge>
               )}
               {changes ? (
                 <p className="text-body-sm text-fg">
-                  {plural(changes, "change", "changes")} in the draft
+                  {t("overview.changesInDraft", { count: changes })}
                 </p>
               ) : null}
               {b === "strategy" && shown.document.strategy.oneLiner ? (
                 <p className="text-body-sm text-fg">“{shown.document.strategy.oneLiner.value}”</p>
               ) : null}
               {b === "visual" && palette.length ? (
-                <ul className="flex gap-1" aria-label="Palette">
+                <ul className="flex gap-1" aria-label={t("overview.palette")}>
                   {palette.map((c) => (
                     <li
                       key={c.name}
@@ -189,7 +212,7 @@ export default async function BrandOverviewPage({
                 </ul>
               ) : null}
               <Link href={`${base}/${blockPage[b]}` as Route} className="mt-auto text-body-sm">
-                Open block
+                {t("overview.openBlock")}
               </Link>
             </Card>
           );
@@ -197,22 +220,20 @@ export default async function BrandOverviewPage({
       </section>
 
       <Card className="p-5">
-        <h2 className="text-heading-sm text-fg">Ready to publish?</h2>
+        <h2 className="text-heading-sm text-fg">{t("overview.readyTitle")}</h2>
         {checks.length ? (
           <>
             <ul className="mt-3 space-y-1 text-body-sm text-fg">
               {checks.map((c) => (
                 <li key={c.key}>
-                  <span className="text-warning">To confirm:</span> {c.message}
+                  <span className="text-warning">{t("overview.toConfirm")}</span> {c.message}
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-body-sm text-fg-muted">
-              You can publish by confirming each open point.
-            </p>
+            <p className="mt-3 text-body-sm text-fg-muted">{t("overview.canPublish")}</p>
           </>
         ) : (
-          <p className="mt-3 text-body-sm text-success">No open checks.</p>
+          <p className="mt-3 text-body-sm text-success">{t("overview.noChecks")}</p>
         )}
       </Card>
     </div>

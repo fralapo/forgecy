@@ -6,10 +6,10 @@ import { Plus, Save, Trash2 } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useId, useState, useTransition } from "react";
 import { saveSectionAction } from "../actions";
 import type { Ctl, FieldUi, SectionUi } from "../_lib/editor-config";
-import { plural } from "@/lib/plural";
 
 type Obj = Record<string, unknown>;
 type SourceOption = { id: string; title: string };
@@ -91,6 +91,7 @@ function Control({
   sources: SourceOption[];
   disabled: boolean;
 }) {
+  const t = useTranslations("brand.editor");
   const id = useId();
   const v = obj[ctl.key];
   const put = (x: unknown) => set({ ...obj, [ctl.key]: x });
@@ -144,7 +145,7 @@ function Control({
           {ctl.required && v ? null : <option value="">—</option>}
           {ctl.options.map((o) => (
             <option key={o.value} value={o.value}>
-              {o.label}
+              {o.label ? t(o.label) : o.value}
             </option>
           ))}
         </select>
@@ -159,7 +160,7 @@ function Control({
           disabled={disabled}
           onChange={(e) => put(e.target.value || undefined)}
         >
-          <option value="">No file</option>
+          <option value="">{t("noFile")}</option>
           {sources.map((s) => (
             <option key={s.id} value={s.id}>
               {s.title}
@@ -185,12 +186,12 @@ function Control({
     case "list":
       return (
         <fieldset className="space-y-2 sm:col-span-2">
-          <legend className="text-label text-fg">{ctl.label}</legend>
+          <legend className="text-label text-fg">{t(ctl.label)}</legend>
           <ObjectList
             items={Array.isArray(v) ? (v as Obj[]) : []}
             item={ctl.item}
             withId={ctl.withId}
-            addLabel={ctl.addLabel}
+            addLabel={t(ctl.addLabel)}
             onChange={put}
             sources={sources}
             disabled={disabled}
@@ -201,9 +202,11 @@ function Control({
   const wide = ctl.kind === "textarea" || ctl.kind === "lines";
   return (
     <div className={wide ? "space-y-1 sm:col-span-2" : "space-y-1"}>
-      <Label htmlFor={id}>{ctl.label}</Label>
+      <Label htmlFor={id}>{t(ctl.label)}</Label>
       {input}
-      {"hint" in ctl && ctl.hint ? <p className="text-body-sm text-fg-muted">{ctl.hint}</p> : null}
+      {"hint" in ctl && ctl.hint ? (
+        <p className="text-body-sm text-fg-muted">{t(ctl.hint)}</p>
+      ) : null}
     </div>
   );
 }
@@ -249,6 +252,7 @@ function ObjectList({
   disabled: boolean;
   sourced?: boolean;
 }) {
+  const t = useTranslations("brand.editor");
   const [keys] = useState(() => new WeakMap<object, string>());
   const keyOf = (o: Obj, i: number) => {
     if (typeof o.id === "string") return o.id;
@@ -290,7 +294,7 @@ function ObjectList({
                 onClick={() => onChange(items.filter((_, j) => j !== i))}
               >
                 <Trash2 aria-hidden />
-                Remove
+                {t("remove")}
               </Button>
             ) : null}
           </div>
@@ -315,15 +319,21 @@ function ObjectList({
 }
 
 function Provenance({ item }: { item: Obj }) {
+  const t = useTranslations("brand.editor");
   const n = Array.isArray(item.sourceIds) ? item.sourceIds.length : 0;
   if (!("sourceIds" in item)) return null;
   return (
     <p className="mb-2 text-body-sm text-fg-muted">
-      {n ? `From ${n === 1 ? "one source" : `${n} sources`}` : "Entered by hand"}
-      {item.acceptedFromProposalId ? " · from an accepted proposal" : ""}
-      {item.confidence && item.confidence !== "high"
-        ? ` · ${item.confidence === "medium" ? "medium" : "low"} confidence`
-        : ""}
+      {t("provenance", {
+        sources: n,
+        accepted: item.acceptedFromProposalId ? "yes" : "no",
+        confidence:
+          item.confidence && item.confidence !== "high"
+            ? item.confidence === "medium"
+              ? "medium"
+              : "low"
+            : "high",
+      })}
     </p>
   );
 }
@@ -345,15 +355,18 @@ function Field({
   pending: number;
   pendingHref: string;
 }) {
+  const t = useTranslations("brand.editor");
   const id = useId();
+  const label = t(field.label);
+  const hint = "hint" in field && field.hint ? t(field.hint) : null;
   const header = (
     <div className="flex flex-wrap items-center gap-2">
       <Label htmlFor={id} className="text-heading-sm text-fg">
-        {field.label}
+        {label}
       </Label>
       {pending ? (
         <Link href={pendingHref as Route} className="text-body-sm">
-          <Badge variant="info">{plural(pending, "proposal", "proposals")}</Badge>
+          <Badge variant="info">{t("proposals", { count: pending })}</Badge>
         </Link>
       ) : null}
     </div>
@@ -362,7 +375,7 @@ function Field({
     case "sourced": {
       const item = isObj(value) ? value : undefined;
       const text = typeof item?.value === "string" ? item.value : "";
-      const set = (t: string) => onChange(item ? { ...item, value: t } : sourcedItem(t));
+      const set = (next: string) => onChange(item ? { ...item, value: next } : sourcedItem(next));
       const words = wordCount(text);
       return (
         <div className="space-y-2">
@@ -380,14 +393,16 @@ function Field({
           ) : (
             <Input id={id} value={text} disabled={disabled} onChange={(e) => set(e.target.value)} />
           )}
-          {field.hint ? <p className="text-body-sm text-fg-muted">{field.hint}</p> : null}
+          {hint ? <p className="text-body-sm text-fg-muted">{hint}</p> : null}
           {field.maxWords && text ? (
             <p
               className={
                 words > field.maxWords ? "text-body-sm text-warning" : "text-body-sm text-fg-muted"
               }
             >
-              {words} words{words > field.maxWords ? `: over ${field.maxWords}` : ""}
+              {words > field.maxWords
+                ? t("wordsOver", { count: words, max: field.maxWords })
+                : t("words", { count: words })}
             </p>
           ) : null}
         </div>
@@ -397,7 +412,7 @@ function Field({
       const item = isObj(value) ? value : sourcedItem({});
       return (
         <fieldset className="space-y-2">
-          <legend className="sr-only">{field.label}</legend>
+          <legend className="sr-only">{label}</legend>
           {header}
           {isObj(value) ? <Provenance item={item} /> : null}
           <ObjectFields
@@ -414,16 +429,14 @@ function Field({
     case "list":
       return (
         <fieldset className="space-y-2">
-          <legend className="sr-only">{field.label}</legend>
+          <legend className="sr-only">{label}</legend>
           {header}
-          {"hint" in field && field.hint ? (
-            <p className="text-body-sm text-fg-muted">{field.hint}</p>
-          ) : null}
+          {hint ? <p className="text-body-sm text-fg-muted">{hint}</p> : null}
           <ObjectList
             items={Array.isArray(value) ? (value as Obj[]) : []}
             item={field.item}
             withId={"withId" in field ? field.withId : undefined}
-            addLabel={field.addLabel}
+            addLabel={t(field.addLabel)}
             onChange={onChange}
             sources={sources}
             disabled={disabled}
@@ -436,13 +449,13 @@ function Field({
         <div className="space-y-2">
           {header}
           <LinesInput id={id} value={value} onChange={onChange} disabled={disabled} />
-          {field.hint ? <p className="text-body-sm text-fg-muted">{field.hint}</p> : null}
+          {hint ? <p className="text-body-sm text-fg-muted">{hint}</p> : null}
         </div>
       );
     case "object":
       return (
         <fieldset className="space-y-2">
-          <legend className="sr-only">{field.label}</legend>
+          <legend className="sr-only">{label}</legend>
           {header}
           <ObjectFields
             item={field.item}
@@ -484,6 +497,7 @@ export function SectionEditor({
   pending: Record<string, number>;
   proposalsHref: string;
 }) {
+  const t = useTranslations("brand.editor");
   const router = useRouter();
   const [values, setValues] = useState(initial);
   const [dirty, setDirty] = useState<Set<string>>(new Set());
@@ -514,7 +528,9 @@ export function SectionEditor({
           )?.[0];
           setMessage({
             kind: "error",
-            text: issue ? `${res.error} (${s.title} › ${issue.path})` : res.error,
+            text: issue
+              ? t("saveError", { error: res.error, section: t(s.title), path: issue.path })
+              : res.error,
           });
           return;
         }
@@ -522,7 +538,7 @@ export function SectionEditor({
       }
       setRev(r);
       setDirty(new Set());
-      setMessage({ kind: "ok", text: "Draft saved." });
+      setMessage({ kind: "ok", text: t("saved") });
       router.refresh();
     });
 
@@ -537,10 +553,10 @@ export function SectionEditor({
         return (
           <section
             key={s.section}
-            aria-label={s.title}
+            aria-label={t(s.title)}
             className="space-y-6 rounded-lg border border-subtle bg-surface p-6"
           >
-            {sections.length > 1 ? <h2 className="text-heading-md text-fg">{s.title}</h2> : null}
+            {sections.length > 1 ? <h2 className="text-heading-md text-fg">{t(s.title)}</h2> : null}
             {s.fields.map((f) => {
               const pointer = `/document/${s.section}${f.key ? `/${f.key}` : ""}`;
               const value =
@@ -577,9 +593,9 @@ export function SectionEditor({
         <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-subtle bg-app py-4">
           <Button onClick={save} disabled={saving || dirty.size === 0}>
             <Save aria-hidden />
-            {saving ? "Saving…" : "Save draft"}
+            {saving ? t("saving") : t("save")}
           </Button>
-          {dirty.size ? <span className="text-body-sm text-fg-muted">Unsaved changes</span> : null}
+          {dirty.size ? <span className="text-body-sm text-fg-muted">{t("unsaved")}</span> : null}
           {message ? (
             <span
               role={message.kind === "error" ? "alert" : "status"}

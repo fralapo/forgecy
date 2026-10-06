@@ -1,13 +1,14 @@
 import { Badge } from "@forgecy/ui";
 import Link from "next/link";
 import type { Route } from "next";
+import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import { ActionButton } from "../_components/action-button";
 import { BrandTabs } from "../_components/brand-tabs";
 import { startDraftAction, submitAction } from "../actions";
-import { brandPath, formatDate, versionStatusLabel, versionStatusVariant } from "../_lib/labels";
+import { brandPath, versionStatusVariant } from "../_lib/labels";
 import { loadBrand, openConflicts, userNames } from "../_lib/server";
-import { plural } from "@/lib/plural";
+import { getFormat } from "@/lib/i18n";
 
 export default async function BrandLayout({
   children,
@@ -17,24 +18,30 @@ export default async function BrandLayout({
   params: Promise<{ clientSlug: string }>;
 }) {
   const { clientSlug } = await params;
+  const t = await getTranslations("brand");
+  const format = await getFormat();
   const { client, ws } = await loadBrand(clientSlug);
   const conflicts = await openConflicts(client.id);
   const { draft, published } = ws;
   const names = await userNames([draft?.lastEditedBy, draft?.createdBy]);
   const base = brandPath(client.slug);
   const tabs = [
-    { href: base, label: "Overview" },
-    { href: `${base}/strategy`, label: "Strategy" },
-    { href: `${base}/verbal`, label: "Verbal" },
-    { href: `${base}/visual`, label: "Visual" },
-    { href: `${base}/content`, label: "Content" },
+    { href: base, label: t("tabs.overview") },
+    { href: `${base}/strategy`, label: t("tabs.strategy") },
+    { href: `${base}/verbal`, label: t("tabs.verbal") },
+    { href: `${base}/visual`, label: t("tabs.visual") },
+    { href: `${base}/content`, label: t("tabs.content") },
     {
       href: `${base}/sources`,
-      label: "Sources",
+      label: t("tabs.sources"),
       count: Object.values(ws.sourceCounts).reduce((a, b) => a + (b ?? 0), 0),
     },
-    { href: `${base}/proposals`, label: "Proposals", count: ws.proposalCounts.proposed ?? 0 },
-    { href: `${base}/versions`, label: "Versions" },
+    {
+      href: `${base}/proposals`,
+      label: t("tabs.proposals"),
+      count: ws.proposalCounts.proposed ?? 0,
+    },
+    { href: `${base}/versions`, label: t("tabs.versions") },
   ];
   const editor = draft ? names.get(draft.lastEditedBy ?? draft.createdBy ?? "") : undefined;
 
@@ -42,14 +49,16 @@ export default async function BrandLayout({
     <>
       <header className="mb-6">
         <p className="text-body-sm text-fg-muted">
-          <Link href="/brand">Brand Identity</Link> › {client.name}
+          <Link href="/brand">{t("title")}</Link> › {client.name}
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-heading-lg text-fg">Brand Identity · {client.name}</h1>
+          <h1 className="font-display text-heading-lg text-fg">
+            {t("layout.heading", { client: client.name })}
+          </h1>
           {published ? (
-            <Badge variant="success">v{published.number} · Published</Badge>
+            <Badge variant="success">{t("layout.published", { number: published.number })}</Badge>
           ) : (
-            <Badge>No published version</Badge>
+            <Badge>{t("layout.noPublished")}</Badge>
           )}
         </div>
       </header>
@@ -59,22 +68,28 @@ export default async function BrandLayout({
           {draft ? (
             <>
               <Badge variant={versionStatusVariant[draft.status]}>
-                Draft v{draft.number} · {versionStatusLabel[draft.status]}
+                {t("layout.draftBadge", {
+                  number: draft.number,
+                  status: t(`versionStatus.${draft.status}`),
+                })}
               </Badge>
               <span className="text-fg-muted">
-                Last edited: {editor ?? "—"}, {formatDate(draft.updatedAt)}
+                {t("layout.lastEdited", {
+                  editor: editor ?? "—",
+                  date: format.date(draft.updatedAt, "dateTime"),
+                })}
               </span>
             </>
           ) : (
             <span className="text-fg-muted">
               {published
-                ? `No open draft: published v${published.number} is shown read-only.`
-                : "No draft: start by filling in a block or importing a brand book."}
+                ? t("layout.noDraftPublished", { number: published.number })
+                : t("layout.noDraft")}
             </span>
           )}
           {conflicts.length ? (
             <Badge variant="warning">
-              {plural(conflicts.length, "open conflict", "open conflicts")}
+              {t("layout.openConflicts", { count: conflicts.length })}
             </Badge>
           ) : null}
         </div>
@@ -84,7 +99,9 @@ export default async function BrandLayout({
               action={startDraftAction.bind(null, client.slug, client.id)}
               variant="secondary"
             >
-              {published ? `Open draft v${published.number + 1}` : "Start the draft"}
+              {published
+                ? t("layout.openDraft", { number: published.number + 1 })
+                : t("layout.startDraft")}
             </ActionButton>
           ) : null}
           {draft?.status === "draft" ? (
@@ -97,7 +114,7 @@ export default async function BrandLayout({
               })}
               variant="secondary"
             >
-              Send for review
+              {t("layout.submit")}
             </ActionButton>
           ) : null}
           {draft ? (
@@ -105,7 +122,7 @@ export default async function BrandLayout({
               href={`${base}/versions/${draft.number}/approve` as Route}
               className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-body-sm font-medium text-primary-foreground"
             >
-              Open approval
+              {t("layout.openApproval")}
             </Link>
           ) : null}
         </div>
@@ -115,9 +132,12 @@ export default async function BrandLayout({
           role="status"
           className="mb-6 rounded-md border border-warning-fill bg-surface px-4 py-3 text-body-sm text-fg"
         >
-          Draft v{draft.number} is in review: you can still edit it; every change must be reread
-          before publishing.
-          {draft.reviewComment ? ` Comment: ${draft.reviewComment}` : ""}
+          {draft.reviewComment
+            ? t("layout.inReviewWithComment", {
+                number: draft.number,
+                comment: draft.reviewComment,
+              })
+            : t("layout.inReview", { number: draft.number })}
         </p>
       ) : null}
       {draft?.status === "draft" && draft.reviewComment ? (
@@ -125,7 +145,7 @@ export default async function BrandLayout({
           role="status"
           className="mb-6 rounded-md border border-subtle bg-surface px-4 py-3 text-body-sm text-fg"
         >
-          Sent back with comment: {draft.reviewComment}
+          {t("layout.sentBack", { comment: draft.reviewComment })}
         </p>
       ) : null}
       {!published ? (
@@ -133,7 +153,7 @@ export default async function BrandLayout({
           role="status"
           className="mb-6 rounded-md border border-error-fill bg-surface px-4 py-3 text-body-sm text-fg"
         >
-          No published version: carousels for {client.name} can’t be generated.
+          {t("layout.cannotGenerate", { client: client.name })}
         </p>
       ) : null}
       {children}

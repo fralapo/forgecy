@@ -3,6 +3,7 @@
 import { Button, Input, Label } from "@forgecy/ui";
 import { BadgeCheck, Undo2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { publishAction, returnToDraftAction } from "../actions";
 import { controlClass } from "./section-editor";
@@ -31,6 +32,7 @@ export function ApproveForm({
   selfApproval: boolean;
   doneHref: string;
 }) {
+  const t = useTranslations("brand.approve");
   const router = useRouter();
   const [seen, setSeen] = useState<Set<string>>(new Set());
   const [changelog, setChangelog] = useState("");
@@ -47,10 +49,8 @@ export function ApproveForm({
     <div className="space-y-6">
       {checks.length ? (
         <fieldset className="space-y-2">
-          <legend className="text-heading-sm text-fg">Open checks</legend>
-          <p className="text-body-sm text-fg-muted">
-            No check blocks publishing: confirm you have seen each one.
-          </p>
+          <legend className="text-heading-sm text-fg">{t("openChecks")}</legend>
+          <p className="text-body-sm text-fg-muted">{t("openChecksHint")}</p>
           <ul className="space-y-2">
             {checks.map((c) => (
               <li key={c.key} className="flex items-start gap-3 text-body-sm">
@@ -69,37 +69,33 @@ export function ApproveForm({
                   }
                 />
                 <label htmlFor={`seen-${c.key}`} className="text-fg">
-                  <span className="text-warning">Seen:</span> {c.message}
+                  <span className="text-warning">{t("seen")}</span> {c.message}
                 </label>
               </li>
             ))}
           </ul>
         </fieldset>
       ) : (
-        <p className="text-body-sm text-success">No open checks.</p>
+        <p className="text-body-sm text-success">{t("noChecks")}</p>
       )}
 
       <div className="space-y-1">
-        <Label htmlFor="changelog">Changelog</Label>
+        <Label htmlFor="changelog">{t("changelog")}</Label>
         <textarea
           id="changelog"
           rows={3}
           className={controlClass}
           value={changelog}
           onChange={(e) => setChangelog(e.target.value)}
-          placeholder="What changes in this version and why"
+          placeholder={t("changelogPlaceholder")}
         />
-        <p className="text-body-sm text-fg-muted">
-          At least {CHANGELOG_MIN} characters: it stays in the history.
-        </p>
+        <p className="text-body-sm text-fg-muted">{t("changelogHint", { min: CHANGELOG_MIN })}</p>
       </div>
       {selfApproval ? (
         <div className="space-y-1">
-          <Label htmlFor="self-note">Approval note</Label>
+          <Label htmlFor="self-note">{t("selfNote")}</Label>
           <Input id="self-note" value={note} onChange={(e) => setNote(e.target.value)} />
-          <p className="text-body-sm text-fg-muted">
-            You’re approving a draft you prepared yourself: write a note for the history.
-          </p>
+          <p className="text-body-sm text-fg-muted">{t("selfNoteHint")}</p>
         </div>
       ) : null}
       {error ? (
@@ -129,12 +125,12 @@ export function ApproveForm({
           }
         >
           <BadgeCheck aria-hidden />
-          Approve and publish v{number}
+          {t("publish", { number })}
         </Button>
         {inReview ? (
           <div className="flex flex-wrap items-end gap-2">
             <div className="space-y-1">
-              <Label htmlFor="return-comment">Comment for whoever prepared it</Label>
+              <Label htmlFor="return-comment">{t("returnComment")}</Label>
               <Input
                 id="return-comment"
                 value={comment}
@@ -159,7 +155,7 @@ export function ApproveForm({
               }
             >
               <Undo2 aria-hidden />
-              {comment.trim() ? "Send back with comment" : "Withdraw from review"}
+              {comment.trim() ? t("sendBack") : t("withdraw")}
             </Button>
           </div>
         ) : null}

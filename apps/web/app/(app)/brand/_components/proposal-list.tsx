@@ -3,11 +3,11 @@
 import { Badge, Button, Input, Label } from "@forgecy/ui";
 import { Bot, Check, FileText, Pencil, User, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { acceptManyAction, acceptProposalAction, rejectAction } from "../actions";
-import { confidenceLabel, confidenceVariant, formatValue } from "../_lib/labels";
+import { confidenceVariant, formatValue } from "../_lib/labels";
 import { controlClass } from "./section-editor";
-import { plural } from "@/lib/plural";
 
 export interface ProposalView {
   id: string;
@@ -47,6 +47,8 @@ function ProposalCard({
   selected: boolean;
   onSelect(v: boolean): void;
 }) {
+  const t = useTranslations("brand.proposals");
+  const tb = useTranslations("brand");
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -60,9 +62,8 @@ function ProposalCard({
     start(async () => {
       setError(null);
       const r = await fn();
-      if (!r.ok) return setError(r.error ?? "Operation failed");
-      if (r.status === "stale")
-        setInfo("The field changed after the proposal: the proposal is superseded.");
+      if (!r.ok) return setError(r.error ?? t("failed"));
+      if (r.status === "stale") setInfo(t("superseded"));
       router.refresh();
     });
 
@@ -83,7 +84,7 @@ function ProposalCard({
           {reviewable && !p.sensitive ? (
             <input
               type="checkbox"
-              aria-label={`Select ${p.title}`}
+              aria-label={t("select", { title: p.title })}
               checked={selected}
               onChange={(e) => onSelect(e.target.checked)}
               className="mt-2 size-4"
@@ -100,17 +101,20 @@ function ProposalCard({
               ) : (
                 <User aria-hidden className="size-4" />
               )}
-              Proposed by {p.author} · {p.createdAt}
+              {t("proposedBy", { author: p.author, date: p.createdAt })}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Badge variant={confidenceVariant[p.confidence]}>{confidenceLabel[p.confidence]}</Badge>
-          {p.sensitive ? <Badge variant="warning">Sensitive</Badge> : null}
+          <Badge variant={confidenceVariant[p.confidence]}>
+            {tb(`confidence.${p.confidence}`)}
+          </Badge>
+          {p.sensitive ? <Badge variant="warning">{t("sensitive")}</Badge> : null}
           {p.conflict ? (
             <Badge variant="error">
-              In conflict with {p.conflict.size - 1} others
-              {p.conflict.suggested ? " · most authoritative source" : ""}
+              {t(p.conflict.suggested ? "inConflictSuggested" : "inConflict", {
+                count: p.conflict.size - 1,
+              })}
             </Badge>
           ) : null}
           {p.status !== "proposed" ? <Badge>{p.statusLabel}</Badge> : null}
@@ -120,12 +124,12 @@ function ProposalCard({
       <dl className="grid gap-3 text-body-sm sm:grid-cols-2">
         {p.status === "proposed" ? (
           <div>
-            <dt className="text-label text-fg-muted">Now in the draft</dt>
+            <dt className="text-label text-fg-muted">{t("nowInDraft")}</dt>
             <dd className="mt-1 whitespace-pre-wrap text-fg">{formatValue(p.current)}</dd>
           </div>
         ) : null}
         <div>
-          <dt className="text-label text-fg-muted">Proposed</dt>
+          <dt className="text-label text-fg-muted">{t("proposed")}</dt>
           <dd className="mt-1 whitespace-pre-wrap text-fg">{formatValue(p.proposed)}</dd>
         </div>
       </dl>
@@ -140,7 +144,7 @@ function ProposalCard({
       ) : null}
 
       <div>
-        <p className="text-label uppercase text-fg-muted">Sources</p>
+        <p className="text-label uppercase text-fg-muted">{t("sources")}</p>
         {p.evidence.length ? (
           <ul className="mt-1 space-y-1 text-body-sm">
             {p.evidence.map((e, i) => (
@@ -155,13 +159,15 @@ function ProposalCard({
             ))}
           </ul>
         ) : (
-          <p className="text-body-sm text-warning">No source given: verify before accepting.</p>
+          <p className="text-body-sm text-warning">{t("noSource")}</p>
         )}
       </div>
 
       {p.review ? (
         <p className="text-body-sm text-fg-muted">
-          {p.review.by ? `${p.statusLabel} by ${p.review.by}` : p.statusLabel}
+          {p.review.by
+            ? t("reviewedBy", { status: p.statusLabel, name: p.review.by })
+            : p.statusLabel}
           {p.review.at ? `, ${p.review.at}` : ""}
           {p.review.note ? ` · ${p.review.note}` : ""}
         </p>
@@ -172,7 +178,7 @@ function ProposalCard({
           {editing ? (
             typeof p.proposed === "string" ? (
               <div className="space-y-1">
-                <Label htmlFor={`edit-${p.id}`}>Corrected value</Label>
+                <Label htmlFor={`edit-${p.id}`}>{t("correctedValue")}</Label>
                 <textarea
                   id={`edit-${p.id}`}
                   rows={3}
@@ -198,9 +204,7 @@ function ProposalCard({
           ) : null}
           <div className="space-y-1">
             <Label htmlFor={`note-${p.id}`}>
-              {needsNote
-                ? "Note (required: low confidence on a sensitive field)"
-                : "Note (optional)"}
+              {needsNote ? t("noteRequired") : t("noteOptional")}
             </Label>
             <Input id={`note-${p.id}`} value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
@@ -220,12 +224,12 @@ function ProposalCard({
               }
             >
               <Check aria-hidden />
-              {editing ? "Accept with changes" : "Accept"}
+              {editing ? t("acceptEdited") : t("accept")}
             </Button>
             {p.editable && !editing ? (
               <Button variant="secondary" disabled={pending} onClick={() => setEditing(true)}>
                 <Pencil aria-hidden />
-                Edit
+                {t("edit")}
               </Button>
             ) : null}
             <Button
@@ -234,7 +238,7 @@ function ProposalCard({
               onClick={() => act(() => rejectAction({ slug, clientId, proposalIds: [p.id], note }))}
             >
               <X aria-hidden />
-              Reject
+              {t("reject")}
             </Button>
           </div>
           {error ? (
@@ -265,6 +269,7 @@ export function ProposalList({
   proposals: ProposalView[];
   reviewable: boolean;
 }) {
+  const t = useTranslations("brand.proposals");
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, start] = useTransition();
@@ -280,11 +285,13 @@ export function ProposalList({
   ) =>
     start(async () => {
       const r = await fn();
-      if (!r.ok) return setMessage(r.error ?? "Operation failed");
+      if (!r.ok) return setMessage(r.error ?? t("failed"));
       setMessage(
         r.rejected !== undefined
-          ? `${plural(r.rejected, "proposal", "proposals")} rejected.`
-          : `${r.accepted ?? 0} accepted${r.stale ? `, ${r.stale} superseded because the field had changed` : ""}.`,
+          ? t("rejectedCount", { count: r.rejected })
+          : r.stale
+            ? t("acceptedWithStale", { count: r.accepted ?? 0, stale: r.stale })
+            : t("acceptedCount", { count: r.accepted ?? 0 }),
       );
       setSelected(new Set());
       router.refresh();
@@ -295,16 +302,14 @@ export function ProposalList({
       {reviewable ? (
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-subtle bg-surface px-4 py-3">
           <span className="text-body-sm text-fg-muted">
-            {ids.length
-              ? `${ids.length} selected`
-              : "Select non-sensitive proposals to decide on them in bulk."}
+            {ids.length ? t("selected", { count: ids.length }) : t("selectHint")}
           </span>
           <Button
             size="sm"
             disabled={!ids.length || pending}
             onClick={() => bulk(() => acceptManyAction({ slug, clientId, proposalIds: ids }))}
           >
-            Accept selected
+            {t("acceptSelected")}
           </Button>
           <Button
             size="sm"
@@ -312,7 +317,7 @@ export function ProposalList({
             disabled={!ids.length || pending}
             onClick={() => bulk(() => rejectAction({ slug, clientId, proposalIds: ids }))}
           >
-            Reject selected
+            {t("rejectSelected")}
           </Button>
           {message ? (
             <span role="status" className="text-body-sm text-fg">

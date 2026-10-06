@@ -67,27 +67,37 @@ export const contrastPairs = [
     fg: "color.semantic.text-primary",
     bg: "color.semantic.background",
     label: "Text on background",
+    id: "textOnBackground",
   },
   {
     fg: "color.semantic.text-secondary",
     bg: "color.semantic.background",
     label: "Secondary text on background",
+    id: "secondaryTextOnBackground",
   },
-  { fg: "color.semantic.text-primary", bg: "color.semantic.surface", label: "Text on surface" },
+  {
+    fg: "color.semantic.text-primary",
+    bg: "color.semantic.surface",
+    label: "Text on surface",
+    id: "textOnSurface",
+  },
   {
     fg: "color.semantic.text-secondary",
     bg: "color.semantic.surface",
     label: "Secondary text on surface",
+    id: "secondaryTextOnSurface",
   },
   {
     fg: "color.semantic.on-brand-primary",
     bg: "color.semantic.brand-primary",
     label: "Text on brand color",
+    id: "textOnBrand",
   },
   {
     fg: "color.semantic.brand-primary",
     bg: "color.semantic.background",
     label: "Brand color on background",
+    id: "brandOnBackground",
   },
 ] as const;
 
@@ -178,7 +188,9 @@ export function referenceColors(tree: TokenTree): ReferenceColor[] {
 
 export interface TokenIssue {
   path: string;
+  /** English text; `code` lets the interface show it in the user's language. */
   message: string;
+  code: "invalid_name" | "missing_role" | "unresolved";
 }
 
 /** Structural checks: every alias resolves, no cycles, colors readable. */
@@ -188,21 +200,22 @@ export function validateTokens(tree: TokenTree): TokenIssue[] {
   try {
     flat = flattenTokens(tree);
   } catch (err) {
-    return [{ path: "", message: (err as Error).message }];
+    return [{ path: "", message: (err as Error).message, code: "unresolved" }];
   }
   for (const [path, token] of flat) {
     if (/[{}]/.test(path) || path.split(".").some((s) => s.startsWith("$")))
-      issues.push({ path, message: "Invalid token name" });
+      issues.push({ path, message: "Invalid token name", code: "invalid_name" });
     try {
       const v = resolveValue(flat, path);
       if (token.type === "color" || path.startsWith("color.") || path.startsWith("component."))
         colorToHex(v as never);
     } catch (err) {
-      issues.push({ path, message: (err as Error).message });
+      issues.push({ path, message: (err as Error).message, code: "unresolved" });
     }
   }
   for (const role of semanticColorRoles)
-    if (!flat.has(role.path)) issues.push({ path: role.path, message: "Missing semantic role" });
+    if (!flat.has(role.path))
+      issues.push({ path: role.path, message: "Missing semantic role", code: "missing_role" });
   return issues;
 }
 
@@ -261,6 +274,8 @@ export function tokenRoleNames(tree: TokenTree): string[] {
 }
 
 export interface ContrastCell {
+  /** Stable id of the pair (textOnBackground...), for translated labels. */
+  id: string;
   fg: string;
   bg: string;
   label: string;

@@ -1,5 +1,6 @@
 // One import per namespace file. A new namespace: add its JSON in every language folder and one line here.
 import auth from "./auth.json";
+import brand from "./brand.json";
 import clients from "./clients.json";
 import common from "./common.json";
 import deliverable from "./deliverable.json";
@@ -17,6 +18,7 @@ import validation from "./validation.json";
 
 export default {
   auth,
+  brand,
   clients,
   common,
   deliverable,

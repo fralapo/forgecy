@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import type { SectionUi } from "../_lib/editor-config";
 import { brandPath } from "../_lib/labels";
@@ -21,6 +22,7 @@ export async function BlockPage({
     ctx: Awaited<ReturnType<typeof loadBrand>> & { shown: ReturnType<typeof shownVersion> },
   ) => ReactNode;
 }) {
+  const t = await getTranslations("brand.block");
   const ctx = await loadBrand(slug);
   const { client, user, ws } = ctx;
   const shown = shownVersion(ws, version);
@@ -35,9 +37,9 @@ export async function BlockPage({
       <p className="max-w-3xl text-body-md text-fg-muted">
         {intro}{" "}
         {shown.version && !shown.editable
-          ? `You’re viewing v${shown.version.number} read-only.`
+          ? t("readOnly", { number: shown.version.number })
           : !shown.version
-            ? "Start the draft to fill in this block."
+            ? t("startDraft")
             : ""}
       </p>
       {before?.({ ...ctx, shown })}
