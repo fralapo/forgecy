@@ -27,5 +27,172 @@
     "aiPolicy": "AI policy",
     "created": "Client created.",
     "submit": "Add"
+  },
+  "overview": {
+    "back": "All clients",
+    "archived": "This client is archived: it is read-only.",
+    "archivedOn": "Client archived on {date}: it is read-only.",
+    "newCarousel": "New carousel",
+    "newCarouselBlocked": "Publish this client’s Brand Identity first to create carousels.",
+    "next": {
+      "label": "Next action",
+      "approveVersion": "you · Approve Brand Identity version {number}",
+      "approveCarousel": "you · Approve or request changes: “{title}”",
+      "reviewProposals": "you · Review {count, plural, one {# Brand Identity proposal} other {# Brand Identity proposals}}",
+      "reviewProposalsCta": "Review proposals",
+      "continueAudit": "you · Continue the audit",
+      "openAudit": "Open audit",
+      "createCarousel": "you · Create a carousel",
+      "openApproval": "Open approval",
+      "none": "Nothing pending"
+    },
+    "brand": {
+      "title": "Brand Identity",
+      "published": "v{number} · Published",
+      "publishedBy": "{date} by {name}",
+      "none": "No published version. Carousels can’t be generated until you publish the first version.",
+      "open": "v{number} · {status}",
+      "proposals": "{count, plural, one {# proposal} other {# proposals}} to review",
+      "openLink": "Open Brand Identity"
+    },
+    "policy": {
+      "title": "AI policy",
+      "adminOnly": "Only Admin users can change this setting.",
+      "explain": {
+        "external_allowed": "Texts and images can be produced with the external AI providers the agency configured.",
+        "external_restricted": "External providers only with the restrictions set by the agency.",
+        "local_only": "Only AI running on the agency’s own machines: no data of this client goes to external providers.",
+        "no_ai": "AI features are off for this client."
+      }
+    },
+    "budget": {
+      "title": "AI spend",
+      "month": "{month}",
+      "ofLimit": "{percent}: {spent} of {limit}",
+      "noLimit": "{spent} this month · no client budget set",
+      "exhausted": "{client}’s AI budget is used up: AI work doesn’t start."
+    },
+    "carousels": {
+      "title": "Latest carousels",
+      "empty": "No carousels yet.",
+      "emptyNoBrand": "No carousels. A published Brand Identity is needed first.",
+      "brand": "Brand v{number}",
+      "brandOld": "Brand v{number} · v{current} is available"
+    },
+    "waiting": {
+      "title": "Waiting",
+      "empty": "Nothing waiting for {client}.",
+      "version": "Brand Identity v{number} to approve",
+      "proposals": "{count, plural, one {# Brand Identity proposal} other {# Brand Identity proposals}} to review",
+      "carousel": "Carousel to approve: “{title}”",
+      "aiImages": "{count, plural, one {# AI image} other {# AI images}} to approve",
+      "products": "{count, plural, one {# proposed product} other {# proposed products}} to review",
+      "reports": "{count, plural, one {# audit report} other {# audit reports}} to approve"
+    },
+    "audits": {
+      "title": "Audits and reports",
+      "empty": "No audit for this client.",
+      "startedBy": "{date} · {name}",
+      "openReport": "Open report"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "empty": "No activity recorded.",
+      "all": "See all activity"
+    }
+  },
+  "activity": {
+    "metaTitle": "Client activity",
+    "title": "Activity of {client}",
+    "description": "Everything people, AI agents and the system did on this client, newest first.",
+    "back": "Back to {client}",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "shown": "Showing {shown, number} of {total, number}",
+    "loadMore": "Load {count, plural, one {# more} other {# more}}",
+    "empty": "No activity recorded.",
+    "emptyFiltered": "No activity with these filters.",
+    "anomaly": "Anomaly: approval without a human author",
+    "actor": {
+      "system": "System",
+      "deletedUser": "Deleted user",
+      "agent": "{role} (AI agent)"
+    },
+    "filters": {
+      "actorType": "Author",
+      "area": "Area",
+      "period": "Period",
+      "all": "All",
+      "anyTime": "Any time",
+      "actorTypes": {
+        "person": "Person",
+        "agent": "AI agent",
+        "system": "System"
+      },
+      "periods": {
+        "today": "Today",
+        "7d": "Last 7 days",
+        "30d": "Last 30 days"
+      },
+      "apply": "Apply",
+      "reset": "Clear filters"
+    },
+    "areas": {
+      "client": "Client",
+      "audit": "Audit",
+      "brand": "Brand Identity",
+      "content": "Content",
+      "products": "Products",
+      "templates": "Templates",
+      "settings": "Settings",
+      "other": "Other"
+    },
+    "objects": {
+      "client": "the client",
+      "audit": "the audit",
+      "audit_competitor": "a competitor",
+      "audit_finding": "an observation",
+      "audit_report": "the audit report",
+      "brand_identity_version": "a Brand Identity version",
+      "brand_identity_proposal": "a Brand Identity change",
+      "brand_source": "a Brand Identity source",
+      "content": "a carousel",
+      "asset": "an image",
+      "product": "a product",
+      "product_import": "a product import",
+      "template": "a template",
+      "other": "an item"
+    },
+    "verbs": {
+      "created": "created",
+      "added": "added",
+      "edited": "edited",
+      "deleted": "deleted",
+      "removed": "removed",
+      "archived": "archived",
+      "restored": "restored",
+      "reopened": "reopened",
+      "approved": "approved",
+      "rejected": "rejected",
+      "submitted": "submitted for review",
+      "published": "published",
+      "accepted": "accepted",
+      "proposed": "proposed",
+      "converted": "converted",
+      "started": "started",
+      "completed": "completed",
+      "cancelled": "cancelled",
+      "exported": "exported",
+      "imported": "imported",
+      "confirmed": "confirmed",
+      "skipped": "skipped",
+      "assigned": "assigned",
+      "ignored": "ignored",
+      "acknowledged": "acknowledged",
+      "analyzed": "analyzed",
+      "duplicated": "duplicated",
+      "generated": "generated with AI",
+      "updated": "updated"
+    }
   }
 }
