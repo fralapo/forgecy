@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useId, useState, type ReactNode } from "react";
 import { decideProposalAction } from "../actions";
 import { FormError, useSave } from "./strategy-forms";
+import { useAiProposalTexts } from "@/lib/use-ai-proposal-texts";
 
 /** A Planner proposal (pillar or rubric): a person accepts or rejects it, with an optional note. */
 export function StrategyProposalCard({
@@ -29,6 +30,7 @@ export function StrategyProposalCard({
   const [note, setNote] = useState("");
   const noteId = useId();
   const t = useTranslations("content.strategy.proposal");
+  const proposalTexts = useAiProposalTexts(agent);
   const { pending, error, run } = useSave();
   const decide = (decision: "accept" | "reject") =>
     run(() => decideProposalAction({ slug, clientId, kind, id, decision, note: note.trim() }));
@@ -37,6 +39,7 @@ export function StrategyProposalCard({
       title={title}
       agent={agent}
       sources={sources}
+      texts={proposalTexts}
       pending={pending}
       onAccept={() => decide("accept")}
       onReject={() => decide("reject")}

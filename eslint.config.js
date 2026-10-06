@@ -65,24 +65,10 @@ export default tseslint.config(
   },
   { files: ["apps/web/**/*.tsx"], plugins: { forgecy } },
   {
-    // Interface text lives in packages/i18n/messages (docs/I18N.md). Each module joins this
-    // list once its pages read their text from the message files.
-    files: [
-      "apps/web/app/layout.tsx",
-      "apps/web/app/login/**/*.tsx",
-      "apps/web/app/setup/**/*.tsx",
-      "apps/web/components/**/*.tsx",
-      "apps/web/app/(app)/layout.tsx",
-      "apps/web/app/(app)/page.tsx",
-      "apps/web/app/(app)/brand/**/*.tsx",
-      "apps/web/app/(app)/audit/**/*.tsx",
-      "apps/web/app/(app)/clients/**/*.tsx",
-      "apps/web/app/(app)/content/**/*.tsx",
-      "apps/web/app/(app)/settings/**/*.tsx",
-      "apps/web/app/(app)/products/**/*.tsx",
-      "apps/web/app/(app)/templates/**/*.tsx",
-      "apps/web/app/design/**/*.tsx",
-    ],
+    // Interface text lives in packages/i18n/messages (docs/I18N.md). The render routes print
+    // deliverables, whose labels come from the template locales instead.
+    files: ["apps/web/**/*.tsx"],
+    ignores: ["apps/web/app/render/**"],
     rules: { "forgecy/no-hardcoded-text": "error" },
   },
 );

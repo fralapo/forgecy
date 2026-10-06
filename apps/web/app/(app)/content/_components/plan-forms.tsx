@@ -19,6 +19,7 @@ import {
 import { carouselPath } from "../_lib/paths";
 import { controlClass } from "./action-button";
 import { Actions, Checks, Field, FormError, Toggle, formClass, useSave } from "./strategy-forms";
+import { useAiProposalTexts } from "@/lib/use-ai-proposal-texts";
 
 export interface PlanOptions {
   pillars: { id: string; name: string }[];
@@ -299,6 +300,7 @@ export function PlanProposal({
   children: ReactNode;
 }) {
   const t = useTranslations("content.plan.proposal");
+  const proposalTexts = useAiProposalTexts(agent);
   const { pending, error, run } = useSave();
   const decide = (decision: "activate" | "discard") => {
     const question = decision === "activate" ? t("activateConfirm") : t("discardConfirm");
@@ -310,6 +312,7 @@ export function PlanProposal({
       title={title}
       agent={agent}
       sources={sources}
+      texts={proposalTexts}
       pending={pending}
       acceptLabel={t("activate")}
       rejectLabel={t("discard")}
