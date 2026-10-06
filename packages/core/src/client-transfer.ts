@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /**
  * Full client export and import (v1, spec page 68): everything about one client in a
  * single ZIP, which can be imported back here or into another Forgecy installation.
@@ -24,3 +26,80 @@ export const CLIENT_PACKAGE_FORMAT = 1;
 
 /** How long a download link of a finished export stays valid. */
 export const CLIENT_EXPORT_LINK_HOURS = 24;
+
+/**
+ * Import of a package, a wizard in four steps (File, Verify, Conflicts, Confirm):
+ * `verifying` (worker reads and checks the ZIP) → `invalid` or `ready` (waiting for
+ * the choices) → `importing` → `done` or `failed`. `cancelled` before the confirmation.
+ */
+export const clientImportStatuses = [
+  "verifying",
+  "invalid",
+  "ready",
+  "importing",
+  "done",
+  "failed",
+  "cancelled",
+] as const;
+export type ClientImportStatus = (typeof clientImportStatuses)[number];
+
+/** Largest package accepted by the upload. */
+export const CLIENT_PACKAGE_MAX_BYTES = 2 * 1024 * 1024 * 1024;
+
+/** Why a package cannot be imported (each one blocks). */
+export const clientImportProblems = [
+  "unreadable",
+  "format",
+  "newerVersion",
+  "checksum",
+  "unknownTable",
+] as const;
+export type ClientImportProblem = (typeof clientImportProblems)[number];
+
+/** A conflict needs a choice before the import can be confirmed. */
+export const clientImportConflictSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("client"),
+    name: z.string(),
+    slug: z.string(),
+    existingId: z.uuid(),
+    existingName: z.string(),
+    proposedSlug: z.string(),
+  }),
+  z.object({
+    kind: z.literal("template"),
+    key: z.string(),
+    version: z.string(),
+    name: z.string(),
+    existingVersions: z.array(z.string()),
+  }),
+]);
+export type ClientImportConflict = z.infer<typeof clientImportConflictSchema>;
+
+/** Settled without asking; listed in the Conflicts step. */
+export const clientImportResolvedSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("templateReused"), key: z.string(), version: z.string() }),
+  z.object({ kind: z.literal("authorMissing"), name: z.string(), email: z.string() }),
+  z.object({ kind: z.literal("authorMatched"), name: z.string(), email: z.string() }),
+]);
+export type ClientImportResolved = z.infer<typeof clientImportResolvedSchema>;
+
+export const CLIENT_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/** The choices of the Conflicts step. */
+export const clientImportChoicesSchema = z.object({
+  client: z.discriminatedUnion("mode", [
+    z.object({
+      mode: z.literal("new"),
+      slug: z.string().min(1).max(80).regex(CLIENT_SLUG_PATTERN),
+    }),
+    z.object({ mode: z.literal("replace") }),
+  ]),
+  /** Keyed by `key@version`. */
+  templates: z.record(z.string(), z.enum(["useExisting", "importDraft"])).default({}),
+});
+export type ClientImportChoices = z.infer<typeof clientImportChoicesSchema>;
+
+export function templateConflictId(key: string, version: string): string {
+  return `${key}@${version}`;
+}

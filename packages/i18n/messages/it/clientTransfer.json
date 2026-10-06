@@ -5,6 +5,7 @@
     "export": "Esporta cliente",
     "import": "Importa cliente"
   },
+  "tabsLabel": "Importa o esporta",
   "export": {
     "client": "Cliente",
     "chooseClient": "Scegli un cliente",
@@ -66,6 +67,126 @@
     "invalidInput": "Controlla le scelte dell'export e riprova.",
     "clientNotFound": "Questo cliente non esiste più.",
     "exportFailed": "L'export non è riuscito. Riprova; se non riesce di nuovo, controlla Stato del sistema.",
-    "notReady": "Questo export non è pronto, o il suo file non è più disponibile."
+    "notReady": "Questo export non è pronto, o il suo file non è più disponibile.",
+    "importNotFound": "Questo import non esiste più.",
+    "importNotReady": "Questo import non si può confermare ora: controlla il suo stato e riprova.",
+    "invalidChoices": "Controlla le scelte di ogni conflitto e riprova.",
+    "typedNameMismatch": "Il nome digitato non corrisponde al cliente: scrivilo esattamente come appare.",
+    "slugTaken": "L'indirizzo «{slug}» è già usato da un altro cliente: scegline un altro.",
+    "unresolvedConflicts": "{count, plural, one {# conflitto ha ancora bisogno di una scelta.} other {# conflitti hanno ancora bisogno di una scelta.}}",
+    "importFailed": "L'import non è riuscito. Nessun dato è stato modificato: l'import scrive tutto alla fine.",
+    "uploadFailed": "Il caricamento non è riuscito. Riprova.",
+    "fileTooLarge": "Il pacchetto supera {size}.",
+    "notZip": "Scegli il file ZIP di un pacchetto cliente di Forgecy."
+  },
+  "import": {
+    "stepsLabel": "Passi dell'import",
+    "steps": {
+      "file": "File",
+      "verify": "Verifica",
+      "conflicts": "Conflitti",
+      "confirm": "Conferma"
+    },
+    "stepState": {
+      "done": "completato",
+      "current": "passo attuale",
+      "todo": "da fare"
+    },
+    "file": {
+      "title": "Scegli il pacchetto",
+      "hint": "Lo ZIP creato da «Esporta cliente», in questa o in un'altra installazione di Forgecy. Fino a {size}.",
+      "label": "Pacchetto cliente (ZIP)",
+      "submit": "Carica e verifica",
+      "uploading": "Caricamento… {percent}%"
+    },
+    "verifying": {
+      "title": "Verifica del pacchetto…",
+      "body": "Forgecy legge il manifest e controlla ogni file con il suo checksum. Puoi lasciare la pagina: l'esito resta qui."
+    },
+    "invalid": {
+      "title": "Questo pacchetto non si può importare",
+      "again": "Carica un altro pacchetto"
+    },
+    "problems": {
+      "unreadable": "Questo file non è un pacchetto cliente di Forgecy o è danneggiato.",
+      "format": "Questo file non è un pacchetto cliente di Forgecy o è danneggiato.",
+      "newerVersion": "Il pacchetto viene da un Forgecy più recente. Aggiorna Forgecy prima di importare questo pacchetto.",
+      "checksum": "Alcuni file del pacchetto non corrispondono al loro checksum: il pacchetto è danneggiato. Esportalo di nuovo.",
+      "unknownTable": "Il pacchetto contiene dati che questa versione di Forgecy non conosce. Aggiorna Forgecy prima di importarlo."
+    },
+    "report": {
+      "title": "Pacchetto",
+      "client": "Cliente",
+      "exportedAt": "Esportato",
+      "size": "Dimensione",
+      "files": "File"
+    },
+    "conflicts": {
+      "counter": "{open, plural, =0 {Nessun conflitto da risolvere} one {# conflitto da risolvere} other {# conflitti da risolvere}} · {auto, plural, =0 {nessuno risolto automaticamente} one {# risolto automaticamente} other {# risolti automaticamente}}",
+      "none": "Nessun conflitto: il cliente verrà importato come nuovo.",
+      "clientLegend": "Cliente «{name}»: esiste già un cliente con lo stesso nome o indirizzo («{existing}»).",
+      "asNew": "Importa come nuovo cliente",
+      "slug": "Indirizzo del nuovo cliente",
+      "slugHint": "Lettere minuscole, numeri e trattini: il cliente si apre in /clients/{slug}.",
+      "replace": "Sostituisci il cliente esistente",
+      "replaceHint": "Distruttiva: la confermi scrivendo il nome del cliente nell'ultimo passo.",
+      "templateLegend": "Template «{name}» ({key}) versione {version}: questa installazione ha {versions}.",
+      "useExisting": "Usa la versione già presente",
+      "importDraft": "Importa come nuova versione in Bozza",
+      "autoTitle": "Risolti automaticamente",
+      "templateReused": "Template {key} {version}: già presente, riusato.",
+      "authorMatched": "{name} ({email}): abbinato alla persona con la stessa email.",
+      "authorMissing": "{name} ({email}): non è una persona di questa installazione. Le sue modifiche restano senza autore.",
+      "next": "Continua"
+    },
+    "confirm": {
+      "create": "Viene creato un nuovo cliente «{name}» in /clients/{slug}.",
+      "replace": "I dati attuali di {name} ({versions, plural, one {# versione di Brand Identity} other {# versioni di Brand Identity}}, {carousels, plural, one {# carosello} other {# caroselli}}, {audits, plural, one {# audit} other {# audit}}) verranno sostituiti da quelli del pacchetto. Prima dell'import Forgecy crea un backup del database.",
+      "templatesDraft": "{count, plural, one {# template viene importato come nuova versione in Bozza.} other {# template vengono importati come nuove versioni in Bozza.}}",
+      "states": "Le versioni mantengono il loro stato e la loro cronologia; la versione pubblicata resta pubblicata. I caroselli in revisione tornano in Bozza.",
+      "typeName": "Scrivi «{name}» per confermare",
+      "submit": "Importa cliente",
+      "back": "Indietro",
+      "cancel": "Annulla import"
+    },
+    "started": "Import avviato. Puoi lasciare la pagina: arriva una notifica quando finisce.",
+    "cancelled": "Import annullato. Non è stato scritto nulla.",
+    "importing": {
+      "title": "Import di {name} in corso…",
+      "body": "Tutto viene scritto alla fine, in un solo passaggio. Puoi lasciare la pagina: arriva una notifica quando finisce."
+    },
+    "done": {
+      "title": "{name} importato",
+      "open": "Apri cliente",
+      "backup": "Backup creato prima della sostituzione: {name}.",
+      "again": "Importa un altro cliente"
+    },
+    "failed": {
+      "title": "L'import non è riuscito",
+      "again": "Carica di nuovo il pacchetto"
+    },
+    "cancelledState": {
+      "title": "Import annullato",
+      "again": "Carica un pacchetto"
+    },
+    "recent": {
+      "title": "Import recenti",
+      "empty": "Nessun import.",
+      "file": "File",
+      "date": "Data",
+      "statusColumn": "Stato",
+      "client": "Cliente",
+      "createdBy": "Avviato da",
+      "open": "Apri"
+    },
+    "status": {
+      "verifying": "In verifica",
+      "invalid": "Non valido",
+      "ready": "In attesa delle scelte",
+      "importing": "Import in corso",
+      "done": "Importato",
+      "failed": "Non riuscito",
+      "cancelled": "Annullato"
+    }
   }
 }

@@ -5,6 +5,7 @@
     "export": "Export client",
     "import": "Import client"
   },
+  "tabsLabel": "Import or export",
   "export": {
     "client": "Client",
     "chooseClient": "Choose a client",
@@ -66,6 +67,126 @@
     "invalidInput": "Check the export choices and try again.",
     "clientNotFound": "This client no longer exists.",
     "exportFailed": "The export did not succeed. Try again; if it fails again, check System health.",
-    "notReady": "This export is not ready, or its file is no longer available."
+    "notReady": "This export is not ready, or its file is no longer available.",
+    "importNotFound": "This import no longer exists.",
+    "importNotReady": "This import cannot be confirmed now: check its state and try again.",
+    "invalidChoices": "Check the choices for each conflict and try again.",
+    "typedNameMismatch": "The typed name does not match the client: type it exactly as shown.",
+    "slugTaken": "The address “{slug}” is already used by another client: choose another one.",
+    "unresolvedConflicts": "{count, plural, one {# conflict still needs a choice.} other {# conflicts still need a choice.}}",
+    "importFailed": "The import did not succeed. Nothing was changed: the import writes everything at the end.",
+    "uploadFailed": "The upload did not succeed. Try again.",
+    "fileTooLarge": "The package is larger than {size}.",
+    "notZip": "Choose the ZIP file of a Forgecy client package."
+  },
+  "import": {
+    "stepsLabel": "Import steps",
+    "steps": {
+      "file": "File",
+      "verify": "Verify",
+      "conflicts": "Conflicts",
+      "confirm": "Confirm"
+    },
+    "stepState": {
+      "done": "done",
+      "current": "current step",
+      "todo": "not started"
+    },
+    "file": {
+      "title": "Choose the package",
+      "hint": "The ZIP made by “Export client”, in this or another Forgecy installation. Up to {size}.",
+      "label": "Client package (ZIP)",
+      "submit": "Upload and check",
+      "uploading": "Uploading… {percent}%"
+    },
+    "verifying": {
+      "title": "Checking the package…",
+      "body": "Forgecy reads the manifest and checks every file against its checksum. You can leave the page: the result stays here."
+    },
+    "invalid": {
+      "title": "This package cannot be imported",
+      "again": "Upload another package"
+    },
+    "problems": {
+      "unreadable": "This file is not a Forgecy client package or it is damaged.",
+      "format": "This file is not a Forgecy client package or it is damaged.",
+      "newerVersion": "The package comes from a newer Forgecy. Update Forgecy before importing this package.",
+      "checksum": "Some files in the package do not match their checksum: the package is damaged. Export it again.",
+      "unknownTable": "The package contains data this version of Forgecy does not know. Update Forgecy before importing it."
+    },
+    "report": {
+      "title": "Package",
+      "client": "Client",
+      "exportedAt": "Exported",
+      "size": "Size",
+      "files": "Files"
+    },
+    "conflicts": {
+      "counter": "{open, plural, =0 {No conflicts to resolve} one {# conflict to resolve} other {# conflicts to resolve}} · {auto, plural, =0 {none resolved automatically} other {# resolved automatically}}",
+      "none": "No conflicts: the client will be imported as new.",
+      "clientLegend": "Client “{name}”: a client with the same name or address already exists (“{existing}”).",
+      "asNew": "Import as a new client",
+      "slug": "Address of the new client",
+      "slugHint": "Lowercase letters, numbers and hyphens: the client opens at /clients/{slug}.",
+      "replace": "Replace the existing client",
+      "replaceHint": "Destructive: you confirm it by typing the client’s name in the last step.",
+      "templateLegend": "Template “{name}” ({key}) version {version}: this installation has {versions}.",
+      "useExisting": "Use the version already here",
+      "importDraft": "Import as a new version in Draft",
+      "autoTitle": "Resolved automatically",
+      "templateReused": "Template {key} {version}: already here, reused.",
+      "authorMatched": "{name} ({email}): matched to the person with the same email.",
+      "authorMissing": "{name} ({email}): not a person here. Their changes are kept without an author.",
+      "next": "Continue"
+    },
+    "confirm": {
+      "create": "A new client “{name}” is created at /clients/{slug}.",
+      "replace": "The current data of {name} ({versions, plural, one {# Brand Identity version} other {# Brand Identity versions}}, {carousels, plural, one {# carousel} other {# carousels}}, {audits, plural, one {# audit} other {# audits}}) will be replaced by the package’s. Before the import Forgecy creates a backup of the database.",
+      "templatesDraft": "{count, plural, one {# template is imported as a new version in Draft.} other {# templates are imported as new versions in Draft.}}",
+      "states": "Versions keep their status and history; the published version stays published. Carousels in review go back to Draft.",
+      "typeName": "Type “{name}” to confirm",
+      "submit": "Import client",
+      "back": "Back",
+      "cancel": "Cancel import"
+    },
+    "started": "Import started. You can leave the page: a notification arrives when it ends.",
+    "cancelled": "Import cancelled. Nothing was written.",
+    "importing": {
+      "title": "Importing {name}…",
+      "body": "Everything is written at the end, in one go. You can leave the page: a notification arrives when it ends."
+    },
+    "done": {
+      "title": "{name} imported",
+      "open": "Open client",
+      "backup": "Backup made before the replacement: {name}.",
+      "again": "Import another client"
+    },
+    "failed": {
+      "title": "The import did not succeed",
+      "again": "Upload the package again"
+    },
+    "cancelledState": {
+      "title": "Import cancelled",
+      "again": "Upload a package"
+    },
+    "recent": {
+      "title": "Recent imports",
+      "empty": "No imports yet.",
+      "file": "File",
+      "date": "Date",
+      "statusColumn": "Status",
+      "client": "Client",
+      "createdBy": "Started by",
+      "open": "Open"
+    },
+    "status": {
+      "verifying": "Checking",
+      "invalid": "Not valid",
+      "ready": "Waiting for choices",
+      "importing": "Importing",
+      "done": "Imported",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    }
   }
 }

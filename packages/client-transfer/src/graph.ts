@@ -43,6 +43,7 @@ export const EXCLUDED_TABLES = new Set([
   "mcp_connections",
   "notifications",
   "client_exports",
+  "client_imports",
 ]);
 
 /** Area of every client table (spec page 68: what the package contains). */

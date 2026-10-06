@@ -256,6 +256,7 @@
       "manual": "Manuale",
       "nightly": "Notturno",
       "pre_restore": "Prima del ripristino",
+      "pre_import": "Prima di un import cliente",
       "cli": "Riga di comando"
     },
     "size": {

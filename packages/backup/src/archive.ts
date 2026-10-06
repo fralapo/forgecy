@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 
 export const BACKUP_FORMAT = 1;
-export const backupKinds = ["manual", "nightly", "pre_restore", "cli"] as const;
+export const backupKinds = ["manual", "nightly", "pre_restore", "pre_import", "cli"] as const;
 export type BackupKind = (typeof backupKinds)[number];
 /** Nightly backups are deleted after this many days; the others never expire. */
 export const NIGHTLY_RETENTION_DAYS = 30;
