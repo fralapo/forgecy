@@ -3,10 +3,12 @@
 import { Button } from "@forgecy/ui";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { authClient } from "@/lib/auth-client";
 
 export function SignOutButton() {
   const router = useRouter();
+  const t = useTranslations("shell");
   return (
     <Button
       variant="ghost"
@@ -19,7 +21,7 @@ export function SignOutButton() {
       }}
     >
       <LogOut aria-hidden />
-      Sign out
+      {t("signOut")}
     </Button>
   );
 }

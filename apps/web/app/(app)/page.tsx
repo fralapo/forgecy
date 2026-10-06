@@ -1,43 +1,25 @@
 import { Card } from "@forgecy/ui";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/session";
 
 const steps = [
-  {
-    href: "/audit",
-    title: "Audit",
-    text: "Analyze a prospect's website, social profiles and competitors, and deliver the report as a PDF.",
-  },
-  {
-    href: "/templates",
-    title: "Templates",
-    text: "Import and publish the agency's templates: reports and carousels use only published ones.",
-  },
-  {
-    href: "/brand",
-    title: "Brand Identity",
-    text: "The client's strategy, voice and visual identity, approved by a person.",
-  },
-  {
-    href: "/products",
-    title: "Products",
-    text: "The client's catalog: only approved products make it into content.",
-  },
-  {
-    href: "/content",
-    title: "Content",
-    text: "Strategy, plan, carousels, review and export to PNG, PDF and ZIP.",
-  },
+  { href: "/audit", key: "audit" },
+  { href: "/templates", key: "templates" },
+  { href: "/brand", key: "brand" },
+  { href: "/products", key: "products" },
+  { href: "/content", key: "content" },
 ] as const;
 
 export default async function HomePage() {
   const user = await requireUser();
+  const t = await getTranslations("home");
   return (
     <>
       <PageHeader
-        title={`Hi ${user.name.split(" ")[0]}`}
-        description="Prospect, Audit, Diagnosis, Brand identity, Content strategy, Carousel, Review, Export."
+        title={t("greeting", { name: user.name.split(" ")[0] ?? user.name })}
+        description={t("flow")}
       />
       <ol className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {steps.map((s, i) => (
@@ -45,10 +27,10 @@ export default async function HomePage() {
             <Card className="h-full p-6">
               <h2 className="text-heading-sm text-fg">
                 <Link href={s.href} className="hover:underline">
-                  {i + 1}. {s.title}
+                  {t("step", { number: i + 1, title: t(`steps.${s.key}.title`) })}
                 </Link>
               </h2>
-              <p className="mt-2 text-body-md text-fg-muted">{s.text}</p>
+              <p className="mt-2 text-body-md text-fg-muted">{t(`steps.${s.key}.text`)}</p>
             </Card>
           </li>
         ))}

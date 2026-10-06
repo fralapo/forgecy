@@ -1,0 +1,24 @@
+{
+  "appName": "Forgecy",
+  "actions": {
+    "save": "Salva",
+    "cancel": "Annulla",
+    "add": "Aggiungi",
+    "create": "Crea",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "open": "Apri",
+    "close": "Chiudi",
+    "back": "Indietro",
+    "retry": "Riprova",
+    "confirm": "Conferma"
+  },
+  "saved": "Salvato.",
+  "required": "Obbligatorio",
+  "optional": "facoltativo",
+  "loading": "Caricamento…",
+  "role": {
+    "admin": "Admin",
+    "user": "Utente"
+  }
+}

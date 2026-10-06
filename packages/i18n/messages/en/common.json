@@ -1,0 +1,24 @@
+{
+  "appName": "Forgecy",
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "add": "Add",
+    "create": "Create",
+    "delete": "Delete",
+    "edit": "Edit",
+    "open": "Open",
+    "close": "Close",
+    "back": "Back",
+    "retry": "Try again",
+    "confirm": "Confirm"
+  },
+  "saved": "Saved.",
+  "required": "Required",
+  "optional": "optional",
+  "loading": "Loading…",
+  "role": {
+    "admin": "Admin",
+    "user": "User"
+  }
+}

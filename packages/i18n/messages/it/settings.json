@@ -1,0 +1,71 @@
+{
+  "title": "Impostazioni",
+  "description": "Le tue preferenze, accesso, persone dell’agenzia e provider AI.",
+  "preferences": {
+    "title": "Preferenze",
+    "language": "Lingua dell’interfaccia",
+    "languageHint": "Cambia solo ciò che vedi tu. I deliverable per i clienti mantengono la lingua scelta per ogni cliente o contenuto.",
+    "automatic": "Automatica (browser: {language})",
+    "saved": "Lingua aggiornata."
+  },
+  "instance": {
+    "title": "Istanza",
+    "access": "Accesso",
+    "storage": "Archivio file",
+    "defaultProvider": "Provider AI predefinito"
+  },
+  "providers": {
+    "title": "Provider AI",
+    "hint": "Le chiavi si impostano nel file .env del server. Gli unici costi sono le API dei provider.",
+    "configured": "Configurato",
+    "notConfigured": "Non configurato",
+    "googleImages": "Google (immagini)",
+    "localModel": "Modello locale",
+    "commercialUseLink": "Uso commerciale delle immagini"
+  },
+  "people": {
+    "title": "Persone",
+    "deactivated": "Disattivato"
+  },
+  "newUser": {
+    "title": "Aggiungi una persona",
+    "name": "Nome",
+    "email": "Email",
+    "password": "Password iniziale",
+    "isAdmin": "Admin (impostazioni, chiavi, budget e backup)",
+    "created": "Account creato.",
+    "submit": "Crea account"
+  },
+  "worker": {
+    "check": "Verifica il worker",
+    "completed": "Il worker risponde",
+    "error": "Coda non raggiungibile"
+  },
+  "aiProviders": {
+    "title": "Provider AI",
+    "description": "Uso commerciale delle immagini generate: un Admin lo verifica leggendo i termini del provider.",
+    "primary": "Principale",
+    "secondary": "Secondario",
+    "status": {
+      "pending_verification": "Da verificare",
+      "verified": "Verificato",
+      "rejected": "Non consentito"
+    },
+    "available": "Disponibile per i clienti la cui policy lo consente.",
+    "unavailable": "Non usato con clienti reali: la generazione di immagini è spenta per tutti i clienti.",
+    "verifiedBy": "Verificato da",
+    "consultedOn": "Termini consultati il",
+    "terms": "Termini",
+    "note": "Nota",
+    "form": {
+      "summary": "Aggiorna lo stato di uso commerciale",
+      "status": "Stato",
+      "termsUrl": "URL dei termini consultati",
+      "termsUrlPlaceholder": "https://",
+      "termsUrlHint": "Obbligatorio per “Verificato”.",
+      "consultedOn": "Data di consultazione",
+      "note": "Nota",
+      "updated": "Stato aggiornato."
+    }
+  }
+}

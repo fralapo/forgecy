@@ -1,0 +1,31 @@
+{
+  "title": "Clients",
+  "description": "The agency's prospects and clients, each with its own AI policy.",
+  "empty": "No clients yet. Add the first prospect.",
+  "table": {
+    "caption": "Client list",
+    "name": "Name",
+    "status": "Status",
+    "industry": "Industry",
+    "aiPolicy": "AI policy",
+    "open": "Open"
+  },
+  "areas": {
+    "audit": "Audit",
+    "brand": "Brand",
+    "content": "Content",
+    "products": "Products"
+  },
+  "areaFor": "for {client}",
+  "new": {
+    "title": "New client",
+    "name": "Name",
+    "website": "Website",
+    "websitePlaceholder": "https://",
+    "industry": "Industry",
+    "status": "Status",
+    "aiPolicy": "AI policy",
+    "created": "Client created.",
+    "submit": "Add"
+  }
+}

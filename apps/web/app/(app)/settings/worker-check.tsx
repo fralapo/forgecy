@@ -2,6 +2,7 @@
 
 import { Badge, Button } from "@forgecy/ui";
 import { Activity } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 type Status =
@@ -15,21 +16,11 @@ type Status =
   | "needs_attention"
   | "error";
 
-const label: Record<Status, string> = {
-  idle: "",
-  queued: "Queued",
-  running: "Running",
-  retrying: "Retrying",
-  completed: "The worker responds",
-  failed: "Failed",
-  cancelled: "Cancelled",
-  needs_attention: "Needs attention",
-  error: "Queue unreachable",
-};
-
 /** Enqueues a `system.ping` job and follows it over SSE: proves web → Redis → worker → Postgres. */
 export function WorkerCheck() {
   const [status, setStatus] = useState<Status>("idle");
+  const t = useTranslations("settings.worker");
+  const te = useTranslations("enums.jobStatus");
 
   async function run() {
     setStatus("queued");
@@ -60,10 +51,14 @@ export function WorkerCheck() {
         disabled={status === "queued" || status === "running"}
       >
         <Activity aria-hidden />
-        Check the worker
+        {t("check")}
       </Button>
       <span aria-live="polite">
-        {status !== "idle" ? <Badge variant={variant}>{label[status]}</Badge> : null}
+        {status === "idle" ? null : (
+          <Badge variant={variant}>
+            {status === "completed" || status === "error" ? t(status) : te(status)}
+          </Badge>
+        )}
       </span>
     </div>
   );

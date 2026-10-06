@@ -1,7 +1,9 @@
 "use client";
 
+import { aiPolicies } from "@forgecy/core";
 import { Button, Input, Label } from "@forgecy/ui";
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { createClientAction, type ClientFormState } from "./actions";
 
@@ -13,39 +15,42 @@ export function NewClientForm() {
     createClientAction,
     {},
   );
+  const t = useTranslations("clients.new");
+  const te = useTranslations("enums");
   return (
     <form action={action} className="mt-4 space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
+        <Label htmlFor="name">{t("name")}</Label>
         <Input id="name" name="name" required />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="websiteUrl">Website</Label>
-        <Input id="websiteUrl" name="websiteUrl" type="url" placeholder="https://" />
+        <Label htmlFor="websiteUrl">{t("website")}</Label>
+        <Input id="websiteUrl" name="websiteUrl" type="url" placeholder={t("websitePlaceholder")} />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="sector">Industry</Label>
+        <Label htmlFor="sector">{t("industry")}</Label>
         <Input id="sector" name="sector" />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="status">Status</Label>
+        <Label htmlFor="status">{t("status")}</Label>
         <select id="status" name="status" className={selectClass} defaultValue="prospect">
-          <option value="prospect">Prospect</option>
-          <option value="active">Active</option>
+          <option value="prospect">{te("clientStatus.prospect")}</option>
+          <option value="active">{te("clientStatus.active")}</option>
         </select>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="aiPolicy">AI policy</Label>
+        <Label htmlFor="aiPolicy">{t("aiPolicy")}</Label>
         <select
           id="aiPolicy"
           name="aiPolicy"
           className={selectClass}
           defaultValue="external_allowed"
         >
-          <option value="external_allowed">External AI allowed</option>
-          <option value="external_restricted">External AI restricted</option>
-          <option value="local_only">Local AI only</option>
-          <option value="no_ai">No AI</option>
+          {aiPolicies.map((p) => (
+            <option key={p} value={p}>
+              {te(`aiPolicy.${p}`)}
+            </option>
+          ))}
         </select>
       </div>
       {state.error ? (
@@ -55,12 +60,12 @@ export function NewClientForm() {
       ) : null}
       {state.ok ? (
         <p role="status" className="text-body-sm text-success">
-          Client created.
+          {t("created")}
         </p>
       ) : null}
       <Button type="submit" className="w-full" disabled={pending}>
         <Plus aria-hidden />
-        Add
+        {t("submit")}
       </Button>
     </form>
   );

@@ -8,12 +8,26 @@ export type ForgecyErrorCode =
   | "provider_error"
   | "unavailable";
 
-/** Domain error with a stable code the API layer maps to an HTTP status. */
+/**
+ * Points to a translated message in the `errors` namespace of @forgecy/i18n
+ * (`{ key: "products.notFound", values: { name } }`). Build it with `localizedError`.
+ */
+export type MessageRef = {
+  key: string;
+  values?: Record<string, string | number>;
+};
+
+/**
+ * Domain error with a stable code the API layer maps to an HTTP status.
+ * `message` is English (logs, API); `ref`, when present, is what the interface shows
+ * in the user's language.
+ */
 export class ForgecyError extends Error {
   constructor(
     readonly code: ForgecyErrorCode,
     message: string,
     readonly details?: Record<string, unknown>,
+    readonly ref?: MessageRef,
   ) {
     super(message);
     this.name = "ForgecyError";

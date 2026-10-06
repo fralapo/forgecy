@@ -1,0 +1,25 @@
+{
+  "name": "@forgecy/i18n",
+  "version": "0.1.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./messages/en": "./messages/en/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@forgecy/core": "workspace:*",
+    "use-intl": "^4.14.9"
+  },
+  "devDependencies": {
+    "@formatjs/icu-messageformat-parser": "^3.5.21",
+    "@types/node": "^22.18.0",
+    "typescript": "6.0.3",
+    "vitest": "^4.1.11"
+  }
+}

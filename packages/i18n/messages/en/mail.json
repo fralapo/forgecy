@@ -1,0 +1,13 @@
+{
+  "magicLink": {
+    "subject": "Your sign-in link for {app}",
+    "greeting": "Hi,",
+    "openLink": "to sign in to {app}, open this link:",
+    "expires": "The link works only once and expires in {minutes, plural, one {# minute} other {# minutes}}.",
+    "ignore": "If you didn’t request this, ignore this email: nobody can sign in without the link.",
+    "heading": "Sign in to {app}",
+    "pressButton": "Press the button to sign in. The link works only once and expires in {minutes, plural, one {# minute} other {# minutes}}.",
+    "button": "Sign in to {app}",
+    "copyAddress": "If the button doesn’t work, copy this address into your browser:"
+  }
+}

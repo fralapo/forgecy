@@ -3,6 +3,7 @@
 import { Button, Input, Label } from "@forgecy/ui";
 import { LogIn, Mail } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 import { authClient } from "@/lib/auth-client";
 
@@ -13,6 +14,7 @@ function safeNext(next: string | null): string {
 
 export function LoginForm({ magicLink, google }: { magicLink: boolean; google: boolean }) {
   const router = useRouter();
+  const t = useTranslations("auth.login");
   const params = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -29,11 +31,7 @@ export function LoginForm({ magicLink, google }: { magicLink: boolean; google: b
     });
     setPending(false);
     if (error) {
-      setError(
-        error.status === 429
-          ? "Too many attempts. Try again in a minute."
-          : "Incorrect email or password.",
-      );
+      setError(error.status === 429 ? t("tooManyAttempts") : t("wrongCredentials"));
       return;
     }
     router.replace(safeNext(params.get("next")) as never);
@@ -48,22 +46,19 @@ export function LoginForm({ magicLink, google }: { magicLink: boolean; google: b
       callbackURL: safeNext(params.get("next")),
     });
     setPending(false);
-    if (error) setError("We couldn't send the link. Check the address.");
-    else
-      setNotice(
-        "If the address is allowed, you'll receive a sign-in link valid for a few minutes.",
-      );
+    if (error) setError(t("magicLinkFailed"));
+    else setNotice(t("magicLinkSent"));
   }
 
   return (
     <div className="space-y-6">
       <form onSubmit={onPassword} className="space-y-4" noValidate>
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("email")}</Label>
           <Input id="email" name="email" type="email" autoComplete="email" required />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t("password")}</Label>
           <Input
             id="password"
             name="password"
@@ -84,7 +79,7 @@ export function LoginForm({ magicLink, google }: { magicLink: boolean; google: b
         ) : null}
         <Button type="submit" className="w-full" disabled={pending}>
           <LogIn aria-hidden />
-          Sign in
+          {t("submit")}
         </Button>
       </form>
       {magicLink ? (
@@ -95,12 +90,12 @@ export function LoginForm({ magicLink, google }: { magicLink: boolean; google: b
           onClick={() => {
             const email =
               (document.getElementById("email") as HTMLInputElement | null)?.value ?? "";
-            if (!email) setError("Enter your email to receive the link.");
+            if (!email) setError(t("magicLinkNeedsEmail"));
             else void onMagicLink(email);
           }}
         >
           <Mail aria-hidden />
-          Email me a sign-in link
+          {t("magicLink")}
         </Button>
       ) : null}
       {google ? (
@@ -115,7 +110,7 @@ export function LoginForm({ magicLink, google }: { magicLink: boolean; google: b
             })
           }
         >
-          Sign in with Google
+          {t("google")}
         </Button>
       ) : null}
     </div>

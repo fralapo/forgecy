@@ -1,0 +1,27 @@
+{
+  "greeting": "Ciao {name}",
+  "flow": "Prospect, Audit, Diagnosi, Brand identity, Strategia dei contenuti, Carosello, Revisione, Export.",
+  "step": "{number}. {title}",
+  "steps": {
+    "audit": {
+      "title": "Audit",
+      "text": "Analizza sito, profili social e competitor di un prospect e consegna il report in PDF."
+    },
+    "templates": {
+      "title": "Template",
+      "text": "Importa e pubblica i template dell’agenzia: report e caroselli usano solo quelli pubblicati."
+    },
+    "brand": {
+      "title": "Brand Identity",
+      "text": "Strategia, voce e identità visiva del cliente, approvate da una persona."
+    },
+    "products": {
+      "title": "Prodotti",
+      "text": "Il catalogo del cliente: nei contenuti entrano solo i prodotti approvati."
+    },
+    "content": {
+      "title": "Contenuti",
+      "text": "Strategia, piano, caroselli, revisione ed export in PNG, PDF e ZIP."
+    }
+  }
+}

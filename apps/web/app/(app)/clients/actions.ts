@@ -4,6 +4,7 @@ import { aiPolicies, assertCan, clientStatuses } from "@forgecy/core";
 import { clients, eq, getDb, recordAuditEvent } from "@forgecy/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { firstIssue, vmsg } from "@/lib/i18n";
 import { requireUser } from "@/lib/session";
 import { slugify } from "@/lib/slug";
 
@@ -11,10 +12,10 @@ const optionalUrl = z
   .string()
   .trim()
   .transform((v) => (v === "" ? undefined : v))
-  .pipe(z.url({ protocol: /^https?$/, message: "Invalid website address" }).optional());
+  .pipe(z.url({ protocol: /^https?$/, message: vmsg("websiteInvalid") }).optional());
 
 const clientSchema = z.object({
-  name: z.string().trim().min(1, "Enter the name").max(120),
+  name: z.string().trim().min(1, vmsg("nameRequired")).max(120),
   status: z.enum(clientStatuses).default("prospect"),
   websiteUrl: optionalUrl,
   sector: z.string().trim().max(80).optional(),
@@ -30,7 +31,7 @@ export async function createClientAction(
   const user = await requireUser();
   assertCan(user.actor, "project.edit");
   const parsed = clientSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid data" };
+  if (!parsed.success) return { error: await firstIssue(parsed.error) };
 
   const db = getDb();
   const base = slugify(parsed.data.name) || "client";

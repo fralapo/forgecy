@@ -1,0 +1,31 @@
+{
+  "aiPolicy": {
+    "external_allowed": "AI esterna consentita",
+    "external_restricted": "AI esterna limitata",
+    "local_only": "Solo AI locale",
+    "no_ai": "Nessuna AI"
+  },
+  "clientStatus": {
+    "prospect": "Prospect",
+    "active": "Attivo",
+    "archived": "Archiviato"
+  },
+  "jobStatus": {
+    "queued": "In coda",
+    "running": "In corso",
+    "retrying": "Nuovo tentativo",
+    "completed": "Completato",
+    "failed": "Non riuscito",
+    "cancelled": "Annullato",
+    "needs_attention": "Richiede attenzione"
+  },
+  "authMode": {
+    "local": "Locale",
+    "intranet": "Intranet",
+    "team": "Team (magic link e Google)"
+  },
+  "storageDriver": {
+    "local": "Disco locale",
+    "s3": "Compatibile S3"
+  }
+}
