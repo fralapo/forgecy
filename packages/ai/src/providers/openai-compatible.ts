@@ -3,6 +3,7 @@ import type { ProviderId } from "@forgecy/core";
 import { classifyError } from "../errors";
 import { isStrictCompatible } from "../schema";
 import type {
+  ChatTurn,
   StopReason,
   TextGenerationRequest,
   TextGenerationResult,
@@ -41,6 +42,24 @@ function normalizeStop(reason: string | null | undefined): StopReason {
   }
 }
 
+function toChatMessage(m: ChatTurn): OpenAI.Chat.Completions.ChatCompletionMessageParam {
+  if (m.role === "assistant") return { role: "assistant", content: m.content };
+  if (!m.images?.length) return { role: "user", content: m.content };
+  // Data URLs work on OpenAI, OpenRouter, Ollama and LM Studio alike.
+  return {
+    role: "user",
+    content: [
+      ...m.images.map((img): OpenAI.Chat.Completions.ChatCompletionContentPartImage => ({
+        type: "image_url",
+        image_url: {
+          url: `data:${img.mimeType};base64,${Buffer.from(img.data).toString("base64")}`,
+        },
+      })),
+      { type: "text", text: m.content },
+    ],
+  };
+}
+
 /**
  * Chat Completions with `response_format: { type: "json_schema" }`. Used for
  * OpenAI, OpenRouter and local servers (Ollama / LM Studio) because it is the
@@ -69,10 +88,7 @@ export function createOpenAICompatibleProvider(opts: OpenAICompatibleOptions): T
             ...(opts.id === "openai"
               ? { max_completion_tokens: req.maxOutputTokens }
               : { max_tokens: req.maxOutputTokens }),
-            messages: [
-              { role: "system", content: req.system },
-              ...req.messages.map((m) => ({ role: m.role, content: m.content })),
-            ],
+            messages: [{ role: "system", content: req.system }, ...req.messages.map(toChatMessage)],
             response_format: {
               type: "json_schema",
               json_schema: {

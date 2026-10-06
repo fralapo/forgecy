@@ -175,6 +175,73 @@ describe("openai-compatible adapter", () => {
   });
 });
 
+describe("vision input in text adapters", () => {
+  const img = { data: new Uint8Array([0x89, 0x50, 0x4e, 0x47]), mimeType: "image/png" as const };
+  const visionReq = {
+    ...req,
+    messages: [{ role: "user" as const, content: "describe", images: [img] }],
+  };
+  const b64 = Buffer.from(img.data).toString("base64");
+
+  it("anthropic sends base64 image blocks before the text", async () => {
+    const captured: Captured[] = [];
+    const client = new Anthropic({
+      apiKey: "k",
+      maxRetries: 0,
+      fetch: fakeFetch(captured, {
+        id: "msg_v",
+        type: "message",
+        role: "assistant",
+        model: "claude-opus-5-5",
+        content: [{ type: "text", text: '{"a":"x"}' }],
+        stop_reason: "end_turn",
+        stop_details: null,
+        stop_sequence: null,
+        usage: { input_tokens: 1500, output_tokens: 5 },
+      }),
+    });
+    await createAnthropicProvider({ apiKey: "k", client }).generateObject(visionReq);
+    expect((captured[0]!.body.messages as unknown[])[0]).toEqual({
+      role: "user",
+      content: [
+        { type: "image", source: { type: "base64", media_type: "image/png", data: b64 } },
+        { type: "text", text: "describe" },
+      ],
+    });
+  });
+
+  it("openai-compatible sends data URL image parts", async () => {
+    const captured: Captured[] = [];
+    const client = new OpenAI({
+      apiKey: "k",
+      maxRetries: 0,
+      fetch: fakeFetch(captured, {
+        id: "c_v",
+        object: "chat.completion",
+        created: 0,
+        model: "gpt-6.1-sol",
+        choices: [
+          {
+            index: 0,
+            finish_reason: "stop",
+            message: { role: "assistant", content: '{"a":"y"}', refusal: null },
+          },
+        ],
+      }),
+    });
+    await createOpenAICompatibleProvider({ id: "openai", apiKey: "k", client }).generateObject(
+      visionReq,
+    );
+    expect((captured[0]!.body.messages as unknown[])[1]).toEqual({
+      role: "user",
+      content: [
+        { type: "image_url", image_url: { url: `data:image/png;base64,${b64}` } },
+        { type: "text", text: "describe" },
+      ],
+    });
+  });
+});
+
 describe("image adapters", () => {
   const png = Buffer.from([1, 2, 3]).toString("base64");
 
