@@ -5,8 +5,9 @@ import {
   renderSlideHtml,
   sampleSlide,
 } from "@forgecy/carousel";
-import { assertCan } from "@forgecy/core";
+import { assertCan, isLocale, type Locale } from "@forgecy/core";
 import { NextResponse } from "next/server";
+import { getLocale } from "next-intl/server";
 import { withUser } from "@/lib/api";
 import { slideResponse, templateById } from "../../../_lib/templates";
 
@@ -38,6 +39,8 @@ export const GET = withUser(
       total: pkg.manifest.layouts.length,
       brand: NEUTRAL_BRAND,
       options: { showSafeZone: q.get("safe") === "1", showSlotOutlines: q.get("slots") === "1" },
+      // Template previews show the labels in the language asked for, else the viewer's.
+      language: isLocale(q.get("lang")) ? (q.get("lang") as Locale) : await getLocale(),
     });
     return slideResponse(html);
   },

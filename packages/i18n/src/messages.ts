@@ -1,18 +1,16 @@
 import type { Locale } from "@forgecy/core";
-import type en from "../messages/en";
+import en from "../messages/en";
+import it from "../messages/it";
 
 /** Every message, shaped like the English source files. */
 export type Messages = typeof en;
 export type Namespace = keyof Messages;
 
 /**
- * One loader per language. Adding a language without its loader is a type error,
+ * Every language's messages. Adding a language without its entry is a type error,
  * and the messages test fails if a folder and this list disagree.
  */
-const loaders: Record<Locale, () => Promise<{ default: unknown }>> = {
-  en: () => import("../messages/en"),
-  it: () => import("../messages/it"),
-};
+const catalogs: Record<Locale, unknown> = { en, it };
 
 type Tree = { [key: string]: string | Tree };
 
@@ -29,16 +27,19 @@ export function withFallback(base: Tree, overlay: Tree): Tree {
   return out;
 }
 
-export async function loadMessages(locale: Locale): Promise<Messages> {
-  const en = (await loaders.en()).default as Messages;
+/** Messages of a language with the English fallback filled in (synchronous). */
+export function messagesFor(locale: Locale): Messages {
   if (locale === "en") return en;
-  const translated = (await loaders[locale]()).default as Tree;
-  return withFallback(en as unknown as Tree, translated) as unknown as Messages;
+  return withFallback(en as unknown as Tree, catalogs[locale] as Tree) as unknown as Messages;
+}
+
+export async function loadMessages(locale: Locale): Promise<Messages> {
+  return messagesFor(locale);
 }
 
 /** Raw messages of one language, without the English fallback (tests and tooling). */
 export async function loadRawMessages(locale: Locale): Promise<Tree> {
-  return (await loaders[locale]()).default as Tree;
+  return catalogs[locale] as Tree;
 }
 
 export type { Tree as MessageTree };

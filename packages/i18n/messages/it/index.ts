@@ -2,6 +2,7 @@
 import auth from "./auth.json";
 import clients from "./clients.json";
 import common from "./common.json";
+import deliverable from "./deliverable.json";
 import enums from "./enums.json";
 import errors from "./errors.json";
 import home from "./home.json";
@@ -16,6 +17,7 @@ export default {
   auth,
   clients,
   common,
+  deliverable,
   enums,
   errors,
   home,

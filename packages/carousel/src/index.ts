@@ -3,6 +3,7 @@ export * from "./brand";
 export * from "./filenames";
 export * from "./formats";
 export * from "./jobs";
+export * from "./labels";
 export * from "./package";
 export * from "./renderer";
 export * from "./slide-schema";

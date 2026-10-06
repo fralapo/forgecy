@@ -12,7 +12,7 @@ import {
 } from "@forgecy/ai";
 import { carouselExportPayloadSchema } from "@forgecy/carousel";
 import { carouselWorkerHandlers } from "@forgecy/carousel/export";
-import { loadEnv, type Actor } from "@forgecy/core";
+import { DEFAULT_LOCALE, isLocale, loadEnv, type Actor } from "@forgecy/core";
 import { and, contentApprovals, contentVersions, desc, eq, type Database } from "@forgecy/db";
 import { createStorageFromEnv } from "@forgecy/files";
 import { handle, NeedsAttentionError, type JobContext, type JobHandlers } from "@forgecy/jobs";
@@ -126,6 +126,7 @@ async function runExport(
     hashtags: doc.hashtags,
     outputs: payload.outputs,
     draft: payload.draft,
+    language: isLocale(c.language) ? c.language : DEFAULT_LOCALE,
     metadata: {
       brandIdentityVersion: `v${brand.identity.number}`,
       ...(meta.models?.length ? { models: meta.models.slice(0, 10) } : {}),

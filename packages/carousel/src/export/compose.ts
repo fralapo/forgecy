@@ -11,6 +11,8 @@ export interface PdfMeta {
   subject: string;
   keywords: string[];
   date: Date;
+  /** BCP 47 tag of the deliverable's language (en-GB, it-IT). */
+  language?: string;
 }
 
 /**
@@ -31,7 +33,7 @@ export async function pngsToPdf(
   doc.setCreator("Forgecy");
   doc.setProducer("Forgecy");
   // Language of the deliverable copy (English by default).
-  doc.setLanguage("en-GB");
+  doc.setLanguage(meta.language ?? "en-GB");
   doc.setCreationDate(meta.date);
   doc.setModificationDate(meta.date);
   for (const png of pngs) {

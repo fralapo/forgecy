@@ -67,6 +67,7 @@ export async function runReportExport(
       brand: { ...NEUTRAL_BRAND, name: doc.agency.name ?? "" },
       outputs: ["pdf"],
       draft: !payload.final,
+      language: doc.language,
       meta: {
         client: client.name,
         content: `Audit ${doc.date}`,

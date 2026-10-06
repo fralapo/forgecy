@@ -164,6 +164,8 @@ export async function captureSlides(
   browser: Browser,
   inputs: CaptureInput[],
   onSlide?: (index: number) => Promise<void> | void,
+  /** BCP 47 tag of the deliverable's language (en-GB, it-IT). */
+  locale = "en-GB",
 ): Promise<Capture[]> {
   const first = inputs[0];
   if (!first) return [];
@@ -173,7 +175,7 @@ export async function captureSlides(
     colorScheme: "light",
     reducedMotion: "reduce",
     // Same locale as the slide copy (English by default).
-    locale: "en-GB",
+    locale,
     timezoneId: "UTC",
     javaScriptEnabled: true,
   });

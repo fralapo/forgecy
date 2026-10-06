@@ -1,0 +1,10 @@
+{
+  "causes": "Cause",
+  "client": "Cliente",
+  "date": "Data",
+  "evidence": "Prova",
+  "impact": "Impatto",
+  "limitations": "Limiti",
+  "preparedBy": "Preparato da",
+  "recommendation": "Raccomandazione"
+}

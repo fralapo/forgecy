@@ -5,3 +5,4 @@ dist
 data
 packages/db/migrations/meta
 packages/ui/src/generated
+.claude

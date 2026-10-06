@@ -1,7 +1,7 @@
 import { NEUTRAL_BRAND, renderSlideHtml } from "@forgecy/carousel";
 import { collectAssetKeys, resolveAssets } from "@forgecy/carousel/node";
 import { getContentRow, loadBrand, parseDocument, toRenderSlide } from "@forgecy/content";
-import { assertCan } from "@forgecy/core";
+import { assertCan, DEFAULT_LOCALE, isLocale } from "@forgecy/core";
 import { and, clients, contentVersions, eq, getDb } from "@forgecy/db";
 import { NextResponse } from "next/server";
 import { catalogSource, getStorage, slideResponse } from "@/app/render/_lib/templates";
@@ -91,6 +91,7 @@ export const GET = withUser(
       brand: theme,
       assets,
       options: { showSafeZone: q.get("safe") === "1" },
+      language: isLocale(c.language) ? c.language : DEFAULT_LOCALE,
     });
     return slideResponse(html);
   },

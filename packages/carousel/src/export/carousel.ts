@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, type Locale } from "@forgecy/core";
+import { getTranslator, intlLocale } from "@forgecy/i18n";
 import type { Browser } from "playwright-core";
 import type { BrandTheme } from "../brand";
 import { exportFileNames } from "../filenames";
@@ -33,6 +35,8 @@ export interface ExportCarouselInput {
   meta: ExportMetadata;
   texts?: CarouselTexts;
   draft?: boolean;
+  /** Language of the deliverable: template labels, watermark, PDF and page language. */
+  language?: Locale;
   /** Called with 0–100 as the export advances. */
   onProgress?: (percent: number, step: string) => Promise<void> | void;
   /** Checked between slides: stop early when it returns true. */
@@ -70,11 +74,13 @@ export async function exportCarousel(
   browser: Browser,
   input: ExportCarouselInput,
 ): Promise<ExportCarouselResult> {
-  const { pkg, slides, brand, meta, draft = false } = input;
+  const { pkg, slides, brand, meta, draft = false, language = DEFAULT_LOCALE } = input;
   const m = pkg.manifest;
   const texts = input.texts ?? {};
   const progress = input.onProgress ?? (() => undefined);
-  const options: RenderOptions = draft ? { watermark: "Draft" } : {};
+  const options: RenderOptions = draft
+    ? { watermark: getTranslator(language, "deliverable")("draftWatermark") }
+    : {};
   const warnings: string[] = [];
 
   await progress(5, "Preparing");
@@ -88,18 +94,24 @@ export async function exportCarousel(
       brand,
       ...(input.assets ? { assets: input.assets } : {}),
       options,
+      language,
     });
     warnings.push(...rendered.warnings.map((w) => `Slide ${index + 1}: ${w}`));
     return { rendered, safeZone: effectiveSafeZone(m, layout), limits: slotLimits(layout) };
   });
 
-  const captures = await captureSlides(browser, captureInputs, async (i) => {
-    if (await input.isCancelled?.()) throw new ExportCancelledError();
-    await progress(
-      10 + Math.round(((i + 1) / slides.length) * 70),
-      `Rendering slide ${i + 1} of ${slides.length}`,
-    );
-  });
+  const captures = await captureSlides(
+    browser,
+    captureInputs,
+    async (i) => {
+      if (await input.isCancelled?.()) throw new ExportCancelledError();
+      await progress(
+        10 + Math.round(((i + 1) / slides.length) * 70),
+        `Rendering slide ${i + 1} of ${slides.length}`,
+      );
+    },
+    intlLocale(language),
+  );
   const pngs = captures.map((c) => c.png);
   const names = exportFileNames({
     client: meta.client,
@@ -122,6 +134,7 @@ export async function exportCarousel(
     await progress(85, "Composing PDF");
     const page = pdfPageSize(m.format);
     pdf = await pngsToPdf(pngs, page.width, page.height, {
+      language: intlLocale(language),
       title: `${meta.content} · v${meta.version}`,
       author: meta.client,
       subject: `${m.name} ${m.version} · ${m.format}`,

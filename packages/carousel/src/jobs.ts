@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, localeSchema } from "@forgecy/core";
 import { defineJob } from "@forgecy/jobs/registry";
 import { z } from "zod";
 import { brandThemeSchema } from "./brand";
@@ -29,6 +30,8 @@ export const carouselExportPayloadSchema = z.object({
   outputs: z.array(z.enum(exportOutputs)).min(1).default(["zip"]),
   /** Before approval: “Draft” watermark and `_draft` file names. */
   draft: z.boolean().default(false),
+  /** Language of the deliverable: template labels, watermark, PDF language. */
+  language: localeSchema.default(DEFAULT_LOCALE),
   metadata: z
     .object({
       brandIdentityVersion: z.string().max(40).optional(),

@@ -1,7 +1,7 @@
 "use client";
 
-import type { MessageRef } from "@forgecy/core";
-import { createFormat, type Locale, type MessageValues } from "@forgecy/i18n";
+import type { Locale, MessageRef } from "@forgecy/core";
+import { createFormat } from "@forgecy/i18n/format";
 import { useLocale, useTimeZone, useTranslations } from "next-intl";
 import { useCallback, useMemo } from "react";
 
@@ -18,7 +18,10 @@ export function useRefText() {
   return useCallback(
     (ref: MessageRef | null | undefined, fallback: string) => {
       if (!ref || !t.has(ref.key as never)) return fallback;
-      return (t as unknown as (key: string, values?: MessageValues) => string)(ref.key, ref.values);
+      return (t as unknown as (key: string, values?: Record<string, string | number>) => string)(
+        ref.key,
+        ref.values,
+      );
     },
     [t],
   );
