@@ -13,5 +13,11 @@
   "test": {
     "subject": "Email di prova da {app}",
     "body": "Questa è un’email di prova inviata da {name} da {app}. Se la stai leggendo, l’email funziona: link di accesso e inviti arriveranno."
+  },
+  "notifications": {
+    "subject": "{app}: {count, plural, one {# nuova notifica} other {# nuove notifiche}}",
+    "heading": "{count, plural, one {# nuova notifica} other {# nuove notifiche}} in {app}",
+    "footer": "Ricevi queste email perché le hai attivate in {app}.",
+    "settings": "Cambia nelle Impostazioni"
   }
 }

@@ -21,6 +21,8 @@ export const notifications = pgTable(
     /** App path the notification opens, e.g. `/content/acme/carousels/<id>/review`. */
     href: text("href").notNull(),
     readAt: timestamp("read_at", { withTimezone: true }),
+    /** When the email copy went out (only for people who opted in). */
+    emailedAt: timestamp("emailed_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [index("notifications_user_created_idx").on(t.userId, t.createdAt)],

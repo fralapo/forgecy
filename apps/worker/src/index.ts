@@ -2,9 +2,11 @@ import { JOB_LOCK_TTL_MS, loadEnv } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
 import { maybeEnqueueNightlyBackup } from "@forgecy/backup";
 import { createJobWorker, createQueues, recoverStaleJobs } from "@forgecy/jobs";
+import { createMailer } from "@forgecy/mail";
 import pino from "pino";
 import { handlers } from "./handlers";
 import { startHealthServer } from "./health";
+import { sendNotificationEmails } from "./notification-emails";
 
 const env = loadEnv();
 const logger = pino({ level: env.FORGECY_LOG_LEVEL, base: { service: "worker" } });
@@ -38,6 +40,18 @@ async function nightly() {
 await nightly();
 const nightlyTimer = setInterval(nightly, 10 * 60_000);
 
+// Notifications by email for the people who opted in: checked every minute, only with SMTP.
+const mailer = createMailer(env, { logger });
+async function notificationEmails() {
+  try {
+    const { sent, failed } = await sendNotificationEmails(db, mailer, env.FORGECY_BASE_URL);
+    if (sent || failed) logger.info({ sent, failed }, "notification emails");
+  } catch (err) {
+    logger.error({ err }, "notification emails failed");
+  }
+}
+const emailTimer = mailer.configured ? setInterval(notificationEmails, 60_000) : null;
+
 const health = startHealthServer(Number(process.env.WORKER_HEALTH_PORT ?? 3001), db, () => running);
 logger.info({ queues: worker.queues }, "worker ready");
 
@@ -47,6 +61,8 @@ async function shutdown(signal: string) {
   logger.info({ signal }, "shutting down");
   clearInterval(recoveryTimer);
   clearInterval(nightlyTimer);
+  if (emailTimer) clearInterval(emailTimer);
+  mailer.close();
   health.close();
   await worker.close();
   await producer.close();

@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { createMailer, renderMagicLinkEmail, smtpOptionsFromEnv, type MailEnv } from "../src";
+import {
+  createMailer,
+  renderMagicLinkEmail,
+  renderNotificationsEmail,
+  smtpOptionsFromEnv,
+  type MailEnv,
+} from "../src";
 
 const env: MailEnv = {
   NODE_ENV: "development",
@@ -96,5 +102,35 @@ describe("createMailer", () => {
     await expect(mailer.sendMail({ to: "a@b.it", subject: "x", text: "y" })).rejects.toMatchObject({
       code: "unavailable",
     });
+  });
+});
+
+describe("renderNotificationsEmail", () => {
+  const n = (url: string) => ({
+    kind: "content_approved" as const,
+    params: { client: "Rossi <Srl>", title: "Spring", version: 2 },
+    url,
+  });
+
+  it("uses the notification as subject when there is one, escaped in HTML", async () => {
+    const mail = await renderNotificationsEmail({
+      locale: "en",
+      notifications: [n("https://forgecy.test/notifications/1")],
+      settingsUrl: "https://forgecy.test/settings",
+    });
+    expect(mail.subject).toBe("Forgecy: Rossi <Srl>: “Spring” v2 was approved.");
+    expect(mail.text).toContain("https://forgecy.test/notifications/1");
+    expect(mail.html).toContain("Rossi &lt;Srl&gt;");
+    expect(mail.html).not.toContain("<Srl>");
+  });
+
+  it("counts several in the reader's language", async () => {
+    const mail = await renderNotificationsEmail({
+      locale: "it",
+      notifications: [n("https://a.test/1"), n("https://a.test/2")],
+      settingsUrl: "https://a.test/settings",
+    });
+    expect(mail.subject).toBe("Forgecy: 2 nuove notifiche");
+    expect(mail.text).toContain("«Spring» v2 è stato approvato.");
   });
 });

@@ -1,6 +1,7 @@
 import { Badge, Card } from "@forgecy/ui";
-import { asc, getDb, users } from "@forgecy/db";
+import { asc, eq, getDb, users } from "@forgecy/db";
 import { LOCALES, loadMessages, negotiateLocale } from "@forgecy/i18n";
+import { smtpOptionsFromEnv } from "@forgecy/mail";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
@@ -9,6 +10,7 @@ import { currentRouting } from "@/lib/ai";
 import { env } from "@/lib/env";
 import { requireUser } from "@/lib/session";
 import { getTheme } from "@/lib/theme";
+import { EmailNotificationsForm } from "./email-notifications-form";
 import { LanguageForm } from "./language-form";
 import { NewUserForm } from "./new-user-form";
 import { ThemeForm } from "./theme-form";
@@ -25,6 +27,10 @@ export default async function SettingsPage() {
   const te = await getTranslations("enums");
   const tc = await getTranslations("common");
   const people = user.isAdmin ? await getDb().select().from(users).orderBy(asc(users.name)) : [];
+  const [me] = await getDb()
+    .select({ emailNotifications: users.emailNotifications })
+    .from(users)
+    .where(eq(users.id, user.id));
   // Each language is listed by its own name, taken from its own messages.
   const languages = await Promise.all(
     LOCALES.map(async (code) => ({ code, name: (await loadMessages(code)).meta.languageName })),
@@ -53,6 +59,10 @@ export default async function SettingsPage() {
             browserLanguage={languages.find((l) => l.code === browser)?.name ?? browser}
           />
           <ThemeForm current={await getTheme()} />
+          <EmailNotificationsForm
+            current={me?.emailNotifications ?? false}
+            smtpReady={smtpOptionsFromEnv(env) !== null}
+          />
         </Card>
         <Card className="p-6">
           <h2 className="text-heading-sm text-fg">{t("instance.title")}</h2>
