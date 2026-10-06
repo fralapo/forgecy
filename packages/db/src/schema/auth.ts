@@ -18,6 +18,8 @@ export const users = pgTable("users", {
   active: boolean("active").notNull().default(true),
   /** Interface language chosen by the person (`en`, `it`); null follows the browser. */
   locale: text("locale", { enum: LOCALES }),
+  /** Also receive the bell's notifications by email (opt-in, needs SMTP). */
+  emailNotifications: boolean("email_notifications").notNull().default(false),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

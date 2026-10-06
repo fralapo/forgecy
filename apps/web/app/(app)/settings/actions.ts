@@ -86,6 +86,15 @@ export async function setThemeAction(theme: string): Promise<void> {
   else jar.delete(THEME_COOKIE);
 }
 
+/** Opt-in to receive the bell's notifications by email too (the person's own account). */
+export async function setEmailNotificationsAction(on: boolean): Promise<void> {
+  const user = await requireUser();
+  await getDb()
+    .update(users)
+    .set({ emailNotifications: on === true })
+    .where(eq(users.id, user.id));
+}
+
 export type LocaleState = { error?: string; ok?: boolean };
 
 /** Saves the person's interface language; empty means "follow the browser". */

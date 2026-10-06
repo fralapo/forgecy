@@ -1,3 +1,4 @@
+import type { NotificationKind, NotificationParams } from "@forgecy/core";
 import { DEFAULT_LOCALE, getTranslator, type Locale } from "@forgecy/i18n";
 
 export interface RenderedEmail {
@@ -82,6 +83,59 @@ export async function renderTestEmail(input: {
 <head><meta charset="utf-8"><title>${escapeHtml(subject)}</title></head>
 <body style="margin:0;padding:24px;background:#f6f6f4;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;">
 <p style="max-width:520px;margin:0 auto;padding:32px;background:#ffffff;border-radius:8px;font-size:16px;line-height:1.5;">${escapeHtml(body)}</p>
+</body>
+</html>`;
+  return { subject, text, html };
+}
+
+/**
+ * The bell's notifications by email (opt-in in Settings): one email per person and
+ * round, in their interface language, with the same texts as the bell.
+ */
+export async function renderNotificationsEmail(input: {
+  appName?: string;
+  locale?: Locale;
+  notifications: { kind: NotificationKind; params: NotificationParams; url: string }[];
+  settingsUrl: string;
+}): Promise<RenderedEmail> {
+  const app = input.appName ?? "Forgecy";
+  const locale = input.locale ?? DEFAULT_LOCALE;
+  const t = getTranslator(locale, "mail");
+  const tn = getTranslator(locale, "notifications");
+  const items = input.notifications.map((n) => ({
+    text: tn(`kinds.${n.kind}`, n.params),
+    url: n.url,
+  }));
+  const count = items.length;
+  const subject =
+    count === 1 ? `${app}: ${items[0]!.text}` : t("notifications.subject", { app, count });
+  const footer = t("notifications.footer", { app });
+  const text = [
+    ...items.flatMap((i) => [i.text, i.url, ""]),
+    footer,
+    input.settingsUrl,
+    "",
+    `— ${app}`,
+  ].join("\n");
+  const rows = items
+    .map(
+      (i) =>
+        `<li style="margin:0 0 12px;font-size:16px;line-height:1.5;"><a href="${escapeHtml(i.url)}" style="color:#1a1a1a;">${escapeHtml(i.text)}</a></li>`,
+    )
+    .join("\n");
+  const html = `<!doctype html>
+<html lang="${locale}">
+<head><meta charset="utf-8"><meta name="color-scheme" content="light dark"><title>${escapeHtml(subject)}</title></head>
+<body style="margin:0;padding:24px;background:#f6f6f4;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:8px;">
+<tr><td style="padding:32px;">
+<h1 style="margin:0 0 16px;font-size:20px;line-height:1.3;">${escapeHtml(t("notifications.heading", { app, count }))}</h1>
+<ul style="margin:0 0 24px;padding-left:20px;">
+${rows}
+</ul>
+<p style="margin:0;font-size:14px;line-height:1.5;color:#555555;">${escapeHtml(footer)} <a href="${escapeHtml(input.settingsUrl)}" style="color:#555555;">${escapeHtml(t("notifications.settings"))}</a></p>
+</td></tr>
+</table>
 </body>
 </html>`;
   return { subject, text, html };

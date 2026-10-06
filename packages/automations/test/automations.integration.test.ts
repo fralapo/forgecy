@@ -13,8 +13,10 @@ import {
   clients,
   contents,
   createDb,
+  claimNotificationEmails,
   eq,
   listNotifications,
+  releaseNotificationEmails,
   sql,
   templates,
   users,
@@ -251,6 +253,16 @@ describe.skipIf(!dbUrl)("batch automations (integration)", () => {
       params: { completed: 1, failed: 1, total: 2 },
       href: `/automations/${automationId}?tab=runs&run=${run.id}`,
     });
+    // Email copy only after opting in; one worker claims it, a failed send puts it back.
+    expect((await claimNotificationEmails(db)).some((r) => r.userId === anna.id)).toBe(false);
+    await db.update(users).set({ emailNotifications: true }).where(eq(users.id, anna.id));
+    const claimed = (await claimNotificationEmails(db)).filter((r) => r.userId === anna.id);
+    expect(claimed.map((r) => r.id)).toEqual([bell[0]!.id]);
+    expect(claimed[0]).toMatchObject({ kind: "automation_run_finished", locale: null });
+    expect((await claimNotificationEmails(db)).some((r) => r.userId === anna.id)).toBe(false);
+    await releaseNotificationEmails(db, [bell[0]!.id]);
+    expect((await claimNotificationEmails(db)).map((r) => r.id)).toContain(bell[0]!.id);
+    await db.update(users).set({ emailNotifications: false }).where(eq(users.id, anna.id));
   });
 
   it("retries the failed items, pauses, resumes and cancels", async () => {

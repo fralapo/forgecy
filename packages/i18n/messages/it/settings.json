@@ -12,7 +12,11 @@
     "themeLight": "Chiaro",
     "themeDark": "Scuro",
     "themeHint": "Salvato su questo browser.",
-    "themeSaved": "Tema aggiornato."
+    "themeSaved": "Tema aggiornato.",
+    "emailNotifications": "Inviami le notifiche anche per email",
+    "emailNotificationsHint": "Ogni nuova notifica arriva anche per email, se non l'hai già letta qui. Disattivato di base.",
+    "emailNotificationsNoSmtp": "L'email non è ancora configurata su questa istanza: un Admin può farlo in Impostazioni › Email (SMTP).",
+    "emailNotificationsSaved": "Preferenza email salvata."
   },
   "instance": {
     "title": "Istanza",

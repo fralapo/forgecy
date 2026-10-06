@@ -1,5 +1,5 @@
 import type { NotificationKind, NotificationParams } from "@forgecy/core";
-import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Database } from "./client";
 import { clients, notifications, users } from "./schema";
 
@@ -112,4 +112,46 @@ export async function markNotificationsRead(
         ids ? inArray(notifications.id, ids) : undefined,
       ),
     );
+}
+
+/** A notification to email, with what the email needs about its recipient. */
+export interface NotificationEmailRow {
+  id: string;
+  userId: string;
+  email: string;
+  locale: string | null;
+  kind: NotificationKind;
+  params: NotificationParams;
+  href: string;
+}
+
+/**
+ * Takes the notifications still to email for people who opted in, created in the last
+ * `withinMinutes`, and marks them emailed in the same statement: two workers never
+ * send the same one. Call `releaseNotificationEmails` for those that failed to send.
+ */
+export async function claimNotificationEmails(
+  db: Pick<Database, "execute">,
+  withinMinutes = 60,
+): Promise<NotificationEmailRow[]> {
+  const result = await db.execute(sql`
+    update ${notifications} n set emailed_at = now()
+    from ${users} u
+    where n.user_id = u.id
+      and n.emailed_at is null
+      and n.read_at is null
+      and u.email_notifications
+      and u.active
+      and n.created_at > now() - make_interval(mins => ${withinMinutes})
+    returning n.id, n.user_id as "userId", u.email, u.locale, n.kind, n.params, n.href`);
+  return result.rows as unknown as NotificationEmailRow[];
+}
+
+/** Puts back notifications whose email could not be sent, for the next attempt. */
+export async function releaseNotificationEmails(
+  db: Pick<Database, "update">,
+  ids: string[],
+): Promise<void> {
+  if (!ids.length) return;
+  await db.update(notifications).set({ emailedAt: null }).where(inArray(notifications.id, ids));
 }

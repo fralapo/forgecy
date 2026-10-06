@@ -12,7 +12,11 @@
     "themeLight": "Light",
     "themeDark": "Dark",
     "themeHint": "Saved on this browser.",
-    "themeSaved": "Theme updated."
+    "themeSaved": "Theme updated.",
+    "emailNotifications": "Also email me my notifications",
+    "emailNotificationsHint": "Each new notification arrives by email too, unless you already read it here. Off by default.",
+    "emailNotificationsNoSmtp": "Email is not set up on this instance yet: an Admin can configure it in Settings › Email (SMTP).",
+    "emailNotificationsSaved": "Email preference saved."
   },
   "instance": {
     "title": "Instance",

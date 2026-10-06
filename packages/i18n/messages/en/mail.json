@@ -13,5 +13,11 @@
   "test": {
     "subject": "Test email from {app}",
     "body": "This is a test email sent by {name} from {app}. If you are reading it, email works: sign-in links and invitations will arrive."
+  },
+  "notifications": {
+    "subject": "{app}: {count, plural, one {# new notification} other {# new notifications}}",
+    "heading": "{count, plural, one {# new notification} other {# new notifications}} in {app}",
+    "footer": "You get these emails because you turned them on in {app}.",
+    "settings": "Change in Settings"
   }
 }
