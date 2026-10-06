@@ -36,7 +36,7 @@ export interface SkippedPage {
 }
 
 export interface CrawlResult {
-  robots: { found: boolean; blockedAll: boolean };
+  robots: { found: boolean; blockedAll: boolean; aiCrawlersBlocked: string[] };
   pages: FetchedPage[];
   skipped: SkippedPage[];
   /** Set when the crawl stopped early (timeout or cancellation); pages read so far are kept. */
@@ -149,6 +149,16 @@ async function fetchText(
   }
 }
 
+/** User agents of the AI answer engines' crawlers, checked against robots.txt. */
+export const AI_CRAWLERS = [
+  "GPTBot",
+  "OAI-SearchBot",
+  "ChatGPT-User",
+  "PerplexityBot",
+  "ClaudeBot",
+  "Google-Extended",
+] as const;
+
 /** URLs listed in sitemap.xml (one level of sitemap index followed). */
 export function parseSitemap(xml: string): { urls: string[]; sitemaps: string[] } {
   const locs = [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) =>
@@ -184,6 +194,7 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
   const robots = robotsParser(robotsUrl, robotsFound ? robotsRes!.text : "");
   const isAllowed = (url: string) => robots.isAllowed(url, AUDIT_USER_AGENT_TOKEN) !== false;
   const blockedAll = !isAllowed(home);
+  const aiCrawlersBlocked = AI_CRAWLERS.filter((bot) => robots.isAllowed(home, bot) === false);
   await progress({
     step: "robots",
     status: "completed",
@@ -305,5 +316,10 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
     status: "completed",
     ...detailOf("audit.scan.extraction", { count: pages.length }),
   });
-  return { robots: { found: robotsFound, blockedAll }, pages, skipped, stoppedEarly };
+  return {
+    robots: { found: robotsFound, blockedAll, aiCrawlersBlocked },
+    pages,
+    skipped,
+    stoppedEarly,
+  };
 }

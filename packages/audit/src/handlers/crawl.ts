@@ -194,7 +194,7 @@ export async function runCrawl(
     });
   }
   await setStep({ step: "checks", status: "running" });
-  const checks = technicalChecks(result.pages);
+  const checks = technicalChecks(result.pages, result.robots);
   const extracted = { ...aggregateExtraction(result.pages), checks };
   await setStep({
     step: "checks",

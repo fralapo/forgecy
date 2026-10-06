@@ -85,7 +85,7 @@ describe("crawlSite", () => {
         steps.push(`${p.step}:${p.status}`);
       },
     });
-    expect(result.robots).toEqual({ found: true, blockedAll: false });
+    expect(result.robots).toEqual({ found: true, blockedAll: false, aiCrawlersBlocked: [] });
     expect(result.pages.map((p) => new URL(p.finalUrl).pathname).sort()).toEqual([
       "/",
       "/contatti",

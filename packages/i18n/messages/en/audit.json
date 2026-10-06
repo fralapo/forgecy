@@ -580,6 +580,16 @@
       "label": "Loads in under 4 seconds",
       "failed": "{count} pages over 4 s (measured from the Forgecy server)",
       "ok": "All under 4 s (measured from the Forgecy server)"
+    },
+    "structured_data": {
+      "label": "Business described in structured data",
+      "failed": "No page describes the business in structured data (Organization or LocalBusiness, JSON-LD)",
+      "ok": "{count, plural, one {# page describes} other {# pages describe}} the business in structured data"
+    },
+    "ai_crawlers": {
+      "label": "Open to AI answer engines",
+      "failed": "robots.txt blocks {bots}: their answer engines cannot read the site",
+      "ok": "robots.txt lets the AI answer engines read the site"
     }
   },
   "errors": {

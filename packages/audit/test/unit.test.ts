@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { quoteFound } from "../src/ai/agents";
 import { buildIndex, confidenceOf, verifyEvidence } from "../src/ai/evidence";
 import { canonicalUrl, parseSitemap, pickPages } from "../src/crawl/crawler";
-import { extractFromHtml } from "../src/crawl/fetcher";
+import { isBusinessType, technicalChecks } from "../src/crawl/extract";
+import { extractFromHtml, structuredDataTypes, type FetchedPage } from "../src/crawl/fetcher";
 import { computeChannelMetrics, type PostRow } from "../src/social/metrics";
 import {
   detectDelimiter,
@@ -137,6 +138,67 @@ describe("page selection", () => {
     expect(page.title).toBe("Forno Rossi");
     expect(page.navLinks).toContain("https://forno.it/servizi");
     expect(page.requiresLogin).toBe(true);
+  });
+
+  it("reads schema.org types from JSON-LD, @graph included, and skips invalid blocks", () => {
+    const html = `<head>
+      <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite"},{"@type":["Bakery","LocalBusiness"]}]}</script>
+      <script type='application/ld+json'>{ not json</script>
+      <script type="application/ld+json">[{"@type":"https://schema.org/BreadcrumbList"}]</script></head>`;
+    expect(structuredDataTypes(html).sort()).toEqual([
+      "Bakery",
+      "BreadcrumbList",
+      "LocalBusiness",
+      "WebSite",
+    ]);
+    expect(extractFromHtml(html, "https://forno.it/").data.structuredDataTypes).toContain(
+      "LocalBusiness",
+    );
+  });
+
+  it("recognizes the types that describe the business", () => {
+    for (const t of [
+      "Organization",
+      "LocalBusiness",
+      "ProfessionalService",
+      "HomeAndConstructionBusiness",
+      "Store",
+      "Bakery",
+    ])
+      expect(isBusinessType(t), t).toBe(true);
+    for (const t of ["WebSite", "WebPage", "BreadcrumbList", "Service", "FAQPage"])
+      expect(isBusinessType(t), t).toBe(false);
+  });
+
+  it("checks structured data and AI crawlers' access", () => {
+    const page = (path: string, types: string[]): FetchedPage => ({
+      url: `https://forno.it${path}`,
+      finalUrl: `https://forno.it${path}`,
+      status: 200,
+      title: "",
+      data: { structuredDataTypes: types },
+      links: [],
+      navLinks: [],
+      colors: [],
+      fonts: [],
+      requiresLogin: false,
+    });
+    const byKey = (checks: ReturnType<typeof technicalChecks>) =>
+      Object.fromEntries(checks.map((c) => [c.key, c]));
+
+    const bare = byKey(
+      technicalChecks([page("/", ["WebSite"])], { aiCrawlersBlocked: ["GPTBot", "ClaudeBot"] }),
+    );
+    expect(bare.structured_data).toMatchObject({ ok: false, pages: ["/"] });
+    expect(bare.ai_crawlers).toMatchObject({ ok: false, pages: ["/robots.txt"] });
+    expect(bare.ai_crawlers!.detail).toContain("GPTBot, ClaudeBot");
+
+    const good = byKey(
+      technicalChecks([page("/", ["Bakery"]), page("/chi-siamo", [])], { aiCrawlersBlocked: [] }),
+    );
+    expect(good.structured_data).toMatchObject({ ok: true, pages: [] });
+    expect(good.ai_crawlers!.ok).toBe(true);
+    expect(byKey(technicalChecks([page("/", [])])).ai_crawlers).toBeUndefined();
   });
 });
 
