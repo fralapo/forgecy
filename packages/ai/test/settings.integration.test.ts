@@ -16,6 +16,7 @@ import {
   DEFAULT_POLICY_KEY,
   getBudgetOverview,
   getDefaultAiPolicy,
+  setApprovedProviders,
   setDefaultAiPolicy,
   setMonthlyBudget,
 } from "../src";
@@ -112,6 +113,21 @@ describe.skipIf(!dbUrl)("AI settings (integration)", () => {
     await expect(setMonthlyBudget(db, member, scope, 100)).rejects.toThrow(/Permission denied/);
     await expect(setMonthlyBudget(db, admin, scope, 0)).rejects.toThrow();
     await expect(setMonthlyBudget(db, admin, scope, 1.5)).rejects.toThrow();
+  });
+  it("stores the providers approved for a client, Admin only, and the ledger reads them", async () => {
+    const ledger = createDbLedger(db);
+    expect(await ledger.approvedProviders!(clientId)).toEqual([]);
+    await setApprovedProviders(db, admin, clientId, ["openai", "anthropic"]);
+    expect(await ledger.approvedProviders!(clientId)).toEqual(["anthropic", "openai"]);
+    await expect(setApprovedProviders(db, admin, clientId, [])).rejects.toThrow();
+    await expect(setApprovedProviders(db, admin, clientId, ["local"])).rejects.toThrow();
+    await expect(setApprovedProviders(db, member, clientId, ["openai"])).rejects.toThrow();
+    await expect(setApprovedProviders(db, agent, clientId, ["openai"])).rejects.toThrow();
+    const overview = await getBudgetOverview(db);
+    expect(overview.clients.find((c) => c.clientId === clientId)?.approvedProviders).toEqual([
+      "anthropic",
+      "openai",
+    ]);
   });
 });
 

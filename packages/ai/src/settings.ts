@@ -1,4 +1,13 @@
-import { aiPolicies, assertCan, type Actor, type AiPolicy, type ClientStatus } from "@forgecy/core";
+import {
+  aiPolicies,
+  assertCan,
+  isLocalProvider,
+  providerIds,
+  type Actor,
+  type AiPolicy,
+  type ClientStatus,
+  type ProviderId,
+} from "@forgecy/core";
 import {
   and,
   appSettings,
@@ -78,6 +87,46 @@ export async function setDefaultAiPolicy(
   });
 }
 
+/** Providers an Admin can approve for an external_restricted client; local models always are. */
+export const restrictableProviders: readonly ProviderId[] = providerIds.filter(
+  (p) => !isLocalProvider(p),
+);
+
+/**
+ * Admin only. The external providers that may receive an external_restricted client's
+ * data (page 61); the gateway sends nothing to the others. At least one is required.
+ */
+export async function setApprovedProviders(
+  db: Database,
+  actor: Actor,
+  clientId: string,
+  providers: readonly ProviderId[],
+): Promise<void> {
+  assertCan(actor, "ai.policies.manage", clientId);
+  const next = restrictableProviders.filter((p) => providers.includes(p));
+  if (next.length === 0 || next.length !== new Set(providers).size)
+    throw new Error("Approve at least one known external provider");
+  await db.transaction(async (tx) => {
+    const [before] = await tx
+      .select({ approvedProviders: clients.approvedProviders })
+      .from(clients)
+      .where(eq(clients.id, clientId));
+    if (!before) throw new Error(`Client not found: ${clientId}`);
+    await tx
+      .update(clients)
+      .set({ approvedProviders: next, updatedAt: new Date() })
+      .where(eq(clients.id, clientId));
+    await recordAuditEvent(tx, {
+      actor,
+      action: "approved_providers_changed",
+      entity: "client",
+      entityId: clientId,
+      clientId,
+      meta: { from: before.approvedProviders, to: next },
+    });
+  });
+}
+
 export type BudgetTarget = { scope: "agency" } | { scope: "client"; clientId: string };
 
 /**
@@ -138,6 +187,7 @@ export interface ClientBudgetLine extends BudgetLine {
   slug: string;
   status: ClientStatus;
   aiPolicy: AiPolicy;
+  approvedProviders: ProviderId[];
 }
 
 export interface BudgetOverview {
@@ -184,6 +234,7 @@ export async function getBudgetOverview(
         slug: clients.slug,
         status: clients.status,
         aiPolicy: clients.aiPolicy,
+        approvedProviders: clients.approvedProviders,
       })
       .from(clients)
       .where(isNull(clients.archivedAt))
@@ -219,6 +270,7 @@ export async function getBudgetOverview(
       slug: c.slug,
       status: c.status,
       aiPolicy: c.aiPolicy,
+      approvedProviders: c.approvedProviders,
       ...line(c.id, spendFor.get(c.id) ?? 0),
     })),
   };
