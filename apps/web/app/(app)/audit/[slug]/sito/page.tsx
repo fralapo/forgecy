@@ -98,17 +98,23 @@ export default async function SitePage({ params }: { params: Promise<{ slug: str
         {!readOnly ? (
           <div className="flex flex-wrap gap-3">
             {running && scan ? (
-              <ActionButton action={cancelScanAction.bind(null, scan.id)} icon={Square}>
+              <ActionButton
+                action={cancelScanAction.bind(null, scan.id)}
+                icon={<Square aria-hidden />}
+              >
                 Ferma la lettura
               </ActionButton>
             ) : scan && scan.status === "failed" ? (
-              <ActionButton action={retryScanAction.bind(null, scan.id)} icon={RefreshCw}>
+              <ActionButton
+                action={retryScanAction.bind(null, scan.id)}
+                icon={<RefreshCw aria-hidden />}
+              >
                 Riprova questo passo
               </ActionButton>
             ) : (
               <ActionButton
                 action={rescanSiteAction.bind(null, audit.id)}
-                icon={RefreshCw}
+                icon={<RefreshCw aria-hidden />}
                 confirm="Rileggere il sito? Le osservazioni già rivedute restano, segnate come lettura precedente."
               >
                 Rileggi il sito

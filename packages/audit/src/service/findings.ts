@@ -2,6 +2,7 @@ import {
   assertCan,
   AUDIT_LIMITS,
   type comparisonOutcomes,
+  confidenceFromEvidence,
   evidenceTypes,
   findingAreas,
   ForgecyError,
@@ -242,11 +243,13 @@ export async function addFinding(
   const { audit } = await loadAudit(deps.db, data.auditId);
   assertCan(actor, "edit_draft", audit.clientId);
   assertEditable(audit);
+  // A problem rests on its observations: they are its evidence, as in the AI diagnosis.
+  let evidence = data.evidence as AuditEvidence[];
   if (data.kind === "problem") {
     if (!data.parentIds.length)
       throw new ForgecyError("validation", "Collega almeno un'osservazione accettata.");
     const parents = await deps.db
-      .select({ id: auditFindings.id })
+      .select({ id: auditFindings.id, title: auditFindings.title })
       .from(auditFindings)
       .where(
         and(
@@ -258,6 +261,10 @@ export async function addFinding(
       );
     if (parents.length !== data.parentIds.length)
       throw new ForgecyError("validation", "Puoi collegare solo osservazioni accettate.");
+    evidence = [
+      ...parents.map((p): AuditEvidence => ({ type: "note", label: p.title.slice(0, 120) })),
+      ...evidence,
+    ].slice(0, 8);
     if ((await usableProblemCount(deps.db, data.auditId)) >= AUDIT_LIMITS.maxProblems)
       throw new ForgecyError(
         "validation",
@@ -281,13 +288,12 @@ export async function addFinding(
         impact: data.impact ?? null,
         recommendation: data.recommendation ?? null,
         priority: data.priority ?? "medium",
-        confidence:
-          data.evidence.length >= 3 ? "high" : data.evidence.length === 2 ? "medium" : "low",
-        confidenceReason: data.evidence.length
-          ? `${data.evidence.length} prove indicate da una persona`
+        confidence: confidenceFromEvidence(evidence.length),
+        confidenceReason: evidence.length
+          ? `${evidence.length} ${data.kind === "problem" ? "elementi collegati" : "prove indicate"} da una persona`
           : "Nessuna prova allegata",
         status: "accepted",
-        evidence: data.evidence as AuditEvidence[],
+        evidence,
         parentIds: data.parentIds,
         channel: data.channel ?? null,
         competitorId: data.competitorId ?? null,

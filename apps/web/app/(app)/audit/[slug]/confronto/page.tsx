@@ -44,7 +44,7 @@ export default async function ComparisonPage({ params }: { params: Promise<{ slu
             <div>
               <ActionButton
                 action={requestComparisonAction.bind(null, audit.id, undefined)}
-                icon={Sparkles}
+                icon={<Sparkles aria-hidden />}
                 variant="primary"
               >
                 {rows.length ? "Aggiorna il confronto" : "Genera il confronto"}

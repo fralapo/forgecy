@@ -1,7 +1,6 @@
 "use client";
 
 import { Button, type ButtonProps } from "@forgecy/ui";
-import type { LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type ReactNode } from "react";
 
@@ -12,7 +11,7 @@ type Result =
 export function ActionButton({
   action,
   children,
-  icon: Icon,
+  icon,
   variant = "secondary",
   size,
   confirm,
@@ -21,7 +20,8 @@ export function ActionButton({
 }: {
   action: () => Promise<Result>;
   children: ReactNode;
-  icon?: LucideIcon;
+  /** An element (e.g. `<Play aria-hidden />`): server pages cannot pass components. */
+  icon?: ReactNode;
   variant?: ButtonProps["variant"];
   size?: ButtonProps["size"];
   /** Ask before running (irreversible or costly steps). */
@@ -52,7 +52,7 @@ export function ActionButton({
           });
         }}
       >
-        {Icon ? <Icon aria-hidden /> : null}
+        {icon}
         {children}
       </Button>
       {state.error ? (

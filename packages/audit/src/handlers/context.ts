@@ -106,12 +106,22 @@ export async function runAgent<T>(
     };
   } catch (err) {
     if (err instanceof ForgecyError) {
-      if (
-        err.code === "policy_blocked" ||
-        err.code === "budget_exceeded" ||
-        err.code === "unavailable"
-      )
-        throw new NeedsAttentionError(err.message, { code: err.code });
+      // Gateway messages are technical (English): the job row shows a sentence a person can act on.
+      if (err.code === "policy_blocked")
+        throw new NeedsAttentionError(
+          "La policy AI di questo prospect non permette questo passo con i provider configurati.",
+          { code: err.code, detail: err.message },
+        );
+      if (err.code === "budget_exceeded")
+        throw new NeedsAttentionError(
+          "Il budget AI del mese è esaurito: alzalo in Impostazioni o scrivi le osservazioni a mano.",
+          { code: err.code, detail: err.message },
+        );
+      if (err.code === "unavailable")
+        throw new NeedsAttentionError(
+          "Nessun provider AI configurato: aggiungilo in Impostazioni oppure scrivi le osservazioni a mano.",
+          { code: err.code, detail: err.message },
+        );
       if (err.code === "provider_error")
         throw new UnrecoverableError(
           "Il provider AI non ha risposto in modo valido. Riprova questo passo.",

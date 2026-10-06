@@ -104,6 +104,8 @@ describe.skipIf(!dbUrl || !redisUrl)("audit services (integration)", () => {
       title: "Offerta poco chiara",
       parentIds: [obs.id],
     });
+    // Its linked observation is its evidence.
+    expect(problem.evidence).toEqual([{ type: "note", label: "La home non dice cosa vendete" }]);
     await expect(
       reviewFinding({ db }, human, { id: problem.id, decision: "reject", rev: problem.rev }),
     ).rejects.toMatchObject({ code: "validation" });

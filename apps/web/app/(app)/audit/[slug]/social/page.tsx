@@ -1,4 +1,4 @@
-import { getSocialView } from "@forgecy/audit";
+import { getSocialView, metricSourceLabels } from "@forgecy/audit";
 import { SOCIAL_AREAS, socialChannels, type FindingArea, type SocialChannel } from "@forgecy/core";
 import { Badge, Card, CardDescription, CardHeader, CardTitle, cn } from "@forgecy/ui";
 import { Sparkles, Trash2 } from "lucide-react";
@@ -183,13 +183,14 @@ export default async function SocialPage({
                     {metricLabel[m.metric] ?? m.metric}: <strong>{m.value}</strong>
                     <span className="text-fg-muted">
                       {" "}
-                      · {formatDate(m.observedOn)} · {m.sourceNote ?? m.source}
+                      · {formatDate(m.observedOn)} · {metricSourceLabels[m.source]}
+                      {m.sourceNote ? ` (${m.sourceNote})` : ""}
                     </span>
                   </span>
                   {!readOnly && !m.sourceId ? (
                     <ActionButton
                       action={deleteMetricAction.bind(null, m.id)}
-                      icon={Trash2}
+                      icon={<Trash2 aria-hidden />}
                       variant="ghost"
                       size="sm"
                     >
@@ -226,7 +227,7 @@ export default async function SocialPage({
                   {!readOnly ? (
                     <ActionButton
                       action={removeSourceAction.bind(null, f.id)}
-                      icon={Trash2}
+                      icon={<Trash2 aria-hidden />}
                       variant="ghost"
                       size="sm"
                       confirm="Rimuovere il file e le righe importate?"
@@ -257,7 +258,7 @@ export default async function SocialPage({
                   {!readOnly ? (
                     <ActionButton
                       action={removeSourceAction.bind(null, s.id)}
-                      icon={Trash2}
+                      icon={<Trash2 aria-hidden />}
                       variant="ghost"
                       size="sm"
                     >
@@ -278,7 +279,7 @@ export default async function SocialPage({
             {!readOnly && aiAllowed && hasData ? (
               <ActionButton
                 action={requestSocialAnalysisAction.bind(null, audit.id, channel)}
-                icon={Sparkles}
+                icon={<Sparkles aria-hidden />}
                 variant="primary"
                 size="sm"
               >

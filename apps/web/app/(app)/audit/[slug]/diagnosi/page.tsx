@@ -53,7 +53,7 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
             <div className="flex flex-wrap gap-3">
               <ActionButton
                 action={requestDiagnosisAction.bind(null, audit.id)}
-                icon={audit.diagnosisAt ? RefreshCw : Sparkles}
+                icon={audit.diagnosisAt ? <RefreshCw aria-hidden /> : <Sparkles aria-hidden />}
                 variant="primary"
                 confirm={
                   audit.diagnosisAt
@@ -108,7 +108,7 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
                     {i > 0 ? (
                       <ActionButton
                         action={moveProblemAction.bind(null, p.id, "up")}
-                        icon={ArrowUp}
+                        icon={<ArrowUp aria-hidden />}
                         variant="ghost"
                         size="sm"
                       >
@@ -118,7 +118,7 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
                     {i < problems.length - 1 ? (
                       <ActionButton
                         action={moveProblemAction.bind(null, p.id, "down")}
-                        icon={ArrowDown}
+                        icon={<ArrowDown aria-hidden />}
                         variant="ghost"
                         size="sm"
                       >
@@ -148,7 +148,7 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
             <div className="flex flex-wrap gap-3">
               <ActionButton
                 action={requestPlanAction.bind(null, audit.id)}
-                icon={plan ? RefreshCw : Sparkles}
+                icon={plan ? <RefreshCw aria-hidden /> : <Sparkles aria-hidden />}
                 variant={plan ? "secondary" : "primary"}
                 confirm={plan ? "Il piano attuale viene sostituito. Continuare?" : undefined}
               >
@@ -230,7 +230,7 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
               <div className="flex flex-wrap gap-3">
                 <ActionButton
                   action={reviewPlanAction.bind(null, audit.id, "accept")}
-                  icon={Check}
+                  icon={<Check aria-hidden />}
                   variant="primary"
                 >
                   Accetta il piano
@@ -238,7 +238,7 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
                 {plan.status !== "rejected" ? (
                   <ActionButton
                     action={reviewPlanAction.bind(null, audit.id, "reject")}
-                    icon={X}
+                    icon={<X aria-hidden />}
                     variant="ghost"
                   >
                     Scarta

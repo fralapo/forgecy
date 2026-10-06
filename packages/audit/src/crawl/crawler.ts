@@ -191,7 +191,7 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
     if (err instanceof CrawlError) throw err;
     throw new CrawlError(
       "SOURCE-UNAVAILABLE",
-      `Non riusciamo a raggiungere ${root.hostname}: ${err instanceof Error ? err.message : String(err)}`,
+      `Non riusciamo a raggiungere ${root.hostname}: ${(err instanceof Error ? err.message : String(err)).split("\n")[0]!.slice(0, 160)}`,
     );
   }
   if (homePage.status >= 400 || homePage.status === 0) {

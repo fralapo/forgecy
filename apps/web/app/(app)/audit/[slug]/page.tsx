@@ -120,12 +120,15 @@ export default async function ProspectOverviewPage({
           {client.archivedAt ? (
             <ActionButton
               action={restoreProspectAction.bind(null, client.id)}
-              icon={ArchiveRestore}
+              icon={<ArchiveRestore aria-hidden />}
             >
               Ripristina prospect
             </ActionButton>
           ) : (
-            <ActionButton action={archiveProspectAction.bind(null, client.id)} icon={Archive}>
+            <ActionButton
+              action={archiveProspectAction.bind(null, client.id)}
+              icon={<Archive aria-hidden />}
+            >
               Archivia prospect
             </ActionButton>
           )}
@@ -180,7 +183,7 @@ export default async function ProspectOverviewPage({
           <div>
             <ActionButton
               action={startAuditAction.bind(null, client.id)}
-              icon={Play}
+              icon={<Play aria-hidden />}
               variant="primary"
             >
               Avvia audit
@@ -293,7 +296,7 @@ export default async function ProspectOverviewPage({
         <div>
           <ActionButton
             action={archiveAuditAction.bind(null, overview.audit.id)}
-            icon={Archive}
+            icon={<Archive aria-hidden />}
             variant="ghost"
             confirm="Archiviare questo audit? I dati restano consultabili e potrai avviarne uno nuovo."
           >

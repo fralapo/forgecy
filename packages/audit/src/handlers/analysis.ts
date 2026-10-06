@@ -646,7 +646,27 @@ export async function runProposeCompetitors(
   return { proposed: run.data.competitors.length };
 }
 
+/**
+ * When the comparison cannot run (no provider, budget, policy) the audit must not stay
+ * "Analisi in corso": it moves to review, where observations can be written by hand.
+ */
 export async function runCompareCompetitors(
+  deps: AuditHandlerDeps,
+  payload: { auditId: string },
+  ctx: JobContext,
+) {
+  try {
+    return await compareCompetitors(deps, payload, ctx);
+  } catch (err) {
+    await deps.db
+      .update(audits)
+      .set({ status: "in_review" })
+      .where(and(eq(audits.id, payload.auditId), eq(audits.status, "analyzing")));
+    throw err;
+  }
+}
+
+async function compareCompetitors(
   deps: AuditHandlerDeps,
   payload: { auditId: string },
   ctx: JobContext,

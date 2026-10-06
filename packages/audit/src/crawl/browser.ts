@@ -104,6 +104,9 @@ export async function createBrowserFetcher(options: {
       javaScriptEnabled: true,
       serviceWorkers: "block",
     });
+    // tsx/esbuild wrap named functions in a `__name` helper that does not exist in the
+    // page: functions passed to page.evaluate would throw "__name is not defined".
+    await ctx.addInitScript("globalThis.__name = globalThis.__name || ((fn) => fn);");
     // Every navigation (redirects and frames included) goes through the host check.
     await ctx.route("**/*", async (route) => {
       const req = route.request();

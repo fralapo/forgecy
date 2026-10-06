@@ -85,7 +85,7 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
               {confirmed || audit.competitorsSkipped ? (
                 <ActionButton
                   action={reopenCompetitorListAction.bind(null, audit.id)}
-                  icon={Pencil}
+                  icon={<Pencil aria-hidden />}
                 >
                   Modifica lista
                 </ActionButton>
@@ -93,7 +93,7 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
                 <>
                   <ActionButton
                     action={confirmCompetitorListAction.bind(null, audit.id, false)}
-                    icon={ListChecks}
+                    icon={<ListChecks aria-hidden />}
                     variant="primary"
                     confirm="Confermare la lista? Le proposte ancora aperte diventano confermate e i loro siti vengono letti."
                   >
@@ -101,7 +101,7 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
                   </ActionButton>
                   <ActionButton
                     action={confirmCompetitorListAction.bind(null, audit.id, true)}
-                    icon={SkipForward}
+                    icon={<SkipForward aria-hidden />}
                     variant="ghost"
                   >
                     Prosegui senza competitor
