@@ -15,6 +15,20 @@
       "when": 1791243080923,
       "tag": "0001_foundations",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791246110792,
+      "tag": "0002_brand_identity",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791246111752,
+      "tag": "0003_brand_identity_guards",
+      "breakpoints": true
     }
   ]
 }
