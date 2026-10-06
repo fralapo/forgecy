@@ -1,4 +1,6 @@
+import type { MessageRef } from "@forgecy/core";
 import type { ScanExtraction } from "@forgecy/db";
+import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import { socialChannelOf } from "../url";
 import type { FetchedPage } from "./fetcher";
 
@@ -78,7 +80,14 @@ export interface TechnicalCheck {
   label: string;
   ok: boolean;
   detail: string;
+  /** `detail` as a message reference, shown in the user's language. */
+  detailRef: MessageRef;
   pages: string[];
+}
+
+/** English detail plus its message reference. */
+function detailOf(key: MessageKey, values?: MessageValues) {
+  return { detail: englishMessage(key, values), detailRef: messageRef(key, values) };
 }
 
 /**
@@ -93,7 +102,9 @@ export function technicalChecks(pages: FetchedPage[]): TechnicalCheck[] {
     key: "h1",
     label: "One H1 heading per page",
     ok: noH1.length === 0,
-    detail: noH1.length ? `${noH1.length} pages without an H1` : "Every page has an H1",
+    ...(noH1.length
+      ? detailOf("audit.check.h1.failed", { count: noH1.length })
+      : detailOf("audit.check.h1.ok")),
     pages: noH1.map(pathOf),
   });
   const multiH1 = pages.filter((p) => (p.data.h1?.length ?? 0) > 1);
@@ -101,9 +112,9 @@ export function technicalChecks(pages: FetchedPage[]): TechnicalCheck[] {
     key: "multiple_h1",
     label: "A single H1",
     ok: multiH1.length === 0,
-    detail: multiH1.length
-      ? `${multiH1.length} pages with more than one H1`
-      : "No page with more than one H1",
+    ...(multiH1.length
+      ? detailOf("audit.check.multiple_h1.failed", { count: multiH1.length })
+      : detailOf("audit.check.multiple_h1.ok")),
     pages: multiH1.map(pathOf),
   });
   const noMeta = pages.filter((p) => !p.data.metaDescription);
@@ -111,9 +122,9 @@ export function technicalChecks(pages: FetchedPage[]): TechnicalCheck[] {
     key: "meta_description",
     label: "Meta description",
     ok: noMeta.length === 0,
-    detail: noMeta.length
-      ? `${noMeta.length} pages without a meta description`
-      : "Present everywhere",
+    ...(noMeta.length
+      ? detailOf("audit.check.meta_description.failed", { count: noMeta.length })
+      : detailOf("audit.check.meta_description.ok")),
     pages: noMeta.map(pathOf),
   });
   const alt = pages.reduce(
@@ -127,7 +138,7 @@ export function technicalChecks(pages: FetchedPage[]): TechnicalCheck[] {
     key: "img_alt",
     label: "Image alt text",
     ok: alt.missing === 0,
-    detail: `${alt.missing} of ${alt.total} images without an alt attribute`,
+    ...detailOf("audit.check.img_alt.detail", { missing: alt.missing, total: alt.total }),
     pages: pages.filter((p) => (p.data.imagesWithoutAlt ?? 0) > 0).map(pathOf),
   });
   const noLang = pages.filter((p) => !p.data.lang);
@@ -135,9 +146,9 @@ export function technicalChecks(pages: FetchedPage[]): TechnicalCheck[] {
     key: "lang",
     label: "Page language declared",
     ok: noLang.length === 0,
-    detail: noLang.length
-      ? `${noLang.length} pages without a lang attribute`
-      : "Declared everywhere",
+    ...(noLang.length
+      ? detailOf("audit.check.lang.failed", { count: noLang.length })
+      : detailOf("audit.check.lang.ok")),
     pages: noLang.map(pathOf),
   });
   const noViewport = pages.filter((p) => p.data.hasViewport === false);
@@ -145,7 +156,9 @@ export function technicalChecks(pages: FetchedPage[]): TechnicalCheck[] {
     key: "viewport",
     label: "Mobile-friendly pages (meta viewport)",
     ok: noViewport.length === 0,
-    detail: noViewport.length ? `${noViewport.length} pages without a meta viewport` : "Present",
+    ...(noViewport.length
+      ? detailOf("audit.check.viewport.failed", { count: noViewport.length })
+      : detailOf("audit.check.viewport.ok")),
     pages: noViewport.map(pathOf),
   });
   const slow = pages.filter((p) => (p.data.loadMs ?? 0) > 4000);
@@ -153,9 +166,9 @@ export function technicalChecks(pages: FetchedPage[]): TechnicalCheck[] {
     key: "load_time",
     label: "Loads in under 4 seconds",
     ok: slow.length === 0,
-    detail: slow.length
-      ? `${slow.length} pages over 4 s (measured from the Forgecy server)`
-      : "All under 4 s (measured from the Forgecy server)",
+    ...(slow.length
+      ? detailOf("audit.check.load_time.failed", { count: slow.length })
+      : detailOf("audit.check.load_time.ok")),
     pages: slow.map(pathOf),
   });
   return checks;

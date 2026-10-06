@@ -3,6 +3,7 @@ import {
   USABLE_FINDING_STATUSES,
   type AuditChannel,
   type AuditStatus,
+  type MessageRef,
   type SocialChannel,
 } from "@forgecy/core";
 import {
@@ -155,6 +156,7 @@ export interface AuditJobState {
   status: string;
   progress: number;
   error: string | null;
+  errorRef: MessageRef | null;
   createdAt: Date;
 }
 
@@ -167,6 +169,7 @@ export async function auditJobStates(db: Database, auditId: string): Promise<Aud
       status: jobs.status,
       progress: jobs.progress,
       error: jobs.error,
+      errorRef: jobs.errorRef,
       createdAt: jobs.createdAt,
     })
     .from(jobs)
@@ -320,6 +323,7 @@ export async function getSocialView(
     findingsOf(db, auditId, { kind: "observation", channel }),
   ]);
   const fileNames = new Map(sources.map((s) => [s.id, s.fileName ?? "Imported file"]));
+  const sourceNames = new Map(sources.map((s) => [s.id, s.fileName]));
   const cards = computeChannelMetrics({
     channel,
     metrics: metrics.map((m) => ({
@@ -331,6 +335,9 @@ export async function getSocialView(
       sourceLabel: m.sourceId
         ? `File: ${fileNames.get(m.sourceId) ?? "imported"}`
         : `${metricSourceLabels[m.source]}${m.sourceNote ? ` · ${m.sourceNote}` : ""}`,
+      origin: m.sourceId
+        ? { kind: "file" as const, fileName: sourceNames.get(m.sourceId) ?? null }
+        : { kind: "source" as const, source: m.source, note: m.sourceNote },
     })),
     posts: posts.map((p) => ({
       postedOn: p.postedOn,
@@ -339,6 +346,7 @@ export async function getSocialView(
       text: p.text,
       metrics: p.metrics,
       sourceLabel: `File: ${fileNames.get(p.sourceId) ?? "importato"}`,
+      origin: { kind: "file" as const, fileName: sourceNames.get(p.sourceId) ?? null },
     })),
   });
   return {

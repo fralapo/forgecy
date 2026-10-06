@@ -4,22 +4,24 @@ import { cn } from "@forgecy/ui";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 const sections = [
-  { path: "", label: "Overview" },
-  { path: "/website", label: "Website" },
-  { path: "/social", label: "Social" },
-  { path: "/competitors", label: "Competitors" },
-  { path: "/comparison", label: "Comparison" },
-  { path: "/diagnosis", label: "Diagnosis" },
-  { path: "/report", label: "Report" },
+  { path: "", label: "overview" },
+  { path: "/website", label: "website" },
+  { path: "/social", label: "social" },
+  { path: "/competitors", label: "competitors" },
+  { path: "/comparison", label: "comparison" },
+  { path: "/diagnosis", label: "diagnosis" },
+  { path: "/report", label: "report" },
 ] as const;
 
 export function SectionTabs({ slug }: { slug: string }) {
   const pathname = usePathname();
+  const t = useTranslations("audit.sections");
   const base = `/audit/${slug}`;
   return (
-    <nav aria-label="Audit sections" className="mb-6 border-b border-subtle">
+    <nav aria-label={t("label")} className="mb-6 border-b border-subtle">
       <ul className="-mb-px flex flex-wrap gap-1">
         {sections.map((s) => {
           const href = `${base}${s.path}`;
@@ -36,7 +38,7 @@ export function SectionTabs({ slug }: { slug: string }) {
                     : "border-transparent text-fg-muted hover:text-fg",
                 )}
               >
-                {s.label}
+                {t(s.label)}
               </Link>
             </li>
           );

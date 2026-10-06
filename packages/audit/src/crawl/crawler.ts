@@ -1,3 +1,5 @@
+import type { MessageRef } from "@forgecy/core";
+import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import robotsParser from "robots-parser";
 import { CrawlError, type AuditErrorCode } from "../errors";
 import { sameSite, type HostCheck } from "../url";
@@ -9,6 +11,12 @@ export interface CrawlProgress {
   step: CrawlStepKey;
   status: "running" | "completed" | "failed" | "skipped";
   detail?: string;
+  detailRef?: MessageRef;
+}
+
+/** English detail plus its message reference, for the scan steps. */
+function detailOf(key: MessageKey, values?: MessageValues) {
+  return { detail: englishMessage(key, values), detailRef: messageRef(key, values) };
 }
 
 export interface SkippedPage {
@@ -170,7 +178,7 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
   await progress({
     step: "robots",
     status: "completed",
-    detail: robotsFound ? "robots.txt found" : "No robots.txt: reading allowed",
+    ...detailOf(robotsFound ? "audit.scan.robotsFound" : "audit.scan.robotsMissing"),
   });
   if (blockedAll) {
     throw new CrawlError(
@@ -227,7 +235,7 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
   await progress({
     step: "discovery",
     status: "completed",
-    detail: `${targets.length} pages to read (maximum ${options.maxPages})`,
+    ...detailOf("audit.scan.discovery", { count: targets.length, max: options.maxPages }),
   });
 
   // 3. Pages
@@ -275,22 +283,21 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
     await progress({
       step: "screenshots",
       status: "running",
-      detail: `Pages read ${pages.length}/${targets.length}`,
+      ...detailOf("audit.scan.progress", { read: pages.length, total: targets.length }),
     });
   }
   const shots = pages.filter((p) => p.screenshotDesktop).length;
   await progress({
     step: "screenshots",
     status: options.fetcher.mode === "browser" ? "completed" : "skipped",
-    detail:
-      options.fetcher.mode === "browser"
-        ? `${pages.length} pages read · ${shots * 2} screenshots`
-        : "Chromium unavailable: no screenshots",
+    ...(options.fetcher.mode === "browser"
+      ? detailOf("audit.scan.screenshots", { pages: pages.length, shots: shots * 2 })
+      : detailOf("audit.scan.noChromium")),
   });
   await progress({
     step: "extraction",
     status: "completed",
-    detail: `${pages.length} pages analyzed`,
+    ...detailOf("audit.scan.extraction", { count: pages.length }),
   });
   return { robots: { found: robotsFound, blockedAll }, pages, skipped, stoppedEarly };
 }

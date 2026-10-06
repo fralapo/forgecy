@@ -2,7 +2,6 @@ import {
   assertCan,
   COMPACT_REPORT_SECTIONS,
   FIXED_REPORT_SECTIONS,
-  ForgecyError,
   reportSectionKeys,
   USABLE_FINDING_STATUSES,
   type Actor,
@@ -12,6 +11,7 @@ import {
   type ReportStatus,
   type ReportVariant,
 } from "@forgecy/core";
+import { localizedError } from "@forgecy/i18n";
 import {
   and,
   appSettings,
@@ -40,6 +40,7 @@ import {
   aiAllowed,
   enqueueAuditJob,
   hasActiveJob,
+  issueKey,
   loadAudit,
   userIdOf,
   type AuditDeps,
@@ -166,10 +167,15 @@ export function defaultSections(
 
 // ---------------------------------------------------------------- Evidence check
 
+export type EvidenceIssueCode =
+  "no_linked_observation" | "no_evidence" | "screenshot_removed" | "source_removed";
+
 export interface EvidenceIssue {
   findingId: string;
   title: string;
   section: ReportSectionKey;
+  /** Stable id of the reason; the interface translates it. */
+  code: EvidenceIssueCode;
   reason: string;
 }
 
@@ -177,7 +183,7 @@ export interface EvidenceCheck {
   ok: boolean;
   included: number;
   errors: EvidenceIssue[];
-  warnings: Array<{ section: ReportSectionKey; message: string }>;
+  warnings: Array<{ section: ReportSectionKey; code: "empty" | "over_limit"; message: string }>;
 }
 
 function evidenceOf(f: FindingRow): AuditEvidence[] {
@@ -232,13 +238,20 @@ export async function checkReportEvidence(
           findingId: f.id,
           title: f.title,
           section,
+          code: "no_linked_observation",
           reason: "No linked observation is included in the report",
         });
       continue;
     }
     const ev = evidenceOf(f);
     if (!ev.length) {
-      errors.push({ findingId: f.id, title: f.title, section, reason: "No evidence" });
+      errors.push({
+        findingId: f.id,
+        title: f.title,
+        section,
+        code: "no_evidence",
+        reason: "No evidence",
+      });
       continue;
     }
     if (!ev.some(alive))
@@ -246,10 +259,9 @@ export async function checkReportEvidence(
         findingId: f.id,
         title: f.title,
         section,
-        reason:
-          ev[0]?.type === "screenshot"
-            ? "Screenshot removed from the Social Audit"
-            : "The cited source no longer exists",
+        ...(ev[0]?.type === "screenshot"
+          ? { code: "screenshot_removed", reason: "Screenshot removed from the Social Audit" }
+          : { code: "source_removed", reason: "The cited source no longer exists" }),
       });
   }
 
@@ -258,10 +270,10 @@ export async function checkReportEvidence(
     if (!s.enabled || s.key === "cover" || s.key === "method") continue;
     const hasItems = (grouped[s.key] ?? []).some((f) => includedIds.has(f.id));
     if (!s.intro.trim() && !s.bullets.length && !hasItems)
-      warnings.push({ section: s.key, message: "Section with no text or items" });
+      warnings.push({ section: s.key, code: "empty", message: "Section with no text or items" });
     const introMax = s.key === "next_steps" ? REPORT_LIMITS.nextStepsIntro : REPORT_LIMITS.intro;
     if (textLength(s.intro) > introMax)
-      warnings.push({ section: s.key, message: "Text over the page limit" });
+      warnings.push({ section: s.key, code: "over_limit", message: "Text over the page limit" });
   }
   return { ok: errors.length === 0, included: included.length, errors, warnings };
 }
@@ -270,26 +282,21 @@ export async function checkReportEvidence(
 
 async function loadReport(db: Database, id: string) {
   const report = await db.query.auditReports.findFirst({ where: eq(auditReports.id, id) });
-  if (!report) throw new ForgecyError("not_found", "Report not found");
+  if (!report) throw localizedError("not_found", "audit.errors.reportNotFound");
   const { audit, client } = await loadAudit(db, report.auditId);
   return { report, audit, client };
 }
 
 function assertStatus(report: ReportRow, ...allowed: ReportStatus[]) {
   if (!allowed.includes(report.status))
-    throw new ForgecyError(
+    throw localizedError(
       "conflict",
-      report.status === "in_review"
-        ? "The report is in review: withdraw it from review to edit it."
-        : "This report version can no longer be edited: create a new version.",
+      report.status === "in_review" ? "audit.errors.reportInReview" : "audit.errors.reportLocked",
     );
 }
 
 function conflict() {
-  return new ForgecyError(
-    "conflict",
-    "Someone changed the report while you were working. Reload the page.",
-  );
+  return localizedError("conflict", "audit.errors.reportConflict");
 }
 
 async function updateReport(
@@ -338,20 +345,17 @@ export async function composeReport(
   const { audit, client } = await loadAudit(deps.db, auditId);
   assertCan(actor, "edit_draft", audit.clientId);
   if (audit.status === "archived")
-    throw new ForgecyError("conflict", "The audit is archived: reports cannot be composed.");
+    throw localizedError("conflict", "audit.errors.auditArchivedReport");
   const readiness = await reportReadiness(deps.db, auditId);
   const missing = readiness.filter((r) => !r.ok);
   if (missing.length)
-    throw new ForgecyError(
-      "validation",
-      `Before the report: ${missing.map((m) => m.label.toLowerCase()).join("; ")}.`,
-    );
+    throw localizedError("validation", "audit.errors.reportNotReady", { count: missing.length });
   const latest = await deps.db.query.auditReports.findFirst({
     where: eq(auditReports.auditId, auditId),
     orderBy: desc(auditReports.version),
   });
   if (latest && (latest.status === "draft" || latest.status === "in_review"))
-    throw new ForgecyError("conflict", `v${latest.version} is still open: work on that one.`);
+    throw localizedError("conflict", "audit.errors.versionOpen", { version: latest.version });
   const profile = await deps.db.query.prospectProfiles.findFirst({
     where: eq(prospectProfiles.clientId, client.id),
   });
@@ -406,12 +410,9 @@ export async function requestReportTexts(
   assertCan(actor, "edit_draft", audit.clientId);
   assertStatus(report, "draft");
   if (!aiAllowed(client.aiPolicy))
-    throw new ForgecyError(
-      "policy_blocked",
-      "This prospect's policy does not allow AI: write the texts by hand.",
-    );
+    throw localizedError("policy_blocked", "audit.errors.policyNoAiTexts");
   if (await hasActiveJob(deps.db, audit.id, auditReportTextsJob.kind))
-    throw new ForgecyError("conflict", "The report texts are already being prepared.");
+    throw localizedError("conflict", "audit.errors.textsInProgress");
   return enqueueAuditJob(deps, {
     def: auditReportTextsJob,
     payload: {
@@ -430,8 +431,8 @@ export const reportSectionsSchema = z
     z.object({
       key: z.enum(reportSectionKeys),
       enabled: z.boolean(),
-      title: z.string().trim().min(1, "Every section needs a title").max(120),
-      intro: z.string().max(REPORT_LIMITS.intro, "Text too long for the page"),
+      title: z.string().trim().min(1, issueKey("audit.validation.sectionTitleRequired")).max(120),
+      intro: z.string().max(REPORT_LIMITS.intro, issueKey("audit.validation.introTooLong")),
       bullets: z
         .array(z.string().trim().min(1).max(REPORT_LIMITS.bullet))
         .max(REPORT_LIMITS.bullets),
@@ -507,10 +508,9 @@ export async function submitReport(
   assertStatus(report, "draft");
   const check = await checkReportEvidence(deps.db, report);
   if (!check.ok)
-    throw new ForgecyError(
-      "validation",
-      `${check.errors.length} included items have no evidence: fix or exclude them (REPORT-EVIDENCE-MISSING).`,
-    );
+    throw localizedError("validation", "audit.errors.evidenceMissingFix", {
+      count: check.errors.length,
+    });
   return deps.db.transaction(async (tx) => {
     const row = await updateReport(
       tx,
@@ -563,16 +563,12 @@ export async function approveReport(
   assertStatus(report, "in_review");
   const note = input.note?.trim() ?? "";
   if (report.submittedBy && report.submittedBy === userIdOf(actor) && !note)
-    throw new ForgecyError(
-      "validation",
-      "You are approving content you submitted: add a note for the record.",
-    );
+    throw localizedError("validation", "audit.errors.ownApprovalNote");
   const check = await checkReportEvidence(deps.db, report);
   if (!check.ok)
-    throw new ForgecyError(
-      "validation",
-      `${check.errors.length} included items have no evidence (REPORT-EVIDENCE-MISSING).`,
-    );
+    throw localizedError("validation", "audit.errors.evidenceMissing", {
+      count: check.errors.length,
+    });
   return deps.db.transaction(async (tx) => {
     const row = await updateReport(
       tx,
@@ -615,7 +611,7 @@ export async function requestReportChanges(
   assertCan(actor, "review", audit.clientId);
   assertStatus(report, "in_review");
   const comment = input.comment.trim();
-  if (!comment) throw new ForgecyError("validation", "Write what needs to change.");
+  if (!comment) throw localizedError("validation", "audit.errors.changesRequired");
   return deps.db.transaction(async (tx) => {
     const row = await updateReport(
       tx,
@@ -633,7 +629,7 @@ export async function deleteReportDraft(deps: AuditDeps, actor: Actor, id: strin
   const { report, audit } = await loadReport(deps.db, id);
   assertCan(actor, "edit_draft", audit.clientId);
   if (report.status !== "draft" || report.submittedAt)
-    throw new ForgecyError("conflict", "Only drafts never submitted for review can be deleted.");
+    throw localizedError("conflict", "audit.errors.draftOnlyDelete");
   await deps.db.transaction(async (tx) => {
     await tx.delete(auditReports).where(eq(auditReports.id, id));
     await event(tx, actor, "audit.report.delete_draft", report, audit.clientId);
@@ -651,24 +647,19 @@ export async function requestReportExport(
 ) {
   const { report, audit } = await loadReport(deps.db, input.reportId);
   assertCan(actor, "reports.export", audit.clientId);
-  if (report.status === "superseded")
-    throw new ForgecyError("conflict", "This version was superseded by a newer one.");
+  if (report.status === "superseded") throw localizedError("conflict", "audit.errors.superseded");
   if (input.final) {
     assertCan(actor, "publish", audit.clientId);
     if (report.status !== "approved" && report.status !== "exported")
-      throw new ForgecyError(
-        "conflict",
-        "The final PDF can only be exported from a version approved by a person.",
-      );
+      throw localizedError("conflict", "audit.errors.finalNeedsApproval");
     const check = await checkReportEvidence(deps.db, report);
     if (!check.ok)
-      throw new ForgecyError(
-        "validation",
-        `${check.errors.length} included items have no evidence (REPORT-EVIDENCE-MISSING).`,
-      );
+      throw localizedError("validation", "audit.errors.evidenceMissing", {
+        count: check.errors.length,
+      });
   }
   if (await hasActiveJob(deps.db, audit.id, auditReportExportJob.kind))
-    throw new ForgecyError("conflict", "A PDF of the report is already being prepared.");
+    throw localizedError("conflict", "audit.errors.pdfInProgress");
   return enqueueAuditJob(deps, {
     def: auditReportExportJob,
     payload: { reportId: report.id, variant: input.variant, final: input.final },

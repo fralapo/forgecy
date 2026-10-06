@@ -2,26 +2,32 @@ import { getCompetitorView } from "@forgecy/audit";
 import { AUDIT_LIMITS } from "@forgecy/core";
 import { Card, CardDescription, CardHeader, CardTitle } from "@forgecy/ui";
 import { ListChecks, Pencil, SkipForward } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { confirmCompetitorListAction, reopenCompetitorListAction } from "../../actions";
 import { ActionButton } from "../../_components/action-button";
 import { AddFinding } from "../../_components/add-finding";
 import { AddCompetitor, CompetitorItem, ProposalRequest } from "../../_components/competitor-tools";
 import { FindingCard } from "../../_components/finding-card";
 import { sectionContext, sourceLinks, toView } from "../../_lib/findings";
-import { formatDateTime } from "../../_lib/labels";
+import { getFormat } from "@/lib/i18n";
 
-export const metadata = { title: "Audit · Competitors" };
+export async function generateMetadata() {
+  const t = await getTranslations("audit.competitors");
+  return { title: t("metaTitle") };
+}
 
 export default async function CompetitorPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const { db, audit, client, readOnly, aiAllowed } = await sectionContext(slug);
   const view = await getCompetitorView(db, audit.id);
   const links = await sourceLinks(db, view.findings);
+  const t = await getTranslations("audit.competitors");
+  const format = await getFormat();
   const active = view.competitors.filter((c) => c.status !== "removed");
   const confirmed = Boolean(audit.competitorsConfirmedAt);
   const companies = [
     ...(view.prospectScan?.extracted?.offer
-      ? [{ name: `${client.name} (prospect)`, ex: view.prospectScan.extracted }]
+      ? [{ name: t("prospectName", { name: client.name }), ex: view.prospectScan.extracted }]
       : []),
     ...view.competitors
       .filter((c) => c.status === "confirmed")
@@ -33,13 +39,18 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
     <div className="flex flex-col gap-8">
       <Card>
         <CardHeader>
-          <CardTitle>Competitor list</CardTitle>
+          <CardTitle>{t("title")}</CardTitle>
           <CardDescription>
             {audit.competitorsSkipped
-              ? "You chose to continue without competitors: the report will not have this section."
+              ? t("skipped")
               : confirmed
-                ? `List confirmed on ${formatDateTime(audit.competitorsConfirmedAt)}. Up to ${AUDIT_LIMITS.maxCompetitorPages} pages are read from each website: home, services and contacts.`
-                : `Up to ${AUDIT_LIMITS.maxCompetitors} direct competitors. The AI's proposals need checking: confirm the list when it is right.`}
+                ? t("confirmed", {
+                    date: audit.competitorsConfirmedAt
+                      ? format.date(audit.competitorsConfirmedAt, "dateTime")
+                      : "—",
+                    pages: AUDIT_LIMITS.maxCompetitorPages,
+                  })
+                : t("intro", { max: AUDIT_LIMITS.maxCompetitors })}
           </CardDescription>
         </CardHeader>
         {view.competitors.length ? (
@@ -65,9 +76,7 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
           </ul>
         ) : (
           <p className="text-body-md text-fg-muted">
-            {aiAllowed
-              ? "No competitors yet. The Strategist proposes them after the website is read, or add them yourself."
-              : "Add the competitors you know."}
+            {aiAllowed ? t("emptyAi") : t("emptyManual")}
           </p>
         )}
         {!readOnly ? (
@@ -87,7 +96,7 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
                   action={reopenCompetitorListAction.bind(null, audit.id)}
                   icon={<Pencil aria-hidden />}
                 >
-                  Edit list
+                  {t("editList")}
                 </ActionButton>
               ) : (
                 <>
@@ -95,16 +104,16 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
                     action={confirmCompetitorListAction.bind(null, audit.id, false)}
                     icon={<ListChecks aria-hidden />}
                     variant="primary"
-                    confirm="Confirm the list? Proposals still open become confirmed and their websites are read."
+                    confirm={t("confirmListQuestion")}
                   >
-                    Confirm list
+                    {t("confirmList")}
                   </ActionButton>
                   <ActionButton
                     action={confirmCompetitorListAction.bind(null, audit.id, true)}
                     icon={<SkipForward aria-hidden />}
                     variant="ghost"
                   >
-                    Continue without competitors
+                    {t("skip")}
                   </ActionButton>
                 </>
               )}
@@ -116,26 +125,24 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
       {companies.length ? (
         <Card className="overflow-x-auto">
           <CardHeader>
-            <CardTitle>Side by side</CardTitle>
-            <CardDescription>
-              Offer and tone read on the pages; the sentence is quoted word for word.
-            </CardDescription>
+            <CardTitle>{t("sideBySide")}</CardTitle>
+            <CardDescription>{t("sideBySideDescription")}</CardDescription>
           </CardHeader>
           <table className="w-full text-left text-body-sm">
-            <caption className="sr-only">Offer and tone of the prospect and competitors</caption>
+            <caption className="sr-only">{t("sideBySideCaption")}</caption>
             <thead className="border-b border-subtle text-label text-fg-muted">
               <tr>
                 <th scope="col" className="px-3 py-2 font-medium">
-                  Company
+                  {t("columns.company")}
                 </th>
                 <th scope="col" className="px-3 py-2 font-medium">
-                  Main offer
+                  {t("columns.offer")}
                 </th>
                 <th scope="col" className="px-3 py-2 font-medium">
-                  Tone
+                  {t("columns.tone")}
                 </th>
                 <th scope="col" className="px-3 py-2 font-medium">
-                  Main CTA
+                  {t("columns.cta")}
                 </th>
               </tr>
             </thead>
@@ -162,7 +169,7 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-heading-md text-fg">Competitor observations</h2>
+          <h2 className="font-display text-heading-md text-fg">{t("observations")}</h2>
           {!readOnly ? (
             <AddFinding auditId={audit.id} channel="website" areas={["competitors"]} />
           ) : null}
@@ -173,9 +180,7 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
           ))
         ) : (
           <p className="text-body-md text-fg-muted">
-            {confirmed
-              ? "Observations arrive after the competitors’ websites are read."
-              : "Confirm the list to start the comparison."}
+            {confirmed ? t("observationsAfterRead") : t("confirmToStart")}
           </p>
         )}
       </section>

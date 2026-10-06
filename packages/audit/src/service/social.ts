@@ -2,15 +2,17 @@ import {
   assertCan,
   AUDIT_LIMITS,
   channelMetrics,
-  ForgecyError,
+  messageRefOf,
   metricSources,
   socialChannels,
   socialPostFields,
   USABLE_FINDING_STATUSES,
   type Actor,
   type AuditEvidence,
+  type MessageRef,
   type SocialChannel,
 } from "@forgecy/core";
+import { localizedError } from "@forgecy/i18n";
 import {
   and,
   auditChannelStates,
@@ -43,6 +45,7 @@ import {
   assertEditable,
   enqueueAuditJob,
   hasActiveJob,
+  issueKey,
   loadAudit,
   requireStorage,
   userIdOf,
@@ -93,10 +96,9 @@ export async function setChannelProfile(
   if (input.profileUrl?.trim()) {
     profileUrl = normalizeSiteUrl(input.profileUrl);
     if (!profileUrl || !isPlatformUrl(input.channel, profileUrl))
-      throw new ForgecyError(
-        "validation",
-        `The link is not a ${channelLabel[input.channel]} profile`,
-      );
+      throw localizedError("validation", "audit.errors.notAProfile", {
+        channel: channelLabel[input.channel],
+      });
   }
   const existing = await deps.db.query.auditChannelStates.findFirst({
     where: and(
@@ -130,7 +132,7 @@ export async function setChannelUnavailable(
   const { audit } = await editableAudit(deps, actor, input.auditId);
   const reason = input.reason?.trim();
   if (input.mode === "unavailable" && !reason)
-    throw new ForgecyError("validation", "Write why the data is not available.");
+    throw localizedError("validation", "audit.errors.unavailableReasonRequired");
   await upsertChannel(deps.db, {
     auditId: input.auditId,
     channel: input.channel,
@@ -205,7 +207,7 @@ export async function uploadScreenshots(
   assertCan(actor, "project.edit", audit.clientId);
   assertEditable(audit);
   const storage = requireStorage(deps);
-  if (!input.files.length) throw new ForgecyError("validation", "Choose at least one image.");
+  if (!input.files.length) throw localizedError("validation", "audit.errors.chooseImage");
   const [count] = await deps.db
     .select({ n: sql<number>`count(*)::int` })
     .from(auditSources)
@@ -217,10 +219,9 @@ export async function uploadScreenshots(
       ),
     );
   if ((count?.n ?? 0) + input.files.length > AUDIT_LIMITS.maxScreenshotsPerChannel)
-    throw new ForgecyError(
-      "validation",
-      `At most ${AUDIT_LIMITS.maxScreenshotsPerChannel} screenshots per channel.`,
-    );
+    throw localizedError("validation", "audit.errors.tooManyScreenshots", {
+      max: AUDIT_LIMITS.maxScreenshotsPerChannel,
+    });
   const checked = input.files.map((f) => ({
     file: f,
     type: assertValidUpload({
@@ -277,7 +278,7 @@ export async function readAll(stream: Readable): Promise<Uint8Array> {
 function tableKind(mime: string, ext: string): "csv" | "xlsx" {
   if (ext === "xlsx") return "xlsx";
   if (ext === "csv" || ext === "txt" || mime.startsWith("text/")) return "csv";
-  throw new ForgecyError("validation", "Upload a CSV or XLSX file.");
+  throw localizedError("validation", "audit.errors.uploadTable");
 }
 
 /** Upload a CSV/XLSX export; nothing is imported until the mapping is confirmed. */
@@ -338,7 +339,7 @@ export async function uploadTable(
 async function loadTableSource(deps: AuditDeps, sourceId: string) {
   const [source] = await deps.db.select().from(auditSources).where(eq(auditSources.id, sourceId));
   if (!source || source.kind !== "file" || !source.storageKey)
-    throw new ForgecyError("not_found", "File not found");
+    throw localizedError("not_found", "audit.errors.fileNotFound");
   const bytes = await readAll(await requireStorage(deps).get(source.storageKey));
   const kind = source.storageKey.endsWith(".xlsx") ? "xlsx" : "csv";
   return { source, bytes, kind } as const;
@@ -362,6 +363,8 @@ export interface TablePreview {
   validRows: number;
   invalid: Array<{ rowNumber: number; reason: string }>;
   error?: string;
+  /** `error` as a message reference, shown in the user's language. */
+  errorRef?: MessageRef;
 }
 
 /** Preview of the mapping (Page 8): first rows, valid and skipped counts. */
@@ -385,12 +388,14 @@ export async function previewTable(
   let validRows = 0;
   let invalid: TablePreview["invalid"] = [];
   let error: string | undefined;
+  let errorRef: MessageRef | null = null;
   try {
     const result = interpretRows(table, mapping, dateFormat);
     validRows = result.rows.length;
     invalid = result.invalid;
   } catch (err) {
     error = err instanceof Error ? err.message : String(err);
+    errorRef = messageRefOf(err);
   }
   return {
     sourceId: source.id,
@@ -405,6 +410,7 @@ export async function previewTable(
     validRows,
     invalid: invalid.slice(0, 50),
     ...(error ? { error } : {}),
+    ...(errorRef ? { errorRef } : {}),
   };
 }
 
@@ -422,14 +428,13 @@ export async function importTable(
   const { source, bytes, kind } = await loadTableSource(deps, input.sourceId);
   const { audit } = await editableAudit(deps, actor, source.auditId);
   if (!dateFormats.includes(input.dateFormat))
-    throw new ForgecyError("validation", "Invalid date format");
+    throw localizedError("validation", "audit.errors.invalidDateFormat");
   const table = await readTable(bytes, kind, input.sheet);
   const mapping = Object.fromEntries(
     Object.entries(mappingSchema.parse(input.mapping)).map(([k, v]) => [Number(k), v]),
   ) as ColumnMapping;
   const { rows, invalid } = interpretRows(table, mapping, input.dateFormat);
-  if (!rows.length)
-    throw new ForgecyError("validation", "No valid rows: check the date column and the format.");
+  if (!rows.length) throw localizedError("validation", "audit.errors.noValidRows");
   const channel = source.channel as SocialChannel;
   const userId = userIdOf(actor);
   await deps.db.transaction(async (tx) => {
@@ -504,16 +509,24 @@ export const metricInputSchema = z
     auditId: z.uuid(),
     channel: z.enum(socialChannels),
     metric: z.enum(channelMetrics),
-    value: z.string().trim().min(1, "Enter the value"),
-    observedOn: z.iso.date("Invalid date"),
-    source: z.enum(metricSources, "Say where the value comes from"),
+    value: z.string().trim().min(1, issueKey("audit.validation.valueRequired")),
+    observedOn: z.iso.date(issueKey("audit.validation.dateInvalid")),
+    source: z.enum(metricSources, issueKey("audit.validation.sourceRequired")),
     sourceNote: z.string().trim().max(200).optional(),
   })
   .superRefine((v, ctx) => {
     if (v.source === "other" && !v.sourceNote)
-      ctx.addIssue({ code: "custom", path: ["sourceNote"], message: "Describe the source" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["sourceNote"],
+        message: issueKey("audit.validation.sourceNoteRequired"),
+      });
     if (v.observedOn > new Date().toISOString().slice(0, 10))
-      ctx.addIssue({ code: "custom", path: ["observedOn"], message: "The date is in the future" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["observedOn"],
+        message: issueKey("audit.validation.dateInFuture"),
+      });
   });
 
 /** A metric typed by a person: exact number, source and date required, never an estimate. */
@@ -525,11 +538,7 @@ export async function addMetric(
   const data = metricInputSchema.parse(input);
   const { audit } = await editableAudit(deps, actor, data.auditId);
   const value = parseStrictNumber(data.value);
-  if (value === null || value < 0)
-    throw new ForgecyError(
-      "validation",
-      "Enter an exact number, without ranges or estimates (e.g. 1,240).",
-    );
+  if (value === null || value < 0) throw localizedError("validation", "audit.errors.exactNumber");
   const userId = userIdOf(actor);
   const [row] = await deps.db
     .insert(auditMetrics)
@@ -558,10 +567,9 @@ export async function addMetric(
 
 export async function deleteMetric(deps: AuditDeps, actor: Actor, metricId: string) {
   const [metric] = await deps.db.select().from(auditMetrics).where(eq(auditMetrics.id, metricId));
-  if (!metric) throw new ForgecyError("not_found", "Value not found");
+  if (!metric) throw localizedError("not_found", "audit.errors.valueNotFound");
   await editableAudit(deps, actor, metric.auditId);
-  if (metric.sourceId)
-    throw new ForgecyError("validation", "This value comes from a file: remove the file.");
+  if (metric.sourceId) throw localizedError("validation", "audit.errors.valueFromFile");
   await deps.db.delete(auditMetrics).where(eq(auditMetrics.id, metricId));
 }
 
@@ -575,10 +583,9 @@ export async function removeSource(
   sourceId: string,
 ): Promise<{ findingsReopened: number }> {
   const [source] = await deps.db.select().from(auditSources).where(eq(auditSources.id, sourceId));
-  if (!source) throw new ForgecyError("not_found", "Source not found");
+  if (!source) throw localizedError("not_found", "audit.errors.sourceNotFound");
   const { audit } = await editableAudit(deps, actor, source.auditId);
-  if (source.kind === "page")
-    throw new ForgecyError("validation", "Website pages are updated by rescanning the website.");
+  if (source.kind === "page") throw localizedError("validation", "audit.errors.pagesByRescan");
   const citing = await deps.db
     .select()
     .from(auditFindings)
@@ -642,7 +649,7 @@ export async function requestSocialAnalysis(
   const { audit, client } = await editableAudit(deps, actor, input.auditId);
   assertAiAllowed(client);
   if (await hasActiveJob(deps.db, audit.id, auditAnalyzeSocialJob.kind))
-    throw new ForgecyError("conflict", "A social analysis is already in progress.");
+    throw localizedError("conflict", "audit.errors.socialInProgress");
   const [posts] = await deps.db
     .select({ n: sql<number>`count(*)::int` })
     .from(auditSocialPosts)
@@ -664,10 +671,7 @@ export async function requestSocialAnalysis(
       ),
     );
   if (!(posts?.n ?? 0) && !(metrics?.n ?? 0) && !(shots?.n ?? 0))
-    throw new ForgecyError(
-      "validation",
-      "Upload some screenshots, import an export or enter at least one value.",
-    );
+    throw localizedError("validation", "audit.errors.socialNoData");
   return enqueueAuditJob(deps, {
     def: auditAnalyzeSocialJob,
     payload: { auditId: audit.id, channel: input.channel },

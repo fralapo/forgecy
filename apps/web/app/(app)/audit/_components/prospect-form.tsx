@@ -1,7 +1,8 @@
 "use client";
 
 import {
-  prospectObjectiveLabels,
+  aiPolicies,
+  AUDIT_LIMITS,
   prospectObjectives,
   socialChannels,
   type AiPolicy,
@@ -12,9 +13,9 @@ import { Button, Input, Label } from "@forgecy/ui";
 import { Save, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { checkDuplicatesAction, createProspectAction, updateProspectAction } from "../actions";
-import { channelLabel } from "../_lib/labels";
 import { selectClass, textareaClass } from "../_lib/styles";
 
 export interface ProspectFormValues {
@@ -41,12 +42,8 @@ const empty: ProspectFormValues = {
   socialUrls: {},
 };
 
-const policyLabel: Record<AiPolicy, string> = {
-  external_allowed: "External AI allowed",
-  external_restricted: "External AI restricted",
-  local_only: "Local AI only",
-  no_ai: "No AI",
-};
+/** Example profile address shown as a placeholder (a URL, not language). */
+const profilePlaceholder = (channel: SocialChannel) => `${channel}.com/…`;
 
 type Duplicate = { id: string; name: string; slug: string; reason: "domain" | "name" };
 
@@ -56,6 +53,8 @@ export function ProspectForm(
     | { mode: "edit"; clientId: string; rev: number; initial: ProspectFormValues },
 ) {
   const router = useRouter();
+  const t = useTranslations("audit");
+  const te = useTranslations("enums.aiPolicy");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -118,35 +117,35 @@ export function ProspectForm(
       }}
     >
       <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-2 text-heading-sm text-fg">Company</legend>
+        <legend className="mb-2 text-heading-sm text-fg">{t("prospectForm.company")}</legend>
         <div className="flex flex-col gap-2 sm:col-span-2">
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="name">{t("prospectForm.name")}</Label>
           <Input id="name" name="name" required maxLength={120} defaultValue={initial.name} />
         </div>
         <div className="flex flex-col gap-2 sm:col-span-2">
-          <Label htmlFor="websiteUrl">Website</Label>
+          <Label htmlFor="websiteUrl">{t("prospectForm.website")}</Label>
           <Input
             id="websiteUrl"
             name="websiteUrl"
             inputMode="url"
-            placeholder="example.com"
+            placeholder={t("prospectForm.websitePlaceholder")}
             defaultValue={initial.websiteUrl}
           />
           <p className="text-body-sm text-fg-muted">
-            Forgecy reads up to 10 public pages, respecting robots.txt.
+            {t("prospectForm.websiteHint", { max: AUDIT_LIMITS.maxPages })}
           </p>
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="sector">Sector</Label>
+          <Label htmlFor="sector">{t("prospectForm.sector")}</Label>
           <Input id="sector" name="sector" maxLength={80} defaultValue={initial.sector} />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="area">Geographic area</Label>
+          <Label htmlFor="area">{t("prospectForm.area")}</Label>
           <Input
             id="area"
             name="area"
             maxLength={120}
-            placeholder="E.g. Bergamo and province"
+            placeholder={t("prospectForm.areaPlaceholder")}
             defaultValue={initial.area}
           />
         </div>
@@ -159,23 +158,24 @@ export function ProspectForm(
         >
           <TriangleAlert aria-hidden className="size-4 shrink-0 text-warning" />
           <div>
-            A similar prospect or client already exists:{" "}
-            {duplicates.map((d, i) => (
-              <span key={d.id}>
-                {i ? ", " : ""}
-                <Link href={`/audit/${d.slug}`} className="text-link underline">
-                  {d.name}
-                </Link>{" "}
-                ({d.reason === "domain" ? "same website" : "similar name"})
-              </span>
-            ))}
-            . You can continue anyway.
+            {t.rich("prospectForm.duplicates", {
+              list: () =>
+                duplicates.map((d, i) => (
+                  <span key={d.id}>
+                    {i ? ", " : ""}
+                    <Link href={`/audit/${d.slug}`} className="text-link underline">
+                      {d.name}
+                    </Link>{" "}
+                    ({t(`prospectForm.duplicateReason.${d.reason}`)})
+                  </span>
+                )),
+            })}
           </div>
         </div>
       ) : null}
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-2 text-heading-sm text-fg">Goals</legend>
+        <legend className="mb-2 text-heading-sm text-fg">{t("prospectForm.goals")}</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {prospectObjectives.map((o) => (
             <label key={o} className="flex items-center gap-2 text-body-sm text-fg">
@@ -188,13 +188,13 @@ export function ProspectForm(
                   )
                 }
               />
-              {prospectObjectiveLabels[o]}
+              {t(`objective.${o}`)}
             </label>
           ))}
         </div>
         {objectives.includes("other") ? (
           <div className="flex flex-col gap-2">
-            <Label htmlFor="otherObjective">Other goal</Label>
+            <Label htmlFor="otherObjective">{t("prospectForm.otherGoal")}</Label>
             <Input
               id="otherObjective"
               name="otherObjective"
@@ -205,32 +205,29 @@ export function ProspectForm(
           </div>
         ) : null}
         <div className="flex flex-col gap-2">
-          <Label htmlFor="notes">Notes</Label>
+          <Label htmlFor="notes">{t("prospectForm.notes")}</Label>
           <textarea
             id="notes"
             name="notes"
             maxLength={4000}
             className={textareaClass}
-            placeholder="What you already know: contact, needs, competitors they mentioned…"
+            placeholder={t("prospectForm.notesPlaceholder")}
             defaultValue={initial.notes}
           />
         </div>
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-2 text-heading-sm text-fg">Social profiles</legend>
-        <p className="text-body-sm text-fg-muted sm:col-span-2">
-          Only the profile link. Data is added later with screenshots, CSV/XLSX exports or values
-          entered by hand.
-        </p>
+        <legend className="mb-2 text-heading-sm text-fg">{t("prospectForm.socialProfiles")}</legend>
+        <p className="text-body-sm text-fg-muted sm:col-span-2">{t("prospectForm.socialHint")}</p>
         {socialChannels.map((c) => (
           <div key={c} className="flex flex-col gap-2">
-            <Label htmlFor={`social_${c}`}>{channelLabel[c]}</Label>
+            <Label htmlFor={`social_${c}`}>{t(`channel.${c}`)}</Label>
             <Input
               id={`social_${c}`}
               name={`social_${c}`}
               inputMode="url"
-              placeholder={`${c}.com/…`}
+              placeholder={profilePlaceholder(c)}
               defaultValue={initial.socialUrls[c] ?? ""}
             />
           </div>
@@ -238,22 +235,22 @@ export function ProspectForm(
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-2 text-heading-sm text-fg">Report and AI</legend>
+        <legend className="mb-2 text-heading-sm text-fg">{t("prospectForm.reportAndAi")}</legend>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="reportLanguage">Report language</Label>
+          <Label htmlFor="reportLanguage">{t("prospectForm.reportLanguage")}</Label>
           <select
             id="reportLanguage"
             name="reportLanguage"
             className={selectClass}
             defaultValue={initial.reportLanguage}
           >
-            <option value="en">English</option>
-            <option value="it">Italian</option>
+            <option value="en">{t("prospectForm.language.en")}</option>
+            <option value="it">{t("prospectForm.language.it")}</option>
           </select>
         </div>
         {props.mode === "create" ? (
           <div className="flex flex-col gap-2">
-            <Label htmlFor="aiPolicy">AI policy</Label>
+            <Label htmlFor="aiPolicy">{t("prospectForm.aiPolicy")}</Label>
             {props.isAdmin ? (
               <select
                 id="aiPolicy"
@@ -261,16 +258,14 @@ export function ProspectForm(
                 className={selectClass}
                 defaultValue="external_allowed"
               >
-                {(Object.keys(policyLabel) as AiPolicy[]).map((p) => (
+                {aiPolicies.map((p) => (
                   <option key={p} value={p}>
-                    {policyLabel[p]}
+                    {te(p)}
                   </option>
                 ))}
               </select>
             ) : (
-              <p className="text-body-sm text-fg-muted">
-                External AI allowed. Only an Admin can change it.
-              </p>
+              <p className="text-body-sm text-fg-muted">{t("prospectForm.aiPolicyFixed")}</p>
             )}
           </div>
         ) : null}
@@ -283,13 +278,13 @@ export function ProspectForm(
       ) : null}
       {saved ? (
         <p role="status" className="text-body-sm text-success">
-          Data saved.
+          {t("prospectForm.saved")}
         </p>
       ) : null}
       <div>
         <Button type="submit" disabled={pending}>
           <Save aria-hidden />
-          {props.mode === "create" ? "Create prospect" : "Save changes"}
+          {props.mode === "create" ? t("prospectForm.create") : t("prospectForm.save")}
         </Button>
       </div>
     </form>

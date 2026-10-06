@@ -5,13 +5,13 @@ import {
   confidenceFromEvidence,
   evidenceTypes,
   findingAreas,
-  ForgecyError,
   levels,
   USABLE_FINDING_STATUSES,
   type Actor,
   type AuditEvidence,
   type FindingStatus,
 } from "@forgecy/core";
+import { localizedError } from "@forgecy/i18n";
 import {
   and,
   asc,
@@ -32,6 +32,7 @@ import {
   assertEditable,
   enqueueAuditJob,
   hasActiveJob,
+  issueKey,
   loadAudit,
   userIdOf,
   type AuditDeps,
@@ -43,7 +44,7 @@ type FindingRow = typeof auditFindings.$inferSelect;
 
 async function loadFinding(db: Database | Tx, id: string): Promise<FindingRow> {
   const [row] = await db.select().from(auditFindings).where(eq(auditFindings.id, id));
-  if (!row) throw new ForgecyError("not_found", "Item not found");
+  if (!row) throw localizedError("not_found", "audit.errors.itemNotFound");
   return row;
 }
 
@@ -54,11 +55,7 @@ async function loadEditable(deps: AuditDeps, id: string) {
   return { finding, audit };
 }
 
-const conflict = () =>
-  new ForgecyError(
-    "conflict",
-    "Someone changed this item in the meantime. Reload to see the updated version.",
-  );
+const conflict = () => localizedError("conflict", "audit.errors.itemConflict");
 
 /** Observation changes after a diagnosis show the "Update diagnosis" banner. */
 async function touchFindings(tx: Tx, finding: FindingRow) {
@@ -92,14 +89,13 @@ export async function reviewFinding(
   const { finding, audit } = await loadEditable(deps, input.id);
   assertCan(actor, "review", audit.clientId);
   if (input.decision === "reject" && finding.kind === "problem" && !input.reason?.trim())
-    throw new ForgecyError("validation", "Write why you are rejecting this problem.");
+    throw localizedError("validation", "audit.errors.rejectReasonRequired");
   if (input.decision === "accept" && finding.kind === "problem") {
     const count = await usableProblemCount(deps.db, finding.auditId, finding.id);
     if (count >= AUDIT_LIMITS.maxProblems)
-      throw new ForgecyError(
-        "validation",
-        `The diagnosis already has ${AUDIT_LIMITS.maxProblems} problems: reject one first.`,
-      );
+      throw localizedError("validation", "audit.errors.problemLimit", {
+        max: AUDIT_LIMITS.maxProblems,
+      });
   }
   const status: FindingStatus =
     input.decision === "reject" ? "rejected" : finding.editedByHuman ? "edited" : "accepted";
@@ -153,7 +149,7 @@ const evidenceSchema = z.object({
 });
 
 export const findingEditSchema = z.object({
-  title: z.string().trim().min(1, "Enter a title").max(160),
+  title: z.string().trim().min(1, issueKey("audit.validation.titleRequired")).max(160),
   description: z.string().trim().max(1000).optional(),
   impact: z.string().trim().max(600).optional(),
   recommendation: z.string().trim().max(1000).optional(),
@@ -246,8 +242,7 @@ export async function addFinding(
   // A problem rests on its observations: they are its evidence, as in the AI diagnosis.
   let evidence = data.evidence as AuditEvidence[];
   if (data.kind === "problem") {
-    if (!data.parentIds.length)
-      throw new ForgecyError("validation", "Link at least one accepted observation.");
+    if (!data.parentIds.length) throw localizedError("validation", "audit.errors.linkObservation");
     const parents = await deps.db
       .select({ id: auditFindings.id, title: auditFindings.title })
       .from(auditFindings)
@@ -260,16 +255,15 @@ export async function addFinding(
         ),
       );
     if (parents.length !== data.parentIds.length)
-      throw new ForgecyError("validation", "You can only link accepted observations.");
+      throw localizedError("validation", "audit.errors.linkAcceptedOnly");
     evidence = [
       ...parents.map((p): AuditEvidence => ({ type: "note", label: p.title.slice(0, 120) })),
       ...evidence,
     ].slice(0, 8);
     if ((await usableProblemCount(deps.db, data.auditId)) >= AUDIT_LIMITS.maxProblems)
-      throw new ForgecyError(
-        "validation",
-        `The diagnosis already has ${AUDIT_LIMITS.maxProblems} problems: reject one first.`,
-      );
+      throw localizedError("validation", "audit.errors.problemLimit", {
+        max: AUDIT_LIMITS.maxProblems,
+      });
   }
   const userId = userIdOf(actor);
   return deps.db.transaction(async (tx) => {
@@ -320,8 +314,7 @@ export async function addFinding(
 export async function deleteFinding(deps: AuditDeps, actor: Actor, id: string) {
   const { finding, audit } = await loadEditable(deps, id);
   assertCan(actor, "edit_draft", audit.clientId);
-  if (finding.authorAgent)
-    throw new ForgecyError("validation", "AI proposals are rejected, not deleted.");
+  if (finding.authorAgent) throw localizedError("validation", "audit.errors.aiNotDeletable");
   await deps.db.transaction(async (tx) => {
     await tx.delete(auditFindings).where(eq(auditFindings.id, id));
     await touchFindings(tx, finding);
@@ -382,9 +375,9 @@ export async function linkObservations(
 ) {
   const { finding, audit } = await loadEditable(deps, input.id);
   assertCan(actor, "edit_draft", audit.clientId);
-  if (finding.kind !== "problem") throw new ForgecyError("validation", "This is not a problem.");
+  if (finding.kind !== "problem") throw localizedError("validation", "audit.errors.notAProblem");
   const ids = [...new Set(input.observationIds)];
-  if (!ids.length) throw new ForgecyError("validation", "Link at least one accepted observation.");
+  if (!ids.length) throw localizedError("validation", "audit.errors.linkObservation");
   const ok = await deps.db
     .select({ id: auditFindings.id })
     .from(auditFindings)
@@ -396,8 +389,7 @@ export async function linkObservations(
         ne(auditFindings.kind, "problem"),
       ),
     );
-  if (ok.length !== ids.length)
-    throw new ForgecyError("validation", "You can only link accepted observations.");
+  if (ok.length !== ids.length) throw localizedError("validation", "audit.errors.linkAcceptedOnly");
   const [row] = await deps.db
     .update(auditFindings)
     .set({
@@ -426,14 +418,11 @@ export async function setComparisonOutcome(
   const { finding, audit } = await loadEditable(deps, input.id);
   assertCan(actor, "review", audit.clientId);
   if (finding.kind !== "comparison" || !finding.comparison)
-    throw new ForgecyError("validation", "This is not a comparison row.");
+    throw localizedError("validation", "audit.errors.notAComparison");
   const proposed = finding.comparison.proposedOutcome ?? finding.comparison.outcome;
   const note = input.note?.trim();
   if (input.outcome !== proposed && !note)
-    throw new ForgecyError(
-      "validation",
-      "Write a note: the outcome differs from the proposed one.",
-    );
+    throw localizedError("validation", "audit.errors.outcomeNoteRequired");
   return deps.db.transaction(async (tx) => {
     const [row] = await tx
       .update(auditFindings)
@@ -459,7 +448,7 @@ export async function setComparisonOutcome(
 
 async function assertNotRunning(deps: AuditDeps, auditId: string, kind: string) {
   if (await hasActiveJob(deps.db, auditId, kind))
-    throw new ForgecyError("conflict", "This step is already in progress.");
+    throw localizedError("conflict", "audit.errors.stepInProgress");
 }
 
 /** Website vs Instagram vs Facebook: needs data on at least two of them. */
@@ -475,11 +464,7 @@ export async function requestChannelComparison(
   await assertNotRunning(deps, audit.id, auditCompareChannelsJob.kind);
   const ready = await channelsWithData(deps.db, audit.id);
   const compared = ready.filter((c) => c === "website" || c === "instagram" || c === "facebook");
-  if (compared.length < 2)
-    throw new ForgecyError(
-      "validation",
-      "Data is needed on at least two channels among website, Instagram and Facebook.",
-    );
+  if (compared.length < 2) throw localizedError("validation", "audit.errors.twoChannels");
   return enqueueAuditJob(deps, {
     def: auditCompareChannelsJob,
     payload: {
@@ -508,11 +493,7 @@ export async function requestDiagnosis(deps: AuditDeps, actor: Actor, auditId: s
         inArray(auditFindings.status, [...USABLE_FINDING_STATUSES]),
       ),
     );
-  if (!row?.n)
-    throw new ForgecyError(
-      "validation",
-      "Accept at least one observation before generating the diagnosis.",
-    );
+  if (!row?.n) throw localizedError("validation", "audit.errors.acceptObservation");
   return enqueueAuditJob(deps, {
     def: auditDiagnoseJob,
     payload: { auditId },
@@ -529,7 +510,7 @@ export async function requestPlan(deps: AuditDeps, actor: Actor, auditId: string
   assertAiAllowed(client);
   await assertNotRunning(deps, audit.id, auditPlanJob.kind);
   if ((await usableProblemCount(deps.db, auditId)) < 1)
-    throw new ForgecyError("validation", "Accept at least one problem of the diagnosis.");
+    throw localizedError("validation", "audit.errors.acceptProblem");
   return enqueueAuditJob(deps, {
     def: auditPlanJob,
     payload: { auditId },
@@ -555,7 +536,7 @@ export async function reviewPlan(
       })
       .where(eq(auditPlans.auditId, input.auditId))
       .returning({ id: auditPlans.id });
-    if (!row) throw new ForgecyError("not_found", "No plan to review");
+    if (!row) throw localizedError("not_found", "audit.errors.noPlan");
     await recordAuditEvent(tx, {
       actor,
       action: `audit.plan.${input.decision}`,
@@ -567,10 +548,12 @@ export async function reviewPlan(
 }
 
 export interface ReadinessItem {
-  key: string;
+  key: "observations" | "competitors" | "problems" | "stale";
   label: string;
   ok: boolean;
   detail?: string;
+  /** The number in `detail`, so the interface can word it in the user's language. */
+  count?: number;
 }
 
 /** What is still missing before the report (Page 11 checklist; the report itself is M3). */
@@ -590,7 +573,7 @@ export async function reportReadiness(db: Database, auditId: string): Promise<Re
       key: "observations",
       label: "Observations reviewed",
       ok: pending === 0,
-      ...(pending ? { detail: `${pending} still to review` } : {}),
+      ...(pending ? { detail: `${pending} still to review`, count: pending } : {}),
     },
     {
       key: "competitors",
@@ -603,12 +586,13 @@ export async function reportReadiness(db: Database, auditId: string): Promise<Re
       ok:
         problems.length >= AUDIT_LIMITS.minProblems && problems.length <= AUDIT_LIMITS.maxProblems,
       detail: `${problems.length} accepted`,
+      count: problems.length,
     },
     {
       key: "stale",
       label: "Diagnosis up to date",
       ok: stale === 0,
-      ...(stale ? { detail: `${stale} problems to recheck` } : {}),
+      ...(stale ? { detail: `${stale} problems to recheck`, count: stale } : {}),
     },
   ];
 }

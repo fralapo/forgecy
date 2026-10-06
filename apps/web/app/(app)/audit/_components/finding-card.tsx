@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import {
   deleteFindingAction,
@@ -23,13 +24,7 @@ import {
   reviewFindingAction,
   setPriorityAction,
 } from "../actions";
-import {
-  agentLabel,
-  areaLabel,
-  findingStatusLabel,
-  findingStatusVariant,
-  levelLabel,
-} from "../_lib/labels";
+import { agentLabelId, findingStatusVariant } from "../_lib/labels";
 import { selectClass, textareaClass } from "../_lib/styles";
 
 export interface FindingView {
@@ -70,17 +65,19 @@ export function FindingCard({
   readOnly?: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations("audit");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"view" | "edit" | "reject">("view");
   const isAi = Boolean(finding.authorAgent);
+  const agentId = finding.authorAgent ? agentLabelId(finding.authorAgent) : null;
   const toReview = finding.status === "observed";
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>) =>
     start(async () => {
       setError(null);
       const res = await fn();
-      if (!res.ok) setError(res.error ?? "Operation failed");
+      if (!res.ok) setError(res.error ?? t("operationFailed"));
       else {
         setMode("view");
         router.refresh();
@@ -98,16 +95,18 @@ export function FindingCard({
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <p className="flex flex-wrap items-center gap-2 text-label text-fg-muted">
-            <span className="uppercase">{areaLabel[finding.area]}</span>
-            {finding.olderReading ? <Badge>From an earlier reading</Badge> : null}
-            {finding.stale ? <Badge variant="warning">To recheck</Badge> : null}
+            <span className="uppercase">{t(`area.${finding.area}`)}</span>
+            {finding.olderReading ? <Badge>{t("finding.olderReading")}</Badge> : null}
+            {finding.stale ? <Badge variant="warning">{t("finding.toRecheck")}</Badge> : null}
           </p>
           <h3 className="text-heading-sm text-fg">{finding.title}</h3>
           <p className="flex items-center gap-1 text-body-sm text-fg-muted">
             {isAi ? (
               <>
                 <Bot aria-hidden className="size-4" />
-                Proposed by {agentLabel[finding.authorAgent!] ?? finding.authorAgent}
+                {t("finding.proposedBy", {
+                  agent: agentId ? t(`agent.${agentId}`) : finding.authorAgent!,
+                })}
                 {finding.model ? (
                   <code className="ml-1 font-mono text-fg-muted">{finding.model}</code>
                 ) : null}
@@ -115,14 +114,14 @@ export function FindingCard({
             ) : (
               <>
                 <User aria-hidden className="size-4" />
-                Written by a person
+                {t("finding.writtenByPerson")}
               </>
             )}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={findingStatusVariant[finding.status]}>
-            {findingStatusLabel[finding.status]}
+            {t(`findingStatus.${finding.status}`)}
           </Badge>
           <Badge
             variant={
@@ -134,7 +133,7 @@ export function FindingCard({
             }
             title={finding.confidenceReason ?? undefined}
           >
-            {levelLabel[finding.confidence]} confidence
+            {t(`confidence.${finding.confidence}`)}
           </Badge>
         </div>
       </header>
@@ -153,13 +152,13 @@ export function FindingCard({
           {finding.description ? <p>{finding.description}</p> : null}
           {finding.impact ? (
             <p className="text-body-sm">
-              <span className="font-medium">Why it matters: </span>
+              <span className="font-medium">{t("finding.impactLabel")}</span>
               {finding.impact}
             </p>
           ) : null}
           {finding.recommendation ? (
             <p className="text-body-sm">
-              <span className="font-medium">What to do: </span>
+              <span className="font-medium">{t("finding.recommendationLabel")}</span>
               {finding.recommendation}
             </p>
           ) : null}
@@ -168,14 +167,14 @@ export function FindingCard({
           ) : null}
           {finding.rejectedReason ? (
             <p className="text-body-sm text-fg-muted">
-              Reason for rejection: {finding.rejectedReason}
+              {t("finding.rejectedReason", { reason: finding.rejectedReason })}
             </p>
           ) : null}
         </div>
       )}
 
       <div className="flex flex-col gap-2">
-        <p className="text-label uppercase text-fg-muted">Evidence</p>
+        <p className="text-label uppercase text-fg-muted">{t("finding.evidence")}</p>
         {finding.evidence.length ? (
           <ul className="flex flex-col gap-1">
             {finding.evidence.map((e, i) => {
@@ -196,10 +195,10 @@ export function FindingCard({
                         rel="noreferrer noopener"
                         className="text-link underline underline-offset-2"
                       >
-                        {e.label ?? link?.label ?? "Source"}
+                        {e.label ?? link?.label ?? t("finding.source")}
                       </a>
                     ) : (
-                      <span>{e.label ?? link?.label ?? "Source"}</span>
+                      <span>{e.label ?? link?.label ?? t("finding.source")}</span>
                     )}
                     {e.quote ? <q className="ml-1 text-fg-muted">{e.quote}</q> : null}
                     {e.capturedAt ? (
@@ -211,7 +210,7 @@ export function FindingCard({
             })}
           </ul>
         ) : (
-          <p className="text-body-sm text-warning">No evidence: verify before accepting.</p>
+          <p className="text-body-sm text-warning">{t("finding.noEvidence")}</p>
         )}
       </div>
 
@@ -227,7 +226,9 @@ export function FindingCard({
           }}
         >
           <Label htmlFor={`reason-${finding.id}`}>
-            Why are you rejecting it?{finding.kind === "problem" ? "" : " (optional)"}
+            {finding.kind === "problem"
+              ? t("finding.rejectQuestion")
+              : t("finding.rejectQuestionOptional")}
           </Label>
           <Input
             id={`reason-${finding.id}`}
@@ -237,10 +238,10 @@ export function FindingCard({
           />
           <div className="flex gap-2">
             <Button type="submit" variant="danger" size="sm" disabled={pending}>
-              Reject
+              {t("finding.reject")}
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={() => setMode("view")}>
-              Cancel
+              {t("finding.cancel")}
             </Button>
           </div>
         </form>
@@ -260,7 +261,7 @@ export function FindingCard({
                 }
               >
                 <Check aria-hidden />
-                Accept
+                {t("finding.accept")}
               </Button>
               <Button
                 variant="secondary"
@@ -269,7 +270,7 @@ export function FindingCard({
                 onClick={() => setMode("reject")}
               >
                 <X aria-hidden />
-                Reject
+                {t("finding.reject")}
               </Button>
             </>
           ) : (
@@ -280,15 +281,15 @@ export function FindingCard({
               onClick={() => run(() => reopenFindingAction(finding.id, finding.rev))}
             >
               <RotateCcw aria-hidden />
-              Mark as to review
+              {t("finding.reopen")}
             </Button>
           )}
           <Button variant="ghost" size="sm" disabled={pending} onClick={() => setMode("edit")}>
             <Pencil aria-hidden />
-            Edit
+            {t("finding.edit")}
           </Button>
           <label className="ml-auto flex items-center gap-2 text-body-sm text-fg-muted">
-            Priority
+            {t("finding.priority")}
             <select
               className={cn(selectClass, "h-8 w-auto")}
               value={finding.priority}
@@ -305,8 +306,9 @@ export function FindingCard({
             >
               {(["high", "medium", "low"] as const).map((l) => (
                 <option key={l} value={l}>
-                  {levelLabel[l]}
-                  {finding.suggestedPriority === l && isAi ? " (suggested)" : ""}
+                  {finding.suggestedPriority === l && isAi
+                    ? t("finding.prioritySuggested", { level: t(`level.${l}`) })
+                    : t(`level.${l}`)}
                 </option>
               ))}
             </select>
@@ -317,11 +319,12 @@ export function FindingCard({
               size="sm"
               disabled={pending}
               onClick={() => {
-                if (window.confirm("Delete this item?")) run(() => deleteFindingAction(finding.id));
+                if (window.confirm(t("finding.deleteConfirm")))
+                  run(() => deleteFindingAction(finding.id));
               }}
             >
               <Trash2 aria-hidden />
-              Delete
+              {t("finding.delete")}
             </Button>
           ) : null}
         </footer>
@@ -352,6 +355,7 @@ function EditForm({
   }) => void;
 }) {
   const id = finding.id;
+  const t = useTranslations("audit.finding");
   return (
     <form
       className="flex flex-col gap-3"
@@ -368,7 +372,7 @@ function EditForm({
       }}
     >
       <div className="flex flex-col gap-1">
-        <Label htmlFor={`title-${id}`}>Title</Label>
+        <Label htmlFor={`title-${id}`}>{t("title")}</Label>
         <Input
           id={`title-${id}`}
           name="title"
@@ -379,13 +383,13 @@ function EditForm({
       </div>
       {(
         [
-          ["description", "Description", finding.description],
-          ["impact", "Why it matters", finding.impact],
-          ["recommendation", "What to do", finding.recommendation],
+          ["description", finding.description],
+          ["impact", finding.impact],
+          ["recommendation", finding.recommendation],
         ] as const
-      ).map(([name, label, value]) => (
+      ).map(([name, value]) => (
         <div key={name} className="flex flex-col gap-1">
-          <Label htmlFor={`${name}-${id}`}>{label}</Label>
+          <Label htmlFor={`${name}-${id}`}>{t(name)}</Label>
           <textarea
             id={`${name}-${id}`}
             name={name}
@@ -397,10 +401,10 @@ function EditForm({
       ))}
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={pending}>
-          Save
+          {t("save")}
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
+          {t("cancel")}
         </Button>
       </div>
     </form>

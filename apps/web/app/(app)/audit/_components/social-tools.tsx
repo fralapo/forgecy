@@ -1,16 +1,20 @@
 "use client";
 
 import {
+  AUDIT_LIMITS,
   channelMetrics,
   metricSources,
   socialPostFields,
+  type MessageRef,
   type MetricSource,
   type SocialChannel,
 } from "@forgecy/core";
 import { Button, Input, Label } from "@forgecy/ui";
 import { FileSpreadsheet, ImageUp, Plus, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
+import { useRefText } from "@/lib/use-format";
 import {
   addMetricAction,
   importTableAction,
@@ -19,10 +23,15 @@ import {
   setChannelProfileAction,
   setChannelUnavailableAction,
 } from "../actions";
-import { metricLabel } from "../_lib/labels";
+import { metricLabelId } from "../_lib/labels";
 import { selectClass } from "../_lib/styles";
 
 type DateFormat = "dd/mm/yyyy" | "mm/dd/yyyy" | "yyyy-mm-dd";
+const DATE_FORMATS = [
+  ["dd/mm/yyyy", "dmy"],
+  ["mm/dd/yyyy", "mdy"],
+  ["yyyy-mm-dd", "ymd"],
+] as const satisfies ReadonlyArray<readonly [DateFormat, string]>;
 
 interface Preview {
   sourceId: string;
@@ -37,45 +46,18 @@ interface Preview {
   validRows: number;
   invalid: Array<{ rowNumber: number; reason: string }>;
   error?: string;
+  errorRef?: MessageRef;
 }
 
-const fieldLabel: Record<string, string> = {
-  ignore: "Ignore",
-  date: "Date",
-  post_type: "Post type",
-  format: "Format",
-  text: "Text",
-  views: "Views",
-  reach: "Reach",
-  interactions: "Interactions",
-  likes: "Likes / reactions",
-  comments: "Comments",
-  saves: "Saves",
-  shares: "Shares",
-  followers: "Followers",
-  impressions: "Impressions",
-  clicks: "Clicks",
-  ctr: "CTR",
-  followers_gained: "Followers gained",
-  followers_lost: "Followers lost",
-  page_visits: "Page visits",
-  leads: "Leads",
-};
-
-const sourceLabel: Record<MetricSource, string> = {
-  provided_by_prospect: "Provided by the prospect",
-  agency_tool: "Agency tool",
-  public_profile: "Read from the public profile",
-  file_import: "Imported file",
-  other: "Other (describe)",
-};
+const mappingFields = ["ignore", ...socialPostFields] as const;
 
 async function upload(
   form: FormData,
+  failed: string,
 ): Promise<{ ok: true; data: Record<string, unknown> } | { ok: false; error: string }> {
   const res = await fetch("/audit/upload", { method: "POST", body: form });
   const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!res.ok) return { ok: false, error: String(body.message ?? body.error ?? "Upload failed") };
+  if (!res.ok) return { ok: false, error: String(body.message ?? body.error ?? failed) };
   return { ok: true, data: body };
 }
 
@@ -88,6 +70,7 @@ export function ScreenshotUpload({
   channel: SocialChannel;
 }) {
   const router = useRouter();
+  const t = useTranslations("audit.socialTools");
   const [pending, start] = useTransition();
   const [message, setMessage] = useState<{ error?: string; ok?: string }>({});
   return (
@@ -101,15 +84,15 @@ export function ScreenshotUpload({
         form.set("kind", "screenshots");
         const el = e.currentTarget;
         start(async () => {
-          const res = await upload(form);
+          const res = await upload(form, t("uploadFailed"));
           if (!res.ok) return setMessage({ error: res.error });
-          setMessage({ ok: `${String(res.data.added)} screenshots uploaded.` });
+          setMessage({ ok: t("screenshotsUploaded", { count: Number(res.data.added) || 0 }) });
           el.reset();
           router.refresh();
         });
       }}
     >
-      <Label htmlFor={`shots-${channel}`}>Screenshots of the profile and posts</Label>
+      <Label htmlFor={`shots-${channel}`}>{t("screenshots")}</Label>
       <input
         id={`shots-${channel}`}
         name="files"
@@ -120,13 +103,12 @@ export function ScreenshotUpload({
         className="text-body-sm"
       />
       <p className="text-body-sm text-fg-muted">
-        PNG, JPEG or WebP, up to 20 MB each and 60 per channel. The AI uses them for style, tone and
-        calls to action; enter the numbers you read below, with their source.
+        {t("screenshotsHint", { max: AUDIT_LIMITS.maxScreenshotsPerChannel })}
       </p>
       <div>
         <Button type="submit" variant="secondary" size="sm" disabled={pending}>
           <ImageUp aria-hidden />
-          Upload screenshots
+          {t("uploadScreenshots")}
         </Button>
       </div>
       {message.error ? (
@@ -154,6 +136,8 @@ export function TableImport({
   pendingSourceId?: string;
 }) {
   const router = useRouter();
+  const t = useTranslations("audit.socialTools");
+  const refText = useRefText();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -180,13 +164,13 @@ export function TableImport({
           start(async () => {
             setError(null);
             setDone(null);
-            const res = await upload(form);
+            const res = await upload(form, t("uploadFailed"));
             if (!res.ok) return setError(res.error);
             load({ sourceId: String(res.data.sourceId) });
           });
         }}
       >
-        <Label htmlFor={`table-${channel}`}>Post export (CSV or XLSX)</Label>
+        <Label htmlFor={`table-${channel}`}>{t("table")}</Label>
         <input
           id={`table-${channel}`}
           name="files"
@@ -198,7 +182,7 @@ export function TableImport({
         <div className="flex flex-wrap gap-2">
           <Button type="submit" variant="secondary" size="sm" disabled={pending}>
             <Upload aria-hidden />
-            Upload and map the columns
+            {t("uploadTable")}
           </Button>
           {pendingSourceId ? (
             <Button
@@ -209,7 +193,7 @@ export function TableImport({
               onClick={() => load({ sourceId: pendingSourceId })}
             >
               <FileSpreadsheet aria-hidden />
-              Resume the uploaded file
+              {t("resume")}
             </Button>
           ) : null}
         </div>
@@ -238,12 +222,12 @@ export function TableImport({
   return (
     <div className="flex flex-col gap-4">
       <p className="text-body-sm text-fg">
-        <strong>{preview.fileName}</strong> · {preview.totalRows} rows
+        <strong>{preview.fileName}</strong> · {t("rows", { count: preview.totalRows })}
       </p>
       <div className="flex flex-wrap gap-4">
         {preview.sheets.length > 1 ? (
           <label className="flex flex-col gap-1 text-label text-fg-muted">
-            Sheet
+            {t("sheet")}
             <select
               className={selectClass}
               value={preview.sheet}
@@ -256,7 +240,7 @@ export function TableImport({
           </label>
         ) : null}
         <label className="flex flex-col gap-1 text-label text-fg-muted">
-          Date format
+          {t("dateFormat")}
           <select
             className={selectClass}
             value={preview.dateFormat}
@@ -269,15 +253,17 @@ export function TableImport({
               })
             }
           >
-            <option value="dd/mm/yyyy">dd/mm/yyyy</option>
-            <option value="mm/dd/yyyy">mm/dd/yyyy</option>
-            <option value="yyyy-mm-dd">yyyy-mm-dd</option>
+            {DATE_FORMATS.map(([value, id]) => (
+              <option key={value} value={value}>
+                {t(`dateFormatOption.${id}`)}
+              </option>
+            ))}
           </select>
         </label>
       </div>
       <div className="overflow-x-auto rounded-md border border-subtle">
         <table className="w-full text-left text-body-sm">
-          <caption className="sr-only">Column mapping and first rows</caption>
+          <caption className="sr-only">{t("mappingCaption")}</caption>
           <thead>
             <tr className="border-b border-subtle">
               {preview.headers.map((h, i) => (
@@ -286,17 +272,17 @@ export function TableImport({
                   scope="col"
                   className="min-w-40 px-3 py-2 align-top font-medium"
                 >
-                  <span className="block truncate">{h || `Column ${i + 1}`}</span>
+                  <span className="block truncate">{h || t("column", { number: i + 1 })}</span>
                   <select
-                    aria-label={`Field for column ${h || i + 1}`}
+                    aria-label={t("fieldFor", { column: h || String(i + 1) })}
                     className={`${selectClass} mt-1 h-8`}
                     value={preview.mapping[i] ?? "ignore"}
                     disabled={pending}
                     onChange={(e) => setMapping(i, e.target.value)}
                   >
-                    {["ignore", ...socialPostFields].map((f) => (
+                    {mappingFields.map((f) => (
                       <option key={f} value={f}>
-                        {fieldLabel[f] ?? f}
+                        {t(`field.${f}`)}
                       </option>
                     ))}
                   </select>
@@ -319,15 +305,15 @@ export function TableImport({
       </div>
       <p className="text-body-sm">
         {preview.error ? (
-          <span className="text-error">{preview.error}</span>
+          <span className="text-error">{refText(preview.errorRef, preview.error)}</span>
+        ) : preview.invalid.length ? (
+          t("validRowsSkipped", {
+            count: preview.validRows,
+            skipped: preview.invalid.length,
+            row: preview.invalid[0]!.rowNumber,
+          })
         ) : (
-          <>
-            {preview.validRows} valid rows
-            {preview.invalid.length
-              ? ` · ${preview.invalid.length} skipped (e.g. row ${preview.invalid[0]!.rowNumber}: ${preview.invalid[0]!.reason})`
-              : ""}
-            . Inexact numbers (ranges, “about”) stay empty, never estimated.
-          </>
+          t("validRows", { count: preview.validRows })
         )}
       </p>
       {error ? (
@@ -349,15 +335,15 @@ export function TableImport({
               });
               if (!res.ok) return setError(res.error);
               setPreview(null);
-              setDone(`Imported ${res.data?.imported ?? 0} rows.`);
+              setDone(t("imported", { count: res.data?.imported ?? 0 }));
               router.refresh();
             })
           }
         >
-          Import {preview.validRows} rows
+          {t("import", { count: preview.validRows })}
         </Button>
         <Button variant="ghost" size="sm" onClick={() => setPreview(null)}>
-          Cancel
+          {t("cancel")}
         </Button>
       </div>
     </div>
@@ -367,6 +353,7 @@ export function TableImport({
 /** A value typed by a person: exact number, date and source are required. */
 export function MetricForm({ auditId, channel }: { auditId: string; channel: SocialChannel }) {
   const router = useRouter();
+  const t = useTranslations("audit");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<MetricSource>("public_profile");
@@ -405,27 +392,27 @@ export function MetricForm({ auditId, channel }: { auditId: string; channel: Soc
       }}
     >
       <div className="flex flex-col gap-1">
-        <Label htmlFor={`metric-${channel}`}>Metric</Label>
+        <Label htmlFor={`metric-${channel}`}>{t("socialTools.metric")}</Label>
         <select id={`metric-${channel}`} name="metric" className={selectClass}>
           {metrics.map((m) => (
             <option key={m} value={m}>
-              {metricLabel[m] ?? m}
+              {metricLabelId(m) ? t(`metric.${metricLabelId(m)!}`) : m}
             </option>
           ))}
         </select>
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor={`value-${channel}`}>Exact number</Label>
+        <Label htmlFor={`value-${channel}`}>{t("socialTools.value")}</Label>
         <Input
           id={`value-${channel}`}
           name="value"
           inputMode="decimal"
           required
-          placeholder="1,240"
+          placeholder={t("socialTools.valuePlaceholder")}
         />
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor={`date-${channel}`}>Observed on</Label>
+        <Label htmlFor={`date-${channel}`}>{t("socialTools.observedOn")}</Label>
         <Input
           id={`date-${channel}`}
           name="observedOn"
@@ -436,7 +423,7 @@ export function MetricForm({ auditId, channel }: { auditId: string; channel: Soc
         />
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor={`source-${channel}`}>Source</Label>
+        <Label htmlFor={`source-${channel}`}>{t("socialTools.source")}</Label>
         <select
           id={`source-${channel}`}
           className={selectClass}
@@ -447,21 +434,21 @@ export function MetricForm({ auditId, channel }: { auditId: string; channel: Soc
             .filter((s) => s !== "file_import")
             .map((s) => (
               <option key={s} value={s}>
-                {sourceLabel[s]}
+                {s === "other" ? t("socialTools.sourceOther") : t(`metricSource.${s}`)}
               </option>
             ))}
         </select>
       </div>
       <div className="flex flex-col gap-1 sm:col-span-2">
         <Label htmlFor={`note-${channel}`}>
-          Source note{source === "other" ? "" : " (optional)"}
+          {source === "other" ? t("socialTools.sourceNote") : t("socialTools.sourceNoteOptional")}
         </Label>
         <Input
           id={`note-${channel}`}
           name="sourceNote"
           maxLength={200}
           required={source === "other"}
-          placeholder="E.g. screenshot from 3 October, Meta Business Suite"
+          placeholder={t("socialTools.sourceNotePlaceholder")}
         />
       </div>
       {error ? (
@@ -472,7 +459,7 @@ export function MetricForm({ auditId, channel }: { auditId: string; channel: Soc
       <div className="sm:col-span-2">
         <Button type="submit" variant="secondary" size="sm" disabled={pending}>
           <Plus aria-hidden />
-          Add value
+          {t("socialTools.addValue")}
         </Button>
       </div>
     </form>
@@ -492,6 +479,7 @@ export function ChannelSettings({
   status: string | null;
 }) {
   const router = useRouter();
+  const t = useTranslations("audit");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"view" | "unavailable">("view");
@@ -499,7 +487,7 @@ export function ChannelSettings({
     start(async () => {
       setError(null);
       const res = await fn();
-      if (!res.ok) return setError(res.error ?? "Operation failed");
+      if (!res.ok) return setError(res.error ?? t("operationFailed"));
       setMode("view");
       router.refresh();
     });
@@ -515,11 +503,11 @@ export function ChannelSettings({
         }}
       >
         <label className="flex min-w-64 flex-1 flex-col gap-1 text-label text-fg-muted">
-          Profile link (Forgecy does not open it)
+          {t("socialTools.profileLink")}
           <Input name="profileUrl" inputMode="url" defaultValue={profileUrl ?? ""} />
         </label>
         <Button type="submit" variant="secondary" size="sm" disabled={pending}>
-          Save link
+          {t("socialTools.saveLink")}
         </Button>
       </form>
       {closed ? (
@@ -530,7 +518,7 @@ export function ChannelSettings({
             disabled={pending}
             onClick={() => run(() => reopenChannelAction(auditId, channel))}
           >
-            Reopen channel
+            {t("socialTools.reopen")}
           </Button>
         </div>
       ) : mode === "unavailable" ? (
@@ -545,19 +533,19 @@ export function ChannelSettings({
           }}
         >
           <label className="flex min-w-64 flex-1 flex-col gap-1 text-label text-fg-muted">
-            Why is the data unavailable?
+            {t("socialTools.unavailableQuestion")}
             <Input
               name="reason"
               required
               maxLength={200}
-              placeholder="E.g. the prospect did not grant access"
+              placeholder={t("socialTools.unavailablePlaceholder")}
             />
           </label>
           <Button type="submit" size="sm" disabled={pending}>
-            Confirm
+            {t("socialTools.confirm")}
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={() => setMode("view")}>
-            Cancel
+            {t("socialTools.cancel")}
           </Button>
         </form>
       ) : (
@@ -568,7 +556,7 @@ export function ChannelSettings({
             disabled={pending}
             onClick={() => setMode("unavailable")}
           >
-            Data unavailable
+            {t("socialTools.unavailable")}
           </Button>
           <Button
             variant="ghost"
@@ -578,7 +566,7 @@ export function ChannelSettings({
               run(() => setChannelUnavailableAction({ auditId, channel, mode: "skipped" }))
             }
           >
-            Skip channel
+            {t("socialTools.skip")}
           </Button>
         </div>
       )}

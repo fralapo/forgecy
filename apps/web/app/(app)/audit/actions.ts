@@ -81,7 +81,7 @@ async function act<T>(
     revalidatePath("/audit", "layout");
     return { ok: true, ...(data === undefined ? {} : { data }) };
   } catch (err) {
-    return toActionError(err);
+    return await toActionError(err);
   }
 }
 
@@ -312,7 +312,7 @@ export async function previewTableAction(input: {
   try {
     return { ok: true, data: await previewTable(readDeps(), input) };
   } catch (err) {
-    return toActionError(err);
+    return await toActionError(err);
   }
 }
 

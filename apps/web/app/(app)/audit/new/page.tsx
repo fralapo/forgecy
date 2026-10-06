@@ -1,18 +1,20 @@
 import { Card } from "@forgecy/ui";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/session";
 import { ProspectForm } from "../_components/prospect-form";
 
-export const metadata = { title: "New prospect" };
+export async function generateMetadata() {
+  const t = await getTranslations("audit.new");
+  return { title: t("title") };
+}
 
 export default async function NewProspectPage() {
   const user = await requireUser();
+  const t = await getTranslations("audit.new");
   return (
     <>
-      <PageHeader
-        title="New prospect"
-        description="The audit needs this data: website, sector, area and goals. Social profiles are kept as links only: Forgecy does not read them automatically."
-      />
+      <PageHeader title={t("title")} description={t("description")} />
       <Card className="max-w-3xl">
         <ProspectForm mode="create" isAdmin={user.isAdmin} />
       </Card>

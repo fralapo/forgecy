@@ -1,4 +1,5 @@
-import { ForgecyError, type SocialPostField } from "@forgecy/core";
+import type { SocialPostField } from "@forgecy/core";
+import { localizedError } from "@forgecy/i18n";
 
 export interface Table {
   sheets: string[];
@@ -21,11 +22,7 @@ export function detectDelimiter(firstLine: string): "," | ";" | "\t" {
 /** RFC 4180 CSV with quoted fields, escaped quotes and CRLF; strips a UTF-8 BOM. */
 export function parseCsv(input: string): string[][] {
   const text = input.replace(/^\uFEFF/, "");
-  if (text.includes("\uFFFD"))
-    throw new ForgecyError(
-      "validation",
-      "We cannot read the file. Export it as UTF-8 with a comma or semicolon separator.",
-    );
+  if (text.includes("\uFFFD")) throw localizedError("validation", "audit.errors.fileUnreadable");
   const delimiter = detectDelimiter(text.split(/\r?\n/, 1)[0] ?? "");
   const rows: string[][] = [];
   let row: string[] = [];
@@ -73,8 +70,7 @@ export async function readTable(
   if (kind === "csv") {
     const decoded = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
     const rows = parseCsv(decoded);
-    if (rows.length < 2)
-      throw new ForgecyError("validation", "The file has no data rows after the header.");
+    if (rows.length < 2) throw localizedError("validation", "audit.errors.fileNoRows");
     return { sheets: [], headers: rows[0]!.map((h) => h.trim()), rows: rows.slice(1) };
   }
   const { default: readXlsxFile } = await import("read-excel-file/node");
@@ -85,11 +81,11 @@ export async function readTable(
       data: unknown[][];
     }>;
   } catch {
-    throw new ForgecyError("validation", "We cannot read the XLSX file.");
+    throw localizedError("validation", "audit.errors.xlsxUnreadable");
   }
   const chosen = sheets.find((s) => s.sheet === sheet) ?? sheets[0];
   if (!chosen || chosen.data.length < 2)
-    throw new ForgecyError("validation", "The sheet has no data rows after the header.");
+    throw localizedError("validation", "audit.errors.sheetNoRows");
   return {
     sheets: sheets.map((s) => s.sheet),
     sheet: chosen.sheet,
@@ -166,7 +162,7 @@ export function interpretRows(
   dateFormat: DateFormat,
 ): InterpretResult {
   const dateCol = Object.entries(mapping).find(([, f]) => f === "date")?.[0];
-  if (dateCol === undefined) throw new ForgecyError("validation", "Map at least the date column.");
+  if (dateCol === undefined) throw localizedError("validation", "audit.errors.mapDateColumn");
   const out: InterpretResult = { rows: [], invalid: [] };
   table.rows.forEach((cells, i) => {
     const rowNumber = i + 2; // 1-based, after the header row

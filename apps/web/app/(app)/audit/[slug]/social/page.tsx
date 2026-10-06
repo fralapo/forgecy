@@ -1,9 +1,11 @@
-import { getSocialView, metricSourceLabels } from "@forgecy/audit";
+import { getSocialView, type MetricCard, type MetricOrigin } from "@forgecy/audit";
 import { SOCIAL_AREAS, socialChannels, type FindingArea, type SocialChannel } from "@forgecy/core";
 import { Badge, Card, CardDescription, CardHeader, CardTitle, cn } from "@forgecy/ui";
 import { Sparkles, Trash2 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { getFormat } from "@/lib/i18n";
 import { deleteMetricAction, removeSourceAction, requestSocialAnalysisAction } from "../../actions";
 import { ActionButton } from "../../_components/action-button";
 import { AddFinding } from "../../_components/add-finding";
@@ -15,16 +17,36 @@ import {
   TableImport,
 } from "../../_components/social-tools";
 import { sectionContext, sourceLinks, toView } from "../../_lib/findings";
-import {
-  channelLabel,
-  formatDate,
-  metricLabel,
-  sourceStatusLabel,
-  sourceStatusVariant,
-} from "../../_lib/labels";
+import { metricLabelId, sourceStatusVariant } from "../../_lib/labels";
 import { fileUrl } from "../../_lib/server";
 
-export const metadata = { title: "Audit · Social" };
+const cardKeys = [
+  "followers",
+  "followers_gained",
+  "followers_lost",
+  "impressions",
+  "clicks",
+  "ctr",
+  "reactions",
+  "comments",
+  "shares",
+  "page_visits",
+  "leads",
+  "posts_total",
+  "frequency",
+  "avg_interactions",
+  "interaction_rate",
+  "formats",
+  "cta_share",
+  "avg_views",
+  "avg_likes",
+] as const;
+const cardKeyOf = (key: string) => cardKeys.find((k) => k === key) ?? null;
+
+export async function generateMetadata() {
+  const t = await getTranslations("audit.social");
+  return { title: t("metaTitle") };
+}
 
 export default async function SocialPage({
   params,
@@ -56,15 +78,49 @@ export default async function SocialPage({
   const areas = (SOCIAL_AREAS as FindingArea[]).filter(
     (a) => a !== "linkedin_leads" || channel === "linkedin",
   );
+  const t = await getTranslations("audit");
+  const format = await getFormat();
+  const num = (n: number) => format.number(n, { maximumFractionDigits: 2 });
+  const cardLabel = (c: MetricCard) => {
+    const key = cardKeyOf(c.key);
+    if (!key) return c.label;
+    return key === "followers" && channel === "linkedin"
+      ? t("social.card.label.followersPage")
+      : t(`social.card.label.${key}`);
+  };
+  const cardValue = (c: MetricCard) => {
+    if (c.value === null) return t("social.card.unavailable");
+    if (!c.shown) return c.display;
+    if (c.shown.unit === "perWeek") return t("social.card.perWeek", { value: num(c.shown.value) });
+    if (c.shown.unit === "percent")
+      return format.number(c.shown.value / 100, { style: "percent", maximumFractionDigits: 2 });
+    return num(c.shown.value);
+  };
+  const originText = (o: MetricOrigin) =>
+    o.kind === "file"
+      ? t("social.card.file", { name: o.fileName ?? t("social.card.imported") })
+      : o.note
+        ? t("social.card.sourceWithNote", { source: t(`metricSource.${o.source}`), note: o.note })
+        : t(`metricSource.${o.source}`);
+  const cardDetail = (c: MetricCard) =>
+    c.value === null
+      ? c.reasonId
+        ? t(`social.card.reason.${c.reasonId}`)
+        : c.reason
+      : [
+          c.origin ? originText(c.origin) : c.source,
+          c.date ? format.date(c.date) : null,
+          c.derived
+            ? t(`social.card.derived.${c.derived.id}`, { count: c.derived.count ?? 0 })
+            : c.derivedFrom,
+        ]
+          .filter(Boolean)
+          .join(" · ");
 
   return (
     <div className="flex flex-col gap-8">
-      <p className="text-body-md text-fg-muted">
-        Forgecy does not read social channels automatically. Upload screenshots as evidence, import
-        the exports or enter values by hand with their source. A missing value stays “Unavailable”,
-        never estimated.
-      </p>
-      <nav aria-label="Social channels">
+      <p className="text-body-md text-fg-muted">{t("social.intro")}</p>
+      <nav aria-label={t("social.channels")}>
         <ul className="flex flex-wrap gap-2">
           {views.map((v) => (
             <li key={v.channel}>
@@ -78,10 +134,10 @@ export default async function SocialPage({
                     : "border-subtle text-fg-muted hover:text-fg",
                 )}
               >
-                {channelLabel[v.channel]}
+                {t(`channel.${v.channel}`)}
                 {v.state ? (
                   <Badge variant={sourceStatusVariant[v.state.status]}>
-                    {sourceStatusLabel[v.state.status]}
+                    {t(`sourceStatus.${v.state.status}`)}
                   </Badge>
                 ) : null}
               </Link>
@@ -93,13 +149,13 @@ export default async function SocialPage({
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>{channelLabel[channel]}</CardTitle>
+            <CardTitle>{t(`channel.${channel}`)}</CardTitle>
             <CardDescription>
               {view.state?.unavailableReason
                 ? view.state.unavailableReason
                 : view.state
-                  ? "Add the data you have."
-                  : "Channel not listed for the prospect: add the link if it exists."}
+                  ? t("social.addData")
+                  : t("social.notListed")}
             </CardDescription>
           </CardHeader>
           {!readOnly ? (
@@ -113,29 +169,21 @@ export default async function SocialPage({
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Metrics</CardTitle>
+            <CardTitle>{t("social.metrics")}</CardTitle>
             <CardDescription>
-              {channel === "linkedin"
-                ? "LinkedIn has its own metrics and is not compared with Instagram."
-                : "The engagement rate appears only with followers and interactions from the same source."}
+              {channel === "linkedin" ? t("social.linkedinHint") : t("social.rateHint")}
             </CardDescription>
           </CardHeader>
           <dl className="grid gap-3 sm:grid-cols-2">
             {view.cards.map((c) => (
               <div key={c.key} className="rounded-md border border-subtle p-3">
-                <dt className="text-label text-fg-muted">{c.label}</dt>
+                <dt className="text-label text-fg-muted">{cardLabel(c)}</dt>
                 <dd
                   className={cn("text-heading-sm", c.value === null ? "text-fg-muted" : "text-fg")}
                 >
-                  {c.display}
+                  {cardValue(c)}
                 </dd>
-                <dd className="text-body-sm text-fg-muted">
-                  {c.value === null
-                    ? c.reason
-                    : [c.source, c.date ? formatDate(c.date) : null, c.derivedFrom]
-                        .filter(Boolean)
-                        .join(" · ")}
-                </dd>
+                <dd className="text-body-sm text-fg-muted">{cardDetail(c)}</dd>
               </div>
             ))}
           </dl>
@@ -146,13 +194,13 @@ export default async function SocialPage({
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Enter a value</CardTitle>
+              <CardTitle>{t("social.enterValue")}</CardTitle>
             </CardHeader>
             <MetricForm auditId={audit.id} channel={channel} />
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Upload data</CardTitle>
+              <CardTitle>{t("social.uploadData")}</CardTitle>
             </CardHeader>
             <TableImport
               auditId={audit.id}
@@ -167,10 +215,8 @@ export default async function SocialPage({
       {view.metrics.length || files.length || shots.length ? (
         <Card>
           <CardHeader>
-            <CardTitle>Collected sources</CardTitle>
-            <CardDescription>
-              Removing a source puts the observations that cite it back to review.
-            </CardDescription>
+            <CardTitle>{t("social.collected")}</CardTitle>
+            <CardDescription>{t("social.collectedDescription")}</CardDescription>
           </CardHeader>
           {view.metrics.length ? (
             <ul className="flex flex-col divide-y divide-subtle">
@@ -180,10 +226,16 @@ export default async function SocialPage({
                   className="flex flex-wrap items-center justify-between gap-2 py-2 text-body-sm"
                 >
                   <span>
-                    {metricLabel[m.metric] ?? m.metric}: <strong>{m.value}</strong>
+                    {t.rich("social.metricValue", {
+                      label: metricLabelId(m.metric)
+                        ? t(`metric.${metricLabelId(m.metric)!}`)
+                        : m.metric,
+                      value: num(m.value),
+                      strong: (chunks) => <strong>{chunks}</strong>,
+                    })}
                     <span className="text-fg-muted">
                       {" "}
-                      · {formatDate(m.observedOn)} · {metricSourceLabels[m.source]}
+                      · {format.date(m.observedOn)} · {t(`metricSource.${m.source}`)}
                       {m.sourceNote ? ` (${m.sourceNote})` : ""}
                     </span>
                   </span>
@@ -194,7 +246,7 @@ export default async function SocialPage({
                       variant="ghost"
                       size="sm"
                     >
-                      Remove
+                      {t("social.remove")}
                     </ActionButton>
                   ) : null}
                 </li>
@@ -220,8 +272,13 @@ export default async function SocialPage({
                       {" "}
                       ·{" "}
                       {f.status === "pending"
-                        ? "to import"
-                        : `${f.data.rowsImported ?? 0} rows imported${f.data.rowsSkipped ? `, ${f.data.rowsSkipped} skipped` : ""}`}
+                        ? t("social.toImport")
+                        : f.data.rowsSkipped
+                          ? t("social.rowsImportedSkipped", {
+                              count: f.data.rowsImported ?? 0,
+                              skipped: f.data.rowsSkipped,
+                            })
+                          : t("social.rowsImported", { count: f.data.rowsImported ?? 0 })}
                     </span>
                   </span>
                   {!readOnly ? (
@@ -230,9 +287,9 @@ export default async function SocialPage({
                       icon={<Trash2 aria-hidden />}
                       variant="ghost"
                       size="sm"
-                      confirm="Remove the file and the imported rows?"
+                      confirm={t("social.removeFileConfirm")}
                     >
-                      Remove
+                      {t("social.remove")}
                     </ActionButton>
                   ) : null}
                 </li>
@@ -248,7 +305,7 @@ export default async function SocialPage({
                       {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
                       <img
                         src={s.href}
-                        alt={`Screenshot ${s.fileName ?? ""}`}
+                        alt={t("social.screenshotAlt", { name: s.fileName ?? "" })}
                         className="h-28 w-full rounded-sm border border-subtle object-cover"
                         loading="lazy"
                       />
@@ -262,7 +319,7 @@ export default async function SocialPage({
                       variant="ghost"
                       size="sm"
                     >
-                      Remove
+                      {t("social.remove")}
                     </ActionButton>
                   ) : null}
                 </li>
@@ -274,7 +331,7 @@ export default async function SocialPage({
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-heading-md text-fg">Observations</h2>
+          <h2 className="font-display text-heading-md text-fg">{t("social.observations")}</h2>
           <div className="flex flex-wrap items-start gap-2">
             {!readOnly && aiAllowed && hasData ? (
               <ActionButton
@@ -284,8 +341,8 @@ export default async function SocialPage({
                 size="sm"
               >
                 {view.findings.some((f) => f.authorAgent)
-                  ? "Regenerate observations"
-                  : "Generate observations"}
+                  ? t("social.regenerate")
+                  : t("social.generate")}
               </ActionButton>
             ) : null}
             {!readOnly ? (
@@ -295,25 +352,20 @@ export default async function SocialPage({
                 areas={areas}
                 sources={view.screenshots.map((s) => ({
                   id: s.id,
-                  label: s.fileName ?? "Screenshot",
+                  label: s.fileName ?? t("social.screenshot"),
                   type: "screenshot" as const,
                 }))}
               />
             ) : null}
           </div>
         </div>
-        {aiAllowed ? (
-          <p className="text-body-sm text-fg-muted">
-            The AI looks at up to 8 recent screenshots for style, tone and calls to action; it takes
-            numbers only from the entered values and imported posts.
-          </p>
-        ) : null}
+        {aiAllowed ? <p className="text-body-sm text-fg-muted">{t("social.aiHint")}</p> : null}
         {view.findings.length ? (
           view.findings.map((f) => (
             <FindingCard key={f.id} finding={toView(f)} sources={links} readOnly={readOnly} />
           ))
         ) : (
-          <p className="text-body-md text-fg-muted">No observations for this channel.</p>
+          <p className="text-body-md text-fg-muted">{t("social.noObservations")}</p>
         )}
       </section>
     </div>

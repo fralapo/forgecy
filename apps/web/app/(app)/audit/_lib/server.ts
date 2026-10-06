@@ -3,7 +3,9 @@ import { auditErrorCode, type AuditDeps } from "@forgecy/audit";
 import { ForgecyError, PermissionDeniedError } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
 import { createStorageFromEnv, type StorageDriver } from "@forgecy/files";
+import type { ZodError } from "zod";
 import { env } from "@/lib/env";
+import { errorMessage, firstIssue } from "@/lib/i18n";
 import { getQueues } from "@/lib/queues";
 
 let storage: StorageDriver | undefined;
@@ -34,16 +36,20 @@ export async function fileUrl(key: string | null | undefined, download?: string)
 export type ActionResult<T = undefined> =
   { ok: true; data?: T; message?: string } | { ok: false; error: string; code?: string };
 
-/** Map domain errors to a message people can act on, with the stable code. */
-export function toActionError(err: unknown): { ok: false; error: string; code?: string } {
+/** Map domain errors to a message people can act on (in their language), with the stable code. */
+export async function toActionError(
+  err: unknown,
+): Promise<{ ok: false; error: string; code?: string }> {
   const code = auditErrorCode(err) ?? undefined;
   if (err instanceof PermissionDeniedError)
-    return { ok: false, error: "You don't have permission for this action.", code: "PERM-DENIED" };
+    return { ok: false, error: (await errorMessage(err)) ?? err.message, code: "PERM-DENIED" };
   if (err instanceof ForgecyError)
-    return { ok: false, error: err.message, ...(code ? { code } : {}) };
-  if (err && typeof err === "object" && "issues" in err) {
-    const issue = (err as { issues: Array<{ message: string }> }).issues[0];
-    return { ok: false, error: issue?.message ?? "Invalid data", code: "INPUT-INVALID" };
-  }
+    return {
+      ok: false,
+      error: (await errorMessage(err)) ?? err.message,
+      ...(code ? { code } : {}),
+    };
+  if (err && typeof err === "object" && "issues" in err)
+    return { ok: false, error: await firstIssue(err as ZodError), code: "INPUT-INVALID" };
   throw err;
 }

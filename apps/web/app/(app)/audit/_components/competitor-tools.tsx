@@ -3,6 +3,7 @@
 import { Badge, Button, cn, Input, Label } from "@forgecy/ui";
 import { Bot, Check, Pencil, Plus, Sparkles, User, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import {
   addCompetitorAction,
@@ -10,7 +11,7 @@ import {
   requestCompetitorProposalAction,
   reviewCompetitorAction,
 } from "../actions";
-import { levelLabel, sourceStatusLabel, sourceStatusVariant } from "../_lib/labels";
+import { sourceStatusVariant } from "../_lib/labels";
 import type { Level, SourceStatus } from "@forgecy/core";
 
 export interface CompetitorView {
@@ -28,13 +29,14 @@ export interface CompetitorView {
 
 function useRun() {
   const router = useRouter();
+  const t = useTranslations("audit");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) =>
     start(async () => {
       setError(null);
       const res = await fn();
-      if (!res.ok) return setError(res.error ?? "Operation failed");
+      if (!res.ok) return setError(res.error ?? t("operationFailed"));
       after?.();
       router.refresh();
     });
@@ -43,6 +45,7 @@ function useRun() {
 
 export function CompetitorItem({ c, readOnly }: { c: CompetitorView; readOnly: boolean }) {
   const { pending, error, run } = useRun();
+  const t = useTranslations("audit");
   const [mode, setMode] = useState<"view" | "remove" | "edit">("view");
   const isAi = Boolean(c.proposedByAgent);
   return (
@@ -82,7 +85,7 @@ export function CompetitorItem({ c, readOnly }: { c: CompetitorView; readOnly: b
                   {c.websiteUrl}
                 </a>
               ) : (
-                <p className="text-body-sm text-fg-muted">No website</p>
+                <p className="text-body-sm text-fg-muted">{t("competitor.noWebsite")}</p>
               )}
             </div>
             <div className="flex flex-wrap gap-2">
@@ -95,15 +98,13 @@ export function CompetitorItem({ c, readOnly }: { c: CompetitorView; readOnly: b
                       : "highlight"
                 }
               >
-                {c.status === "confirmed"
-                  ? "Confirmed"
-                  : c.status === "removed"
-                    ? "Removed"
-                    : "To confirm"}
+                {t(`competitor.status.${c.status}`)}
               </Badge>
               {c.status !== "removed" ? (
                 <Badge variant={sourceStatusVariant[c.sourceStatus]}>
-                  Website: {sourceStatusLabel[c.sourceStatus].toLowerCase()}
+                  {t("competitor.websiteStatus", {
+                    status: t(`sourceStatus.${c.sourceStatus}`).toLowerCase(),
+                  })}
                 </Badge>
               ) : null}
             </div>
@@ -115,12 +116,16 @@ export function CompetitorItem({ c, readOnly }: { c: CompetitorView; readOnly: b
               <User aria-hidden className="size-4" />
             )}
             {isAi
-              ? `Proposed by the Strategist · ${levelLabel[c.confidence].toLowerCase()} confidence`
-              : "Added by a person"}
+              ? t("competitor.proposedByStrategist", {
+                  confidence: t(`confidence.${c.confidence}`).toLowerCase(),
+                })
+              : t("competitor.addedByPerson")}
           </p>
           {c.reason ? <p className="text-body-sm">{c.reason}</p> : null}
           {c.removedReason ? (
-            <p className="text-body-sm text-fg-muted">Reason: {c.removedReason}</p>
+            <p className="text-body-sm text-fg-muted">
+              {t("competitor.removedReason", { reason: c.removedReason })}
+            </p>
           ) : null}
           {c.sourceError ? <p className="text-body-sm text-fg-muted">{c.sourceError}</p> : null}
         </>
@@ -138,14 +143,19 @@ export function CompetitorItem({ c, readOnly }: { c: CompetitorView; readOnly: b
           }}
         >
           <label className="flex min-w-56 flex-1 flex-col gap-1 text-label text-fg-muted">
-            Why are you removing it?
-            <Input name="reason" required maxLength={200} placeholder="E.g. different sector" />
+            {t("competitor.removeQuestion")}
+            <Input
+              name="reason"
+              required
+              maxLength={200}
+              placeholder={t("competitor.removePlaceholder")}
+            />
           </label>
           <Button type="submit" variant="danger" size="sm" disabled={pending}>
-            Remove
+            {t("competitor.remove")}
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={() => setMode("view")}>
-            Cancel
+            {t("competitor.cancel")}
           </Button>
         </form>
       ) : null}
@@ -158,7 +168,7 @@ export function CompetitorItem({ c, readOnly }: { c: CompetitorView; readOnly: b
               onClick={() => run(() => reviewCompetitorAction({ id: c.id, decision: "confirm" }))}
             >
               <Check aria-hidden />
-              Confirm
+              {t("competitor.confirm")}
             </Button>
           ) : null}
           {c.status !== "removed" ? (
@@ -169,12 +179,12 @@ export function CompetitorItem({ c, readOnly }: { c: CompetitorView; readOnly: b
               onClick={() => setMode("remove")}
             >
               <X aria-hidden />
-              Remove
+              {t("competitor.remove")}
             </Button>
           ) : null}
           <Button variant="ghost" size="sm" disabled={pending} onClick={() => setMode("edit")}>
             <Pencil aria-hidden />
-            Edit
+            {t("competitor.edit")}
           </Button>
         </div>
       ) : null}
@@ -199,6 +209,7 @@ function CompetitorForm({
   onSave: (v: { name: string; websiteUrl?: string; reason?: string }) => void;
 }) {
   const key = initial?.name ?? "new";
+  const t = useTranslations("audit.competitor");
   return (
     <form
       className="flex flex-col gap-2"
@@ -215,7 +226,7 @@ function CompetitorForm({
     >
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="flex flex-col gap-1">
-          <Label htmlFor={`c-name-${key}`}>Name</Label>
+          <Label htmlFor={`c-name-${key}`}>{t("name")}</Label>
           <Input
             id={`c-name-${key}`}
             name="name"
@@ -225,7 +236,7 @@ function CompetitorForm({
           />
         </div>
         <div className="flex flex-col gap-1">
-          <Label htmlFor={`c-url-${key}`}>Website</Label>
+          <Label htmlFor={`c-url-${key}`}>{t("website")}</Label>
           <Input
             id={`c-url-${key}`}
             name="websiteUrl"
@@ -235,7 +246,7 @@ function CompetitorForm({
         </div>
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor={`c-reason-${key}`}>Why it is a competitor</Label>
+        <Label htmlFor={`c-reason-${key}`}>{t("reason")}</Label>
         <Input
           id={`c-reason-${key}`}
           name="reason"
@@ -245,10 +256,10 @@ function CompetitorForm({
       </div>
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={pending}>
-          Save
+          {t("save")}
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
+          {t("cancel")}
         </Button>
       </div>
     </form>
@@ -257,6 +268,7 @@ function CompetitorForm({
 
 export function AddCompetitor({ auditId }: { auditId: string }) {
   const { pending, error, run } = useRun();
+  const t = useTranslations("audit.competitor");
   const [open, setOpen] = useState(false);
   return (
     <div className="flex flex-col gap-2">
@@ -275,7 +287,7 @@ export function AddCompetitor({ auditId }: { auditId: string }) {
         <div>
           <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
             <Plus aria-hidden />
-            Add competitor
+            {t("add")}
           </Button>
         </div>
       )}
@@ -296,6 +308,7 @@ export function ProposalRequest({
   hasProposals: boolean;
 }) {
   const { pending, error, run } = useRun();
+  const t = useTranslations("audit.competitor");
   return (
     <form
       className="flex flex-wrap items-end gap-2"
@@ -306,12 +319,12 @@ export function ProposalRequest({
       }}
     >
       <label className="flex min-w-64 flex-1 flex-col gap-1 text-label text-fg-muted">
-        Instruction for the Strategist (optional)
-        <Input name="instruction" maxLength={500} placeholder="E.g. only companies in Lombardy" />
+        {t("instruction")}
+        <Input name="instruction" maxLength={500} placeholder={t("instructionPlaceholder")} />
       </label>
       <Button type="submit" variant="secondary" size="sm" disabled={pending}>
         <Sparkles aria-hidden />
-        {hasProposals ? "New proposals" : "Propose competitors"}
+        {hasProposals ? t("newProposals") : t("propose")}
       </Button>
       {error ? (
         <p role="alert" className="w-full text-body-sm text-error">

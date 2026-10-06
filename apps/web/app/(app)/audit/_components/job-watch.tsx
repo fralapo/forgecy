@@ -1,8 +1,11 @@
 "use client";
 
+import type { MessageRef } from "@forgecy/core";
 import { Badge } from "@forgecy/ui";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { useRefText } from "@/lib/use-format";
 
 export interface WatchedJob {
   id: string;
@@ -11,18 +14,13 @@ export interface WatchedJob {
   status: string;
   progress: number;
   error: string | null;
+  errorRef?: MessageRef | null;
 }
 
 const ACTIVE = new Set(["queued", "running", "retrying"]);
-const statusLabel: Record<string, string> = {
-  queued: "Queued",
-  running: "Running",
-  retrying: "Retrying",
-  completed: "Completed",
-  failed: "Failed",
-  cancelled: "Cancelled",
-  needs_attention: "Needs attention",
-};
+const STATUSES = new Set([...ACTIVE, "completed", "failed", "cancelled", "needs_attention"]);
+type JobStatus =
+  "queued" | "running" | "retrying" | "completed" | "failed" | "cancelled" | "needs_attention";
 
 /**
  * Live state of the audit jobs (SSE). When a job ends the page refreshes, so new
@@ -30,6 +28,9 @@ const statusLabel: Record<string, string> = {
  */
 export function JobWatch({ jobs }: { jobs: WatchedJob[] }) {
   const router = useRouter();
+  const t = useTranslations("audit.jobWatch");
+  const te = useTranslations("enums.jobStatus");
+  const refText = useRefText();
   const [live, setLive] = useState(jobs);
   const [seen, setSeen] = useState(jobs);
   if (seen !== jobs) {
@@ -48,6 +49,7 @@ export function JobWatch({ jobs }: { jobs: WatchedJob[] }) {
             status: string;
             progress?: number;
             error?: string | null;
+            errorRef?: MessageRef | null;
           };
           setLive((prev) =>
             prev.map((j) =>
@@ -57,6 +59,7 @@ export function JobWatch({ jobs }: { jobs: WatchedJob[] }) {
                     status: event.status,
                     progress: event.progress ?? j.progress,
                     error: event.error ?? j.error,
+                    errorRef: event.errorRef ?? j.errorRef ?? null,
                   }
                 : j,
             ),
@@ -89,11 +92,15 @@ export function JobWatch({ jobs }: { jobs: WatchedJob[] }) {
               ACTIVE.has(j.status) ? "info" : j.status === "needs_attention" ? "warning" : "error"
             }
           >
-            {statusLabel[j.status] ?? j.status}
-            {j.status === "running" && j.progress > 0 ? ` · ${j.progress}%` : ""}
+            {(() => {
+              const status = STATUSES.has(j.status) ? te(j.status as JobStatus) : j.status;
+              return j.status === "running" && j.progress > 0
+                ? t("progress", { status, percent: j.progress })
+                : status;
+            })()}
           </Badge>
           {j.error && !ACTIVE.has(j.status) ? (
-            <span className="text-fg-muted">{j.error}</span>
+            <span className="text-fg-muted">{refText(j.errorRef, j.error)}</span>
           ) : null}
         </li>
       ))}

@@ -11,7 +11,7 @@ import {
 import { loadAudit } from "../service/common";
 import { reportFindings, REPORT_LIMITS } from "../service/reports";
 import { prospectContext } from "./analysis";
-import { oneLine, runAgent, type AuditHandlerDeps } from "./context";
+import { oneLine, runAgent, unrecoverable, type AuditHandlerDeps } from "./context";
 
 /** Sections whose texts an agent writes; cover and method are filled by the system. */
 const WRITABLE = (k: ReportSectionKey) => !FIXED_REPORT_SECTIONS.includes(k);
@@ -47,8 +47,7 @@ export async function runReportTexts(
     where: eq(auditReports.id, payload.reportId),
   });
   if (!report) throw new UnrecoverableError("Report not found");
-  if (report.status !== "draft")
-    throw new UnrecoverableError("The report is no longer a draft: the texts were not changed.");
+  if (report.status !== "draft") throw unrecoverable("audit.jobErrors.notDraft");
   const { audit, client } = await loadAudit(db, report.auditId);
   const [profile, plan, grouped] = await Promise.all([
     db.query.prospectProfiles.findFirst({ where: eq(prospectProfiles.clientId, client.id) }),
@@ -153,8 +152,7 @@ export async function runReportTexts(
     const current = await db.query.auditReports.findFirst({
       where: eq(auditReports.id, report.id),
     });
-    if (!current || current.status !== "draft")
-      throw new UnrecoverableError("The report is no longer a draft: the texts were not changed.");
+    if (!current || current.status !== "draft") throw unrecoverable("audit.jobErrors.notDraft");
     const sections = current.sections.map((s) => {
       const t = texts.get(s.key);
       const start = before.get(s.key);
@@ -185,7 +183,5 @@ export async function runReportTexts(
       .returning({ id: auditReports.id });
     if (row) return { sections: texts.size, email: Boolean(email && !keepEmail), costMicroUsd };
   }
-  throw new UnrecoverableError(
-    "The report changed too many times while the texts were being written. Try again.",
-  );
+  throw unrecoverable("audit.jobErrors.reportBusy");
 }

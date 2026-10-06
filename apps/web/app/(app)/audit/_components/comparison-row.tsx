@@ -11,15 +11,10 @@ import {
 import { Badge, Button, Input, Label } from "@forgecy/ui";
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { reviewFindingAction, setComparisonOutcomeAction } from "../actions";
-import {
-  channelLabel,
-  findingStatusLabel,
-  findingStatusVariant,
-  outcomeLabel,
-  outcomeVariant,
-} from "../_lib/labels";
+import { findingStatusVariant, outcomeVariant } from "../_lib/labels";
 import { selectClass } from "../_lib/styles";
 
 export interface ComparisonRowView {
@@ -41,6 +36,7 @@ export interface ComparisonRowView {
 
 export function ComparisonRow({ row, readOnly }: { row: ComparisonRowView; readOnly: boolean }) {
   const router = useRouter();
+  const t = useTranslations("audit");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<ComparisonOutcome>(row.outcome);
@@ -50,8 +46,10 @@ export function ComparisonRow({ row, readOnly }: { row: ComparisonRowView; readO
       <header className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-heading-sm text-fg">{row.title}</h3>
         <div className="flex gap-2">
-          <Badge variant={outcomeVariant[row.outcome]}>{outcomeLabel[row.outcome]}</Badge>
-          <Badge variant={findingStatusVariant[row.status]}>{findingStatusLabel[row.status]}</Badge>
+          <Badge variant={outcomeVariant[row.outcome]}>{t(`outcome.${row.outcome}`)}</Badge>
+          <Badge variant={findingStatusVariant[row.status]}>
+            {t(`findingStatus.${row.status}`)}
+          </Badge>
         </div>
       </header>
       <dl className="grid gap-3 sm:grid-cols-3">
@@ -59,19 +57,22 @@ export function ComparisonRow({ row, readOnly }: { row: ComparisonRowView; readO
           const cell = row.cells[c];
           return (
             <div key={c} className="rounded-md border border-subtle p-3">
-              <dt className="text-label text-fg-muted">{channelLabel[c]}</dt>
+              <dt className="text-label text-fg-muted">{t(`channel.${c}`)}</dt>
               <dd className={cell?.value ? "text-body-sm text-fg" : "text-body-sm text-fg-muted"}>
                 {cell?.value ??
-                  `Unavailable${cell?.unavailableReason ? `: ${cell.unavailableReason}` : ""}`}
+                  (cell?.unavailableReason
+                    ? t("comparisonRow.unavailableReason", { reason: cell.unavailableReason })
+                    : t("comparisonRow.unavailable"))}
               </dd>
               {cell?.evidence?.length ? (
                 <dd className="mt-1 text-body-sm text-fg-muted">
-                  Source:{" "}
-                  {cell.evidence
-                    .map((e) => e.label)
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .join(", ")}
+                  {t("comparisonRow.source", {
+                    sources: cell.evidence
+                      .map((e) => e.label)
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .join(", "),
+                  })}
                 </dd>
               ) : null}
             </div>
@@ -81,8 +82,11 @@ export function ComparisonRow({ row, readOnly }: { row: ComparisonRowView; readO
       <p className="text-body-sm">{row.rationale}</p>
       {row.outcomeNote ? (
         <p className="text-body-sm text-fg-muted">
-          Note ({outcomeLabel[row.proposedOutcome].toLowerCase()} →{" "}
-          {outcomeLabel[row.outcome].toLowerCase()}): {row.outcomeNote}
+          {t("comparisonRow.note", {
+            from: t(`outcome.${row.proposedOutcome}`).toLowerCase(),
+            to: t(`outcome.${row.outcome}`).toLowerCase(),
+            note: row.outcomeNote,
+          })}
         </p>
       ) : null}
       {!readOnly ? (
@@ -105,7 +109,7 @@ export function ComparisonRow({ row, readOnly }: { row: ComparisonRowView; readO
           }}
         >
           <div className="flex w-48 flex-col gap-1">
-            <Label htmlFor={`outcome-${row.id}`}>Outcome</Label>
+            <Label htmlFor={`outcome-${row.id}`}>{t("comparisonRow.outcome")}</Label>
             <select
               id={`outcome-${row.id}`}
               className={selectClass}
@@ -114,15 +118,16 @@ export function ComparisonRow({ row, readOnly }: { row: ComparisonRowView; readO
             >
               {comparisonOutcomes.map((o) => (
                 <option key={o} value={o}>
-                  {outcomeLabel[o]}
-                  {o === row.proposedOutcome ? " (proposed)" : ""}
+                  {o === row.proposedOutcome
+                    ? t("comparisonRow.proposedOption", { outcome: t(`outcome.${o}`) })
+                    : t(`outcome.${o}`)}
                 </option>
               ))}
             </select>
           </div>
           {changed ? (
             <div className="flex min-w-56 flex-1 flex-col gap-1">
-              <Label htmlFor={`note-${row.id}`}>Note (required if you change the outcome)</Label>
+              <Label htmlFor={`note-${row.id}`}>{t("comparisonRow.noteRequired")}</Label>
               <Input
                 id={`note-${row.id}`}
                 name="note"
@@ -134,7 +139,7 @@ export function ComparisonRow({ row, readOnly }: { row: ComparisonRowView; readO
           ) : null}
           <Button type="submit" size="sm" disabled={pending}>
             <Check aria-hidden />
-            {row.status === "observed" ? "Accept" : "Save"}
+            {row.status === "observed" ? t("comparisonRow.accept") : t("comparisonRow.save")}
           </Button>
           {row.status !== "rejected" ? (
             <Button
@@ -154,7 +159,7 @@ export function ComparisonRow({ row, readOnly }: { row: ComparisonRowView; readO
                 })
               }
             >
-              Reject row
+              {t("comparisonRow.rejectRow")}
             </Button>
           ) : null}
         </form>
