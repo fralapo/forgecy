@@ -339,6 +339,8 @@ export interface CarouselPromptInput {
   product: ProductSummary | null;
   brief: Brief;
   manifest: TemplateManifest;
+  /** The client's default CTA (Agent memory, structured settings), used when the brief has none. */
+  defaultCta?: string | null;
 }
 
 function briefBlock(i: CarouselPromptInput): string {
@@ -352,7 +354,7 @@ function briefBlock(i: CarouselPromptInput): string {
     b.problem && `Problem: ${b.problem}`,
     b.audienceNote && `Audience note: ${b.audienceNote}`,
     b.promise && `Promise: ${b.promise}`,
-    b.cta && `CTA: ${b.cta}`,
+    b.cta ? `CTA: ${b.cta}` : i.defaultCta && `CTA (client default): ${i.defaultCta}`,
     b.constraints.length && `Constraints:\n${b.constraints.map((c) => `- ${c}`).join("\n")}`,
     b.toneShift.length &&
       `Tone shifts (at most one step from the Brand Identity): ${b.toneShift.map((t) => `${t.axis} ${t.delta > 0 ? "+1" : t.delta < 0 ? "-1" : "0"}`).join(", ")}`,

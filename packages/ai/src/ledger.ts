@@ -1,4 +1,4 @@
-import type { AiPolicy, ProviderId } from "@forgecy/core";
+import type { AgentRole, AiPolicy, ProviderId } from "@forgecy/core";
 import {
   and,
   budgets,
@@ -13,6 +13,7 @@ import {
   sql,
   type Database,
 } from "@forgecy/db";
+import { approvedMemoriesFor } from "./memory";
 
 export type BudgetScope = { scope: "agency" } | { scope: "client"; clientId: string };
 
@@ -53,6 +54,11 @@ export interface AiLedger {
    * Optional so older test ledgers keep working; the gateway then uses the request's list.
    */
   approvedProviders?(clientId: string): Promise<readonly ProviderId[]>;
+  /** Approved memories of a client for an agent, added to its prompt (spec page 56). */
+  agentMemory?(
+    clientId: string,
+    agent: AgentRole,
+  ): Promise<ReadonlyArray<{ id: string; version: number; content: string }>>;
 }
 
 /** "YYYY-MM-01" for the UTC month containing `date`. */
@@ -130,6 +136,7 @@ export function createDbLedger(db: Pick<Database, "select" | "insert">): AiLedge
         .where(eq(clients.id, clientId));
       return row?.approvedProviders ?? [];
     },
+    agentMemory: (clientId, agent) => approvedMemoriesFor(db, clientId, agent),
   };
 }
 

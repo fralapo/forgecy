@@ -7,6 +7,7 @@
  */
 import {
   AiProviderError,
+  loadClientMemorySettings,
   type AiGateway,
   type GenerateObjectRequest,
   type ModelRef,
@@ -506,6 +507,7 @@ async function carouselPromptInput(
     product,
     brief,
     manifest,
+    defaultCta: (await loadClientMemorySettings(db, c.clientId)).default_cta?.value.text ?? null,
   };
 }
 

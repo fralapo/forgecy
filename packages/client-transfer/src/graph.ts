@@ -92,6 +92,9 @@ export const TABLE_AREAS: Record<string, ClientTransferArea | "client"> = {
   product_import_files: "products",
   product_import_items: "products",
   product_imports: "products",
+  memory_items: "client",
+  memory_item_versions: "client",
+  client_memory_settings: "client",
 };
 
 function allTables(): PgTable[] {

@@ -38,6 +38,19 @@ export function agentInstructionsBlock(instructions: { version: number; text: st
   ].join("\n");
 }
 
+/**
+ * Approved memories of the client for this agent (spec page 56). They go after the
+ * module prompt and the agency instructions, which win when they disagree.
+ */
+export function agentMemoryBlock(memories: ReadonlyArray<{ content: string }>): string {
+  return [
+    "## Client memory (approved by the agency)",
+    "Rules and preferences a person approved for this client. Apply them unless they conflict with the rules above.",
+    "",
+    ...memories.map((m) => `- ${m.content.replace(/\s+/g, " ").trim()}`),
+  ].join("\n");
+}
+
 /** Pipeline order, as the Agents page lists them (spec page 54). */
 export const AGENT_ORDER: readonly AgentRole[] = [
   "brand_analyst",
