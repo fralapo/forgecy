@@ -44,6 +44,17 @@ describe("slide schemas from template.json", async () => {
     expect(msgs).toContain("Copertina: solo come prima slide");
     expect(msgs).toContain("CTA: solo come ultima slide");
   });
+
+  it("rejects empty list items", () => {
+    const list = byId("list");
+    const name = m.layouts.find((l) => l.id === "list")!.slots.find((s) => s.type === "list")!.name;
+    const items = list.slots[name] as string[];
+    const res = buildSlideSchema(m).safeParse({
+      ...list,
+      slots: { ...list.slots, [name]: [items[0], " ", ...items.slice(1)] },
+    });
+    expect(res.error?.issues.map((i) => i.message).join()).toContain("la voce 2 è vuota");
+  });
 });
 
 describe("report formats", () => {
@@ -122,5 +133,27 @@ describe("Docker worker image", () => {
     const version = pkg.dependencies["playwright-core"];
     expect(version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(dockerfile).toContain(`mcr.microsoft.com/playwright:v${version}-noble AS worker`);
+  });
+});
+
+describe("export payload", async () => {
+  const { carouselExportPayloadSchema } = await import("../src/jobs");
+  const pkg = await loadRepoTemplate("editoriale-linkedin");
+  const base = {
+    clientId: "00000000-0000-4000-8000-000000000001",
+    client: "Forno Rossi",
+    content: "Come nasce la pagnotta",
+    version: 1,
+    templateId: pkg.manifest.id,
+    slides: [sampleSlide(pkg.manifest.layouts[0]!)],
+  };
+
+  it("accepts a LinkedIn caption up to 3.000 characters", () => {
+    expect(
+      carouselExportPayloadSchema.safeParse({ ...base, caption: "a".repeat(3000) }).success,
+    ).toBe(true);
+    expect(
+      carouselExportPayloadSchema.safeParse({ ...base, caption: "a".repeat(3001) }).success,
+    ).toBe(false);
   });
 });

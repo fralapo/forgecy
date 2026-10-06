@@ -132,7 +132,16 @@ export function checkSlideAgainstLayout(
           path,
           message: `«${slot.label ?? slot.name}»: da ${slot.minItems} a ${slot.maxItems} voci`,
         });
-      value.forEach((item, i) => checkText(slot, item, ctx, [...path, i]));
+      value.forEach((item, i) => {
+        // An empty item would export as a blank numbered row.
+        if (item.trim() === "")
+          ctx.addIssue({
+            code: "custom",
+            path: [...path, i],
+            message: `«${slot.label ?? slot.name}»: la voce ${i + 1} è vuota`,
+          });
+        else checkText(slot, item, ctx, [...path, i]);
+      });
     } else if (typeof value !== "object" || Array.isArray(value)) {
       ctx.addIssue({ code: "custom", path, message: "Attesa un'immagine" });
     }
