@@ -21,6 +21,7 @@ import {
 } from "@forgecy/db";
 import { assertValidUpload, contentKey, sha256, type StorageDriver } from "@forgecy/files";
 import { conflict, humanOnly, invalid, notFound, type Executor } from "./access";
+import { productSource } from "./products";
 
 export type AssetRow = typeof assets.$inferSelect;
 
@@ -184,6 +185,10 @@ export async function importProductImage(
   humanOnly(actor, "assets.upload", input.clientId);
   if (!input.storageKey.startsWith(`clients/${input.clientId}/`))
     invalid("Immagine di un altro cliente");
+  // Only images of an approved product of this client, as the catalog lists them.
+  const product = await productSource().get(db, input.clientId, input.productId);
+  if (!product?.images.some((i) => i.storageKey === input.storageKey))
+    invalid("L'immagine non appartiene a un prodotto approvato del cliente");
   const chunks: Uint8Array[] = [];
   for await (const c of await storage.get(input.storageKey)) chunks.push(c as Uint8Array);
   const bytes = new Uint8Array(Buffer.concat(chunks));
