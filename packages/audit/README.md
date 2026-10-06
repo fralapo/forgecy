@@ -15,7 +15,7 @@ Ogni servizio riceve `(deps, actor, input)`, controlla il permesso con `assertCa
 | --------------------------- | --------------------------------------------------------------------- |
 | `audit.crawl`               | Legge fino a 10 pagine (3 per un competitor), screenshot e controlli  |
 | `audit.analyze_site`        | Osservazioni del Brand Analyst sul sito                               |
-| `audit.analyze_social`      | Osservazioni su un canale, solo da metriche e post importati          |
+| `audit.analyze_social`      | Osservazioni su un canale da metriche, post importati e screenshot    |
 | `audit.propose_competitors` | Lo Strategist propone 3–5 competitor da confermare                    |
 | `audit.compare_competitors` | Offerta, tono e osservazioni di confronto con i competitor confermati |
 | `audit.compare_channels`    | Sito, Instagram e Facebook su cinque criteri                          |
@@ -39,7 +39,7 @@ Rispetta sempre `robots.txt` (user agent `ForgecyAudit`), salta le pagine con lo
 
 ## Social
 
-Niente scraping: screenshot (solo come prova), export CSV/XLSX con mappatura delle colonne, oppure valori inseriti a mano con fonte e data. Un valore mancante resta "Non disponibile". Il tasso di interazione appare solo con follower e interazioni dalla stessa fonte.
+Niente scraping: screenshot, export CSV/XLSX con mappatura delle colonne, oppure valori inseriti a mano con fonte e data. L'analisi manda al modello fino a 8 screenshot recenti (ridotti a JPEG, lato massimo 1568 px) per stile, tono e call to action; i numeri vengono solo da valori ed export, mai letti dalle immagini. Un valore mancante resta "Non disponibile". Il tasso di interazione appare solo con follower e interazioni dalla stessa fonte.
 
 ## Test
 

@@ -121,8 +121,8 @@ export function ScreenshotUpload({
         className="text-body-sm"
       />
       <p className="text-body-sm text-fg-muted">
-        PNG, JPEG o WebP, massimo 20 MB l&apos;uno e 60 per canale. Restano come prova: i valori che
-        leggi li inserisci qui sotto con la fonte.
+        PNG, JPEG o WebP, massimo 20 MB l&apos;uno e 60 per canale. L&apos;AI li usa per stile, tono
+        e call to action; i numeri che leggi li inserisci qui sotto con la fonte.
       </p>
       <div>
         <Button type="submit" variant="secondary" size="sm" disabled={pending}>

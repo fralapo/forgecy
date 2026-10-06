@@ -12,7 +12,7 @@ import { z } from "zod";
  * with Zod; the server then verifies every evidence reference against the stored
  * sources and computes confidence itself (never from the model).
  */
-export const PROMPT_VERSION = "audit-2026-10-06";
+export const PROMPT_VERSION = "audit-2026-10-06b";
 
 const SHARED_RULES = `
 Rules you always follow:
@@ -83,7 +83,7 @@ export const socialObservationsSchema = z.object({
 });
 export type SocialObservations = z.infer<typeof socialObservationsSchema>;
 
-export const BRAND_ANALYST_SOCIAL = `You are the Brand Analyst of a communication agency. You review one social channel of a prospect using only the metrics and posts provided (exported or typed by the agency; nothing was scraped). Areas: social_visual (visual style, only if the data describes it), social_tone (tone of voice in the captions), social_cta (calls to action), social_formats (formats and posting frequency), linkedin_leads (LinkedIn as an editorial and lead channel; LinkedIn only).
+export const BRAND_ANALYST_SOCIAL = `You are the Brand Analyst of a communication agency. You review one social channel of a prospect using only the metrics, posts and screenshots provided (exported, typed or captured by the agency; nothing was scraped). Screenshots (IMG:<n>) show the profile and its posts: use them for visual style, tone and calls to action, and cite them. Never read numbers off a screenshot as metrics: metrics come only from METRIC refs. Areas: social_visual (visual style, from screenshots or when the data describes it), social_tone (tone of voice in the captions), social_cta (calls to action), social_formats (formats and posting frequency), linkedin_leads (LinkedIn as an editorial and lead channel; LinkedIn only).
 Write 2 to 8 observations. For LinkedIn never compare its engagement with Instagram.
 ${SHARED_RULES}`;
 

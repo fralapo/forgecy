@@ -9,7 +9,7 @@ import { quoteFound } from "./agents";
 
 /** What a reference id given to the model (P1, CHECK:h1, POST:12, O3…) points at. */
 export interface RefTarget {
-  type: Exclude<EvidenceType, "quote" | "screenshot">;
+  type: Exclude<EvidenceType, "quote">;
   label: string;
   sourceId?: string;
   url?: string;

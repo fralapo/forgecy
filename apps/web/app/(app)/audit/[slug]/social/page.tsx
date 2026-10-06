@@ -52,7 +52,7 @@ export default async function SocialPage({
     ),
   ]);
   const pendingFile = view.files.find((f) => f.status === "pending");
-  const hasData = view.postsCount > 0 || view.metrics.length > 0;
+  const hasData = view.postsCount > 0 || view.metrics.length > 0 || view.screenshots.length > 0;
   const areas = (SOCIAL_AREAS as FindingArea[]).filter(
     (a) => a !== "linkedin_leads" || channel === "linkedin",
   );
@@ -302,9 +302,10 @@ export default async function SocialPage({
             ) : null}
           </div>
         </div>
-        {!hasData && aiAllowed ? (
+        {aiAllowed ? (
           <p className="text-body-sm text-fg-muted">
-            L&apos;AI analizza solo valori e post importati: gli screenshot restano come prova.
+            L&apos;AI guarda fino a 8 screenshot recenti per stile, tono e call to action; i numeri
+            li prende solo dai valori e dai post importati.
           </p>
         ) : null}
         {view.findings.length ? (

@@ -62,6 +62,7 @@ import { channelLabel } from "../service/prospects";
 import { computeChannelMetrics } from "../social/metrics";
 import { domainOf, normalizeSiteUrl } from "../url";
 import { oneLine, runAgent, type AuditHandlerDeps } from "./context";
+import { screenshotImages } from "./images";
 
 type SourceRow = typeof auditSources.$inferSelect;
 type FindingInsert = typeof auditFindings.$inferInsert;
@@ -507,11 +508,41 @@ export async function runAnalyzeSocial(
   const { db } = deps;
   const { audit, client } = await load(deps, payload.auditId);
   const data = await socialData(db, audit.id, payload.channel);
-  if (!data.posts.length && !data.metrics.length)
+  const shotRows = await db
+    .select({
+      id: auditSources.id,
+      storageKey: auditSources.storageKey,
+      fileName: auditSources.fileName,
+      createdAt: auditSources.createdAt,
+    })
+    .from(auditSources)
+    .where(
+      and(
+        eq(auditSources.auditId, audit.id),
+        eq(auditSources.channel, payload.channel),
+        eq(auditSources.kind, "screenshot"),
+      ),
+    )
+    .orderBy(desc(auditSources.createdAt));
+  const shots = await screenshotImages(deps.storage, shotRows);
+  if (!data.posts.length && !data.metrics.length && !shots.length)
     throw new NeedsAttentionError(
-      "Nessun dato da analizzare: importa un export o inserisci i valori.",
+      "Nessun dato da analizzare: carica screenshot, importa un export o inserisci i valori.",
     );
-  const index = buildIndex(socialIndexEntries(payload.channel, data));
+  const shotName = new Map(shotRows.map((s) => [s.id, s]));
+  const index = buildIndex([
+    ...socialIndexEntries(payload.channel, data),
+    ...shots.map(({ sourceId }, i): [string, RefTarget] => [
+      `IMG:${i + 1}`,
+      {
+        type: "screenshot",
+        label: `${channelLabel[payload.channel]} · screenshot ${shotName.get(sourceId)?.fileName ?? i + 1}`,
+        sourceId,
+        channel: payload.channel,
+        capturedAt: shotName.get(sourceId)?.createdAt.toISOString().slice(0, 10),
+      },
+    ]),
+  ]);
   const run = await runAgent(deps, ctx, {
     client,
     role: "brand_analyst",
@@ -523,10 +554,14 @@ export async function runAnalyzeSocial(
       prospectContext(audit, client),
       `Channel: ${payload.channel}.`,
       socialPrompt(payload.channel, data),
-      "Reference posts as POST:<n> and metrics as METRIC:<key>.",
+      shots.length
+        ? `${shots.length} screenshots are attached, in order: IMG:1 to IMG:${shots.length}.`
+        : "No screenshots.",
+      "Reference posts as POST:<n>, metrics as METRIC:<key> and screenshots as IMG:<n>.",
     ].join("\n\n"),
     action: "audit.ai.analyze_social",
     entityId: audit.id,
+    images: shots.map((s) => s.image),
   });
   const rows: FindingInsert[] = [];
   for (const o of run.data.observations) {

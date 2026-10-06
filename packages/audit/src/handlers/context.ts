@@ -1,4 +1,4 @@
-import type { AiGateway } from "@forgecy/ai";
+import type { AiGateway, InputImage } from "@forgecy/ai";
 import { assertCan, ForgecyError, type AgentRole, type AiPolicy } from "@forgecy/core";
 import { recordAuditEvent, type AiMeta, type Database } from "@forgecy/db";
 import type { StorageDriver } from "@forgecy/files";
@@ -54,6 +54,8 @@ export async function runAgent<T>(
     prompt: string;
     action: string;
     entityId: string;
+    /** Screenshots for vision models; the gateway logs only their hash and size. */
+    images?: InputImage[];
   },
 ): Promise<AgentRun<T>> {
   const policy: AiPolicy = input.client.aiPolicy;
@@ -70,6 +72,7 @@ export async function runAgent<T>(
       schemaName: input.schemaName,
       system: input.system,
       input: input.prompt,
+      ...(input.images?.length ? { images: input.images } : {}),
       clientId: input.client.id,
       clientPolicy: policy,
       authorizedBy: ctx.row.createdBy,

@@ -268,7 +268,7 @@ export async function uploadScreenshots(
   return { added: checked.length };
 }
 
-async function readAll(stream: Readable): Promise<Uint8Array> {
+export async function readAll(stream: Readable): Promise<Uint8Array> {
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(Buffer.from(chunk as Uint8Array));
   return new Uint8Array(Buffer.concat(chunks));
@@ -656,10 +656,20 @@ export async function requestSocialAnalysis(
     .select({ n: sql<number>`count(*)::int` })
     .from(auditMetrics)
     .where(and(eq(auditMetrics.auditId, audit.id), eq(auditMetrics.channel, input.channel)));
-  if (!(posts?.n ?? 0) && !(metrics?.n ?? 0))
+  const [shots] = await deps.db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(auditSources)
+    .where(
+      and(
+        eq(auditSources.auditId, audit.id),
+        eq(auditSources.channel, input.channel),
+        eq(auditSources.kind, "screenshot"),
+      ),
+    );
+  if (!(posts?.n ?? 0) && !(metrics?.n ?? 0) && !(shots?.n ?? 0))
     throw new ForgecyError(
       "validation",
-      "Importa un export o inserisci almeno un valore: gli screenshot restano come prova ma non vengono letti dall'AI.",
+      "Carica qualche screenshot, importa un export o inserisci almeno un valore.",
     );
   return enqueueAuditJob(deps, {
     def: auditAnalyzeSocialJob,
