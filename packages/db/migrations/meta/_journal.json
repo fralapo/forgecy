@@ -22,6 +22,20 @@
       "when": 1791259401766,
       "tag": "0002_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791271191290,
+      "tag": "0003_brand_identity",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791271192630,
+      "tag": "0004_brand_identity_guards",
+      "breakpoints": true
     }
   ]
 }
