@@ -297,7 +297,7 @@ export function TokensEditor({
           </thead>
           <tbody>
             {matrix.map((cell) => (
-              <tr key={`${cell.fg}-${cell.bg}`} className="border-t border-subtle">
+              <tr key={cell.id} className="border-t border-subtle">
                 <td className="py-2 text-fg">
                   {isPairId(cell.id) ? t(`pairs.${cell.id}`) : cell.label}
                 </td>

@@ -26,7 +26,7 @@ export default async function VisualPage({
       intro={t("visual")}
       before={({ client, shown }) => (
         <TokensEditor
-          key={shown.version?.id ?? "none"}
+          key={`tokens-${shown.version?.id ?? "none"}`}
           initial={shown.tokens}
           editable={shown.editable}
           slug={client.slug}
