@@ -16,6 +16,7 @@
     "@fontsource-variable/space-grotesk": "^5.3.0",
     "@forgecy/ai": "workspace:*",
     "@forgecy/carousel": "workspace:*",
+    "@forgecy/brand": "workspace:*",
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",
     "@forgecy/files": "workspace:*",

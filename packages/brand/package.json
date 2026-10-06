@@ -1,27 +1,27 @@
 {
-  "name": "@forgecy/worker",
+  "name": "@forgecy/brand",
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./*": "./src/*.ts"
+  },
   "scripts": {
-    "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
-    "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@forgecy/ai": "workspace:*",
-    "@forgecy/carousel": "workspace:*",
-    "@forgecy/brand": "workspace:*",
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",
     "@forgecy/files": "workspace:*",
     "@forgecy/jobs": "workspace:*",
-    "@forgecy/mail": "workspace:*",
-    "bullmq": "^6.3.11",
-    "ioredis": "^5.11.1",
-    "pino": "^10.4.0",
-    "tsx": "^4.23.15"
+    "@forgecy/ui": "workspace:*",
+    "fflate": "^0.8.3",
+    "unpdf": "^1.8.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^22.18.0",
