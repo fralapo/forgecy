@@ -1,9 +1,13 @@
 import {
+  agencyName,
   listBackups,
   nightlyBackupEnabled,
   NIGHTLY_HOUR,
   NIGHTLY_RETENTION_DAYS,
+  readRestoreStatus,
+  restoreInProgress,
   systemBackupJob,
+  type RestoreStatus,
 } from "@forgecy/backup";
 import { and, databaseInfo, desc, eq, getDb, inArray, jobs, sql, users } from "@forgecy/db";
 import { resolveMediaRoot } from "@forgecy/files";
@@ -17,7 +21,13 @@ import { getFormat, refText } from "@/lib/i18n";
 import { requireUser } from "@/lib/session";
 import { AdminOnly } from "../_components/admin-only";
 import { diskSpace } from "../storage/usage";
-import { CreateBackupForm, DeleteBackupButton, NightlySwitch, RefreshWhileRunning } from "./forms";
+import {
+  CreateBackupForm,
+  DeleteBackupButton,
+  NightlySwitch,
+  RefreshWhileRunning,
+  RestoreForm,
+} from "./forms";
 
 export async function generateMetadata() {
   const t = await getTranslations("admin.backup");
@@ -26,7 +36,7 @@ export async function generateMetadata() {
 
 export const dynamic = "force-dynamic";
 
-const RESTORE_CMD = "pnpm forgecy restore <file.tar.gz> --yes";
+const RESTART_CMD = "docker compose restart web worker";
 const DAY_MS = 86_400_000;
 
 function olderThanADay(date: Date | undefined): boolean {
@@ -40,34 +50,37 @@ export default async function BackupPage() {
   const format = await getFormat();
   const db = getDb();
   const dataDir = resolveMediaRoot(env.FORGECY_DATA_DIR);
-  const [backups, nightlyOn, active, lastNightly, space, dbInfo, people] = await Promise.all([
-    listBackups(dataDir),
-    nightlyBackupEnabled(db),
-    db
-      .select({ id: jobs.id, status: jobs.status, progress: jobs.progress })
-      .from(jobs)
-      .where(
-        and(
-          eq(jobs.kind, systemBackupJob.kind),
-          inArray(jobs.status, ["queued", "running", "retrying"]),
-        ),
-      )
-      .limit(1),
-    db
-      .select({
-        status: jobs.status,
-        error: jobs.error,
-        errorRef: jobs.errorRef,
-        updatedAt: jobs.updatedAt,
-      })
-      .from(jobs)
-      .where(and(eq(jobs.kind, systemBackupJob.kind), sql`${jobs.payload}->>'kind' = 'nightly'`))
-      .orderBy(desc(jobs.createdAt))
-      .limit(1),
-    diskSpace(dataDir),
-    databaseInfo(db).catch(() => null),
-    db.select({ id: users.id, name: users.name }).from(users),
-  ]);
+  const [backups, nightlyOn, active, lastNightly, space, dbInfo, people, restore, agency] =
+    await Promise.all([
+      listBackups(dataDir),
+      nightlyBackupEnabled(db),
+      db
+        .select({ id: jobs.id, status: jobs.status, progress: jobs.progress })
+        .from(jobs)
+        .where(
+          and(
+            eq(jobs.kind, systemBackupJob.kind),
+            inArray(jobs.status, ["queued", "running", "retrying"]),
+          ),
+        )
+        .limit(1),
+      db
+        .select({
+          status: jobs.status,
+          error: jobs.error,
+          errorRef: jobs.errorRef,
+          updatedAt: jobs.updatedAt,
+        })
+        .from(jobs)
+        .where(and(eq(jobs.kind, systemBackupJob.kind), sql`${jobs.payload}->>'kind' = 'nightly'`))
+        .orderBy(desc(jobs.createdAt))
+        .limit(1),
+      diskSpace(dataDir),
+      databaseInfo(db).catch(() => null),
+      db.select({ id: users.id, name: users.name }).from(users),
+      readRestoreStatus(dataDir),
+      agencyName(db),
+    ]);
   const running = active[0];
   const nightly = lastNightly[0];
   const nameOf = new Map(people.map((p) => [p.id, p.name]));
@@ -79,11 +92,12 @@ export default async function BackupPage() {
         ? t("size.mb", { value: format.number(n / 1e6, { maximumFractionDigits: 1 }) })
         : t("size.kb", { value: format.number(Math.ceil(n / 1e3)) });
   const stale = olderThanADay(latest?.createdAt);
+  const restoring = restoreInProgress(restore);
 
   return (
     <>
       <PageHeader title={t("title")} description={t("description")} />
-      <RefreshWhileRunning active={Boolean(running)} />
+      <RefreshWhileRunning active={Boolean(running) || restoring} />
       <p className="mb-6 text-body-sm text-fg">
         {latest
           ? t("latest", {
@@ -219,9 +233,80 @@ export default async function BackupPage() {
 
       <Card className="mt-6 p-6">
         <h2 className="text-heading-sm text-fg">{t("restore.title")}</h2>
-        <p className="mt-2 text-body-sm text-fg-muted">{t("restore.cli")}</p>
-        <code className="mt-2 block font-mono text-body-sm text-fg">{RESTORE_CMD}</code>
+        {restore ? <RestoreStatusLine status={restore} restoring={restoring} /> : null}
+        <p className="mt-2 text-body-sm text-fg-muted">{t("restore.intro")}</p>
+        <RestoreForm
+          choices={backups.map((b) => ({
+            name: b.name,
+            label: t("restore.option", {
+              date: format.date(b.createdAt, "dateTime"),
+              kind: t(`kind.${b.kind}`),
+              size: bytes(b.sizeBytes),
+            }),
+          }))}
+          agency={agency}
+          impact={t("restore.impact", { size: dbInfo ? bytes(dbInfo.sizeBytes) : "—" })}
+          busy={restoring || Boolean(running)}
+        />
+        <p className="mt-4 text-body-sm text-fg-muted">{t("restore.upload")}</p>
       </Card>
     </>
   );
+}
+
+async function RestoreStatusLine({
+  status,
+  restoring,
+}: {
+  status: RestoreStatus;
+  restoring: boolean;
+}) {
+  const t = await getTranslations("admin.backup.restore.status");
+  const format = await getFormat();
+  const when = (iso: string | undefined) => (iso ? format.date(iso, "dateTime") : "—");
+  const pre = status.preRestoreBackup ? (
+    <p className="text-body-sm text-fg">{t("preRestore", { backup: status.preRestoreBackup })}</p>
+  ) : null;
+  if (restoring)
+    return (
+      <div
+        role="status"
+        className="mt-4 flex flex-col gap-1 rounded-md bg-warning-fill p-3 text-fg"
+      >
+        <p className="text-body-sm text-fg">
+          {t(status.state === "queued" ? "queued" : "running", {
+            backup: status.backup,
+            name: status.requestedBy,
+            date: when(status.requestedAt),
+          })}
+        </p>
+        {pre}
+      </div>
+    );
+  if (status.state === "completed")
+    return (
+      <div role="status" className="mt-4 flex flex-col gap-1 rounded-md border border-subtle p-3">
+        <p className="text-body-sm text-success">
+          {t("completed", { backup: status.backup, date: when(status.finishedAt) })}
+        </p>
+        <p className="text-body-sm text-fg">{t("restart")}</p>
+        <code className="font-mono text-body-sm text-fg">{RESTART_CMD}</code>
+        {pre}
+      </div>
+    );
+  if (status.state === "failed")
+    return (
+      <div role="alert" className="mt-4 flex flex-col gap-1 rounded-md border border-subtle p-3">
+        <p className="text-body-sm text-error">
+          {t("failed", {
+            backup: status.backup,
+            date: when(status.finishedAt),
+            error: status.error ?? "—",
+          })}
+        </p>
+        {pre}
+        {status.preRestoreBackup ? <p className="text-body-sm text-fg">{t("failedHint")}</p> : null}
+      </div>
+    );
+  return null;
 }

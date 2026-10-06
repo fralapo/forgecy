@@ -305,7 +305,43 @@
     },
     "restore": {
       "title": "Restore",
-      "cli": "Restoring replaces the database and the files. For now it runs on the server, with the web and worker containers stopped:"
+      "intro": "Restoring replaces the whole database (users, sessions and settings included) with the backup's, and copies its files back. Files added after the backup stay. Forgecy first makes a backup of the current state, so you can go back.",
+      "choose": "Backup to restore",
+      "choosePlaceholder": "Choose a backup",
+      "option": "{date} · {kind} · {size}",
+      "check": "Check backup",
+      "checking": "Checking the backup…",
+      "valid": "The backup can be restored.",
+      "summary": "Made on {date} · {scope} · Forgecy {version} · last migration {migration}",
+      "unknown": "unknown",
+      "migrations": "{count, plural, =0 {No migration to apply afterwards.} one {# migration will be applied afterwards.} other {# migrations will be applied afterwards.}}",
+      "impact": "What gets replaced: all the current data ({size} of database) is swapped for the backup's. Everyone is signed out, and jobs in progress are cancelled.",
+      "problem": {
+        "unreadable": "The archive can't be read: the file is damaged or isn't a Forgecy backup.",
+        "format": "This backup uses a format this version doesn't know.",
+        "newer_version": "This backup comes from a newer Forgecy version. Update Forgecy before restoring it."
+      },
+      "confirmLabel": "To confirm, type the agency name: {name}",
+      "confirmMismatch": "The name doesn't match.",
+      "submit": "Restore this backup",
+      "queued": "Restore started. The page follows its progress.",
+      "busy": "A backup or a restore is already in progress: wait until it ends.",
+      "notFound": "Backup not found.",
+      "status": {
+        "queued": "Restore of {backup} queued by {name} on {date}. Waiting for the worker…",
+        "running": "Restore of {backup} in progress, started by {name} on {date}. Other people see “Restore in progress” until it ends.",
+        "preRestore": "Backup of the previous state: {backup}",
+        "completed": "Restore of {backup} completed on {date}.",
+        "restart": "Restart the services so every part reads the restored data, then sign in again:",
+        "failed": "Restore of {backup} failed on {date}: {error}",
+        "failedHint": "If the database was partly replaced, restore the backup of the previous state from the list."
+      },
+      "upload": "To restore a file made elsewhere, copy it into the data/backups folder on the server: it then shows in the list.",
+      "maintenance": {
+        "title": "Restore in progress",
+        "body": "An Admin is restoring a backup. Forgecy is back when it ends; you will need to sign in again.",
+        "since": "Started on {date}."
+      }
     }
   }
 }
