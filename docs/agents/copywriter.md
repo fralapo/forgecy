@@ -6,6 +6,7 @@ Forgecy AI agent. Not a role for people: it proposes, it does not approve.
 - **Input:** Structured brief, approved outline, brand context (buildBrandContext).
 - **Output:** Text in the layout slots, captions and hashtags; never HTML.
 - **Phase:** MVP (M5)
+- **Playbooks:** `copywriting` (outline, slides, single-slide edits, audit email), `slide-design` (layout choice in the outline). See [packages/ai/src/playbooks](../../packages/ai/src/playbooks/).
 
 ## Constraints
 

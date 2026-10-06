@@ -6,6 +6,7 @@ Forgecy AI agent. Not a role for people: it proposes, it does not approve.
 - **Input:** Audit conclusions, published Brand Identity, product catalog.
 - **Output:** Diagnosis, editorial plan, proposals on strategy and pillars.
 - **Phase:** MVP, with diagnosis and content strategy (M2, M5)
+- **Playbooks:** `positioning` (diagnosis, competitors, content strategy), `social-content` (pillars and 30-day plans). See [packages/ai/src/playbooks](../../packages/ai/src/playbooks/).
 
 ## Constraints
 
