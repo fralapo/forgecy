@@ -3,7 +3,9 @@
     "label": "Sezioni delle impostazioni",
     "general": "Generali",
     "aiProviders": "Provider AI",
-    "aiPolicies": "Policy AI e budget"
+    "aiPolicies": "Policy AI e budget",
+    "smtp": "Email (SMTP)",
+    "storage": "Storage"
   },
   "adminOnly": "Questa impostazione è riservata agli utenti Admin.",
   "aiPolicies": {
@@ -62,5 +64,101 @@
     },
     "spent": "{percent}% · {spent} di {limit}",
     "spentNoLimit": "{spent}"
+  },
+  "smtp": {
+    "title": "Email (SMTP)",
+    "description": "Il server email che Forgecy usa per i link di accesso e gli inviti, letto dal file .env del server.",
+    "status": {
+      "configured": "Configurato",
+      "not_configured": "Non configurato"
+    },
+    "mailpit": "Ambiente di sviluppo: le email vengono catturate da Mailpit e non arrivano ai destinatari reali. <link>Apri Mailpit</link>",
+    "config": {
+      "title": "Configurazione",
+      "host": "Server",
+      "port": "Porta",
+      "security": "Sicurezza",
+      "tls": "TLS (implicito)",
+      "starttls": "STARTTLS se offerto",
+      "username": "Nome utente",
+      "password": "Password",
+      "passwordSet": "Impostata (mai mostrata)",
+      "none": "Non impostato",
+      "from": "Mittente",
+      "replyTo": "Rispondi a",
+      "missing": "Nessun server SMTP impostato: l’accesso con magic link non è disponibile. Chi gestisce il server imposta SMTP_HOST e gli altri valori SMTP_* in .env.",
+      "envHint": "I valori vengono da .env; per cambiarli serve un riavvio dei container web e worker."
+    },
+    "test": {
+      "title": "Email di prova",
+      "never": "Nessuna email di prova inviata finora.",
+      "lastOk": "Ultima prova il {date} da {name}: consegnata al server.",
+      "lastFailed": "Ultima prova il {date} da {name}: non riuscita.",
+      "to": "Destinatario",
+      "send": "Invia email di prova",
+      "sent": "Email di prova inviata a {to}. Controlla la posta in arrivo e lo spam.",
+      "failed": "L’email di prova non è stata inviata. Controlla server, porta, nome utente e password in .env.",
+      "invalid": "Inserisci un indirizzo email valido."
+    },
+    "verify": {
+      "button": "Verifica connessione",
+      "ok": "Il server SMTP accetta la connessione e le credenziali.",
+      "failed": "Il server SMTP non è raggiungibile o rifiuta le credenziali."
+    },
+    "dns": {
+      "title": "Autenticazione del dominio",
+      "intro": "Perché i link di accesso non finiscano nello spam, il dominio del mittente ha bisogno di questi record DNS (i valori esatti li dà il tuo servizio email):",
+      "spf": "SPF: autorizza il servizio email a inviare per il tuo dominio.",
+      "dkim": "DKIM: firma ogni messaggio con una chiave pubblicata nel DNS.",
+      "dmarc": "DMARC: dice ai destinatari cosa fare con i messaggi che non superano SPF o DKIM.",
+      "brevo": "Servizio consigliato: Brevo (piano gratuito per volumi bassi). Va bene qualunque servizio SMTP."
+    }
+  },
+  "storage": {
+    "title": "Storage",
+    "description": "Dove Forgecy conserva i file e quanto spazio occupano. Lo spostamento dei file tra storage diversi si fa da riga di comando.",
+    "lowSpace": "Il disco è quasi pieno (meno del {percent}% libero): upload, render, export e backup possono fallire.",
+    "config": {
+      "title": "Configurazione",
+      "driver": "Driver",
+      "path": "Cartella",
+      "endpoint": "Endpoint",
+      "awsDefault": "Predefinito AWS",
+      "bucket": "Bucket",
+      "region": "Regione",
+      "accessKey": "Chiave di accesso",
+      "set": "Impostata (mai mostrata)",
+      "notSet": "Non impostata",
+      "pathStyle": "URL in stile path",
+      "yes": "Sì",
+      "no": "No",
+      "envHint": "I valori vengono da .env; cambiare driver richiede un riavvio e lo spostamento dei file esistenti."
+    },
+    "test": {
+      "button": "Esegui prova di scrittura",
+      "running": "Prova in corso…",
+      "ok": "Scrittura, lettura ed eliminazione riuscite in {ms} ms.",
+      "failed": "La prova di scrittura non è riuscita: controlla i permessi della cartella o le credenziali S3."
+    },
+    "space": {
+      "title": "Spazio",
+      "summary": "{free} liberi su {total}",
+      "s3Note": "Spazio del disco del server; lo spazio dello storage S3 è gestito dal servizio S3.",
+      "unknown": "Su questo sistema non è possibile leggere lo spazio libero."
+    },
+    "usage": {
+      "title": "File per area",
+      "area": "Area",
+      "files": "File",
+      "size": "Dimensione",
+      "empty": "Ancora nessun file.",
+      "backups": "Backup: {size}",
+      "truncated": "Molti file: i totali contano solo i primi 200.000."
+    },
+    "size": {
+      "gb": "{value} GB",
+      "mb": "{value} MB",
+      "kb": "{value} KB"
+    }
   }
 }
