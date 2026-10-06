@@ -57,8 +57,9 @@ CMD ["node", "apps/web/server.js"]
 FROM mcr.microsoft.com/playwright:v1.63.0-noble AS worker
 ENV NODE_ENV=production PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 WORKDIR /app
-COPY --from=workspace --chown=pwuser:pwuser /app /app
-USER pwuser
+# uid 1000 (`ubuntu` here, `node` in the web image): web and worker share ./data/media.
+COPY --from=workspace --chown=1000:1000 /app /app
+USER 1000:1000
 EXPOSE 3001
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
   CMD node -e "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
