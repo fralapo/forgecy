@@ -580,6 +580,16 @@
       "label": "Caricamento in meno di 4 secondi",
       "failed": "{count} pagine oltre i 4 s (misurato dal server Forgecy)",
       "ok": "Tutte sotto i 4 s (misurato dal server Forgecy)"
+    },
+    "structured_data": {
+      "label": "Attività descritta nei dati strutturati",
+      "failed": "Nessuna pagina descrive l'attività nei dati strutturati (Organization o LocalBusiness, JSON-LD)",
+      "ok": "{count, plural, one {# pagina descrive} other {# pagine descrivono}} l'attività nei dati strutturati"
+    },
+    "ai_crawlers": {
+      "label": "Aperto ai motori di risposta AI",
+      "failed": "robots.txt blocca {bots}: i loro motori di risposta non possono leggere il sito",
+      "ok": "robots.txt permette ai motori di risposta AI di leggere il sito"
     }
   },
   "errors": {

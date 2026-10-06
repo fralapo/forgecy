@@ -91,10 +91,88 @@ function detailOf(key: MessageKey, values?: MessageValues) {
 }
 
 /**
+ * schema.org types that describe pages, content or parts of them, never the business.
+ * Every other type counts as describing it: Organization, LocalBusiness and their many
+ * subtypes (Bakery, Dentist, Hotel...) are too many to list.
+ */
+const NON_BUSINESS_TYPES = new Set([
+  "WebSite",
+  "WebPage",
+  "AboutPage",
+  "ContactPage",
+  "CollectionPage",
+  "ItemPage",
+  "FAQPage",
+  "QAPage",
+  "SearchResultsPage",
+  "ProfilePage",
+  "CheckoutPage",
+  "MedicalWebPage",
+  "RealEstateListing",
+  "BreadcrumbList",
+  "ItemList",
+  "ListItem",
+  "SiteNavigationElement",
+  "WPHeader",
+  "WPFooter",
+  "WPSideBar",
+  "SearchAction",
+  "ReadAction",
+  "EntryPoint",
+  "PropertyValueSpecification",
+  "Article",
+  "NewsArticle",
+  "BlogPosting",
+  "Blog",
+  "CreativeWork",
+  "HowTo",
+  "HowToStep",
+  "Recipe",
+  "Question",
+  "Answer",
+  "Comment",
+  "Review",
+  "Rating",
+  "AggregateRating",
+  "ImageObject",
+  "VideoObject",
+  "MediaObject",
+  "Product",
+  "ProductGroup",
+  "Offer",
+  "AggregateOffer",
+  "Service",
+  "Event",
+  "Course",
+  "JobPosting",
+  "Thing",
+  "PostalAddress",
+  "GeoCoordinates",
+  "ContactPoint",
+  "OpeningHoursSpecification",
+  "Place",
+  "Country",
+  "City",
+  "PriceSpecification",
+  "Duration",
+  "QuantitativeValue",
+  "Language",
+  "DefinedTerm",
+]);
+
+/** True for schema.org types that describe the business (Organization, LocalBusiness and their subtypes). */
+export function isBusinessType(type: string): boolean {
+  return /^[A-Z][A-Za-z]+$/.test(type) && !NON_BUSINESS_TYPES.has(type);
+}
+
+/**
  * Accessibility and performance checks computed without AI (they also run under
  * the no_ai policy). Each failed check can become a technical evidence.
  */
-export function technicalChecks(pages: FetchedPage[]): TechnicalCheck[] {
+export function technicalChecks(
+  pages: FetchedPage[],
+  site: { aiCrawlersBlocked?: readonly string[] } = {},
+): TechnicalCheck[] {
   const pathOf = (p: FetchedPage) => new URL(p.finalUrl).pathname || "/";
   const checks: TechnicalCheck[] = [];
   const noH1 = pages.filter((p) => (p.data.h1?.length ?? 0) === 0);
@@ -171,5 +249,27 @@ export function technicalChecks(pages: FetchedPage[]): TechnicalCheck[] {
       : detailOf("audit.check.load_time.ok")),
     pages: slow.map(pathOf),
   });
+  const withOrg = pages.filter((p) => (p.data.structuredDataTypes ?? []).some(isBusinessType));
+  checks.push({
+    key: "structured_data",
+    label: "Business described in structured data",
+    ok: withOrg.length > 0,
+    ...(withOrg.length
+      ? detailOf("audit.check.structured_data.ok", { count: withOrg.length })
+      : detailOf("audit.check.structured_data.failed")),
+    pages: withOrg.length ? [] : pages.slice(0, 1).map(pathOf),
+  });
+  if (site.aiCrawlersBlocked) {
+    const blocked = site.aiCrawlersBlocked;
+    checks.push({
+      key: "ai_crawlers",
+      label: "Open to AI answer engines",
+      ok: blocked.length === 0,
+      ...(blocked.length
+        ? detailOf("audit.check.ai_crawlers.failed", { bots: blocked.join(", ") })
+        : detailOf("audit.check.ai_crawlers.ok")),
+      pages: blocked.length ? ["/robots.txt"] : [],
+    });
+  }
   return checks;
 }

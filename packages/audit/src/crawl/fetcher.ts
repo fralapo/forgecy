@@ -63,6 +63,30 @@ function absolute(href: string | undefined, base: string): string | null {
   }
 }
 
+const JSON_LD =
+  /<script[^>]*type\s*=\s*["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script>/gi;
+
+/** schema.org types declared in the page's JSON-LD blocks (nested @graph included). */
+export function structuredDataTypes(html: string): string[] {
+  const types = new Set<string>();
+  const visit = (node: unknown, depth: number): void => {
+    if (depth > 4 || !node || typeof node !== "object") return;
+    if (Array.isArray(node)) return node.slice(0, 50).forEach((n) => visit(n, depth + 1));
+    const obj = node as Record<string, unknown>;
+    for (const t of [obj["@type"]].flat())
+      if (typeof t === "string" && t.length <= 60) types.add(t.replace(/^.*[/#:]/, ""));
+    if (obj["@graph"]) visit(obj["@graph"], depth + 1);
+  };
+  for (const m of html.matchAll(JSON_LD)) {
+    try {
+      visit(JSON.parse(m[1]!), 0);
+    } catch {
+      // Invalid JSON-LD declares nothing a search engine can read.
+    }
+  }
+  return [...types].slice(0, 20);
+}
+
 /** Extract page data from markup. Shared by the HTML fetcher and the browser fallback. */
 export function extractFromHtml(
   html: string,
@@ -121,6 +145,7 @@ export function extractFromHtml(
       imagesTotal: images.length,
       imagesWithoutAlt: images.filter((i) => !i.hasAttribute("alt")).length,
       contactForm,
+      structuredDataTypes: structuredDataTypes(html),
       links: links.size,
     },
   };

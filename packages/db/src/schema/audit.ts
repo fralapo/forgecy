@@ -175,7 +175,12 @@ export const siteScans = pgTable(
     status: sourceStatusEnum("status").notNull().default("pending"),
     maxPages: integer("max_pages").notNull(),
     steps: jsonb("steps").$type<ScanStep[]>().notNull().default([]),
-    robots: jsonb("robots").$type<{ found: boolean; blockedAll: boolean }>(),
+    robots: jsonb("robots").$type<{
+      found: boolean;
+      blockedAll: boolean;
+      /** AI answer-engine crawlers that robots.txt keeps off the home page. */
+      aiCrawlersBlocked?: string[];
+    }>(),
     extracted: jsonb("extracted").$type<ScanExtraction>(),
     /** Stable error code shown in the UI (SOURCE-UNAVAILABLE, AUD-ROBOTS-BLOCKED...). */
     errorCode: text("error_code"),
@@ -209,6 +214,8 @@ export interface PageData {
   imagesWithoutAlt?: number;
   imagesTotal?: number;
   contactForm?: boolean;
+  /** schema.org types declared in JSON-LD blocks. */
+  structuredDataTypes?: string[];
   loadMs?: number;
   links?: number;
 }
