@@ -79,6 +79,7 @@ export async function runAgent<T>(
   try {
     const res = await deps.gateway.generateObject({
       task: input.task,
+      agent: input.role,
       schema: input.schema,
       schemaName: input.schemaName,
       system: input.system + languageRule(input.language),
