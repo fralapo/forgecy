@@ -636,6 +636,33 @@
       "note": "Nota (facoltativa)",
       "notePlaceholder": "Es. prima della revisione con il cliente",
       "submit": "Salva versione"
+    },
+    "compare": {
+      "from": "Da",
+      "to": "A",
+      "submit": "Confronta",
+      "back": "Torna alle versioni",
+      "missing": "La versione {number} non esiste.",
+      "same": "Scegli due versioni diverse.",
+      "title": "Versione {left} e versione {right} a confronto",
+      "count": "{count, plural, =0 {Nessuna differenza} one {# slide diversa} other {# slide diverse}}",
+      "narrow": "Il confronto richiede uno schermo più largo.",
+      "notThere": "Non presente nella versione {number}",
+      "slideOf": "Slide {number} della versione {version}",
+      "slide": "Slide {left} → {right}",
+      "change": {
+        "same": "Uguale",
+        "changed": "Modificata",
+        "added": "Aggiunta",
+        "removed": "Rimossa"
+      },
+      "moved": "Spostata",
+      "parts": "Modificato: {parts}",
+      "part": {
+        "layout": "Layout",
+        "tone": "Tono"
+      },
+      "caption": "Caption e hashtag"
     }
   },
   "editor": {

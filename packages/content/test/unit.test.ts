@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { imageSize } from "../src/assets";
 import { findingsToAcknowledge, toGuardContent } from "../src/carousels/brand-guard";
 import { computeChecks } from "../src/carousels/checks";
+import { compareCarouselVersions } from "../src/carousels/compare";
 import {
   carouselDocumentSchema,
   channelFormat,
@@ -307,5 +308,37 @@ describe("brand guard mapping", () => {
       findings: [f("a", "error", "open"), f("b", "note", "open"), f("c", "warning", "ignored")],
     }).map((x) => x.key);
     expect(keys).toEqual(["a"]);
+  });
+});
+
+describe("carousel version comparison", () => {
+  const slide = (id: string, title: string, layout = "text") => ({
+    id,
+    layout,
+    slots: { title },
+    protectedSlots: [],
+  });
+  const doc = (slides: ReturnType<typeof slide>[], caption = "") =>
+    carouselDocumentSchema.parse({ slides, caption });
+
+  it("pairs slides by id and names what changed", () => {
+    const left = doc([slide("a", "Hook"), slide("b", "Two"), slide("c", "Three")], "Old");
+    const right = doc([slide("a", "Better hook"), slide("c", "Three"), slide("d", "Four", "cta")]);
+    const r = compareCarouselVersions(left, right);
+    expect(r.slides.map((s) => [s.slideId, s.change, s.moved])).toEqual([
+      ["a", "changed", false],
+      ["b", "removed", false],
+      ["c", "same", true],
+      ["d", "added", false],
+    ]);
+    expect(r.slides[0]!.changedParts).toEqual(["title"]);
+    expect(r.captionChanged).toBe(true);
+    expect(r.hashtagsChanged).toBe(false);
+    expect(r.changedCount).toBe(4);
+  });
+
+  it("finds nothing between identical versions", () => {
+    const d = doc([slide("a", "Hook")]);
+    expect(compareCarouselVersions(d, d).changedCount).toBe(0);
   });
 });

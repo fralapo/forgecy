@@ -128,3 +128,65 @@ function diffTokens(before: TokenTree, after: TokenTree): FieldChange[] {
       });
   return out;
 }
+
+/** One field of the side-by-side comparison: its whole value in each version. */
+export interface FieldComparison {
+  block: BlockKey;
+  label: string;
+  pointer: string;
+  sensitive: boolean;
+  /** Value in the left (older) version; lists keep all their items. */
+  left: unknown;
+  right: unknown;
+  changed: boolean;
+}
+
+const plain = (v: unknown): unknown => (Array.isArray(v) ? v.map(unwrap) : unwrap(v));
+
+/**
+ * Every field of two versions side by side, in the order of `fields`, then the design
+ * tokens present in either version. `changed` uses the same rules as `diffVersions`
+ * (sources and proposal ids are not content), so filtering on it shows only what differs.
+ */
+export function compareVersions(
+  left: { document: BrandIdentityDocument; tokens: TokenTree },
+  right: { document: BrandIdentityDocument; tokens: TokenTree },
+): FieldComparison[] {
+  const out: FieldComparison[] = [];
+  for (const field of fields) {
+    if (field.shape === "token-group") continue;
+    const l = plain(getAt(left, field.pointer));
+    const r = plain(getAt(right, field.pointer));
+    out.push({
+      block: field.block,
+      label: field.label,
+      pointer: field.pointer,
+      sensitive: field.sensitive,
+      left: l,
+      right: r,
+      changed: !deepEqual(l ?? null, r ?? null),
+    });
+  }
+  let fl, fr;
+  try {
+    fl = flattenTokens(left.tokens);
+    fr = flattenTokens(right.tokens);
+  } catch {
+    return out;
+  }
+  const paths = [...new Set([...fl.keys(), ...fr.keys()])].sort();
+  for (const path of paths) {
+    const l = fl.get(path)?.value;
+    const r = fr.get(path)?.value;
+    out.push({
+      block: "visual",
+      label: `Token ${path}`,
+      pointer: `/tokens/${path.split(".").join("/")}`,
+      sensitive: path.startsWith("color.reference.") || path.startsWith("color.semantic."),
+      left: l,
+      right: r,
+      changed: !deepEqual(l ?? null, r ?? null),
+    });
+  }
+  return out;
+}

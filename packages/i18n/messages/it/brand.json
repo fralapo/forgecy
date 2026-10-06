@@ -655,7 +655,20 @@
     "comparedWith": "v{number} rispetto alla v{previous}",
     "firstVersion": "v{number} · prima versione",
     "openReadOnly": "Apri i blocchi in sola lettura: <strategy>Strategia</strategy>, <verbal>Identità verbale</verbal>, <visual>Identità visiva</visual>, <content>Contenuti</content>.",
-    "number": "v{number}"
+    "number": "v{number}",
+    "compareTitle": "v{left} e v{right} a confronto",
+    "compareCount": "{count, plural, =0 {Nessuna differenza} one {# campo diverso} other {# campi diversi}}",
+    "compareFrom": "Da",
+    "compareTo": "A",
+    "compare": "Confronta",
+    "compareSideBySide": "Confronta affiancata con v{previous}",
+    "showAll": "Mostra tutti i campi",
+    "onlyDifferences": "Solo le differenze",
+    "backToVersions": "Torna alle versioni",
+    "compareNarrow": "Il confronto richiede uno schermo più largo.",
+    "compareSame": "Scegli due versioni diverse.",
+    "compareMissing": "La versione v{number} non esiste.",
+    "field": "Campo"
   },
   "approve": {
     "notOpen": "La v{number} non è una bozza aperta: le versioni approvate non si possono modificare. <link>Vai allo storico</link>.",

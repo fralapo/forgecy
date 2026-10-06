@@ -655,7 +655,20 @@
     "comparedWith": "v{number} compared with v{previous}",
     "firstVersion": "v{number} · first version",
     "openReadOnly": "Open the blocks read-only: <strategy>Strategy</strategy>, <verbal>Verbal</verbal>, <visual>Visual</visual>, <content>Content</content>.",
-    "number": "v{number}"
+    "number": "v{number}",
+    "compareTitle": "v{left} and v{right} side by side",
+    "compareCount": "{count, plural, =0 {No differences} one {# field differs} other {# fields differ}}",
+    "compareFrom": "From",
+    "compareTo": "To",
+    "compare": "Compare",
+    "compareSideBySide": "Compare side by side with v{previous}",
+    "showAll": "Show all fields",
+    "onlyDifferences": "Only the differences",
+    "backToVersions": "Back to the versions",
+    "compareNarrow": "The comparison needs a wider screen.",
+    "compareSame": "Choose two different versions.",
+    "compareMissing": "Version v{number} doesn’t exist.",
+    "field": "Field"
   },
   "approve": {
     "notOpen": "v{number} is not an open draft: approved versions can’t be edited. <link>Go to the history</link>.",
