@@ -33,6 +33,11 @@ export const priceTable: Record<string, ModelPrice> = {
   // OpenAI (images, token-billed: text input / image output)
   "openai:gpt-image-2": { input: 2.5, output: 15 },
   "openai:gpt-image-2.5-flare": { input: 2.5, output: 15 },
+  // DeepSeek: peak-hour list prices (off-peak is about half), TO VERIFY on
+  // api-docs.deepseek.com/quick_start/pricing. Checked 2026-10-06.
+  "deepseek:deepseek-flash": { input: 0.3, output: 1.2, cacheRead: 0.006 },
+  "deepseek:deepseek-v4-pro": { input: 1.32, output: 3.96, cacheRead: 0.044 },
+  // OpenRouter (text and images) reports the billed cost itself (usage.cost), so it needs no rows.
   // Google images: per-image estimate, TO VERIFY on ai.google.dev/pricing.
   "google:gemini-3.1-flash-image": { input: 0, output: 0, perImage: 0.04 },
 };

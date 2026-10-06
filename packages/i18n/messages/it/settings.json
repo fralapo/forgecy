@@ -46,6 +46,7 @@
     "description": "Uso commerciale delle immagini generate: un Admin lo verifica leggendo i termini del provider.",
     "primary": "Principale",
     "secondary": "Secondario",
+    "unused": "Non usato: si provano solo i primi due provider configurati (ordine in IMAGE_PROVIDERS).",
     "status": {
       "pending_verification": "Da verificare",
       "verified": "Verificato",

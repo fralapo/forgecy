@@ -32,6 +32,19 @@ const { data } = await ai.generateObject({
 - **Prices**: `src/pricing.ts` is an editable table. It must be checked against the providers' pages; missing models cost 0 and are flagged (`unpriced: true`).
 - **BYOK keys**: `encryptSecret` / `decryptSecret` (AES-256-GCM with `FORGECY_ENCRYPTION_KEY`); only `keyHint` (last 4 characters) in plain text. Never in logs.
 
+## Providers
+
+| Provider     | Text | Images | Key / setting                                                 |
+| ------------ | ---- | ------ | ------------------------------------------------------------- |
+| `anthropic`  | yes  | no     | `ANTHROPIC_API_KEY`                                           |
+| `openai`     | yes  | yes    | `OPENAI_API_KEY`                                              |
+| `openrouter` | yes  | yes    | `OPENROUTER_API_KEY`, image model `OPENROUTER_IMAGE_MODEL`    |
+| `deepseek`   | yes  | no     | `DEEPSEEK_API_KEY` (JSON via `json_object`, schema in prompt) |
+| `google`     | no   | yes    | `GOOGLE_AI_API_KEY`                                           |
+| `local`      | yes  | no     | `LOCAL_LLM_ENABLED`, `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`  |
+
+Image providers are tried in the order of `IMAGE_PROVIDERS` (default `openai,google,openrouter`): first configured one primary, next one fallback. Logging in with a ChatGPT account is not supported (see `docs/adr/0006`).
+
 ## Adding a provider
 
 1. If it is compatible with the OpenAI API, `createOpenAICompatibleProvider({ id, apiKey, baseURL })` is enough. Otherwise create `src/providers/<name>.ts` implementing `TextProvider` (or `ImageProvider` for images): it translates `jsonSchema` into the provider's format, normalizes `stopReason` and `usage`, and converts errors with `classifyError()` or `AiProviderError`.
