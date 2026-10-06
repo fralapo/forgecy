@@ -1,0 +1,36 @@
+{
+  "name": "@forgecy/carousel",
+  "version": "0.1.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./export": "./src/export/index.ts",
+    "./node": "./src/node.ts",
+    "./catalog": "./src/catalog.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "preview": "tsx scripts/preview.ts",
+    "schema": "tsx scripts/schema.ts"
+  },
+  "dependencies": {
+    "@forgecy/core": "workspace:*",
+    "@forgecy/db": "workspace:*",
+    "@forgecy/files": "workspace:*",
+    "@forgecy/jobs": "workspace:*",
+    "fflate": "^0.8.3",
+    "linkedom": "^0.18.13",
+    "pdf-lib": "^1.17.1",
+    "playwright-core": "1.63.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "typescript": "6.0.3",
+    "vitest": "^4.1.11",
+    "tsx": "^4.23.15"
+  }
+}

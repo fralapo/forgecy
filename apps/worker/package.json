@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@forgecy/ai": "workspace:*",
+    "@forgecy/carousel": "workspace:*",
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",
     "@forgecy/files": "workspace:*",

@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: new URL("../../", import.meta.url).pathname,
   // Internal packages ship TypeScript source ("just-in-time" packages).
   transpilePackages: [
+    "@forgecy/carousel",
     "@forgecy/core",
     "@forgecy/db",
     "@forgecy/ai",
