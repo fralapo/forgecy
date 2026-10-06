@@ -1,15 +1,15 @@
 # @forgecy/brand-guard
 
-Brand Guard (M6): rule-based checks of a content against the client's published Brand
+Brand Guard (M6): rule-based checks of content against the client's published Brand
 Identity, a coherence score with its evidence, and the review gates (spec Page 46
 "Carousel brand check", Page 47 approval, C-6 and UXA-P4-12/13/14/52).
 
 Brand Guard **signals, it does not block**: nothing it finds stops sending to review or
 the export. The only finding that blocks approval is an AI image not approved by a
-person. Agents (the Reviewer) can run checks; ignoring, reopening and "Ho visto" are
+person. Agents (the Reviewer) can run checks; ignoring, reopening and "Seen" are
 people's decisions, refused to agents on the server.
 
-## API for the Contents module
+## API for the Content module
 
 ```ts
 import {
@@ -21,7 +21,7 @@ import {
   exportGate,
 } from "@forgecy/brand-guard";
 
-// On save, after generation and on «Riesegui controlli» (a job of the Contents module):
+// On save, after generation and on “Rerun checks” (a job of the Content module):
 const { report } = await runBrandCheck(db, actor, {
   clientId,
   subject: { type: "carousel", id: carouselId, version: 3 },
@@ -30,7 +30,7 @@ const { report } = await runBrandCheck(db, actor, {
   brandVersionId, // the BI version the carousel was generated with; default: published
 });
 
-// Page 46: latest report with ignores, "Ho visto", open counts and resolved findings.
+// Page 46: latest report with ignores, "Seen", open counts and resolved findings.
 const check = await getBrandCheck(db, actor, { clientId, subject });
 
 // Inside the approve transaction (throws CHECKS-NOT-ACKNOWLEDGED, AI-IMAGES-NOT-APPROVED,
@@ -72,7 +72,7 @@ pixel sample exists for a slot, it replaces the token-based contrast check.
 | `sensitive_claim`                                             | warning unless it repeats a proven message | json   |
 | `product_fact`, `price_not_requested`                         | error (numbers and units vs product data)  | json   |
 | `off_brand_color`, `off_brand_font`                           | error, with the nearest role               | json   |
-| `contrast`                                                    | error (4,5:1, large text 3:1, UXA-14)      | json   |
+| `contrast`                                                    | error (4.5:1, large text 3:1, UXA-14)      | json   |
 | `contrast_on_render`                                          | error, measured on pixels                  | render |
 | `text_overflow`, `outside_slide`, `overlap`, `too_many_lines` | error                                      | render |
 | `outside_safe_zone`                                           | error; warning for decorative elements     | render |
@@ -87,16 +87,16 @@ facts without numbers) are listed in `report.notRun` and belong to the Reviewer 
 
 Each finding has a stable `key` (check, slide, slot and what was found) and a
 `blockHash`: an ignored warning reopens when its block changes. Errors cannot be
-ignored. "Ho visto" is stored per content version.
+ignored. "Seen" is stored per content version.
 
 ## Coherence score
 
 `report.coherence` is 100 minus 15 per error, 5 per warning and 1 per note, per category
 (vocabulary, claims, editorial, visual, layout, images) and overall, with the bands of
-spec 12.6 (critico, debole, discreto, buono, eccellente) and the finding keys as evidence.
+spec 12.6 (band values `critico`, `debole`, `discreto`, `buono`, `eccellente`) and the finding keys as evidence.
 Ignored findings do not count. It is never meant to be shown alone. Spec 12.6 says "no
 numeric scores in the MVP" for the eight audit scores; this is the content coherence the
-Brand Identity tab asks for ("nell'MVP c'è solo la coerenza, come brand check a regole"),
+Brand Identity tab asks for ("in the MVP there is only coherence, as a rule-based brand check"),
 so the UI may show only the band and the findings if the Product Owner prefers.
 
 ## Data
@@ -104,7 +104,7 @@ so the UI may show only the band and the findings if the Product Owner prefers.
 - `brand_check_runs`: one row per run with the full report (jsonb), counts, score, the BI
   version used and who ran it.
 - `brand_check_issue_states`: people's decisions (`ignored` with reason and optional note,
-  280 characters max, required for "Altro"; `acknowledged` per version), never written by
+  280 characters max, required for the `other` reason; `acknowledged` per version), never written by
   agents.
 
 Events in `audit_events`: `brand_check_completed`, `brand_check_issue_ignored`,

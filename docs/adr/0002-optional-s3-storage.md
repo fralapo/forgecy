@@ -1,16 +1,16 @@
-# 0002 · Storage S3 opzionale con SeaweedFS invece di MinIO
+# 0002 · Optional S3 storage with SeaweedFS instead of MinIO
 
-- Stato: accettata (M1)
-- Data: 2026-10-05
+- Status: accepted (M1)
+- Date: 2026-10-05
 
-## Contesto
+## Context
 
-La scheda indica il disco locale come storage di default e MinIO come alternativa. MinIO Community Edition non pubblica più immagini Docker da ottobre 2025 e il repository è stato archiviato nel 2026.
+The specification names local disk as the default storage and MinIO as the alternative. MinIO Community Edition has not published Docker images since October 2025 and the repository was archived in 2026.
 
-## Decisione
+## Decision
 
-Il default resta il disco (`STORAGE_DRIVER=local`, file in `./data/media`). Il driver `s3` di `packages/files` funziona con qualunque storage compatibile S3; il profilo Compose `s3` include SeaweedFS (Apache 2.0) per chi vuole uno storage a oggetti sulla stessa macchina.
+The default stays the disk (`STORAGE_DRIVER=local`, files in `./data/media`). The `s3` driver of `packages/files` works with any S3-compatible storage; the Compose `s3` profile includes SeaweedFS (Apache 2.0) for those who want object storage on the same machine.
 
-## Conseguenze
+## Consequences
 
-Nessuna dipendenza a pagamento. Chi ha già un S3 compatibile (Garage, Ceph, un bucket esterno) imposta `S3_ENDPOINT` e le chiavi senza cambiare codice.
+No paid dependencies. Anyone who already has S3-compatible storage (Garage, Ceph, an external bucket) sets `S3_ENDPOINT` and the keys without changing code.

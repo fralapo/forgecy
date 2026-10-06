@@ -1,21 +1,21 @@
-# 0001 · Better Auth al posto di Auth.js
+# 0001 · Better Auth instead of Auth.js
 
-- Stato: accettata (M1)
-- Data: 2026-10-05
+- Status: accepted (M1)
+- Date: 2026-10-05
 
-## Contesto
+## Context
 
-La scheda prevede Auth.js per password locale, magic link e Google OAuth. Da settembre 2025 Auth.js è in manutenzione (solo patch di sicurezza): lo mantiene il team di Better Auth, che consiglia Better Auth per i progetti nuovi.
+The specification calls for Auth.js for local password, magic link and Google OAuth. Since September 2025 Auth.js has been in maintenance mode (security patches only): it is maintained by the Better Auth team, which recommends Better Auth for new projects.
 
-## Decisione
+## Decision
 
-Usiamo Better Auth (MIT, self-hosted, sessioni nel nostro PostgreSQL) con l'adattatore Drizzle. Copre i tre livelli di accesso della scheda:
+We use Better Auth (MIT, self-hosted, sessions in our PostgreSQL) with the Drizzle adapter. It covers the specification's three access levels:
 
-- `local` e `intranet`: email e password; la registrazione pubblica è spenta, gli account li crea il primo avvio (`/setup`) o un Admin.
-- `team`: in più magic link (token salvato solo come hash, scadenza `FORGECY_MAGIC_LINK_TTL_MINUTES`, default 15) e Google OAuth, solo per i domini in `FORGECY_ALLOWED_EMAIL_DOMAINS`.
+- `local` and `intranet`: email and password; public sign-up is off, accounts are created by the first start (`/setup`) or by an Admin.
+- `team`: additionally magic link (token stored only as a hash, expiry `FORGECY_MAGIC_LINK_TTL_MINUTES`, default 15) and Google OAuth, only for the domains in `FORGECY_ALLOWED_EMAIL_DOMAINS`.
 
-Telemetria di Better Auth spenta, limite di frequenza attivo sui login, utenti disattivati bloccati alla creazione della sessione.
+Better Auth telemetry off, rate limiting on sign-ins, deactivated users blocked at session creation.
 
-## Conseguenze
+## Consequences
 
-Le tabelle di identità sono `users`, `sessions`, `accounts`, `verifications` (`packages/db/src/schema/auth.ts`). La password sta in `accounts.password` e non in `users.password_hash` come nella scheda. I permessi restano nel codice (`can()` in `packages/core`), indipendenti dalla libreria di login.
+The identity tables are `users`, `sessions`, `accounts`, `verifications` (`packages/db/src/schema/auth.ts`). The password lives in `accounts.password` and not in `users.password_hash` as in the specification. Permissions stay in code (`can()` in `packages/core`), independent of the sign-in library.

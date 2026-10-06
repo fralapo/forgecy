@@ -1,18 +1,18 @@
 # @forgecy/content
 
-Contenuti e caroselli (M5): Content Strategy, piano a 30 giorni, caroselli con brief, scaletta, slide, immagini, revisione ed export.
+Content and carousels (M5): Content Strategy, 30-day plan, carousels with brief, outline, slides, images, review and export.
 
-- **Strategia** (`strategy.ts`): pilastri e rubriche con obiettivo, funnel, frequenza e prodotti collegati; revisione con `rev` (`CONFLICT-DRAFT-REV`). Il Planner (`content.propose_strategy`) salva solo proposte con fonti e confidenza; le accetta o rifiuta una persona.
-- **Piano** (`content.propose_plan`): un piano proposto per volta; le voci si decidono una a una e «Attiva piano» sostituisce il piano attivo. Da una voce accettata nasce un carosello già impostato.
-- **Caroselli** (`carousels.ts`): servono una Brand Identity pubblicata (`BRAND-NOT-PUBLISHED`) e un template pubblicato del catalogo. Il brief strutturato si adatta al canale (Instagram 2.200 caratteri di didascalia, LinkedIn 3.000). Scaletta (`content.generate_outline`), approvazione della scaletta, slide (`content.generate_slides`) validate contro i layout del template, modifica di una slide con un'istruzione (`content.edit_slide`) con «Tieni» o «Annulla modifica», slot protetti dall'AI.
-- **Versioni**: ogni generazione, salvataggio, ripristino e invio crea una versione immutabile (trigger `content_versions_immutable`); la bozza si salva con `draftRev`.
-- **Controlli** (`checks.ts`, anche nel browser): limiti del template, didascalia, CTA finale, hashtag, parole vietate, prezzi non richiesti, immagini AI non approvate, uso commerciale da verificare, alt text, prodotto o Brand Identity cambiati.
-- **Revisione**: «Invia in revisione» richiede zero errori; l'approvazione richiede «Ho visto» su ogni avviso e una nota se approvi un tuo lavoro. Gli agenti propongono, non approvano mai.
-- **Brand Guard** (`brand-guard.ts`): porta registrata dalle app con `setBrandGuard({ run: runBrandCheck, get: getBrandCheck, confirmForApproval: confirmBrandCheckForApproval })`. Con la porta registrata il carosello si controlla al salvataggio e all'invio, e l'approvazione conferma i suoi esiti nella stessa transazione. L'interfaccia mostra la fascia di coerenza e gli esiti, mai il punteggio numerico.
-- **Immagini** (`assets.ts`, `content.generate_image`): libreria del cliente con indirizzi per contenuto (`clients/<id>/assets/<sha256>.<ext>`). Le immagini AI passano dal gateway (OpenAI, poi Gemini) e restano bozze finché una persona non le approva; un provider con `commercial_use_status` respinto è escluso, uno da verificare genera un avviso.
-- **Export** (`content.export`, coda `export`): usa l'export del renderer con la versione approvata, il tema dal brand e la versione del template fissata; il primo export finale porta il carosello in «Esportato».
-- **Prodotti** (`products.ts`): porta `setProductSource` per il catalogo. `listProductUsage(db, clientId, productId)` elenca pilastri, rubriche, voci di piano e caroselli che usano un prodotto (la sezione «Usato in» del catalogo).
+- **Strategy** (`strategy.ts`): pillars and rubrics with goal, funnel, frequency and linked products; review with `rev` (`CONFLICT-DRAFT-REV`). The Planner (`content.propose_strategy`) saves only proposals with sources and confidence; a person accepts or rejects them.
+- **Plan** (`content.propose_plan`): one proposed plan at a time; items are decided one by one and “Activate plan” replaces the active plan. An accepted item gives rise to an already set-up carousel.
+- **Carousels** (`carousels.ts`): they need a published Brand Identity (`BRAND-NOT-PUBLISHED`) and a published template from the catalog. The structured brief adapts to the channel (Instagram 2,200 caption characters, LinkedIn 3,000). Outline (`content.generate_outline`), outline approval, slides (`content.generate_slides`) validated against the template's layouts, editing a slide with an instruction (`content.edit_slide`) with “Keep” or “Undo edit”, slots protected from the AI.
+- **Versions**: every generation, save, restore and submission creates an immutable version (trigger `content_versions_immutable`); the draft is saved with `draftRev`.
+- **Checks** (`checks.ts`, also in the browser): template limits, caption, final CTA, hashtags, forbidden words, unrequested prices, unapproved AI images, commercial use to verify, alt text, changed product or Brand Identity.
+- **Review**: “Submit for review” requires zero errors; approval requires “Seen” on every warning and a note if you approve your own work. Agents propose, they never approve.
+- **Brand Guard** (`brand-guard.ts`): a port registered by the apps with `setBrandGuard({ run: runBrandCheck, get: getBrandCheck, confirmForApproval: confirmBrandCheckForApproval })`. With the port registered, the carousel is checked on save and on submission, and approval confirms its results in the same transaction. The interface shows the coherence band and the results, never the numeric score.
+- **Images** (`assets.ts`, `content.generate_image`): the client's library with content-addressed keys (`clients/<id>/assets/<sha256>.<ext>`). AI images go through the gateway (OpenAI, then Gemini) and stay drafts until a person approves them; a provider with a rejected `commercial_use_status` is excluded, one still to verify produces a warning.
+- **Export** (`content.export`, `export` queue): uses the renderer's export with the approved version, the theme from the brand and the pinned template version; the first final export moves the carousel to “Exported”.
+- **Products** (`products.ts`): `setProductSource` port for the catalog. `listProductUsage(db, clientId, productId)` lists the pillars, rubrics, plan items and carousels that use a product (the catalog's “Used in” section).
 
-Il worker registra `contentHandlers` da `@forgecy/content/handlers`; il browser importa solo `@forgecy/content/client`.
+The worker registers `contentHandlers` from `@forgecy/content/handlers`; the browser imports only `@forgecy/content/client`.
 
-Test: `pnpm --filter @forgecy/content test`; quelli d'integrazione partono con `FORGECY_TEST_DATABASE_URL`.
+Tests: `pnpm --filter @forgecy/content test`; the integration ones run with `FORGECY_TEST_DATABASE_URL`.

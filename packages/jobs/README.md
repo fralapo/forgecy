@@ -1,10 +1,10 @@
 # @forgecy/jobs
 
-Job in background: BullMQ sposta il lavoro, la tabella `jobs` in Postgres è la fonte di verità che l'interfaccia legge.
+Background jobs: BullMQ moves the work, the `jobs` table in Postgres is the source of truth the interface reads.
 
-## Definire un job
+## Defining a job
 
-Ogni modulo definisce i suoi job in un proprio file, importato sia dall'app web sia dal worker:
+Each module defines its jobs in its own file, imported by both the web app and the worker:
 
 ```ts
 export const outlineJob = defineJob({
@@ -14,28 +14,28 @@ export const outlineJob = defineJob({
 });
 ```
 
-Code: `default`, `ai`, `export`, `media`. Il job `system.ping` (payload `{ message }`) serve per gli smoke test.
+Queues: `default`, `ai`, `export`, `media`. The `system.ping` job (payload `{ message }`) is for smoke tests.
 
-## Accodare
+## Enqueuing
 
-`enqueueJob(db, queues, { kind, payload, clientId?, entity?, entityId?, createdBy?, dependsOnJobId? })` valida il payload, inserisce la riga (`queued`) e aggiunge il job BullMQ con `jobId` = id della riga, 3 tentativi e attesa 0 s / 5 s / 30 s. In Redis va solo il `kind`; il payload resta in Postgres. `cancelJob` annulla.
+`enqueueJob(db, queues, { kind, payload, clientId?, entity?, entityId?, createdBy?, dependsOnJobId? })` validates the payload, inserts the row (`queued`) and adds the BullMQ job with `jobId` = row id, 3 attempts and waits of 0 s / 5 s / 30 s. Only the `kind` goes to Redis; the payload stays in Postgres. `cancelJob` cancels.
 
 ## Worker
 
-`createJobWorker({ db, redisUrl, handlers, concurrency, logger })`, con `handlers` costruiti da `handle(def, async (payload, ctx) => result)`. Il contesto offre `ctx.progress(n)`, `ctx.heartbeat()`, `ctx.isCancelled()`. Stati: `running` → `completed` (con risultato) oppure `retrying` → `failed`. Una `NeedsAttentionError` porta subito a `needs_attention` senza altri tentativi; una `UnrecoverableError` porta subito a `failed`. `close()` chiude in modo ordinato (da chiamare su SIGTERM).
+`createJobWorker({ db, redisUrl, handlers, concurrency, logger })`, with `handlers` built by `handle(def, async (payload, ctx) => result)`. The context offers `ctx.progress(n)`, `ctx.heartbeat()`, `ctx.isCancelled()`. States: `running` → `completed` (with a result) or `retrying` → `failed`. A `NeedsAttentionError` leads straight to `needs_attention` with no further attempts; an `UnrecoverableError` leads straight to `failed`. `close()` shuts down cleanly (call it on SIGTERM).
 
-`recoverStaleJobs(db, olderThanMs, { queues })` rimette in `retrying` (o `failed`, se i tentativi sono finiti) i job `running` fermi da più del TTL del lock (10 min). Va eseguita all'avvio del worker e poi periodicamente.
+`recoverStaleJobs(db, olderThanMs, { queues })` puts `running` jobs stuck for longer than the lock TTL (10 min) back into `retrying` (or `failed`, if attempts are exhausted). Run it when the worker starts and then periodically.
 
-## Lock sul contenuto
+## Content lock
 
-`acquireLock(db, { table, id, jobId, ttlMs })` esegue un solo `UPDATE … WHERE locked_by_job_id IS NULL OR lock_expires_at < now()` (rientrante per lo stesso job). Ci sono anche `renewLock`, `releaseLock` e `withLock`, che rinnova il lock ogni ttl/3 e lo rilascia anche in caso di errore. La tabella deve avere le colonne `locked_by_job_id` e `lock_expires_at`.
+`acquireLock(db, { table, id, jobId, ttlMs })` runs a single `UPDATE … WHERE locked_by_job_id IS NULL OR lock_expires_at < now()` (reentrant for the same job). There are also `renewLock`, `releaseLock` and `withLock`, which renews the lock every ttl/3 and releases it even on error. The table must have the `locked_by_job_id` and `lock_expires_at` columns.
 
 ## SSE
 
-`subscribeJobEvents(db, jobId, { signal })` è un iteratore asincrono che interroga la riga ogni secondo e restituisce un evento a ogni cambio di stato o progresso, fino allo stato terminale. La route SSE web (`GET /api/jobs/:id/events`) lo usa direttamente.
+`subscribeJobEvents(db, jobId, { signal })` is an async iterator that polls the row every second and yields an event on every state or progress change, until the terminal state. The web SSE route (`GET /api/jobs/:id/events`) uses it directly.
 
 ## Redis
 
-BullMQ 6 non include più un driver Redis: serve `ioredis` come dipendenza (caricato in modo lazy da `createRedisConnection`).
+BullMQ 6 no longer bundles a Redis driver: `ioredis` is required as a dependency (loaded lazily by `createRedisConnection`).
 
-Test di integrazione: `FORGECY_TEST_DATABASE_URL=… FORGECY_TEST_REDIS_URL=… pnpm test`.
+Integration tests: `FORGECY_TEST_DATABASE_URL=… FORGECY_TEST_REDIS_URL=… pnpm test`.

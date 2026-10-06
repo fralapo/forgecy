@@ -1,63 +1,63 @@
-# Architettura di Forgecy
+# Forgecy architecture
 
-Monolite TypeScript self-hosted in un solo repository: un'app Next.js per interfaccia e API, un worker per i lavori lunghi, PostgreSQL con pgvector, Redis per la coda e uno storage di file su disco o S3 compatibile. Tutto parte con Docker Compose sulla macchina dell'agenzia; solo i provider AI esterni, se abilitati, escono dalla rete.
+Self-hosted TypeScript monolith in a single repository: a Next.js app for the interface and API, a worker for long-running work, PostgreSQL with pgvector, Redis for the queue and file storage on disk or S3-compatible. Everything starts with Docker Compose on the agency's machine; only external AI providers, if enabled, leave the network.
 
 ```
-browser ──► apps/web (Next.js 16) ──► PostgreSQL (stato, job, jobs_log)
+browser ──► apps/web (Next.js 16) ──► PostgreSQL (state, jobs, jobs_log)
                 │  enqueue                 ▲
                 ▼                          │
-              Redis (BullMQ) ──► apps/worker ──► packages/ai ──► provider AI (opzionali)
-                                       └──► packages/files ──► ./data/media o S3
+              Redis (BullMQ) ──► apps/worker ──► packages/ai ──► AI providers (optional)
+                                       └──► packages/files ──► ./data/media or S3
 ```
 
-L'app web risponde subito e mette in coda i lavori lunghi; il worker li esegue e aggiorna la riga in `jobs`; l'interfaccia legge solo quella riga (via Server-Sent Events su `/api/jobs/:id/events`).
+The web app responds immediately and queues long-running work; the worker runs it and updates the row in `jobs`; the interface reads only that row (via Server-Sent Events on `/api/jobs/:id/events`).
 
-## Mappa dei pacchetti
+## Package map
 
-| Cartella                         | Pacchetto         | Cosa contiene                                                                                                                      | Dipende da                      |
-| -------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| `apps/web`                       | `@forgecy/web`    | Next.js App Router: pagine, server action, route API, login (Better Auth), `proxy.ts`                                              | tutti i pacchetti               |
-| `apps/worker`                    | `@forgecy/worker` | Processo BullMQ, health su `:3001`, recupero dei job rimasti appesi                                                                | core, db, jobs, ai, files, mail |
-| `packages/core`                  | `@forgecy/core`   | Configurazione (`loadEnv`), permessi (`can`, `assertCan`), policy AI, stati di contenuti e job, errori di dominio                  | zod                             |
-| `packages/db`                    | `@forgecy/db`     | Schema Drizzle (un file per modulo in `src/schema/`), migrazioni, `getDb`, `recordAuditEvent`, seed                                | core                            |
-| `packages/ai`                    | `@forgecy/ai`     | Gateway AI: adattatori Anthropic, OpenAI, OpenRouter, locale, immagini OpenAI e Google; policy, budget, `jobs_log`, cifratura BYOK | core, db                        |
-| `packages/jobs`                  | `@forgecy/jobs`   | Registro dei job (`defineJob`), `enqueueJob`, worker, lock sui contenuti, eventi per SSE, recupero                                 | core, db, bullmq, ioredis       |
-| `packages/files`                 | `@forgecy/files`  | Driver di storage (disco, S3), URL firmati, controllo degli upload                                                                 | core                            |
-| `packages/mail`                  | `@forgecy/mail`   | SMTP (Mailpit in sviluppo), email del magic link                                                                                   | core                            |
-| `packages/ui`                    | `@forgecy/ui`     | Token DTCG → `tokens.css` e tema Tailwind 4, componenti, pagina `/design`                                                          | react                           |
-| `docs/agents/`                   | —                 | Un file per agente AI (ruolo, input, output, vincoli)                                                                              | —                               |
-| `templates/`                     | —                 | Template iniziali nel formato canonico (HTML, CSS, `template.json`)                                                                | —                               |
-| `docker/`, `docker-compose*.yml` | —                 | Immagini `web`, `worker`, `migrate`; profili `dev`, `s3`, `https`                                                                  | —                               |
-| `scripts/`                       | —                 | CLI `pnpm forgecy` (start, migrate, seed, backup, restore, upgrade, health)                                                        | —                               |
+| Folder                           | Package           | What it contains                                                                                                                | Depends on                      |
+| -------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `apps/web`                       | `@forgecy/web`    | Next.js App Router: pages, server actions, API routes, sign-in (Better Auth), `proxy.ts`                                        | all packages                    |
+| `apps/worker`                    | `@forgecy/worker` | BullMQ process, health on `:3001`, recovery of stuck jobs                                                                       | core, db, jobs, ai, files, mail |
+| `packages/core`                  | `@forgecy/core`   | Configuration (`loadEnv`), permissions (`can`, `assertCan`), AI policy, content and job states, domain errors                   | zod                             |
+| `packages/db`                    | `@forgecy/db`     | Drizzle schema (one file per module in `src/schema/`), migrations, `getDb`, `recordAuditEvent`, seed                            | core                            |
+| `packages/ai`                    | `@forgecy/ai`     | AI gateway: Anthropic, OpenAI, OpenRouter, local, OpenAI and Google image adapters; policy, budget, `jobs_log`, BYOK encryption | core, db                        |
+| `packages/jobs`                  | `@forgecy/jobs`   | Job registry (`defineJob`), `enqueueJob`, worker, content locks, SSE events, recovery                                           | core, db, bullmq, ioredis       |
+| `packages/files`                 | `@forgecy/files`  | Storage drivers (disk, S3), signed URLs, upload checks                                                                          | core                            |
+| `packages/mail`                  | `@forgecy/mail`   | SMTP (Mailpit in development), magic link email                                                                                 | core                            |
+| `packages/ui`                    | `@forgecy/ui`     | DTCG tokens → `tokens.css` and Tailwind 4 theme, components, `/design` page                                                     | react                           |
+| `docs/agents/`                   | —                 | One file per AI agent (role, input, output, constraints)                                                                        | —                               |
+| `templates/`                     | —                 | Starter templates in the canonical format (HTML, CSS, `template.json`)                                                          | —                               |
+| `docker/`, `docker-compose*.yml` | —                 | `web`, `worker`, `migrate` images; `dev`, `s3`, `https` profiles                                                                | —                               |
+| `scripts/`                       | —                 | `pnpm forgecy` CLI (start, migrate, seed, backup, restore, upgrade, health)                                                     | —                               |
 
-I pacchetti interni esportano i sorgenti TypeScript ("just in time"): niente build intermedie, Next.js li compila con `transpilePackages`, il worker e le migrazioni girano con `tsx`, senza package manager a runtime.
+Internal packages export their TypeScript sources ("just in time"): no intermediate builds, Next.js compiles them with `transpilePackages`, the worker and migrations run with `tsx`, with no package manager at runtime.
 
-## Convenzioni
+## Conventions
 
-- **Schema e migrazioni.** Ogni modulo ha il suo file in `packages/db/src/schema/<modulo>.ts`, esportato da `schema/index.ts` con una riga. Le migrazioni si generano con `pnpm db:generate` e non si scrivono a mano (salvo SQL personalizzato, es. estensioni). Due thread che generano migrazioni in parallelo vanno in conflitto su `migrations/meta/_journal.json`: chi arriva secondo fa merge di `main`, cancella la propria migrazione e la rigenera. La CI fallisce se schema e migrazioni divergono.
-- **Enum.** I valori stanno in `packages/core` e il database li importa, così Zod e Postgres non divergono.
-- **Permessi.** Ogni server action e route chiama `requireUser()` (o `withUser` per le route API) e poi `assertCan(user.actor, permesso, clientId)`. Gli agenti hanno solo `view` e `propose`: approvare, pubblicare e archiviare è sempre di una persona.
-- **Activity log.** Ogni modifica rilevante scrive `recordAuditEvent` nella stessa transazione.
-- **Job.** Ogni modulo definisce i suoi job con `defineJob` nel proprio pacchetto e aggiunge gli handler in `apps/worker/src/handlers.ts` (una riga di spread). Il payload resta in Postgres; Redis riceve solo l'id. Tre tentativi (subito, 5 s, 30 s); `NeedsAttentionError` porta a "richiede intervento".
-- **AI.** Mai chiamare un SDK direttamente: `createAiGateway` applica policy del cliente, budget e registra ogni tentativo in `jobs_log` (solo hash dei dati inviati, mai il testo).
-- **File.** Le chiavi sono deterministiche (`contentKey`), i file si servono solo con URL firmati a scadenza breve (`/api/files/...`), gli upload passano da `validateUpload`.
-- **Interfaccia.** Solo token di `@forgecy/ui` (`bg-app`, `bg-surface`, `text-fg`, `text-fg-muted`, `border-subtle`, `text-heading-*`, `font-display`...). Il tema Tailwind non ha la palette predefinita, il lint blocca colori scritti a mano e il test di contrasto blocca token sotto WCAG AA. Testi in italiano, icone Lucide.
-- **Navigazione.** Ogni modulo aggiunge la sua voce in `apps/web/components/app-shell.tsx` (una riga) e le sue pagine in `apps/web/app/(app)/<sezione>/`.
-- **Test.** Vitest per i pacchetti; i test di integrazione partono solo con `FORGECY_TEST_DATABASE_URL` e `FORGECY_TEST_REDIS_URL` (la CI li imposta). Non lanciarli con un worker di sviluppo acceso: condividono la coda `default`.
-- **Decisioni.** Ciò che cambia la scheda tecnica va in `docs/adr/`.
+- **Schema and migrations.** Each module has its own file in `packages/db/src/schema/<module>.ts`, exported from `schema/index.ts` with one line. Migrations are generated with `pnpm db:generate` and are not written by hand (except for custom SQL, e.g. extensions). Two threads generating migrations in parallel conflict on `migrations/meta/_journal.json`: whoever comes second merges `main`, deletes their own migration and regenerates it. CI fails if schema and migrations diverge.
+- **Enums.** The values live in `packages/core` and the database imports them, so Zod and Postgres do not diverge.
+- **Permissions.** Every server action and route calls `requireUser()` (or `withUser` for API routes) and then `assertCan(user.actor, permission, clientId)`. Agents only have `view` and `propose`: approving, publishing and archiving is always done by a person.
+- **Activity log.** Every relevant change writes `recordAuditEvent` in the same transaction.
+- **Jobs.** Each module defines its jobs with `defineJob` in its own package and adds the handlers in `apps/worker/src/handlers.ts` (one spread line). The payload stays in Postgres; Redis only receives the id. Three attempts (immediately, 5 s, 30 s); `NeedsAttentionError` leads to "needs attention".
+- **AI.** Never call an SDK directly: `createAiGateway` applies the client policy and budget and records every attempt in `jobs_log` (only hashes of the data sent, never the text).
+- **Files.** Keys are deterministic (`contentKey`), files are served only with short-lived signed URLs (`/api/files/...`), uploads go through `validateUpload`.
+- **Interface.** Only `@forgecy/ui` tokens (`bg-app`, `bg-surface`, `text-fg`, `text-fg-muted`, `border-subtle`, `text-heading-*`, `font-display`...). The Tailwind theme has no default palette, lint blocks hand-written colors and the contrast test blocks tokens below WCAG AA. UI text in English, Lucide icons.
+- **Navigation.** Each module adds its entry in `apps/web/components/app-shell.tsx` (one line) and its pages in `apps/web/app/(app)/<section>/`.
+- **Tests.** Vitest for packages; integration tests run only with `FORGECY_TEST_DATABASE_URL` and `FORGECY_TEST_REDIS_URL` (CI sets them). Don't run them with a development worker running: they share the `default` queue.
+- **Decisions.** Anything that changes the technical specification goes in `docs/adr/`.
 
-## Suddivisione dei moduli successivi
+## Split of the next modules
 
-Ogni riga è un thread che può partire in parallelo agli altri. I file condivisi si toccano solo con le aggiunte di una riga indicate sopra (indice dello schema, handler del worker, voce di navigazione, seed).
+Each row is a thread that can start in parallel with the others. Shared files are touched only with the one-line additions listed above (schema index, worker handlers, navigation entry, seed).
 
-| Thread                                  | Milestone | Cartelle di sua proprietà                                                                                                                                                             | Dipende da                                                |
-| --------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Audit dei prospect                      | M2        | `packages/audit/`, `packages/db/src/schema/audit.ts`, `apps/web/app/(app)/audit/`                                                                                                     | fondamenta                                                |
-| Renderer, template ed export            | M3        | `packages/carousel/` (SlideRenderer, `template.json`, layout), `templates/`, `apps/web/app/render/`, `apps/web/app/(app)/template/`, target `worker` del Dockerfile (base Playwright) | fondamenta                                                |
-| Brand Identity                          | M4        | `packages/brand/`, `packages/db/src/schema/brand.ts`, `apps/web/app/(app)/brand/`                                                                                                     | fondamenta; usa le osservazioni dell'Audit quando ci sono |
-| Catalogo prodotti                       | M4–M5     | `packages/catalog/`, `packages/db/src/schema/catalog.ts`, `apps/web/app/(app)/products/`                                                                                              | fondamenta, files                                         |
-| Contenuti e caroselli                   | M5        | `packages/content/`, `packages/db/src/schema/content.ts`, `apps/web/app/(app)/content/`                                                                                               | Renderer e Brand Identity                                 |
-| Brand Guard, revisione ed export finale | M6        | `packages/brand-guard/`, approvazioni e gate di export                                                                                                                                | Contenuti                                                 |
-| Impostazioni avanzate                   | M1–M6     | `apps/web/app/(app)/settings/` (budget, chiavi BYOK, policy, pagina Sistema, backup dall'interfaccia)                                                                                 | fondamenta                                                |
+| Thread                               | Milestone | Folders it owns                                                                                                                                                                            | Depends on                                        |
+| ------------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
+| Prospect audits                      | M2        | `packages/audit/`, `packages/db/src/schema/audit.ts`, `apps/web/app/(app)/audit/`                                                                                                          | foundations                                       |
+| Renderer, templates and export       | M3        | `packages/carousel/` (SlideRenderer, `template.json`, layouts), `templates/`, `apps/web/app/render/`, `apps/web/app/(app)/templates/`, `worker` target of the Dockerfile (Playwright base) | foundations                                       |
+| Brand Identity                       | M4        | `packages/brand/`, `packages/db/src/schema/brand.ts`, `apps/web/app/(app)/brand/`                                                                                                          | foundations; uses the Audit findings when present |
+| Product catalog                      | M4–M5     | `packages/catalog/`, `packages/db/src/schema/catalog.ts`, `apps/web/app/(app)/products/`                                                                                                   | foundations, files                                |
+| Content and carousels                | M5        | `packages/content/`, `packages/db/src/schema/content.ts`, `apps/web/app/(app)/content/`                                                                                                    | Renderer and Brand Identity                       |
+| Brand Guard, review and final export | M6        | `packages/brand-guard/`, approvals and export gate                                                                                                                                         | Content                                           |
+| Advanced settings                    | M1–M6     | `apps/web/app/(app)/settings/` (budget, BYOK keys, policy, System page, backups from the interface)                                                                                        | foundations                                       |
 
-I primi quattro possono partire subito; Contenuti e Brand Guard partono quando renderer e Brand Identity hanno le loro interfacce pubbliche.
+The first four can start right away; Content and Brand Guard start once the renderer and Brand Identity have their public interfaces.

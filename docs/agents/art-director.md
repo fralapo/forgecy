@@ -1,16 +1,16 @@
 # Art Director
 
-Agente AI di Forgecy. Non è un ruolo delle persone: propone, non approva.
+Forgecy AI agent. Not a role for people: it proposes, it does not approve.
 
-- **Responsabilità:** Sceglie layout e immagini con i token pubblicati; dalla v1 propone palette, layout, template e stile.
-- **Input:** Catalogo layout e template, token DTCG del cliente, libreria asset.
-- **Output:** Scelta del layout per slide, brief visuali e prompt immagine.
-- **Fase:** MVP (M5) e v1
+- **Responsibility:** Picks layouts and images with the published tokens; from v1 it proposes palette, layout, template and style.
+- **Input:** Layout and template catalog, the client's DTCG tokens, asset library.
+- **Output:** Layout choice per slide, visual briefs and image prompts.
+- **Phase:** MVP (M5) and v1
 
-## Vincoli
+## Constraints
 
-- Permessi ammessi: solo `view` e `propose` (vedi `can()` in `packages/core/src/permissions.ts`). Il server rifiuta qualsiasi approvazione, pubblicazione o archiviazione fatta da un agente.
-- Ogni chiamata passa dal gateway di `packages/ai`, che applica la policy AI del cliente e il budget e registra la chiamata in `jobs_log`.
-- Usa solo elementi approvati della Brand Identity; la memoria vive nel database (`memory_items`), non in questo file.
+- Allowed permissions: only `view` and `propose` (see `can()` in `packages/core/src/permissions.ts`). The server rejects any approval, publication or archiving done by an agent.
+- Every call goes through the `packages/ai` gateway, which applies the client's AI policy and budget and records the call in `jobs_log`.
+- Uses only approved elements of the Brand Identity; memory lives in the database (`memory_items`), not in this file.
 
-La definizione TypeScript (id, istruzioni versionate, strumenti ammessi, provider) arriva con il modulo che usa l'agente.
+The TypeScript definition (id, versioned instructions, allowed tools, provider) arrives with the module that uses the agent.

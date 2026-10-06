@@ -1,9 +1,9 @@
 # @forgecy/mail
 
-Invio email via SMTP (Nodemailer) e template delle email di sistema.
+Email sending via SMTP (Nodemailer) and templates for system emails.
 
-- `createMailer(env)` legge `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_REPLY_TO`. In sviluppo, senza `SMTP_HOST`, usa Mailpit (`localhost:1025`, senza auth). In produzione senza `SMTP_HOST` il mailer risulta `configured: false` e `sendMail` lancia `ForgecyError("unavailable")`.
-- `mailer.sendMail({ to, subject, text, html })`, `mailer.verify()` per la pagina di stato, `mailer.close()`.
-- `renderMagicLinkEmail({ url, minutes, appName })` restituisce oggetto, testo e HTML in italiano (HTML semplice e accessibile, nessuna immagine esterna).
+- `createMailer(env)` reads `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_REPLY_TO`. In development, without `SMTP_HOST`, it uses Mailpit (`localhost:1025`, no auth). In production without `SMTP_HOST` the mailer reports `configured: false` and `sendMail` throws `ForgecyError("unavailable")`.
+- `mailer.sendMail({ to, subject, text, html })`, `mailer.verify()` for the status page, `mailer.close()`.
+- `renderMagicLinkEmail({ url, minutes, appName })` returns subject, text and HTML in English (simple, accessible HTML, no external images).
 
-Il corpo delle email non viene mai loggato: il link contiene il token. Il logger opzionale riceve solo `messageId` e i domini dei destinatari.
+The email body is never logged: the link contains the token. The optional logger receives only `messageId` and the recipients' domains.

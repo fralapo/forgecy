@@ -1,46 +1,46 @@
 # @forgecy/audit
 
-Audit dei prospect (M2): lettura del sito, dati social caricati a mano, competitor, confronto tra canali, diagnosi e piano di 30 giorni. Ogni osservazione cita le sue prove; l'AI propone, una persona accetta, modifica o scarta.
+Prospect audits (M2): website reading, manually uploaded social data, competitors, channel comparison, diagnosis and 30-day plan. Every observation cites its evidence; the AI proposes, a person accepts, edits or rejects.
 
-## Ingressi
+## Entry points
 
-- `@forgecy/audit`: servizi e query per l'app web (prospect, audit, osservazioni, competitor, social), definizioni dei job, parser di CSV/XLSX e metriche. Non carica Chromium.
-- `@forgecy/audit/handlers`: `createAuditHandlers()` per il worker, con il crawler e le chiamate AI.
+- `@forgecy/audit`: services and queries for the web app (prospects, audits, observations, competitors, social), job definitions, CSV/XLSX parsers and metrics. It does not load Chromium.
+- `@forgecy/audit/handlers`: `createAuditHandlers()` for the worker, with the crawler and the AI calls.
 
-Ogni servizio riceve `(deps, actor, input)`, controlla il permesso con `assertCan` e scrive `recordAuditEvent` nella stessa transazione. Gli agenti hanno solo `view` e `propose`: scrivono proposte (`status = observed`) e non possono accettarle né scartarle.
+Every service receives `(deps, actor, input)`, checks the permission with `assertCan` and writes `recordAuditEvent` in the same transaction. Agents only have `view` and `propose`: they write proposals (`status = observed`) and cannot accept or reject them.
 
-## Job
+## Jobs
 
-| Job                         | Cosa fa                                                               |
-| --------------------------- | --------------------------------------------------------------------- |
-| `audit.crawl`               | Legge fino a 10 pagine (3 per un competitor), screenshot e controlli  |
-| `audit.analyze_site`        | Osservazioni del Brand Analyst sul sito                               |
-| `audit.analyze_social`      | Osservazioni su un canale da metriche, post importati e screenshot    |
-| `audit.propose_competitors` | Lo Strategist propone 3–5 competitor da confermare                    |
-| `audit.compare_competitors` | Offerta, tono e osservazioni di confronto con i competitor confermati |
-| `audit.compare_channels`    | Sito, Instagram e Facebook su cinque criteri                          |
-| `audit.diagnose`            | 3–5 problemi dalle osservazioni accettate                             |
-| `audit.plan`                | Pilastri e piano di 30 giorni dai problemi accettati                  |
+| Job                         | What it does                                                           |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `audit.crawl`               | Reads up to 10 pages (3 for a competitor), screenshots and checks      |
+| `audit.analyze_site`        | Brand Analyst observations on the website                              |
+| `audit.analyze_social`      | Observations on a channel from metrics, imported posts and screenshots |
+| `audit.propose_competitors` | The Strategist proposes 3–5 competitors to confirm                     |
+| `audit.compare_competitors` | Offer, tone and comparison observations with the confirmed competitors |
+| `audit.compare_channels`    | Website, Instagram and Facebook on five criteria                       |
+| `audit.diagnose`            | 3–5 problems from the accepted observations                            |
+| `audit.plan`                | Pillars and 30-day plan from the accepted problems                     |
 
-Con la policy `no_ai` nessun job AI parte: osservazioni e problemi si scrivono a mano.
+With the `no_ai` policy no AI job starts: observations and problems are written by hand.
 
-## Prove e confidenza
+## Evidence and confidence
 
-Il modello riceve riferimenti (`P1`, `CHECK:h1`, `POST:3`, `O2`…) e deve citarli. `verifyEvidence` scarta i riferimenti inventati e tiene una citazione solo se compare parola per parola nella fonte. La confidenza viene dal numero di elementi distinti verificati, mai dal modello.
+The model receives references (`P1`, `CHECK:h1`, `POST:3`, `O2`…) and must cite them. `verifyEvidence` discards invented references and keeps a quote only if it appears word for word in the source. Confidence comes from the number of distinct verified items, never from the model.
 
 ## Crawler
 
-Rispetta sempre `robots.txt` (user agent `ForgecyAudit`), salta le pagine con login, ha un timeout per pagina e uno per l'intera lettura. Rifiuta gli indirizzi della rete locale.
+It always respects `robots.txt` (user agent `ForgecyAudit`), skips pages behind a login, and has a timeout per page and one for the whole read. It refuses local network addresses.
 
-| Variabile                           | Effetto                                                             |
-| ----------------------------------- | ------------------------------------------------------------------- |
-| `FORGECY_CHROMIUM_PATH`             | Chromium da usare; senza, lettura del solo HTML (niente screenshot) |
-| `FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS` | `true` permette siti nella rete locale (intranet)                   |
+| Variable                            | Effect                                                          |
+| ----------------------------------- | --------------------------------------------------------------- |
+| `FORGECY_CHROMIUM_PATH`             | Chromium to use; without it, HTML-only reading (no screenshots) |
+| `FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS` | `true` allows websites on the local network (intranet)          |
 
 ## Social
 
-Niente scraping: screenshot, export CSV/XLSX con mappatura delle colonne, oppure valori inseriti a mano con fonte e data. L'analisi manda al modello fino a 8 screenshot recenti (ridotti a JPEG, lato massimo 1568 px) per stile, tono e call to action; i numeri vengono solo da valori ed export, mai letti dalle immagini. Un valore mancante resta "Non disponibile". Il tasso di interazione appare solo con follower e interazioni dalla stessa fonte.
+No scraping: screenshots, CSV/XLSX exports with column mapping, or values entered by hand with source and date. The analysis sends the model up to 8 recent screenshots (reduced to JPEG, longest side 1568 px) for style, tone and calls to action; numbers come only from values and exports, never read from the images. A missing value stays "Not available". The engagement rate appears only with followers and interactions from the same source.
 
-## Test
+## Tests
 
-`pnpm --filter @forgecy/audit test`. I test di integrazione dei servizi usano `FORGECY_TEST_DATABASE_URL` e `FORGECY_TEST_REDIS_URL` e vengono saltati senza.
+`pnpm --filter @forgecy/audit test`. The service integration tests use `FORGECY_TEST_DATABASE_URL` and `FORGECY_TEST_REDIS_URL` and are skipped without them.
