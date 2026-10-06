@@ -38,7 +38,7 @@ export type ImportFileRow = typeof productImportFiles.$inferSelect;
 export type ImportItemRow = typeof productImportItems.$inferSelect;
 
 export interface ImportOptions {
-  /** Content language (default: Italian). */
+  /** Content language (default: English). */
   language: string;
   /** Match images to products (by name/SKU, then AI when allowed). */
   matchImages: boolean;
@@ -50,7 +50,7 @@ export interface ImportOptions {
 }
 
 export const defaultImportOptions: ImportOptions = {
-  language: "italiano",
+  language: "English",
   matchImages: true,
   official: false,
 };

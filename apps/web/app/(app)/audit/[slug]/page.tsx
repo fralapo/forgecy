@@ -74,7 +74,7 @@ export default async function ProspectOverviewPage({
         objectives: (profile?.objectives ?? []) as ProspectObjective[],
         otherObjective: profile?.otherObjective ?? "",
         notes: client.notes ?? "",
-        reportLanguage: profile?.reportLanguage === "en" ? "en" : "it",
+        reportLanguage: profile?.reportLanguage === "it" ? "it" : "en",
         socialUrls: profile?.socialUrls ?? {},
       }}
     />

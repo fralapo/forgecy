@@ -153,7 +153,7 @@ export function FileStep(props: {
         ...ids,
         options: {
           // Same default as importOptions in @forgecy/catalog (a stored value, kept as is).
-          language: String(fd.get("language") || "italiano"),
+          language: String(fd.get("language") || "English"),
           matchImages: fd.get("matchImages") === "on",
           official: fd.get("official") === "yes",
         },

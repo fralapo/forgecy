@@ -288,8 +288,8 @@ export function renderSlideHtml(input: RenderSlideInput): RenderedSlide {
   const title = document.createElement("title");
   title.textContent = `${m.name} · ${layout.name} · ${index + 1}`;
   const html =
-    // Slide copy is the client's deliverable, Italian by default (not UI text).
-    `<!doctype html><html lang="it"><head><meta charset="utf-8">` +
+    // Slide copy is the client's deliverable, English by default.
+    `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
     `<meta http-equiv="Content-Security-Policy" content="${RENDER_CSP}">` +
     `<meta name="viewport" content="width=${m.width}">${title.outerHTML}` +
     `<style>${css}</style></head><body>${root.outerHTML}</body></html>`;

@@ -25,8 +25,8 @@ export const contentChannelSchema = z.enum(contentChannels);
 export const captionLimits: Record<ContentChannel, number> = { instagram: 2200, linkedin: 3000 };
 
 export const contentLanguages = [
-  { code: "it", label: "Italian" },
   { code: "en", label: "English" },
+  { code: "it", label: "Italian" },
   { code: "de", label: "German" },
   { code: "fr", label: "French" },
   { code: "es", label: "Spanish" },
@@ -133,7 +133,7 @@ export const carouselParamsSchema = z.object({
   format: releasedFormatSchema,
   templateKey: z.string().min(1).max(64),
   slideCount: z.number().int().min(1).max(20),
-  language: languageSchema.default("it"),
+  language: languageSchema.default("en"),
   planItemId: z.uuid().nullable().default(null),
 });
 export type CarouselParams = z.output<typeof carouselParamsSchema>;

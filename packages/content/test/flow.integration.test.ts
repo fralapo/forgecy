@@ -138,7 +138,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
     });
     await db.insert(templates).values({
       key: templateKey,
-      version: "1.0.0",
+      version: manifest.version,
       name: "Editorial test",
       kind: "carousel",
       channel: "instagram",
@@ -433,7 +433,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
     expect(ws.document.slides).toHaveLength(7);
     expect(ws.document.hashtags).toEqual(["#hiking", "#waterbottle"]);
     expect(ws.checks?.errors).toEqual([]);
-    expect(ws.content.templateVersion).toBe("1.0.0");
+    expect(ws.content.templateVersion).toBe(manifest.version);
 
     // Stale autosave.
     expect(

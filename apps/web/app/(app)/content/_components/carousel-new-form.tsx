@@ -67,7 +67,7 @@ export function CarouselNewForm({
   const [pillarId, setPillarId] = useState(plan?.pillarId ?? "");
   const [rubricId, setRubricId] = useState(plan?.rubricId ?? "");
   const [productId, setProductId] = useState(plan?.productId ?? "");
-  const [language, setLanguage] = useState<Language>("it");
+  const [language, setLanguage] = useState<Language>("en");
   const [briefText, setBriefText] = useState(plan?.briefText ?? "");
 
   const rubrics = options.rubrics.filter((r) => !pillarId || r.pillarId === pillarId);

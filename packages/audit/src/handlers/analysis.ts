@@ -67,13 +67,13 @@ import { screenshotImages } from "./images";
 type SourceRow = typeof auditSources.$inferSelect;
 type FindingInsert = typeof auditFindings.$inferInsert;
 
-// Stored as the finding title, which lands in the client report (Italian by default): kept in Italian.
+// Stored as the finding title, which lands in the client report (English by default).
 const criterionLabel: Record<(typeof comparisonCriteria)[number], string> = {
-  color: "Colore dominante",
-  tone: "Tono di voce",
-  cta: "Call to action principale",
-  audience: "Pubblico a cui parla",
-  visual_style: "Stile visivo",
+  color: "Dominant color",
+  tone: "Tone of voice",
+  cta: "Main call to action",
+  audience: "Audience it speaks to",
+  visual_style: "Visual style",
 };
 
 /** Text a quote from this page must be found in. */

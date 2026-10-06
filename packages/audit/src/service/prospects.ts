@@ -101,7 +101,7 @@ export const prospectInputSchema = z
     objectives: z.array(z.enum(prospectObjectives)).max(6).default([]),
     otherObjective: optionalText(200),
     notes: optionalText(4000),
-    reportLanguage: z.enum(["it", "en"]).default("it"),
+    reportLanguage: z.enum(["it", "en"]).default("en"),
     ownerId: z.uuid().optional(),
     socialUrls: socialUrlsSchema,
     aiPolicy: z.enum(aiPolicies).default("external_allowed"),
