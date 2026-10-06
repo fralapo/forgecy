@@ -21,6 +21,7 @@ import { requireClient } from "./access";
 import { getContentRow, recordExport } from "./carousels/carousels";
 import { parseDocument, toRenderSlide } from "./document";
 import {
+  creativeDirectionJob,
   editSlideJob,
   exportContentJob,
   generateImageJob,
@@ -30,6 +31,7 @@ import {
   proposeStrategyJob,
 } from "./jobs";
 import {
+  runCreativeDirection,
   runEditSlide,
   runGenerateImage,
   runGenerateOutline,
@@ -173,6 +175,9 @@ export const contentHandlers: JobHandlers = {
   ),
   ...handle(proposePlanJob, (p, ctx) =>
     runProposePlan(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+  ),
+  ...handle(creativeDirectionJob, (p, ctx) =>
+    runCreativeDirection(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
   ...handle(generateOutlineJob, (p, ctx) =>
     runGenerateOutline(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),

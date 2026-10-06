@@ -44,6 +44,8 @@ export const agentRoles = [
   "art_director",
   "copywriter",
   "reviewer",
+  /** v1: creative direction of a carousel and consistency across its slides. */
+  "creative_director",
 ] as const;
 export type AgentRole = (typeof agentRoles)[number];
 

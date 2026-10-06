@@ -12,6 +12,7 @@ export const statusVariant: Record<ContentStatus, NonNullable<BadgeProps["varian
 
 /** Message key (under `content.labels.job`) of a job kind of this module. */
 const jobKeys = {
+  "content.creative_direction": "creativeDirection",
   "content.generate_outline": "generateOutline",
   "content.generate_slides": "generateSlides",
   "content.edit_slide": "editSlide",

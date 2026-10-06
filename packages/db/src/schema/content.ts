@@ -35,7 +35,7 @@ import { brandIdentityVersions } from "./brand";
 import { clients } from "./clients";
 import { jobs } from "./jobs";
 import { createdAt, id, updatedAt } from "./_common";
-import { contentStatusEnum } from "./enums";
+import { contentStatusEnum, proposalStatusEnum } from "./enums";
 
 type Json = Record<string, unknown>;
 
@@ -329,6 +329,40 @@ export const contentOutlines = pgTable(
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("content_outlines_number_uq").on(t.contentId, t.number)],
+);
+
+/**
+ * Creative direction of a carousel (v1, Creative Director AI): a proposal a person
+ * accepts or rejects. The accepted one guides the Copywriter and the Art Director;
+ * a newer proposal makes the older open ones `stale`.
+ */
+export const contentCreativeDirections = pgTable(
+  "content_creative_directions",
+  {
+    id: id(),
+    contentId: uuid("content_id")
+      .notNull()
+      .references(() => contents.id, { onDelete: "cascade" }),
+    number: integer("number").notNull(),
+    status: proposalStatusEnum("status").notNull().default("proposed"),
+    /** Concept, thread, per-slide intent and visual notes (typed in @forgecy/content). */
+    direction: jsonb("direction").$type<Json>().notNull(),
+    /** Agent, run, model, rationale. */
+    provenance: jsonb("provenance").$type<Json>(),
+    instruction: text("instruction"),
+    jobId: uuid("job_id").references(() => jobs.id, { onDelete: "set null" }),
+    decidedBy: uuid("decided_by").references(() => users.id, { onDelete: "set null" }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    decisionNote: text("decision_note"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("content_creative_directions_number_uq").on(t.contentId, t.number),
+    check(
+      "content_creative_directions_decided_by_person",
+      sql`${t.status} not in ('accepted', 'rejected') or (${t.decidedBy} is not null and ${t.decidedAt} is not null)`,
+    ),
+  ],
 );
 
 /** AI instructions on a single slide, with the slide before and after for "Undo change". */

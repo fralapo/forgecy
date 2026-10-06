@@ -36,6 +36,13 @@ import {
   submitForReview,
 } from "../src/carousels/carousels";
 import {
+  acceptDirection,
+  acceptedDirection,
+  listDirections,
+  rejectDirection,
+} from "../src/carousels/direction";
+import {
+  runCreativeDirection,
   runGenerateOutline,
   runGenerateSlides,
   runProposePlan,
@@ -380,6 +387,52 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
       brief: { text: "Explain why the bottle keeps water cool on a hike." },
     });
 
+    // Creative Director: proposes, a person decides; the accepted direction guides the outline.
+    const direction = (concept: string) => ({
+      json: {
+        concept,
+        thread: "From the warm sip to the cool one",
+        tone: "Practical",
+        slides: [
+          { position: 1, intent: "Hook on warm water", visual: "Sweaty hiker" },
+          { position: 1, intent: "Duplicate", visual: "" },
+          { position: 9, intent: "Out of range", visual: "" },
+        ],
+        rationale: "The brief is about a hike.",
+      },
+    });
+    fake.push(direction("First idea"));
+    const first = await runCreativeDirection(deps, await job("content.creative_direction"), {
+      clientId,
+      contentId: c.id,
+      instruction: "",
+    });
+    expect(first).toMatchObject({ directionNumber: 1, slides: 1 });
+    const [d1] = await listDirections(db, clientId, c.id);
+    expect(d1!.provenance).toMatchObject({ agent: "creative_director", model: "fake-model" });
+    const asAgent: Actor = { type: "agent", role: "creative_director" };
+    expect(
+      await codeOf(acceptDirection(db, asAgent, { clientId, contentId: c.id, id: d1!.id })),
+    ).toBe("permission_denied");
+    expect(
+      await codeOf(
+        rejectDirection(db, anna, { clientId, contentId: c.id, id: d1!.id, reason: " " }),
+      ),
+    ).toBe("validation");
+    fake.push(direction("Second idea"));
+    await runCreativeDirection(deps, await job("content.creative_direction"), {
+      clientId,
+      contentId: c.id,
+      instruction: "Bolder",
+    });
+    const [d2, d1b] = await listDirections(db, clientId, c.id);
+    expect([d2!.status, d1b!.status]).toEqual(["proposed", "stale"]);
+    expect(await codeOf(acceptDirection(db, anna, { clientId, contentId: c.id, id: d1!.id }))).toBe(
+      "conflict",
+    );
+    await acceptDirection(db, anna, { clientId, contentId: c.id, id: d2!.id });
+    expect((await acceptedDirection(db, c.id))?.concept).toBe("Second idea");
+
     const roles = ["cover", "text", "text", "list", "text", "text", "cta"] as const;
     fake.push({
       json: {
@@ -396,6 +449,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
       keepEdited: true,
     });
     expect(outline.rows).toBe(7);
+    expect(JSON.stringify(fake.calls.at(-1)!.messages)).toContain("Concept: Second idea");
 
     // Slides need an approved outline.
     expect(

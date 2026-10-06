@@ -49,6 +49,13 @@ export const generateOutlineJob = defineJob({
   }),
 });
 
+/** Creative Director: concept, thread and per-slide intent, as a proposal. */
+export const creativeDirectionJob = defineJob({
+  kind: "content.creative_direction",
+  queue: "ai",
+  payload: z.object({ ...base, contentId: z.uuid(), instruction }),
+});
+
 /** Copywriter: slide texts from the approved outline. */
 export const generateSlidesJob = defineJob({
   kind: "content.generate_slides",
@@ -97,6 +104,7 @@ export const exportContentJob = defineJob({
 export const contentJobs = [
   proposeStrategyJob,
   proposePlanJob,
+  creativeDirectionJob,
   generateOutlineJob,
   generateSlidesJob,
   editSlideJob,

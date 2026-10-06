@@ -9,14 +9,16 @@
     "strategist": "Strategist",
     "copywriter": "Copywriter",
     "art_director": "Art Director AI",
-    "reviewer": "Reviewer"
+    "reviewer": "Reviewer",
+    "creative_director": "Creative Director AI"
   },
   "role": {
     "brand_analyst": "Legge siti, screenshot, export dei social e brand book; propone osservazioni e valori di Brand Identity.",
     "strategist": "Legge le osservazioni accettate e la Brand Identity pubblicata; scrive diagnosi, piani, report e content strategy.",
     "copywriter": "Scrive scalette, testi delle slide, caption e hashtag, e modifica le slide su richiesta.",
     "art_director": "Sceglie i layout tra quelli ammessi e scrive i prompt delle immagini nel rispetto della Brand Identity.",
-    "reviewer": "Esegue i controlli Brand Guard su testi e render. Non approva."
+    "reviewer": "Esegue i controlli Brand Guard su testi e render. Non approva.",
+    "creative_director": "Definisce la direzione creativa del carosello: il concept, il filo tra le slide e che cosa deve fare ogni slide, prima che scriva il Copywriter."
   },
   "inputs": {
     "brand_analyst": {
@@ -43,6 +45,11 @@
       "1": "Testi e render delle slide",
       "2": "Regole della Brand Identity pubblicata",
       "3": "Caption del carosello"
+    },
+    "creative_director": {
+      "1": "Brief del carosello e la sua strategia",
+      "2": "Brand Identity pubblicata",
+      "3": "Layout del template"
     }
   },
   "outputs": {
@@ -70,6 +77,11 @@
       "1": "Esiti dei controlli",
       "2": "Problemi da correggere, slide per slide",
       "3": "Note per chi approva"
+    },
+    "creative_director": {
+      "1": "Direzione creativa (Proposta)",
+      "2": "Intento di ogni slide",
+      "3": "Filo visivo per l'Art Director"
     }
   },
   "capability": {
@@ -102,7 +114,8 @@
     "brand_propose": "Proposte di Brand Identity",
     "catalog_extract": "Estrazione dal catalogo",
     "image": "Immagini",
-    "test": "Chiamata di prova"
+    "test": "Chiamata di prova",
+    "creative_direction": "Direzione creativa"
   },
   "list": {
     "agent": "Agente",

@@ -113,7 +113,8 @@
     "art_director": "Art Director",
     "copywriter": "Copywriter",
     "reviewer": "Reviewer",
-    "agent": "Agent"
+    "agent": "Agent",
+    "creative_director": "Creative Director"
   },
   "fields": {
     "strategy": {

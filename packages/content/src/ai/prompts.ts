@@ -1,6 +1,7 @@
 /**
  * Prompts and output schemas of the content agents: Planner (strategy and plan),
- * Copywriter (outline, slides, single-slide edits) and Art Director (image prompts).
+ * Creative Director (creative direction), Copywriter (outline, slides, single-slide edits)
+ * and Art Director (image prompts).
  * Output schemas are deliberately flat (slots as name/value rows) so every provider's
  * structured output accepts them; the pipeline converts and re-validates against the
  * template before anything is stored. The model's output is always a proposal.
@@ -16,8 +17,9 @@ import { z } from "zod";
 import { funnelLabels, objectiveLabels } from "../labels";
 import { contentChannels, type Brief, type Outline } from "../document";
 import type { ProductSummary } from "../products";
+import { directionBlock, type CreativeDirection } from "../carousels/direction";
 
-export const CONTENT_PROMPT_VERSION = "content-2026-10-06f";
+export const CONTENT_PROMPT_VERSION = "content-2026-10-06g";
 
 const SHARED_RULES = `- Write in the indicated language (English when no language is indicated), with the tone and rules of the Brand Identity below. The writing rules and forbidden words are binding.
 - Use only facts found in the brief, the Brand Identity or the product sheet. Never invent data, numbers, prices, testimonials or claims.
@@ -120,6 +122,41 @@ ${SHARED_RULES}
 - Channels: only the ones indicated. One concrete theme per item (not "post about X"), with a hook of at most 120 characters.
 - productIds: only ids from the list of approved products, and only when the theme is about the product.`,
   "social-content",
+);
+
+// ---- Creative Director: creative direction ----
+
+export const creativeDirectionOutputSchema = z.object({
+  concept: z.string().max(300),
+  thread: z.string().max(400),
+  tone: z.string().max(200),
+  slides: z
+    .array(
+      z.object({
+        position: z.number().int().min(1).max(20),
+        intent: z.string().max(200),
+        visual: z.string().max(200),
+      }),
+    )
+    .max(20),
+  rationale: z.string().max(1000),
+});
+export type CreativeDirectionOutput = z.infer<typeof creativeDirectionOutputSchema>;
+
+export const CREATIVE_DIRECTION_SYSTEM = withPlaybooks(
+  `You are the Creative Director of Forgecy. Before the copy is written, you set the creative direction of one carousel: a single concept and the thread that keeps every slide consistent.
+
+Rules:
+${SHARED_RULES}
+- One concept, said in one or two sentences: the idea that makes this carousel recognizable, not a summary of the brief.
+- "thread": how the reader is carried from the cover to the call to action (a question answered step by step, a before/after, a list that builds up...).
+- "tone": the tone of this carousel within the Brand Identity's limits; never outside them.
+- One entry in "slides" per slide, numbered from 1, with what the slide must achieve ("intent") and what it should show ("visual": composition, subject, use of color), coherent across the whole carousel.
+- No final copy and no image prompts: the Copywriter and the Art Director write them following your direction.
+- In "rationale" explain the choice in one or two sentences, citing the brief or the Brand Identity.`,
+  "social-content",
+  "slide-design",
+  "imagery",
 );
 
 // ---- Copywriter: outline ----
@@ -341,6 +378,8 @@ export interface CarouselPromptInput {
   manifest: TemplateManifest;
   /** The client's default CTA (Agent memory, structured settings), used when the brief has none. */
   defaultCta?: string | null;
+  /** The creative direction a person accepted for this carousel (Creative Director AI). */
+  direction?: CreativeDirection | null;
 }
 
 function briefBlock(i: CarouselPromptInput): string {
@@ -395,6 +434,7 @@ export function outlineUserPrompt(
       ? `## Rows written by a person, to keep identical (same position)\n${json(keepRows.map((r) => ({ role: r.role, layout: r.layout, point: r.point })))}`
       : "",
     previous ? `## Previous outline (to improve)\n${json(previous.rows.map((r) => r.point))}` : "",
+    directionBlock(i.direction),
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -407,7 +447,10 @@ export function slidesUserPrompt(i: CarouselPromptInput, outline: Outline): stri
     `## Approved outline (one slide per row, in order)\n${json(outline.rows.map((r) => ({ rowId: r.id, role: r.role, layout: r.layout, point: r.point, note: r.note })))}`,
     `Hook: ${outline.hook}\nCTA: ${outline.cta}`,
     `Requested hashtags: ${i.brief.outputs.hashtags}. Caption: ${i.brief.outputs.caption ? "yes" : "no (leave empty)"}.`,
-  ].join("\n\n");
+    directionBlock(i.direction),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 export function editSlideUserPrompt(input: {
@@ -437,11 +480,31 @@ export function imagePromptUserPrompt(input: {
   slideText: string;
   imagery: string;
   language: string;
+  /** The accepted creative direction, reduced to this slide. */
+  direction?: string;
 }): string {
   return [
     `Language of the alt text: ${input.language}`,
     `## Brand Identity imagery guidelines\n${input.imagery || "(no guidance)"}`,
+    input.direction ?? "",
     `## Slide text\n${input.slideText}`,
     `## Visual brief\n${input.brief}`,
-  ].join("\n\n");
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+export function creativeDirectionUserPrompt(
+  i: CarouselPromptInput,
+  previous: CreativeDirection | null,
+  instruction: string,
+): string {
+  return [
+    `# Carousel brief\n${briefBlock(i)}`,
+    `## Layouts of the template “${i.manifest.name}”\n${layoutGuide(i.manifest)}`,
+    previous ? `## Current direction (to improve, keep what works)\n${json(previous)}` : "",
+    instruction ? `## The person's directions\n${instruction}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }

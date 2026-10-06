@@ -9,14 +9,16 @@
     "strategist": "Strategist",
     "copywriter": "Copywriter",
     "art_director": "Art Director AI",
-    "reviewer": "Reviewer"
+    "reviewer": "Reviewer",
+    "creative_director": "Creative Director AI"
   },
   "role": {
     "brand_analyst": "Reads websites, screenshots, social exports and brand books; proposes findings and Brand Identity values.",
     "strategist": "Reads accepted findings and the published Brand Identity; writes diagnoses, plans, reports and content strategies.",
     "copywriter": "Writes outlines, slide texts, captions and hashtags, and edits slides on request.",
     "art_director": "Chooses layouts among the allowed ones and writes image prompts that respect the Brand Identity.",
-    "reviewer": "Runs the Brand Guard checks on texts and renders. It does not approve."
+    "reviewer": "Runs the Brand Guard checks on texts and renders. It does not approve.",
+    "creative_director": "Sets the creative direction of a carousel: the concept, the thread across slides and what each slide must do, before the Copywriter writes."
   },
   "inputs": {
     "brand_analyst": {
@@ -43,6 +45,11 @@
       "1": "Slide texts and renders",
       "2": "Published Brand Identity rules",
       "3": "Carousel captions"
+    },
+    "creative_director": {
+      "1": "Carousel brief and its strategy",
+      "2": "Published Brand Identity",
+      "3": "Template layouts"
     }
   },
   "outputs": {
@@ -70,6 +77,11 @@
       "1": "Check results",
       "2": "Issues to fix, slide by slide",
       "3": "Notes for the person who approves"
+    },
+    "creative_director": {
+      "1": "Creative direction (Proposed)",
+      "2": "Intent of each slide",
+      "3": "Visual thread for the Art Director"
     }
   },
   "capability": {
@@ -102,7 +114,8 @@
     "brand_propose": "Brand Identity proposals",
     "catalog_extract": "Catalog extraction",
     "image": "Images",
-    "test": "Test call"
+    "test": "Test call",
+    "creative_direction": "Creative direction"
   },
   "list": {
     "agent": "Agent",
