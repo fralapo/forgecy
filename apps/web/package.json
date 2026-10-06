@@ -24,6 +24,7 @@
     "@forgecy/brand-guard": "workspace:*",
     "@forgecy/carousel": "workspace:*",
     "@forgecy/catalog": "workspace:*",
+    "@forgecy/client-transfer": "workspace:*",
     "@forgecy/content": "workspace:*",
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",

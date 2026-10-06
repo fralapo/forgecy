@@ -1,6 +1,7 @@
 import { createAuditHandlers } from "@forgecy/audit/handlers";
 import { automationHandlers } from "@forgecy/automations/handlers";
 import { backupHandlers } from "@forgecy/backup";
+import { clientTransferHandlers } from "@forgecy/client-transfer/handlers";
 import { loadEnv } from "@forgecy/core";
 import { resolveMediaRoot } from "@forgecy/files";
 import { carouselWorkerHandlers } from "@forgecy/carousel/export";
@@ -28,6 +29,7 @@ export const handlers: JobHandlers = {
   ...brandBookHandlers(),
   ...contentHandlers,
   ...automationHandlers(),
+  ...clientTransferHandlers(),
   ...catalogHandlers,
   ...backupHandlers({
     dataDir: resolveMediaRoot(env.FORGECY_DATA_DIR),

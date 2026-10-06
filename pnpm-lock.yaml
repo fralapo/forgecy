@@ -83,6 +83,9 @@ importers:
       '@forgecy/catalog':
         specifier: workspace:*
         version: link:../../packages/catalog
+      '@forgecy/client-transfer':
+        specifier: workspace:*
+        version: link:../../packages/client-transfer
       '@forgecy/content':
         specifier: workspace:*
         version: link:../../packages/content
@@ -186,6 +189,9 @@ importers:
       '@forgecy/catalog':
         specifier: workspace:*
         version: link:../../packages/catalog
+      '@forgecy/client-transfer':
+        specifier: workspace:*
+        version: link:../../packages/client-transfer
       '@forgecy/content':
         specifier: workspace:*
         version: link:../../packages/content
@@ -619,6 +625,52 @@ importers:
       yazl:
         specifier: ^3.3.1
         version: 3.3.1
+
+  packages/client-transfer:
+    dependencies:
+      '@forgecy/core':
+        specifier: workspace:*
+        version: link:../core
+      '@forgecy/db':
+        specifier: workspace:*
+        version: link:../db
+      '@forgecy/files':
+        specifier: workspace:*
+        version: link:../files
+      '@forgecy/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@forgecy/jobs':
+        specifier: workspace:*
+        version: link:../jobs
+      drizzle-orm:
+        specifier: ^0.45.3
+        version: 0.45.3(@types/pg@8.23.1)(kysely@0.29.6)(pg@8.23.1)
+      yazl:
+        specifier: ^3.3.1
+        version: 3.3.1
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@types/node':
+        specifier: ^22.18.0
+        version: 22.20.5
+      '@types/yauzl':
+        specifier: ^3.4.0
+        version: 3.4.0
+      '@types/yazl':
+        specifier: ^3.3.1
+        version: 3.3.1
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@22.20.5)(vite@8.3.2(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+      yauzl:
+        specifier: ^3.4.0
+        version: 3.4.0
 
   packages/content:
     dependencies:

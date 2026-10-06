@@ -30,6 +30,7 @@ export const adminPermissions = [
   "ai.policies.manage",
   "system.backup",
   "system.update",
+  "clients.transfer",
 ] as const;
 
 export type ContentPermission = (typeof contentPermissions)[number];

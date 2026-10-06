@@ -1,0 +1,71 @@
+{
+  "title": "Import/export",
+  "description": "Take a whole client out of Forgecy in one file, or bring one in.",
+  "tabs": {
+    "export": "Export client",
+    "import": "Import client"
+  },
+  "export": {
+    "client": "Client",
+    "chooseClient": "Choose a client",
+    "areasLegend": "What the package contains",
+    "areas": {
+      "brand": "Brand Identity and versions",
+      "brandHint": "Every version with its status and changelog, decided proposals, sources and observations.",
+      "brandBook": "Brand Book",
+      "brandBookHint": "Exported PDFs and Brand System ZIPs.",
+      "templates": "Templates assigned to the client",
+      "templatesHint": "Template packages with their fonts and assets.",
+      "audit": "Audit",
+      "auditHint": "Data, observations with evidence, screenshots, diagnosis, report drafts and plan.",
+      "content": "Gallery and carousels",
+      "contentHint": "Images with their provenance, carousels with versions and exported files, plans and automations.",
+      "products": "Products",
+      "productsHint": "Product catalog, images and imports.",
+      "reports": "Reports",
+      "reportsHint": "Audit report PDFs and their export history.",
+      "activity": "Client activity",
+      "activityHint": "The client's activity log as CSV. It is not imported back."
+    },
+    "excludeUnapprovedAi": "Leave out AI images not approved",
+    "includeAgencyTemplates": "Include the agency templates the client used",
+    "submit": "Export client",
+    "confirm": "Export {client}? The package is built in the background; you can leave this page.",
+    "confirmButton": "Start export",
+    "cancel": "Cancel",
+    "started": "Export started. It appears below, and in the bell when it is ready.",
+    "noAreas": "Choose at least one thing to include."
+  },
+  "summary": {
+    "title": "Summary",
+    "rows": "{count, plural, =0 {Nothing yet} one {# item} other {# items}}",
+    "images": "Images",
+    "warning": "The package contains client data: keep it like a confidential document.",
+    "pick": "Choose a client to see what its package will contain."
+  },
+  "recent": {
+    "title": "Recent exports",
+    "empty": "No exports yet. Choose a client to build its full package.",
+    "date": "Date",
+    "client": "Client",
+    "contents": "Contents",
+    "size": "Size",
+    "status": {
+      "queued": "Queued",
+      "running": "Building",
+      "ready": "Ready",
+      "failed": "Failed"
+    },
+    "createdBy": "Created by",
+    "download": "Download",
+    "linkHint": "Download links are valid for 24 hours.",
+    "unknown": "Unknown",
+    "statusColumn": "Status"
+  },
+  "errors": {
+    "invalidInput": "Check the export choices and try again.",
+    "clientNotFound": "This client no longer exists.",
+    "exportFailed": "The export did not succeed. Try again; if it fails again, check System health.",
+    "notReady": "This export is not ready, or its file is no longer available."
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "title": "Import/export",
+  "description": "Porta fuori da Forgecy un cliente completo in un solo file, o portane dentro uno.",
+  "tabs": {
+    "export": "Esporta cliente",
+    "import": "Importa cliente"
+  },
+  "export": {
+    "client": "Cliente",
+    "chooseClient": "Scegli un cliente",
+    "areasLegend": "Contenuto del pacchetto",
+    "areas": {
+      "brand": "Brand Identity e versioni",
+      "brandHint": "Tutte le versioni con stato e changelog, proposte decise, fonti e osservazioni.",
+      "brandBook": "Brand Book",
+      "brandBookHint": "PDF esportati e ZIP del Brand System.",
+      "templates": "Template assegnati al cliente",
+      "templatesHint": "Pacchetti dei template con font e asset.",
+      "audit": "Audit",
+      "auditHint": "Dati, osservazioni con evidenze, screenshot, diagnosi, bozze di report e piano.",
+      "content": "Galleria e caroselli",
+      "contentHint": "Immagini con la loro provenienza, caroselli con versioni e file esportati, piani e automazioni.",
+      "products": "Prodotti",
+      "productsHint": "Catalogo prodotti, immagini e import.",
+      "reports": "Report",
+      "reportsHint": "PDF dei report di audit e cronologia degli export.",
+      "activity": "Attività del cliente",
+      "activityHint": "Il registro attività del cliente in CSV. Non viene reimportato."
+    },
+    "excludeUnapprovedAi": "Escludi le immagini AI non approvate",
+    "includeAgencyTemplates": "Includi i template dell'agenzia usati dal cliente",
+    "submit": "Esporta cliente",
+    "confirm": "Esportare {client}? Il pacchetto si prepara in background: puoi lasciare la pagina.",
+    "confirmButton": "Avvia export",
+    "cancel": "Annulla",
+    "started": "Export avviato. Compare qui sotto e nella campanella quando è pronto.",
+    "noAreas": "Scegli almeno un contenuto da includere."
+  },
+  "summary": {
+    "title": "Riepilogo",
+    "rows": "{count, plural, =0 {Ancora niente} one {# elemento} other {# elementi}}",
+    "images": "Immagini",
+    "warning": "Il pacchetto contiene dati del cliente: conservalo come un documento riservato.",
+    "pick": "Scegli un cliente per vedere cosa conterrà il pacchetto."
+  },
+  "recent": {
+    "title": "Export recenti",
+    "empty": "Nessun export. Scegli un cliente per creare il suo pacchetto completo.",
+    "date": "Data",
+    "client": "Cliente",
+    "contents": "Contenuto",
+    "size": "Dimensione",
+    "status": {
+      "queued": "In coda",
+      "running": "In preparazione",
+      "ready": "Pronto",
+      "failed": "Non riuscito"
+    },
+    "createdBy": "Creato da",
+    "download": "Scarica",
+    "linkHint": "I link di download valgono 24 ore.",
+    "unknown": "Sconosciuto",
+    "statusColumn": "Stato"
+  },
+  "errors": {
+    "invalidInput": "Controlla le scelte dell'export e riprova.",
+    "clientNotFound": "Questo cliente non esiste più.",
+    "exportFailed": "L'export non è riuscito. Riprova; se non riesce di nuovo, controlla Stato del sistema.",
+    "notReady": "Questo export non è pronto, o il suo file non è più disponibile."
+  }
+}
