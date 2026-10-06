@@ -394,6 +394,12 @@ export function applyMapping(
       }
 
     const clean = sanitizeDraft(draft as ProductDraft);
+    // A sheet with one short "Descrizione" column: the same text also serves as the short
+    // description (copied from the file, never written by us), so the product can be approved.
+    if (!clean.shortDescription && clean.longDescription && clean.longDescription.length <= 280) {
+      clean.shortDescription = clean.longDescription;
+      if (sources.longDescription) sources.shortDescription ??= sources.longDescription;
+    }
     const extra = {
       ...(parent ? { parent } : {}),
       ...(type ? { type } : {}),

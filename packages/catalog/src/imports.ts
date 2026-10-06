@@ -447,7 +447,7 @@ export function plannedAiSteps(
     )
       sheets++;
   }
-  return { pdfChars, pdfPages, images, sheets, usesAi: pdfChars > 0 || images > 0 };
+  return { pdfChars, pdfPages, images, sheets, usesAi: pdfChars > 0 || images > 0 || sheets > 0 };
 }
 
 /**

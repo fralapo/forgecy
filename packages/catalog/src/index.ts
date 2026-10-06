@@ -3,6 +3,7 @@
 export * from "./ai";
 export * from "./candidates";
 export * from "./completeness";
+export * from "./cost";
 export * from "./csv-export";
 export * from "./db";
 export * from "./documents";
@@ -16,6 +17,7 @@ export * from "./mapping";
 export * from "./meta";
 export * from "./pdf";
 export * from "./pipeline";
+export * from "./product-images";
 export * from "./products";
 export * from "./queries";
 export * from "./review";
