@@ -1,5 +1,7 @@
 import { createAuditHandlers } from "@forgecy/audit/handlers";
 import { carouselWorkerHandlers } from "@forgecy/carousel/export";
+import { brandHandlers } from "@forgecy/brand/handlers";
+import { catalogHandlers } from "@forgecy/catalog/handlers";
 import { handle, systemPingJob, type JobHandlers } from "@forgecy/jobs";
 
 /**
@@ -13,4 +15,6 @@ export const handlers: JobHandlers = {
     return { pong: payload.message, at: new Date().toISOString() };
   }),
   ...carouselWorkerHandlers(),
+  ...brandHandlers,
+  ...catalogHandlers,
 };
