@@ -4,7 +4,14 @@
  */
 import type { Permission } from "./permissions";
 
-export const contentStatuses = ["draft", "in_review", "changes_requested", "approved", "exported", "archived"] as const;
+export const contentStatuses = [
+  "draft",
+  "in_review",
+  "changes_requested",
+  "approved",
+  "exported",
+  "archived",
+] as const;
 export type ContentStatus = (typeof contentStatuses)[number];
 
 type Transition = { to: ContentStatus; permission: Permission };

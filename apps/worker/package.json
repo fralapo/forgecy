@@ -10,13 +10,14 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@forgecy/ai": "workspace:*",
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",
-    "@forgecy/ai": "workspace:*",
     "@forgecy/files": "workspace:*",
     "@forgecy/jobs": "workspace:*",
     "@forgecy/mail": "workspace:*",
     "bullmq": "^6.3.11",
+    "ioredis": "^5.11.1",
     "pino": "^10.4.0",
     "tsx": "^4.23.15"
   },

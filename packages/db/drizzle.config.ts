@@ -5,7 +5,9 @@ export default defineConfig({
   schema: "./src/schema/index.ts",
   out: "./migrations",
   casing: "snake_case",
-  dbCredentials: { url: process.env.DATABASE_URL ?? "postgres://forgecy:forgecy@localhost:5432/forgecy" },
+  dbCredentials: {
+    url: process.env.DATABASE_URL ?? "postgres://forgecy:forgecy@localhost:5432/forgecy",
+  },
   strict: true,
   verbose: true,
 });

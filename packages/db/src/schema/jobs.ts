@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, text, timestamp, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
+import {
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  type AnyPgColumn,
+} from "drizzle-orm/pg-core";
 import { users } from "./auth";
 import { clients } from "./clients";
 import { createdAt, id, updatedAt } from "./_common";
@@ -19,7 +28,9 @@ export const jobs = pgTable(
     clientId: uuid("client_id").references(() => clients.id, { onDelete: "cascade" }),
     entity: text("entity"),
     entityId: uuid("entity_id"),
-    dependsOnJobId: uuid("depends_on_job_id").references((): AnyPgColumn => jobs.id, { onDelete: "set null" }),
+    dependsOnJobId: uuid("depends_on_job_id").references((): AnyPgColumn => jobs.id, {
+      onDelete: "set null",
+    }),
     payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
     result: jsonb("result").$type<Record<string, unknown>>(),
     progress: integer("progress").notNull().default(0),
@@ -35,6 +46,8 @@ export const jobs = pgTable(
     index("jobs_status_idx").on(t.status),
     index("jobs_entity_idx").on(t.entity, t.entityId),
     index("jobs_client_idx").on(t.clientId),
-    index("jobs_active_idx").on(t.updatedAt).where(sql`${t.status} in ('queued', 'running', 'retrying')`),
+    index("jobs_active_idx")
+      .on(t.updatedAt)
+      .where(sql`${t.status} in ('queued', 'running', 'retrying')`),
   ],
 );

@@ -23,7 +23,13 @@ describe("permissions", () => {
     const agent = { type: "agent" as const, role: "reviewer" as const };
     expect(can(agent, "view")).toBe(true);
     expect(can(agent, "propose")).toBe(true);
-    for (const p of ["approve", "publish", "archive", "brand_identity.approve", "settings.manage"] as const) {
+    for (const p of [
+      "approve",
+      "publish",
+      "archive",
+      "brand_identity.approve",
+      "settings.manage",
+    ] as const) {
       expect(can(agent, p)).toBe(false);
     }
   });
@@ -62,6 +68,8 @@ describe("env", () => {
     expect(env.FORGECY_MAGIC_LINK_TTL_MINUTES).toBe(15);
   });
   it("fails loudly on a short secret", () => {
-    expect(() => loadEnv({ DATABASE_URL: "x", BETTER_AUTH_SECRET: "short" })).toThrow(/BETTER_AUTH_SECRET/);
+    expect(() => loadEnv({ DATABASE_URL: "x", BETTER_AUTH_SECRET: "short" })).toThrow(
+      /BETTER_AUTH_SECRET/,
+    );
   });
 });

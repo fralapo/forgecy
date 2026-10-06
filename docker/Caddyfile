@@ -1,0 +1,7 @@
+# Optional HTTPS for the internal network (profile "https"). Set FORGECY_HOSTNAME in .env.
+# `tls internal` uses Caddy's local CA; install its root certificate on the agency machines.
+{$FORGECY_HOSTNAME:forgecy.local} {
+	tls internal
+	encode zstd gzip
+	reverse_proxy web:3000
+}

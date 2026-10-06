@@ -2,7 +2,12 @@
  * Per-client AI confidentiality policy (spec: "Policy di riservatezza AI").
  * The gateway checks it before every request; a job that would break it never starts.
  */
-export const aiPolicies = ["external_allowed", "external_restricted", "local_only", "no_ai"] as const;
+export const aiPolicies = [
+  "external_allowed",
+  "external_restricted",
+  "local_only",
+  "no_ai",
+] as const;
 export type AiPolicy = (typeof aiPolicies)[number];
 
 export const providerIds = ["anthropic", "openai", "openrouter", "google", "local"] as const;
@@ -25,7 +30,9 @@ export function checkAiPolicy(
     case "no_ai":
       return { allowed: false, reason: "no_ai" };
     case "local_only":
-      return isLocalProvider(provider) ? { allowed: true } : { allowed: false, reason: "external_blocked" };
+      return isLocalProvider(provider)
+        ? { allowed: true }
+        : { allowed: false, reason: "external_blocked" };
     case "external_restricted":
       return isLocalProvider(provider) || approvedProviders.includes(provider)
         ? { allowed: true }

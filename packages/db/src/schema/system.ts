@@ -19,7 +19,10 @@ export const auditEvents = pgTable(
     meta: jsonb("meta").$type<Record<string, unknown>>().notNull().default({}),
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("audit_events_entity_idx").on(t.entity, t.entityId), index("audit_events_at_idx").on(t.at)],
+  (t) => [
+    index("audit_events_entity_idx").on(t.entity, t.entityId),
+    index("audit_events_at_idx").on(t.at),
+  ],
 );
 
 /** Instance-wide settings edited by Admins (installed version, per-task providers, SMTP overrides...). */

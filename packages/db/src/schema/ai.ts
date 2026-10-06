@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { users } from "./auth";
 import { clients } from "./clients";
 import { jobs } from "./jobs";
@@ -53,7 +62,13 @@ export const budgets = pgTable(
     warnAtPercent: integer("warn_at_percent").notNull().default(70),
     createdAt: createdAt(),
   },
-  (t) => [uniqueIndex("budgets_scope_month_uq").on(t.scope, sql`coalesce(${t.scopeId}, '00000000-0000-0000-0000-000000000000'::uuid)`, t.month)],
+  (t) => [
+    uniqueIndex("budgets_scope_month_uq").on(
+      t.scope,
+      sql`coalesce(${t.scopeId}, '00000000-0000-0000-0000-000000000000'::uuid)`,
+      t.month,
+    ),
+  ],
 );
 
 /**
@@ -70,9 +85,13 @@ export const aiConnections = pgTable(
     encryptedKey: text("encrypted_key").notNull(),
     keyHint: text("key_hint").notNull(),
     baseUrl: text("base_url"),
-    status: text("status", { enum: ["active", "disabled"] }).notNull().default("active"),
+    status: text("status", { enum: ["active", "disabled"] })
+      .notNull()
+      .default("active"),
     /** Product Owner check of the provider's terms before use with real clients. */
-    commercialUseStatus: text("commercial_use_status", { enum: ["pending_verification", "verified", "rejected"] })
+    commercialUseStatus: text("commercial_use_status", {
+      enum: ["pending_verification", "verified", "rejected"],
+    })
       .notNull()
       .default("pending_verification"),
     allowedModels: jsonb("allowed_models").$type<string[]>().notNull().default([]),

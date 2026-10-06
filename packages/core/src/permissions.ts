@@ -50,7 +50,11 @@ export type Actor =
   | { type: "agent"; role: AgentRole; runId?: string };
 
 /** The only permissions an agent can ever hold. */
-export const AGENT_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>(["view", "propose", "brand_identity.propose"]);
+export const AGENT_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
+  "view",
+  "propose",
+  "brand_identity.propose",
+]);
 
 const ADMIN_SET: ReadonlySet<Permission> = new Set<Permission>(adminPermissions);
 

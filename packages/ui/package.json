@@ -8,12 +8,15 @@
     "./tokens.css": "./src/generated/tokens.css",
     "./styles.css": "./src/styles.css",
     "./tokens.json": "./tokens/forgecy.tokens.json",
+    "./tokens": "./src/tokens.ts",
+    "./cn": "./src/cn.ts",
     "./*": "./src/*.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "tokens": "tsx scripts/build-tokens.ts"
+    "tokens": "tsx scripts/build-tokens.ts",
+    "tokens:check": "tsx scripts/build-tokens.ts --check"
   },
   "dependencies": {
     "clsx": "^2.1.1",
