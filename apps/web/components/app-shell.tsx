@@ -13,6 +13,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import type { CurrentUser } from "@/lib/session";
+import { SearchBox } from "./search-box";
 import { SignOutButton } from "./sign-out-button";
 
 // Module threads add their entries here (Audit, Brand Identity, Content, Templates...).
@@ -34,6 +35,7 @@ export async function AppShell({ user, children }: { user: CurrentUser; children
     <div className="grid min-h-dvh grid-cols-[15rem_1fr]">
       <aside className="flex flex-col border-r border-subtle bg-surface">
         <div className="px-6 py-5 font-display text-heading-md text-fg">{t("common.appName")}</div>
+        <SearchBox />
         <nav aria-label={t("shell.mainNavigation")} className="flex-1 px-3">
           <ul className="space-y-1">
             {nav.map(({ href, label, icon: Icon }) => (

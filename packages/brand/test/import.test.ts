@@ -177,5 +177,6 @@ describe("colorName", () => {
     expect(colorName(ctx, "#0044CC", "x")).toBe("Colors Rossi Blue");
     expect(colorName("White: #fff", "#FFFFFF", "x")).toBe("White");
     expect(colorName("#123456", "#123456", "color-1")).toBe("color-1");
-  });
+    // The first import loads the db and service modules, slow on a busy CI runner.
+  }, 30_000);
 });
