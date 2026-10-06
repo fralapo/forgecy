@@ -2461,7 +2461,7 @@
           "name": "channel",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "format": {
           "name": "format",
