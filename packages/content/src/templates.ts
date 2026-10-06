@@ -27,7 +27,8 @@ export interface UsableTemplate {
 
 function parseRow(row: typeof templates.$inferSelect): UsableTemplate | null {
   const r = templateManifestSchema.safeParse(row.manifest);
-  if (!r.success) return null;
+  // Only carousel templates bound to a channel (report templates have none).
+  if (!r.success || r.data.kind !== "carousel" || !r.data.channel) return null;
   return {
     key: row.key,
     version: row.version,

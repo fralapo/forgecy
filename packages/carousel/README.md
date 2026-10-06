@@ -2,7 +2,7 @@
 
 Renderer, template ed export dei caroselli (M3).
 
-- **Formati** (`FORMATS`): Instagram 4:5 e documento LinkedIn nell'MVP; Instagram 1:1, Stories 9:16, Facebook 4:5 e TikTok foto pronti per la v1, con dimensioni in pixel reali e safe zone di default.
+- **Formati** (`FORMATS`): Instagram 4:5 e documento LinkedIn nell'MVP; Instagram 1:1, Stories 9:16, Facebook 4:5 e TikTok foto pronti per la v1, con dimensioni in pixel reali e safe zone di default. Per i report (`kind: "report"`, senza canale) ci sono `report_a4` (1240×1754 a 150 dpi, PDF in A4 reale) e `report_16x9` (1920×1080); `pdfPageSize()` dà la pagina in punti. Ruoli delle pagine di report: `section`, `finding`, `problem`, `next_steps`, `method`.
 - **`template.json`** (`templateManifestSchema`): formato, numero di slide, layout con ruolo e posizione, slot (`text`, `list`, `image`) con limiti, font inclusi, variabili CSS legate ai ruoli colore e font della Brand Identity, scala tipografica, regole di composizione. Lo schema JSON per l'editor è `templates/agency/template.schema.json` (`pnpm --filter @forgecy/carousel schema`).
 - **Slide**: JSON con `layout` e un valore per slot. `buildSlideSchema(template)` e `buildCarouselSchema(template)` producono gli schemi Zod con cui si validano le slide scritte dall'AI o dall'editor (limiti di caratteri, voci, slide prima e ultima, CTA, immagini per slide). `==parola==` evidenzia una parola negli slot con `highlight`.
 - **`renderSlideHtml`** (il `SlideRenderer`): riempie l'HTML del layout inserendo i valori come testo, applica colori e font del brand come variabili CSS, toglie dal template script, handler e riferimenti esterni e restituisce un documento autosufficiente di esattamente `width×height` px. È puro e sincrono: stesso input, stessa stringa.

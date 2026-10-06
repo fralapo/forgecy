@@ -61,9 +61,23 @@ export interface ModelRef {
 
 export type JsonSchema = Record<string, unknown>;
 
+/** Image formats every vision-capable adapter accepts (Anthropic, OpenAI, OpenRouter, Ollama). */
+export const inputImageMimeTypes = ["image/png", "image/jpeg", "image/webp", "image/gif"] as const;
+export type InputImageMimeType = (typeof inputImageMimeTypes)[number];
+
+/** Image sent to a model as input (vision), e.g. a social profile screenshot. */
+export interface InputImage {
+  data: Uint8Array;
+  mimeType: InputImageMimeType;
+  /** Optional reference (file key, asset id) logged next to the hash; never the image itself. */
+  id?: string;
+}
+
 export interface ChatTurn {
   role: "user" | "assistant";
   content: string;
+  /** Images placed before the text of a user turn. Ignored on assistant turns. */
+  images?: InputImage[];
 }
 
 /** Normalized stop reason. Providers keep the raw value in `rawStopReason`. */

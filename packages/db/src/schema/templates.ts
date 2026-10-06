@@ -29,7 +29,7 @@ export const templates = pgTable(
     version: text("version").notNull(),
     name: text("name").notNull(),
     kind: text("kind").notNull(),
-    channel: text("channel").notNull(),
+    channel: text("channel"),
     format: text("format").notNull(),
     /** "system" (curated by the Product Owner) or "agency". */
     origin: text("origin").notNull().default("agency"),

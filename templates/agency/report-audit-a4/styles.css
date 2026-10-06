@@ -1,0 +1,309 @@
+/* Report di audit · A4 (PDF, 1240×1754 a 150 dpi). Colors and fonts come only from the role
+   variables declared in template.json; sizes from the type scale (24 px = 11.5 pt in print). */
+
+.frame {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--fc-safe-top) var(--fc-safe-right) var(--fc-safe-bottom) var(--fc-safe-left);
+  background: var(--fc-bg);
+  color: var(--fc-text);
+  font-family: var(--fc-font-body);
+  font-size: 24px;
+  line-height: 1.5;
+}
+
+[data-tone="inverse"] .frame {
+  background: var(--fc-text);
+  color: var(--fc-bg);
+}
+
+/* Header: logo or brand name on the left, optional tag on the right. */
+.chrome {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 72px;
+  flex: none;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--fc-surface);
+}
+.logo {
+  height: 48px;
+  width: 200px;
+  object-fit: contain;
+  object-position: left center;
+}
+.brand {
+  font-family: var(--fc-font-heading);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.logo:not([data-empty]) + .brand {
+  display: none;
+}
+.tag {
+  margin-left: auto;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: var(--fc-accent);
+  color: var(--fc-cta-text);
+  font-family: var(--fc-font-heading);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: 56px;
+  overflow: hidden;
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  flex: none;
+  border-top: 2px solid var(--fc-surface);
+  padding-top: 12px;
+  font-size: 20px;
+  color: var(--fc-muted);
+}
+.pager {
+  margin-left: auto;
+  font-family: var(--fc-font-heading);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.pager:has([data-empty]) {
+  display: none;
+}
+.sep {
+  margin: 0 6px;
+}
+[data-tone="inverse"] .foot,
+[data-tone="inverse"] .lead {
+  color: var(--fc-bg);
+}
+
+.kicker {
+  margin: 0 0 16px;
+  font-family: var(--fc-font-heading);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fc-accent);
+}
+
+.display,
+.title {
+  margin: 0;
+  font-family: var(--fc-font-heading);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.display {
+  font-size: 96px;
+  line-height: 1.02;
+}
+.title {
+  font-size: 56px;
+  line-height: 1.1;
+}
+.fc-hl {
+  color: var(--fc-accent);
+}
+
+.lead {
+  margin: 32px 0 0;
+  font-size: 32px;
+  line-height: 1.35;
+  color: var(--fc-muted);
+}
+
+.copy {
+  margin: 32px 0 0;
+  font-size: 28px;
+  line-height: 1.5;
+}
+
+/* Cover: optional image on the top, title in the middle, client and date at the bottom. */
+.cover .chrome {
+  border-bottom: 0;
+}
+.cover .cover-image {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 40%;
+}
+.cover:has(.cover-image:not([data-empty])) .chrome {
+  position: relative;
+  align-self: flex-start;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: var(--fc-bg);
+}
+.cover .body {
+  justify-content: flex-end;
+  padding-bottom: 72px;
+}
+.cover:has(.cover-image:not([data-empty])) .display {
+  font-size: 72px;
+}
+.meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  margin: 0;
+  padding-top: 24px;
+  border-top: 4px solid var(--fc-accent);
+  flex: none;
+}
+.meta-label {
+  margin: 0;
+  font-family: var(--fc-font-heading);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fc-muted);
+}
+.meta-value {
+  margin: 4px 0 0;
+  font-size: 24px;
+  line-height: 1.35;
+  font-weight: 600;
+}
+.meta-item:has(.meta-value[data-empty]) {
+  display: none;
+}
+
+/* Section opener: big number, title, intro, bullet list. */
+.number {
+  margin: 0 0 24px;
+  font-family: var(--fc-font-heading);
+  font-size: 160px;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: var(--fc-accent);
+}
+
+/* Lists */
+.items,
+.steps {
+  list-style: none;
+  margin: 40px 0 0;
+  padding: 0;
+}
+.items li {
+  position: relative;
+  padding: 16px 0 16px 40px;
+  border-top: 2px solid var(--fc-surface);
+}
+.items li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 30px;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--fc-accent);
+}
+.item-text {
+  font-size: 28px;
+  line-height: 1.4;
+}
+.list-label {
+  margin: 40px 0 0;
+  font-family: var(--fc-font-heading);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fc-muted);
+}
+.list-label + .items {
+  margin-top: 12px;
+}
+.list-label:has(+ .items[data-empty]) {
+  display: none;
+}
+
+/* Next steps: numbered cards. */
+.steps {
+  counter-reset: step;
+}
+.steps li {
+  counter-increment: step;
+  display: flex;
+  gap: 28px;
+  align-items: baseline;
+  margin-top: 16px;
+  padding: 24px 28px;
+  border-radius: 16px;
+  background: var(--fc-surface);
+}
+.steps li::before {
+  content: counter(step, decimal-leading-zero);
+  flex: none;
+  width: 56px;
+  font-family: var(--fc-font-heading);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--fc-accent);
+}
+.note {
+  margin: 40px 0 0;
+  font-size: 24px;
+  color: var(--fc-muted);
+}
+
+/* Panels: evidence, recommendation, impact, limits. */
+.panel {
+  margin-top: 32px;
+  padding: 28px 32px;
+  border-radius: 16px;
+  background: var(--fc-surface);
+}
+.panel-accent {
+  background: var(--fc-accent);
+  color: var(--fc-cta-text);
+}
+.panel-strong {
+  background: var(--fc-cta-bg);
+  color: var(--fc-cta-text);
+}
+.panel-label {
+  margin: 0 0 8px;
+  font-family: var(--fc-font-heading);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.panel-text {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.5;
+}
+.panel:has(.panel-text[data-empty]):not(:has(img:not([data-empty]))) {
+  display: none;
+}
+.evidence-image {
+  display: block;
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+  border-radius: 8px;
+}
