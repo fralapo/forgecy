@@ -1,6 +1,7 @@
 /** Read models of the content pages. Every query checks `view` on the client. */
 import { getPublishedBrandIdentity } from "@forgecy/brand";
-import { assertCan, type Actor } from "@forgecy/core";
+import { assertCan, type Actor, type MessageRef } from "@forgecy/core";
+import { englishMessage, messageRef } from "@forgecy/i18n";
 import {
   and,
   assets,
@@ -80,16 +81,19 @@ export async function getStrategyOverview(db: Database, actor: Actor, clientId: 
     : [];
   const contentsByPillar = new Map(usage.map((u) => [u.pillarId, u.n]));
   const live = (s: string) => s === "accepted" || s === "stale";
-  const warnings: { pillarId: string; message: string }[] = [];
+  const warnings: { pillarId: string; message: string; ref: MessageRef }[] = [];
   for (const p of pillars.filter((x) => live(x.status))) {
     const own = rubrics.filter((r) => r.pillarId === p.id && live(r.status));
     const sum = own.reduce((t, r) => t + perWeek(freqOf(r.frequencyCount, r.frequencyUnit)), 0);
     const cap = perWeek(freqOf(p.frequencyCount, p.frequencyUnit));
-    if (cap > 0 && sum > cap + 1e-9)
+    if (cap > 0 && sum > cap + 1e-9) {
+      const values = { pillar: p.name, sum: Number(sum.toFixed(1)), cap: Number(cap.toFixed(1)) };
       warnings.push({
         pillarId: p.id,
-        message: `The rubrics of “${p.name}” ask for more content than the pillar (${sum.toFixed(1)} vs ${cap.toFixed(1)} per week)`,
+        message: englishMessage("content.strategy.frequencyWarning", values),
+        ref: messageRef("content.strategy.frequencyWarning", values),
       });
+    }
   }
   const active = plans.find((p) => p.status === "active") ?? null;
   const proposed = plans.find((p) => p.status === "proposed") ?? null;
@@ -163,6 +167,7 @@ export async function listContentJobs(db: Database, contentId: string) {
       status: jobs.status,
       progress: jobs.progress,
       error: jobs.error,
+      errorRef: jobs.errorRef,
       result: jobs.result,
       createdAt: jobs.createdAt,
       endedAt: jobs.endedAt,

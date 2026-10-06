@@ -1,10 +1,11 @@
 "use client";
 
-import { slideRoleLabels, slideRoles, type SlideRole } from "@forgecy/carousel";
+import { slideRoles, type SlideRole } from "@forgecy/carousel";
 import { newSlideId, type Outline, type OutlineRow } from "@forgecy/content/client";
 import { Button, Input, Label } from "@forgecy/ui";
 import { ArrowDown, ArrowUp, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { generateOutlineAction, saveOutlineAction, type ActionResult } from "../actions";
 import { controlClass } from "./action-button";
@@ -58,6 +59,7 @@ export function CarouselOutlineGenerate({
   disabled: boolean;
 }) {
   const { pending, error, run } = useRun();
+  const t = useTranslations("content.outline.generateForm");
   const [instruction, setInstruction] = useState("");
   const [keepEdited, setKeepEdited] = useState(true);
   return (
@@ -78,7 +80,7 @@ export function CarouselOutlineGenerate({
         );
       }}
     >
-      <Label htmlFor="ol-instruction">Directions for the Copywriter (optional)</Label>
+      <Label htmlFor="ol-instruction">{t("instruction")}</Label>
       <textarea
         id="ol-instruction"
         rows={2}
@@ -87,7 +89,7 @@ export function CarouselOutlineGenerate({
         value={instruction}
         disabled={disabled || pending}
         onChange={(e) => setInstruction(e.target.value)}
-        placeholder="E.g. open with a statistic, close with a question"
+        placeholder={t("instructionPlaceholder")}
       />
       {hasOutline ? (
         <label className="flex items-center gap-2 text-body-sm text-fg">
@@ -97,7 +99,7 @@ export function CarouselOutlineGenerate({
             disabled={disabled || pending}
             onChange={(e) => setKeepEdited(e.target.checked)}
           />
-          Keep manually edited rows
+          {t("keepEdited")}
         </label>
       ) : null}
       <div className="flex flex-wrap items-center gap-3">
@@ -107,7 +109,7 @@ export function CarouselOutlineGenerate({
           disabled={disabled || pending}
         >
           <Sparkles aria-hidden />
-          {hasOutline ? "Regenerate" : "Generate outline"}
+          {hasOutline ? t("regenerate") : t("generate")}
         </Button>
         <ErrorText error={error} />
       </div>
@@ -152,6 +154,8 @@ export function CarouselOutlineEditor({
   editable: boolean;
 }) {
   const { pending, error, run } = useRun();
+  const t = useTranslations("content.outline.editor");
+  const tl = useTranslations("content.labels");
   const [o, setO] = useState<Outline | null>(outline);
   const [hashtags, setHashtags] = useState((outline?.hashtags ?? []).join(" "));
   const [dirty, setDirty] = useState(false);
@@ -164,7 +168,7 @@ export function CarouselOutlineEditor({
         disabled={!editable}
         onClick={() => setO(emptyOutline(slideCount, layouts))}
       >
-        Write the outline manually
+        {t("writeManually")}
       </Button>
     );
 
@@ -216,7 +220,7 @@ export function CarouselOutlineEditor({
       <fieldset disabled={!editable || pending} className="grid gap-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="grid gap-2">
-            <Label htmlFor="ol-title">Title</Label>
+            <Label htmlFor="ol-title">{t("title")}</Label>
             <Input
               id="ol-title"
               maxLength={160}
@@ -225,7 +229,7 @@ export function CarouselOutlineEditor({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="ol-hook">Hook</Label>
+            <Label htmlFor="ol-hook">{t("hook")}</Label>
             <Input
               id="ol-hook"
               maxLength={200}
@@ -238,17 +242,17 @@ export function CarouselOutlineEditor({
           {o.rows.map((r, i) => (
             <li key={r.id} className="grid gap-3 rounded-md border border-subtle p-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-label text-fg">Slide {i + 1}</span>
+                <span className="text-label text-fg">{t("slide", { number: i + 1 })}</span>
                 {r.edited ? (
-                  <span className="text-body-sm text-fg-muted">· edited manually</span>
+                  <span className="text-body-sm text-fg-muted">· {t("edited")}</span>
                 ) : null}
                 <span className="ml-auto flex gap-1">
                   <Button
                     type="button"
                     size="icon"
                     variant="ghost"
-                    title="Move up"
-                    aria-label={`Move slide ${i + 1} up`}
+                    title={t("moveUp")}
+                    aria-label={t("moveUpLabel", { number: i + 1 })}
                     disabled={i === 0}
                     onClick={() => move(i, -1)}
                   >
@@ -258,8 +262,8 @@ export function CarouselOutlineEditor({
                     type="button"
                     size="icon"
                     variant="ghost"
-                    title="Move down"
-                    aria-label={`Move slide ${i + 1} down`}
+                    title={t("moveDown")}
+                    aria-label={t("moveDownLabel", { number: i + 1 })}
                     disabled={i === o.rows.length - 1}
                     onClick={() => move(i, 1)}
                   >
@@ -269,8 +273,8 @@ export function CarouselOutlineEditor({
                     type="button"
                     size="icon"
                     variant="ghost"
-                    title="Delete"
-                    aria-label={`Delete slide ${i + 1}`}
+                    title={t("delete")}
+                    aria-label={t("deleteLabel", { number: i + 1 })}
                     disabled={o.rows.length <= 1}
                     onClick={() => patch({ rows: o.rows.filter((_, j) => j !== i) })}
                   >
@@ -280,7 +284,7 @@ export function CarouselOutlineEditor({
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="grid gap-1">
-                  <Label htmlFor={`ol-role-${r.id}`}>Role</Label>
+                  <Label htmlFor={`ol-role-${r.id}`}>{t("role")}</Label>
                   <select
                     id={`ol-role-${r.id}`}
                     className={controlClass}
@@ -296,13 +300,13 @@ export function CarouselOutlineEditor({
                   >
                     {rolesFor(r.role).map((x) => (
                       <option key={x} value={x}>
-                        {slideRoleLabels[x]}
+                        {tl(`slideRole.${x}`)}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div className="grid gap-1">
-                  <Label htmlFor={`ol-layout-${r.id}`}>Layout</Label>
+                  <Label htmlFor={`ol-layout-${r.id}`}>{t("layout")}</Label>
                   <select
                     id={`ol-layout-${r.id}`}
                     className={controlClass}
@@ -321,7 +325,7 @@ export function CarouselOutlineEditor({
                 </div>
               </div>
               <div className="grid gap-1">
-                <Label htmlFor={`ol-point-${r.id}`}>Point</Label>
+                <Label htmlFor={`ol-point-${r.id}`}>{t("point")}</Label>
                 <textarea
                   id={`ol-point-${r.id}`}
                   rows={2}
@@ -332,7 +336,7 @@ export function CarouselOutlineEditor({
                 />
               </div>
               <div className="grid gap-1">
-                <Label htmlFor={`ol-note-${r.id}`}>Note</Label>
+                <Label htmlFor={`ol-note-${r.id}`}>{t("note")}</Label>
                 <Input
                   id={`ol-note-${r.id}`}
                   maxLength={300}
@@ -365,11 +369,11 @@ export function CarouselOutlineEditor({
             }
           >
             <Plus aria-hidden />
-            Add slide
+            {t("addSlide")}
           </Button>
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="ol-cta">Call to action</Label>
+          <Label htmlFor="ol-cta">{t("cta")}</Label>
           <Input
             id="ol-cta"
             maxLength={200}
@@ -378,7 +382,7 @@ export function CarouselOutlineEditor({
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="ol-caption">Caption</Label>
+          <Label htmlFor="ol-caption">{t("caption")}</Label>
           <textarea
             id="ol-caption"
             rows={4}
@@ -389,7 +393,7 @@ export function CarouselOutlineEditor({
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="ol-hashtags">Hashtags</Label>
+          <Label htmlFor="ol-hashtags">{t("hashtags")}</Label>
           <Input
             id="ol-hashtags"
             value={hashtags}
@@ -397,15 +401,15 @@ export function CarouselOutlineEditor({
               setHashtags(e.target.value);
               setDirty(true);
             }}
-            placeholder="#example #another"
+            placeholder={t("hashtagsPlaceholder")}
           />
         </div>
       </fieldset>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={!editable || pending || !dirty}>
-          Save outline
+          {t("save")}
         </Button>
-        {dirty ? <span className="text-body-sm text-fg-muted">Unsaved changes</span> : null}
+        {dirty ? <span className="text-body-sm text-fg-muted">{t("unsaved")}</span> : null}
         <ErrorText error={error} />
       </div>
     </form>

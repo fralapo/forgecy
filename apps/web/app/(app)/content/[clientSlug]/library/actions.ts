@@ -5,8 +5,10 @@ import "../../_lib/ports";
 import { importProductImage, productSource } from "@forgecy/content";
 import { assertCan, ForgecyError, PermissionDeniedError, type Actor } from "@forgecy/core";
 import { getDb, type Database } from "@forgecy/db";
+import { localizedError } from "@forgecy/i18n";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { errorMessage } from "@/lib/i18n";
 import { requireUser } from "@/lib/session";
 import type { ActionResult } from "../../actions";
 import { getStorage } from "../../_lib/server";
@@ -28,10 +30,11 @@ async function run<T extends object>(
     if (err instanceof PermissionDeniedError)
       return {
         ok: false,
-        error: "You don't have permission for this action.",
+        error: (await errorMessage(err)) ?? err.message,
         code: "PERM-DENIED",
       };
-    if (err instanceof ForgecyError) return { ok: false, error: err.message, code: err.code };
+    if (err instanceof ForgecyError)
+      return { ok: false, error: (await errorMessage(err)) ?? err.message, code: err.code };
     throw err;
   }
 }
@@ -52,7 +55,7 @@ export async function importProductImageAction(input: {
     const product = await productSource().get(db, clientId, uuid.parse(input.productId));
     const img = product?.images[z.number().int().min(0).parse(input.image)];
     if (!product || !img)
-      throw new ForgecyError("not_found", "Product or image not found among the approved ones");
+      throw localizedError("not_found", "content.library.errors.productImageNotFound");
     const { row, created } = await importProductImage(db, getStorage(), actor, {
       clientId,
       productId: product.id,

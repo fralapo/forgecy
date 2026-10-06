@@ -18,6 +18,8 @@ export const dateStyles = {
   time: { timeStyle: "short" },
   /** October 2026 */
   month: { month: "long", year: "numeric" },
+  /** Tue 6 Oct */
+  weekday: { weekday: "short", day: "numeric", month: "short" },
 } satisfies Record<string, Intl.DateTimeFormatOptions>;
 
 export type DateStyle = keyof typeof dateStyles;

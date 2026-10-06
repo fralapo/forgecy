@@ -1,6 +1,5 @@
 import { FORMATS } from "@forgecy/carousel";
 import {
-  agentLabels,
   channelLabels,
   getNewCarouselOptions,
   getStrategyOverview,
@@ -8,7 +7,6 @@ import {
   proposePlanJob,
   provenanceSchema,
   releasedFormats,
-  strategyStatusLabels,
   type CarouselParamsInput,
   type ContentChannel,
   type StrategyOverview,
@@ -19,7 +17,9 @@ import { Badge, Card } from "@forgecy/ui";
 import { Check, ExternalLink, LoaderCircle, X } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
+import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
+import { getFormat, refText } from "@/lib/i18n";
 import { decidePlanItemAction } from "../../actions";
 import { ActionButton } from "../../_components/action-button";
 import {
@@ -33,7 +33,10 @@ import { RefreshWhile } from "../../_components/refresh-while";
 import { carouselPath } from "../../_lib/paths";
 import { loadClient } from "../../_lib/server";
 
-export const metadata = { title: "Content plan" };
+export async function generateMetadata() {
+  const t = await getTranslations("content.plan");
+  return { title: t("metaTitle") };
+}
 
 type Plan = NonNullable<StrategyOverview["activePlan"]>;
 type Item = Plan["items"][number];
@@ -45,27 +48,25 @@ const objectiveOfFunnel: Record<FunnelStage, ContentObjective> = {
   conversion: "conversion",
   loyalty: "community",
 };
-const dayFormat = new Intl.DateTimeFormat("en-GB", {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-});
 const dateOf = (plan: Plan, day: number) => {
   const d = new Date(plan.acceptedAt ?? plan.createdAt);
   d.setDate(d.getDate() + day - 1);
-  return dayFormat.format(d);
+  return d;
 };
 const statusVariant = { accepted: "success", proposed: "info", stale: "warning" } as const;
 
 export default async function PlanPage({ params }: { params: Promise<{ clientSlug: string }> }) {
   const { clientSlug } = await params;
   const { db, user, client } = await loadClient(clientSlug);
+  const t = await getTranslations("content.plan");
+  const tl = await getTranslations("content.labels");
+  const format = await getFormat();
   const actor = user.actor;
   const [o, newOptions, [lastJob]] = await Promise.all([
     getStrategyOverview(db, actor, client.id),
     getNewCarouselOptions(db, actor, client.id),
     db
-      .select({ status: jobs.status, error: jobs.error })
+      .select({ status: jobs.status, error: jobs.error, errorRef: jobs.errorRef })
       .from(jobs)
       .where(and(eq(jobs.clientId, client.id), eq(jobs.kind, proposePlanJob.kind)))
       .orderBy(desc(jobs.createdAt))
@@ -103,13 +104,11 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
     const rubric = item.rubricId ? rubricById.get(item.rubricId) : undefined;
     const forFormat = newOptions.templates.filter((t) => t.format === item.format);
     const template = forFormat.find((t) => t.key === rubric?.templateKey) ?? forFormat[0];
-    if (!newOptions.brandPublished)
-      return { params: null, reason: "A published Brand Identity is required." };
-    if (!template) return { params: null, reason: "No published template for this format." };
+    if (!newOptions.brandPublished) return { params: null, reason: t("reason.brand") };
+    if (!template) return { params: null, reason: t("reason.template") };
     const own = (pillar?.audienceIds ?? []).filter((a) => audienceIds.has(a));
     const audience = own.length ? own : newOptions.audience.slice(0, 1).map((a) => a.id);
-    if (!audience.length)
-      return { params: null, reason: "The Brand Identity has no defined audience." };
+    if (!audience.length) return { params: null, reason: t("reason.audience") };
     return {
       params: {
         objective: pillar?.funnel ? objectiveOfFunnel[pillar.funnel] : "awareness",
@@ -136,11 +135,13 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
     return (
       <div className="min-w-0 flex-1 space-y-1">
         <p className="text-body-md font-medium text-fg">{item.theme}</p>
-        {item.hook ? <p className="text-body-sm text-fg">Angle: {item.hook}</p> : null}
+        {item.hook ? (
+          <p className="text-body-sm text-fg">{t("angle", { hook: item.hook })}</p>
+        ) : null}
         <p className="text-body-sm text-fg-muted">
           {channelLabels[item.channel as ContentChannel] ?? item.channel} ·{" "}
           {FORMATS[item.format as keyof typeof FORMATS]?.label ?? item.format} ·{" "}
-          {pillar ?? "Pillar removed"}
+          {pillar ?? t("pillarRemoved")}
           {rubric ? ` › ${rubric}` : ""}
           {products ? ` · ${products}` : ""}
         </p>
@@ -155,13 +156,13 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
       className="flex flex-wrap items-start gap-4 border-b border-subtle py-4 last:border-b-0"
     >
       <div className="w-24 shrink-0">
-        <p className="text-label uppercase text-fg-muted">Day {item.day}</p>
-        <p className="text-body-sm text-fg">{dateOf(plan, item.day)}</p>
+        <p className="text-label uppercase text-fg-muted">{t("day", { day: item.day })}</p>
+        <p className="text-body-sm text-fg">{format.date(dateOf(plan, item.day), "weekday")}</p>
       </div>
       {describe(item)}
       <div className="flex flex-wrap items-start gap-2">
         <Badge variant={statusVariant[item.status as keyof typeof statusVariant] ?? "neutral"}>
-          {strategyStatusLabels[item.status]}
+          {tl(`strategyStatus.${item.status}`)}
         </Badge>
         {actions}
       </div>
@@ -176,7 +177,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
         rev={item.rev}
         initial={planItemRowToInput(item)}
         options={options}
-        label="Edit"
+        label={t("edit")}
       />
     ) : null;
 
@@ -190,20 +191,18 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
       <RefreshWhile active={running} />
 
       <Card className="space-y-3 p-5">
-        <h2 className="text-heading-sm text-fg">Propose plan</h2>
-        <p className="text-body-sm text-fg-muted">
-          The Planner proposes a 30-day plan based on the active pillars and rubrics. The current
-          plan doesn’t change until you activate the proposal.
-        </p>
+        <h2 className="text-heading-sm text-fg">{t("ask.title")}</h2>
+        <p className="text-body-sm text-fg-muted">{t("ask.description")}</p>
         {running ? (
           <p role="status" className="flex items-center gap-2 text-body-sm text-fg">
             <LoaderCircle aria-hidden className="size-4 animate-spin" />
-            The Planner is preparing the plan…
+            {t("ask.running")}
           </p>
         ) : failed ? (
           <p role="alert" className="text-body-sm text-error">
-            The last plan request failed
-            {lastJob.error ? `: ${lastJob.error}` : "."}
+            {lastJob.error
+              ? t("ask.failedWith", { error: await refText(lastJob.errorRef, lastJob.error) })
+              : t("ask.failed")}
           </p>
         ) : null}
         {canEdit ? (
@@ -211,11 +210,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
             {...base}
             running={running}
             disabledReason={
-              !o.brand
-                ? "A published Brand Identity is required."
-                : !options.pillars.length
-                  ? "At least one active pillar is required in Strategy."
-                  : null
+              !o.brand ? t("reason.brand") : !options.pillars.length ? t("reason.pillar") : null
             }
           />
         ) : null}
@@ -224,19 +219,24 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
       {proposed ? (
         <section aria-labelledby="proposed-plan" className="space-y-3">
           <h2 id="proposed-plan" className="text-heading-md text-fg">
-            Proposed plan
+            {t("proposed")}
           </h2>
           {canEdit ? (
             <PlanProposal
               {...base}
               planId={proposed.id}
-              title={`Plan no. ${proposed.number} · ${proposed.items.length} items`}
-              agent={p ? agentLabels[p.agent] : "Planner"}
+              title={t("proposalTitle", {
+                number: proposed.number,
+                count: proposed.items.length,
+              })}
+              agent={tl(`agent.${p ? p.agent : "planner"}`)}
               sources={p?.sources.map((s) => ({ label: s.label })) ?? []}
             >
               {p?.rationale ? <p className="text-body-sm text-fg">{p.rationale}</p> : null}
               {p?.instruction ? (
-                <p className="text-body-sm text-fg-muted">Instruction: “{p.instruction}”</p>
+                <p className="text-body-sm text-fg-muted">
+                  {t("instruction", { instruction: p.instruction })}
+                </p>
               ) : null}
               <ul>
                 {proposed.items.map((item) =>
@@ -254,7 +254,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
                           })}
                         >
                           <Check aria-hidden />
-                          Accept
+                          {t("accept")}
                         </ActionButton>
                         <ActionButton
                           size="sm"
@@ -266,7 +266,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
                           })}
                         >
                           <X aria-hidden />
-                          Reject
+                          {t("reject")}
                         </ActionButton>
                         {editButton(item)}
                       </>
@@ -282,15 +282,13 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
       <section aria-labelledby="active-plan" className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="active-plan" className="text-heading-md text-fg">
-            {active ? `Current plan · no. ${active.number}` : "Current plan"}
+            {active ? t("currentNumber", { number: active.number }) : t("current")}
           </h2>
-          {canEdit ? <PlanItemForm {...base} options={options} label="Add item" /> : null}
+          {canEdit ? <PlanItemForm {...base} options={options} label={t("addItem")} /> : null}
         </div>
         {!active || !active.items.length ? (
           <Card className="p-6">
-            <p className="text-body-md text-fg-muted">
-              No items in the plan. Add one manually or ask the Planner for a proposal.
-            </p>
+            <p className="text-body-md text-fg-muted">{t("empty")}</p>
           </Card>
         ) : (
           <Card className="px-5">
@@ -308,7 +306,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
                           className="inline-flex h-8 items-center gap-1 rounded-md border border-control bg-surface px-3 text-body-sm text-fg"
                         >
                           <ExternalLink aria-hidden className="size-4" />
-                          Open carousel
+                          {t("openCarousel")}
                         </Link>
                       ) : canEdit ? (
                         (() => {

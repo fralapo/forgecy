@@ -59,9 +59,11 @@ import {
 } from "@forgecy/content";
 import { ForgecyError, PermissionDeniedError, type Actor } from "@forgecy/core";
 import { getDb, type Database } from "@forgecy/db";
+import { localizedError } from "@forgecy/i18n";
 import { enqueueJob, type JobDefinition } from "@forgecy/jobs";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { errorMessage } from "@/lib/i18n";
 import { getQueues } from "@/lib/queues";
 import { requireUser } from "@/lib/session";
 
@@ -92,14 +94,14 @@ async function run<T extends object>(
     if (err instanceof PermissionDeniedError)
       return {
         ok: false,
-        error: "You don't have permission for this action.",
+        error: (await errorMessage(err)) ?? err.message,
         code: "PERM-DENIED",
       };
     if (err instanceof ForgecyError) {
       const code = typeof err.details?.code === "string" ? err.details.code : err.code;
       return {
         ok: false,
-        error: err.message,
+        error: (await errorMessage(err)) ?? err.message,
         code,
         ...(err.details ? { details: err.details } : {}),
       };
@@ -127,7 +129,7 @@ async function enqueue<S extends z.ZodType>(
 
 async function requirePublishedBrand(ctx: Ctx, clientId: string) {
   if (!(await getPublishedBrandIdentity(ctx.db, ctx.actor, clientId)))
-    throw new ForgecyError("conflict", "Publish the client's Brand Identity first", {
+    throw localizedError("conflict", "content.errors.brandNotPublished", undefined, {
       code: "BRAND-NOT-PUBLISHED",
     });
 }
@@ -374,8 +376,7 @@ export async function generateOutlineAction(
     const r = ref(input);
     humanOnly(ctx.actor, "edit_draft", r.clientId);
     const c = await getContentRow(ctx.db, r.clientId, r.id);
-    if (!briefReady(c.brief))
-      throw new ForgecyError("validation", "Write a brief of at least 20 characters");
+    if (!briefReady(c.brief)) throw localizedError("validation", "content.errors.briefTooShort");
     return enqueue(
       ctx,
       generateOutlineJob,
@@ -424,7 +425,7 @@ export async function generateSlidesAction(input: ContentRef) {
     humanOnly(ctx.actor, "edit_draft", r.clientId);
     const c = await getContentRow(ctx.db, r.clientId, r.id);
     if (!outlineOf(c) || !c.outlineApprovedAt)
-      throw new ForgecyError("validation", "Approve the outline before generating the slides");
+      throw localizedError("validation", "content.errors.approveOutlineFirst");
     return enqueue(
       ctx,
       generateSlidesJob,

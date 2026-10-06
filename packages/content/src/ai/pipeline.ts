@@ -39,6 +39,7 @@ import {
   type Database,
 } from "@forgecy/db";
 import type { StorageDriver } from "@forgecy/files";
+import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import { NeedsAttentionError, withLock } from "@forgecy/jobs";
 import type { z } from "zod";
 import { humanOnly, invalid, notFound, requireClient } from "../access";
@@ -110,42 +111,50 @@ const agent = (role: AgentRole, ctx: PipelineContext): Actor => ({
   runId: ctx.jobId,
 });
 
+type JobErrorKey = Extract<MessageKey, `content.jobErrors.${string}`>;
+
+/** A job error a person must fix, in English for the log and as a reference for the interface. */
+function attention(key: JobErrorKey, values?: MessageValues, details?: Record<string, unknown>) {
+  return new NeedsAttentionError(englishMessage(key, values), details, messageRef(key, values));
+}
+
 /** Turn gateway failures a person must fix into needs_attention; transient ones are retried. */
 async function guarded<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (err) {
-    if (err instanceof AiProviderError && !err.retryable)
-      throw new NeedsAttentionError(aiErrorMessage(err), { kind: err.kind });
+    if (err instanceof AiProviderError && !err.retryable) throw aiError(err);
     if (err instanceof ForgecyError && err.code === "policy_blocked")
-      throw new NeedsAttentionError(
-        "The client's AI policy does not allow this generation (client settings)",
-        err.details,
-      );
+      throw attention("content.jobErrors.policyBlocked", undefined, err.details);
     if (err instanceof ForgecyError && ["validation", "conflict", "not_found"].includes(err.code))
-      throw new NeedsAttentionError(err.message, err.details);
+      throw new NeedsAttentionError(err.message, err.details, err.ref);
     throw err;
   }
 }
 
-function aiErrorMessage(err: AiProviderError): string {
+function aiError(err: AiProviderError): NeedsAttentionError {
+  const details = { kind: err.kind };
   switch (err.kind) {
     case "auth":
-      return "The AI provider key is invalid or expired";
+      return attention("content.jobErrors.aiAuth", undefined, details);
     case "refusal":
     case "content_filter":
-      return "The model refused the request: review the brief";
+      return attention("content.jobErrors.aiRefusal", undefined, details);
     case "invalid_output":
-      return "The model did not produce a valid result after two attempts: try again or simplify the brief";
+      return attention("content.jobErrors.aiInvalidOutput", undefined, details);
     case "max_tokens":
-      return "The model's answer was truncated: reduce the number of slides or the brief";
+      return attention("content.jobErrors.aiTruncated", undefined, details);
     default:
-      return `AI provider error: ${err.message.slice(0, 200)}`;
+      return attention(
+        "content.jobErrors.aiProvider",
+        { message: err.message.slice(0, 200) },
+        details,
+      );
   }
 }
 
 function requireAi(deps: PipelineDeps): AiGateway {
-  if (!deps.ai) throw new NeedsAttentionError("No AI provider configured: add a key in settings");
+  if (!deps.ai) throw attention("content.jobErrors.noAiProvider");
   return deps.ai;
 }
 
@@ -156,7 +165,7 @@ async function brandContextFor(
   options: { channel?: string; formatKey?: string; brief?: string } = {},
 ): Promise<BrandContext> {
   const ctx = await loadBrandContext(db, actor, clientId, options);
-  if (!ctx) throw new NeedsAttentionError("The client's Brand Identity is not published");
+  if (!ctx) throw attention("content.jobErrors.brandNotPublished");
   return ctx;
 }
 
@@ -303,7 +312,7 @@ const isUuid = (s: string) =>
 
 async function publishedIdentity(db: Database, actor: Actor, clientId: string) {
   const identity = await getPublishedBrandIdentity(db, actor, clientId);
-  if (!identity) throw new NeedsAttentionError("The client's Brand Identity is not published");
+  if (!identity) throw attention("content.jobErrors.brandNotPublished");
   return identity;
 }
 
@@ -337,8 +346,7 @@ export async function runProposePlan(
       ),
     productSource().listApproved(deps.db, input.clientId),
   ]);
-  if (!pillars.length)
-    throw new NeedsAttentionError("Accept at least one pillar before asking for a plan");
+  if (!pillars.length) throw attention("content.jobErrors.acceptPillarFirst");
   await ctx.progress(10);
   const { system, prefix } = withBrand(PLAN_SYSTEM, brandCtx);
   const freq = (c: number | null, u: "week" | "month" | null) =>
@@ -483,7 +491,7 @@ async function carouselSetup(
   const client = await requireClient(deps.db, clientId);
   const c = await getContentRow(deps.db, clientId, contentId);
   if (c.status === "in_review" || c.status === "archived")
-    throw new NeedsAttentionError("The carousel cannot be edited in this status");
+    throw attention("content.jobErrors.notEditable");
   const template = await getTemplate(deps.db, clientId, c.templateKey, c.templateVersion);
   const identity = await publishedIdentity(deps.db, actor, clientId);
   const brandCtx = await brandContextFor(deps.db, actor, clientId, {
@@ -517,7 +525,7 @@ async function locked<T>(
     return await withLock(deps.db, lockOf(contentId, ctx), fn);
   } catch (err) {
     if (err instanceof Error && err.name === "LockUnavailableError")
-      throw new NeedsAttentionError("Another generation is working on this carousel");
+      throw attention("content.jobErrors.anotherGeneration");
     throw err;
   }
 }
@@ -530,8 +538,7 @@ export async function runGenerateOutline(
   const ai = requireAi(deps);
   return locked(deps, ctx, input.contentId, async () => {
     const s = await carouselSetup(deps, ctx, input.clientId, input.contentId);
-    if (!briefReady(s.c.brief))
-      throw new NeedsAttentionError("The brief needs at least 20 characters");
+    if (!briefReady(s.c.brief)) throw attention("content.jobErrors.briefTooShort");
     const m = s.template.manifest;
     const n = s.promptInput.slideCount;
     const previous = outlineOf(s.c);
@@ -662,7 +669,7 @@ export async function runGenerateSlides(
     const s = await carouselSetup(deps, ctx, input.clientId, input.contentId);
     const outline = outlineOf(s.c);
     if (!outline || !s.c.outlineApprovedAt)
-      throw new NeedsAttentionError("Approve the outline before generating the slides");
+      throw attention("content.jobErrors.approveOutlineFirst");
     const m = s.template.manifest;
     await ctx.progress(10);
     const { system, prefix } = withBrand(SLIDES_SYSTEM, s.brandCtx);
@@ -759,12 +766,12 @@ export async function requestSlideEdit(
 ) {
   humanOnly(actor, "edit_draft", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
-  if (isLocked(c)) invalid("The AI is already working on this carousel");
+  if (isLocked(c)) invalid("content.errors.aiAlreadyWorking");
   const instruction = input.instruction.trim();
   if (instruction.length < 3 || instruction.length > 500)
-    invalid("Write an instruction of 3 to 500 characters");
+    invalid("content.errors.instructionLength");
   if (!parseDocument(c.draft).slides.some((s) => s.id === input.slideId))
-    notFound("Slide not found");
+    notFound("content.errors.slideNotFound");
   const [row] = await db
     .insert(contentSlideEdits)
     .values({ contentId: c.id, slideId: input.slideId, instruction, createdBy: actor.id })
@@ -789,21 +796,22 @@ export async function runEditSlide(
         ),
       );
     if (!edit || edit.status !== "queued") return { skipped: true };
-    const fail = async (message: string) => {
+    const fail = async (key: JobErrorKey) => {
+      const error = attention(key);
       await deps.db
         .update(contentSlideEdits)
-        .set({ status: "failed", note: message, jobId: ctx.jobId })
+        .set({ status: "failed", note: error.message, jobId: ctx.jobId })
         .where(eq(contentSlideEdits.id, edit.id));
-      throw new NeedsAttentionError(message);
+      throw error;
     };
     try {
       const s = await carouselSetup(deps, ctx, input.clientId, input.contentId);
       const doc = parseDocument(s.c.draft);
       const i = doc.slides.findIndex((x) => x.id === edit.slideId);
-      if (i < 0) return fail("The slide no longer exists");
+      if (i < 0) return fail("content.jobErrors.slideGone");
       const slide = doc.slides[i]!;
       const layout = findLayout(s.template.manifest, slide.layout);
-      if (!layout) return fail("The slide's layout is not in the template");
+      if (!layout) return fail("content.jobErrors.layoutNotInTemplate");
       const keep: Record<string, SlotValue> = {};
       for (const def of layout.slots)
         if (def.type === "image" || slide.protectedSlots.includes(def.name)) {
@@ -959,13 +967,11 @@ export async function runGenerateImage(
   const slide = doc.slides.find((s) => s.id === input.slideId);
   const layout = slide ? findLayout(template.manifest, slide.layout) : undefined;
   if (!slide || !layout?.slots.some((s) => s.name === input.slot && s.type === "image"))
-    throw new NeedsAttentionError("Image slot not found in the slide");
+    throw attention("content.jobErrors.imageSlotNotFound");
   const routed = await imageRouteFor(deps.db, input.clientId, deps.imageRoute);
-  if (!routed) throw new NeedsAttentionError("No image provider configured");
+  if (!routed) throw attention("content.jobErrors.noImageProvider");
   if (routed.status.get(routed.route.primary.provider) === "rejected")
-    throw new NeedsAttentionError(
-      "Commercial use of the image provider was rejected: choose another provider in settings",
-    );
+    throw attention("content.jobErrors.commercialUseRejected");
   const identity = await publishedIdentity(deps.db, actor, input.clientId);
   const common: CommonAi = {
     clientId: input.clientId,

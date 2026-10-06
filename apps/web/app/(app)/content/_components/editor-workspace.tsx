@@ -16,6 +16,7 @@ import type { ContentStatus } from "@forgecy/core";
 import { Badge, Button, Input, Label } from "@forgecy/ui";
 import { AlertTriangle, History, Lock, RefreshCw, Save, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import type { Route } from "next";
 import {
   useCallback,
@@ -34,12 +35,11 @@ import {
   withdrawAction,
   type ActionResult,
 } from "../actions";
-import { formatDate } from "../_lib/paths";
 import { ActionButton, controlClass } from "./action-button";
 import { SlideAiPanel } from "./editor-ai";
 import { SlideList, SlidePanel } from "./editor-slides";
 import { RefreshWhile } from "./refresh-while";
-import { plural } from "@/lib/plural";
+import { useFormat, useRefText } from "@/lib/use-format";
 
 export type CommercialUse = "verified" | "pending_verification" | "rejected";
 
@@ -90,26 +90,32 @@ type SaveState = "saved" | "dirty" | "saving" | "error" | "conflict";
 
 const AUTOSAVE_MS = 1200;
 /** Force grouping so Node and the browser format counts the same way and hydration matches. */
-const countFormat = new Intl.NumberFormat("en-GB", { useGrouping: "always" });
+const countOptions: Intl.NumberFormatOptions = { useGrouping: "always" };
 
 /** User-facing message of an action error, by its code. */
-export function actionMessage(r: Extract<ActionResult, { ok: false }>): string {
-  switch (r.code) {
-    case "CONFLICT-DRAFT-REV":
-      return "Someone else edited the carousel while you were editing it too.";
-    case "CONTENT-IN-REVIEW":
-      return "The carousel is in review: withdraw it from review to edit it.";
-    case "CONTENT-LOCKED":
-      return "The AI is working on this carousel: wait for it to finish.";
-    case "CHECKS-BLOCKING":
-      return "Fix the blocking issues before continuing.";
-    case "BRAND-NOT-PUBLISHED":
-      return "Publish the client’s Brand Identity first.";
-    case "PERM-DENIED":
-      return "You don’t have permission for this action.";
-    default:
-      return r.error;
-  }
+export function useActionMessage() {
+  const t = useTranslations("content.editor.actionErrors");
+  return useCallback(
+    (r: Extract<ActionResult, { ok: false }>): string => {
+      switch (r.code) {
+        case "CONFLICT-DRAFT-REV":
+          return t("conflict");
+        case "CONTENT-IN-REVIEW":
+          return t("inReview");
+        case "CONTENT-LOCKED":
+          return t("locked");
+        case "CHECKS-BLOCKING":
+          return t("checksBlocking");
+        case "BRAND-NOT-PUBLISHED":
+          return t("brandNotPublished");
+        case "PERM-DENIED":
+          return t("permissionDenied");
+        default:
+          return r.error;
+      }
+    },
+    [t],
+  );
 }
 
 /** Checks attached to an error result (CHECKS-BLOCKING, CHECKS-UNACKNOWLEDGED). */
@@ -139,6 +145,9 @@ export interface EditorWorkspaceProps extends EditorRef {
 
 export function EditorWorkspace(props: EditorWorkspaceProps) {
   const router = useRouter();
+  const t = useTranslations("content.editor");
+  const format = useFormat();
+  const actionMessage = useActionMessage();
   const ref: EditorRef = { slug: props.slug, clientId: props.clientId, contentId: props.contentId };
   const [doc, setDoc] = useState(props.document);
   const [rev, setRev] = useState(props.draftRev);
@@ -210,15 +219,15 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
     } finally {
       inflight.current = null;
     }
-  }, [ref.slug, ref.clientId, ref.contentId, router]);
+  }, [ref.slug, ref.clientId, ref.contentId, router, actionMessage]);
 
   const autosave = useEffectEvent(() => {
     void save();
   });
   useEffect(() => {
     if (saveState !== "dirty") return;
-    const t = setTimeout(autosave, AUTOSAVE_MS);
-    return () => clearTimeout(t);
+    const timer = setTimeout(autosave, AUTOSAVE_MS);
+    return () => clearTimeout(timer);
   }, [doc, saveState]);
 
   useEffect(() => {
@@ -300,7 +309,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
 
       <div className="flex flex-wrap items-end gap-3 rounded-lg border border-subtle bg-surface p-4">
         <div className="min-w-64 flex-1 space-y-1">
-          <Label htmlFor="doc-title">Carousel title</Label>
+          <Label htmlFor="doc-title">{t("carouselTitle")}</Label>
           <Input
             id="doc-title"
             value={doc.title}
@@ -330,29 +339,31 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
         >
           <AlertTriangle aria-hidden className="size-5 text-error" />
           <span className="flex-1">
-            The carousel was edited
-            {props.updatedByName ? ` by ${props.updatedByName}` : " by another session"}
-            {props.updatedAt ? ` (${formatDate(props.updatedAt)})` : ""} while you were editing it.
-            Your latest changes were not saved.
+            {t("conflict.text", {
+              hasAuthor: props.updatedByName ? "yes" : "no",
+              author: props.updatedByName ?? "",
+              hasDate: props.updatedAt ? "yes" : "no",
+              date: props.updatedAt ? format.date(props.updatedAt, "dateTime") : "",
+            })}
           </span>
           <Button variant="secondary" size="sm" onClick={reloadFromServer}>
             <RefreshCw aria-hidden />
-            Reload the saved version
+            {t("conflict.reload")}
           </Button>
         </div>
       ) : null}
       {saveState === "error" && saveError ? (
         <p role="alert" className="text-body-sm text-error">
-          Save failed: {saveError}{" "}
+          {t("saveFailed", { error: saveError })}{" "}
           <button type="button" className="underline" onClick={() => void save()}>
-            Retry
+            {t("retry")}
           </button>
         </p>
       ) : null}
 
       {!props.manifest ? (
         <p role="alert" className="text-body-sm text-error">
-          The carousel template is unavailable: the slides can’t be edited.
+          {t("templateUnavailable")}
         </p>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)_24rem]">
@@ -390,7 +401,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               </>
             ) : (
               <p className="rounded-lg border border-dashed border-subtle p-6 text-body-sm text-fg-muted">
-                The carousel has no slides yet: add one from the list.
+                {t("noSlides")}
               </p>
             )}
           </div>
@@ -405,15 +416,17 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
             ) : selected ? (
               <p className="rounded-lg border border-dashed border-subtle p-6 text-body-sm text-fg-muted">
                 {saveState === "error" || saveState === "conflict"
-                  ? "The preview of this slide appears once the draft is saved."
-                  : "New slide: the preview appears after the autosave."}
+                  ? t("preview.afterSave")
+                  : t("preview.newSlide")}
               </p>
             ) : null}
             <ChecksBox
-              title={selected ? `Slide ${selectedIndex + 1} checks` : "Checks"}
+              title={
+                selected ? t("checks.slide", { number: selectedIndex + 1 }) : t("checks.title")
+              }
               checks={checks.filter((c) => c.slideId && c.slideId === selected?.id)}
             />
-            <ChecksBox title="Carousel checks" checks={globalChecks} />
+            <ChecksBox title={t("checks.carousel")} checks={globalChecks} />
             {props.guard ? (
               <GuardSummary guard={props.guard} slideIndex={selected ? selectedIndex : null} />
             ) : null}
@@ -430,10 +443,10 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
         className="space-y-4 rounded-lg border border-subtle bg-surface p-4"
       >
         <h2 id="caption-title" className="text-heading-sm text-fg">
-          Caption and hashtags
+          {t("captionSection")}
         </h2>
         <div className="space-y-1">
-          <Label htmlFor="doc-caption">Caption</Label>
+          <Label htmlFor="doc-caption">{t("caption")}</Label>
           <textarea
             id="doc-caption"
             rows={6}
@@ -452,17 +465,20 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               captionLen > limit ? "text-body-sm text-error" : "text-body-sm text-fg-muted"
             }
           >
-            {countFormat.format(captionLen)} / {countFormat.format(limit)} characters (
-            {props.channel === "linkedin" ? "LinkedIn" : "Instagram"})
+            {t("captionCount", {
+              count: format.number(captionLen, countOptions),
+              limit: format.number(limit, countOptions),
+              channel: props.channel === "linkedin" ? "LinkedIn" : "Instagram",
+            })}
           </p>
         </div>
         <div className="space-y-1">
-          <Label htmlFor="doc-hashtags">Hashtags</Label>
+          <Label htmlFor="doc-hashtags">{t("hashtags")}</Label>
           <Input
             id="doc-hashtags"
             value={hashtagText}
             disabled={readOnly}
-            placeholder="#example #another"
+            placeholder={t("hashtagsPlaceholder")}
             aria-describedby="doc-hashtags-hint"
             onChange={(e) => {
               const text = e.target.value;
@@ -480,11 +496,12 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
             onBlur={() => setHashtagText(doc.hashtags.join(" "))}
           />
           <p id="doc-hashtags-hint" className="text-body-sm text-fg-muted">
-            {plural(doc.hashtags.length, "hashtag", "hashtags")}
             {props.checkContext.maxHashtags !== undefined
-              ? ` (the Brand Identity allows at most ${props.checkContext.maxHashtags})`
-              : ""}
-            . Separate them with a space.
+              ? t("hashtagsHintMax", {
+                  count: doc.hashtags.length,
+                  max: props.checkContext.maxHashtags,
+                })
+              : t("hashtagsHint", { count: doc.hashtags.length })}
           </p>
         </div>
       </section>
@@ -494,6 +511,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
 
 function StatusBanners(props: EditorWorkspaceProps & { editorRef: EditorRef }) {
   const r = props.editorRef;
+  const t = useTranslations("content.editor.banners");
   return (
     <>
       {props.status === "in_review" ? (
@@ -502,16 +520,14 @@ function StatusBanners(props: EditorWorkspaceProps & { editorRef: EditorRef }) {
           className="flex flex-wrap items-center gap-3 rounded-md border border-warning-fill bg-surface px-4 py-3 text-body-sm text-fg"
         >
           <Lock aria-hidden className="size-5 text-warning" />
-          <span className="flex-1">
-            The carousel is in review: to edit it, withdraw it from review.
-          </span>
+          <span className="flex-1">{t("inReview")}</span>
           <ActionButton
             variant="secondary"
             size="sm"
-            confirm="Withdraw the carousel from review? It will go back to draft."
+            confirm={t("withdrawConfirm")}
             action={() => withdrawAction({ slug: r.slug, clientId: r.clientId, id: r.contentId })}
           >
-            Withdraw from review
+            {t("withdraw")}
           </ActionButton>
         </div>
       ) : null}
@@ -521,24 +537,23 @@ function StatusBanners(props: EditorWorkspaceProps & { editorRef: EditorRef }) {
           className="flex items-center gap-2 rounded-md border border-primary bg-surface px-4 py-3 text-body-sm text-fg"
         >
           <RefreshCw aria-hidden className="size-5 animate-spin motion-reduce:animate-none" />
-          The AI is working on this carousel: editing resumes as soon as it finishes.
+          {t("locked")}
         </p>
       ) : null}
       {props.status === "archived" ? (
         <p role="status" className="text-body-sm text-fg-muted">
-          Carousel archived: restore it to edit it.
+          {t("archived")}
         </p>
       ) : null}
       {props.reviewNote ? (
         <div className="rounded-md border border-error-fill bg-surface px-4 py-3 text-body-sm text-fg">
-          <p className="font-medium text-error">Changes requested in review</p>
+          <p className="font-medium text-error">{t("changesRequested")}</p>
           <p className="mt-1 whitespace-pre-line">{props.reviewNote}</p>
         </div>
       ) : null}
       {props.status === "approved" || props.status === "exported" ? (
         <p role="status" className="text-body-sm text-fg-muted">
-          The carousel is approved: if you edit it, it goes back to draft and must be approved
-          again.
+          {t("approved")}
         </p>
       ) : null}
     </>
@@ -546,20 +561,18 @@ function StatusBanners(props: EditorWorkspaceProps & { editorRef: EditorRef }) {
 }
 
 function SaveIndicator({ state, readOnly }: { state: SaveState; readOnly: boolean }) {
-  if (readOnly) return <Badge icon={Lock}>Read-only</Badge>;
-  const map: Record<
-    SaveState,
-    { label: string; variant: "neutral" | "success" | "warning" | "error" | "info" }
-  > = {
-    saved: { label: "Saved", variant: "success" },
-    dirty: { label: "Unsaved changes", variant: "neutral" },
-    saving: { label: "Saving…", variant: "info" },
-    error: { label: "Not saved", variant: "error" },
-    conflict: { label: "Conflict", variant: "error" },
+  const t = useTranslations("content.editor.saveState");
+  if (readOnly) return <Badge icon={Lock}>{t("readOnly")}</Badge>;
+  const variants: Record<SaveState, "neutral" | "success" | "warning" | "error" | "info"> = {
+    saved: "success",
+    dirty: "neutral",
+    saving: "info",
+    error: "error",
+    conflict: "error",
   };
   return (
     <span aria-live="polite">
-      <Badge variant={map[state].variant}>{map[state].label}</Badge>
+      <Badge variant={variants[state]}>{t(state)}</Badge>
     </span>
   );
 }
@@ -580,6 +593,9 @@ function VersionAndSubmit({
   blocking: number;
 }) {
   const router = useRouter();
+  const t = useTranslations("content.editor.submit");
+  const refText = useRefText();
+  const actionMessage = useActionMessage();
   const [pending, start] = useTransition();
   const [note, setNote] = useState("");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -591,7 +607,7 @@ function VersionAndSubmit({
       setMessage(null);
       setBlockers([]);
       if (!(await flush())) {
-        setMessage({ ok: false, text: "Save pending changes first." });
+        setMessage({ ok: false, text: t("saveFirst") });
         return;
       }
       await fn();
@@ -601,13 +617,13 @@ function VersionAndSubmit({
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-end gap-2">
         <div className="space-y-1">
-          <Label htmlFor="version-note">Version note</Label>
+          <Label htmlFor="version-note">{t("versionNote")}</Label>
           <Input
             id="version-note"
             value={note}
             maxLength={300}
             className="w-56"
-            placeholder="Optional"
+            placeholder={t("optional")}
             onChange={(e) => setNote(e.target.value)}
           />
         </div>
@@ -623,17 +639,17 @@ function VersionAndSubmit({
               });
               if (!res.ok) return setMessage({ ok: false, text: actionMessage(res) });
               setNote("");
-              setMessage({ ok: true, text: `Version ${res.number} saved.` });
+              setMessage({ ok: true, text: t("versionSaved", { number: res.number }) });
               router.refresh();
             })
           }
         >
           <History aria-hidden />
-          Save version
+          {t("saveVersion")}
         </Button>
         <Button
           disabled={disabled || pending}
-          title={blocking ? plural(blocking, "blocking issue", "blocking issues") : undefined}
+          title={blocking ? t("blockingIssues", { count: blocking }) : undefined}
           onClick={() =>
             run(async () => {
               const res = await submitAction({ ...base, draftRev: rev() });
@@ -646,7 +662,7 @@ function VersionAndSubmit({
           }
         >
           <Send aria-hidden />
-          Submit for review
+          {t("submit")}
         </Button>
       </div>
       {message ? (
@@ -661,7 +677,7 @@ function VersionAndSubmit({
       {blockers.length ? (
         <ul className="list-disc space-y-1 pl-5 text-body-sm text-error">
           {blockers.map((c) => (
-            <li key={c.id}>{c.message}</li>
+            <li key={c.id}>{refText(c.ref, c.message)}</li>
           ))}
         </ul>
       ) : null}
@@ -682,6 +698,7 @@ function SlidePreview({
   index: number;
   stale: boolean;
 }) {
+  const t = useTranslations("content.editor.preview");
   const width = 384;
   const scale = width / manifest.width;
   return (
@@ -693,7 +710,7 @@ function SlidePreview({
         <iframe
           key={src}
           src={src}
-          title={`Preview of slide ${index + 1}`}
+          title={t("frameTitle", { number: index + 1 })}
           sandbox=""
           width={manifest.width}
           height={manifest.height}
@@ -702,15 +719,15 @@ function SlidePreview({
         />
       </div>
       <figcaption className="text-body-sm text-fg-muted">
-        {stale
-          ? "Preview of the last save: it updates after the autosave."
-          : `Slide ${index + 1}, as it will be exported.`}
+        {stale ? t("stale") : t("caption", { number: index + 1 })}
       </figcaption>
     </figure>
   );
 }
 
 function ChecksBox({ title, checks }: { title: string; checks: ContentCheck[] }) {
+  const t = useTranslations("content.editor.checks");
+  const refText = useRefText();
   return (
     <section className="space-y-2 rounded-lg border border-subtle bg-surface p-4">
       <h3 className="text-label text-fg">{title}</h3>
@@ -719,42 +736,46 @@ function ChecksBox({ title, checks }: { title: string; checks: ContentCheck[] })
           {checks.map((c) => (
             <li key={c.id} className="flex items-start gap-2 text-body-sm text-fg">
               <Badge variant={c.severity === "error" ? "error" : "warning"}>
-                {c.severity === "error" ? "Blocking" : "Warning"}
+                {c.severity === "error" ? t("blocking") : t("warning")}
               </Badge>
-              <span>{c.message}</span>
+              <span>{refText(c.ref, c.message)}</span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-body-sm text-success">No issues.</p>
+        <p className="text-body-sm text-success">{t("none")}</p>
       )}
     </section>
   );
 }
 
 function GuardSummary({ guard, slideIndex }: { guard: GuardReport; slideIndex: number | null }) {
+  const t = useTranslations("content.editor.guard");
+  const refText = useRefText();
   const open = guard.findings.filter(
     (f) => f.status === "open" && f.severity !== "note" && f.slide === slideIndex,
   );
   return (
     <section className="space-y-2 rounded-lg border border-subtle bg-surface p-4">
-      <h3 className="text-label text-fg">Brand Guard (last save)</h3>
+      <h3 className="text-label text-fg">{t("title")}</h3>
       {open.length ? (
         <ul className="space-y-2">
           {open.map((f) => (
             <li key={f.key} className="text-body-sm text-fg">
               <Badge variant={f.severity === "error" ? "error" : "warning"}>
-                {f.severity === "error" ? "Error" : "Warning"}
+                {f.severity === "error" ? t("error") : t("warning")}
               </Badge>{" "}
-              {f.message}
+              {refText(f.ref, f.message)}
               {f.suggestion ? (
-                <span className="block text-fg-muted">Suggestion: {f.suggestion}</span>
+                <span className="block text-fg-muted">
+                  {t("suggestion", { suggestion: refText(f.suggestionRef, f.suggestion) })}
+                </span>
               ) : null}
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-body-sm text-success">No findings on this slide.</p>
+        <p className="text-body-sm text-success">{t("none")}</p>
       )}
     </section>
   );
@@ -767,16 +788,18 @@ function SlideComments({
   editorRef: EditorRef;
   comments: EditorComment[];
 }) {
+  const t = useTranslations("content.editor.comments");
+  const format = useFormat();
   if (!comments.length) return null;
   return (
     <section className="space-y-2 rounded-lg border border-subtle bg-surface p-4">
-      <h3 className="text-label text-fg">Open comments</h3>
+      <h3 className="text-label text-fg">{t("title")}</h3>
       <ul className="space-y-3">
         {comments.map((c) => (
           <li key={c.id} className="space-y-1 text-body-sm">
             <p className="whitespace-pre-line text-fg">{c.body}</p>
             <p className="text-fg-muted">
-              {c.authorName ?? "Removed user"} · {formatDate(c.createdAt)}
+              {c.authorName ?? t("removedUser")} · {format.date(c.createdAt, "dateTime")}
             </p>
             <ActionButton
               variant="ghost"
@@ -790,7 +813,7 @@ function SlideComments({
                 })
               }
             >
-              Mark as resolved
+              {t("resolve")}
             </ActionButton>
           </li>
         ))}

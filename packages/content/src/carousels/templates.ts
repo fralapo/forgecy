@@ -91,7 +91,7 @@ export async function getTemplate(
     );
   const row = rows.sort((a, b) => compareVersions(b.version, a.version))[0];
   const parsed = row ? parseRow(row) : null;
-  if (!parsed) notFound(`Template “${key}” not available`);
+  if (!parsed) notFound("content.errors.templateUnavailable", { key });
   return parsed;
 }
 

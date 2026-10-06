@@ -8,6 +8,7 @@ import type {
 import { AiProposal, Button, Input, Label } from "@forgecy/ui";
 import { LayoutTemplate, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useId, useState, useTransition, type ReactNode } from "react";
 import {
   askPlanAction,
@@ -18,6 +19,7 @@ import {
 import { carouselPath } from "../_lib/paths";
 import { controlClass } from "./action-button";
 import { Actions, Checks, Field, FormError, Toggle, formClass, useSave } from "./strategy-forms";
+import { useAiProposalTexts } from "@/lib/use-ai-proposal-texts";
 
 export interface PlanOptions {
   pillars: { id: string; name: string }[];
@@ -69,15 +71,16 @@ function PlanItemFields({
       theme: "",
     },
   );
+  const t = useTranslations("content.plan.itemForm");
   const { pending, error, run } = useSave();
   const set = (patch: Partial<PlanItemInputRaw>) => setV((cur) => ({ ...cur, ...patch }));
   const formats = options.formats.filter((f) => f.channel === v.channel);
   const rubrics = options.rubrics.filter((r) => r.pillarId === v.pillarId);
   if (!options.pillars.length)
-    return <p className="text-body-sm text-fg-muted">Create a pillar in Strategy first.</p>;
+    return <p className="text-body-sm text-fg-muted">{t("needPillar")}</p>;
   return (
     <form
-      aria-label={id ? "Edit plan item" : "New plan item"}
+      aria-label={id ? t("editLabel") : t("newLabel")}
       className={formClass}
       onSubmit={(e) => {
         e.preventDefault();
@@ -85,7 +88,7 @@ function PlanItemFields({
       }}
     >
       <div className="grid gap-4 md:grid-cols-3">
-        <Field label="Day (1–30)">
+        <Field label={t("day")}>
           {(fid) => (
             <Input
               id={fid}
@@ -98,7 +101,7 @@ function PlanItemFields({
             />
           )}
         </Field>
-        <Field label="Channel">
+        <Field label={t("channel")}>
           {(fid) => (
             <select
               id={fid}
@@ -118,7 +121,7 @@ function PlanItemFields({
             </select>
           )}
         </Field>
-        <Field label="Format">
+        <Field label={t("format")}>
           {(fid) => (
             <select
               id={fid}
@@ -134,7 +137,7 @@ function PlanItemFields({
             </select>
           )}
         </Field>
-        <Field label="Pillar">
+        <Field label={t("pillar")}>
           {(fid) => (
             <select
               id={fid}
@@ -150,7 +153,7 @@ function PlanItemFields({
             </select>
           )}
         </Field>
-        <Field label="Rubric">
+        <Field label={t("rubric")}>
           {(fid) => (
             <select
               id={fid}
@@ -158,7 +161,7 @@ function PlanItemFields({
               value={v.rubricId ?? ""}
               onChange={(e) => set({ rubricId: e.target.value || null })}
             >
-              <option value="">None</option>
+              <option value="">{t("rubricNone")}</option>
               {rubrics.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
@@ -167,7 +170,7 @@ function PlanItemFields({
             </select>
           )}
         </Field>
-        <Field label="Theme">
+        <Field label={t("theme")}>
           {(fid) => (
             <Input
               id={fid}
@@ -178,7 +181,7 @@ function PlanItemFields({
             />
           )}
         </Field>
-        <Field label="Angle / hook">
+        <Field label={t("hook")}>
           {(fid) => (
             <Input
               id={fid}
@@ -189,7 +192,7 @@ function PlanItemFields({
           )}
         </Field>
         <div className="md:col-span-2">
-          <Field label="Notes">
+          <Field label={t("notes")}>
             {(fid) => (
               <textarea
                 id={fid}
@@ -204,7 +207,7 @@ function PlanItemFields({
         </div>
       </div>
       <Checks
-        legend="Linked products"
+        legend={t("products")}
         options={options.products.map((p) => ({ value: p.id, label: p.name }))}
         value={v.productIds ?? []}
         onChange={(productIds) => set({ productIds })}
@@ -231,10 +234,11 @@ export function AskPlanForm({
   const [instruction, setInstruction] = useState("");
   const [chosen, setChosen] = useState<string[]>(["instagram"]);
   const id = useId();
+  const t = useTranslations("content.plan.ask");
   const { pending, error, run } = useSave();
   return (
     <form
-      aria-label="Propose plan"
+      aria-label={t("title")}
       className="space-y-3"
       onSubmit={(e) => {
         e.preventDefault();
@@ -250,15 +254,15 @@ export function AskPlanForm({
         );
       }}
     >
-      <Checks legend="Channels" options={channels} value={chosen} onChange={setChosen} />
+      <Checks legend={t("channels")} options={channels} value={chosen} onChange={setChosen} />
       <div className="space-y-1">
-        <Label htmlFor={id}>Instruction for the Planner (optional)</Label>
+        <Label htmlFor={id}>{t("instructionLabel")}</Label>
         <textarea
           id={id}
           rows={2}
           maxLength={500}
           className={controlClass}
-          placeholder="E.g. launch of the new collection in the second week"
+          placeholder={t("instructionPlaceholder")}
           value={instruction}
           onChange={(e) => setInstruction(e.target.value)}
         />
@@ -268,7 +272,7 @@ export function AskPlanForm({
         disabled={pending || running || !chosen.length || Boolean(disabledReason)}
       >
         <Sparkles aria-hidden />
-        Propose plan
+        {t("title")}
       </Button>
       {disabledReason ? <p className="text-body-sm text-fg-muted">{disabledReason}</p> : null}
       <FormError error={error} />
@@ -295,12 +299,11 @@ export function PlanProposal({
   sources: { label: string }[];
   children: ReactNode;
 }) {
+  const t = useTranslations("content.plan.proposal");
+  const proposalTexts = useAiProposalTexts(agent);
   const { pending, error, run } = useSave();
   const decide = (decision: "activate" | "discard") => {
-    const question =
-      decision === "activate"
-        ? "Activate this plan? The current plan will be replaced; items still pending will be accepted."
-        : "Discard the proposed plan?";
+    const question = decision === "activate" ? t("activateConfirm") : t("discardConfirm");
     if (!window.confirm(question)) return;
     run(() => planDecisionAction({ slug, clientId, planId, decision }));
   };
@@ -309,9 +312,10 @@ export function PlanProposal({
       title={title}
       agent={agent}
       sources={sources}
+      texts={proposalTexts}
       pending={pending}
-      acceptLabel="Activate plan"
-      rejectLabel="Discard"
+      acceptLabel={t("activate")}
+      rejectLabel={t("discard")}
       onAccept={() => decide("activate")}
       onReject={() => decide("discard")}
     >
@@ -337,6 +341,7 @@ export function CreateCarouselButton({
   disabledReason?: string | null;
 }) {
   const router = useRouter();
+  const t = useTranslations("content.plan");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   return (
@@ -357,7 +362,7 @@ export function CreateCarouselButton({
         }
       >
         <LayoutTemplate aria-hidden />
-        Create carousel
+        {t("createCarousel")}
       </Button>
       {disabledReason ? (
         <span className="max-w-xs text-body-sm text-fg-muted">{disabledReason}</span>

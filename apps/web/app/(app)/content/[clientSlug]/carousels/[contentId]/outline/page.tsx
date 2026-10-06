@@ -2,6 +2,8 @@ import { briefReady } from "@forgecy/content";
 import { Badge, Card } from "@forgecy/ui";
 import Link from "next/link";
 import type { Route } from "next";
+import { getTranslations } from "next-intl/server";
+import { getFormat } from "@/lib/i18n";
 import { ActionButton } from "../../../../_components/action-button";
 import {
   CarouselOutlineEditor,
@@ -12,11 +14,13 @@ import {
   generateSlidesAction,
   restoreOutlineAction,
 } from "../../../../actions";
-import { carouselPath, formatDate } from "../../../../_lib/paths";
-import { outlineOriginLabels } from "../../_lib/labels";
+import { carouselPath } from "../../../../_lib/paths";
 import { loadCarousel } from "../../_lib/workspace";
 
-export const metadata = { title: "Outline · Carousel" };
+export async function generateMetadata() {
+  const t = await getTranslations("content.outline");
+  return { title: t("metaTitle") };
+}
 
 const EDITABLE = ["draft", "changes_requested", "approved", "exported"];
 
@@ -28,6 +32,9 @@ export default async function OutlinePage({
   const { clientSlug, contentId } = await params;
   const { client, ws } = await loadCarousel(clientSlug, contentId);
   const c = ws.content;
+  const t = await getTranslations("content.outline");
+  const tl = await getTranslations("content.labels");
+  const format = await getFormat();
   const editable = EDITABLE.includes(c.status) && !ws.locked;
   const ready = briefReady(c.brief);
   const refs = { slug: client.slug, clientId: client.id, contentId: c.id };
@@ -49,19 +56,23 @@ export default async function OutlinePage({
             role="status"
             className="rounded-md border border-warning-fill bg-surface px-4 py-3 text-body-sm text-fg"
           >
-            The brief changed after this outline: regenerate or review it before approving it.
+            {t("stale")}
           </p>
         ) : null}
         <Card className="grid gap-4 p-5">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-heading-sm text-fg">
-              Outline{ws.outline ? ` no. ${c.outlineNumber}` : ""}
+              {ws.outline ? t("titleNumber", { number: c.outlineNumber }) : t("title")}
             </h3>
             {ws.outline ? (
               approved ? (
-                <Badge variant="success">Approved on {formatDate(c.outlineApprovedAt)}</Badge>
+                <Badge variant="success">
+                  {t("approvedOn", {
+                    date: c.outlineApprovedAt ? format.date(c.outlineApprovedAt, "dateTime") : "—",
+                  })}
+                </Badge>
               ) : (
-                <Badge variant="warning">To approve</Badge>
+                <Badge variant="warning">{t("toApprove")}</Badge>
               )
             ) : null}
           </div>
@@ -75,25 +86,21 @@ export default async function OutlinePage({
                     outlineNumber: c.outlineNumber,
                   })}
                 >
-                  Approve outline
+                  {t("approve")}
                 </ActionButton>
               ) : null}
               <ActionButton
                 variant={approved ? "primary" : "secondary"}
                 disabled={!editable || !approved}
-                title={approved ? undefined : "Approve the outline first"}
-                confirm={
-                  hasSlides
-                    ? "The current slides will be rewritten from the approved outline. Continue?"
-                    : undefined
-                }
+                title={approved ? undefined : t("approveFirst")}
+                confirm={hasSlides ? t("regenerateConfirm") : undefined}
                 action={generateSlidesAction.bind(null, act)}
               >
-                {hasSlides ? "Regenerate slides" : "Generate slides"}
+                {hasSlides ? t("regenerate") : t("generate")}
               </ActionButton>
               {hasSlides ? (
                 <Link href={`${base}/editor` as Route} className="self-center text-body-sm">
-                  Open the editor
+                  {t("openEditor")}
                 </Link>
               ) : null}
             </div>
@@ -111,11 +118,10 @@ export default async function OutlinePage({
       </div>
       <div className="grid content-start gap-6">
         <Card className="grid gap-3 p-5">
-          <h3 className="text-heading-sm text-fg">Copywriter</h3>
+          <h3 className="text-heading-sm text-fg">{tl("agent.copywriter")}</h3>
           {!ready ? (
             <p className="text-body-sm text-fg-muted">
-              Write a brief of at least 20 characters to generate the outline.{" "}
-              <Link href={base as Route}>Open the brief</Link>
+              {t("briefRequired")} <Link href={base as Route}>{t("openBrief")}</Link>
             </p>
           ) : null}
           <CarouselOutlineGenerate
@@ -125,9 +131,9 @@ export default async function OutlinePage({
           />
         </Card>
         <Card className="grid gap-3 p-5">
-          <h3 className="text-heading-sm text-fg">Previous outlines</h3>
+          <h3 className="text-heading-sm text-fg">{t("previous")}</h3>
           {ws.outlines.length <= 1 ? (
-            <p className="text-body-sm text-fg-muted">No previous outlines.</p>
+            <p className="text-body-sm text-fg-muted">{t("noPrevious")}</p>
           ) : (
             <ul className="grid gap-3">
               {ws.outlines
@@ -139,9 +145,14 @@ export default async function OutlinePage({
                   >
                     <span>
                       <span className="text-fg">
-                        no. {o.number} · {outlineOriginLabels[o.origin]}
+                        {t("previousItem", {
+                          number: o.number,
+                          origin: tl(`outlineOrigin.${o.origin}`),
+                        })}
                       </span>
-                      <span className="block text-fg-muted">{formatDate(o.createdAt)}</span>
+                      <span className="block text-fg-muted">
+                        {format.date(o.createdAt, "dateTime")}
+                      </span>
                       {o.instruction ? (
                         <span className="block text-fg-muted">“{o.instruction}”</span>
                       ) : null}
@@ -150,10 +161,10 @@ export default async function OutlinePage({
                       size="sm"
                       variant="secondary"
                       disabled={!editable}
-                      confirm={`Restore outline no. ${o.number}? It becomes a new outline to approve.`}
+                      confirm={t("restoreConfirm", { number: o.number })}
                       action={restoreOutlineAction.bind(null, { ...act, number: o.number })}
                     >
-                      Restore
+                      {t("restore")}
                     </ActionButton>
                   </li>
                 ))}

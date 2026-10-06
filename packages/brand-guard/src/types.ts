@@ -4,7 +4,7 @@
  * the Contents module builds it from its carousel and the renderer's capture, so this
  * package does not depend on how either stores its data.
  */
-import type { BrandCheckOrigin, BrandCheckSeverity } from "@forgecy/core";
+import type { BrandCheckOrigin, BrandCheckSeverity, MessageRef } from "@forgecy/core";
 import { z } from "zod";
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
@@ -183,10 +183,13 @@ export interface BrandCheckFinding {
   /** 0-based slide index; null for caption and whole-content findings. */
   slide: number | null;
   slot: string | null;
+  /** English text (logs, API, stored reports); `ref` is the same message for the interface. */
   message: string;
+  ref?: MessageRef;
   measured?: string | number;
   threshold?: string | number;
   suggestion?: string;
+  suggestionRef?: MessageRef;
   rule?: BrandRuleRef;
   /** Hash of the checked block: an ignored finding reopens when it changes. */
   blockHash: string;
@@ -218,5 +221,5 @@ export interface BrandCheckReport {
   counts: Record<BrandCheckSeverity, number>;
   coherence: CoherenceScore;
   /** Checks that need the model or data the input did not carry; shown as "not active". */
-  notRun: Array<{ check: string; reason: string }>;
+  notRun: Array<{ check: string; reason: string; reasonRef?: MessageRef }>;
 }

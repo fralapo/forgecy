@@ -3,15 +3,12 @@
 import { Button } from "@forgecy/ui";
 import { Download } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { exportAction } from "../actions";
 
 type Output = "png" | "pdf" | "zip";
-const OUTPUTS: { value: Output; label: string }[] = [
-  { value: "png", label: "PNG images" },
-  { value: "pdf", label: "PDF" },
-  { value: "zip", label: "ZIP package (images, copy and caption)" },
-];
+const OUTPUTS: Output[] = ["png", "pdf", "zip"];
 
 /** Export request: draft (watermarked, any time) or final (approved version only). */
 export function CarouselExportForm({
@@ -30,6 +27,7 @@ export function CarouselExportForm({
   disabled: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations("content.export.form");
   const [pending, start] = useTransition();
   const [draft, setDraft] = useState(!canFinal);
   const [outputs, setOutputs] = useState<Output[]>(["zip"]);
@@ -46,22 +44,19 @@ export function CarouselExportForm({
           if (!r.ok)
             return setMessage({
               error: true,
-              text:
-                r.code === "EXPORT-NOT-APPROVED"
-                  ? "The final version can only be exported from an approved carousel."
-                  : r.error,
+              text: r.code === "EXPORT-NOT-APPROVED" ? t("notApproved") : r.error,
             });
-          setMessage({ error: false, text: "Export queued: the files will appear below." });
+          setMessage({ error: false, text: t("queued") });
           router.refresh();
         });
       }}
     >
       <fieldset disabled={disabled || pending} className="grid gap-4">
         <fieldset className="grid gap-2">
-          <legend className="mb-1 text-label text-fg">Version</legend>
+          <legend className="mb-1 text-label text-fg">{t("version")}</legend>
           <label className="flex items-center gap-2 text-body-sm text-fg">
             <input type="radio" name="ex-kind" checked={draft} onChange={() => setDraft(true)} />
-            Draft (watermarked, from the current draft)
+            {t("draft")}
           </label>
           <label className="flex items-center gap-2 text-body-sm text-fg">
             <input
@@ -71,28 +66,22 @@ export function CarouselExportForm({
               disabled={!canFinal}
               onChange={() => setDraft(false)}
             />
-            Final{approvedVersion ? ` (approved version v${approvedVersion})` : ""}
+            {approvedVersion ? t("finalVersion", { number: approvedVersion }) : t("final")}
           </label>
-          {!canFinal ? (
-            <p className="text-body-sm text-fg-muted">
-              The final version is available after approval.
-            </p>
-          ) : null}
+          {!canFinal ? <p className="text-body-sm text-fg-muted">{t("finalHint")}</p> : null}
         </fieldset>
         <fieldset className="grid gap-2">
-          <legend className="mb-1 text-label text-fg">File</legend>
+          <legend className="mb-1 text-label text-fg">{t("file")}</legend>
           {OUTPUTS.map((o) => (
-            <label key={o.value} className="flex items-center gap-2 text-body-sm text-fg">
+            <label key={o} className="flex items-center gap-2 text-body-sm text-fg">
               <input
                 type="checkbox"
-                checked={outputs.includes(o.value)}
+                checked={outputs.includes(o)}
                 onChange={(e) =>
-                  setOutputs((cur) =>
-                    e.target.checked ? [...cur, o.value] : cur.filter((x) => x !== o.value),
-                  )
+                  setOutputs((cur) => (e.target.checked ? [...cur, o] : cur.filter((x) => x !== o)))
                 }
               />
-              {o.label}
+              {t(`outputs.${o}`)}
             </label>
           ))}
         </fieldset>
@@ -100,7 +89,7 @@ export function CarouselExportForm({
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={disabled || pending || outputs.length === 0}>
           <Download aria-hidden />
-          Export
+          {t("submit")}
         </Button>
         {message ? (
           <span

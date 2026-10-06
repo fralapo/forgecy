@@ -1,27 +1,23 @@
-import {
-  checkDocument,
-  contentStatusLabels,
-  findingsToAcknowledge,
-  imageKeys,
-  parseDocument,
-} from "@forgecy/content";
+import { checkDocument, findingsToAcknowledge, imageKeys, parseDocument } from "@forgecy/content";
 import { findLayout } from "@forgecy/carousel";
 import { can } from "@forgecy/core";
 import { and, contentVersions, eq } from "@forgecy/db";
 import { Badge, Card } from "@forgecy/ui";
 import Link from "next/link";
 import type { Route } from "next";
+import { getTranslations } from "next-intl/server";
+import { getFormat } from "@/lib/i18n";
 import { SlideFrame } from "@/app/(app)/templates/slide-frame";
 import { ReviewComments, type ReviewComment } from "../../../../_components/review-comments";
 import { ReviewForm, type PendingImage } from "../../../../_components/review-form";
-import { carouselPath, formatDate } from "../../../../_lib/paths";
+import { carouselPath } from "../../../../_lib/paths";
 import { thumbnailUrls } from "../../../../_lib/server";
 import { loadCarousel } from "../../_lib/workspace";
-import { plural } from "@/lib/plural";
 
-export const metadata = { title: "Carousel review" };
-
-const decisionLabels = { approved: "Approved", changes_requested: "Changes requested" } as const;
+export async function generateMetadata() {
+  const t = await getTranslations("content.review");
+  return { title: t("metaTitle") };
+}
 
 export default async function ReviewPage({
   params,
@@ -31,6 +27,9 @@ export default async function ReviewPage({
   const { clientSlug, contentId } = await params;
   const { db, user, client, ws } = await loadCarousel(clientSlug, contentId);
   const c = ws.content;
+  const t = await getTranslations("content.review");
+  const tl = await getTranslations("content.labels");
+  const format = await getFormat();
   const base = carouselPath(client.slug, c.id);
   const inReview = c.status === "in_review";
 
@@ -99,20 +98,27 @@ export default async function ReviewPage({
       <section className="space-y-2">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-heading-md text-fg">
-            {version ? `Version ${version.number}` : "No version"}
+            {version ? t("version", { number: version.number }) : t("noVersion")}
           </h2>
-          <Badge variant={inReview ? "warning" : "neutral"}>{contentStatusLabels[c.status]}</Badge>
+          <Badge variant={inReview ? "warning" : "neutral"}>
+            {tl(`contentStatus.${c.status}`)}
+          </Badge>
         </div>
         {version ? (
           <p className="text-body-sm text-fg-muted">
-            Created {versionAuthor ? `by ${versionAuthor} ` : ""}on {formatDate(version.createdAt)}
+            {versionAuthor
+              ? t("createdBy", {
+                  author: versionAuthor,
+                  date: format.date(version.createdAt, "dateTime"),
+                })
+              : t("created", { date: format.date(version.createdAt, "dateTime") })}
           </p>
         ) : null}
         {!inReview ? (
           <p className="text-body-sm text-fg">
-            The carousel is not in review.{" "}
+            {t("notInReview")}{" "}
             {c.status === "draft" || c.status === "changes_requested" ? (
-              <Link href={`${base}/editor` as Route}>Open the editor</Link>
+              <Link href={`${base}/editor` as Route}>{t("openEditor")}</Link>
             ) : null}
           </p>
         ) : null}
@@ -126,7 +132,7 @@ export default async function ReviewPage({
       {version && doc && manifest ? (
         <section aria-labelledby="slides-title" className="space-y-4">
           <h2 id="slides-title" className="text-heading-sm text-fg">
-            Slides
+            {t("slides")}
           </h2>
           <ol className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {doc.slides.map((s, i) => {
@@ -137,7 +143,7 @@ export default async function ReviewPage({
                 <li key={s.id} className="space-y-3">
                   <SlideFrame
                     src={`${base}/preview?version=${version.id}&slide=${encodeURIComponent(s.id)}`}
-                    title={`Slide ${i + 1}`}
+                    title={t("slide", { number: i + 1 })}
                     width={manifest.width}
                     height={manifest.height}
                     scale={scale}
@@ -145,16 +151,16 @@ export default async function ReviewPage({
                   <p className="flex flex-wrap items-center gap-2 text-body-sm text-fg">
                     {i + 1}. {findLayout(manifest, s.layout)?.name ?? s.layout}
                     {findings.length ? (
-                      <Badge variant="warning">
-                        {plural(findings.length, "finding", "findings")}
-                      </Badge>
+                      <Badge variant="warning">{t("findings", { count: findings.length })}</Badge>
                     ) : null}
                   </p>
-                  {s.note ? <p className="text-body-sm text-fg-muted">Note: {s.note}</p> : null}
+                  {s.note ? (
+                    <p className="text-body-sm text-fg-muted">{t("note", { note: s.note })}</p>
+                  ) : null}
                   <ReviewComments
                     {...ref}
                     slideId={s.id}
-                    label={`slide ${i + 1}`}
+                    label={t("commentTarget.slide", { number: i + 1 })}
                     comments={comments(s.id)}
                     canComment={canComment}
                   />
@@ -163,18 +169,18 @@ export default async function ReviewPage({
             })}
           </ol>
           <div className="space-y-2">
-            <h3 className="text-label text-fg">Caption</h3>
+            <h3 className="text-label text-fg">{t("caption")}</h3>
             <p className="whitespace-pre-line text-body-sm text-fg">{doc.caption || "—"}</p>
             {doc.hashtags.length ? (
               <p className="text-body-sm text-fg-muted">{doc.hashtags.join(" ")}</p>
             ) : null}
           </div>
           <div className="space-y-2">
-            <h3 className="text-label text-fg">Carousel comments</h3>
+            <h3 className="text-label text-fg">{t("carouselComments")}</h3>
             <ReviewComments
               {...ref}
               slideId={null}
-              label="carousel"
+              label={t("commentTarget.carousel")}
               comments={comments(null)}
               canComment={canComment}
             />
@@ -212,7 +218,7 @@ export default async function ReviewPage({
 
       <section aria-labelledby="history-title" className="space-y-3">
         <h2 id="history-title" className="text-heading-sm text-fg">
-          Approval history
+          {t("history.title")}
         </h2>
         {ws.approvals.length ? (
           <ol className="space-y-3">
@@ -220,11 +226,12 @@ export default async function ReviewPage({
               <li key={a.id} className="space-y-1 rounded-md border border-subtle bg-surface p-3">
                 <p className="flex flex-wrap items-center gap-2 text-body-sm text-fg">
                   <Badge variant={a.decision === "approved" ? "success" : "error"}>
-                    {decisionLabels[a.decision]}
+                    {t(`history.decision.${a.decision}`)}
                   </Badge>
-                  Version {versionNumbers.get(a.versionId) ?? "—"} ·{" "}
-                  {a.deciderName ?? "Removed user"} · {formatDate(a.decidedAt)}
-                  {a.selfApproval ? <Badge>Self-approval</Badge> : null}
+                  {t("history.version", { number: versionNumbers.get(a.versionId) ?? "—" })} ·{" "}
+                  {a.deciderName ?? t("history.removedUser")} ·{" "}
+                  {format.date(a.decidedAt, "dateTime")}
+                  {a.selfApproval ? <Badge>{t("history.selfApproval")}</Badge> : null}
                 </p>
                 {a.note ? (
                   <p className="whitespace-pre-line text-body-sm text-fg-muted">{a.note}</p>
@@ -233,7 +240,7 @@ export default async function ReviewPage({
             ))}
           </ol>
         ) : (
-          <p className="text-body-sm text-fg-muted">No decisions yet.</p>
+          <p className="text-body-sm text-fg-muted">{t("history.empty")}</p>
         )}
       </section>
     </div>

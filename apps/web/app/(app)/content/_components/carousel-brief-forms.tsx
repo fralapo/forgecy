@@ -3,13 +3,14 @@
 import {
   BRIEF_MIN_CHARS,
   contentLanguages,
-  objectiveLabels,
   type Brief,
   type CarouselParamsInput,
   type ContentChannel,
 } from "@forgecy/content/client";
+import { contentObjectives } from "@forgecy/core";
 import { Badge, Button, Input, Label } from "@forgecy/ui";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition, type ReactNode } from "react";
 import { saveBriefAction, updateParamsAction } from "../actions";
 import { controlClass } from "./action-button";
@@ -60,6 +61,7 @@ function Field({
 }
 
 function Status({ error, saved }: { error: string | null; saved: boolean }) {
+  const t = useTranslations("content.brief");
   if (error)
     return (
       <span role="alert" className="text-body-sm text-error">
@@ -68,7 +70,7 @@ function Status({ error, saved }: { error: string | null; saved: boolean }) {
     );
   return saved ? (
     <span role="status" className="text-body-sm text-fg-muted">
-      Saved
+      {t("saved")}
     </span>
   ) : null;
 }
@@ -123,9 +125,11 @@ function ParamsForm({
   router,
 }: Inner) {
   const templates = options.templates;
+  const t = useTranslations("content.brief.params");
+  const tl = useTranslations("content.labels");
   const [title, setTitle] = useState(params.title ?? "");
   const [templateKey, setTemplateKey] = useState(params.templateKey);
-  const template = templates.find((t) => t.key === templateKey);
+  const template = templates.find((x) => x.key === templateKey);
   const [slideCount, setSlideCount] = useState(params.slideCount);
   const [objective, setObjective] = useState<Objective>(params.objective);
   const [audienceIds, setAudienceIds] = useState<string[]>(params.audienceIds);
@@ -141,14 +145,7 @@ function ParamsForm({
     e.preventDefault();
     const format = template?.format ?? params.format;
     const changed = templateKey !== params.templateKey || format !== params.format;
-    if (
-      changed &&
-      hasSlides &&
-      !window.confirm(
-        "Changing the template or format recreates the slides: the current slide copy is lost (it stays in the saved versions). Continue?",
-      )
-    )
-      return;
+    if (changed && hasSlides && !window.confirm(t("resetSlidesConfirm"))) return;
     setError(null);
     setSaved(false);
     start(async () => {
@@ -175,7 +172,11 @@ function ParamsForm({
           },
         });
       let r = await call(changed && hasSlides);
-      if (!r.ok && r.code === "TEMPLATE-CHANGE-RESETS" && window.confirm(`${r.error}. Continue?`))
+      if (
+        !r.ok &&
+        r.code === "TEMPLATE-CHANGE-RESETS" &&
+        window.confirm(t("continueConfirm", { error: r.error }))
+      )
         r = await call(true);
       if (!r.ok) return setError(r.error);
       setRev(r.briefRev);
@@ -189,9 +190,9 @@ function ParamsForm({
       onSubmit={save}
       className="grid content-start gap-4 rounded-lg border border-subtle bg-surface p-5"
     >
-      <h3 className="text-heading-sm text-fg">Parameters</h3>
+      <h3 className="text-heading-sm text-fg">{t("title")}</h3>
       <fieldset disabled={!editable || pending} className="grid gap-4">
-        <Field id="cp-title" label="Title">
+        <Field id="cp-title" label={t("titleField")}>
           <Input
             id="cp-title"
             value={title}
@@ -202,8 +203,8 @@ function ParamsForm({
         <div className="grid gap-4 md:grid-cols-2">
           <Field
             id="cp-template"
-            label="Format and template"
-            hint={hasSlides ? "Changing it recreates the slides." : undefined}
+            label={t("template")}
+            hint={hasSlides ? t("templateHint") : undefined}
           >
             <select
               id="cp-template"
@@ -211,24 +212,31 @@ function ParamsForm({
               value={templateKey}
               onChange={(e) => {
                 setTemplateKey(e.target.value);
-                const t = templates.find((x) => x.key === e.target.value);
-                if (t) setSlideCount(Math.min(Math.max(slideCount, t.slides.min), t.slides.max));
+                const tpl = templates.find((x) => x.key === e.target.value);
+                if (tpl)
+                  setSlideCount(Math.min(Math.max(slideCount, tpl.slides.min), tpl.slides.max));
               }}
             >
               {template ? null : (
-                <option value={params.templateKey}>{params.templateKey} (unavailable)</option>
+                <option value={params.templateKey}>
+                  {t("templateUnavailable", { key: params.templateKey })}
+                </option>
               )}
-              {templates.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.name} · {t.channel === "linkedin" ? "LinkedIn" : "Instagram"}
+              {templates.map((tpl) => (
+                <option key={tpl.key} value={tpl.key}>
+                  {tl("templateChannel", { name: tpl.name, channel: tpl.channel })}
                 </option>
               ))}
             </select>
           </Field>
           <Field
             id="cp-slides"
-            label="Number of slides"
-            hint={template ? `From ${template.slides.min} to ${template.slides.max}` : undefined}
+            label={t("slides")}
+            hint={
+              template
+                ? t("slidesRange", { min: template.slides.min, max: template.slides.max })
+                : undefined
+            }
           >
             <Input
               id="cp-slides"
@@ -239,21 +247,21 @@ function ParamsForm({
               onChange={(e) => setSlideCount(Number(e.target.value))}
             />
           </Field>
-          <Field id="cp-objective" label="Goal">
+          <Field id="cp-objective" label={t("objective")}>
             <select
               id="cp-objective"
               className={controlClass}
               value={objective}
               onChange={(e) => setObjective(e.target.value as Objective)}
             >
-              {(Object.keys(objectiveLabels) as Objective[]).map((o) => (
+              {contentObjectives.map((o) => (
                 <option key={o} value={o}>
-                  {objectiveLabels[o]}
+                  {tl(`objective.${o}`)}
                 </option>
               ))}
             </select>
           </Field>
-          <Field id="cp-language" label="Language">
+          <Field id="cp-language" label={t("language")}>
             <select
               id="cp-language"
               className={controlClass}
@@ -262,12 +270,12 @@ function ParamsForm({
             >
               {contentLanguages.map((l) => (
                 <option key={l.code} value={l.code}>
-                  {l.label}
+                  {tl(`language.${l.code}`)}
                 </option>
               ))}
             </select>
           </Field>
-          <Field id="cp-pillar" label="Pillar">
+          <Field id="cp-pillar" label={t("pillar")}>
             <select
               id="cp-pillar"
               className={controlClass}
@@ -277,7 +285,7 @@ function ParamsForm({
                 setRubricId("");
               }}
             >
-              <option value="">None</option>
+              <option value="">{t("none")}</option>
               {options.pillars.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -285,14 +293,14 @@ function ParamsForm({
               ))}
             </select>
           </Field>
-          <Field id="cp-rubric" label="Rubric">
+          <Field id="cp-rubric" label={t("rubric")}>
             <select
               id="cp-rubric"
               className={controlClass}
               value={rubricId}
               onChange={(e) => setRubricId(e.target.value)}
             >
-              <option value="">None</option>
+              <option value="">{t("none")}</option>
               {rubrics.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
@@ -300,16 +308,16 @@ function ParamsForm({
               ))}
             </select>
           </Field>
-          <Field id="cp-product" label="Product (optional)">
+          <Field id="cp-product" label={t("product")}>
             <select
               id="cp-product"
               className={controlClass}
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
             >
-              <option value="">No product</option>
+              <option value="">{t("noProduct")}</option>
               {productId && !options.products.some((p) => p.id === productId) ? (
-                <option value={productId}>Product no longer approved</option>
+                <option value={productId}>{t("productNotApproved")}</option>
               ) : null}
               {options.products.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -320,7 +328,7 @@ function ParamsForm({
           </Field>
         </div>
         <fieldset className="grid gap-2">
-          <legend className="mb-2 text-label text-fg">Audience</legend>
+          <legend className="mb-2 text-label text-fg">{t("audience")}</legend>
           <div className="flex flex-wrap gap-4">
             {options.audience.map((a) => (
               <label key={a.id} className="flex items-center gap-2 text-body-sm text-fg">
@@ -341,7 +349,7 @@ function ParamsForm({
       </fieldset>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={!editable || pending || !audienceIds.length}>
-          Save parameters
+          {t("save")}
         </Button>
         <Status error={error} saved={saved} />
       </div>
@@ -365,6 +373,7 @@ function BriefForm({
 }: Inner) {
   const [b, setB] = useState<Brief>(brief);
   const [constraints, setConstraints] = useState(brief.constraints.join("\n"));
+  const t = useTranslations("content.brief.form");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -375,11 +384,11 @@ function BriefForm({
       fromPlan: cur.fromPlan.filter((f) => f !== key),
     }));
   const fromPlan = (f: PlanField) =>
-    b.fromPlan.includes(f) ? <Badge variant="info">From the plan</Badge> : null;
-  const toneOf = (axis: string) => b.toneShift.find((t) => t.axis === axis)?.delta ?? 0;
+    b.fromPlan.includes(f) ? <Badge variant="info">{t("fromPlan")}</Badge> : null;
+  const toneOf = (axis: string) => b.toneShift.find((x) => x.axis === axis)?.delta ?? 0;
   const setTone = (axis: string, delta: -1 | 0 | 1) =>
     set("toneShift", [
-      ...b.toneShift.filter((t) => t.axis !== axis),
+      ...b.toneShift.filter((x) => x.axis !== axis),
       ...(delta ? [{ axis, delta }] : []),
     ]);
   const textLen = b.text.trim().length;
@@ -420,16 +429,18 @@ function BriefForm({
       onSubmit={save}
       className="grid content-start gap-4 rounded-lg border border-subtle bg-surface p-5"
     >
-      <h3 className="text-heading-sm text-fg">Brief</h3>
+      <h3 className="text-heading-sm text-fg">{t("title")}</h3>
       <fieldset disabled={!editable || pending} className="grid gap-4">
         <Field
           id="cb-text"
           label={
-            <span className="flex items-center gap-2">What it’s about {fromPlan("text")}</span>
+            <span className="flex items-center gap-2">
+              {t("text")} {fromPlan("text")}
+            </span>
           }
           hint={
             textLen < BRIEF_MIN_CHARS
-              ? `At least ${BRIEF_MIN_CHARS} characters to generate the outline (now ${textLen}).`
+              ? t("textHint", { min: BRIEF_MIN_CHARS, count: textLen })
               : undefined
           }
         >
@@ -445,7 +456,9 @@ function BriefForm({
         <Field
           id="cb-problem"
           label={
-            <span className="flex items-center gap-2">Audience problem {fromPlan("problem")}</span>
+            <span className="flex items-center gap-2">
+              {t("problem")} {fromPlan("problem")}
+            </span>
           }
         >
           <textarea
@@ -457,7 +470,7 @@ function BriefForm({
             onChange={(e) => set("problem", e.target.value)}
           />
         </Field>
-        <Field id="cb-audience" label="Audience note">
+        <Field id="cb-audience" label={t("audienceNote")}>
           <textarea
             id="cb-audience"
             rows={2}
@@ -469,7 +482,11 @@ function BriefForm({
         </Field>
         <Field
           id="cb-promise"
-          label={<span className="flex items-center gap-2">Key message {fromPlan("promise")}</span>}
+          label={
+            <span className="flex items-center gap-2">
+              {t("promise")} {fromPlan("promise")}
+            </span>
+          }
         >
           <Input
             id="cb-promise"
@@ -480,7 +497,11 @@ function BriefForm({
         </Field>
         <Field
           id="cb-cta"
-          label={<span className="flex items-center gap-2">Call to action {fromPlan("cta")}</span>}
+          label={
+            <span className="flex items-center gap-2">
+              {t("cta")} {fromPlan("cta")}
+            </span>
+          }
         >
           <Input
             id="cb-cta"
@@ -492,9 +513,11 @@ function BriefForm({
         <Field
           id="cb-constraints"
           label={
-            <span className="flex items-center gap-2">Constraints {fromPlan("constraints")}</span>
+            <span className="flex items-center gap-2">
+              {t("constraints")} {fromPlan("constraints")}
+            </span>
           }
-          hint="One per line (up to 20)."
+          hint={t("constraintsHint")}
         >
           <textarea
             id="cb-constraints"
@@ -505,10 +528,8 @@ function BriefForm({
           />
         </Field>
         <fieldset className="grid gap-2">
-          <legend className="mb-1 text-label text-fg">Tone shift</legend>
-          <p className="text-body-sm text-fg-muted">
-            At most one step away from the Brand Identity.
-          </p>
+          <legend className="mb-1 text-label text-fg">{t("tone")}</legend>
+          <p className="text-body-sm text-fg-muted">{t("toneHint")}</p>
           {toneAxes.map((a) => (
             <div key={a.key} className="flex flex-wrap items-center gap-3 text-body-sm text-fg">
               <span className="min-w-48">
@@ -523,10 +544,10 @@ function BriefForm({
                     onChange={() => setTone(a.key, d)}
                   />
                   {d === -1
-                    ? `More ${a.left.toLowerCase()}`
+                    ? t("toneMore", { quality: a.left.toLowerCase() })
                     : d === 1
-                      ? `More ${a.right.toLowerCase()}`
-                      : "As in the Brand Identity"}
+                      ? t("toneMore", { quality: a.right.toLowerCase() })
+                      : t("toneSame")}
                 </label>
               ))}
             </div>
@@ -539,18 +560,18 @@ function BriefForm({
               checked={b.usePrice}
               onChange={(e) => set("usePrice", e.target.checked)}
             />
-            Mention the product price ({productPrice})
+            {t("usePrice", { price: productPrice })}
           </label>
         ) : null}
         <fieldset className="grid gap-2">
-          <legend className="mb-1 text-label text-fg">To prepare</legend>
+          <legend className="mb-1 text-label text-fg">{t("outputs")}</legend>
           <label className="flex items-center gap-2 text-body-sm text-fg">
             <input
               type="checkbox"
               checked={b.outputs.caption}
               onChange={(e) => set("outputs", { ...b.outputs, caption: e.target.checked })}
             />
-            Caption
+            {t("caption")}
           </label>
           <label className="flex items-center gap-2 text-body-sm text-fg">
             <input
@@ -558,7 +579,7 @@ function BriefForm({
               checked={b.outputs.altText}
               onChange={(e) => set("outputs", { ...b.outputs, altText: e.target.checked })}
             />
-            Image alt text
+            {t("altText")}
           </label>
           <label className="flex items-center gap-2 text-body-sm text-fg">
             <input
@@ -566,10 +587,10 @@ function BriefForm({
               checked={b.outputs.designerNotes}
               onChange={(e) => set("outputs", { ...b.outputs, designerNotes: e.target.checked })}
             />
-            Notes for the designer
+            {t("designerNotes")}
           </label>
           <label className="flex items-center gap-2 text-body-sm text-fg">
-            Hashtags
+            {t("hashtags")}
             <Input
               type="number"
               min={0}
@@ -588,7 +609,7 @@ function BriefForm({
       </fieldset>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={!editable || pending}>
-          Save brief
+          {t("save")}
         </Button>
         <Status error={error} saved={saved} />
       </div>

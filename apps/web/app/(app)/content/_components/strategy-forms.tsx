@@ -1,16 +1,17 @@
 "use client";
 
 import {
-  funnelLabels,
   funnelSchema,
   type ContentChannel,
   type Frequency,
   type PillarInputRaw,
   type RubricInputRaw,
 } from "@forgecy/content/client";
+import { funnelStages } from "@forgecy/core";
 import { Button, Input, Label } from "@forgecy/ui";
 import { Pencil, Plus, Save, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useId, useState, useTransition, type ReactNode } from "react";
 import { savePillarAction, saveRubricAction, type ActionResult } from "../actions";
 import { controlClass } from "./action-button";
@@ -28,6 +29,7 @@ type Option = { value: string; label: string };
 /** Runs a save action, shows its error, refreshes the page on success. */
 export function useSave() {
   const router = useRouter();
+  const t = useTranslations("content.form");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const run = (fn: () => Promise<ActionResult>, onOk?: () => void) =>
@@ -36,9 +38,7 @@ export function useSave() {
       const r = await fn();
       if (!r.ok) {
         setError(
-          r.code === "CONFLICT-DRAFT-REV"
-            ? `${r.error} Reload the page to see the updated version.`
-            : r.error,
+          r.code === "CONFLICT-DRAFT-REV" ? t("conflictReload", { error: r.error }) : r.error,
         );
         return;
       }
@@ -121,16 +121,17 @@ function FrequencyField({
   onChange(v: Frequency | null): void;
 }) {
   const id = useId();
+  const t = useTranslations("content.form.frequency");
   return (
     <fieldset className="space-y-1">
-      <legend className="text-label text-fg">Frequency</legend>
+      <legend className="text-label text-fg">{t("legend")}</legend>
       <div className="flex gap-2">
         <Input
           id={id}
           type="number"
           min={1}
           max={60}
-          aria-label="Number of posts"
+          aria-label={t("count")}
           placeholder="—"
           value={value?.count ?? ""}
           onChange={(e) => {
@@ -141,7 +142,7 @@ function FrequencyField({
           }}
         />
         <select
-          aria-label="Period"
+          aria-label={t("period")}
           className={controlClass}
           value={value?.unit ?? "week"}
           disabled={!value}
@@ -149,8 +150,8 @@ function FrequencyField({
             value && onChange({ ...value, unit: e.target.value as Frequency["unit"] })
           }
         >
-          <option value="week">per week</option>
-          <option value="month">per month</option>
+          <option value="week">{t("week")}</option>
+          <option value="month">{t("month")}</option>
         </select>
       </div>
     </fieldset>
@@ -184,15 +185,16 @@ export function Toggle({
 }
 
 export function Actions({ pending, onCancel }: { pending: boolean; onCancel(): void }) {
+  const t = useTranslations("content.form");
   return (
     <div className="flex flex-wrap gap-2">
       <Button type="submit" disabled={pending}>
         <Save aria-hidden />
-        Save
+        {t("save")}
       </Button>
       <Button type="button" variant="secondary" disabled={pending} onClick={onCancel}>
         <X aria-hidden />
-        Cancel
+        {t("cancel")}
       </Button>
     </div>
   );
@@ -230,11 +232,13 @@ function PillarFields({
   const [v, setV] = useState<PillarInputRaw>(initial ?? { name: "" });
   const [themes, setThemes] = useState((initial?.themes ?? []).join("\n"));
   const [forbidden, setForbidden] = useState((initial?.forbidden ?? []).join("\n"));
+  const t = useTranslations("content.strategy.pillarForm");
+  const tl = useTranslations("content.labels");
   const { pending, error, run } = useSave();
   const set = (patch: Partial<PillarInputRaw>) => setV((cur) => ({ ...cur, ...patch }));
   return (
     <form
-      aria-label={id ? `Edit pillar ${initial?.name ?? ""}` : "New pillar"}
+      aria-label={id ? t("editLabel", { name: initial?.name ?? "" }) : t("newLabel")}
       className={formClass}
       onSubmit={(e) => {
         e.preventDefault();
@@ -243,7 +247,7 @@ function PillarFields({
       }}
     >
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Name">
+        <Field label={t("name")}>
           {(fid) => (
             <Input
               id={fid}
@@ -254,7 +258,7 @@ function PillarFields({
             />
           )}
         </Field>
-        <Field label="Funnel">
+        <Field label={t("funnel")}>
           {(fid) => (
             <select
               id={fid}
@@ -264,16 +268,16 @@ function PillarFields({
                 set({ funnel: e.target.value ? funnelSchema.parse(e.target.value) : null })
               }
             >
-              <option value="">Not specified</option>
-              {Object.entries(funnelLabels).map(([k, l]) => (
+              <option value="">{t("funnelNone")}</option>
+              {funnelStages.map((k) => (
                 <option key={k} value={k}>
-                  {l}
+                  {tl(`funnel.${k}`)}
                 </option>
               ))}
             </select>
           )}
         </Field>
-        <Field label="Goal">
+        <Field label={t("goal")}>
           {(fid) => (
             <Input
               id={fid}
@@ -284,7 +288,7 @@ function PillarFields({
           )}
         </Field>
         <FrequencyField value={v.frequency} onChange={(frequency) => set({ frequency })} />
-        <Field label="Call to action">
+        <Field label={t("cta")}>
           {(fid) => (
             <Input
               id={fid}
@@ -294,7 +298,7 @@ function PillarFields({
             />
           )}
         </Field>
-        <Field label="Emotion">
+        <Field label={t("emotion")}>
           {(fid) => (
             <Input
               id={fid}
@@ -304,7 +308,7 @@ function PillarFields({
             />
           )}
         </Field>
-        <Field label="Themes" hint="One per line.">
+        <Field label={t("themes")} hint={t("onePerLine")}>
           {(fid) => (
             <textarea
               id={fid}
@@ -315,7 +319,7 @@ function PillarFields({
             />
           )}
         </Field>
-        <Field label="To avoid" hint="One per line.">
+        <Field label={t("avoid")} hint={t("onePerLine")}>
           {(fid) => (
             <textarea
               id={fid}
@@ -328,13 +332,13 @@ function PillarFields({
         </Field>
       </div>
       <Checks
-        legend="Audience"
+        legend={t("audience")}
         options={options.audience.map((a) => ({ value: a.id, label: a.name }))}
         value={v.audienceIds ?? []}
         onChange={(audienceIds) => set({ audienceIds })}
       />
       <Checks
-        legend="Linked products"
+        legend={t("products")}
         options={options.products.map((p) => ({ value: p.id, label: p.name }))}
         value={v.productIds ?? []}
         onChange={(productIds) => set({ productIds })}
@@ -380,6 +384,7 @@ function RubricFields({
   onClose,
 }: Parameters<typeof RubricForm>[0] & { onClose(): void }) {
   const [v, setV] = useState<RubricInputRaw>(initial ?? { pillarId, name: "" });
+  const t = useTranslations("content.strategy.rubricForm");
   const { pending, error, run } = useSave();
   const set = (patch: Partial<RubricInputRaw>) => setV((cur) => ({ ...cur, ...patch }));
   const text = (key: "hookFormula" | "hookExample" | "cta", label: string) => (
@@ -396,7 +401,7 @@ function RubricFields({
   );
   return (
     <form
-      aria-label={id ? `Edit rubric ${initial?.name ?? ""}` : "New rubric"}
+      aria-label={id ? t("editLabel", { name: initial?.name ?? "" }) : t("newLabel")}
       className={formClass}
       onSubmit={(e) => {
         e.preventDefault();
@@ -404,7 +409,7 @@ function RubricFields({
       }}
     >
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Name">
+        <Field label={t("name")}>
           {(fid) => (
             <Input
               id={fid}
@@ -415,7 +420,7 @@ function RubricFields({
             />
           )}
         </Field>
-        <Field label="Pillar">
+        <Field label={t("pillar")}>
           {(fid) => (
             <select
               id={fid}
@@ -432,7 +437,7 @@ function RubricFields({
           )}
         </Field>
         <FrequencyField value={v.frequency} onChange={(frequency) => set({ frequency })} />
-        <Field label="Template">
+        <Field label={t("template")}>
           {(fid) => (
             <select
               id={fid}
@@ -440,27 +445,27 @@ function RubricFields({
               value={v.templateKey ?? ""}
               onChange={(e) => set({ templateKey: e.target.value || null })}
             >
-              <option value="">None</option>
-              {options.templates.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.name}
+              <option value="">{t("templateNone")}</option>
+              {options.templates.map((tpl) => (
+                <option key={tpl.key} value={tpl.key}>
+                  {tpl.name}
                 </option>
               ))}
             </select>
           )}
         </Field>
-        {text("hookFormula", "Hook formula")}
-        {text("hookExample", "Hook example")}
-        {text("cta", "Call to action")}
+        {text("hookFormula", t("hookFormula"))}
+        {text("hookExample", t("hookExample"))}
+        {text("cta", t("cta"))}
       </div>
       <Checks
-        legend="Channels"
+        legend={t("channels")}
         options={channelOptions}
         value={v.channels ?? []}
         onChange={(channels) => set({ channels: channels as ContentChannel[] })}
       />
       <Checks
-        legend="Linked products"
+        legend={t("products")}
         options={options.products.map((p) => ({ value: p.id, label: p.name }))}
         value={v.productIds ?? []}
         onChange={(productIds) => set({ productIds })}

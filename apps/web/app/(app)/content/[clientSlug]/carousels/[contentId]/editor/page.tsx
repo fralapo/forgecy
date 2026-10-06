@@ -1,12 +1,16 @@
 import { getPublishedBrandIdentity } from "@forgecy/brand";
 import { briefSchema, type ContentChannel } from "@forgecy/content";
 import { eq, users } from "@forgecy/db";
+import { getTranslations } from "next-intl/server";
 import { EditorWorkspace, type EditorAsset } from "../../../../_components/editor-workspace";
 import { carouselPath } from "../../../../_lib/paths";
 import { thumbnailUrls } from "../../../../_lib/server";
 import { isActiveJob, loadCarousel } from "../../_lib/workspace";
 
-export const metadata = { title: "Carousel editor" };
+export async function generateMetadata() {
+  const t = await getTranslations("content.editor");
+  return { title: t("metaTitle") };
+}
 
 type Generation = { commercialUse?: string; slideId?: string; slot?: string; provider?: string };
 

@@ -2,14 +2,19 @@ import { asc, clients, contents, getDb, isNull, sql } from "@forgecy/db";
 import { Badge, Card } from "@forgecy/ui";
 import Link from "next/link";
 import type { Route } from "next";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/session";
 import { contentPath } from "./_lib/paths";
 
-export const metadata = { title: "Content" };
+export async function generateMetadata() {
+  const t = await getTranslations("content");
+  return { title: t("title") };
+}
 
 export default async function ContentPickerPage() {
   await requireUser();
+  const t = await getTranslations("content");
   const db = getDb();
   const rows = await db
     .select({
@@ -27,14 +32,13 @@ export default async function ContentPickerPage() {
 
   return (
     <>
-      <PageHeader
-        title="Content"
-        description="Editorial strategy, 30-day plan and carousels for every client."
-      />
+      <PageHeader title={t("title")} description={t("description")} />
       {rows.length === 0 ? (
         <Card className="p-6">
           <p className="text-body-md text-fg-muted">
-            No clients yet. <Link href="/clients">Add the first client</Link>.
+            {t.rich("picker.empty", {
+              link: (chunks) => <Link href="/clients">{chunks}</Link>,
+            })}
           </p>
         </Card>
       ) : (
@@ -47,9 +51,13 @@ export default async function ContentPickerPage() {
               >
                 <span className="text-heading-sm">{c.name}</span>
                 <span className="flex flex-wrap gap-2">
-                  {c.inReview ? <Badge variant="warning">{c.inReview} in review</Badge> : null}
-                  {c.drafts ? <Badge variant="info">{c.drafts} in progress</Badge> : null}
-                  {!c.inReview && !c.drafts ? <Badge>No open carousels</Badge> : null}
+                  {c.inReview ? (
+                    <Badge variant="warning">{t("picker.inReview", { count: c.inReview })}</Badge>
+                  ) : null}
+                  {c.drafts ? (
+                    <Badge variant="info">{t("picker.inProgress", { count: c.drafts })}</Badge>
+                  ) : null}
+                  {!c.inReview && !c.drafts ? <Badge>{t("picker.noneOpen")}</Badge> : null}
                 </span>
               </Link>
             </li>
