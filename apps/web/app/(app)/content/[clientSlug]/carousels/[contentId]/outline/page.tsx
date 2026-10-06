@@ -1,4 +1,4 @@
-import { briefReady } from "@forgecy/content";
+import { briefReady, listDirections, type DirectionView } from "@forgecy/content";
 import { Badge, Card } from "@forgecy/ui";
 import Link from "next/link";
 import type { Route } from "next";
@@ -9,6 +9,7 @@ import {
   CarouselOutlineEditor,
   CarouselOutlineGenerate,
 } from "../../../../_components/carousel-outline";
+import { DirectionDecision, DirectionPropose } from "../../../../_components/carousel-direction";
 import {
   approveOutlineAction,
   generateSlidesAction,
@@ -30,8 +31,10 @@ export default async function OutlinePage({
   params: Promise<{ clientSlug: string; contentId: string }>;
 }) {
   const { clientSlug, contentId } = await params;
-  const { client, ws } = await loadCarousel(clientSlug, contentId);
+  const { db, client, ws } = await loadCarousel(clientSlug, contentId);
   const c = ws.content;
+  const directions = await listDirections(db, client.id, c.id);
+  const td = await getTranslations("content.direction");
   const t = await getTranslations("content.outline");
   const tl = await getTranslations("content.labels");
   const format = await getFormat();
@@ -117,6 +120,127 @@ export default async function OutlinePage({
         </Card>
       </div>
       <div className="grid content-start gap-6">
+        <Card className="grid gap-3 p-5">
+          <h3 className="text-heading-sm text-fg">{tl("agent.creative_director")}</h3>
+          <p className="text-body-sm text-fg-muted">{td("description")}</p>
+          {(() => {
+            const current =
+              directions.find((d) => d.status === "proposed") ??
+              directions.find((d) => d.status === "accepted");
+            const earlier = directions.filter((d) => d !== current);
+            const block = (d: DirectionView) => (
+              <div className="grid gap-2 text-body-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium text-fg">
+                    {td("numberTitle", { number: d.number })}
+                  </span>
+                  <Badge
+                    variant={
+                      d.status === "accepted"
+                        ? "success"
+                        : d.status === "proposed"
+                          ? "warning"
+                          : "neutral"
+                    }
+                  >
+                    {td(`status.${d.status}`)}
+                  </Badge>
+                </div>
+                <p className="text-fg">
+                  <span className="font-medium">{td("concept")}:</span> {d.direction.concept}
+                </p>
+                {d.direction.thread ? (
+                  <p className="text-fg">
+                    <span className="font-medium">{td("thread")}:</span> {d.direction.thread}
+                  </p>
+                ) : null}
+                {d.direction.tone ? (
+                  <p className="text-fg">
+                    <span className="font-medium">{td("tone")}:</span> {d.direction.tone}
+                  </p>
+                ) : null}
+                {d.direction.slides.length ? (
+                  <details>
+                    <summary className="cursor-pointer text-fg">
+                      {td("slides")} ({d.direction.slides.length})
+                    </summary>
+                    <ol className="mt-2 grid gap-1">
+                      {d.direction.slides.map((x) => (
+                        <li key={x.position} className="text-fg">
+                          <span className="font-medium">
+                            {td("slideItem", { position: x.position })}:
+                          </span>{" "}
+                          {x.intent}
+                          {x.visual ? (
+                            <span className="block text-fg-muted">
+                              {td("visual", { visual: x.visual })}
+                            </span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
+                ) : null}
+                {d.provenance?.rationale ? (
+                  <p className="text-fg-muted">
+                    {td("rationale", { rationale: d.provenance.rationale })}
+                  </p>
+                ) : null}
+                {d.instruction ? (
+                  <p className="text-fg-muted">
+                    {td("instruction", { instruction: d.instruction })}
+                  </p>
+                ) : null}
+                {d.decisionNote && d.status === "rejected" ? (
+                  <p className="text-fg-muted">{td("rejectedNote", { reason: d.decisionNote })}</p>
+                ) : null}
+                <p className="text-fg-muted">
+                  {td("byline", {
+                    model: d.provenance?.model ?? "—",
+                    date: format.date(d.createdAt, "dateTime"),
+                  })}
+                </p>
+              </div>
+            );
+            return (
+              <>
+                {current ? (
+                  <div className="grid gap-3 rounded-md border border-subtle p-3">
+                    {block(current)}
+                    {current.status === "proposed" ? (
+                      <DirectionDecision
+                        refs={refs}
+                        directionId={current.id}
+                        disabled={!editable}
+                      />
+                    ) : (
+                      <p className="text-body-sm text-fg-muted">{td("followed")}</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-body-sm text-fg-muted">{td("none")}</p>
+                )}
+                <DirectionPropose
+                  refs={refs}
+                  hasDirection={directions.length > 0}
+                  disabled={!editable || !ready}
+                />
+                {earlier.length ? (
+                  <details className="text-body-sm">
+                    <summary className="cursor-pointer text-fg">
+                      {td("history")} ({earlier.length})
+                    </summary>
+                    <ul className="mt-3 grid gap-4">
+                      {earlier.map((d) => (
+                        <li key={d.id}>{block(d)}</li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+              </>
+            );
+          })()}
+        </Card>
         <Card className="grid gap-3 p-5">
           <h3 className="text-heading-sm text-fg">{tl("agent.copywriter")}</h3>
           {!ready ? (

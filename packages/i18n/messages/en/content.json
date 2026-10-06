@@ -39,6 +39,7 @@
     "imageOtherClient": "Image of another client",
     "imageNotProduct": "The image does not belong to an approved product of the client",
     "rejectReasonRequired": "Write why the image is not right",
+    "directionReasonRequired": "Write why the direction is not right",
     "imageDecided": "Image not found or already decided",
     "imageNotFound": "Image not found",
     "pillarNotFound": "Pillar not found",
@@ -248,7 +249,8 @@
     "agent": {
       "planner": "Planner",
       "copywriter": "Copywriter",
-      "art_director": "Art Director"
+      "art_director": "Art Director",
+      "creative_director": "Creative Director"
     },
     "confidence": {
       "high": "High confidence",
@@ -270,6 +272,7 @@
       "es": "Spanish"
     },
     "job": {
+      "creativeDirection": "Proposing the creative direction",
       "generateOutline": "Generating the outline",
       "generateSlides": "Generating the slides",
       "editSlide": "Editing a slide",
@@ -570,6 +573,42 @@
       "designerNotes": "Notes for the designer",
       "hashtags": "Hashtags",
       "save": "Save brief"
+    }
+  },
+  "direction": {
+    "title": "Creative direction",
+    "description": "The Creative Director proposes one concept and what each slide does and shows. Once you accept it, the Copywriter and the Art Director follow it.",
+    "none": "No direction yet. You can also write the outline without one.",
+    "numberTitle": "Direction {number}",
+    "status": {
+      "proposed": "To decide",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "stale": "Superseded"
+    },
+    "concept": "Concept",
+    "thread": "Thread",
+    "tone": "Tone",
+    "slides": "Slides",
+    "slideItem": "Slide {position}",
+    "visual": "Visual: {visual}",
+    "rationale": "Why: {rationale}",
+    "byline": "{model} · {date}",
+    "instruction": "Your directions: “{instruction}”",
+    "followed": "The Copywriter and the Art Director follow this direction.",
+    "accept": "Accept",
+    "reject": "Reject",
+    "rejectReason": "Why is it not right?",
+    "rejectPlaceholder": "E.g. too abstract for this audience",
+    "confirmReject": "Reject direction",
+    "cancel": "Cancel",
+    "rejectedNote": "Rejected: {reason}",
+    "history": "Earlier directions",
+    "form": {
+      "instruction": "Directions for the Creative Director (optional)",
+      "instructionPlaceholder": "E.g. a bolder idea, play on the before/after",
+      "propose": "Propose a direction",
+      "again": "Propose another"
     }
   },
   "outline": {

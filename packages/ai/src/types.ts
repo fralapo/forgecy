@@ -16,6 +16,7 @@ export const aiTasks = [
   "image_prompt",
   "brand_propose",
   "catalog_extract",
+  "creative_direction",
   "test",
 ] as const;
 export type AiTask = (typeof aiTasks)[number];

@@ -13,6 +13,7 @@ export const AGENT_TASKS: Record<AgentRole, readonly AiTask[]> = {
   copywriter: ["outline", "slides", "edit_slide"],
   art_director: ["image_prompt"],
   reviewer: [],
+  creative_director: ["creative_direction"],
 };
 
 /** The agent a task belongs to when the caller does not say (some tasks are shared). */
@@ -55,6 +56,7 @@ export function agentMemoryBlock(memories: ReadonlyArray<{ content: string }>): 
 export const AGENT_ORDER: readonly AgentRole[] = [
   "brand_analyst",
   "strategist",
+  "creative_director",
   "copywriter",
   "art_director",
   "reviewer",
@@ -73,6 +75,7 @@ export const AGENT_CAPABILITIES: Record<AgentRole, readonly AgentCapability[]> =
   copywriter: ["view", "propose", "generate"],
   art_director: ["view", "propose", "generate"],
   reviewer: ["view", "check"],
+  creative_director: ["view", "propose"],
 };
 
 /** The `jobs_log` kinds of an agent's runs: its tasks, plus images for the Art Director. */

@@ -39,6 +39,7 @@
     "imageOtherClient": "Immagine di un altro cliente",
     "imageNotProduct": "L’immagine non appartiene a un prodotto approvato del cliente",
     "rejectReasonRequired": "Scrivi perché l’immagine non va bene",
+    "directionReasonRequired": "Scrivi perché la direzione non va bene",
     "imageDecided": "Immagine non trovata o già decisa",
     "imageNotFound": "Immagine non trovata",
     "pillarNotFound": "Pilastro non trovato",
@@ -248,7 +249,8 @@
     "agent": {
       "planner": "Planner",
       "copywriter": "Copywriter",
-      "art_director": "Art Director"
+      "art_director": "Art Director",
+      "creative_director": "Creative Director"
     },
     "confidence": {
       "high": "Attendibilità alta",
@@ -270,6 +272,7 @@
       "es": "Spagnolo"
     },
     "job": {
+      "creativeDirection": "Proposta della direzione creativa",
       "generateOutline": "Generazione della scaletta",
       "generateSlides": "Generazione delle slide",
       "editSlide": "Modifica di una slide",
@@ -570,6 +573,42 @@
       "designerNotes": "Note per il designer",
       "hashtags": "Hashtag",
       "save": "Salva Brief"
+    }
+  },
+  "direction": {
+    "title": "Direzione creativa",
+    "description": "Il Creative Director propone un concept e cosa fa e mostra ogni slide. Quando la accetti, il Copywriter e l'Art Director la seguono.",
+    "none": "Ancora nessuna direzione. Puoi scrivere l'outline anche senza.",
+    "numberTitle": "Direzione {number}",
+    "status": {
+      "proposed": "Da decidere",
+      "accepted": "Accettata",
+      "rejected": "Rifiutata",
+      "stale": "Superata"
+    },
+    "concept": "Concept",
+    "thread": "Filo conduttore",
+    "tone": "Tono",
+    "slides": "Slide",
+    "slideItem": "Slide {position}",
+    "visual": "Visual: {visual}",
+    "rationale": "Perché: {rationale}",
+    "byline": "{model} · {date}",
+    "instruction": "Le tue indicazioni: “{instruction}”",
+    "followed": "Il Copywriter e l'Art Director seguono questa direzione.",
+    "accept": "Accetta",
+    "reject": "Rifiuta",
+    "rejectReason": "Perché non va bene?",
+    "rejectPlaceholder": "Es. troppo astratta per questo pubblico",
+    "confirmReject": "Rifiuta la direzione",
+    "cancel": "Annulla",
+    "rejectedNote": "Rifiutata: {reason}",
+    "history": "Direzioni precedenti",
+    "form": {
+      "instruction": "Indicazioni per il Creative Director (facoltative)",
+      "instructionPlaceholder": "Es. un'idea più audace, gioca sul prima/dopo",
+      "propose": "Proponi una direzione",
+      "again": "Proponine un'altra"
     }
   },
   "outline": {

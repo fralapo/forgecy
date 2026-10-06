@@ -1,5 +1,5 @@
 /**
- * The generation pipeline: Planner, Copywriter and Art Director steps run by the
+ * The generation pipeline: Planner, Creative Director, Copywriter and Art Director steps run by the
  * worker. Each step reads only approved inputs (published Brand Identity, accepted
  * strategy, approved products), calls the AI gateway (policy, budget, logging) and
  * stores its output as something a person reviews: proposals, a new outline, draft
@@ -74,12 +74,15 @@ import {
 import { productSource, type ProductSummary } from "../products";
 import {
   CONTENT_PROMPT_VERSION,
+  CREATIVE_DIRECTION_SYSTEM,
   EDIT_SLIDE_SYSTEM,
   IMAGE_PROMPT_SYSTEM,
   OUTLINE_SYSTEM,
   PLAN_SYSTEM,
   PLANNER_SYSTEM,
   SLIDES_SYSTEM,
+  creativeDirectionOutputSchema,
+  creativeDirectionUserPrompt,
   editSlideOutputSchema,
   editSlideUserPrompt,
   imagePromptOutputSchema,
@@ -97,6 +100,7 @@ import {
 } from "./prompts";
 import { saveProposedPlan, saveStrategyProposals, type ProposedRubric } from "../strategy";
 import { clampSlideCount, getTemplate, pickLayout } from "../carousels/templates";
+import { acceptedDirection, directionBlock, recordDirection } from "../carousels/direction";
 import { frequencyLabel } from "../labels";
 
 export interface PipelineDeps {
@@ -508,6 +512,7 @@ async function carouselPromptInput(
     brief,
     manifest,
     defaultCta: (await loadClientMemorySettings(db, c.clientId)).default_cta?.value.text ?? null,
+    direction: await acceptedDirection(db, c.id),
   };
 }
 
@@ -516,8 +521,9 @@ async function carouselSetup(
   ctx: PipelineContext,
   clientId: string,
   contentId: string,
+  role: AgentRole = "copywriter",
 ) {
-  const actor = agent("copywriter", ctx);
+  const actor = agent(role, ctx);
   const client = await requireClient(deps.db, clientId);
   const c = await getContentRow(deps.db, clientId, contentId);
   if (c.status === "in_review" || c.status === "archived")
@@ -626,6 +632,77 @@ export async function runGenerateOutline(
     await ctx.progress(100);
     return { outlineNumber: row.outlineNumber, rows: rows.length, costMicroUsd: res.costMicroUsd };
   });
+}
+
+// ---- Creative Director ----
+
+/** A creative direction for one carousel, stored as a proposal a person accepts or rejects. */
+export async function runCreativeDirection(
+  deps: PipelineDeps,
+  ctx: PipelineContext,
+  input: { clientId: string; contentId: string; instruction: string },
+) {
+  const ai = requireAi(deps);
+  const s = await carouselSetup(deps, ctx, input.clientId, input.contentId, "creative_director");
+  if (!briefReady(s.c.brief)) throw attention("content.jobErrors.briefTooShort");
+  const n = s.promptInput.slideCount;
+  await ctx.progress(10);
+  const { system, prefix } = withBrand(CREATIVE_DIRECTION_SYSTEM, s.brandCtx);
+  const res = await guarded(() =>
+    ai.generateObject({
+      task: "creative_direction",
+      schema: creativeDirectionOutputSchema,
+      schemaName: "creative_direction",
+      system,
+      input:
+        prefix +
+        creativeDirectionUserPrompt(
+          s.promptInput,
+          s.promptInput.direction ?? null,
+          input.instruction,
+        ),
+      ...s.common,
+      inputSummary: {
+        fields: { brief: JSON.stringify(s.c.brief), instruction: input.instruction },
+        meta: {
+          promptVersion: CONTENT_PROMPT_VERSION,
+          template: s.template.manifest.id,
+          slides: n,
+        },
+      },
+    }),
+  );
+  await ctx.progress(80);
+  const out = res.data;
+  const seen = new Set<number>();
+  const slides = out.slides
+    .filter((x) => x.position >= 1 && x.position <= n && x.intent.trim())
+    .filter((x) => !seen.has(x.position) && Boolean(seen.add(x.position)))
+    .sort((a, b) => a.position - b.position)
+    .map((x) => ({ position: x.position, intent: x.intent.trim(), visual: x.visual.trim() }));
+  const row = await guarded(() =>
+    recordDirection(deps.db, s.actor, {
+      clientId: input.clientId,
+      contentId: input.contentId,
+      direction: {
+        concept: out.concept.trim(),
+        thread: out.thread.trim(),
+        tone: out.tone.trim(),
+        slides,
+      },
+      provenance: {
+        agent: "creative_director",
+        jobId: ctx.jobId,
+        provider: res.provider,
+        model: res.model,
+        rationale: out.rationale.trim(),
+      },
+      instruction: input.instruction,
+      jobId: ctx.jobId,
+    }),
+  );
+  await ctx.progress(100);
+  return { directionNumber: row.number, slides: slides.length, costMicroUsd: res.costMicroUsd };
 }
 
 /** Flat model slots → slide slots of the layout (unknown slots and image slots dropped). */
@@ -1016,6 +1093,10 @@ export async function runGenerateImage(
     jobId: ctx.jobId,
     contentId: input.contentId,
   };
+  const direction = directionBlock(
+    await acceptedDirection(deps.db, c.id),
+    doc.slides.indexOf(slide) + 1,
+  );
   const slideText = Object.values(slide.slots)
     .flatMap((v) => (typeof v === "string" ? [v] : Array.isArray(v) ? v : []))
     .join("\n")
@@ -1032,6 +1113,7 @@ export async function runGenerateImage(
         slideText,
         imagery: imageryGuidelines(identity),
         language: c.language,
+        direction,
       }),
       ...common,
       inputSummary: {

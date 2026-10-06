@@ -4,6 +4,7 @@ import "./_lib/ports";
 
 import { getPublishedBrandIdentity } from "@forgecy/brand";
 import {
+  acceptDirection,
   activatePlan,
   addComment,
   addPlanItem,
@@ -13,6 +14,7 @@ import {
   createCarousel,
   createPillar,
   createRubric,
+  creativeDirectionJob,
   decideAsset,
   decidePlanItem,
   decideReview,
@@ -31,6 +33,7 @@ import {
   prepareExport,
   proposePlanJob,
   proposeStrategyJob,
+  rejectDirection,
   requestSlideEdit,
   resolveComment,
   restoreOutline,
@@ -373,6 +376,47 @@ export async function saveBriefAction(input: ContentRef & { briefRev: number; br
       brief: input.brief,
     });
     return { briefRev: row.briefRev };
+  });
+}
+
+// ---- Creative direction ----
+
+export async function proposeDirectionAction(input: ContentRef & { instruction: string }) {
+  return run(input.slug, async (ctx) => {
+    const r = ref(input);
+    humanOnly(ctx.actor, "edit_draft", r.clientId);
+    const c = await getContentRow(ctx.db, r.clientId, r.id);
+    if (!briefReady(c.brief)) throw localizedError("validation", "content.errors.briefTooShort");
+    return enqueue(
+      ctx,
+      creativeDirectionJob,
+      {
+        clientId: r.clientId,
+        contentId: r.id,
+        instruction: input.instruction.slice(0, 500),
+        requestedBy: ctx.userId,
+      },
+      { clientId: r.clientId, entity: "content", entityId: r.id },
+    );
+  });
+}
+
+export async function decideDirectionAction(
+  input: ContentRef & { directionId: string; decision: "accept" | "reject"; reason?: string },
+) {
+  return run(input.slug, async ({ db, actor }) => {
+    const r = ref(input);
+    const id = uuid.parse(input.directionId);
+    if (input.decision === "accept")
+      await acceptDirection(db, actor, { clientId: r.clientId, contentId: r.id, id });
+    else
+      await rejectDirection(db, actor, {
+        clientId: r.clientId,
+        contentId: r.id,
+        id,
+        reason: input.reason ?? "",
+      });
+    return {};
   });
 }
 
