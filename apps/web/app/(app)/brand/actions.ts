@@ -17,12 +17,15 @@ import {
   type DocumentSectionKey,
   type TokenTree,
 } from "@forgecy/brand";
+import { brandSystemParts, exportBrandSystem } from "@forgecy/brand-book";
 import { assertCan, brandSourceKinds, ForgecyError, PermissionDeniedError } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
+import { createStorageFromEnv } from "@forgecy/files";
 import { enqueueJob } from "@forgecy/jobs";
 import { revalidatePath } from "next/cache";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
+import { env } from "@/lib/env";
 import { errorMessage, firstIssue, vmsg } from "@/lib/i18n";
 import { getQueues } from "@/lib/queues";
 import { requireUser } from "@/lib/session";
@@ -306,5 +309,24 @@ export async function importSourceAction(input: {
       createdBy: userId,
     });
     return { jobId: job.id };
+  });
+}
+
+/** Builds the Internal Brand System ZIP (stored and listed as BB-n). */
+export async function exportBrandSystemAction(input: {
+  slug: string;
+  clientId: string;
+  versionId: string;
+  parts: string[];
+}) {
+  slugSchema.parse(input.slug);
+  const parts = z.array(z.enum(brandSystemParts)).min(1).max(20).parse(input.parts);
+  return run(input.slug, async ({ actor }) => {
+    const row = await exportBrandSystem(
+      { db: getDb(), storage: createStorageFromEnv(env) },
+      actor,
+      { clientId: uuid.parse(input.clientId), versionId: uuid.parse(input.versionId), parts },
+    );
+    return { number: row.number };
   });
 }

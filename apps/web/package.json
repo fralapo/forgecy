@@ -19,6 +19,7 @@
     "@forgecy/audit": "workspace:*",
     "@forgecy/backup": "workspace:*",
     "@forgecy/brand": "workspace:*",
+    "@forgecy/brand-book": "workspace:*",
     "@forgecy/brand-guard": "workspace:*",
     "@forgecy/carousel": "workspace:*",
     "@forgecy/catalog": "workspace:*",

@@ -68,6 +68,9 @@ importers:
       '@forgecy/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@forgecy/brand-book':
+        specifier: workspace:*
+        version: link:../../packages/brand-book
       '@forgecy/brand-guard':
         specifier: workspace:*
         version: link:../../packages/brand-guard
@@ -355,6 +358,43 @@ importers:
       unpdf:
         specifier: ^1.8.1
         version: 1.8.1
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@types/node':
+        specifier: ^22.18.0
+        version: 22.20.5
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@22.20.5)(vite@8.3.2(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+
+  packages/brand-book:
+    dependencies:
+      '@forgecy/brand':
+        specifier: workspace:*
+        version: link:../brand
+      '@forgecy/core':
+        specifier: workspace:*
+        version: link:../core
+      '@forgecy/db':
+        specifier: workspace:*
+        version: link:../db
+      '@forgecy/files':
+        specifier: workspace:*
+        version: link:../files
+      '@forgecy/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@forgecy/ui':
+        specifier: workspace:*
+        version: link:../ui
+      fflate:
+        specifier: ^0.8.3
+        version: 0.8.3
       zod:
         specifier: ^4.6.5
         version: 4.6.5

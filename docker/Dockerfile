@@ -19,6 +19,7 @@ COPY packages/backup/package.json packages/backup/
 COPY packages/carousel/package.json packages/carousel/
 COPY packages/brand/package.json packages/brand/
 COPY packages/content/package.json packages/content/
+COPY packages/brand-book/package.json packages/brand-book/
 COPY packages/brand-guard/package.json packages/brand-guard/
 COPY packages/catalog/package.json packages/catalog/
 COPY packages/files/package.json packages/files/

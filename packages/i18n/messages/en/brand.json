@@ -8,7 +8,8 @@
     "sources": "Sources · Brand Identity",
     "proposals": "Proposals · Brand Identity",
     "versions": "Versions · Brand Identity",
-    "approval": "Approval · Brand Identity"
+    "approval": "Approval · Brand Identity",
+    "book": "Brand Book · Brand Identity"
   },
   "picker": {
     "description": "Choose a client to see their Brand Identity.",
@@ -44,7 +45,8 @@
     "content": "Content",
     "sources": "Sources",
     "proposals": "Proposals",
-    "versions": "Versions"
+    "versions": "Versions",
+    "book": "Brand Book"
   },
   "blocks": {
     "strategy": "Strategy",
@@ -803,6 +805,53 @@
       "fieldChanged": "The field changed after the proposal",
       "restored": "Draft v{number} was replaced by a restore",
       "sourceRemoved": "The proposal's source was removed"
+    }
+  },
+  "book": {
+    "systemTitle": "Internal Brand System",
+    "systemIntro": "A ZIP for the agency and its agents: the identity as JSON, the design tokens, the agent rules, the sources and the confidence of every field. It is built from an approved version, never from a draft.",
+    "internalWarning": "Contains internal rules and prompts: do not share it with the client.",
+    "version": "Brand Identity version",
+    "versionPublished": "Version {number} · published {date}",
+    "versionArchived": "Version {number} · archived (published {date})",
+    "files": "Files",
+    "filesHint": "README.md is always included.",
+    "parts": {
+      "identity": "Brand Identity",
+      "tokens": "Design tokens (flat, DTCG and CSS)",
+      "agent_rules": "Rules the agents receive",
+      "sources": "Sources",
+      "scores": "Confidence of every field",
+      "examples": "Approved and rejected examples",
+      "changelog": "Changelog",
+      "assets": "Logo and font files"
+    },
+    "generate": "Generate ZIP",
+    "generating": "Generating…",
+    "generated": "BB-{number} is ready: download it from the list.",
+    "noPublished": "Nothing to export yet: publish a Brand Identity version first.",
+    "historyTitle": "Exports",
+    "historyEmpty": "No exports yet.",
+    "colExport": "Export",
+    "colDetails": "Details",
+    "number": "BB-{number}",
+    "type": {
+      "client_book": "Brand Book",
+      "brand_system": "Brand System"
+    },
+    "status": {
+      "draft": "Draft",
+      "approved": "Approved",
+      "exported": "Exported",
+      "superseded": "Superseded"
+    },
+    "fromVersion": "From Brand Identity version {number}",
+    "createdBy": "By {name} on {date}",
+    "partCount": "{count, plural, one {# part} other {# parts}}",
+    "download": "Download",
+    "errors": {
+      "noParts": "Choose at least one file to include.",
+      "noPublished": "This version is not approved: only published or archived versions can be exported."
     }
   }
 }
