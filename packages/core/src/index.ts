@@ -9,6 +9,7 @@ export * from "./env";
 export * from "./errors";
 export * from "./jobs";
 export * from "./locale";
+export * from "./notification";
 export * from "./permissions";
 export * from "./review-status";
 export * from "./brand-check";

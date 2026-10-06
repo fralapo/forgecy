@@ -14,6 +14,7 @@ import {
   contents,
   createDb,
   eq,
+  listNotifications,
   sql,
   templates,
   users,
@@ -241,6 +242,15 @@ describe.skipIf(!dbUrl)("batch automations (integration)", () => {
     const [ended] = await db.select().from(automationRuns).where(eq(automationRuns.id, run.id));
     expect(ended).toMatchObject({ status: "partial" });
     expect((await getAutomation(db, anna, automationId)).status).toBe("draft");
+    // Anna, who started it, hears once how it ended.
+    const bell = (await listNotifications(db, anna.id)).filter(
+      (n) => n.kind === "automation_run_finished",
+    );
+    expect(bell).toHaveLength(1);
+    expect(bell[0]).toMatchObject({
+      params: { completed: 1, failed: 1, total: 2 },
+      href: `/automations/${automationId}?tab=runs&run=${run.id}`,
+    });
   });
 
   it("retries the failed items, pauses, resumes and cancels", async () => {

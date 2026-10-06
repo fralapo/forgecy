@@ -31,6 +31,7 @@ import {
   eq,
   inArray,
   isNull,
+  notify,
   recordAuditEvent,
   sql,
   type Database,
@@ -867,6 +868,14 @@ export async function submitForReview(
       version: v.number,
       reviewerId: input.reviewerId ?? null,
     });
+    await notify(tx, {
+      kind: "content_review_requested",
+      to: input.reviewerId ? [input.reviewerId] : "everyone",
+      except: actor.id,
+      clientId: c.clientId,
+      params: { title: c.title, version: v.number },
+      href: (slug) => `/content/${slug}/carousels/${c.id}/review`,
+    });
     return { content: row, version: v };
   });
   if (brandGuard())
@@ -990,6 +999,14 @@ export async function decideReview(
       .returning();
     if (!row) conflict("content.errors.changedMeanwhile");
     await audit(tx, actor, input.decision, c, { version: version.number, selfApproval });
+    await notify(tx, {
+      kind: input.decision === "approved" ? "content_approved" : "content_changes_requested",
+      to: [c.submittedBy ?? c.createdBy],
+      except: actor.id,
+      clientId: c.clientId,
+      params: { title: c.title, version: version.number },
+      href: (slug) => `/content/${slug}/carousels/${c.id}`,
+    });
     return row;
   });
 }

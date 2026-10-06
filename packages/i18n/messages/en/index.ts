@@ -15,6 +15,7 @@ import home from "./home.json";
 import jobs from "./jobs.json";
 import mail from "./mail.json";
 import meta from "./meta.json";
+import notifications from "./notifications.json";
 import products from "./products.json";
 import review from "./review.json";
 import search from "./search.json";
@@ -40,6 +41,7 @@ export default {
   jobs,
   mail,
   meta,
+  notifications,
   products,
   review,
   search,

@@ -1,0 +1,20 @@
+{
+  "title": "Notifications",
+  "description": "Reviews, approvals and finished runs that concern you.",
+  "empty": "No notifications yet.",
+  "markAllRead": "Mark all as read",
+  "unread": "Unread",
+  "bell": "{count, plural, =0 {Notifications} one {Notifications, # unread} other {Notifications, # unread}}",
+  "kinds": {
+    "content_review_requested": "{client}: “{title}” v{version} is waiting for your review.",
+    "content_approved": "{client}: “{title}” v{version} was approved.",
+    "content_changes_requested": "{client}: changes requested on “{title}” v{version}.",
+    "brand_review_requested": "{client}: Brand Identity draft v{version} is in review.",
+    "brand_changes_requested": "{client}: Brand Identity draft v{version} was sent back with a comment.",
+    "brand_published": "{client}: Brand Identity v{version} is published.",
+    "report_review_requested": "{client}: audit report v{version} is waiting for review.",
+    "report_approved": "{client}: audit report v{version} was approved.",
+    "report_changes_requested": "{client}: changes requested on audit report v{version}.",
+    "automation_run_finished": "{client}: “{name}” finished, {completed} of {total} carousels created{failed, plural, =0 {} other {, # failed}}."
+  }
+}
