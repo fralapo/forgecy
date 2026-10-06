@@ -44,7 +44,7 @@ reviewed by a person before anything is approved.
 | `cost.ts`                                                                | AI setup, cost estimate and budget shown before starting        |
 
 The worker registers `catalogHandlers` from `@forgecy/catalog/handlers`; the web pages
-live in `apps/web/app/(app)/prodotti`.
+live in `apps/web/app/(app)/products`.
 
 ## Tests
 

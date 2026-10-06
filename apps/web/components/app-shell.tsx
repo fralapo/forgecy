@@ -17,13 +17,13 @@ import { SignOutButton } from "./sign-out-button";
 // Module threads add their entries here (Audit, Brand Identity, Contenuti, Template...).
 const nav = [
   { href: "/", label: "Panoramica", icon: LayoutDashboard },
-  { href: "/clienti", label: "Clienti", icon: Building2 },
+  { href: "/clients", label: "Clienti", icon: Building2 },
   { href: "/audit", label: "Audit", icon: ClipboardCheck },
-  { href: "/prodotti", label: "Prodotti", icon: Package },
-  { href: "/template", label: "Template", icon: LayoutTemplate },
+  { href: "/products", label: "Prodotti", icon: Package },
+  { href: "/templates", label: "Template", icon: LayoutTemplate },
   { href: "/brand", label: "Brand Identity", icon: Fingerprint },
-  { href: "/contenuti", label: "Contenuti", icon: GalleryHorizontal },
-  { href: "/impostazioni", label: "Impostazioni", icon: Settings },
+  { href: "/content", label: "Contenuti", icon: GalleryHorizontal },
+  { href: "/settings", label: "Impostazioni", icon: Settings },
   { href: "/design", label: "Design system", icon: Palette },
 ] as const;
 

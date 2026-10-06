@@ -79,19 +79,19 @@ export function unzipTemplatePackage(zip: Uint8Array): Map<string, Uint8Array> {
   return files;
 }
 
-/** `templates/agency` of the repository, or FORGECY_TEMPLATES_DIR when set. */
+/** `templates` of the repository, or FORGECY_TEMPLATES_DIR when set. */
 export function defaultTemplatesDir(): string {
   const fromEnv = process.env.FORGECY_TEMPLATES_DIR;
   if (fromEnv) return path.resolve(fromEnv);
   let dir = process.cwd();
   for (let i = 0; i < 6; i++) {
-    const candidate = path.join(dir, "templates", "agency");
-    if (existsSync(candidate)) return candidate;
+    const candidate = path.join(dir, "templates");
+    if (existsSync(path.join(candidate, "template.schema.json"))) return candidate;
     const parent = path.dirname(dir);
     if (parent === dir) break;
     dir = parent;
   }
-  return path.resolve("templates/agency");
+  return path.resolve("templates");
 }
 
 export interface CatalogEntry {

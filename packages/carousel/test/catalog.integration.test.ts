@@ -37,7 +37,7 @@ const dec = new TextDecoder();
 
 /** The repository template under a unique key, so the test never touches real catalog rows. */
 async function testPackage(key: string, version = "1.0.0") {
-  const files = await readTemplateDir(path.join(TEMPLATES, "editoriale-ig-4x5"));
+  const files = await readTemplateDir(path.join(TEMPLATES, "editorial-ig-4x5"));
   const manifest = JSON.parse(dec.decode(files.get("template.json")!));
   files.set("template.json", enc.encode(JSON.stringify({ ...manifest, id: key, version })));
   return files;

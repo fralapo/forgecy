@@ -4,11 +4,11 @@ import { formatIssue, validateTemplatePackage } from "../src/validate";
 import { TEMPLATES, miniPackage } from "./helpers";
 
 describe("validateTemplatePackage", () => {
-  it("accepts every template shipped in templates/agency", async () => {
+  it("accepts every template shipped in templates", async () => {
     const entries = await scanTemplateDir(TEMPLATES);
     expect(entries.map((e) => e.folder).sort()).toEqual([
-      "editoriale-ig-4x5",
-      "editoriale-linkedin",
+      "editorial-ig-4x5",
+      "editorial-linkedin",
       "report-audit-a4",
     ]);
     for (const e of entries) expect(e.report.issues.map(formatIssue), e.folder).toEqual([]);

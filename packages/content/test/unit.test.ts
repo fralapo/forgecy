@@ -14,10 +14,7 @@ import { brandThemeFromIdentity } from "../src/theme";
 const manifest = templateManifestSchema.parse(
   JSON.parse(
     readFileSync(
-      path.resolve(
-        import.meta.dirname,
-        "../../../templates/agency/editoriale-ig-4x5/template.json",
-      ),
+      path.resolve(import.meta.dirname, "../../../templates/editorial-ig-4x5/template.json"),
       "utf8",
     ),
   ),

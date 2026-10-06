@@ -220,16 +220,16 @@ export default async function ProspectOverviewPage({
   const base = `/audit/${slug}`;
   const next: Array<{ href: string; label: string }> = [];
   if (overview.audit.status === "awaiting_competitors" && !overview.audit.competitorsConfirmedAt)
-    next.push({ href: `${base}/competitor`, label: "Conferma la lista dei competitor" });
+    next.push({ href: `${base}/competitors`, label: "Conferma la lista dei competitor" });
   if (overview.counts.observationsToReview)
     next.push({
-      href: `${base}/sito`,
+      href: `${base}/website`,
       label: `Rivedi ${plural(overview.counts.observationsToReview, "osservazione proposta", "osservazioni proposte")}`,
     });
   if (overview.channels.some((c) => c.channel !== "website" && c.status === "pending"))
     next.push({ href: `${base}/social`, label: "Aggiungi i dati dei social" });
   if (overview.counts.observationsUsable && !overview.counts.problems)
-    next.push({ href: `${base}/diagnosi`, label: "Genera la diagnosi" });
+    next.push({ href: `${base}/diagnosis`, label: "Genera la diagnosi" });
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
