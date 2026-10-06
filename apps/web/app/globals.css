@@ -1,0 +1,5 @@
+@import "tailwindcss";
+@import "@forgecy/ui/styles.css";
+
+/* Scan the shared UI package for class names. */
+@source "../../../packages/ui/src";

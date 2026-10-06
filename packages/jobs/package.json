@@ -1,0 +1,27 @@
+{
+  "name": "@forgecy/jobs",
+  "version": "0.1.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@forgecy/core": "workspace:*",
+    "@forgecy/db": "workspace:*",
+    "bullmq": "^6.3.11",
+    "ioredis": "^5.11.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "typescript": "6.0.3",
+    "vitest": "^4.1.11"
+  }
+}

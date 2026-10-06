@@ -1,0 +1,75 @@
+/*
+ * Forgecy base styles. Import AFTER `@import "tailwindcss";` in the app stylesheet:
+ *   @import "tailwindcss";
+ *   @import "@forgecy/ui/styles.css";
+ *   @source "../../../packages/ui/src";
+ */
+@import "./generated/tokens.css";
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--fc-bg-app);
+    color: var(--fc-text-primary);
+    font-family: var(--fc-font-body);
+    font-size: var(--fc-text-body-md-size);
+    line-height: var(--fc-text-body-md-line-height);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--fc-font-display);
+  }
+
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--fc-font-mono);
+  }
+
+  /* Tabular figures for tables and changing numbers */
+  table,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  a {
+    color: var(--fc-text-link);
+  }
+
+  /* 2px Forge Blue focus ring with 2px offset on every interactive element */
+  :focus-visible {
+    outline: var(--fc-line-default) solid var(--fc-focus-ring);
+    outline-offset: var(--fc-line-default);
+  }
+
+  ::selection {
+    background-color: var(--fc-action-primary-bg);
+    color: var(--fc-action-primary-text);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

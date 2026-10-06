@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  TURBO_TELEMETRY_DISABLED: "1"
+
+jobs:
+  checks:
+    name: Lint, typecheck, test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: forgecy
+          POSTGRES_PASSWORD: forgecy
+          POSTGRES_DB: forgecy
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U forgecy -d forgecy"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:8-alpine
+        ports: ["6379:6379"]
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgres://forgecy:forgecy@localhost:5432/forgecy
+      REDIS_URL: redis://localhost:6379
+      FORGECY_TEST_DATABASE_URL: postgres://forgecy:forgecy@localhost:5432/forgecy
+      FORGECY_TEST_REDIS_URL: redis://localhost:6379
+      BETTER_AUTH_SECRET: ci-only-secret-at-least-32-characters-long
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Format
+        run: pnpm format:check
+      - name: Lint (includes Brand Guard rules)
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Design tokens are up to date
+        run: pnpm tokens && git diff --exit-code -- packages/ui/src/generated
+      - name: Migrations
+        run: pnpm db:migrate
+      - name: Schema and migrations are in sync
+        run: |
+          pnpm --filter @forgecy/db exec drizzle-kit check
+          pnpm --filter @forgecy/db exec drizzle-kit generate --name=ci_drift_check
+          git status --porcelain packages/db/migrations | tee /tmp/drift
+          test ! -s /tmp/drift || (echo "Schema changed without a migration: run pnpm db:generate" && exit 1)
+      - name: Test
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+
+  docker:
+    name: Docker image (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [web, worker, migrate]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: ${{ matrix.target }}
+          push: false
+          cache-from: type=gha,scope=${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.target }}

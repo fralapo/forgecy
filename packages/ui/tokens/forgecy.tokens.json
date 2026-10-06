@@ -1,0 +1,709 @@
+{
+  "$description": "Forgecy product identity. Single source of truth (DTCG 2025.10). Edit via PR approved by the Product Owner, then run `pnpm tokens`.",
+  "color": {
+    "$type": "color",
+    "$description": "Reference palette.",
+    "forge-blue": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.1412, 0.3569, 1],
+        "hex": "#245BFF"
+      },
+      "$description": "Forge Blue: primary buttons, selection, focus"
+    },
+    "forge-blue-700": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.0863, 0.2745, 0.8471],
+        "hex": "#1646D8"
+      },
+      "$description": "Forge Blue 700: blue text, links, pressed state"
+    },
+    "porcelain": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.9647, 0.9569, 0.9373],
+        "hex": "#F6F4EF"
+      },
+      "$description": "Warm Porcelain: app background"
+    },
+    "white": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [1, 1, 1],
+        "hex": "#FFFFFF"
+      },
+      "$description": "Card White: surfaces"
+    },
+    "graphite-900": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.0902, 0.0941, 0.1294],
+        "hex": "#171821"
+      },
+      "$description": "Deep Graphite: primary text, dark background"
+    },
+    "graphite-70": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.3333, 0.3451, 0.3922],
+        "hex": "#555864"
+      },
+      "$description": "Graphite 70: secondary text"
+    },
+    "graphite-50": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.502, 0.5137, 0.5529],
+        "hex": "#80838D"
+      },
+      "$description": "Graphite 50: input and control borders"
+    },
+    "gray-grid": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.8471, 0.8549, 0.8667],
+        "hex": "#D8DADD"
+      },
+      "$description": "Gray Grid: dividers only"
+    },
+    "amber": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [1, 0.6902, 0.1255],
+        "hex": "#FFB020"
+      },
+      "$description": "Amber Glow: highlight fill, always with Deep Graphite text"
+    },
+    "green": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0, 0.651, 0.4627],
+        "hex": "#00A676"
+      },
+      "$description": "Verified Green: success fills and icons"
+    },
+    "green-700": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0, 0.4784, 0.3412],
+        "hex": "#007A57"
+      },
+      "$description": "Verified Green 700: success text"
+    },
+    "orange": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.9137, 0.4824, 0.1176],
+        "hex": "#E97B1E"
+      },
+      "$description": "Notice Orange: warning fills and icons"
+    },
+    "orange-700": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.7059, 0.3255, 0.0353],
+        "hex": "#B45309"
+      },
+      "$description": "Notice Orange 700: warning text"
+    },
+    "red": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.8863, 0.2314, 0.2706],
+        "hex": "#E23B45"
+      },
+      "$description": "Alert Red: error fills and icons"
+    },
+    "red-700": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.7686, 0.1686, 0.2078],
+        "hex": "#C42B35"
+      },
+      "$description": "Alert Red 700: error text, destructive buttons"
+    },
+    "dark": {
+      "$description": "Reference colors used only by the dark theme (v1).",
+      "graphite-800": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.1294, 0.1373, 0.1804],
+          "hex": "#21232E"
+        },
+        "$description": "Dark surface"
+      },
+      "graphite-700": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.2039, 0.2157, 0.2745],
+          "hex": "#343746"
+        },
+        "$description": "Dark dividers (decorative)"
+      },
+      "graphite-30": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.6627, 0.6745, 0.7216],
+          "hex": "#A9ACB8"
+        },
+        "$description": "Dark secondary text"
+      },
+      "blue-300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.4784, 0.6078, 1],
+          "hex": "#7A9BFF"
+        },
+        "$description": "Dark link text and focus ring"
+      },
+      "green-300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.2392, 0.8392, 0.6392],
+          "hex": "#3DD6A3"
+        },
+        "$description": "Dark success text"
+      },
+      "orange-300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9608, 0.6196, 0.2941],
+          "hex": "#F59E4B"
+        },
+        "$description": "Dark warning text"
+      },
+      "red-300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [1, 0.4784, 0.5098],
+          "hex": "#FF7A82"
+        },
+        "$description": "Dark error text"
+      }
+    }
+  },
+  "semantic": {
+    "$description": "Semantic tokens. Components use only these. Same paths in every theme.",
+    "light": {
+      "$type": "color",
+      "bg": {
+        "app": {
+          "$value": "{color.porcelain}"
+        },
+        "surface": {
+          "$value": "{color.white}"
+        }
+      },
+      "text": {
+        "primary": {
+          "$value": "{color.graphite-900}"
+        },
+        "secondary": {
+          "$value": "{color.graphite-70}"
+        },
+        "link": {
+          "$value": "{color.forge-blue-700}"
+        }
+      },
+      "border": {
+        "subtle": {
+          "$value": "{color.gray-grid}"
+        },
+        "control": {
+          "$value": "{color.graphite-50}"
+        }
+      },
+      "focus": {
+        "ring": {
+          "$value": "{color.forge-blue}"
+        }
+      },
+      "action": {
+        "primary": {
+          "bg": {
+            "$value": "{color.forge-blue}"
+          },
+          "bg-pressed": {
+            "$value": "{color.forge-blue-700}"
+          },
+          "text": {
+            "$value": "{color.white}"
+          }
+        },
+        "danger": {
+          "bg": {
+            "$value": "{color.red-700}"
+          },
+          "text": {
+            "$value": "{color.white}"
+          }
+        }
+      },
+      "status": {
+        "success": {
+          "fill": {
+            "$value": "{color.green}"
+          },
+          "text": {
+            "$value": "{color.green-700}"
+          }
+        },
+        "warning": {
+          "fill": {
+            "$value": "{color.orange}"
+          },
+          "text": {
+            "$value": "{color.orange-700}"
+          }
+        },
+        "error": {
+          "fill": {
+            "$value": "{color.red}"
+          },
+          "text": {
+            "$value": "{color.red-700}"
+          }
+        }
+      },
+      "accent": {
+        "highlight": {
+          "$value": "{color.amber}"
+        },
+        "on-highlight": {
+          "$value": "{color.graphite-900}"
+        }
+      }
+    },
+    "dark": {
+      "$type": "color",
+      "bg": {
+        "app": {
+          "$value": "{color.graphite-900}"
+        },
+        "surface": {
+          "$value": "{color.dark.graphite-800}"
+        }
+      },
+      "text": {
+        "primary": {
+          "$value": "{color.porcelain}"
+        },
+        "secondary": {
+          "$value": "{color.dark.graphite-30}"
+        },
+        "link": {
+          "$value": "{color.dark.blue-300}"
+        }
+      },
+      "border": {
+        "subtle": {
+          "$value": "{color.dark.graphite-700}"
+        },
+        "control": {
+          "$value": "{color.graphite-50}"
+        }
+      },
+      "focus": {
+        "ring": {
+          "$value": "{color.dark.blue-300}"
+        }
+      },
+      "action": {
+        "primary": {
+          "bg": {
+            "$value": "{color.forge-blue}"
+          },
+          "bg-pressed": {
+            "$value": "{color.forge-blue-700}"
+          },
+          "text": {
+            "$value": "{color.white}"
+          }
+        },
+        "danger": {
+          "bg": {
+            "$value": "{color.red-700}"
+          },
+          "text": {
+            "$value": "{color.white}"
+          }
+        }
+      },
+      "status": {
+        "success": {
+          "fill": {
+            "$value": "{color.green}"
+          },
+          "text": {
+            "$value": "{color.dark.green-300}"
+          }
+        },
+        "warning": {
+          "fill": {
+            "$value": "{color.orange}"
+          },
+          "text": {
+            "$value": "{color.dark.orange-300}"
+          }
+        },
+        "error": {
+          "fill": {
+            "$value": "{color.red}"
+          },
+          "text": {
+            "$value": "{color.dark.red-300}"
+          }
+        }
+      },
+      "accent": {
+        "highlight": {
+          "$value": "{color.amber}"
+        },
+        "on-highlight": {
+          "$value": "{color.graphite-900}"
+        }
+      }
+    }
+  },
+  "font": {
+    "family": {
+      "$type": "fontFamily",
+      "display": {
+        "$value": [
+          "Space Grotesk Variable",
+          "Space Grotesk",
+          "ui-sans-serif",
+          "system-ui",
+          "sans-serif"
+        ]
+      },
+      "body": {
+        "$value": ["Inter Variable", "Inter", "ui-sans-serif", "system-ui", "sans-serif"]
+      },
+      "mono": {
+        "$value": [
+          "JetBrains Mono Variable",
+          "JetBrains Mono",
+          "ui-monospace",
+          "SFMono-Regular",
+          "monospace"
+        ]
+      },
+      "$description": "Self-hosted via Fontsource variable packages (apps/web); plain names and system stacks as fallback."
+    },
+    "scale": {
+      "$type": "typography",
+      "$description": "letterSpacing is stored in px (DTCG dimension) and emitted in em relative to fontSize.",
+      "heading-xl": {
+        "$value": {
+          "fontFamily": "{font.family.display}",
+          "fontSize": {
+            "value": 48,
+            "unit": "px"
+          },
+          "fontWeight": 600,
+          "letterSpacing": {
+            "value": -1.44,
+            "unit": "px"
+          },
+          "lineHeight": 1.06
+        }
+      },
+      "heading-lg": {
+        "$value": {
+          "fontFamily": "{font.family.display}",
+          "fontSize": {
+            "value": 34,
+            "unit": "px"
+          },
+          "fontWeight": 600,
+          "letterSpacing": {
+            "value": -0.68,
+            "unit": "px"
+          },
+          "lineHeight": 1.12
+        }
+      },
+      "heading-md": {
+        "$value": {
+          "fontFamily": "{font.family.display}",
+          "fontSize": {
+            "value": 24,
+            "unit": "px"
+          },
+          "fontWeight": 600,
+          "letterSpacing": {
+            "value": -0.24,
+            "unit": "px"
+          },
+          "lineHeight": 1.18
+        }
+      },
+      "heading-sm": {
+        "$value": {
+          "fontFamily": "{font.family.body}",
+          "fontSize": {
+            "value": 18,
+            "unit": "px"
+          },
+          "fontWeight": 600,
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          },
+          "lineHeight": 1.25
+        }
+      },
+      "body-lg": {
+        "$value": {
+          "fontFamily": "{font.family.body}",
+          "fontSize": {
+            "value": 18,
+            "unit": "px"
+          },
+          "fontWeight": 400,
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          },
+          "lineHeight": 1.55
+        }
+      },
+      "body-md": {
+        "$value": {
+          "fontFamily": "{font.family.body}",
+          "fontSize": {
+            "value": 16,
+            "unit": "px"
+          },
+          "fontWeight": 400,
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          },
+          "lineHeight": 1.5
+        }
+      },
+      "body-sm": {
+        "$value": {
+          "fontFamily": "{font.family.body}",
+          "fontSize": {
+            "value": 14,
+            "unit": "px"
+          },
+          "fontWeight": 400,
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          },
+          "lineHeight": 1.45
+        }
+      },
+      "label": {
+        "$value": {
+          "fontFamily": "{font.family.body}",
+          "fontSize": {
+            "value": 13,
+            "unit": "px"
+          },
+          "fontWeight": 500,
+          "letterSpacing": {
+            "value": 0.39,
+            "unit": "px"
+          },
+          "lineHeight": 1.3
+        }
+      },
+      "mono-md": {
+        "$value": {
+          "fontFamily": "{font.family.mono}",
+          "fontSize": {
+            "value": 14,
+            "unit": "px"
+          },
+          "fontWeight": 500,
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          },
+          "lineHeight": 1.5
+        }
+      }
+    }
+  },
+  "radius": {
+    "$type": "dimension",
+    "sm": {
+      "$value": {
+        "value": 4,
+        "unit": "px"
+      }
+    },
+    "md": {
+      "$value": {
+        "value": 8,
+        "unit": "px"
+      },
+      "$description": "Buttons and inputs"
+    },
+    "lg": {
+      "$value": {
+        "value": 12,
+        "unit": "px"
+      },
+      "$description": "Cards"
+    },
+    "xl": {
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      },
+      "$description": "Modals"
+    }
+  },
+  "space": {
+    "4": {
+      "$value": {
+        "value": 4,
+        "unit": "px"
+      }
+    },
+    "8": {
+      "$value": {
+        "value": 8,
+        "unit": "px"
+      }
+    },
+    "12": {
+      "$value": {
+        "value": 12,
+        "unit": "px"
+      }
+    },
+    "16": {
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      }
+    },
+    "24": {
+      "$value": {
+        "value": 24,
+        "unit": "px"
+      }
+    },
+    "32": {
+      "$value": {
+        "value": 32,
+        "unit": "px"
+      }
+    },
+    "48": {
+      "$value": {
+        "value": 48,
+        "unit": "px"
+      }
+    },
+    "64": {
+      "$value": {
+        "value": 64,
+        "unit": "px"
+      }
+    },
+    "$type": "dimension"
+  },
+  "line": {
+    "$type": "dimension",
+    "hairline": {
+      "$value": {
+        "value": 1,
+        "unit": "px"
+      },
+      "$description": "Dividers"
+    },
+    "default": {
+      "$value": {
+        "value": 2,
+        "unit": "px"
+      },
+      "$description": "Active states and selections"
+    }
+  },
+  "shadow": {
+    "$type": "shadow",
+    "$description": "Only for elements above the page: dropdowns and modals.",
+    "dropdown": {
+      "$value": {
+        "color": {
+          "colorSpace": "srgb",
+          "components": [0.0902, 0.0941, 0.1294],
+          "alpha": 0.12,
+          "hex": "#171821"
+        },
+        "offsetX": {
+          "value": 0,
+          "unit": "px"
+        },
+        "offsetY": {
+          "value": 4,
+          "unit": "px"
+        },
+        "blur": {
+          "value": 12,
+          "unit": "px"
+        },
+        "spread": {
+          "value": 0,
+          "unit": "px"
+        }
+      }
+    },
+    "modal": {
+      "$value": {
+        "color": {
+          "colorSpace": "srgb",
+          "components": [0.0902, 0.0941, 0.1294],
+          "alpha": 0.18,
+          "hex": "#171821"
+        },
+        "offsetX": {
+          "value": 0,
+          "unit": "px"
+        },
+        "offsetY": {
+          "value": 16,
+          "unit": "px"
+        },
+        "blur": {
+          "value": 40,
+          "unit": "px"
+        },
+        "spread": {
+          "value": 0,
+          "unit": "px"
+        }
+      }
+    }
+  },
+  "motion": {
+    "fast": {
+      "$type": "duration",
+      "$value": {
+        "value": 120,
+        "unit": "ms"
+      }
+    },
+    "base": {
+      "$type": "duration",
+      "$value": {
+        "value": 200,
+        "unit": "ms"
+      }
+    },
+    "easing": {
+      "$type": "cubicBezier",
+      "$value": [0.2, 0, 0, 1]
+    }
+  }
+}

@@ -1,0 +1,104 @@
+# Forgecy self-hosted stack. Start with: docker compose up -d
+# Optional profiles: `dev` (Mailpit), `s3` (bundled S3 store), `https` (Caddy).
+name: forgecy
+
+x-app-env: &app-env
+  env_file: .env
+  environment:
+    DATABASE_URL: postgres://${POSTGRES_USER:-forgecy}:${POSTGRES_PASSWORD:-forgecy}@postgres:5432/${POSTGRES_DB:-forgecy}
+    REDIS_URL: redis://redis:6379
+    MEDIA_ROOT: /data/media
+    FORGECY_DATA_DIR: /data
+    FORGECY_BASE_URL: ${FORGECY_BASE_URL:-http://localhost:3000}
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-forgecy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forgecy}
+      POSTGRES_DB: ${POSTGRES_DB:-forgecy}
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build: { context: ., dockerfile: docker/Dockerfile, target: migrate }
+    image: forgecy-migrate:local
+    <<: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  web:
+    build: { context: ., dockerfile: docker/Dockerfile, target: web }
+    image: forgecy-web:local
+    restart: unless-stopped
+    <<: *app-env
+    ports:
+      - "${FORGECY_PORT:-3000}:3000"
+    volumes:
+      - ./data:/data
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  worker:
+    build: { context: ., dockerfile: docker/Dockerfile, target: worker }
+    image: forgecy-worker:local
+    restart: unless-stopped
+    <<: *app-env
+    volumes:
+      - ./data:/data
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  mailpit:
+    image: axllent/mailpit:latest
+    profiles: ["dev"]
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  s3:
+    image: chrislusf/seaweedfs:latest
+    profiles: ["s3"]
+    restart: unless-stopped
+    env_file: .env
+    entrypoint: ["/bin/sh", "/entrypoint-forgecy.sh"]
+    volumes:
+      - ./docker/seaweedfs-entrypoint.sh:/entrypoint-forgecy.sh:ro
+      - ./data/s3:/data
+    ports:
+      - "8333:8333"
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["https"]
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/caddy:/data
+    depends_on: [web]
