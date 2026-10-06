@@ -14,19 +14,9 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auditDeps } from "@/app/(app)/audit/_lib/server";
 import { requireUser } from "@/lib/session";
-
-export type AdminActionResult =
-  { ok: true; message: string } | { ok: false; error: string; code?: string };
+import { deniedResult, type AdminActionResult } from "../_lib/admin-action";
 
 const PATH = "/settings/ai-policies";
-
-async function denied(): Promise<AdminActionResult> {
-  return {
-    ok: false,
-    error: (await getTranslations("admin"))("adminOnly"),
-    code: "PERM-DENIED",
-  };
-}
 
 const policySchema = z.enum(aiPolicies);
 
@@ -38,7 +28,7 @@ export async function setDefaultPolicyAction(policy: AiPolicy): Promise<AdminAct
   try {
     await setDefaultAiPolicy(getDb(), user.actor, parsed.data);
   } catch (err) {
-    if (err instanceof PermissionDeniedError) return denied();
+    if (err instanceof PermissionDeniedError) return deniedResult();
     throw err;
   }
   revalidatePath(PATH);
@@ -69,7 +59,7 @@ export async function setClientPolicyAction(
       message: cancelledJobs ? t("changedCancelled", { count: cancelledJobs }) : t("changed"),
     };
   } catch (err) {
-    if (err instanceof PermissionDeniedError) return denied();
+    if (err instanceof PermissionDeniedError) return deniedResult();
     throw err;
   }
 }
@@ -101,7 +91,7 @@ export async function setBudgetAction(
       parsed.data,
     );
   } catch (err) {
-    if (err instanceof PermissionDeniedError) return denied();
+    if (err instanceof PermissionDeniedError) return deniedResult();
     throw err;
   }
   revalidatePath(PATH);

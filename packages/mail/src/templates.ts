@@ -64,3 +64,25 @@ export async function renderMagicLinkEmail(input: {
 </html>`;
   return { subject, text, html };
 }
+
+/** Test email sent from Settings › Email (SMTP) to check the configuration end to end. */
+export async function renderTestEmail(input: {
+  appName?: string;
+  locale?: Locale;
+  sentBy: string;
+}): Promise<RenderedEmail> {
+  const app = input.appName ?? "Forgecy";
+  const locale = input.locale ?? DEFAULT_LOCALE;
+  const t = getTranslator(locale, "mail");
+  const subject = t("test.subject", { app });
+  const body = t("test.body", { app, name: input.sentBy });
+  const text = [body, "", `— ${app}`].join("\n");
+  const html = `<!doctype html>
+<html lang="${locale}">
+<head><meta charset="utf-8"><title>${escapeHtml(subject)}</title></head>
+<body style="margin:0;padding:24px;background:#f6f6f4;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;">
+<p style="max-width:520px;margin:0 auto;padding:32px;background:#ffffff;border-radius:8px;font-size:16px;line-height:1.5;">${escapeHtml(body)}</p>
+</body>
+</html>`;
+  return { subject, text, html };
+}
