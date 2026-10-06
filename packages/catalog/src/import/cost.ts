@@ -5,6 +5,7 @@ import {
   defaultRoutingFromEnv,
   monthKey,
   type AiEnv,
+  type Routing,
 } from "@forgecy/ai";
 import type { AiPolicy, MessageRef } from "@forgecy/core";
 import { englishMessage, messageRef } from "@forgecy/i18n";
@@ -26,7 +27,8 @@ export interface AiSetup {
 }
 
 /** Which model an import would use for this client, or why none. */
-export function importAiSetup(env: AiEnv, policy: AiPolicy): AiSetup {
+/** `routing`: the current routing (Admin settings); defaults to the environment's. */
+export function importAiSetup(env: AiEnv, policy: AiPolicy, routing?: Routing): AiSetup {
   const avail = aiAvailability(policy, env.LOCAL_LLM_ENABLED);
   if (!avail.available)
     return { available: false, reason: avail.reason, reasonRef: avail.reasonRef };
@@ -41,7 +43,7 @@ export function importAiSetup(env: AiEnv, policy: AiPolicy): AiSetup {
       reason: englishMessage("products.ai.noProvider"),
       reasonRef: messageRef("products.ai.noProvider"),
     };
-  const route = defaultRoutingFromEnv(env, providers);
+  const route = routing ?? defaultRoutingFromEnv(env, providers);
   const ref = route.tasks?.catalog_extract?.primary ?? route.default.primary;
   return { available: true, provider: ref.provider, model: ref.model };
 }

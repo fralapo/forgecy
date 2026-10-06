@@ -1,7 +1,6 @@
 import type { Env, ProviderId } from "@forgecy/core";
 import { and, eq, mcpConnections, type Database } from "@forgecy/db";
-import type { ImageProvider, ModelRef } from "../types";
-import { imageModelFor, imageProviderOrder, type ImageProviderId } from "../registry";
+import type { ImageProvider } from "../types";
 import { createMcpToolCaller } from "./client";
 import { createHiggsfieldImageProvider, createWeaveImageProvider } from "./images";
 import { StoredMcpOAuthProvider } from "./oauth";
@@ -89,19 +88,4 @@ export async function isMcpConnected(db: Database, provider: McpImageProviderId)
     .from(mcpConnections)
     .where(and(eq(mcpConnections.provider, provider), eq(mcpConnections.status, "connected")));
   return !!row;
-}
-
-/**
- * The full image route in IMAGE_PROVIDERS order: providers configured by key (`keyed`)
- * plus the MCP ones connected right now.
- */
-export async function imageRouteWithMcp(
-  db: Database,
-  env: McpEnv,
-  keyed: readonly ProviderId[],
-): Promise<ModelRef[]> {
-  const connected = env.FORGECY_ENCRYPTION_KEY ? await connectedMcpProviders(db) : new Set();
-  return imageProviderOrder(env)
-    .filter((p: ImageProviderId) => (isMcpImageProvider(p) ? connected.has(p) : keyed.includes(p)))
-    .map((p) => ({ provider: p, model: imageModelFor(p, env) }));
 }

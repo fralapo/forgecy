@@ -61,7 +61,8 @@ export interface GatewayLogger {
 export interface GatewayOptions {
   ledger: AiLedger;
   providers: ProviderSet;
-  routing: Routing;
+  /** Fixed routing, or a function read before every request (Admin settings in the DB). */
+  routing: Routing | (() => Promise<Routing>);
   logger?: GatewayLogger;
   now?: () => Date;
   imagePollIntervalMs?: number;
@@ -196,7 +197,9 @@ const sleep = (ms: number, signal?: AbortSignal) =>
   });
 
 export function createAiGateway(opts: GatewayOptions): AiGateway {
-  const { ledger, providers, routing, logger } = opts;
+  const { ledger, providers, logger } = opts;
+  const currentRouting = async (): Promise<Routing> =>
+    typeof opts.routing === "function" ? opts.routing() : opts.routing;
   const now = opts.now ?? (() => new Date());
   const pollMs = opts.imagePollIntervalMs ?? 2_000;
 
@@ -369,6 +372,7 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
 
   return {
     async generateObject<T>(req: GenerateObjectRequest<T>): Promise<GenerateObjectResult<T>> {
+      const routing = await currentRouting();
       const route = req.route ?? routing.tasks?.[req.task] ?? routing.default;
       const jsonSchema = zodToJsonSchema(req.schema);
       const schemaName = req.schemaName ?? req.task;
@@ -557,6 +561,7 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
 
     async generateImage(req: GenerateImageRequest): Promise<GenerateImageResult> {
       const kind = "image";
+      const routing = await currentRouting();
       const route = req.route ?? routing.image;
       if (!route) throw new ForgecyError("unavailable", "No image provider route configured");
       const summary = summarize(kind, req, { prompt: req.prompt });

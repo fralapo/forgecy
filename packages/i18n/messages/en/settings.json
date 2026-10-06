@@ -92,6 +92,27 @@
         "noEncryptionKey": "Set FORGECY_ENCRYPTION_KEY in .env first: it encrypts the login tokens.",
         "startFailed": "The provider did not accept the connection. Check the server address in .env and try again."
       }
+    },
+    "routing": {
+      "title": "Services and models",
+      "description": "Choose which service and which model Forgecy uses. Changes apply to new jobs within a few seconds.",
+      "inUse": "In use now",
+      "textInUse": "Text: {model}",
+      "imageInUse": "Images: {model}",
+      "noImage": "Images: no provider ready",
+      "textTitle": "Text (audits, strategy, slides, review)",
+      "provider": "Service",
+      "model": "Model",
+      "fallbackProvider": "Fallback service",
+      "none": "None",
+      "modelHint": "Leave the model empty for the service’s default. With OpenRouter use its model ids, e.g. deepseek/deepseek-chat or openai/gpt-6.1-sol.",
+      "imagesTitle": "Images",
+      "imagesHint": "Number the services in the order to try them; the first two ready ones are used (primary and fallback). “Off” never uses that service.",
+      "position": "Order",
+      "off": "Off",
+      "notReady": "{name} (not configured)",
+      "saved": "Choices saved.",
+      "invalid": "Check the choices: each service can appear only once."
     }
   }
 }

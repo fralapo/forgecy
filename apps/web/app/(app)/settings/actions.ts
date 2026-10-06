@@ -1,6 +1,12 @@
 "use server";
 
-import { beginMcpConnection, disconnectMcp, mcpImageProviderIds } from "@forgecy/ai";
+import {
+  beginMcpConnection,
+  disconnectMcp,
+  imageProviderIds,
+  mcpImageProviderIds,
+  saveAiRoutingSettings,
+} from "@forgecy/ai";
 import { setCommercialUse } from "@forgecy/content";
 import { assertCan, ForgecyError, localeSchema, PermissionDeniedError } from "@forgecy/core";
 import { eq, getDb, users } from "@forgecy/db";
@@ -111,4 +117,47 @@ export async function disconnectMcpAction(form: FormData): Promise<void> {
   const provider = mcpProviderSchema.parse(form.get("provider"));
   await disconnectMcp(getDb(), admin.actor, provider);
   revalidatePath("/settings/ai-providers");
+}
+
+export type RoutingState = { error?: string; ok?: boolean };
+
+/** “Services and models”: which provider and model each kind of work uses. */
+export async function saveRoutingAction(
+  _prev: RoutingState,
+  form: FormData,
+): Promise<RoutingState> {
+  const admin = await requireUser();
+  const str = (k: string) => String(form.get(k) ?? "").trim();
+  const images = imageProviderIds
+    .map((p) => ({
+      provider: p,
+      model: str(`image.${p}.model`),
+      position: str(`image.${p}.position`),
+    }))
+    .filter((i) => i.position !== "")
+    .sort((a, b) => Number(a.position) - Number(b.position))
+    .map(({ provider, model }) => ({ provider, model }));
+  const fallbackProvider = str("text.fallback.provider");
+  const input = {
+    text: {
+      provider: str("text.provider"),
+      model: str("text.model"),
+      ...(fallbackProvider
+        ? { fallback: { provider: fallbackProvider, model: str("text.fallback.model") } }
+        : {}),
+    },
+    images,
+  };
+  try {
+    await saveAiRoutingSettings(getDb(), admin.actor, input);
+  } catch (err) {
+    if (err instanceof PermissionDeniedError)
+      return { error: (await getTranslations("errors"))("adminOnly") };
+    if (err instanceof ForgecyError && err.code === "validation")
+      return { error: (await getTranslations("settings.aiProviders.routing"))("invalid") };
+    throw err;
+  }
+  revalidatePath("/settings/ai-providers");
+  revalidatePath("/settings");
+  return { ok: true };
 }

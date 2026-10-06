@@ -19,3 +19,4 @@ export * from "./mcp/client";
 export * from "./mcp/images";
 export * from "./mcp/registry";
 export * from "./mcp/connections";
+export * from "./routing-settings";

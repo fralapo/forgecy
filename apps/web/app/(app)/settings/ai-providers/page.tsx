@@ -1,8 +1,13 @@
 import {
+  defaultModelFor,
   imageModelFor,
+  imageProviderIds,
   imageProviderOrder,
   isMcpImageProvider,
   listMcpConnections,
+  loadAiRoutingSettings,
+  textProviderIds,
+  type TextProviderId,
 } from "@forgecy/ai";
 import { getCommercialUseReviews, type ImageProvider } from "@forgecy/content";
 import { getDb } from "@forgecy/db";
@@ -10,11 +15,13 @@ import { Badge, Card } from "@forgecy/ui";
 import { BadgeCheck, Hourglass, XCircle } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
+import { currentRouting } from "@/lib/ai";
 import { env } from "@/lib/env";
 import { getFormat } from "@/lib/i18n";
 import { requireUser } from "@/lib/session";
 import { CommercialUseForm } from "./commercial-use-form";
 import { McpConnection } from "./mcp-connection";
+import { RoutingForm } from "./routing-form";
 
 export async function generateMetadata() {
   const t = await getTranslations("settings.aiProviders");
@@ -34,6 +41,22 @@ const keyReady: Partial<Record<ImageProvider, boolean>> = {
   openai: Boolean(env.OPENAI_API_KEY),
   google: Boolean(env.GOOGLE_AI_API_KEY),
   openrouter: Boolean(env.OPENROUTER_API_KEY),
+};
+
+const textNames: Record<TextProviderId, string> = {
+  anthropic: "Anthropic",
+  openai: "OpenAI",
+  openrouter: "OpenRouter",
+  deepseek: "DeepSeek",
+  local: "",
+};
+
+const textReady: Record<TextProviderId, boolean> = {
+  anthropic: Boolean(env.ANTHROPIC_API_KEY),
+  openai: Boolean(env.OPENAI_API_KEY),
+  openrouter: Boolean(env.OPENROUTER_API_KEY),
+  deepseek: Boolean(env.DEEPSEEK_API_KEY),
+  local: env.LOCAL_LLM_ENABLED,
 };
 
 const mcpStatusBadge = {
@@ -72,11 +95,25 @@ export default async function AiProvidersPage({
   const connections = await listMcpConnections(getDb());
   const ready = (p: ImageProvider) =>
     isMcpImageProvider(p) ? connections.get(p)?.status === "connected" : !!keyReady[p];
-  // Order from IMAGE_PROVIDERS; the first two ready providers are primary and fallback.
-  const order = imageProviderOrder(env);
-  const configured = order.filter(ready);
+  const tr = await getTranslations("settings.aiProviders.routing");
+  const settings = await loadAiRoutingSettings(getDb());
+  const { routing, images: imageRoute } = await currentRouting();
+  // The first two usable image providers in the chosen order are primary and fallback.
   const roleOf = (p: ImageProvider) =>
-    configured[0] === p ? "primary" : configured[1] === p ? "secondary" : "unused";
+    imageRoute[0]?.provider === p
+      ? "primary"
+      : imageRoute[1]?.provider === p
+        ? "secondary"
+        : "unused";
+  const chosenImages =
+    settings.images ?? imageProviderOrder(env).map((provider) => ({ provider, model: "" }));
+  // Cards in the chosen order, then the providers switched off.
+  const order: ImageProvider[] = [
+    ...chosenImages.map((i) => i.provider),
+    ...imageProviderIds.filter((p) => !chosenImages.some((i) => i.provider === p)),
+  ];
+  const ref = (m: { provider: string; model: string } | undefined) =>
+    m ? `${m.provider} · ${m.model}` : "";
 
   return (
     <>
@@ -89,6 +126,39 @@ export default async function AiProvidersPage({
           {tm(`result.${mcpResult}`)}
         </p>
       ) : null}
+      <Card className="mb-6 grid gap-4 p-6">
+        <div>
+          <h2 className="text-heading-sm text-fg">{tr("title")}</h2>
+          <p className="text-body-sm text-fg-muted">{tr("description")}</p>
+        </div>
+        <div className="grid gap-1 text-body-sm">
+          <span className="text-fg-muted">{tr("inUse")}</span>
+          <span className="font-mono text-fg">
+            {tr("textInUse", { model: ref(routing.default.primary) })}
+          </span>
+          <span className="font-mono text-fg">
+            {imageRoute[0] ? tr("imageInUse", { model: ref(imageRoute[0]) }) : tr("noImage")}
+          </span>
+        </div>
+        <RoutingForm
+          text={textProviderIds.map((id) => ({
+            id,
+            name: id === "local" ? tp("localModel") : textNames[id],
+            ready: textReady[id],
+            defaultModel: defaultModelFor(id, env),
+          }))}
+          images={imageProviderIds.map((id) => ({
+            id,
+            name: providerNames[id],
+            ready: ready(id),
+            defaultModel: imageModelFor(id, env),
+          }))}
+          initial={{
+            text: settings.text ?? { provider: env.AI_DEFAULT_PROVIDER, model: "" },
+            images: chosenImages,
+          }}
+        />
+      </Card>
       <div className="grid gap-6 lg:grid-cols-2">
         {order.map((p) => {
           const isReady = ready(p);
@@ -102,7 +172,9 @@ export default async function AiProvidersPage({
                 <div>
                   <h2 className="text-heading-sm text-fg">{providerNames[p]}</h2>
                   <p className="text-body-sm text-fg-muted">{t(roleOf(p))}</p>
-                  <p className="font-mono text-body-sm text-fg-muted">{imageModelFor(p, env)}</p>
+                  <p className="font-mono text-body-sm text-fg-muted">
+                    {imageRoute.find((r) => r.provider === p)?.model ?? imageModelFor(p, env)}
+                  </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {isMcpImageProvider(p) ? (
