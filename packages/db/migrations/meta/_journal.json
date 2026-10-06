@@ -99,6 +99,13 @@
       "when": 1791301795658,
       "tag": "0015_client_approved_providers",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791302945273,
+      "tag": "0016_brand_book_exports",
+      "breakpoints": true
     }
   ]
 }

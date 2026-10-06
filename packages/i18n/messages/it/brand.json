@@ -8,7 +8,8 @@
     "sources": "Fonti · Brand Identity",
     "proposals": "Proposte · Brand Identity",
     "versions": "Versioni · Brand Identity",
-    "approval": "Approvazione · Brand Identity"
+    "approval": "Approvazione · Brand Identity",
+    "book": "Brand Book · Brand Identity"
   },
   "picker": {
     "description": "Scegli un cliente per vederne la Brand Identity.",
@@ -44,7 +45,8 @@
     "content": "Contenuti",
     "sources": "Fonti",
     "proposals": "Proposte",
-    "versions": "Versioni"
+    "versions": "Versioni",
+    "book": "Brand Book"
   },
   "blocks": {
     "strategy": "Strategia",
@@ -803,6 +805,53 @@
       "fieldChanged": "Il campo è cambiato dopo la proposta",
       "restored": "La bozza v{number} è stata sostituita da un ripristino",
       "sourceRemoved": "La fonte della proposta è stata rimossa"
+    }
+  },
+  "book": {
+    "systemTitle": "Internal Brand System",
+    "systemIntro": "Uno ZIP per l'agenzia e i suoi agenti: l'identità in JSON, i token di design, le regole per gli agenti, le fonti e la confidenza di ogni campo. Nasce da una versione approvata, mai da una bozza.",
+    "internalWarning": "Contiene regole interne e prompt: non condividerlo con il cliente.",
+    "version": "Versione della Brand Identity",
+    "versionPublished": "Versione {number} · pubblicata il {date}",
+    "versionArchived": "Versione {number} · archiviata (pubblicata il {date})",
+    "files": "File",
+    "filesHint": "README.md è sempre incluso.",
+    "parts": {
+      "identity": "Brand Identity",
+      "tokens": "Token di design (piatti, DTCG e CSS)",
+      "agent_rules": "Regole che ricevono gli agenti",
+      "sources": "Fonti",
+      "scores": "Confidenza di ogni campo",
+      "examples": "Esempi approvati e rifiutati",
+      "changelog": "Cronologia delle modifiche",
+      "assets": "File del logo e dei font"
+    },
+    "generate": "Genera ZIP",
+    "generating": "Generazione in corso…",
+    "generated": "BB-{number} è pronto: scaricalo dall'elenco.",
+    "noPublished": "Ancora niente da esportare: prima pubblica una versione della Brand Identity.",
+    "historyTitle": "Export",
+    "historyEmpty": "Nessun export.",
+    "colExport": "Export",
+    "colDetails": "Dettagli",
+    "number": "BB-{number}",
+    "type": {
+      "client_book": "Brand Book",
+      "brand_system": "Brand System"
+    },
+    "status": {
+      "draft": "Bozza",
+      "approved": "Approvato",
+      "exported": "Esportato",
+      "superseded": "Sostituito"
+    },
+    "fromVersion": "Dalla versione {number} della Brand Identity",
+    "createdBy": "Di {name} il {date}",
+    "partCount": "{count, plural, one {# parte} other {# parti}}",
+    "download": "Scarica",
+    "errors": {
+      "noParts": "Scegli almeno un file da includere.",
+      "noPublished": "Questa versione non è approvata: si esportano solo versioni pubblicate o archiviate."
     }
   }
 }

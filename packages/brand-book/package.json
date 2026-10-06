@@ -1,0 +1,30 @@
+{
+  "name": "@forgecy/brand-book",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@forgecy/brand": "workspace:*",
+    "@forgecy/core": "workspace:*",
+    "@forgecy/db": "workspace:*",
+    "@forgecy/files": "workspace:*",
+    "@forgecy/i18n": "workspace:*",
+    "@forgecy/ui": "workspace:*",
+    "fflate": "^0.8.3",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "typescript": "6.0.3",
+    "vitest": "^4.1.11"
+  }
+}

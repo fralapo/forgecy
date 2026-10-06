@@ -11,3 +11,4 @@ export * from "./brand";
 export * from "./content";
 export * from "./catalog";
 export * from "./brand-guard";
+export * from "./brand-book";

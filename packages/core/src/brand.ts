@@ -51,3 +51,13 @@ export type BrandExampleKind = (typeof brandExampleKinds)[number];
 
 export const brandExampleVerdicts = ["approved", "rejected"] as const;
 export type BrandExampleVerdict = (typeof brandExampleVerdicts)[number];
+
+/**
+ * Brand Book exports (v1): the client-facing PDF and the Internal Brand System ZIP.
+ * The PDF goes through draft → approved → exported; the ZIP is born `exported`.
+ */
+export const brandBookTypes = ["client_book", "brand_system"] as const;
+export type BrandBookType = (typeof brandBookTypes)[number];
+
+export const brandBookStatuses = ["draft", "approved", "exported", "superseded"] as const;
+export type BrandBookStatus = (typeof brandBookStatuses)[number];

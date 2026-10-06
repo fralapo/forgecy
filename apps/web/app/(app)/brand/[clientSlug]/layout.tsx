@@ -42,6 +42,7 @@ export default async function BrandLayout({
       count: ws.proposalCounts.proposed ?? 0,
     },
     { href: `${base}/versions`, label: t("tabs.versions") },
+    { href: `${base}/book`, label: t("tabs.book") },
   ];
   const editor = draft ? names.get(draft.lastEditedBy ?? draft.createdBy ?? "") : undefined;
 
