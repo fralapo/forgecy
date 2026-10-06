@@ -1,8 +1,9 @@
-import { ForgecyError } from "@forgecy/core";
+import { DEFAULT_LOCALE, ForgecyError, type Locale } from "@forgecy/core";
 import { parseHTML } from "linkedom";
 import { type BrandTheme, NEUTRAL_BRAND } from "./brand";
 import { fontFaceRule, fontStack, inlineCss, resolvePackagePath } from "./css";
 import { FORMATS } from "./formats";
+import { templateTexts, type TemplateTexts } from "./labels";
 import { type TemplatePackage, packageFileDataUrl, readText } from "./package";
 import { ALLOWED_ELEMENTS, isAllowedAttribute, isDangerousValue } from "./sanitize";
 import type { ImageRef, Slide, SlotValue } from "./slide-schema";
@@ -28,6 +29,8 @@ export interface RenderSlideInput {
   brand?: BrandTheme;
   assets?: ResolvedAssets;
   options?: RenderOptions;
+  /** Language of the deliverable: printed labels and `lang`. English when omitted. */
+  language?: Locale;
 }
 
 export interface RenderedSlide {
@@ -166,6 +169,14 @@ function fillSlots(
   }
 }
 
+/** Printed labels (`data-fc-text`) in the deliverable's language; the layout's text is the last fallback. */
+function fillLabels(root: El, texts: TemplateTexts): void {
+  for (const el of [...root.querySelectorAll("[data-fc-text]")] as El[]) {
+    const text = texts[el.getAttribute("data-fc-text") ?? ""];
+    if (text !== undefined) el.textContent = text;
+  }
+}
+
 function fillAuto(
   root: El,
   pkg: TemplatePackage,
@@ -239,7 +250,7 @@ function buildCss(
  * Pure and synchronous: the same input always yields the same string.
  */
 export function renderSlideHtml(input: RenderSlideInput): RenderedSlide {
-  const { pkg, slide, index = 0, total = 1, options = {} } = input;
+  const { pkg, slide, index = 0, total = 1, options = {}, language = DEFAULT_LOCALE } = input;
   const brand = input.brand ?? NEUTRAL_BRAND;
   const assets = input.assets ?? new Map<string, string>();
   const m = pkg.manifest;
@@ -258,6 +269,7 @@ export function renderSlideHtml(input: RenderSlideInput): RenderedSlide {
   sanitize(root, pkg, layout.file);
   fillSlots(document, root, layout, slide, pkg, assets, warnings);
   fillAuto(root, pkg, brand, assets, index, total);
+  fillLabels(root, templateTexts(pkg, language));
 
   root.setAttribute("data-template", m.id);
   root.setAttribute("data-format", m.format);
@@ -288,8 +300,8 @@ export function renderSlideHtml(input: RenderSlideInput): RenderedSlide {
   const title = document.createElement("title");
   title.textContent = `${m.name} · ${layout.name} · ${index + 1}`;
   const html =
-    // Slide copy is the client's deliverable, English by default.
-    `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
+    // Slide copy is the client's deliverable, in the deliverable's language.
+    `<!doctype html><html lang="${language}"><head><meta charset="utf-8">` +
     `<meta http-equiv="Content-Security-Policy" content="${RENDER_CSP}">` +
     `<meta name="viewport" content="width=${m.width}">${title.outerHTML}` +
     `<style>${css}</style></head><body>${root.outerHTML}</body></html>`;

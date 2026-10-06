@@ -1,0 +1,19 @@
+{
+  "draftWatermark": "Bozza",
+  "auditReport": {
+    "kicker": "Audit di comunicazione",
+    "title": "La comunicazione di =={name}==",
+    "subtitle": "Sito, social e competitor: cosa funziona, cosa no e da dove partire.",
+    "problem": "Problema {number}",
+    "finding": "{section} · {number}",
+    "priority": {
+      "high": "Priorità alta",
+      "medium": "Priorità media",
+      "low": "Priorità bassa"
+    },
+    "noEvidence": "Osservazione dell'agenzia",
+    "fromCauses": "Nasce dalle osservazioni elencate qui sotto.",
+    "noRecommendation": "Da approfondire insieme nella call di restituzione.",
+    "noSteps": "Fissiamo una call per decidere insieme le priorità."
+  }
+}

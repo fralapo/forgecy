@@ -62,6 +62,7 @@ async function runExport(deps: CarouselHandlerDeps, p: CarouselExportPayload, ct
       assets,
       outputs: p.outputs,
       draft: p.draft,
+      language: p.language,
       meta: { client: p.client, content: p.content, version: p.version, ...p.metadata },
       texts: { caption: p.caption, hashtags: p.hashtags },
       onProgress: (percent) => ctx.progress(percent),

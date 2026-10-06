@@ -29,8 +29,8 @@ describe("createFormat", () => {
 
 describe("getTranslator", () => {
   it("renders ICU plurals in each language", async () => {
-    const en = await getTranslator("en", "mail");
-    const it = await getTranslator("it", "mail");
+    const en = getTranslator("en", "mail");
+    const it = getTranslator("it", "mail");
     expect(en("magicLink.expires", { minutes: 1 })).toContain("1 minute.");
     expect(it("magicLink.expires", { minutes: 15 })).toContain("15 minuti.");
   });

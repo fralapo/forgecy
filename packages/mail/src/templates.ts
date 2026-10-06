@@ -25,7 +25,7 @@ export async function renderMagicLinkEmail(input: {
 }): Promise<RenderedEmail> {
   const app = input.appName ?? "Forgecy";
   const locale = input.locale ?? DEFAULT_LOCALE;
-  const t = await getTranslator(locale, "mail");
+  const t = getTranslator(locale, "mail");
   const minutes = input.minutes;
   const subject = t("magicLink.subject", { app });
   const text = [

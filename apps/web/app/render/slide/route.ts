@@ -1,6 +1,7 @@
 import { brandThemeSchema, renderSlideHtml, slideSchema } from "@forgecy/carousel";
 import { collectAssetKeys, resolveAssets } from "@forgecy/carousel/node";
-import { assertCan } from "@forgecy/core";
+import { assertCan, DEFAULT_LOCALE, localeSchema } from "@forgecy/core";
+import { getTranslator } from "@forgecy/i18n";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withUser } from "@/lib/api";
@@ -17,6 +18,8 @@ const bodySchema = z.object({
   brand: brandThemeSchema.optional(),
   /** Required as soon as the slide or the brand points at stored assets. */
   clientId: z.uuid().optional(),
+  /** Language of the deliverable: printed labels and the draft watermark. */
+  language: localeSchema.default(DEFAULT_LOCALE),
   options: z
     .object({
       showSafeZone: z.boolean().default(false),
@@ -54,7 +57,13 @@ export const POST = withUser(async (user, request: Request) => {
     total: body.total,
     ...(body.brand ? { brand: body.brand } : {}),
     ...(assets ? { assets } : {}),
-    options: body.options,
+    options: {
+      ...body.options,
+      ...(body.options.watermark
+        ? { watermark: getTranslator(body.language, "deliverable")("draftWatermark") }
+        : {}),
+    },
+    language: body.language,
   });
   return slideResponse(html);
 });

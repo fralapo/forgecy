@@ -1,0 +1,19 @@
+{
+  "draftWatermark": "Draft",
+  "auditReport": {
+    "kicker": "Communication audit",
+    "title": "How =={name}== communicates",
+    "subtitle": "Website, social media and competitors: what works, what does not, where to start.",
+    "problem": "Problem {number}",
+    "finding": "{section} · {number}",
+    "priority": {
+      "high": "High priority",
+      "medium": "Medium priority",
+      "low": "Low priority"
+    },
+    "noEvidence": "Agency observation",
+    "fromCauses": "It comes from the observations listed below.",
+    "noRecommendation": "To be discussed together in the follow-up call.",
+    "noSteps": "Let's schedule a call to agree on the priorities."
+  }
+}

@@ -1,65 +1,16 @@
 import type { LayoutDef, SlideInput, SlideRole, TemplateManifest } from "@forgecy/carousel";
-import type { Level } from "@forgecy/core";
+import type { Level, Locale } from "@forgecy/core";
+import { createFormat, getTranslator } from "@forgecy/i18n";
 import type { ReportDocItem, ReportDocSection, ReportDocument } from "../service/reports";
 import { fitText } from "./text";
 
-// Per-language texts of the client deliverable: the `it` entry stays Italian.
-const TEXT = {
-  it: {
-    kicker: "Audit di comunicazione",
-    title: (name: string) => `La comunicazione di ==${name}==`,
-    subtitle: "Sito, social e competitor: cosa funziona, cosa no e da dove partire.",
-    problem: (n: number) => `Problema ${n}`,
-    finding: (section: string, n: number) => `${section} · ${n}`,
-    priority: { high: "Priorità alta", medium: "Priorità media", low: "Priorità bassa" },
-    noEvidence: "Osservazione dell'agenzia",
-    fromCauses: "Nasce dalle osservazioni elencate qui sotto.",
-    noRecommendation: "Da approfondire insieme nella call di restituzione.",
-    noSteps: "Fissiamo una call per decidere insieme le priorità.",
-    months: [
-      "gennaio",
-      "febbraio",
-      "marzo",
-      "aprile",
-      "maggio",
-      "giugno",
-      "luglio",
-      "agosto",
-      "settembre",
-      "ottobre",
-      "novembre",
-      "dicembre",
-    ],
-  },
-  en: {
-    kicker: "Communication audit",
-    title: (name: string) => `How ==${name}== communicates`,
-    subtitle: "Website, social media and competitors: what works, what does not, where to start.",
-    problem: (n: number) => `Problem ${n}`,
-    finding: (section: string, n: number) => `${section} · ${n}`,
-    priority: { high: "High priority", medium: "Medium priority", low: "Low priority" },
-    noEvidence: "Agency observation",
-    fromCauses: "It comes from the observations listed below.",
-    noRecommendation: "To be discussed together in the follow-up call.",
-    noSteps: "Let's schedule a call to agree on the priorities.",
-    months: [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ],
-  },
-} as const;
+/** Texts of the client deliverable, in the report's language (packages/i18n, `deliverable`). */
+type Text = ReturnType<typeof deliverableText>;
 
-type Text = (typeof TEXT)["it" | "en"];
+function deliverableText(language: Locale) {
+  return getTranslator(language, "deliverable");
+}
+
 type Values = Record<string, string | string[] | undefined>;
 
 /** Fit values to the limits the template declares; empty values are left out. */
@@ -95,7 +46,7 @@ export interface ReportSlides {
  * report template with the same roles works too.
  */
 export function reportSlides(doc: ReportDocument, template: TemplateManifest): ReportSlides {
-  const t = TEXT[doc.language];
+  const t = deliverableText(doc.language);
   const byRole = (role: SlideRole) => {
     const layout = template.layouts.find((l) => l.role === role);
     if (!layout) throw new Error(`The template has no “${role}” page`);
@@ -109,15 +60,18 @@ export function reportSlides(doc: ReportDocument, template: TemplateManifest): R
   const method = byRole("method");
 
   const [year, month] = doc.date.split("-").map(Number);
-  const date = year && month ? `${t.months[month - 1]} ${year}` : doc.date;
+  const date =
+    year && month
+      ? createFormat(doc.language, "UTC").date(Date.UTC(year, month - 1, 15), "month")
+      : doc.date;
   const coverSection = doc.sections.find((s) => s.key === "cover");
   const head: SlideInput[] = [
     fitSlot(
       cover,
       {
-        kicker: t.kicker,
-        title: t.title(fitText(doc.prospect.name, 40)),
-        subtitle: coverSection?.intro || t.subtitle,
+        kicker: t("auditReport.kicker"),
+        title: t("auditReport.title", { name: fitText(doc.prospect.name, 40) }),
+        subtitle: coverSection?.intro || t("auditReport.subtitle"),
         client: doc.prospect.name,
         date,
         prepared_by: doc.agency.name ?? undefined,
@@ -146,7 +100,7 @@ export function reportSlides(doc: ReportDocument, template: TemplateManifest): R
           fitSlot(nextSteps, {
             title: s.title,
             intro: s.intro,
-            steps: s.bullets.length ? s.bullets : [t.noSteps],
+            steps: s.bullets.length ? s.bullets : [t("auditReport.noSteps")],
           }),
         ],
         pages: [],
@@ -187,12 +141,12 @@ export function reportSlides(doc: ReportDocument, template: TemplateManifest): R
 
 function problemPage(layout: LayoutDef, item: ReportDocItem, i: number, t: Text): SlideInput {
   return fitSlot(layout, {
-    label: t.problem(i + 1),
+    label: t("auditReport.problem", { number: i + 1 }),
     title: item.title,
     description:
       item.description ||
       item.recommendation ||
-      (item.causes.length ? t.fromCauses : t.noRecommendation),
+      t(item.causes.length ? "auditReport.fromCauses" : "auditReport.noRecommendation"),
     impact: item.impact ?? undefined,
     causes: item.causes,
   });
@@ -206,11 +160,11 @@ function findingPage(
   t: Text,
 ): SlideInput {
   return fitSlot(layout, {
-    label: t.finding(s.title, i + 1),
-    severity: t.priority[item.priority as Level],
+    label: t("auditReport.finding", { section: s.title, number: i + 1 }),
+    severity: t(`auditReport.priority.${item.priority as Level}`),
     title: item.title,
     description: item.description || item.impact || item.title,
-    evidence: item.evidence.length ? item.evidence.join(" · ") : t.noEvidence,
-    recommendation: item.recommendation || item.impact || t.noRecommendation,
+    evidence: item.evidence.length ? item.evidence.join(" · ") : t("auditReport.noEvidence"),
+    recommendation: item.recommendation || item.impact || t("auditReport.noRecommendation"),
   });
 }
