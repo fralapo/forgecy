@@ -15,7 +15,8 @@ import { getTranslations } from "next-intl/server";
 import { ProposalList, type ProposalView } from "../../_components/proposal-list";
 import { brandPath, fieldMessageKey } from "../../_lib/labels";
 import { loadBrand, openConflicts, shownVersion, sourcesFor, userNames } from "../../_lib/server";
-import { getFormat, refText } from "@/lib/i18n";
+import { getFormat, getRefText, refText } from "@/lib/i18n";
+import { importTextRef } from "../../_lib/stored-text";
 
 export async function generateMetadata() {
   const t = await getTranslations("brand.meta");
@@ -34,6 +35,7 @@ export default async function ProposalsPage({
   const [{ clientSlug }, sp] = await Promise.all([params, searchParams]);
   const t = await getTranslations("brand");
   const root = await getTranslations();
+  const rt = await getRefText();
   const format = await getFormat();
   const { db, user, client, ws } = await loadBrand(clientSlug);
   const status = statuses.find((s) => s === sp.status) ?? "proposed";
@@ -83,7 +85,7 @@ export default async function ProposalsPage({
       const autoTitle = p.title === fieldLabel(p.fieldPath) ? fieldTitle(p.fieldPath) : null;
       return {
         id: p.id,
-        title: autoTitle ?? p.title,
+        title: autoTitle ?? rt(p.titleRef ?? importTextRef(p.title), p.title),
         block: match ? t(`blocks.${match.field.block}`) : t("blocks.other"),
         fieldPath: p.fieldPath,
         status: p.status,
@@ -94,7 +96,9 @@ export default async function ProposalsPage({
             : (names.get(p.authorUserId ?? "") ?? t("proposals.person")),
         authorType: p.authorType,
         createdAt: format.date(p.createdAt, "dateTime"),
-        rationale: p.rationale,
+        rationale: p.rationale
+          ? rt(p.rationaleRef ?? importTextRef(p.rationale), p.rationale)
+          : null,
         proposed,
         current,
         editable:
@@ -115,8 +119,8 @@ export default async function ProposalsPage({
         ),
         evidence: p.evidence.map((e) => ({
           title: sourceById.get(e.sourceId)?.title ?? t("proposals.removedSource"),
-          locator: e.locator ?? null,
-          quote: e.quote ?? null,
+          locator: e.locator ? rt(importTextRef(e.locator), e.locator) : null,
+          quote: e.quote ? rt(importTextRef(e.quote), e.quote) : null,
         })),
         conflict: conflict
           ? { suggested: conflict.suggestedId === p.id, size: conflict.proposalIds.length }
@@ -127,7 +131,11 @@ export default async function ProposalsPage({
             : {
                 by: names.get(p.reviewedBy ?? "") ?? null,
                 at: p.reviewedAt ? format.date(p.reviewedAt, "dateTime") : null,
-                note: p.reviewNote ?? p.staleReason ?? null,
+                note:
+                  p.reviewNote ??
+                  (p.staleReason
+                    ? rt(p.staleRef ?? importTextRef(p.staleReason), p.staleReason)
+                    : null),
               },
       };
     }),

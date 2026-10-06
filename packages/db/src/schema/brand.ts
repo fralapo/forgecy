@@ -138,9 +138,11 @@ export const brandSources = pgTable(
     statusDetail: text("status_detail"),
     /** `statusDetail` as message references (joined with " · "), shown in the reader's language. */
     statusDetailRef: jsonb("status_detail_ref").$type<MessageRef[]>(),
-    /** Extracted pages: [{ locator: "p. 12", text }]. Kept for evidence and re-runs. */
-    pages:
-      jsonb("pages").$type<Array<{ locator: string; locatorRef?: MessageRef; text: string }>>(),
+    /**
+     * Extracted pages: [{ locator: "p. 12", text }]. Kept for evidence and re-runs. The
+     * locator is a stable English id the AI cites; pages translate it when shown.
+     */
+    pages: jsonb("pages").$type<Array<{ locator: string; text: string }>>(),
     note: text("note"),
     capturedAt: timestamp("captured_at", { withTimezone: true }).notNull().defaultNow(),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
@@ -191,11 +193,9 @@ export const brandIdentityProposals = pgTable(
     rationale: text("rationale"),
     /** `rationale` as a message reference when written by code (AI rationale has none). */
     rationaleRef: jsonb("rationale_ref").$type<MessageRef>(),
-    /** [{ sourceId, locator?, locatorRef?, quote? }] */
+    /** [{ sourceId, locator?, quote? }] */
     evidence: jsonb("evidence")
-      .$type<
-        Array<{ sourceId: string; locator?: string; locatorRef?: MessageRef; quote?: string }>
-      >()
+      .$type<Array<{ sourceId: string; locator?: string; quote?: string }>>()
       .notNull()
       .default([]),
     confidence: confidenceEnum("confidence").notNull(),

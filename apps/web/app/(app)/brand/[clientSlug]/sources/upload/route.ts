@@ -5,6 +5,7 @@ import { contentKey, createStorageFromEnv, sha256 } from "@forgecy/files";
 import { localizedError } from "@forgecy/i18n";
 import { enqueueJob } from "@forgecy/jobs";
 import { NextResponse } from "next/server";
+import { getLocale } from "next-intl/server";
 import { withUser } from "@/lib/api";
 import type { CurrentUser } from "@/lib/session";
 import { env } from "@/lib/env";
@@ -86,7 +87,12 @@ async function upload(
   });
   const job = await enqueueJob(db, await getQueues(), {
     kind: brandImportSourceJob,
-    payload: { clientId: client.id, sourceId: source.id, requestedBy: user.id },
+    payload: {
+      clientId: client.id,
+      sourceId: source.id,
+      requestedBy: user.id,
+      language: await getLocale(),
+    },
     clientId: client.id,
     entity: "brand_source",
     entityId: source.id,

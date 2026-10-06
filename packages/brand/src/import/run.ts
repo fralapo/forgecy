@@ -3,7 +3,8 @@
  * Every extracted element becomes a proposal in state `proposed`, citing the
  * source and the page; nothing becomes official without a person.
  */
-import { ForgecyError, type Actor } from "@forgecy/core";
+import { ForgecyError, type Actor, type MessageRef } from "@forgecy/core";
+import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import type { AiGateway } from "@forgecy/ai";
 import { and, brandIdentityProposals, brandSources, clients, eq, type Database } from "@forgecy/db";
 import type { StorageDriver } from "@forgecy/files";
@@ -19,6 +20,20 @@ import {
   type AnalystItem,
 } from "./analyst";
 import { updateSourceStatus } from "../service";
+
+const msg = (key: MessageKey & `brand.import.${string}`, values?: MessageValues) =>
+  messageRef(key, values);
+
+/** Source status line: English text for logs and the API, references for the interface. */
+function detail(refs: MessageRef[]) {
+  return {
+    statusDetail: refs
+      .map((r) => englishMessage(r.key as MessageKey, r.values))
+      .join(" · ")
+      .slice(0, 500),
+    statusDetailRef: refs,
+  };
+}
 
 export interface ImportDeps {
   db: Database;
@@ -164,6 +179,10 @@ function fromAnalyst(item: AnalystItem): CandidateProposal | null {
   }
 }
 
+function rationale(key: MessageKey & `brand.import.rationale.${string}`, values?: MessageValues) {
+  return { rationale: englishMessage(key, values), rationaleRef: messageRef(key, values) };
+}
+
 function deterministic(
   extraction: Extraction,
   fileName: string,
@@ -178,7 +197,7 @@ function deterministic(
       path: "",
       op: "set",
       value: { name: c.context, hex: c.hex, usage: "" },
-      rationale: `Color found in the file (${c.count} ${c.count === 1 ? "occurrence" : "occurrences"}).`,
+      ...rationale("brand.import.rationale.color", { count: c.count }),
       evidence: { locator: c.locator, quote: c.context },
     });
   for (const f of extraction.fonts)
@@ -192,10 +211,11 @@ function deterministic(
         licenseStatus: "to_verify",
         ...(type === "font" ? { sourceId } : {}),
       },
-      rationale:
+      ...rationale(
         type === "font"
-          ? "Imported font: confirm role and license."
-          : "Font named in the document theme.",
+          ? "brand.import.rationale.fontImported"
+          : "brand.import.rationale.fontTheme",
+      ),
       evidence: { locator: f.locator },
     });
   // File names may be Italian ("marchio", "logotipo").
@@ -211,7 +231,7 @@ function deterministic(
       path: "/document/visual/logo/variants",
       op: "append",
       value: { role, sourceId, background: role === "logo_negative" ? "dark" : "any" },
-      rationale: "Imported logo file: confirm the variant's role.",
+      ...rationale("brand.import.rationale.logo"),
       evidence: { locator: fileName },
     });
   }
@@ -222,7 +242,7 @@ function deterministic(
 export async function runSourceImport(
   deps: ImportDeps,
   ctx: ImportContext,
-  input: { clientId: string; sourceId: string },
+  input: { clientId: string; sourceId: string; language?: string },
 ): Promise<ImportResult> {
   const { db } = deps;
   const [source] = await db
@@ -247,7 +267,10 @@ export async function runSourceImport(
         eq(brandIdentityProposals.status, "proposed"),
       ),
     );
-  await updateSourceStatus(db, source.id, { status: "extracting", statusDetail: "Reading" });
+  await updateSourceStatus(db, source.id, {
+    status: "extracting",
+    ...detail([msg("brand.import.status.reading")]),
+  });
 
   let extraction: Extraction;
   let candidates: CandidateProposal[];
@@ -255,7 +278,12 @@ export async function runSourceImport(
     const bytes = await readAll(await deps.storage.get(source.storageKey));
     const detected = detectImportFile({ name: source.title, mime: source.mime ?? "", bytes });
     if (!detected.ok) {
-      await updateSourceStatus(db, source.id, { status: "failed", statusDetail: detected.message });
+      await updateSourceStatus(db, source.id, {
+        status: "failed",
+        ...(detected.ref
+          ? detail([detected.ref])
+          : { statusDetail: detected.message, statusDetailRef: null }),
+      });
       return {
         sourceId: source.id,
         pages: 0,
@@ -270,7 +298,7 @@ export async function runSourceImport(
       extraction = await extractFile(detected.type, bytes, source.title);
     } catch (err) {
       if (!(err instanceof ExtractionError)) throw err;
-      await updateSourceStatus(db, source.id, { status: "failed", statusDetail: err.message });
+      await updateSourceStatus(db, source.id, { status: "failed", ...detail([err.ref]) });
       return {
         sourceId: source.id,
         pages: 0,
@@ -291,11 +319,11 @@ export async function runSourceImport(
 
   // ---- Brand Analyst ----
   let ai: ImportResult["ai"] = "skipped";
-  let aiNote = "";
+  let aiNote: MessageRef | null = null;
   const textPages = extraction.pages.filter((p) => p.text.trim().length > 20);
-  if (!deps.ai) aiNote = "No AI provider configured: automatic extraction only";
-  else if (client.aiPolicy === "no_ai") aiNote = "AI features turned off for this client";
-  else if (!textPages.length) aiNote = "No text to interpret";
+  if (!deps.ai) aiNote = msg("brand.import.status.noProvider");
+  else if (client.aiPolicy === "no_ai") aiNote = msg("brand.import.status.aiOff");
+  else if (!textPages.length) aiNote = msg("brand.import.status.noText");
   else {
     try {
       const chunks = chunkPages(textPages);
@@ -308,6 +336,7 @@ export async function runSourceImport(
           input: analystUserPrompt({
             clientName: client.name,
             sourceTitle: source.title,
+            language: input.language ?? "en",
             pages: chunk,
           }),
           clientId: input.clientId,
@@ -338,8 +367,8 @@ export async function runSourceImport(
         ai = "failed";
         aiNote =
           err instanceof ForgecyError
-            ? `AI interpretation not run: ${err.message}`
-            : "AI interpretation failed";
+            ? (err.ref ?? msg("brand.import.status.aiNotRun", { message: err.message }))
+            : msg("brand.import.status.aiFailed");
       } else throw err;
     }
   }
@@ -354,16 +383,16 @@ export async function runSourceImport(
   await ctx.progress?.(95);
   const parts = [
     extraction.pages.length
-      ? `${extraction.pages.length} ${extraction.pages.length === 1 ? "page read" : "pages read"}`
+      ? msg("brand.import.status.pagesRead", { count: extraction.pages.length })
       : null,
-    `${created} ${created === 1 ? "proposal" : "proposals"}`,
-    skipped ? `${skipped} already present or invalid` : null,
+    msg("brand.import.status.proposals", { count: created }),
+    skipped ? msg("brand.import.status.skipped", { count: skipped }) : null,
     ...extraction.warnings,
-    aiNote || null,
-  ].filter(Boolean);
-  const detail = parts.join(" · ");
+    aiNote,
+  ].filter((r): r is MessageRef => r !== null);
+  const summary = detail(parts);
   const status = extraction.warnings.length || ai === "failed" ? "partial" : "extracted";
-  await updateSourceStatus(db, source.id, { status, statusDetail: detail.slice(0, 500) });
+  await updateSourceStatus(db, source.id, { status, ...summary });
   return {
     sourceId: source.id,
     pages: extraction.pages.length,
@@ -371,6 +400,6 @@ export async function runSourceImport(
     proposals: created,
     skipped,
     ai,
-    detail,
+    detail: summary.statusDetail,
   };
 }
