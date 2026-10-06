@@ -1,11 +1,13 @@
 import { listProducts, loadCatalogClient, productsToCsv, type CatalogRow } from "@forgecy/catalog";
 import { clients, eq, getDb } from "@forgecy/db";
+import { getTranslations } from "next-intl/server";
 import { withUser } from "@/lib/api";
+import { csvLabels } from "../../_lib/labels";
 import { parseCatalogFilters } from "../../_lib/filters";
 
 export const dynamic = "force-dynamic";
 
-/** “Export CSV” of the filtered products (formulas neutralized, `;` for Excel). */
+/** “Export CSV” of the filtered products in the exporter's language (formulas neutralized, `;` for Excel). */
 export const GET = withUser(
   async (_user, request: Request, { params }: { params: Promise<{ clientSlug: string }> }) => {
     const { clientSlug } = await params;
@@ -20,7 +22,8 @@ export const GET = withUser(
       rows.push(...r.rows);
       if (page >= r.pages || page >= 200) break;
     }
-    return new Response(productsToCsv(rows), {
+    const t = await getTranslations("products");
+    return new Response(productsToCsv(rows, csvLabels(t)), {
       headers: {
         "content-type": "text/csv; charset=utf-8",
         "content-disposition": `attachment; filename="products-${client.slug}.csv"`,

@@ -1,3 +1,5 @@
+import type { MessageRef } from "@forgecy/core";
+import { englishMessage, messageRef } from "@forgecy/i18n";
 import { z } from "zod";
 import {
   sanitizeDraft,
@@ -68,7 +70,8 @@ export const columnMappingSchema = z.object({
 });
 export type ColumnMapping = z.infer<typeof columnMappingSchema>;
 
-// Header synonyms match Italian and English column names in client files.
+// Header synonyms match Italian and English column names in client files, and the
+// headers of Forgecy's own CSV export in every interface language.
 const SYNONYMS: Record<Exclude<MappingTarget, "ignore">, string[]> = {
   name: [
     "name",
@@ -94,6 +97,8 @@ const SYNONYMS: Record<Exclude<MappingTarget, "ignore">, string[]> = {
     "riferimento",
     "ean",
     "art",
+    "sku code",
+    "sku codice",
   ],
   category: [
     "categories",
@@ -134,6 +139,8 @@ const SYNONYMS: Record<Exclude<MappingTarget, "ignore">, string[]> = {
     "composizione",
     "composition",
     "inci",
+    "ingredients or materials",
+    "ingredienti o materiali",
   ],
   formats: [
     "formato",
@@ -158,6 +165,7 @@ const SYNONYMS: Record<Exclude<MappingTarget, "ignore">, string[]> = {
     "uso",
     "directions",
     "utilizzo",
+    "usage instructions",
   ],
   features: [
     "caratteristiche",
@@ -182,7 +190,15 @@ const SYNONYMS: Record<Exclude<MappingTarget, "ignore">, string[]> = {
   ],
   tags: ["tags", "tag", "etichette", "parole chiave", "keywords"],
   url: ["url", "link", "external url", "url esterno", "permalink", "product url"],
-  notes: ["note", "notes", "purchase note", "nota di acquisto", "commenti"],
+  notes: [
+    "note",
+    "notes",
+    "purchase note",
+    "nota di acquisto",
+    "commenti",
+    "internal notes",
+    "note interne",
+  ],
   price: [
     "regular price",
     "prezzo di listino",
@@ -271,7 +287,14 @@ export interface MappedRow {
 
 export interface RejectedRow {
   row: number;
+  /** English text, for logs and the stored fallback. */
   reason: string;
+  ref: MessageRef;
+}
+
+function rejectedRow(row: number, key: "rowNoName" | "rowNoParent"): RejectedRow {
+  const k = `products.discards.${key}` as const;
+  return { row, reason: englishMessage(k, { row }), ref: messageRef(k, { row }) };
 }
 
 const listTargets = new Set<MappingTarget>([
@@ -418,7 +441,7 @@ export function applyMapping(
       return;
     }
     if (!clean.name) {
-      rejected.push({ row: rowNumber, reason: `Row ${rowNumber}: missing name` });
+      rejected.push(rejectedRow(rowNumber, "rowNoName"));
       return;
     }
     out.push({ draft: clean, sources, images, row: rowNumber, ...extra });
@@ -447,8 +470,7 @@ function groupWooVariations(
       parents.find((p) => p.draft.name && p.draft.name === v.draft.name?.split(" - ")[0]);
     if (!parent) {
       if (v.draft.name) parents.push({ ...v, type: "simple" });
-      else
-        rejected.push({ row: v.row, reason: `Row ${v.row}: variation without a parent product` });
+      else rejected.push(rejectedRow(v.row, "rowNoParent"));
       continue;
     }
     const attrs = v.draft.variants?.length

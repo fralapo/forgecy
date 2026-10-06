@@ -3,7 +3,7 @@ import { clients, eq, getDb } from "@forgecy/db";
 import { getTranslations } from "next-intl/server";
 import { withUser } from "@/lib/api";
 import { refText } from "@/lib/i18n";
-import { discardText } from "../../../../_lib/labels";
+import { csvLabels, discardText } from "../../../../_lib/labels";
 
 export const dynamic = "force-dynamic";
 
@@ -23,12 +23,14 @@ export const GET = withUser(
     const review = await importReview(db, client.id, importId);
     if (!review) return new Response("Not found", { status: 404 });
     const t = await getTranslations("products");
-    const rows = review.items
-      .filter((i) => i.status === "discarded")
-      .map((i) => ({
-        reason: discardText(t, i.discardReason ?? ""),
-        source: ((i.origin as { fileName?: string } | null)?.fileName ?? "") as string,
-      }));
+    const rows = await Promise.all(
+      review.items
+        .filter((i) => i.status === "discarded")
+        .map(async (i) => ({
+          reason: await refText(i.discardRef, discardText(t, i.discardReason ?? "")),
+          source: ((i.origin as { fileName?: string } | null)?.fileName ?? "") as string,
+        })),
+    );
     const invalidFiles = await Promise.all(
       review.files
         .filter((f) => !f.valid)
@@ -43,7 +45,7 @@ export const GET = withUser(
           };
         }),
     );
-    return new Response(discardsToCsv([...invalidFiles, ...rows]), {
+    return new Response(discardsToCsv([...invalidFiles, ...rows], csvLabels(t)), {
       headers: {
         "content-type": "text/csv; charset=utf-8",
         "content-disposition": `attachment; filename="rejected-import-${importId.slice(0, 8)}.csv"`,

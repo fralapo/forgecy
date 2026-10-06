@@ -194,7 +194,8 @@
     "rowNoName": "Riga {row}: nome mancante",
     "rowNoParent": "Riga {row}: variazione senza prodotto padre",
     "page": "Pagina {page}: {reason}",
-    "inReview": "Rifiutato in revisione"
+    "inReview": "Rifiutato in revisione",
+    "inBulkReview": "Rifiutato in blocco in revisione"
   },
   "matchReasons": {
     "sku": "Stesso SKU {sku}",
@@ -723,5 +724,10 @@
     "sensitiveAccepted": "Campo sensibile accettato.",
     "proposalAccepted": "Proposta accettata.",
     "proposalRejected": "Proposta rifiutata."
+  },
+  "csv": {
+    "status": "Stato",
+    "source": "Fonte",
+    "reason": "Motivo"
   }
 }

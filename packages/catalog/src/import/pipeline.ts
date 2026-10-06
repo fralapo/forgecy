@@ -385,7 +385,12 @@ async function extract(run: Run) {
   await db.delete(productImportItems).where(eq(productImportItems.importId, run.importId));
   const all = (await files(run)).filter((f) => f.valid && f.route !== "ignore");
   const sheetCandidates: Candidate[] = [];
-  const discarded: Array<{ reason: string; origin: SourceRef; draft: ProductDraft }> = [];
+  const discarded: Array<{
+    reason: string;
+    ref: MessageRef;
+    origin: SourceRef;
+    draft: ProductDraft;
+  }> = [];
 
   // 1. Sheets with their confirmed mapping.
   for (const f of all.filter((x) => x.kind === "sheet" && x.mapping && x.storageKey)) {
@@ -415,6 +420,7 @@ async function extract(run: Run) {
     for (const r of rejected)
       discarded.push({
         reason: r.reason,
+        ref: r.ref,
         origin: { kind, fileId: f.id, fileName: f.name, row: r.row },
         draft: {},
       });
@@ -477,7 +483,14 @@ async function extract(run: Run) {
       }
       for (const s of res.skippedPages)
         discarded.push({
-          reason: `Page ${s.page}: ${s.reason.slice(0, 160)}`,
+          reason: englishMessage("products.discards.page", {
+            page: s.page,
+            reason: s.reason.slice(0, 160),
+          }),
+          ref: messageRef("products.discards.page", {
+            page: s.page,
+            reason: s.reason.slice(0, 160),
+          }),
           origin: { kind: "pdf", fileId: f.id, fileName: f.name, page: s.page },
           draft: {},
         });
@@ -546,7 +559,12 @@ async function extract(run: Run) {
   const assignedImages = new Set<string>();
   for (const c of candidates) {
     if (!c.draft.name) {
-      discarded.push({ reason: "Product without a name", origin: c.origin, draft: c.draft });
+      discarded.push({
+        reason: englishMessage("products.discards.noName"),
+        ref: messageRef("products.discards.noName"),
+        origin: c.origin,
+        draft: c.draft,
+      });
       continue;
     }
     const fieldMeta = buildFieldMeta(c, run);
@@ -590,11 +608,7 @@ async function extract(run: Run) {
         >[],
         proposedByAgent: c.agent === true,
         matchProductId: match?.id ?? null,
-        matchReason: match
-          ? c.draft.sku && match.sku && normalizeSku(match.sku) === normalizeSku(c.draft.sku)
-            ? `Same SKU ${match.sku}`
-            : "Same name and category"
-          : null,
+        ...matchReasonOf(c.draft.sku, match),
         matchRevision: match?.revision ?? null,
         conflicts: conflictList as unknown as Record<string, unknown>[],
       })
@@ -610,6 +624,7 @@ async function extract(run: Run) {
       draft: sanitizeDraft(d.draft) as Record<string, unknown>,
       origin: d.origin as unknown as Record<string, unknown>,
       discardReason: d.reason,
+      discardRef: d.ref,
       confidence: "low",
     });
 
@@ -694,6 +709,25 @@ async function extract(run: Run) {
     });
   });
   return { found: summary.found, duplicates, conflicts };
+}
+
+/** Why an imported row is the same as a catalog product, in English and as a reference. */
+function matchReasonOf(
+  sku: string | undefined,
+  match: { sku: string | null } | undefined,
+): { matchReason: string | null; matchRef: MessageRef | null } {
+  if (!match) return { matchReason: null, matchRef: null };
+  if (sku && match.sku && normalizeSku(match.sku) === normalizeSku(sku)) {
+    const values = { sku: match.sku };
+    return {
+      matchReason: englishMessage("products.matchReasons.sku", values),
+      matchRef: messageRef("products.matchReasons.sku", values),
+    };
+  }
+  return {
+    matchReason: englishMessage("products.matchReasons.nameCategory"),
+    matchRef: messageRef("products.matchReasons.nameCategory"),
+  };
 }
 
 async function baseSummary(run: Run) {

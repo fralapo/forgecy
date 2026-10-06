@@ -11,6 +11,7 @@ import {
   brandSourceKinds,
   brandSourceStatuses,
   confidenceLevels,
+  type MessageRef,
 } from "@forgecy/core";
 import { sql } from "drizzle-orm";
 import {
@@ -135,8 +136,11 @@ export const brandSources = pgTable(
     status: brandSourceStatusEnum("status").notNull().default("pending"),
     /** Short summary of the last extraction ("23 elementi estratti"), or the error. */
     statusDetail: text("status_detail"),
+    /** `statusDetail` as message references (joined with " · "), shown in the reader's language. */
+    statusDetailRef: jsonb("status_detail_ref").$type<MessageRef[]>(),
     /** Extracted pages: [{ locator: "p. 12", text }]. Kept for evidence and re-runs. */
-    pages: jsonb("pages").$type<Array<{ locator: string; text: string }>>(),
+    pages:
+      jsonb("pages").$type<Array<{ locator: string; locatorRef?: MessageRef; text: string }>>(),
     note: text("note"),
     capturedAt: timestamp("captured_at", { withTimezone: true }).notNull().defaultNow(),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
@@ -181,11 +185,17 @@ export const brandIdentityProposals = pgTable(
     fieldPath: text("field_path").notNull(),
     category: text("category").notNull(),
     title: text("title").notNull(),
+    /** `title` as a message reference when written by code. */
+    titleRef: jsonb("title_ref").$type<MessageRef>(),
     changes: jsonb("changes").$type<Array<Record<string, unknown>>>().notNull(),
     rationale: text("rationale"),
-    /** [{ sourceId, locator?, quote? }] */
+    /** `rationale` as a message reference when written by code (AI rationale has none). */
+    rationaleRef: jsonb("rationale_ref").$type<MessageRef>(),
+    /** [{ sourceId, locator?, locatorRef?, quote? }] */
     evidence: jsonb("evidence")
-      .$type<Array<{ sourceId: string; locator?: string; quote?: string }>>()
+      .$type<
+        Array<{ sourceId: string; locator?: string; locatorRef?: MessageRef; quote?: string }>
+      >()
       .notNull()
       .default([]),
     confidence: confidenceEnum("confidence").notNull(),
@@ -204,6 +214,7 @@ export const brandIdentityProposals = pgTable(
     /** Value actually written when accepted with edits ("Accept with edits"). */
     editedValue: jsonb("edited_value").$type<unknown>(),
     staleReason: text("stale_reason"),
+    staleRef: jsonb("stale_ref").$type<MessageRef>(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

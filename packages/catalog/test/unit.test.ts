@@ -24,7 +24,10 @@ import {
   suggestMapping,
   type Candidate,
 } from "../src";
-import { csvCell } from "../src/products/csv-export";
+import { csvCell, englishCsvLabels } from "../src/products/csv-export";
+import { fieldDefs } from "../src/products/fields";
+import { LOCALES } from "@forgecy/core";
+import { messagesFor } from "@forgecy/i18n";
 import { makePdf, makeXlsx, makeZip, PNG } from "./fixtures";
 
 const WOO_HEADERS = [
@@ -163,7 +166,13 @@ describe("mapping", () => {
       row: 2,
       column: "Short description",
     });
-    expect(rejected).toEqual([{ row: 4, reason: "Row 4: missing name" }]);
+    expect(rejected).toEqual([
+      {
+        row: 4,
+        reason: "Row 4: missing name",
+        ref: { key: "products.discards.rowNoName", values: { row: 4 } },
+      },
+    ]);
   });
   it("keeps the price only when it is in the file, normalized", () => {
     expect(sanitizeDraft({ price: "1.234,50 €" }).price).toBe("1234.50");
@@ -353,5 +362,23 @@ describe("rules", () => {
   it("neutralizes formulas in CSV exports", () => {
     expect(csvCell("=HYPERLINK(1)")).toBe("'=HYPERLINK(1)");
     expect(productsToCsv([]).startsWith("\uFEFFStatus;Name")).toBe(true);
+  });
+  it("re-imports its own CSV export in every interface language", () => {
+    for (const locale of LOCALES) {
+      const t = messagesFor(locale).products;
+      const header = productsToCsv([], {
+        ...englishCsvLabels,
+        status: t.csv.status,
+        source: t.csv.source,
+        field: (key) => t.fields[key],
+      })
+        .slice(1)
+        .trim()
+        .split(";")
+        .map((h) => h.replace(/^"|"$/g, ""));
+      const { columns } = suggestMapping(header);
+      for (const def of fieldDefs)
+        expect([locale, columns[header.indexOf(t.fields[def.key])]]).toEqual([locale, def.key]);
+    }
   });
 });
