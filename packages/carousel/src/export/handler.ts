@@ -2,7 +2,13 @@ import { ForgecyError, loadEnv } from "@forgecy/core";
 import { type StorageDriver, contentKey, createStorageFromEnv, sha256 } from "@forgecy/files";
 import { type JobContext, NeedsAttentionError, UnrecoverableError, handle } from "@forgecy/jobs";
 import type { Browser } from "playwright-core";
-import { type TemplateSource, directoryTemplateSource } from "../node";
+import {
+  dbTemplateSource,
+  getTemplateRow,
+  loadTemplatePackage,
+  saveTemplateValidation,
+} from "../catalog";
+import type { TemplateSource } from "../node";
 import {
   type CarouselExportPayload,
   type ExportedFile,
@@ -18,12 +24,14 @@ import { renderCheckTemplate } from "./template-check";
 
 export interface CarouselHandlerDeps {
   storage: StorageDriver;
-  templates: TemplateSource;
+  /** Defaults to the published catalog in the database. */
+  templates?: TemplateSource;
   browser: () => Promise<Browser>;
 }
 
 async function runExport(deps: CarouselHandlerDeps, p: CarouselExportPayload, ctx: JobContext) {
-  const pkg = await deps.templates.get(p.templateId, p.templateVersion);
+  const source = deps.templates ?? dbTemplateSource({ db: ctx.db, storage: deps.storage });
+  const pkg = await source.get(p.templateId, p.templateVersion);
   if (!pkg)
     throw new NeedsAttentionError(
       `Template ${p.templateId}${p.templateVersion ? ` v${p.templateVersion}` : ""} non trovato`,
@@ -98,14 +106,16 @@ export function carouselHandlers(deps: CarouselHandlerDeps) {
   return {
     ...handle(carouselExportJob, (payload, ctx) => runExport(deps, payload, ctx)),
     ...handle(templateValidateJob, async (payload, ctx) => {
-      const pkg = await deps.templates.get(payload.templateId);
-      if (!pkg) throw new NeedsAttentionError(`Template ${payload.templateId} non trovato`);
+      const row = await getTemplateRow(ctx.db, payload.templateRowId);
+      if (!row) throw new NeedsAttentionError("Template non trovato");
+      const pkg = await loadTemplatePackage(deps.storage, row);
       const report = validateTemplatePackage(pkg.files);
-      await ctx.progress(40);
+      await ctx.progress(30);
       const full = report.ok
         ? await renderCheckTemplate(await deps.browser(), pkg, report)
         : report;
-      return { ok: full.ok, checks: full.checks, issues: full.issues };
+      await saveTemplateValidation(ctx.db, row.id, full);
+      return { ok: full.ok, checks: full.checks, issues: full.issues.length };
     }),
   };
 }
@@ -115,7 +125,6 @@ export function carouselWorkerHandlers() {
   const browser = sharedRenderBrowser();
   return carouselHandlers({
     storage: createStorageFromEnv(loadEnv()),
-    templates: directoryTemplateSource(),
     browser: () => browser.get(),
   });
 }

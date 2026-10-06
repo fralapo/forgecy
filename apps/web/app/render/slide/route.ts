@@ -1,12 +1,10 @@
 import { brandThemeSchema, renderSlideHtml, slideSchema } from "@forgecy/carousel";
 import { collectAssetKeys, resolveAssets } from "@forgecy/carousel/node";
 import { assertCan } from "@forgecy/core";
-import { createStorageFromEnv } from "@forgecy/files";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withUser } from "@/lib/api";
-import { env } from "@/lib/env";
-import { slideResponse, templateSource } from "../_lib/templates";
+import { catalogSource, getStorage, slideResponse } from "../_lib/templates";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +36,7 @@ export const POST = withUser(async (user, request: Request) => {
     return NextResponse.json({ error: "validation", issues: parsed.error.issues }, { status: 422 });
   const body = parsed.data;
   assertCan(user.actor, "view", body.clientId);
-  const pkg = await templateSource.get(body.templateId, body.templateVersion);
+  const pkg = await catalogSource().get(body.templateId, body.templateVersion);
   if (!pkg) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const keys = collectAssetKeys([body.slide], body.brand ?? brandThemeSchema.parse({}));
@@ -47,9 +45,7 @@ export const POST = withUser(async (user, request: Request) => {
       { error: "validation", message: "clientId obbligatorio con asset" },
       { status: 422 },
     );
-  const assets = keys.length
-    ? await resolveAssets(createStorageFromEnv(env), body.clientId!, keys)
-    : undefined;
+  const assets = keys.length ? await resolveAssets(getStorage(), body.clientId!, keys) : undefined;
 
   const { html } = renderSlideHtml({
     pkg,

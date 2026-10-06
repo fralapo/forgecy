@@ -18,4 +18,4 @@ Stessa funzione e stessi byte in ingresso danno la stessa slide in anteprima e i
 
 ## Conseguenze
 
-L'export funziona anche con l'app web spenta e non apre una porta di servizio. Il worker deve leggere i template (oggi da `templates/agency`, poi dal catalogo nel database) e gli asset dallo storage, con il controllo che ogni asset appartenga al cliente dell'export. L'immagine `worker` parte da `mcr.microsoft.com/playwright` con la stessa versione di `playwright-core`; un test lo verifica.
+L'export funziona anche con l'app web spenta e non apre una porta di servizio. Il worker deve leggere i template dal catalogo nel database (pacchetti ZIP nello storage) e gli asset dallo storage, con il controllo che ogni asset appartenga al cliente dell'export. L'immagine `worker` parte da `mcr.microsoft.com/playwright` con la stessa versione di `playwright-core`; un test lo verifica.

@@ -1,53 +1,106 @@
-import { FORMATS, formatIssue, slideRoleLabels } from "@forgecy/carousel";
-import { Badge, Card } from "@forgecy/ui";
-import { CircleCheck, CircleMinus, CircleX } from "lucide-react";
+import { FORMATS, formatIssue, slideRoleLabels, type TemplateManifest } from "@forgecy/carousel";
+import {
+  getTemplateRow,
+  isPublishable,
+  listTemplates,
+  storedValidation,
+  type TemplateStatus,
+} from "@forgecy/carousel/catalog";
+import { can } from "@forgecy/core";
+import { getDb } from "@forgecy/db";
+import { Badge, Button, Card, Input, Label } from "@forgecy/ui";
+import { CircleCheck, CircleMinus, CircleX, LoaderCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/session";
-import { templateSource } from "../../../render/_lib/templates";
+import { revalidateAction, transitionAction } from "../actions";
 import { SlideFrame } from "../slide-frame";
+import { ErrorNotice, StatusBadge, ValidationBadge } from "../status";
 
-const STATUS = {
+const CHECK = {
   ok: { icon: CircleCheck, className: "text-success", label: "Superato" },
   error: { icon: CircleX, className: "text-error", label: "Errore" },
   warning: { icon: CircleX, className: "text-warning", label: "Avviso" },
   skipped: { icon: CircleMinus, className: "text-fg-muted", label: "Non verificato" },
 } as const;
 
+function TransitionForm({
+  id,
+  to,
+  label,
+  notes,
+  variant = "primary",
+  disabled,
+}: {
+  id: string;
+  to: TemplateStatus;
+  label: string;
+  notes?: boolean;
+  variant?: "primary" | "secondary" | "danger";
+  disabled?: boolean;
+}) {
+  return (
+    <form action={transitionAction} className="space-y-2">
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="to" value={to} />
+      {notes ? (
+        <div className="space-y-1">
+          <Label htmlFor={`notes-${to}`}>Note di versione</Label>
+          <Input id={`notes-${to}`} name="notes" required minLength={3} placeholder="Cosa cambia" />
+        </div>
+      ) : null}
+      <Button type="submit" variant={variant} disabled={disabled} className="w-full">
+        {label}
+      </Button>
+    </form>
+  );
+}
+
 export default async function TemplateDetailPage({
   params,
   searchParams,
 }: {
   params: Promise<{ templateId: string }>;
-  searchParams: Promise<{ long?: string; safe?: string; slots?: string }>;
+  searchParams: Promise<{ long?: string; safe?: string; slots?: string; errore?: string }>;
 }) {
-  await requireUser();
+  const user = await requireUser();
   const { templateId } = await params;
   const q = await searchParams;
-  const entry = (await templateSource.list()).find((e) => e.pkg?.manifest.id === templateId);
-  if (!entry?.pkg) notFound();
-  const m = entry.pkg.manifest;
+  const db = getDb();
+  const row = await getTemplateRow(db, templateId);
+  if (!row) notFound();
+  const m = row.manifest as TemplateManifest;
+  const validation = storedValidation(row);
+  const status = row.status as TemplateStatus;
+  const manage = can(user.actor, "templates.manage");
+  const publishable = isPublishable(row);
+  const versions = (await listTemplates(db)).filter((r) => r.key === row.key);
+
   const flags = { long: q.long === "1", safe: q.safe === "1", slots: q.slots === "1" };
-  const toggle = (key: keyof typeof flags) => {
-    const next = { ...flags, [key]: !flags[key] };
-    const qs = Object.entries(next)
+  const query = (f: typeof flags) =>
+    Object.entries(f)
       .filter(([, v]) => v)
       .map(([k]) => `${k}=1`)
       .join("&");
-    return qs ? `/template/${m.id}?${qs}` : `/template/${m.id}`;
+  const toggle = (key: keyof typeof flags) => {
+    const qs = query({ ...flags, [key]: !flags[key] });
+    return qs ? `/template/${row.id}?${qs}` : `/template/${row.id}`;
   };
-  const renderQuery = Object.entries(flags)
-    .filter(([, v]) => v)
-    .map(([k]) => `${k}=1`)
-    .join("&");
+  const renderQuery = query(flags);
 
   return (
     <>
       <PageHeader
-        title={m.name}
-        description={`${m.description} ${FORMATS[m.format].label} · ${m.width}×${m.height} px · ${m.slides.min}–${m.slides.max} slide (default ${m.slides.default}) · v${m.version}`}
+        title={`${row.name} · v${row.version}`}
+        description={`${m.description} ${FORMATS[m.format].label} · ${m.width}×${m.height} px · ${m.slides.min}–${m.slides.max} slide (default ${m.slides.default})`}
       />
+      {q.errore ? <ErrorNotice message={q.errore} /> : null}
+      <div className="mb-6 flex flex-wrap gap-2">
+        <StatusBadge status={status} />
+        <ValidationBadge validation={validation} />
+        <Badge>{row.origin === "system" ? "Sistema" : "Agenzia"}</Badge>
+      </div>
       <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
         <section aria-labelledby="layouts">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -77,8 +130,8 @@ export default async function TemplateDetailPage({
             {m.layouts.map((layout) => (
               <li key={layout.id} className="space-y-2">
                 <SlideFrame
-                  src={`/render/templates/${m.id}/${layout.id}${renderQuery ? `?${renderQuery}` : ""}`}
-                  title={`${layout.name}`}
+                  src={`/render/templates/${row.id}/${layout.id}${renderQuery ? `?${renderQuery}` : ""}`}
+                  title={layout.name}
                   width={m.width}
                   height={m.height}
                   scale={0.25}
@@ -107,11 +160,77 @@ export default async function TemplateDetailPage({
           </ul>
         </section>
         <aside className="space-y-6">
+          {manage ? (
+            <Card className="space-y-4 p-5">
+              <h2 className="text-heading-sm text-fg">Stato</h2>
+              {row.versionNotes ? (
+                <p className="text-body-sm text-fg">
+                  <span className="text-fg-muted">Note: </span>
+                  {row.versionNotes}
+                </p>
+              ) : null}
+              {(status === "draft" || status === "in_review") && !publishable ? (
+                <p className="text-body-sm text-fg-muted">
+                  {validation.ok
+                    ? "Si può pubblicare quando il render di prova è finito."
+                    : "Correggi gli errori di validazione e importa di nuovo il pacchetto."}
+                </p>
+              ) : null}
+              {status === "draft" ? (
+                <>
+                  <TransitionForm
+                    id={row.id}
+                    to="in_review"
+                    label="Invia in revisione"
+                    notes
+                    variant="secondary"
+                    disabled={!publishable}
+                  />
+                  <TransitionForm
+                    id={row.id}
+                    to="published"
+                    label="Pubblica"
+                    notes
+                    disabled={!publishable}
+                  />
+                </>
+              ) : null}
+              {status === "in_review" ? (
+                <>
+                  <TransitionForm
+                    id={row.id}
+                    to="published"
+                    label="Pubblica"
+                    notes
+                    disabled={!publishable}
+                  />
+                  <TransitionForm
+                    id={row.id}
+                    to="draft"
+                    label="Riporta in bozza"
+                    variant="secondary"
+                  />
+                </>
+              ) : null}
+              {status === "published" ? (
+                <TransitionForm id={row.id} to="archived" label="Archivia" variant="secondary" />
+              ) : null}
+              {status === "archived" ? (
+                <TransitionForm
+                  id={row.id}
+                  to="published"
+                  label="Ripubblica"
+                  variant="secondary"
+                  disabled={!publishable}
+                />
+              ) : null}
+            </Card>
+          ) : null}
           <Card className="p-5">
             <h2 className="text-heading-sm text-fg">Validazione</h2>
             <ul className="mt-4 space-y-2">
-              {entry.report.checks.map((c) => {
-                const s = STATUS[c.status];
+              {validation.checks.map((c) => {
+                const s = CHECK[c.status];
                 return (
                   <li key={c.id} className="flex items-start gap-2 text-body-sm text-fg">
                     <s.icon
@@ -122,20 +241,50 @@ export default async function TemplateDetailPage({
                   </li>
                 );
               })}
+              {!validation.rendered && validation.ok ? (
+                <li className="flex items-start gap-2 text-body-sm text-fg-muted">
+                  <LoaderCircle aria-hidden className="mt-0.5 size-4 shrink-0" />
+                  <span>Render di prova in corso nel worker</span>
+                </li>
+              ) : null}
             </ul>
-            {entry.report.issues.length ? (
+            {validation.issues.length ? (
               <ul className="mt-4 space-y-2 border-t border-subtle pt-4 text-body-sm text-error">
-                {entry.report.issues.map((i, n) => (
+                {validation.issues.map((i, n) => (
                   <li key={n}>
                     {formatIssue(i)} <span className="text-fg-muted">{i.code}</span>
                   </li>
                 ))}
               </ul>
             ) : null}
-            <p className="mt-4 text-body-sm text-fg-muted">
-              Render di prova e controllo dei testi lunghi girano nel worker con Chromium.
-            </p>
+            {manage ? (
+              <form action={revalidateAction} className="mt-4">
+                <input type="hidden" name="id" value={row.id} />
+                <Button type="submit" variant="ghost" size="sm">
+                  Riesegui validazione
+                </Button>
+              </form>
+            ) : null}
           </Card>
+          {versions.length > 1 ? (
+            <Card className="p-5">
+              <h2 className="text-heading-sm text-fg">Versioni</h2>
+              <ul className="mt-4 space-y-2 text-body-sm">
+                {versions.map((v) => (
+                  <li key={v.id} className="flex items-center justify-between gap-2">
+                    {v.id === row.id ? (
+                      <span className="font-medium text-fg">v{v.version}</span>
+                    ) : (
+                      <Link href={`/template/${v.id}`} className="text-link hover:underline">
+                        v{v.version}
+                      </Link>
+                    )}
+                    <StatusBadge status={v.status} />
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
           <Card className="p-5">
             <h2 className="text-heading-sm text-fg">Ruoli colore e font</h2>
             <ul className="mt-4 space-y-1 text-body-sm">

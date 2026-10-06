@@ -45,11 +45,11 @@ export const carouselExportJob = defineJob({
   payload: carouselExportPayloadSchema,
 });
 
-/** Validates a template package (static checks + test render) after an upload or import. */
+/** Validates a catalog template (static checks + test render) after an import; saves the report on the row. */
 export const templateValidateJob = defineJob({
   kind: "carousel.validate_template",
   queue: "export",
-  payload: z.object({ templateId: z.string().min(1).max(64) }),
+  payload: z.object({ templateRowId: z.uuid() }),
 });
 
 export interface ExportedFile {

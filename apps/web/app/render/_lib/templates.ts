@@ -1,9 +1,27 @@
 import "server-only";
 import { RENDER_CSP } from "@forgecy/carousel";
-import { directoryTemplateSource } from "@forgecy/carousel/node";
+import { dbTemplateSource, getTemplateRow, loadTemplatePackage } from "@forgecy/carousel/catalog";
+import { getDb } from "@forgecy/db";
+import { createStorageFromEnv, type StorageDriver } from "@forgecy/files";
+import { env } from "@/lib/env";
 
-/** Templates of the repository catalog (templates/agency, or FORGECY_TEMPLATES_DIR). */
-export const templateSource = directoryTemplateSource();
+let storage: StorageDriver | undefined;
+export function getStorage(): StorageDriver {
+  storage ??= createStorageFromEnv(env);
+  return storage;
+}
+
+/** Published templates (pinned versions also when archived): what editors and exports use. */
+export function catalogSource() {
+  return dbTemplateSource({ db: getDb(), storage: getStorage() });
+}
+
+/** Any version by row id, drafts included: catalog and template editor previews. */
+export async function templateById(id: string) {
+  const row = await getTemplateRow(getDb(), id);
+  if (!row) return undefined;
+  return { row, pkg: await loadTemplatePackage(getStorage(), row) };
+}
 
 /**
  * A rendered slide is served as its own document: same CSP the renderer writes in the

@@ -206,6 +206,9 @@ importers:
       '@forgecy/core':
         specifier: workspace:*
         version: link:../core
+      '@forgecy/db':
+        specifier: workspace:*
+        version: link:../db
       '@forgecy/files':
         specifier: workspace:*
         version: link:../files

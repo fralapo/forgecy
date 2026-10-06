@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./export": "./src/export/index.ts",
-    "./node": "./src/node.ts"
+    "./node": "./src/node.ts",
+    "./catalog": "./src/catalog.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -16,6 +17,7 @@
   },
   "dependencies": {
     "@forgecy/core": "workspace:*",
+    "@forgecy/db": "workspace:*",
     "@forgecy/files": "workspace:*",
     "@forgecy/jobs": "workspace:*",
     "fflate": "^0.8.3",

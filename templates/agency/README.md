@@ -15,4 +15,6 @@ Regole per scrivere un template:
 - Varianti con `[data-tone="inverse"]`, `[data-first]`, `[data-last]` sulla radice `.fc-slide`.
 - Niente script, link esterni, `@import` o `@font-face`: font e immagini stanno nel pacchetto.
 
+Per usarli si importano dalla pagina Template (sezione «Da importare») o come ZIP: diventano bozze nel catalogo e vanno pubblicati. Una modifica a un template già pubblicato richiede di aumentare `version` in `template.json`.
+
 Verifica: `pnpm --filter @forgecy/carousel preview ../../templates/agency/<cartella> /tmp/out`. I font sono Space Grotesk e Inter (SIL Open Font License 1.1, licenze in `fonts/`).
