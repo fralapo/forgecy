@@ -208,7 +208,7 @@
       "it": "Italiano"
     },
     "aiPolicy": "Policy AI",
-    "aiPolicyFixed": "AI esterna consentita. Solo un Admin può modificarla.",
+    "aiPolicyFixed": "{policy}. Solo un Admin può modificarla.",
     "saved": "Dati salvati.",
     "create": "Crea prospect",
     "save": "Salva modifiche"

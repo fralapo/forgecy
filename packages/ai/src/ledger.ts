@@ -1,5 +1,17 @@
 import type { AiPolicy, ProviderId } from "@forgecy/core";
-import { and, budgets, eq, gte, isNull, jobsLog, lt, sql, type Database } from "@forgecy/db";
+import {
+  and,
+  budgets,
+  desc,
+  eq,
+  gte,
+  isNull,
+  jobsLog,
+  lt,
+  lte,
+  sql,
+  type Database,
+} from "@forgecy/db";
 
 export type BudgetScope = { scope: "agency" } | { scope: "client"; clientId: string };
 
@@ -32,6 +44,7 @@ export interface LedgerEntry {
 export interface AiLedger {
   /** Sum of jobs_log cost for the month starting at `month` ("YYYY-MM-01", UTC). */
   monthSpendMicroUsd(scope: BudgetScope, month: string): Promise<number>;
+  /** The limit in force for `month`: the latest one set in that month or before (budgets carry over). */
   budgetFor(scope: BudgetScope, month: string): Promise<BudgetLimit | null>;
   record(entry: LedgerEntry): Promise<void>;
 }
@@ -73,9 +86,10 @@ export function createDbLedger(db: Pick<Database, "select" | "insert">): AiLedge
             scope.scope === "client"
               ? eq(budgets.scopeId, scope.clientId)
               : isNull(budgets.scopeId),
-            eq(budgets.month, month),
+            lte(budgets.month, month),
           ),
         )
+        .orderBy(desc(budgets.month))
         .limit(1);
       const row = rows[0];
       return row
@@ -130,7 +144,14 @@ export function createMemoryLedger(): MemoryLedger {
         .reduce((sum, e) => sum + e.costMicroUsd, 0);
     },
     async budgetFor(scope, month) {
-      return limits.get(key(scope, month)) ?? null;
+      const prefix = key(scope, "");
+      let best: { month: string; limit: BudgetLimit } | null = null;
+      for (const [k, limit] of limits) {
+        if (!k.startsWith(prefix)) continue;
+        const m = k.slice(prefix.length);
+        if (m <= month && (!best || m > best.month)) best = { month: m, limit };
+      }
+      return best?.limit ?? null;
     },
     async record(entry) {
       entries.push(structuredClone(entry));

@@ -1,0 +1,66 @@
+{
+  "nav": {
+    "label": "Sezioni delle impostazioni",
+    "general": "Generali",
+    "aiProviders": "Provider AI",
+    "aiPolicies": "Policy AI e budget"
+  },
+  "adminOnly": "Questa impostazione è riservata agli utenti Admin.",
+  "aiPolicies": {
+    "title": "Policy AI e budget",
+    "description": "Dove possono andare i dati dei clienti e quanto può costare l’AI ogni mese.",
+    "monthSpend": "Budget di {month}: {spent} di {limit} ({percent}%)",
+    "monthSpendNoLimit": "Spesa di {month}: {spent} · nessun limite mensile",
+    "warning": "Avviso",
+    "exhausted": "Esaurito",
+    "policies": {
+      "title": "Le quattro policy",
+      "clients": "{count, plural, =0 {Nessun cliente} one {# cliente} other {# clienti}}",
+      "external_allowed": "Brief, testi e immagini possono essere inviati ai provider AI configurati.",
+      "external_restricted": "Solo provider approvati per questo cliente, con conferma prima di inviare file del cliente.",
+      "local_only": "Nessun dato esce dalla rete dell’agenzia; serve un modello locale configurato. Mai fallback verso il cloud.",
+      "no_ai": "Nessuna funzione AI su questo cliente: template, editor ed export manuali."
+    },
+    "default": {
+      "title": "Policy predefinita per i nuovi clienti",
+      "hint": "Vale per i clienti creati da ora; non cambia i clienti esistenti.",
+      "setBy": "Impostata da {name} il {date}",
+      "neverSet": "Mai cambiata: i nuovi clienti partono con AI esterna consentita.",
+      "label": "Policy predefinita",
+      "save": "Salva policy predefinita",
+      "saved": "Policy predefinita salvata."
+    },
+    "clients": {
+      "title": "Clienti",
+      "empty": "Nessun cliente. La policy predefinita si applicherà al primo cliente che crei.",
+      "name": "Cliente",
+      "policy": "Policy",
+      "policyFor": "Policy di {name}",
+      "budget": "Budget mensile (USD)",
+      "budgetFor": "Budget mensile di {name} in dollari",
+      "spend": "Spesa del mese",
+      "noClientLimit": "Nessun limite del cliente: vale il budget dell’agenzia",
+      "changed": "Policy cambiata.",
+      "changedCancelled": "Policy cambiata. {count, plural, one {# job in attesa è stato annullato.} other {# job in attesa sono stati annullati.}}",
+      "localMissing": "Nessun modello locale configurato: le funzioni AI dei clienti con questa policy non partiranno."
+    },
+    "agency": {
+      "title": "Budget dell’agenzia",
+      "noBudget": "Nessun budget mensile: la spesa AI non ha limiti.",
+      "label": "Budget mensile (USD)",
+      "hint": "Lascia vuoto per nessun limite. Il limite vale anche per i mesi successivi finché non lo cambi.",
+      "forecast": "Al ritmo attuale: {amount} a fine mese",
+      "thresholds": "70% · avviso a tutti · 100% · i lavori AI non partono",
+      "monthReset": "Il mese è quello di calendario in UTC; la spesa riparte dal giorno 1."
+    },
+    "budget": {
+      "save": "Salva budget",
+      "saved": "Budget salvato.",
+      "removed": "Limite rimosso.",
+      "alreadyExceeded": "Budget salvato. È già superato: i lavori AI non partiranno fino al mese prossimo.",
+      "invalid": "Inserisci un importo in dollari maggiore di zero, con al massimo due decimali."
+    },
+    "spent": "{percent}% · {spent} di {limit}",
+    "spentNoLimit": "{spent}"
+  }
+}

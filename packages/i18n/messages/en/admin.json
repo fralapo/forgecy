@@ -1,0 +1,66 @@
+{
+  "nav": {
+    "label": "Settings sections",
+    "general": "General",
+    "aiProviders": "AI providers",
+    "aiPolicies": "AI policies and budgets"
+  },
+  "adminOnly": "This setting is reserved for Admin users.",
+  "aiPolicies": {
+    "title": "AI policies and budgets",
+    "description": "Where client data may go and how much AI may cost each month.",
+    "monthSpend": "{month} budget: {spent} of {limit} ({percent}%)",
+    "monthSpendNoLimit": "{month} spend: {spent} · no monthly limit",
+    "warning": "Warning",
+    "exhausted": "Exhausted",
+    "policies": {
+      "title": "The four policies",
+      "clients": "{count, plural, =0 {No clients} one {# client} other {# clients}}",
+      "external_allowed": "Briefs, texts and images can be sent to the configured AI providers.",
+      "external_restricted": "Only providers approved for this client, with a confirmation before sending the client’s files.",
+      "local_only": "No data leaves the agency’s network; a configured local model is needed. Never falls back to the cloud.",
+      "no_ai": "No AI features for this client: templates, editor and exports by hand."
+    },
+    "default": {
+      "title": "Default policy for new clients",
+      "hint": "Applies to clients created from now on; existing clients keep theirs.",
+      "setBy": "Set by {name} on {date}",
+      "neverSet": "Never changed: new clients start with external AI allowed.",
+      "label": "Default policy",
+      "save": "Save default policy",
+      "saved": "Default policy saved."
+    },
+    "clients": {
+      "title": "Clients",
+      "empty": "No clients. The default policy will apply to the first client you create.",
+      "name": "Client",
+      "policy": "Policy",
+      "policyFor": "Policy of {name}",
+      "budget": "Monthly budget (USD)",
+      "budgetFor": "Monthly budget of {name} in US dollars",
+      "spend": "Spend this month",
+      "noClientLimit": "No client limit: the agency budget applies",
+      "changed": "Policy changed.",
+      "changedCancelled": "Policy changed. {count, plural, one {# waiting job was cancelled.} other {# waiting jobs were cancelled.}}",
+      "localMissing": "No local model is configured: AI features of clients with this policy will not start."
+    },
+    "agency": {
+      "title": "Agency budget",
+      "noBudget": "No monthly budget: AI spending has no limit.",
+      "label": "Monthly budget (USD)",
+      "hint": "Leave empty for no limit. The limit carries over to the next months until you change it.",
+      "forecast": "At the current pace: {amount} by the end of the month",
+      "thresholds": "70% · a warning to everyone · 100% · AI jobs do not start",
+      "monthReset": "The month is the calendar month in UTC; spending restarts on the 1st."
+    },
+    "budget": {
+      "save": "Save budget",
+      "saved": "Budget saved.",
+      "removed": "Limit removed.",
+      "alreadyExceeded": "Budget saved. It is already exceeded: AI jobs will not start until next month.",
+      "invalid": "Enter an amount in dollars greater than zero, with at most two decimals."
+    },
+    "spent": "{percent}% · {spent} of {limit}",
+    "spentNoLimit": "{spent}"
+  }
+}
