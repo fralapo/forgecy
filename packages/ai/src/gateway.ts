@@ -15,10 +15,12 @@ import {
   type ImageGenerationStatus,
   type ImageProvider,
   type ImageSize,
+  type InputImage,
   type ModelRef,
   type ProviderSet,
   type TextGenerationResult,
   type Usage,
+  inputImageMimeTypes,
 } from "./types";
 
 /** Max model calls per job for structured output: first try + one retry with the validation error. */
@@ -26,6 +28,10 @@ export const MAX_VALIDATION_ATTEMPTS = 2;
 const DEFAULT_TIMEOUT_MS = 120_000;
 const DEFAULT_IMAGE_TIMEOUT_MS = 180_000;
 const DEFAULT_MAX_OUTPUT_TOKENS = 16_000;
+/** Images per request. Anthropic accepts more, but beyond this a task should be split. */
+export const MAX_INPUT_IMAGES = 20;
+/** Raw bytes per image: base64 of 3.75 MB stays under Anthropic's 5 MB per-image limit. */
+export const MAX_INPUT_IMAGE_BYTES = 3_750_000;
 
 export interface TaskRoute {
   primary: ModelRef;
@@ -89,6 +95,11 @@ export interface GenerateObjectRequest<T> extends CommonRequest {
   schemaName?: string;
   system: string;
   input: string;
+  /**
+   * Images sent with `input` (vision). Same policy, budget and log as text: the log
+   * keeps only hash, size and type of each image. local_only needs a local vision model.
+   */
+  images?: InputImage[];
   effort?: Effort;
   maxOutputTokens?: number;
 }
@@ -130,6 +141,49 @@ export interface GenerateImageResult {
 export interface AiGateway {
   generateObject<T>(req: GenerateObjectRequest<T>): Promise<GenerateObjectResult<T>>;
   generateImage(req: GenerateImageRequest): Promise<GenerateImageResult>;
+}
+
+function sniffImage(data: Uint8Array): string | undefined {
+  const at = (i: number) => data[i];
+  const ascii = (from: number, len: number) =>
+    String.fromCharCode(...data.subarray(from, from + len));
+  if (at(0) === 0x89 && ascii(1, 3) === "PNG") return "image/png";
+  if (at(0) === 0xff && at(1) === 0xd8 && at(2) === 0xff) return "image/jpeg";
+  if (ascii(0, 4) === "GIF8") return "image/gif";
+  if (ascii(0, 4) === "RIFF" && ascii(8, 4) === "WEBP") return "image/webp";
+  return undefined;
+}
+
+/** Rejects images a provider would refuse with a 400, before any policy or budget check. */
+export function validateInputImages(images: readonly InputImage[]): void {
+  if (images.length > MAX_INPUT_IMAGES) {
+    throw new ForgecyError(
+      "validation",
+      `Too many images (${images.length}); the limit is ${MAX_INPUT_IMAGES} per request`,
+    );
+  }
+  images.forEach((img, index) => {
+    if (!(inputImageMimeTypes as readonly string[]).includes(img.mimeType)) {
+      throw new ForgecyError("validation", `Image ${index}: unsupported type ${img.mimeType}`, {
+        index,
+      });
+    }
+    if (img.data.byteLength === 0 || img.data.byteLength > MAX_INPUT_IMAGE_BYTES) {
+      throw new ForgecyError(
+        "validation",
+        `Image ${index}: ${img.data.byteLength} bytes; allowed 1 to ${MAX_INPUT_IMAGE_BYTES}`,
+        { index, bytes: img.data.byteLength },
+      );
+    }
+    const sniffed = sniffImage(img.data);
+    if (sniffed !== img.mimeType) {
+      throw new ForgecyError(
+        "validation",
+        `Image ${index}: content is ${sniffed ?? "not a supported image"}, declared ${img.mimeType}`,
+        { index },
+      );
+    }
+  });
 }
 
 const sleep = (ms: number, signal?: AbortSignal) =>
@@ -318,9 +372,21 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
       const route = req.route ?? routing.tasks?.[req.task] ?? routing.default;
       const jsonSchema = zodToJsonSchema(req.schema);
       const schemaName = req.schemaName ?? req.task;
+      const images = req.images ?? [];
+      validateInputImages(images);
       const summary = {
         ...summarize(req.task, req, { system: req.system, input: req.input }),
         schema: { name: schemaName, sha256: sha256(JSON.stringify(jsonSchema)) },
+        ...(images.length
+          ? {
+              images: images.map((img) => ({
+                ...(img.id ? { id: img.id } : {}),
+                sha256: sha256(img.data),
+                bytes: img.data.byteLength,
+                mimeType: img.mimeType,
+              })),
+            }
+          : {}),
       };
       const candidates = await resolveCandidates(
         req.task,
@@ -332,7 +398,9 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
       );
       const budgetWarnings = await checkBudget(req.task, req, candidates[0]!, summary);
 
-      const baseMessages: ChatTurn[] = [{ role: "user", content: req.input }];
+      const baseMessages: ChatTurn[] = [
+        { role: "user", content: req.input, ...(images.length ? { images } : {}) },
+      ];
       let usage = emptyUsage();
       let cost = 0;
       let attempts = 0;

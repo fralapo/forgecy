@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { classifyError } from "../errors";
 import { toAnthropicSchema } from "../schema";
 import type {
+  ChatTurn,
   StopReason,
   TextGenerationRequest,
   TextGenerationResult,
@@ -34,6 +35,25 @@ function normalizeStop(reason: string | null): StopReason {
   }
 }
 
+function toAnthropicMessage(m: ChatTurn): Anthropic.MessageParam {
+  if (m.role !== "user" || !m.images?.length) return { role: m.role, content: m.content };
+  // Images before the text, as Anthropic recommends for vision prompts.
+  return {
+    role: "user",
+    content: [
+      ...m.images.map((img): Anthropic.ImageBlockParam => ({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: img.mimeType,
+          data: Buffer.from(img.data).toString("base64"),
+        },
+      })),
+      { type: "text", text: m.content },
+    ],
+  };
+}
+
 /**
  * Anthropic Messages API with structured outputs (`output_config.format` json_schema).
  * The system prompt is a single block marked `cache_control: ephemeral` so the
@@ -58,7 +78,7 @@ export function createAnthropicProvider(opts: AnthropicProviderOptions): TextPro
             model: req.model,
             max_tokens: req.maxOutputTokens,
             system: [{ type: "text", text: req.system, cache_control: { type: "ephemeral" } }],
-            messages: req.messages.map((m) => ({ role: m.role, content: m.content })),
+            messages: req.messages.map(toAnthropicMessage),
             output_config: {
               format: { type: "json_schema", schema: toAnthropicSchema(req.jsonSchema) },
               ...(req.effort ? { effort: req.effort } : {}),
