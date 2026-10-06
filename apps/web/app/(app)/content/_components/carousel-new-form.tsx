@@ -58,11 +58,20 @@ export function CarouselNewForm({
 
   const [title, setTitle] = useState(plan?.title ?? "");
   const [channel, setChannel] = useState<string>(plan?.channel ?? channels[0] ?? "instagram");
+  const defaults = options.defaults;
   const [templateKey, setTemplateKey] = useState(
-    firstTemplate(plan?.channel ?? channels[0] ?? "", plan?.format)?.key ?? "",
+    firstTemplate(plan?.channel ?? channels[0] ?? "", plan?.format ?? defaults.format ?? undefined)
+      ?.key ?? "",
   );
   const template = templates.find((t) => t.key === templateKey);
-  const [slideCount, setSlideCount] = useState(template?.slides.default ?? 7);
+  // The client's default slide count (Agent memory), within what the template allows.
+  const startCount = (tpl: typeof template) =>
+    tpl
+      ? defaults.slideCount
+        ? Math.min(Math.max(defaults.slideCount, tpl.slides.min), tpl.slides.max)
+        : tpl.slides.default
+      : (defaults.slideCount ?? 7);
+  const [slideCount, setSlideCount] = useState(startCount(template));
   const [objective, setObjective] = useState<Objective>("awareness");
   const [audienceIds, setAudienceIds] = useState<string[]>(
     options.audience.length === 1 ? [options.audience[0]!.id] : [],
@@ -70,7 +79,7 @@ export function CarouselNewForm({
   const [pillarId, setPillarId] = useState(plan?.pillarId ?? "");
   const [rubricId, setRubricId] = useState(plan?.rubricId ?? "");
   const [productId, setProductId] = useState(plan?.productId ?? "");
-  const [language, setLanguage] = useState<Language>("en");
+  const [language, setLanguage] = useState<Language>(defaults.language ?? "en");
   const [briefText, setBriefText] = useState(plan?.briefText ?? "");
 
   const rubrics = options.rubrics.filter((r) => !pillarId || r.pillarId === pillarId);
@@ -81,7 +90,7 @@ export function CarouselNewForm({
   function pickTemplate(key: string) {
     setTemplateKey(key);
     const tpl = templates.find((x) => x.key === key);
-    if (tpl) setSlideCount(tpl.slides.default);
+    if (tpl) setSlideCount(startCount(tpl));
   }
 
   function submit(e: React.FormEvent) {

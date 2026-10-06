@@ -23,3 +23,4 @@ export * from "./mcp/connections";
 export * from "./routing-settings";
 export * from "./agent-tasks";
 export * from "./agents";
+export * from "./memory";

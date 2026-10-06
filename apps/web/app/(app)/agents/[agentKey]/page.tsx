@@ -1,8 +1,8 @@
 import { AGENT_CAPABILITIES, aiTasks, listAgentRuns, type AiTask } from "@forgecy/ai";
 import { AGENT_INSTRUCTIONS_MAX, agentKeySchema } from "@forgecy/core";
 import { getDb, inArray, users } from "@forgecy/db";
-import { Badge, Card, cn } from "@forgecy/ui";
-import { ArrowLeft, Bot, ShieldCheck } from "lucide-react";
+import { Badge, Button, Card, cn } from "@forgecy/ui";
+import { ArrowLeft, Bot, Brain, ShieldCheck } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -354,6 +354,12 @@ export default async function AgentPage({
                 {version(config.published.version)}
               </span>
             ) : null}
+            <Button asChild variant="secondary">
+              <Link href={`/agents/${agent}/memory` as Route}>
+                <Brain aria-hidden />
+                {t("memory.open")}
+              </Link>
+            </Button>
           </div>
         }
       />

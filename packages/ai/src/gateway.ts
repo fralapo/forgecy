@@ -7,7 +7,12 @@ import {
   type ProviderId,
 } from "@forgecy/core";
 import { messageRef } from "@forgecy/i18n";
-import { agentForTask, agentInstructionsBlock, type AgentRuntime } from "./agent-tasks";
+import {
+  agentForTask,
+  agentInstructionsBlock,
+  agentMemoryBlock,
+  type AgentRuntime,
+} from "./agent-tasks";
 import { AiProviderError, classifyError } from "./errors";
 import { monthKey, type AiLedger, type BudgetScope, type LedgerEntry } from "./ledger";
 import { computeCost } from "./pricing";
@@ -435,10 +440,17 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
       const runtime = agent ? routing.agents?.[agent] : undefined;
       const route =
         req.route ?? runtime?.tasks?.[req.task] ?? routing.tasks?.[req.task] ?? routing.default;
-      // Published instructions of the agent go after the module's own prompt, which wins.
-      const system = runtime?.instructions
-        ? `${req.system}\n\n${agentInstructionsBlock(runtime.instructions)}`
-        : req.system;
+      // Published instructions, then the client's approved memories, go after the
+      // module's own prompt, which wins.
+      const memories =
+        agent && req.clientId && ledger.agentMemory
+          ? await ledger.agentMemory(req.clientId, agent)
+          : [];
+      const system = [
+        req.system,
+        ...(runtime?.instructions ? [agentInstructionsBlock(runtime.instructions)] : []),
+        ...(memories.length ? [agentMemoryBlock(memories)] : []),
+      ].join("\n\n");
       const jsonSchema = zodToJsonSchema(req.schema);
       const schemaName = req.schemaName ?? req.task;
       const images = req.images ?? [];
@@ -452,6 +464,9 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
                 instructionsVersion: runtime?.instructions?.version ?? null,
               },
             }
+          : {}),
+        ...(memories.length
+          ? { memory: memories.map((m) => ({ id: m.id, version: m.version })) }
           : {}),
         schema: { name: schemaName, sha256: sha256(JSON.stringify(jsonSchema)) },
         ...(images.length

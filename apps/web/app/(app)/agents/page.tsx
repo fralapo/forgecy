@@ -1,6 +1,6 @@
 import { AGENT_CAPABILITIES, AGENT_ORDER } from "@forgecy/ai";
-import { Badge } from "@forgecy/ui";
-import { Bot, Info } from "lucide-react";
+import { Badge, Button } from "@forgecy/ui";
+import { Bot, Brain, Info } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
@@ -40,7 +40,18 @@ export default async function AgentsPage() {
 
   return (
     <>
-      <PageHeader title={t("title")} description={t("description")} />
+      <PageHeader
+        title={t("title")}
+        description={t("description")}
+        actions={
+          <Button asChild variant="secondary">
+            <Link href={"/agents/all/memory" as Route}>
+              <Brain aria-hidden />
+              {t("memory.openAll")}
+            </Link>
+          </Button>
+        }
+      />
       <p className="-mt-6 mb-6 text-body-sm text-fg-muted">{t("activeCount", { count: active })}</p>
       <p
         role="note"

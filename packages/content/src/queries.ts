@@ -1,4 +1,5 @@
 /** Read models of the content pages. Every query checks `view` on the client. */
+import { loadClientMemorySettings } from "@forgecy/ai";
 import { getPublishedBrandIdentity } from "@forgecy/brand";
 import { assertCan, type Actor, type MessageRef } from "@forgecy/core";
 import { englishMessage, messageRef } from "@forgecy/i18n";
@@ -28,7 +29,7 @@ import {
   type Database,
 } from "@forgecy/db";
 import { checkDocument, getContentRow, isLocked, outlineOf } from "./carousels/carousels";
-import { parseDocument, perWeek } from "./document";
+import { languageSchema, parseDocument, perWeek } from "./document";
 import { productSource, hasProductCatalog } from "./products";
 import { getTemplate, listUsableTemplates } from "./carousels/templates";
 
@@ -332,7 +333,7 @@ export type CarouselWorkspace = Awaited<ReturnType<typeof getCarouselWorkspace>>
 /** Data for the “New carousel” form. */
 export async function getNewCarouselOptions(db: Database, actor: Actor, clientId: string) {
   assertCan(actor, "view", clientId);
-  const [brand, templates, pillars, rubrics, products] = await Promise.all([
+  const [brand, templates, pillars, rubrics, products, settings] = await Promise.all([
     getPublishedBrandIdentity(db, actor, clientId),
     listUsableTemplates(db, clientId),
     db
@@ -349,9 +350,17 @@ export async function getNewCarouselOptions(db: Database, actor: Actor, clientId
       .from(contentRubrics)
       .where(and(eq(contentRubrics.clientId, clientId), eq(contentRubrics.status, "accepted"))),
     productSource().listApproved(db, clientId),
+    loadClientMemorySettings(db, clientId),
   ]);
+  const language = languageSchema.safeParse(settings.language?.value);
   return {
     brandPublished: Boolean(brand),
+    /** The client's structured settings (Agent memory): starting values of the form. */
+    defaults: {
+      slideCount: settings.slide_count?.value ?? null,
+      format: settings.format?.value ?? null,
+      language: language.success ? language.data : null,
+    },
     audience: (brand?.document.strategy.audience ?? [])
       .filter((a) => !a.deprecated)
       .map((a) => ({ id: a.id, name: a.value.name })),

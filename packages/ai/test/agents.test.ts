@@ -116,6 +116,37 @@ describe("gateway with agent configuration", () => {
   });
 });
 
+describe("gateway with client memory", () => {
+  it("adds the client's approved memories after the instructions and records their ids", async () => {
+    const ledger = Object.assign(createMemoryLedger(), {
+      agentMemory: async (clientId: string, agent: string) =>
+        clientId === "c1" && agent === "copywriter"
+          ? [{ id: "m1", version: 2, content: "No rhetorical  questions\nin titles." }]
+          : [],
+    });
+    const anthropic = createFakeTextProvider("anthropic");
+    const gateway = createAiGateway({
+      ledger,
+      providers: { text: { anthropic }, image: {} },
+      routing: {
+        ...routing,
+        agents: { copywriter: { active: true, instructions: { version: 1, text: "Short." } } },
+      },
+    });
+    anthropic.push({ json: { title: "Hi" } });
+    anthropic.push({ json: { title: "Hi" } });
+    await gateway.generateObject({ ...req, clientId: "c1" });
+    const system = anthropic.calls[0]!.system;
+    expect(system.indexOf("Short.")).toBeLessThan(system.indexOf("Client memory"));
+    expect(system).toContain("- No rhetorical questions in titles.");
+    expect(ledger.entries[0]!.inputSummary).toMatchObject({ memory: [{ id: "m1", version: 2 }] });
+    // Another client: nothing added, nothing recorded.
+    await gateway.generateObject({ ...req, clientId: "c2" });
+    expect(anthropic.calls[1]!.system).not.toContain("Client memory");
+    expect(ledger.entries[1]!.inputSummary).not.toHaveProperty("memory");
+  });
+});
+
 describe("withAgents", () => {
   const config = (over: Partial<AgentConfig>): AgentConfig => ({
     agent: "copywriter",
