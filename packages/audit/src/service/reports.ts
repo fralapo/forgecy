@@ -3,6 +3,7 @@ import {
   COMPACT_REPORT_SECTIONS,
   FIXED_REPORT_SECTIONS,
   reportSectionKeys,
+  STRATEGY_REPORT_SECTIONS,
   USABLE_FINDING_STATUSES,
   type Actor,
   type AuditEvidence,
@@ -11,7 +12,7 @@ import {
   type ReportStatus,
   type ReportVariant,
 } from "@forgecy/core";
-import { localizedError } from "@forgecy/i18n";
+import { getTranslator, localizedError } from "@forgecy/i18n";
 import {
   and,
   appSettings,
@@ -24,6 +25,8 @@ import {
   auditReports,
   audits,
   auditSources,
+  brandIdentityVersions,
+  contentPillars,
   desc,
   eq,
   inArray,
@@ -765,8 +768,11 @@ export interface ReportDocItem {
   causes: string[];
 }
 
+/** Pages only the Strategy Presentation has, built from the brand and content modules. */
+export type StrategyDocSectionKey = "brand_identity" | "content_strategy";
+
 export interface ReportDocSection {
-  key: ReportSectionKey;
+  key: ReportSectionKey | StrategyDocSectionKey;
   title: string;
   intro: string;
   bullets: string[];
@@ -865,7 +871,12 @@ export async function buildReportDocument(
   const titles = new Map(included.map((f) => [f.id, f.title]));
   const grouped = groupFindings(included);
   const language = lang(profile?.reportLanguage);
-  const keys = variant === "compact" ? new Set(COMPACT_REPORT_SECTIONS) : null;
+  const keys =
+    variant === "compact"
+      ? new Set(COMPACT_REPORT_SECTIONS)
+      : variant === "strategy"
+        ? new Set(STRATEGY_REPORT_SECTIONS)
+        : null;
   const acceptedPlan = plan && (plan.status === "accepted" || plan.status === "edited");
   const toItem = (f: FindingRow): ReportDocItem => ({
     id: f.id,
@@ -902,6 +913,12 @@ export async function buildReportDocument(
       }
       return { ...base, items: grouped[s.key].map(toItem) };
     });
+  if (variant === "strategy") {
+    // Brand Identity and Content Strategy go between the diagnosis and the next steps.
+    const extra = await strategySections(db, client.id, language);
+    const at = sections.findIndex((x) => x.key === "next_steps" || x.key === "method");
+    sections.splice(at < 0 ? sections.length : at, 0, ...extra);
+  }
   const agencyValue = (agency?.value ?? null) as { name?: string } | null;
   return {
     language,
@@ -915,6 +932,112 @@ export async function buildReportDocument(
   };
 }
 
+type Field = { value?: unknown; deprecated?: boolean } | undefined;
+const fieldText = (f: Field) =>
+  f && !f.deprecated && typeof f.value === "string" ? f.value.trim() : "";
+
+/**
+ * The Strategy Presentation's own pages: the latest Brand Identity of the client
+ * (published or still proposed) and the accepted pillars of its Content Strategy.
+ * A missing part says so instead of being invented.
+ */
+async function strategySections(
+  db: Database,
+  clientId: string,
+  language: "it" | "en",
+): Promise<ReportDocSection[]> {
+  const t = getTranslator(language, "deliverable");
+  const [identity] = await db
+    .select({ number: brandIdentityVersions.number, document: brandIdentityVersions.document })
+    .from(brandIdentityVersions)
+    .where(
+      and(
+        eq(brandIdentityVersions.clientId, clientId),
+        ne(brandIdentityVersions.status, "archived"),
+      ),
+    )
+    .orderBy(desc(brandIdentityVersions.number))
+    .limit(1);
+  const pillars = await db
+    .select()
+    .from(contentPillars)
+    .where(and(eq(contentPillars.clientId, clientId), eq(contentPillars.status, "accepted")))
+    .orderBy(asc(contentPillars.createdAt));
+
+  const doc = (identity?.document ?? {}) as {
+    strategy?: Record<string, Field | Array<{ value?: { name?: string }; deprecated?: boolean }>>;
+    verbal?: {
+      voice?: Field;
+      weAreWeAreNot?: Array<{
+        value?: { weAre?: string; weAreNot?: string };
+        deprecated?: boolean;
+      }>;
+    };
+  };
+  const st = (doc.strategy ?? {}) as Record<string, Field>;
+  const audience = (
+    (doc.strategy?.audience ?? []) as Array<{ value?: { name?: string }; deprecated?: boolean }>
+  )
+    .filter((a) => !a.deprecated && a.value?.name)
+    .map((a) => a.value!.name!);
+  const weAre = (doc.verbal?.weAreWeAreNot ?? [])
+    .filter((w) => !w.deprecated && w.value?.weAre && w.value.weAreNot)
+    .slice(0, 2)
+    .map((w) =>
+      t("strategyPresentation.weAre", { weAre: w.value!.weAre!, weAreNot: w.value!.weAreNot! }),
+    );
+  const brandBullets = [
+    fieldText(st.positioning) &&
+      t("strategyPresentation.positioning", { value: fieldText(st.positioning) }),
+    fieldText(st.promise) && t("strategyPresentation.promise", { value: fieldText(st.promise) }),
+    fieldText(st.differentiation) &&
+      t("strategyPresentation.differentiation", { value: fieldText(st.differentiation) }),
+    audience.length &&
+      t("strategyPresentation.audience", { value: audience.slice(0, 4).join(", ") }),
+    fieldText(doc.verbal?.voice) &&
+      t("strategyPresentation.voice", { value: fieldText(doc.verbal?.voice) }),
+    ...weAre,
+  ]
+    .filter((x): x is string => Boolean(x))
+    .map((x) => fitText(x, REPORT_LIMITS.bullet))
+    .slice(0, 6);
+
+  const pillarItems: ReportDocItem[] = pillars.slice(0, 6).map((p) => ({
+    id: p.id,
+    kind: "observation",
+    title: p.name,
+    description: p.goal || null,
+    impact: p.cta ? t("strategyPresentation.cta", { value: p.cta }) : null,
+    recommendation: null,
+    priority: "medium",
+    evidence: [],
+    causes: p.themes.slice(0, 4),
+  }));
+
+  return [
+    {
+      key: "brand_identity",
+      title: t("strategyPresentation.brandTitle"),
+      intro: identity
+        ? fieldText(st.oneLiner) || t("strategyPresentation.brandIntro")
+        : t("strategyPresentation.brandMissing"),
+      bullets: brandBullets,
+      note: "",
+      items: [],
+    },
+    {
+      key: "content_strategy",
+      title: t("strategyPresentation.strategyTitle"),
+      intro: pillars.length
+        ? t("strategyPresentation.strategyIntro", { count: pillars.length })
+        : t("strategyPresentation.strategyMissing"),
+      bullets: pillarItems.map((p) => p.title),
+      note: "",
+      items: pillarItems,
+    },
+  ];
+}
+
 /** Deterministic PDF name: `rossi-srl_audit_2026-10-05_v2_full.pdf`. */
 export function reportFileName(input: {
   slug: string;
@@ -924,8 +1047,9 @@ export function reportFileName(input: {
   final: boolean;
 }): string {
   const day = input.auditDate.toISOString().slice(0, 10);
-  const v = input.variant === "full" ? "full" : "compact";
-  return `${input.slug}_audit_${day}_v${input.version}_${v}${input.final ? "" : "_draft"}.pdf`;
+  const kind = input.variant === "strategy" ? "strategy" : "audit";
+  const v = input.variant === "strategy" ? "" : input.variant === "full" ? "_full" : "_compact";
+  return `${input.slug}_${kind}_${day}_v${input.version}${v}${input.final ? "" : "_draft"}.pdf`;
 }
 
 // ---------------------------------------------------------------- Queries

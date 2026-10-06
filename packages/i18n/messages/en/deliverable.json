@@ -35,6 +35,27 @@
     },
     "pdfTitle": "Audit {date}"
   },
+  "strategyPresentation": {
+    "kicker": "Strategy presentation",
+    "title": "A strategy for =={name}==",
+    "subtitle": "Where the communication stands today, the proposed identity and the content that follows from it.",
+    "brandTitle": "Proposed Brand Identity",
+    "brandIntro": "The identity we propose, built on the audit's findings.",
+    "brandMissing": "The Brand Identity is still to be defined: we will build it together from this diagnosis.",
+    "positioning": "Positioning: {value}",
+    "promise": "Promise: {value}",
+    "differentiation": "What sets it apart: {value}",
+    "audience": "Speaks to: {value}",
+    "voice": "Voice: {value}",
+    "weAre": "We are {weAre}, not {weAreNot}",
+    "strategyTitle": "Content strategy",
+    "strategyIntro": "{count, plural, one {One editorial pillar} other {# editorial pillars}}: what to talk about, why and with which call to action.",
+    "strategyMissing": "The content pillars are still to be agreed: they follow from the approved identity.",
+    "pillar": "Pillar {number}",
+    "noGoal": "Goal to be agreed together.",
+    "cta": "Call to action: {value}",
+    "pdfTitle": "Strategy {date}"
+  },
   "carousel": {
     "untitled": "Untitled carousel",
     "imageNote": "Image “{slot}”: {brief}",

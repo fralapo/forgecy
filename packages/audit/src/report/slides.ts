@@ -65,13 +65,18 @@ export function reportSlides(doc: ReportDocument, template: TemplateManifest): R
       ? createFormat(doc.language, "UTC").date(Date.UTC(year, month - 1, 15), "month")
       : doc.date;
   const coverSection = doc.sections.find((s) => s.key === "cover");
+  const strategy = doc.variant === "strategy";
   const head: SlideInput[] = [
     fitSlot(
       cover,
       {
-        kicker: t("auditReport.kicker"),
-        title: t("auditReport.title", { name: fitText(doc.prospect.name, 40) }),
-        subtitle: coverSection?.intro || t("auditReport.subtitle"),
+        kicker: t(strategy ? "strategyPresentation.kicker" : "auditReport.kicker"),
+        title: t(strategy ? "strategyPresentation.title" : "auditReport.title", {
+          name: fitText(doc.prospect.name, 40),
+        }),
+        subtitle:
+          coverSection?.intro ||
+          t(strategy ? "strategyPresentation.subtitle" : "auditReport.subtitle"),
         client: doc.prospect.name,
         date,
         prepared_by: doc.agency.name ?? undefined,
@@ -114,14 +119,22 @@ export function reportSlides(doc: ReportDocument, template: TemplateManifest): R
           number: String(number).padStart(2, "0"),
           title: s.title,
           intro: s.intro,
-          items: s.key === "overview" ? s.bullets : s.items.map((i) => i.title),
+          items:
+            s.key === "overview" || s.key === "brand_identity" || s.key === "content_strategy"
+              ? s.bullets
+              : s.items.map((i) => i.title),
         }),
       ],
-      pages: s.items.map((item, i) =>
-        s.key === "problems"
-          ? problemPage(problem, item, i, t)
-          : findingPage(finding, s, item, i, t),
-      ),
+      pages:
+        s.key === "brand_identity"
+          ? []
+          : s.items.map((item, i) =>
+              s.key === "content_strategy"
+                ? pillarPage(problem, item, i, t)
+                : s.key === "problems"
+                  ? problemPage(problem, item, i, t)
+                  : findingPage(finding, s, item, i, t),
+            ),
     });
   }
 
@@ -147,6 +160,17 @@ function problemPage(layout: LayoutDef, item: ReportDocItem, i: number, t: Text)
       item.description ||
       item.recommendation ||
       t(item.causes.length ? "auditReport.fromCauses" : "auditReport.noRecommendation"),
+    impact: item.impact ?? undefined,
+    causes: item.causes,
+  });
+}
+
+/** A pillar of the proposed Content Strategy, on the problem layout (label, goal, CTA, themes). */
+function pillarPage(layout: LayoutDef, item: ReportDocItem, i: number, t: Text): SlideInput {
+  return fitSlot(layout, {
+    label: t("strategyPresentation.pillar", { number: i + 1 }),
+    title: item.title,
+    description: item.description || t("strategyPresentation.noGoal"),
     impact: item.impact ?? undefined,
     causes: item.causes,
   });

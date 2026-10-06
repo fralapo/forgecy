@@ -328,7 +328,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
           ) : null}
           {current.status !== "superseded" ? (
             <div className="flex flex-wrap gap-2">
-              {(["full", "compact"] as const).map((variant) => (
+              {(["full", "compact", "strategy"] as const).map((variant) => (
                 <ActionButton
                   key={`draft-${variant}`}
                   action={requestReportExportAction.bind(null, {
@@ -347,7 +347,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
           ) : null}
           {!closed && (current.status === "approved" || current.status === "exported") ? (
             <div className="flex flex-wrap gap-2">
-              {(["full", "compact"] as const).map((variant) => (
+              {(["full", "compact", "strategy"] as const).map((variant) => (
                 <ActionButton
                   key={`final-${variant}`}
                   action={requestReportExportAction.bind(null, {

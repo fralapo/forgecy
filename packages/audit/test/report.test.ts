@@ -99,6 +99,49 @@ describe("report pages", () => {
     ]);
   });
 
+  it("builds the Strategy Presentation with brand and pillar pages", () => {
+    const d = {
+      ...doc([
+        section("cover"),
+        section("problems", [item(1, { kind: "problem" })]),
+        section("brand_identity", [], ["Posizionamento: " + long(60), "Voce: calda"]),
+        section(
+          "content_strategy",
+          [item(2, { title: "Ricette", causes: ["Carbonara", "Amatriciana"], impact: "Prenota" })],
+          ["Ricette"],
+        ),
+        section("next_steps"),
+        section("method", [], ["x"]),
+      ]),
+      variant: "strategy" as const,
+    };
+    const { slides } = reportSlides(d, template);
+    expect(slides.map((s) => s.layout)).toEqual([
+      "cover",
+      "section",
+      "problem",
+      "section",
+      "section",
+      "problem",
+      "next-steps",
+      "method",
+    ]);
+    expect(buildCarouselSchema(template).safeParse(slides).success).toBe(true);
+    expect(slides[0]!.slots).toMatchObject({
+      kicker: "Presentazione della strategia",
+      title: "Una strategia per ==Forno Rossi==",
+    });
+    expect(slides[3]!.slots?.items).toEqual([
+      expect.stringMatching(/^Posizionamento/),
+      "Voce: calda",
+    ]);
+    expect(slides[5]!.slots).toMatchObject({
+      label: "Pilastro 1",
+      title: "Ricette",
+      causes: ["Carbonara", "Amatriciana"],
+    });
+  });
+
   it("stays within the page limit by dropping findings of the longest section", () => {
     const many = Array.from({ length: 60 }, (_, i) => item(i));
     const { slides, dropped } = reportSlides(

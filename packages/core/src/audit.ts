@@ -232,8 +232,12 @@ export const prospectObjectiveLabels: Record<ProspectObjective, string> = {
 export const reportStatuses = ["draft", "in_review", "approved", "exported", "superseded"] as const;
 export type ReportStatus = (typeof reportStatuses)[number];
 
-/** Full report or the compact one for a first email; both come from the same version. */
-export const reportVariants = ["full", "compact"] as const;
+/**
+ * Full report, the compact one for a first email, or the Strategy Presentation (v1):
+ * the diagnosis followed by the proposed Brand Identity and Content Strategy. All three
+ * come from the same version and follow the same review.
+ */
+export const reportVariants = ["full", "compact", "strategy"] as const;
 export type ReportVariant = (typeof reportVariants)[number];
 
 /** Sections in their default order. Cover and method are always in the full report. */
@@ -256,6 +260,16 @@ export const COMPACT_REPORT_SECTIONS: readonly ReportSectionKey[] = [
   "cover",
   "overview",
   "problems",
+  "next_steps",
+  "method",
+];
+
+/** The diagnosis part of the Strategy Presentation; brand and strategy pages follow. */
+export const STRATEGY_REPORT_SECTIONS: readonly ReportSectionKey[] = [
+  "cover",
+  "overview",
+  "problems",
+  "opportunities",
   "next_steps",
   "method",
 ];

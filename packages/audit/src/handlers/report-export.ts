@@ -65,9 +65,10 @@ export async function runReportExport(
       language: doc.language,
       meta: {
         client: client.name,
-        content: getTranslator(doc.language, "deliverable")("auditReport.pdfTitle", {
-          date: doc.date,
-        }),
+        content: getTranslator(doc.language, "deliverable")(
+          doc.variant === "strategy" ? "strategyPresentation.pdfTitle" : "auditReport.pdfTitle",
+          { date: doc.date },
+        ),
         version: report.version,
         ...(report.approvedAt ? { approvedAt: report.approvedAt.toISOString() } : {}),
       },

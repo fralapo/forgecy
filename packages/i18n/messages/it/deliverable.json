@@ -35,6 +35,27 @@
     },
     "pdfTitle": "Audit {date}"
   },
+  "strategyPresentation": {
+    "kicker": "Presentazione della strategia",
+    "title": "Una strategia per =={name}==",
+    "subtitle": "Dove si trova oggi la comunicazione, l'identità proposta e i contenuti che ne derivano.",
+    "brandTitle": "Brand Identity proposta",
+    "brandIntro": "L'identità che proponiamo, costruita su quanto emerso dall'audit.",
+    "brandMissing": "La Brand Identity è ancora da definire: la costruiremo insieme a partire da questa diagnosi.",
+    "positioning": "Posizionamento: {value}",
+    "promise": "Promessa: {value}",
+    "differentiation": "Cosa la distingue: {value}",
+    "audience": "Parla a: {value}",
+    "voice": "Voce: {value}",
+    "weAre": "Siamo {weAre}, non {weAreNot}",
+    "strategyTitle": "Strategia dei contenuti",
+    "strategyIntro": "{count, plural, one {Un pilastro editoriale} other {# pilastri editoriali}}: di cosa parlare, perché e con quale invito all'azione.",
+    "strategyMissing": "I pilastri dei contenuti sono ancora da concordare: derivano dall'identità approvata.",
+    "pillar": "Pilastro {number}",
+    "noGoal": "Obiettivo da concordare insieme.",
+    "cta": "Invito all'azione: {value}",
+    "pdfTitle": "Strategia {date}"
+  },
   "carousel": {
     "untitled": "Carosello senza titolo",
     "imageNote": "Immagine “{slot}”: {brief}",
