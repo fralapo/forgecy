@@ -19,6 +19,7 @@ import {
   type CarouselDocument,
   type ContentChannel,
 } from "../document";
+import { channelLabels } from "../labels";
 
 export type CheckSeverity = "error" | "warning";
 
@@ -126,7 +127,7 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
       severity: "error",
       ...say("review.checks.captionLength", {
         count: String(captionLen),
-        channel: input.channel === "linkedin" ? "LinkedIn" : "Instagram",
+        channel: channelLabels[input.channel],
         max: String(limit),
       }),
     });

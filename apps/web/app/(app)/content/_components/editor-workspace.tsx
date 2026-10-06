@@ -2,6 +2,7 @@
 
 import {
   captionLimits,
+  channelLabels,
   computeChecks,
   normalizeHashtag,
   type CarouselDocument,
@@ -468,7 +469,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
             {t("captionCount", {
               count: format.number(captionLen, countOptions),
               limit: format.number(limit, countOptions),
-              channel: props.channel === "linkedin" ? "LinkedIn" : "Instagram",
+              channel: channelLabels[props.channel],
             })}
           </p>
         </div>

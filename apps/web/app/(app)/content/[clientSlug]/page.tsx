@@ -1,10 +1,12 @@
 import {
+  channelLabels,
   getStrategyOverview,
   listUsableTemplates,
   pillarRowToInput,
   proposeStrategyJob,
   provenanceSchema,
   rubricRowToInput,
+  type ContentChannel,
   type StrategyOverview,
 } from "@forgecy/content";
 import { can } from "@forgecy/core";
@@ -142,7 +144,7 @@ export default async function StrategyPage({
     [t("facts.frequency"), frequency(freq(r.frequencyCount, r.frequencyUnit))],
     [
       t("facts.channels"),
-      r.channels.map((c) => (c === "linkedin" ? "LinkedIn" : "Instagram")).join(", ") || null,
+      r.channels.map((c) => channelLabels[c as ContentChannel] ?? c).join(", ") || null,
     ],
     [
       t("facts.template"),

@@ -6,25 +6,9 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useId, useState, useTransition } from "react";
 import { selectClass } from "@/app/(app)/audit/_lib/styles";
-import {
-  setBudgetAction,
-  setClientPolicyAction,
-  setDefaultPolicyAction,
-  type AdminActionResult,
-} from "./actions";
-
-function Feedback({ result }: { result: AdminActionResult | null }) {
-  if (!result) return null;
-  return result.ok ? (
-    <p role="status" className="text-body-sm text-success">
-      {result.message}
-    </p>
-  ) : (
-    <p role="alert" className="text-body-sm text-error">
-      {result.error} {result.code ? <span className="font-mono">{result.code}</span> : null}
-    </p>
-  );
-}
+import { ActionFeedback } from "../_components/action-feedback";
+import type { AdminActionResult } from "../_lib/admin-action";
+import { setBudgetAction, setClientPolicyAction, setDefaultPolicyAction } from "./actions";
 
 function useAction() {
   const router = useRouter();
@@ -67,7 +51,7 @@ export function DefaultPolicyForm({ current }: { current: AiPolicy }) {
         {t("save")}
       </Button>
       <div className="basis-full">
-        <Feedback result={result} />
+        <ActionFeedback result={result} />
       </div>
     </form>
   );
@@ -103,7 +87,7 @@ export function ClientPolicySelect({
           </option>
         ))}
       </select>
-      <Feedback result={result} />
+      <ActionFeedback result={result} />
     </div>
   );
 }
@@ -151,7 +135,7 @@ export function BudgetForm({
         {t("save")}
       </Button>
       <div className="basis-full">
-        <Feedback result={result} />
+        <ActionFeedback result={result} />
       </div>
     </form>
   );

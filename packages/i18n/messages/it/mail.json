@@ -9,5 +9,9 @@
     "pressButton": "Premi il pulsante per accedere. Il link funziona una sola volta e scade tra {minutes, plural, one {# minuto} other {# minuti}}.",
     "button": "Accedi a {app}",
     "copyAddress": "Se il pulsante non funziona, copia questo indirizzo nel browser:"
+  },
+  "test": {
+    "subject": "Email di prova da {app}",
+    "body": "Questa è un’email di prova inviata da {name} da {app}. Se la stai leggendo, l’email funziona: link di accesso e inviti arriveranno."
   }
 }

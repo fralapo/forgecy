@@ -146,6 +146,34 @@
   --fc-accent-on-highlight: var(--fc-color-graphite-900);
 }
 
+/* No theme chosen: follow the operating system */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --fc-bg-app: var(--fc-color-graphite-900);
+    --fc-bg-surface: var(--fc-color-dark-graphite-800);
+    --fc-text-primary: var(--fc-color-porcelain);
+    --fc-text-secondary: var(--fc-color-dark-graphite-30);
+    --fc-text-link: var(--fc-color-dark-blue-300);
+    --fc-border-subtle: var(--fc-color-dark-graphite-700);
+    --fc-border-control: var(--fc-color-graphite-50);
+    --fc-focus-ring: var(--fc-color-dark-blue-300);
+    --fc-action-primary-bg: var(--fc-color-forge-blue);
+    --fc-action-primary-bg-pressed: var(--fc-color-forge-blue-700);
+    --fc-action-primary-text: var(--fc-color-white);
+    --fc-action-danger-bg: var(--fc-color-red-700);
+    --fc-action-danger-text: var(--fc-color-white);
+    --fc-status-success-fill: var(--fc-color-green);
+    --fc-status-success-text: var(--fc-color-dark-green-300);
+    --fc-status-warning-fill: var(--fc-color-orange);
+    --fc-status-warning-text: var(--fc-color-dark-orange-300);
+    --fc-status-error-fill: var(--fc-color-red);
+    --fc-status-error-text: var(--fc-color-dark-red-300);
+    --fc-accent-highlight: var(--fc-color-amber);
+    --fc-accent-on-highlight: var(--fc-color-graphite-900);
+  }
+}
+
 /* shadcn/ui contract, re-evaluated inside every themed subtree */
 :root,
 [data-theme] {
