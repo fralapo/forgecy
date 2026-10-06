@@ -12,7 +12,7 @@
   "accepted": "Accettato",
   "noteOptional": "Nota (facoltativa)",
   "reasonOptional": "Motivo (facoltativo)",
-  "noteRequiredLow": "Nota (obbligatoria: affidabilità bassa)",
+  "noteRequiredLow": "Nota (obbligatoria: attendibilità bassa)",
   "proposedByAgent": "Proposto da Brand Analyst",
   "untitled": "Senza titolo",
   "selectItem": "Seleziona {name}",
@@ -57,9 +57,9 @@
     "low": "Bassa"
   },
   "confidenceOf": {
-    "high": "Affidabilità alta",
-    "medium": "Affidabilità media",
-    "low": "Affidabilità bassa"
+    "high": "Attendibilità alta",
+    "medium": "Attendibilità media",
+    "low": "Attendibilità bassa"
   },
   "completeness": {
     "complete": "Completo",
@@ -113,8 +113,8 @@
     "notes": "Note interne"
   },
   "claims": {
-    "health": "Claim sulla salute",
-    "environmental": "Claim ambientale",
+    "health": "Asserzione sulla salute",
+    "environmental": "Asserzione ambientale",
     "certification": "Certificazione",
     "warranty": "Garanzia"
   },
@@ -227,13 +227,13 @@
     "fieldInvalid": "{field}: valore non valido",
     "nameRequired": "Il nome è obbligatorio",
     "notSensitive": "Il campo non è sensibile",
-    "lowConfidenceNote": "Affidabilità bassa: scrivi una nota per accettare il campo.",
+    "lowConfidenceNote": "Attendibilità bassa: scrivi una nota per accettare il campo.",
     "invalidAction": "Azione non valida",
     "typedNameMismatch": "Il nome digitato non corrisponde",
     "proposalNotFound": "Proposta non trovata",
     "proposalDecided": "Qualcun altro ha già deciso su questa proposta",
     "invalidValue": "Valore non valido",
-    "sensitiveLowConfidence": "Campo sensibile con affidabilità bassa: scrivi una nota per accettarlo.",
+    "sensitiveLowConfidence": "Campo sensibile con attendibilità bassa: scrivi una nota per accettarlo.",
     "imageNotFound": "Immagine non trovata",
     "uploadImage": "Carica un’immagine PNG, JPG o WebP.",
     "imageAlreadyLinked": "Questa immagine è già collegata al prodotto.",
@@ -553,7 +553,7 @@
     "closeSummary": "{approved, number} approvati · {proposed, number} restano Proposti nel catalogo · {discarded, number} rifiutati · {images, plural, one {# immagine ancora da assegnare} other {# immagini ancora da assegnare}}.",
     "closeBody": "Gli elementi non decisi entrano nel catalogo come Proposti, con la loro fonte.",
     "counts": "{found, plural, one {# prodotto trovato} other {# prodotti trovati}} · {new, number} nuovi · {duplicates, plural, one {# possibile duplicato} other {# possibili duplicati}} · {conflicts, plural, one {# conflitto} other {# conflitti}} · {discarded, number} rifiutati · {images, plural, one {# immagine} other {# immagini}} da assegnare",
-    "confidence": "Affidabilità",
+    "confidence": "Attendibilità",
     "all": "Tutti",
     "onlySensitive": "Con campi sensibili",
     "selectedCount": "{count, number} selezionati",

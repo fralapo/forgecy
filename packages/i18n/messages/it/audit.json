@@ -51,9 +51,9 @@
     "low": "Bassa"
   },
   "confidence": {
-    "high": "Affidabilità alta",
-    "medium": "Affidabilità media",
-    "low": "Affidabilità bassa"
+    "high": "Attendibilità alta",
+    "medium": "Attendibilità media",
+    "low": "Attendibilità bassa"
   },
   "outcome": {
     "consistent": "Coerente",

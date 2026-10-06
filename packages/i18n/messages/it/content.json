@@ -251,9 +251,9 @@
       "art_director": "Art Director"
     },
     "confidence": {
-      "high": "Affidabilità alta",
-      "medium": "Affidabilità media",
-      "low": "Affidabilità bassa"
+      "high": "Attendibilità alta",
+      "medium": "Attendibilità media",
+      "low": "Attendibilità bassa"
     },
     "band": {
       "critico": "Critica",

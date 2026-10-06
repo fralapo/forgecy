@@ -68,9 +68,9 @@
     "stale": "Superata"
   },
   "confidence": {
-    "high": "Affidabilità alta",
-    "medium": "Affidabilità media",
-    "low": "Affidabilità bassa"
+    "high": "Attendibilità alta",
+    "medium": "Attendibilità media",
+    "low": "Attendibilità bassa"
   },
   "confidenceReason": {
     "conflicting": "Fonti in conflitto",
@@ -115,7 +115,7 @@
   },
   "fields": {
     "strategy": {
-      "oneLiner": "One-liner",
+      "oneLiner": "Frase di sintesi",
       "insight": "Insight",
       "positioning": "Posizionamento",
       "promise": "Promessa",
@@ -126,7 +126,7 @@
       "category": "Categoria",
       "values": "Valori",
       "audience": "Pubblico",
-      "messages": "Messaggi e claim",
+      "messages": "Messaggi e asserzioni",
       "avoidTopics": "Temi da evitare"
     },
     "verbal": {
@@ -201,10 +201,10 @@
     "noChecks": "Nessun controllo aperto."
   },
   "checks": {
-    "oneLinerMissing": "Manca il one-liner",
-    "oneLinerTooLong": "One-liner oltre le {max} parole: il posizionamento non è ancora deciso",
+    "oneLinerMissing": "Manca la frase di sintesi",
+    "oneLinerTooLong": "Frase di sintesi oltre le {max} parole: il posizionamento non è ancora deciso",
     "noAudience": "Nessun segmento di pubblico",
-    "claimsUnproved": "{count, plural, one {# claim senza prova collegata} other {# claim senza prova collegata}}",
+    "claimsUnproved": "{count, plural, one {# asserzione senza prova collegata} other {# asserzioni senza prova collegata}}",
     "toneAxes": "Assi del tono definiti: {defined} su {total}",
     "weAre": "Siamo / Non siamo: {count, plural, one {# riga} other {# righe}}, ne servono almeno {min}",
     "logoMissing": "Manca il logo principale",
@@ -219,7 +219,7 @@
   },
   "proposalChecks": {
     "forbiddenWord": "Parola vietata: “{word}”",
-    "oneLinerLength": "One-liner di {count} parole: il massimo è {max}",
+    "oneLinerLength": "Frase di sintesi di {count} parole: il massimo è {max}",
     "contrast": "Contrasto sullo sfondo principale: {ratio}:1{grade, select, large { · Solo testo grande} fail { · Non adatto al testo} other {}}",
     "noIssues": "Nessun problema rilevato"
   },
@@ -236,7 +236,7 @@
   "editor": {
     "noFile": "Nessun file",
     "remove": "Rimuovi",
-    "provenance": "{sources, plural, =0 {Inserito a mano} one {Da una fonte} other {Da # fonti}}{accepted, select, yes { · da una proposta accettata} other {}}{confidence, select, medium { · affidabilità media} low { · affidabilità bassa} other {}}",
+    "provenance": "{sources, plural, =0 {Inserito a mano} one {Da una fonte} other {Da # fonti}}{accepted, select, yes { · da una proposta accettata} other {}}{confidence, select, medium { · attendibilità media} low { · attendibilità bassa} other {}}",
     "proposals": "{count, plural, one {# proposta} other {# proposte}}",
     "words": "{count, plural, one {# parola} other {# parole}}",
     "wordsOver": "{count, plural, one {# parola} other {# parole}}: oltre {max}",
@@ -254,7 +254,7 @@
       "channels": "Canali"
     },
     "strategy": {
-      "oneLiner": "One-liner",
+      "oneLiner": "Frase di sintesi",
       "oneLinerHint": "Chi siete e perché contate, in meno di 20 parole.",
       "insight": "Insight",
       "positioning": "Posizionamento",
@@ -281,9 +281,9 @@
       "language": "Linguaggio",
       "channels": "Canali",
       "alternatives": "Alternative",
-      "messages": "Messaggi e claim",
+      "messages": "Messaggi e asserzioni",
       "addMessage": "Aggiungi un messaggio",
-      "messagesHint": "Ogni claim richiede una prova: senza, va confermato prima della pubblicazione.",
+      "messagesHint": "Ogni asserzione richiede una prova: senza, va confermata prima della pubblicazione.",
       "messageType": "Tipo",
       "messageText": "Testo",
       "proof": "Prova o fonte",
@@ -423,7 +423,7 @@
       "messageKind": {
         "value_proposition": "Proposta di valore",
         "tagline": "Tagline",
-        "claim": "Claim",
+        "claim": "Asserzione",
         "proof_point": "Prova a supporto",
         "reason_to_believe": "Reason to believe",
         "elevator_pitch": "Elevator pitch",
@@ -621,7 +621,7 @@
     "noSource": "Nessuna fonte indicata: verifica prima di accettare.",
     "reviewedBy": "{status} da {name}",
     "correctedValue": "Valore corretto",
-    "noteRequired": "Nota (obbligatoria: affidabilità bassa su un campo sensibile)",
+    "noteRequired": "Nota (obbligatoria: attendibilità bassa su un campo sensibile)",
     "noteOptional": "Nota (facoltativa)",
     "accept": "Accetta",
     "acceptEdited": "Accetta con modifiche",
@@ -699,7 +699,7 @@
     "proposalNotFound": "Proposta non trovata",
     "proposalDecided": "Sulla proposta è già stata presa una decisione.",
     "sensitiveOneByOne": "Le proposte sensibili si accettano una alla volta.",
-    "noteRequired": "Perché accetti nonostante l’affidabilità bassa? Scrivi una nota di almeno 10 caratteri.",
+    "noteRequired": "Perché accetti nonostante l’attendibilità bassa? Scrivi una nota di almeno 10 caratteri.",
     "unknownProposalField": "Campo della proposta sconosciuto",
     "malformedProposal": "Proposta non valida",
     "proposedValueInvalid": "Il valore proposto non è valido: {detail}",
