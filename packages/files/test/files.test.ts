@@ -8,6 +8,7 @@ import {
   assertValidKey,
   contentKey,
   createStorageFromEnv,
+  resolveMediaRoot,
   sha256,
   sha256Stream,
   signFileUrl,
@@ -167,6 +168,20 @@ describe("createStorageFromEnv", () => {
       createStorageFromEnv({ ...base, STORAGE_DRIVER: "s3", S3_ENDPOINT: "http://localhost:9000" })
         .name,
     ).toBe("s3");
+  });
+});
+
+describe("resolveMediaRoot", () => {
+  const repo = path.resolve(import.meta.dirname, "../../..");
+  it("reads a relative root from the repository root, whatever the cwd", () => {
+    const fromWeb = resolveMediaRoot("./data/media", path.join(repo, "apps/web"));
+    const fromWorker = resolveMediaRoot("./data/media", path.join(repo, "apps/worker"));
+    expect(fromWeb).toBe(path.join(repo, "data/media"));
+    expect(fromWorker).toBe(fromWeb);
+  });
+  it("keeps absolute roots and falls back to the cwd outside a checkout", () => {
+    expect(resolveMediaRoot("/data/media")).toBe("/data/media");
+    expect(resolveMediaRoot("media", "/")).toBe("/media");
   });
 });
 

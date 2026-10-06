@@ -146,6 +146,8 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   const [selectedId, setSelectedId] = useState<string | null>(props.document.slides[0]?.id ?? null);
   const [seenRev, setSeenRev] = useState(props.draftRev);
   const [hashtagText, setHashtagText] = useState(props.document.hashtags.join(" "));
+  // Slides in the draft stored on the server: the preview route renders only those.
+  const [savedIds, setSavedIds] = useState(() => slideIds(props.document));
 
   // A newer draft from the server (AI edit, revert, another tab): take it when nothing is pending here.
   if (props.draftRev !== seenRev) {
@@ -153,6 +155,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
     if (saveState === "saved" && props.draftRev > rev) {
       setDoc(props.document);
       setRev(props.draftRev);
+      setSavedIds(slideIds(props.document));
       setHashtagText(props.document.hashtags.join(" "));
     }
   }
@@ -174,16 +177,18 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
     const run = (async () => {
       dirtyRef.current = false;
       setSaveState("saving");
+      const sent = docRef.current;
       const r = await saveDraftAction({
         slug: ref.slug,
         clientId: ref.clientId,
         id: ref.contentId,
         draftRev: revRef.current,
-        document: docRef.current,
+        document: sent,
       });
       if (r.ok) {
         revRef.current = r.draftRev;
         setRev(r.draftRev);
+        setSavedIds(slideIds(sent));
         setSaveError(null);
         setSaveState(dirtyRef.current ? "dirty" : "saved");
         return true;
@@ -243,6 +248,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
     dirtyRef.current = false;
     setDoc(props.document);
     setRev(props.draftRev);
+    setSavedIds(slideIds(props.document));
     setHashtagText(props.document.hashtags.join(" "));
     setSaveState("saved");
     setSaveError(null);
@@ -388,13 +394,19 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
             )}
           </div>
           <aside className="space-y-4 lg:col-span-2 xl:col-span-1">
-            {selected ? (
+            {selected && savedIds.has(selected.id) ? (
               <SlidePreview
                 src={`${props.basePath}/anteprima?slide=${encodeURIComponent(selected.id)}&rev=${rev}`}
                 manifest={props.manifest}
                 index={selectedIndex}
                 stale={saveState !== "saved"}
               />
+            ) : selected ? (
+              <p className="rounded-lg border border-dashed border-subtle p-6 text-body-sm text-fg-muted">
+                {saveState === "error" || saveState === "conflict"
+                  ? "L'anteprima di questa slide appare quando la bozza viene salvata."
+                  : "Nuova slide: l'anteprima appare dopo il salvataggio automatico."}
+              </p>
             ) : null}
             <ChecksBox
               title={selected ? `Controlli della slide ${selectedIndex + 1}` : "Controlli"}
@@ -654,6 +666,8 @@ function VersionAndSubmit({
     </div>
   );
 }
+
+const slideIds = (d: CarouselDocument) => new Set(d.slides.map((x) => x.id));
 
 function SlidePreview({
   src,

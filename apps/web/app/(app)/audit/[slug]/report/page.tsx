@@ -1,4 +1,6 @@
 import {
+  auditJobStates,
+  auditReportExportJob,
   buildReportDocument,
   checkReportEvidence,
   listReports,
@@ -40,6 +42,7 @@ import {
   reportStatusLabel,
   reportStatusVariant,
 } from "../../_lib/labels";
+import { plural } from "@/lib/plural";
 
 export const metadata = { title: "Audit · Report" };
 
@@ -104,12 +107,21 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
     );
   }
 
-  const [grouped, check, doc, exports] = await Promise.all([
+  const [grouped, check, doc, exports, jobs] = await Promise.all([
     reportFindings(db, current),
     checkReportEvidence(db, current),
     buildReportDocument(db, current.id, "full"),
     reportExports(db, current.id),
+    auditJobStates(db, audit.id),
   ]);
+  // The last PDF attempt, when it failed: shown next to the export buttons, not only in the job bar.
+  const exportJob = jobs.find((j) => j.kind === auditReportExportJob.kind);
+  const exportFailure =
+    exportJob &&
+    (exportJob.status === "failed" || exportJob.status === "needs_attention") &&
+    !exports.some((e) => e.createdAt > exportJob.createdAt)
+      ? exportJob
+      : null;
   const downloads = await Promise.all(
     exports.slice(0, 6).map(async (e) => ({
       ...e,
@@ -226,7 +238,11 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                 <p className="mt-2 text-body-sm font-medium">{current.emailSubject}</p>
                 <p className="whitespace-pre-line text-body-sm">{current.emailBody}</p>
               </details>
-            ) : null}
+            ) : (
+              <p className="text-body-sm text-fg-muted">
+                Nessuna email di accompagnamento in questa versione.
+              </p>
+            )}
           </Card>
         )}
       </div>
@@ -306,6 +322,12 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
               finale si esporta dopo l&apos;approvazione e consegna l&apos;audit.
             </CardDescription>
           </CardHeader>
+          {exportFailure ? (
+            <p role="alert" className="text-body-sm text-error">
+              L&apos;ultimo PDF non è stato creato
+              {exportFailure.error ? `: ${exportFailure.error}` : "."}
+            </p>
+          ) : null}
           {current.status !== "superseded" ? (
             <div className="flex flex-wrap gap-2">
               {(["full", "compact"] as const).map((variant) => (
@@ -361,7 +383,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
                     <span>{d.fileName}</span>
                   )}
                   <span className="text-fg-muted">
-                    {d.final ? "Finale" : "Bozza"} · {d.pages} pagine ·{" "}
+                    {d.final ? "Finale" : "Bozza"} · {plural(d.pages, "pagina", "pagine")} ·{" "}
                     {formatDateTime(d.createdAt)}
                   </span>
                 </li>
@@ -380,7 +402,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
           {check.ok ? (
             <p className="flex items-center gap-2 text-body-sm">
               <Check aria-hidden className="size-4 text-success" />
-              {check.included} elementi, tutti con evidenza
+              {plural(check.included, "elemento", "elementi")}, tutti con evidenza
             </p>
           ) : (
             <ul className="flex flex-col gap-2">

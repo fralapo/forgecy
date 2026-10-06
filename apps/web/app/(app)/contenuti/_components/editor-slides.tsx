@@ -22,6 +22,7 @@ import { updateAltAction } from "../actions";
 import { ActionButton, controlClass } from "./action-button";
 import { AiImageDrafts, ImageGenerator, Thumb } from "./editor-ai";
 import type { EditorAsset, EditorRef } from "./editor-workspace";
+import { plural } from "@/lib/plural";
 
 type Update = (fn: (d: CarouselDocument) => CarouselDocument) => void;
 
@@ -402,12 +403,25 @@ function SlotField({
   const id = `slot-${def.name}`;
   const label = def.label ?? def.name;
   return (
-    <fieldset className="space-y-2 border-t border-subtle pt-3">
+    // A group named by the slot; a text slot's name is a real <label> of its field, so a
+    // click on it focuses the field and checkers find the association.
+    <div
+      role="group"
+      aria-labelledby={`${id}-name`}
+      className="space-y-2 border-t border-subtle pt-3"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <legend className="text-body-sm font-medium text-fg">
-          {label}
-          {def.required ? <span className="text-fg-muted"> · obbligatorio</span> : null}
-        </legend>
+        {def.type === "text" ? (
+          <label id={`${id}-name`} htmlFor={id} className="text-body-sm font-medium text-fg">
+            {label}
+            {def.required ? <span className="text-fg-muted"> · obbligatorio</span> : null}
+          </label>
+        ) : (
+          <span id={`${id}-name`} className="text-body-sm font-medium text-fg">
+            {label}
+            {def.required ? <span className="text-fg-muted"> · obbligatorio</span> : null}
+          </span>
+        )}
         <label className="flex items-center gap-2 text-body-sm text-fg">
           <input
             type="checkbox"
@@ -417,7 +431,7 @@ function SlotField({
             onChange={(e) => onProtect(e.target.checked)}
           />
           <ShieldCheck aria-hidden className="size-4" />
-          Proteggi dall&apos;AI
+          Proteggi dall&apos;AI<span className="sr-only">: {label}</span>
         </label>
       </div>
 
@@ -449,7 +463,7 @@ function SlotField({
           flush={flush}
         />
       )}
-    </fieldset>
+    </div>
   );
 }
 
@@ -471,7 +485,6 @@ function TextSlot({
     id,
     value,
     disabled: readOnly,
-    "aria-label": def.label ?? def.name,
     "aria-describedby": `${id}-count`,
   };
   return (
@@ -488,7 +501,7 @@ function TextSlot({
       )}
       <p className="flex flex-wrap justify-between gap-2 text-label text-fg-muted">
         <span>
-          {def.maxLines ? `Massimo ${def.maxLines} righe. ` : ""}
+          {def.maxLines ? `Massimo ${plural(def.maxLines, "riga", "righe")}. ` : ""}
           {def.highlight ? "Evidenzia una parola con ==parola==." : ""}
         </span>
         <Counter id={`${id}-count`} len={visibleLength(value)} max={def.maxChars} />
@@ -550,7 +563,7 @@ function ListSlot({
           </Button>
         ) : null}
         <span className="text-label text-fg-muted">
-          {value.length} voci · da {def.minItems} a {def.maxItems}
+          {plural(value.length, "voce", "voci")} · da {def.minItems} a {def.maxItems}
         </span>
       </div>
     </div>

@@ -1,5 +1,7 @@
 import { Badge, Card } from "@forgecy/ui";
 import { asc, clients, getDb, isNull } from "@forgecy/db";
+import type { Route } from "next";
+import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/session";
 import { NewClientForm } from "./new-client-form";
@@ -7,6 +9,18 @@ import { NewClientForm } from "./new-client-form";
 export const metadata = { title: "Clienti" };
 
 const statusLabel = { prospect: "Prospect", active: "Attivo", archived: "Archiviato" } as const;
+const linkClass = "text-link underline-offset-2 hover:underline";
+
+/** Where each client's work lives: the audit for prospects, the three modules for clients. */
+function areaLinks(c: { slug: string; status: keyof typeof statusLabel }) {
+  if (c.status === "prospect") return [{ label: "Audit", href: `/audit/${c.slug}` }];
+  return [
+    { label: "Brand", href: `/brand/${c.slug}` },
+    { label: "Contenuti", href: `/contenuti/${c.slug}` },
+    { label: "Prodotti", href: `/prodotti/${c.slug}` },
+  ];
+}
+
 const policyLabel = {
   external_allowed: "AI esterna ammessa",
   external_restricted: "AI esterna limitata",
@@ -50,6 +64,9 @@ export default async function ClientsPage() {
                   <th scope="col" className="px-6 py-3 font-medium">
                     Policy AI
                   </th>
+                  <th scope="col" className="px-6 py-3 font-medium">
+                    Apri
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -66,6 +83,18 @@ export default async function ClientsPage() {
                     </td>
                     <td className="px-6 py-3 text-fg-muted">{c.sector ?? "—"}</td>
                     <td className="px-6 py-3 text-fg-muted">{policyLabel[c.aiPolicy]}</td>
+                    <td className="px-6 py-3">
+                      <ul className="flex flex-wrap gap-x-3 gap-y-1">
+                        {areaLinks(c).map((l) => (
+                          <li key={l.label}>
+                            <Link href={l.href as Route} className={linkClass}>
+                              {l.label}
+                              <span className="sr-only"> di {c.name}</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </td>
                   </tr>
                 ))}
               </tbody>

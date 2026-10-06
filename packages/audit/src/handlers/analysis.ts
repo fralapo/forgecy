@@ -1095,13 +1095,17 @@ export async function runDiagnose(
   ).length;
   let slots = AUDIT_LIMITS.maxProblems - keptUsable;
   const rows: FindingInsert[] = [];
+  let withoutEvidence = 0;
   for (const p of run.data.problems) {
     if (slots <= 0) break;
     const v = verifyEvidence(
       p.observationRefs.map((ref) => ({ ref })),
       index,
     );
-    if (!v.findingIds.length) continue;
+    if (!v.findingIds.length) {
+      withoutEvidence++;
+      continue;
+    }
     const parents = observations.filter((o) => v.findingIds.includes(o.id));
     const evidence = parents.flatMap((o) => o.evidence).slice(0, 8);
     const confidence = confidenceFromEvidence(parents.length);
@@ -1131,7 +1135,8 @@ export async function runDiagnose(
       await tx.insert(auditFindings).values(rows.map((r, i) => ({ ...r, position: start + i })));
     await tx.update(audits).set({ diagnosisAt: new Date() }).where(eq(audits.id, audit.id));
   });
-  return { problems: rows.length };
+  // Stored as the job result: the diagnosis page explains why fewer problems arrived.
+  return { problems: rows.length, proposed: run.data.problems.length, withoutEvidence };
 }
 
 // ---------------------------------------------------------------- Plan

@@ -290,7 +290,7 @@ export function FindingCard({
           <label className="ml-auto flex items-center gap-2 text-body-sm text-fg-muted">
             Priorità
             <select
-              className={cn(selectClass, "h-8 w-28")}
+              className={cn(selectClass, "h-8 w-auto")}
               value={finding.priority}
               disabled={pending}
               onChange={(e) =>

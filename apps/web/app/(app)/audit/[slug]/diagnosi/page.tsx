@@ -13,13 +13,14 @@ import { AddFinding } from "../../_components/add-finding";
 import { FindingCard } from "../../_components/finding-card";
 import { sectionContext, sourceLinks, toView } from "../../_lib/findings";
 import { channelLabel, findingStatusLabel, findingStatusVariant } from "../../_lib/labels";
+import { plural } from "@/lib/plural";
 
 export const metadata = { title: "Audit · Diagnosi" };
 
 export default async function DiagnosisPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const { db, audit, readOnly, aiAllowed } = await sectionContext(slug);
-  const { problems, observations, plan } = await getDiagnosisView(db, audit.id);
+  const { problems, observations, plan, outcome } = await getDiagnosisView(db, audit.id);
   const links = await sourceLinks(db, problems);
   const live = problems.filter((p) => p.status !== "rejected");
   const usable = problems.filter((p) => p.status === "accepted" || p.status === "edited");
@@ -40,12 +41,20 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
           </CardDescription>
         </CardHeader>
         <p className="text-body-sm">
-          {observations.length} osservazioni utilizzabili · {usable.length} problemi accettati
+          {plural(observations.length, "osservazione utilizzabile", "osservazioni utilizzabili")} ·{" "}
+          {plural(usable.length, "problema accettato", "problemi accettati")}
         </p>
         {outdated ? (
           <p role="status" className="rounded-md border border-warning-fill p-3 text-body-sm">
             Le osservazioni sono cambiate dopo l&apos;ultima diagnosi: i problemi segnati “Da
             ricontrollare” vanno rivisti.
+          </p>
+        ) : null}
+        {outcome && outcome.withoutEvidence > 0 ? (
+          <p role="status" className="rounded-md border border-warning-fill p-3 text-body-sm">
+            Scartati perché non collegati a osservazioni accettate: {outcome.withoutEvidence} su{" "}
+            {plural(outcome.proposed, "problema proposto", "problemi proposti")} dall&apos;ultima
+            diagnosi.
           </p>
         ) : null}
         {canEdit && aiAllowed ? (
@@ -131,7 +140,13 @@ export default async function DiagnosisPage({ params }: { params: Promise<{ slug
             </div>
           ))
         ) : (
-          <p className="text-body-md text-fg-muted">Nessun problema ancora.</p>
+          <p className="text-body-md text-fg-muted">
+            {outcome && outcome.proposed > 0
+              ? "Nessun problema utilizzabile dall'ultima diagnosi. Puoi aggiornarla o scrivere tu i problemi."
+              : outcome
+                ? "L'ultima diagnosi non ha proposto problemi. Puoi aggiornarla o scrivere tu i problemi."
+                : "Nessun problema ancora."}
+          </p>
         )}
       </section>
 

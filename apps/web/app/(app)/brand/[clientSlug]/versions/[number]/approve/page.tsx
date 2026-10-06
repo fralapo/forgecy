@@ -13,6 +13,7 @@ import { ApproveForm } from "../../../../_components/approve-form";
 import { DiffList } from "../../../../_components/diff-list";
 import { brandPath } from "../../../../_lib/labels";
 import { loadBrand, openConflicts } from "../../../../_lib/server";
+import { plural } from "@/lib/plural";
 
 export const metadata = { title: "Approvazione · Brand Identity" };
 
@@ -67,7 +68,8 @@ export default async function ApprovePage({
           {published ? `rispetto alla v${ws.published!.number}` : "· prima pubblicazione"}
         </h2>
         <p className="mt-1 text-body-sm text-fg-muted">
-          {changes.length} campi cambiati, {changes.filter((c) => c.sensitive).length} sensibili.
+          {plural(changes.length, "campo cambiato", "campi cambiati")},{" "}
+          {plural(changes.filter((c) => c.sensitive).length, "sensibile", "sensibili")}.
         </p>
         <div className="mt-4">
           <DiffList changes={changes} />

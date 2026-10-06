@@ -184,6 +184,10 @@ export function CarouselOutlineEditor({
     const own = layouts.filter((l) => l.role === role);
     return own.length ? own : layouts;
   };
+  // Only the roles this template has a layout for (a social template has no report pages);
+  // the row's current role stays listed so the select never shows a value it lacks.
+  const rolesFor = (current: SlideRole) =>
+    slideRoles.filter((x) => x === current || layouts.some((l) => l.role === x));
 
   return (
     <form
@@ -290,7 +294,7 @@ export function CarouselOutlineEditor({
                       });
                     }}
                   >
-                    {slideRoles.map((x) => (
+                    {rolesFor(r.role).map((x) => (
                       <option key={x} value={x}>
                         {slideRoleLabels[x]}
                       </option>
