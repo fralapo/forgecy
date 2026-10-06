@@ -1,5 +1,6 @@
 import yauzl from "yauzl";
-import { ImportError } from "../import/errors";
+import { ImportError, importError } from "../import/errors";
+import type { MessageKey, MessageValues } from "@forgecy/i18n";
 import { IMPORT_LIMITS } from "../import/limits";
 
 export interface ZipEntryInfo {
@@ -63,7 +64,8 @@ function open(source: string | Buffer): Promise<yauzl.ZipFile> {
   });
 }
 
-const tooLarge = (msg: string) => new ImportError("IMPORT-TOO-LARGE", msg);
+const tooLarge = (key: MessageKey, values?: MessageValues) =>
+  importError("IMPORT-TOO-LARGE", key, values);
 
 /**
  * Walk an archive reading only the central directory, enforcing the anti zip-bomb
@@ -83,19 +85,18 @@ export async function readZip(
   const maxTotal = opts.maxUncompressedBytes ?? IMPORT_LIMITS.archiveUncompressedBytes;
   const maxRatio = opts.maxEntryRatio ?? IMPORT_LIMITS.archiveEntryMaxRatio;
   const maxEntryBytes = opts.maxEntryBytes ?? maxTotal;
-  const label = opts.label ? `"${opts.label}"` : "The archive";
+  // "The archive" or the file name, quoted, in every message.
+  const label = { named: opts.label ? "yes" : "no", name: opts.label ?? "" };
 
   let zip: yauzl.ZipFile;
   try {
     zip = await open(source);
   } catch {
-    throw new ImportError("IMPORT-INVALID", `${label} is not a readable ZIP.`);
+    throw importError("IMPORT-INVALID", "products.errors.zipUnreadable", label);
   }
   try {
     if (zip.entryCount > maxEntries * 2)
-      throw tooLarge(
-        `${label} contains too many files (max ${maxEntries}). Split it into several ZIPs.`,
-      );
+      throw tooLarge("products.errors.zipTooManyEntries", { ...label, max: maxEntries });
     const entries: ZipEntryInfo[] = [];
     let skipped = 0;
     let declaredTotal = 0;
@@ -122,26 +123,26 @@ export async function readZip(
             uncompressedSize: entry.uncompressedSize,
           };
           if (entries.length + 1 > maxEntries)
-            throw tooLarge(
-              `${label} contains more than ${maxEntries} files. Split it into several ZIPs.`,
-            );
+            throw tooLarge("products.errors.zipMoreThan", { ...label, max: maxEntries });
           declaredTotal += entry.uncompressedSize;
           if (declaredTotal > maxTotal)
-            throw tooLarge(
-              `${label} exceeds ${Math.round(maxTotal / 1024 / 1024)} MB uncompressed. Split it into several ZIPs.`,
-            );
+            throw tooLarge("products.errors.zipUncompressedMb", {
+              ...label,
+              mb: Math.round(maxTotal / 1024 / 1024),
+            });
           if (
             entry.uncompressedSize > 1024 * 1024 &&
             entry.uncompressedSize / Math.max(1, entry.compressedSize) > maxRatio
           )
-            throw tooLarge(`${label} contains a file with an abnormal compression ratio.`);
+            throw tooLarge("products.errors.zipRatio", label);
           entries.push(info);
           if (opts.want?.(info) && opts.onData) {
             if (entry.uncompressedSize > maxEntryBytes)
-              throw tooLarge(`"${path}" exceeds the maximum allowed size.`);
+              throw tooLarge("products.errors.zipEntryTooLarge", { path });
             const data = await readEntry(zip, entry, maxEntryBytes);
             readTotal += data.length;
-            if (readTotal > maxTotal) throw tooLarge(`${label} is too large uncompressed.`);
+            if (readTotal > maxTotal)
+              throw tooLarge("products.errors.zipTooLargeUncompressed", label);
             await opts.onData(info, data);
           }
           zip.readEntry();
@@ -152,7 +153,7 @@ export async function readZip(
     return { entries, skipped };
   } catch (err) {
     if (err instanceof ImportError) throw err;
-    throw new ImportError("IMPORT-INVALID", `${label} is damaged or unreadable.`);
+    throw importError("IMPORT-INVALID", "products.errors.zipDamaged", label);
   } finally {
     zip.close();
   }
@@ -167,7 +168,7 @@ function readEntry(zip: yauzl.ZipFile, entry: yauzl.Entry, cap: number): Promise
       stream.on("data", (c: Buffer) => {
         size += c.length;
         if (size > cap) {
-          stream.destroy(tooLarge(`"${entry.fileName}" exceeds the maximum allowed size.`));
+          stream.destroy(tooLarge("products.errors.zipEntryTooLarge", { path: entry.fileName }));
           return;
         }
         chunks.push(c);

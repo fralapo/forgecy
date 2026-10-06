@@ -49,12 +49,13 @@ export const productFieldsSchema = z.object({
     .string()
     .trim()
     .max(40)
-    .regex(/^$|^\d+([.,]\d{1,4})?$/, "Invalid price"),
+    // Messages are keys of @forgecy/i18n, shown translated by the interface.
+    .regex(/^$|^\d+([.,]\d{1,4})?$/, "products.validation.invalidPrice"),
   currency: z
     .string()
     .trim()
     .max(3)
-    .regex(/^$|^[A-Z]{3}$/, "Invalid currency (e.g. EUR)"),
+    .regex(/^$|^[A-Z]{3}$/, "products.validation.invalidCurrency"),
   availability: str(120),
   notes: str(LIMITS.notes),
 });

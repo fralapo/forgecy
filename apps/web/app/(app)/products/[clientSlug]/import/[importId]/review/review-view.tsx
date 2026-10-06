@@ -10,11 +10,12 @@ import {
   type FieldKey,
   type ProductFields,
 } from "@forgecy/catalog/fields";
-import { claimLabels, type ClaimKind } from "@forgecy/catalog/sensitive";
+import type { ClaimKind } from "@forgecy/catalog/sensitive";
 import { Badge, Button, Card, cn } from "@forgecy/ui";
 import { ShieldAlert, Sparkles } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { ActionMessage, ConfirmDialog, useCatalogAction } from "../../../../_components/client";
 import {
@@ -27,7 +28,7 @@ import {
   textareaClass,
 } from "../../../../_components/ui";
 import { fromText, toText } from "../../../../_lib/field-text";
-import { confidenceText, itemStatusLabels } from "../../../../_lib/labels";
+import { fieldLabel } from "../../../../_lib/labels";
 import {
   acceptItemSensitiveAction,
   approveItemsAction,
@@ -98,21 +99,7 @@ export interface ReviewImageView {
   suggestion: { itemId: string; name: string; confidence: ConfidenceLevel } | null;
 }
 
-const tabLabels: Record<Tab, string> = {
-  new: "New",
-  duplicates: "Duplicates",
-  conflicts: "Conflicts",
-  images: "Images to assign",
-  discarded: "Rejected",
-};
-
-const emptyTab: Record<Tab, string> = {
-  new: "No new products.",
-  duplicates: "No duplicates found.",
-  conflicts: "No conflicts with the catalog.",
-  images: "All images have been matched.",
-  discarded: "No rejected rows or pages.",
-};
+const tabs: Tab[] = ["new", "duplicates", "conflicts", "images", "discarded"];
 
 export function ReviewView(props: {
   clientId: string;
@@ -128,6 +115,7 @@ export function ReviewView(props: {
   importHref: Route;
   catalogHref: Route;
 }) {
+  const t = useTranslations("products");
   const [tab, setTab] = useState<Tab>(props.initialTab);
   const [confidence, setConfidence] = useState<"" | ConfidenceLevel>("");
   const [onlySensitive, setOnlySensitive] = useState(false);
@@ -169,16 +157,15 @@ export function ReviewView(props: {
           actions={
             <>
               <Button asChild variant="secondary">
-                <Link href={props.importHref}>Back to import</Link>
+                <Link href={props.importHref}>{t("review.backToImport")}</Link>
               </Button>
               <Button asChild variant="secondary">
-                <a href={props.discardsHref}>Download rejected rows report</a>
+                <a href={props.discardsHref}>{t("downloadDiscards")}</a>
               </Button>
             </>
           }
         >
-          The analysis found no products in these files. Check that the PDF contains readable text
-          or that the CSV has a column with the product name.
+          {t("review.nothingFound")}
         </EmptyState>
       </Card>
     );
@@ -187,25 +174,28 @@ export function ReviewView(props: {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-body-sm text-fg-muted">
-          <span className="font-medium text-fg">Next action: </span>
+          <span className="font-medium text-fg">{t("nextAction")} </span>
           {!props.open
-            ? "No pending actions"
+            ? t("noPendingActions")
             : openMatches.length
-              ? `you · Resolve ${counts.conflicts} conflicts and ${counts.duplicates} duplicates`
-              : "you · Approve the products and close the review"}
+              ? t("review.nextResolve", {
+                  conflicts: counts.conflicts,
+                  duplicates: counts.duplicates,
+                })
+              : t("review.nextApprove")}
         </p>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="ghost">
-            <a href={props.discardsHref}>Download rejected rows report</a>
+            <a href={props.discardsHref}>{t("downloadDiscards")}</a>
           </Button>
           <Button asChild variant="ghost">
-            <Link href={props.importHref}>Back to import</Link>
+            <Link href={props.importHref}>{t("review.backToImport")}</Link>
           </Button>
           {props.open ? (
             <>
               <ConfirmDialog
-                title={`Reject ${pendingNew} undecided products?`}
-                confirmLabel="Reject products"
+                title={t("review.rejectUndecidedTitle", { count: pendingNew })}
+                confirmLabel={t("review.rejectProducts")}
                 danger
                 disabled={pendingNew === 0}
                 onConfirm={() => action.run(() => discardPendingAction(ids))}
@@ -215,41 +205,40 @@ export function ReviewView(props: {
                     onClick={open}
                     disabled={action.pending || pendingNew === 0}
                   >
-                    Reject all undecided
+                    {t("review.rejectUndecided")}
                   </Button>
                 )}
               >
-                <p>
-                  They won’t enter the catalog; you can recover them from the Rejected tab while the
-                  review is open.
-                </p>
+                <p>{t("review.rejectUndecidedBody")}</p>
               </ConfirmDialog>
               <ConfirmDialog
-                title="Close the review?"
-                confirmLabel="Close review"
+                title={t("review.closeTitle")}
+                confirmLabel={t("review.close")}
                 onConfirm={() => action.run(() => closeReviewAction(ids))}
                 trigger={(open) => (
                   <Button
                     onClick={open}
                     disabled={action.pending || openMatches.length > 0}
-                    title={
-                      openMatches.length ? "Decide on duplicates and conflicts first" : undefined
-                    }
+                    title={openMatches.length ? t("review.decideFirst") : undefined}
                   >
-                    Close review
+                    {t("review.close")}
                   </Button>
                 )}
               >
                 <p>
-                  {approved} approved · {pendingNew} stay Proposed in the catalog ·{" "}
-                  {counts.discarded} rejected · {counts.images} images still to assign.
+                  {t("review.closeSummary", {
+                    approved,
+                    proposed: pendingNew,
+                    discarded: counts.discarded,
+                    images: counts.images,
+                  })}
                 </p>
-                <p>Undecided items enter the catalog as Proposed, with their source.</p>
+                <p>{t("review.closeBody")}</p>
               </ConfirmDialog>
             </>
           ) : (
             <Button asChild>
-              <Link href={props.catalogHref}>Open catalog</Link>
+              <Link href={props.catalogHref}>{t("openCatalog")}</Link>
             </Button>
           )}
         </div>
@@ -258,22 +247,27 @@ export function ReviewView(props: {
 
       <Card className="gap-3 p-4">
         <p className="text-body-sm text-fg">
-          {found} products found · {counts.new} new · {counts.duplicates} possible duplicates ·{" "}
-          {counts.conflicts} conflicts · {counts.discarded} rejected · {counts.images} images to
-          assign
+          {t("review.counts", {
+            found,
+            new: counts.new,
+            duplicates: counts.duplicates,
+            conflicts: counts.conflicts,
+            discarded: counts.discarded,
+            images: counts.images,
+          })}
         </p>
         <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-body-sm text-fg-muted">
-            Confidence
+            {t("review.confidence")}
             <select
               className={selectClass}
               value={confidence}
               onChange={(e) => setConfidence(e.target.value as "" | ConfidenceLevel)}
             >
-              <option value="">All</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
+              <option value="">{t("review.all")}</option>
+              <option value="high">{t("confidence.high")}</option>
+              <option value="medium">{t("confidence.medium")}</option>
+              <option value="low">{t("confidence.low")}</option>
             </select>
           </label>
           <label className="flex items-center gap-2 text-body-sm text-fg">
@@ -283,25 +277,25 @@ export function ReviewView(props: {
               onChange={(e) => setOnlySensitive(e.target.checked)}
               className="size-4"
             />
-            With sensitive fields
+            {t("review.onlySensitive")}
           </label>
         </div>
       </Card>
 
-      <div role="tablist" aria-label="Import items" className="flex flex-wrap gap-1">
-        {(Object.keys(tabLabels) as Tab[]).map((t) => (
+      <div role="tablist" aria-label={t("review.tabs.label")} className="flex flex-wrap gap-1">
+        {tabs.map((id) => (
           <Button
-            key={t}
+            key={id}
             role="tab"
-            aria-selected={tab === t}
-            variant={tab === t ? "secondary" : "ghost"}
+            aria-selected={tab === id}
+            variant={tab === id ? "secondary" : "ghost"}
             size="sm"
             onClick={() => {
-              setTab(t);
+              setTab(id);
               setChecked(new Set());
             }}
           >
-            {tabLabels[t]} ({counts[t]})
+            {t("review.tabs.item", { label: t(`review.tabs.${id}`), count: counts[id] })}
           </Button>
         ))}
       </div>
@@ -310,7 +304,7 @@ export function ReviewView(props: {
         <ImagesTab images={props.images} items={props.items} ids={ids} open={props.open} />
       ) : list.length === 0 ? (
         <Card className="p-0">
-          <EmptyState icon={Inbox}>{emptyTab[tab]}</EmptyState>
+          <EmptyState icon={Inbox}>{t(`review.empty.${tab}`)}</EmptyState>
         </Card>
       ) : (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
@@ -321,11 +315,13 @@ export function ReviewView(props: {
                 aria-live="polite"
               >
                 <span className="text-body-sm text-fg-muted">
-                  {chosen.length ? `${chosen.length} selected` : "Select the products to approve"}
+                  {chosen.length
+                    ? t("review.selectedCount", { count: chosen.length })
+                    : t("review.selectToApprove")}
                 </span>
                 <ConfirmDialog
-                  title={`Approve ${chosen.length - chosenSensitive} products?`}
-                  confirmLabel="Approve"
+                  title={t("review.approveTitle", { count: chosen.length - chosenSensitive })}
+                  confirmLabel={t("approve")}
                   disabled={chosen.length - chosenSensitive === 0}
                   onConfirm={() =>
                     action.run(
@@ -335,13 +331,13 @@ export function ReviewView(props: {
                   }
                   trigger={(open) => (
                     <Button size="sm" onClick={open} disabled={!chosen.length || action.pending}>
-                      Approve selected
+                      {t("review.approveSelected")}
                     </Button>
                   )}
                 >
-                  <p>They become usable in {props.clientName}’s carousels.</p>
+                  <p>{t("usableInCarousels", { client: props.clientName })}</p>
                   {chosenSensitive ? (
-                    <p>{chosenSensitive} skipped: sensitive fields to accept one by one.</p>
+                    <p>{t("review.sensitiveSkipped", { count: chosenSensitive })}</p>
                   ) : null}
                 </ConfirmDialog>
               </div>
@@ -358,7 +354,7 @@ export function ReviewView(props: {
                   {tab === "new" && props.open ? (
                     <input
                       type="checkbox"
-                      aria-label={`Select ${i.name}`}
+                      aria-label={t("selectItem", { name: i.name })}
                       disabled={i.status !== "pending"}
                       checked={checked.has(i.id)}
                       onChange={() =>
@@ -380,7 +376,7 @@ export function ReviewView(props: {
                     className="min-w-0 flex-1 text-left focus-visible:outline-2 focus-visible:outline-focus"
                   >
                     <span className="block truncate text-body-md text-fg">
-                      {i.name || "Untitled"}
+                      {i.name || t("untitled")}
                     </span>
                     <span className="block truncate text-body-sm text-fg-muted">
                       {[i.sku, i.category, i.origin].filter(Boolean).join(" · ")}
@@ -388,12 +384,17 @@ export function ReviewView(props: {
                   </button>
                   <div className="flex flex-col items-end gap-1">
                     {i.sensitive ? (
-                      <ShieldAlert aria-label="Sensitive fields" className="size-4 text-warning" />
+                      <ShieldAlert
+                        aria-label={t("review.sensitiveFields")}
+                        className="size-4 text-warning"
+                      />
                     ) : null}
-                    <span className="text-body-sm text-fg-muted">{itemStatusLabels[i.status]}</span>
+                    <span className="text-body-sm text-fg-muted">
+                      {t(`itemStatus.${i.status}`)}
+                    </span>
                     {tab !== "discarded" ? (
                       <span className="text-body-sm text-fg-muted">
-                        {confidenceText[i.confidence]} confidence
+                        {t(`confidenceOf.${i.confidence}`)}
                       </span>
                     ) : null}
                   </div>
@@ -419,6 +420,7 @@ function ItemDetail({
   ids: { clientId: string; importId: string };
   open: boolean;
 }) {
+  const t = useTranslations("products");
   const action = useCatalogAction();
   const [replace, setReplace] = useState<Set<FieldKey>>(new Set());
   const run = (a: Parameters<typeof itemAction>[0]["action"]) =>
@@ -433,16 +435,16 @@ function ItemDetail({
     : [];
 
   return (
-    <Card className="gap-4" aria-label={`Details of ${item.name}`}>
+    <Card className="gap-4" aria-label={t("review.detailsOf", { name: item.name })}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-heading-sm">{item.name || "Untitled"}</h2>
+          <h2 className="text-heading-sm">{item.name || t("untitled")}</h2>
           <p className="text-body-sm text-fg-muted">{item.origin}</p>
         </div>
         <div className="flex flex-wrap gap-1">
           {item.byAgent ? (
             <Badge variant="info" icon={Sparkles}>
-              Proposed by Brand Analyst
+              {t("proposedByAgent")}
             </Badge>
           ) : null}
           <ConfidenceBadge level={item.confidence} />
@@ -450,11 +452,13 @@ function ItemDetail({
       </div>
       {item.productHref ? (
         <Link href={item.productHref} className="text-body-sm text-link hover:underline">
-          Open product sheet
+          {t("review.openProduct")}
         </Link>
       ) : null}
       {item.discardReason ? (
-        <p className="text-body-sm text-fg-muted">Reason: {item.discardReason}</p>
+        <p className="text-body-sm text-fg-muted">
+          {t("review.reason", { reason: item.discardReason })}
+        </p>
       ) : null}
 
       {item.images.length ? (
@@ -471,23 +475,27 @@ function ItemDetail({
       {item.tab === "conflicts" && item.match ? (
         <div className="space-y-3">
           {item.conflicts.map((c) => {
-            const def = fieldDefs.find((d) => d.key === c.field)!;
+            const def = fieldDefs.find((d) => d.key === c.field);
             const decision = item.decisions[c.field];
             return (
               <div key={c.field} className="rounded-md border border-subtle p-3 text-body-sm">
-                <p className="font-medium text-fg">{def?.label ?? c.field}</p>
+                <p className="font-medium text-fg">{def ? fieldLabel(t, def.key) : c.field}</p>
                 <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-                  <dt className="text-fg-muted">Approved</dt>
+                  <dt className="text-fg-muted">{t("review.approvedValue")}</dt>
                   <dd>
                     {formatValue(c.field as FieldKey, c.approved) || "—"}
                     {item.match!.approvedBy ? (
                       <span className="block text-fg-muted">
-                        Approved by {item.match!.approvedBy}
-                        {item.match!.approvedAt ? ` on ${item.match!.approvedAt}` : ""}
+                        {item.match!.approvedAt
+                          ? t("review.approvedByOn", {
+                              name: item.match!.approvedBy,
+                              date: item.match!.approvedAt,
+                            })
+                          : t("review.approvedBy", { name: item.match!.approvedBy })}
                       </span>
                     ) : null}
                   </dd>
-                  <dt className="text-fg-muted">From file</dt>
+                  <dt className="text-fg-muted">{t("review.fromFile")}</dt>
                   <dd>
                     {formatValue(c.field as FieldKey, c.incoming) || "—"}
                     <span className="block text-fg-muted">
@@ -497,12 +505,11 @@ function ItemDetail({
                 </dl>
                 {decision ? (
                   <p className="mt-2 text-fg-muted">
-                    Decided:{" "}
                     {decision === "keep"
-                      ? "kept the approved value"
+                      ? t("review.decided.keep")
                       : decision === "accept"
-                        ? "accepted the file value"
-                        : "deferred"}
+                        ? t("review.decided.accept")
+                        : t("review.decided.defer")}
                   </p>
                 ) : open && pending ? (
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -514,7 +521,7 @@ function ItemDetail({
                         run({ type: "conflict", field: c.field as FieldKey, decision: "keep" })
                       }
                     >
-                      Keep approved
+                      {t("review.keepApproved")}
                     </Button>
                     <Button
                       size="sm"
@@ -523,7 +530,7 @@ function ItemDetail({
                         run({ type: "conflict", field: c.field as FieldKey, decision: "accept" })
                       }
                     >
-                      Accept file value
+                      {t("review.acceptFileValue")}
                     </Button>
                     <Button
                       size="sm"
@@ -533,7 +540,7 @@ function ItemDetail({
                         run({ type: "conflict", field: c.field as FieldKey, decision: "defer" })
                       }
                     >
-                      Defer
+                      {t("review.defer")}
                     </Button>
                   </div>
                 ) : null}
@@ -541,7 +548,7 @@ function ItemDetail({
             );
           })}
           <Link href={item.match.href} className="text-body-sm text-link hover:underline">
-            Open the product in the catalog
+            {t("review.openInCatalog")}
           </Link>
         </div>
       ) : null}
@@ -549,31 +556,31 @@ function ItemDetail({
       {item.tab === "duplicates" && item.match ? (
         <div className="space-y-3 text-body-sm">
           <p className="text-fg-muted">
-            {item.matchReason ?? "Possible duplicate"} · in the catalog:{" "}
+            {t("review.inCatalog", { reason: item.matchReason ?? t("matchReasons.possible") })}{" "}
             <Link href={item.match.href} className="text-link hover:underline">
               {item.match.name}
             </Link>{" "}
             <ProductStatusBadge status={item.match.status} />
           </p>
           {diffs.length === 0 ? (
-            <p className="text-fg-muted">No differences in the fields present in the file.</p>
+            <p className="text-fg-muted">{t("review.noDifferences")}</p>
           ) : (
             <table className="w-full">
               <thead className="text-left text-fg-muted">
                 <tr>
                   {open && pending ? (
                     <th scope="col">
-                      <span className="sr-only">Replace</span>
+                      <span className="sr-only">{t("review.replace")}</span>
                     </th>
                   ) : null}
                   <th scope="col" className="font-medium">
-                    Field
+                    {t("review.field")}
                   </th>
                   <th scope="col" className="font-medium">
-                    In the catalog
+                    {t("review.catalogValue")}
                   </th>
                   <th scope="col" className="font-medium">
-                    From file
+                    {t("review.fromFile")}
                   </th>
                 </tr>
               </thead>
@@ -584,7 +591,7 @@ function ItemDetail({
                       <td className="py-1 pr-2">
                         <input
                           type="checkbox"
-                          aria-label={`Replace ${d.label}`}
+                          aria-label={t("review.replaceField", { field: fieldLabel(t, d.key) })}
                           checked={replace.has(d.key)}
                           onChange={() =>
                             setReplace((s) => {
@@ -598,7 +605,7 @@ function ItemDetail({
                         />
                       </td>
                     ) : null}
-                    <td className="py-1 pr-2 text-fg-muted">{d.label}</td>
+                    <td className="py-1 pr-2 text-fg-muted">{fieldLabel(t, d.key)}</td>
                     <td className="py-1 pr-2">
                       {formatValue(d.key, item.match!.fields[d.key]) || "—"}
                     </td>
@@ -611,7 +618,7 @@ function ItemDetail({
           {open && pending ? (
             <div className="flex flex-wrap gap-2">
               <Button size="sm" disabled={action.pending} onClick={() => run({ type: "merge" })}>
-                Merge
+                {t("review.merge")}
               </Button>
               <Button
                 size="sm"
@@ -619,7 +626,7 @@ function ItemDetail({
                 disabled={action.pending}
                 onClick={() => run({ type: "keep_both" })}
               >
-                Keep both
+                {t("review.keepBoth")}
               </Button>
               <Button
                 size="sm"
@@ -627,7 +634,7 @@ function ItemDetail({
                 disabled={action.pending || replace.size === 0}
                 onClick={() => run({ type: "replace_fields", fields: [...replace] })}
               >
-                Replace selected fields
+                {t("review.replaceSelected")}
               </Button>
             </div>
           ) : null}
@@ -659,7 +666,7 @@ function ItemDetail({
                 title={item.blockers[0]}
                 onClick={() => run({ type: "approve" })}
               >
-                Approve
+                {t("approve")}
               </Button>
               <Button
                 size="sm"
@@ -667,25 +674,25 @@ function ItemDetail({
                 disabled={action.pending}
                 onClick={() => run({ type: "accept" })}
               >
-                Accept as Proposed
+                {t("review.acceptAsProposed")}
               </Button>
             </>
           ) : null}
           {item.tab !== "discarded" && pending ? (
             <ConfirmDialog
-              title={`Reject “${item.name}”?`}
-              confirmLabel="Reject"
+              title={t("review.rejectTitle", { name: item.name })}
+              confirmLabel={t("reject")}
               onConfirm={(f) =>
                 run({ type: "discard", reason: String(f.get("reason") ?? "") || undefined })
               }
               trigger={(openDialog) => (
                 <Button size="sm" variant="ghost" onClick={openDialog} disabled={action.pending}>
-                  Reject
+                  {t("reject")}
                 </Button>
               )}
             >
               <label className="block text-body-sm text-fg">
-                Reason (optional)
+                {t("reasonOptional")}
                 <input name="reason" maxLength={500} className={cn(textareaClass, "mt-1")} />
               </label>
             </ConfirmDialog>
@@ -697,7 +704,7 @@ function ItemDetail({
               disabled={action.pending}
               onClick={() => run({ type: "recover" })}
             >
-              Recover
+              {t("review.recover")}
             </Button>
           ) : null}
         </div>
@@ -717,8 +724,10 @@ function ItemField({
   ids: { clientId: string; importId: string };
   editable: boolean;
 }) {
+  const t = useTranslations("products");
   const value = item.fields[def.key];
   const meta = item.meta[def.key];
+  const label = fieldLabel(t, def.key);
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(() => toText(def, value));
   const action = useCatalogAction();
@@ -726,17 +735,17 @@ function ItemField({
   return (
     <div className="border-b border-subtle pb-3 text-body-sm last:border-0">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-medium text-fg">{def.label}</span>
+        <span className="font-medium text-fg">{label}</span>
         {editable && !editing ? (
           <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-            Edit
+            {t("edit")}
           </Button>
         ) : null}
       </div>
       {editing ? (
         <div className="mt-1 space-y-2">
           <textarea
-            aria-label={def.label}
+            aria-label={label}
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={def.kind === "text" ? 1 : 3}
@@ -759,10 +768,10 @@ function ItemField({
                 )
               }
             >
-              Save
+              {t("save")}
             </Button>
             <Button size="sm" variant="secondary" onClick={() => setEditing(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
           </div>
         </div>
@@ -772,18 +781,23 @@ function ItemField({
       {meta && !isEmptyValue(value) ? (
         <p className="mt-1 flex flex-wrap items-center gap-2 text-fg-muted">
           {meta.truth === "observed" ? <ObservedBadge /> : null}
-          {meta.source} · {confidenceText[meta.confidence]} confidence
+          {t("review.metaSource", {
+            source: meta.source,
+            confidence: t(`confidenceOf.${meta.confidence}`),
+          })}
         </p>
       ) : null}
       {meta?.sensitive.length && !isEmptyValue(value) ? (
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <Badge variant="warning" icon={ShieldAlert}>
-            Sensitive · {meta.sensitive.map((k) => claimLabels[k]).join(", ")}
+            {t("badges.sensitiveClaims", {
+              claims: meta.sensitive.map((k) => t(`claims.${k}`)).join(", "),
+            })}
           </Badge>
           {needsAccept && editable ? (
             <ConfirmDialog
-              title={`Accept “${def.label}”?`}
-              confirmLabel="Accept field"
+              title={t("review.acceptFieldTitle", { field: label })}
+              confirmLabel={t("review.acceptField")}
               onConfirm={(f) =>
                 action.run(() =>
                   acceptItemSensitiveAction({
@@ -801,12 +815,12 @@ function ItemField({
                   onClick={openDialog}
                   disabled={action.pending}
                 >
-                  Accept sensitive field
+                  {t("review.acceptSensitive")}
                 </Button>
               )}
             >
               <label className="block text-body-sm text-fg">
-                Note {meta.confidence === "low" ? "(required: Low confidence)" : "(optional)"}
+                {meta.confidence === "low" ? t("noteRequiredLow") : t("noteOptional")}
                 <textarea
                   name="note"
                   rows={2}
@@ -817,7 +831,7 @@ function ItemField({
               </label>
             </ConfirmDialog>
           ) : !needsAccept ? (
-            <span className="text-fg-muted">Accepted</span>
+            <span className="text-fg-muted">{t("accepted")}</span>
           ) : null}
         </div>
       ) : null}
@@ -837,12 +851,13 @@ function ImagesTab({
   ids: { clientId: string; importId: string };
   open: boolean;
 }) {
+  const t = useTranslations("products");
   const action = useCatalogAction();
   const targets = items.filter((i) => i.tab !== "discarded" && i.name);
   if (images.length === 0)
     return (
       <Card className="p-0">
-        <EmptyState icon={Inbox}>All images have been matched.</EmptyState>
+        <EmptyState icon={Inbox}>{t("review.empty.images")}</EmptyState>
       </Card>
     );
   return (
@@ -855,7 +870,10 @@ function ImagesTab({
             <p className="truncate text-body-sm text-fg">{img.name}</p>
             {img.suggestion ? (
               <p className="text-body-sm text-fg-muted">
-                Maybe: {img.suggestion.name} · {confidenceText[img.suggestion.confidence]}
+                {t("review.maybe", {
+                  name: img.suggestion.name,
+                  confidence: t(`confidence.${img.suggestion.confidence}`),
+                })}
               </p>
             ) : null}
             {open ? (
@@ -874,11 +892,11 @@ function ImagesTab({
                       )
                     }
                   >
-                    Accept suggestion
+                    {t("review.acceptSuggestion")}
                   </Button>
                 ) : null}
                 <select
-                  aria-label={`Assign ${img.name} to a product`}
+                  aria-label={t("review.assignTo", { name: img.name })}
                   className={cn(selectClass, "w-full")}
                   defaultValue=""
                   disabled={action.pending}
@@ -894,7 +912,7 @@ function ImagesTab({
                     )
                   }
                 >
-                  <option value="">Assign to…</option>
+                  <option value="">{t("review.assignPlaceholder")}</option>
                   {targets.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
@@ -912,7 +930,7 @@ function ImagesTab({
                     )
                   }
                 >
-                  Ignore image
+                  {t("review.ignoreImage")}
                 </Button>
               </div>
             ) : null}

@@ -1,4 +1,5 @@
-import type { ConfidenceLevel } from "@forgecy/core";
+import type { ConfidenceLevel, MessageRef } from "@forgecy/core";
+import { englishMessage, messageRef } from "@forgecy/i18n";
 import { readTextDocument } from "./documents";
 import { isImportError, type ImportErrorCode } from "../import/errors";
 import { IMPORT_LIMITS } from "../import/limits";
@@ -29,6 +30,8 @@ export interface FileMeta {
   };
   /** Manual CSV options chosen after IMPORT-CSV-ENCODING. */
   csv?: CsvOptions;
+  /** The error message of an invalid file, for the interface in the user's language. */
+  messageRef?: MessageRef;
 }
 
 export interface Inspection {
@@ -36,6 +39,7 @@ export interface Inspection {
   meta: FileMeta;
   code?: ImportErrorCode;
   message?: string;
+  messageRef?: MessageRef;
   /** Short validation text shown in the list ("Valid · 412 rows"). */
   summary: string;
 }
@@ -116,15 +120,19 @@ export async function inspectFile(
           counts.pdfs ? `${fmt(counts.pdfs)} PDF` : "",
           counts.texts ? `${fmt(counts.texts)} texts` : "",
         ].filter(Boolean);
+        const usable = counts.entries - counts.ignored + listing.skipped > 0;
+        const noFiles = messageRef("products.errors.zipNoUsableFiles", { name });
         return {
-          valid: counts.entries - counts.ignored + listing.skipped > 0,
-          meta: { archive: counts },
+          valid: usable,
+          // The stored meta keeps the reference so the file list shows it in any language.
+          meta: usable ? { archive: counts } : { archive: counts, messageRef: noFiles },
           summary: `ZIP: ${parts.join(", ") || "no usable files"}${counts.ignored ? ` · ${fmt(counts.ignored)} files ignored: formats not allowed` : ""}`,
-          ...(counts.entries - counts.ignored + listing.skipped > 0
+          ...(usable
             ? {}
             : {
                 code: "IMPORT-INVALID" as const,
-                message: `"${name}" contains no usable files.`,
+                message: englishMessage("products.errors.zipNoUsableFiles", { name }),
+                messageRef: noFiles,
               }),
         };
       }
@@ -140,9 +148,10 @@ export async function inspectFile(
     if (isImportError(err))
       return {
         valid: false,
-        meta: {},
+        meta: err.ref ? { messageRef: err.ref } : {},
         code: err.code,
         message: err.message,
+        ...(err.ref ? { messageRef: err.ref } : {}),
         summary: "Not valid",
       };
     throw err;

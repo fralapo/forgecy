@@ -13,7 +13,9 @@ import {
 } from "@forgecy/catalog";
 import { getDb } from "@forgecy/db";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
+import { firstIssue } from "@/lib/i18n";
 import { requireUser } from "@/lib/session";
 import { paths } from "../../_lib/paths";
 import { actingUser, attempt } from "../../_lib/server";
@@ -32,16 +34,18 @@ export async function saveFieldAction(input: {
   const user = await requireUser();
   const field = fieldKey.parse(input.field);
   const parsed = productFieldsSchema.shape[field].safeParse(input.value);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid value" };
-  return attempt(async () => {
+  if (!parsed.success) return { error: await firstIssue(parsed.error) };
+  const t = await getTranslations("products");
+  const r = await attempt(async () => {
     await updateProductFields(getDb(), actingUser(user), {
       clientId: z.uuid().parse(input.clientId),
       productId: z.uuid().parse(input.productId),
       revision: z.number().int().parse(input.revision),
       patch: { [field]: parsed.data },
     });
-    return "Saved";
+    return t("product.saved");
   });
+  return r.ok ? { ...r, edited: true } : r;
 }
 
 export async function acceptSensitiveAction(input: {
@@ -51,6 +55,7 @@ export async function acceptSensitiveAction(input: {
   note?: string;
 }): Promise<ActionResult> {
   const user = await requireUser();
+  const t = await getTranslations("products");
   return attempt(async () => {
     await acceptSensitiveField(getDb(), actingUser(user), {
       clientId: z.uuid().parse(input.clientId),
@@ -58,7 +63,7 @@ export async function acceptSensitiveAction(input: {
       field: fieldKey.parse(input.field),
       note: input.note?.slice(0, 1000),
     });
-    return "Sensitive field accepted.";
+    return t("product.sensitiveAccepted");
   });
 }
 
@@ -69,6 +74,7 @@ export async function decideProposalAction(input: {
   editedValue?: unknown;
 }): Promise<ActionResult> {
   const user = await requireUser();
+  const t = await getTranslations("products");
   return attempt(async () => {
     await decideFieldProposal(getDb(), actingUser(user), {
       clientId: z.uuid().parse(input.clientId),
@@ -76,7 +82,9 @@ export async function decideProposalAction(input: {
       decision: z.enum(["accept", "reject"]).parse(input.decision),
       editedValue: input.editedValue,
     });
-    return input.decision === "accept" ? "Proposal accepted." : "Proposal rejected.";
+    return input.decision === "accept"
+      ? t("product.proposalAccepted")
+      : t("product.proposalRejected");
   });
 }
 

@@ -4,7 +4,9 @@ import {
   type Actor,
   type ConfidenceLevel,
   type ImportFileKind,
+  type MessageRef,
 } from "@forgecy/core";
+import { englishMessage, localizedError, messageRef } from "@forgecy/i18n";
 import type { AiGateway } from "@forgecy/ai";
 import {
   and,
@@ -103,7 +105,10 @@ export interface PipelineContext {
 
 interface Warning {
   code: string;
+  /** English (logs, stored fallback). */
   message: string;
+  /** The message for the interface, in the user's language. */
+  ref?: MessageRef;
   fileId?: string;
 }
 
@@ -117,7 +122,7 @@ export async function runImportPhase(
   ctx: PipelineContext = {},
 ) {
   const [imp] = await deps.db.select().from(productImports).where(eq(productImports.id, importId));
-  if (!imp) throw new ForgecyError("not_found", "Import not found");
+  if (!imp) throw localizedError("not_found", "products.errors.importNotFound");
   if (imp.status !== "analyzing") return { skipped: true, status: imp.status };
   const client = await loadCatalogClient(deps.db, imp.clientId);
   const options = importOptions(imp);
@@ -129,11 +134,9 @@ export async function runImportPhase(
     client,
     options,
     aiAllowed: ai.available && deps.ai !== null,
-    aiReason:
-      ai.reason ??
-      (deps.ai
-        ? undefined
-        : "No AI provider configured: using manual mapping, matching by file name and SKU, and PDFs as sources."),
+    aiReason: ai.reason ?? (deps.ai ? undefined : englishMessage("products.ai.noProviderPipeline")),
+    aiReasonRef:
+      ai.reasonRef ?? (deps.ai ? undefined : messageRef("products.ai.noProviderPipeline")),
     createdBy: imp.createdBy,
     warnings: [],
     costMicroUsd: 0,
@@ -153,6 +156,7 @@ interface Run {
   options: ImportOptions;
   aiAllowed: boolean;
   aiReason?: string;
+  aiReasonRef?: MessageRef;
   createdBy: string | null;
   warnings: Warning[];
   costMicroUsd: number;
@@ -201,13 +205,19 @@ async function callAi<T>(
           : err.code === "budget_exceeded"
             ? "BUDGET-EXCEEDED"
             : "PROVIDER-UNAVAILABLE";
-      const message =
+      const key =
         code === "POLICY-BLOCKED"
-          ? `${run.client.name}'s policy does not allow AI analysis of these files.`
+          ? "products.ai.policyBlocked"
           : code === "BUDGET-EXCEEDED"
-            ? `${run.client.name}'s AI budget is used up: the rest of the import continues without AI analysis.`
-            : "The AI provider is not responding. Sheet rows already read are saved; retry the analysis of PDFs and images.";
-      run.warnings.push({ code, message, ...(req.fileId ? { fileId: req.fileId } : {}) });
+            ? "products.ai.budgetExceeded"
+            : "products.ai.providerUnavailable";
+      const values = { client: run.client.name };
+      run.warnings.push({
+        code,
+        message: englishMessage(key, values),
+        ref: messageRef(key, values),
+        ...(req.fileId ? { fileId: req.fileId } : {}),
+      });
       // After a policy or budget block, stop calling: every next call would fail the same way.
       if (code !== "PROVIDER-UNAVAILABLE") run.aiAllowed = false;
       run.deps.logger?.warn(
@@ -343,9 +353,17 @@ async function expandArchive(run: Run, archive: ImportFileRow) {
     if (isImportError(err)) {
       await db
         .update(productImportFiles)
-        .set({ valid: false, route: "ignore", errorCode: err.code, message: err.message })
+        .set({
+          valid: false,
+          route: "ignore",
+          errorCode: err.code,
+          message: err.message,
+          ...(err.ref
+            ? { meta: { ...(archive.meta as Record<string, unknown>), messageRef: err.ref } }
+            : {}),
+        })
         .where(eq(productImportFiles.id, archive.id));
-      run.warnings.push({ code: err.code, message: err.message, fileId: archive.id });
+      run.warnings.push({ code: err.code, message: err.message, ref: err.ref, fileId: archive.id });
       return;
     }
     throw err;
@@ -409,7 +427,8 @@ async function extract(run: Run) {
     if (!run.aiAllowed) {
       run.warnings.push({
         code: "POLICY-BLOCKED",
-        message: run.aiReason ?? "AI analysis not available: the PDF stays as a source.",
+        message: run.aiReason ?? englishMessage("products.ai.pdfNoAi"),
+        ref: run.aiReasonRef ?? messageRef("products.ai.pdfNoAi"),
         fileId: f.id,
       });
       continue;
@@ -421,7 +440,8 @@ async function extract(run: Run) {
       if (pdf.textless) {
         run.warnings.push({
           code: "IMPORT-PDF-UNREADABLE",
-          message: `"${f.name}" is a scan without readable text: it stays as a source for manual entry.`,
+          message: englishMessage("products.ai.pdfScan", { name: f.name }),
+          ref: messageRef("products.ai.pdfScan", { name: f.name }),
           fileId: f.id,
         });
         continue;
@@ -429,7 +449,7 @@ async function extract(run: Run) {
       pages = pdf.pages;
     } catch (err) {
       if (isImportError(err)) {
-        run.warnings.push({ code: err.code, message: err.message, fileId: f.id });
+        run.warnings.push({ code: err.code, message: err.message, ref: err.ref, fileId: f.id });
         continue;
       }
       throw err;
@@ -495,7 +515,7 @@ async function extract(run: Run) {
       material.push({ id: f.id, path: f.path, kind: "text", textFields: draft });
     } catch (err) {
       if (!isImportError(err)) throw err;
-      run.warnings.push({ code: err.code, message: err.message, fileId: f.id });
+      run.warnings.push({ code: err.code, message: err.message, ref: err.ref, fileId: f.id });
     }
   }
   const matched = matchMaterial(material, candidates, (m) => ({

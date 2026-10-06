@@ -1,4 +1,5 @@
-import { assertCan, ForgecyError, type ConfidenceLevel } from "@forgecy/core";
+import { assertCan, ForgecyError, type ConfidenceLevel, type MessageRef } from "@forgecy/core";
+import { englishMessage, localizedError, messageRef, type MessageValues } from "@forgecy/i18n";
 import {
   and,
   eq,
@@ -16,7 +17,6 @@ import type { ImageRef } from "./candidates";
 import type { ActingUser, Tx } from "../db";
 import {
   emptyFields,
-  fieldDef,
   fieldKeys,
   isEmptyValue,
   productFieldsSchema,
@@ -28,8 +28,12 @@ import {
 import { loadImport, type ImportItemRow } from "./imports";
 import type { FieldMeta, FieldMetaMap } from "../products/meta";
 import {
-  approvalBlockers,
+  approvalBlockerList,
   attachImages,
+  blockerError,
+  blockerText,
+  invalidFieldError,
+  type ApprovalBlocker,
   fieldsToColumns,
   loadProduct,
   pendingSensitive,
@@ -69,14 +73,14 @@ async function lockItem(
       ),
     )
     .for("update");
-  if (!item) throw new ForgecyError("not_found", "Item not found");
+  if (!item) throw localizedError("not_found", "products.errors.itemNotFound");
   return item;
 }
 
 async function assertReviewOpen(tx: Tx, clientId: string, importId: string) {
   const imp = await loadImport(tx, clientId, importId);
   if (imp.status !== "ready_for_review")
-    throw new ForgecyError("conflict", "The review of this import is not open.", {
+    throw localizedError("conflict", "products.errors.reviewNotOpen", undefined, {
       code: "CONFLICT-STATE",
     });
   return imp;
@@ -228,7 +232,7 @@ export async function decideItem(
   db: Database,
   user: ActingUser,
   input: { clientId: string; importId: string; itemId: string; action: ItemAction },
-): Promise<{ productId?: string; message?: string }> {
+): Promise<{ productId?: string; message?: string; messageRef?: MessageRef }> {
   const a = input.action;
   const permission =
     a.type === "approve" || (a.type === "conflict" && a.decision === "accept")
@@ -270,12 +274,9 @@ export async function decideItem(
       case "approve": {
         if (item.status !== "pending" && item.status !== "accepted") throw stateConflict();
         if (item.matchProductId && item.status === "pending")
-          throw new ForgecyError(
-            "validation",
-            "Decide on the duplicate first: merge, keep both or replace the fields.",
-          );
-        const blockers = approvalBlockers(draftOf(item), metaOfItem(item));
-        if (blockers.length) throw new ForgecyError("validation", blockers[0]!);
+          throw localizedError("validation", "products.errors.decideDuplicateFirst");
+        const blockers = approvalBlockerList(draftOf(item), metaOfItem(item));
+        if (blockers.length) throw blockerError(blockers[0]!);
         let productId = item.productId;
         if (productId) {
           const p = await loadProduct(tx, input.clientId, productId);
@@ -318,7 +319,8 @@ export async function decideItem(
           .update(productImportItems)
           .set({
             status: "discarded",
-            discardReason: a.reason?.trim().slice(0, 300) || "Rejected in review",
+            discardReason:
+              a.reason?.trim().slice(0, 300) || englishMessage("products.discards.inReview"),
             ...decided,
           })
           .where(eq(productImportItems.id, item.id));
@@ -347,7 +349,7 @@ export async function decideItem(
       case "replace_fields": {
         if (item.status !== "pending" || !item.matchProductId) throw stateConflict();
         const fresh = await assertMatchFresh(tx, item);
-        if (fresh?.stale) return { message: staleMessage(fresh.product.name) };
+        if (fresh?.stale) return stale(fresh.product.name);
         const product = fresh!.product;
         const current = rowToFields(product);
         const incoming = draftOf(item);
@@ -410,7 +412,8 @@ export async function decideItem(
           productId: product.id,
           ...(proposals
             ? {
-                message: `${proposals} fields become proposals to accept on the product sheet.`,
+                message: englishMessage("products.review.mergeProposals", { count: proposals }),
+                messageRef: messageRef("products.review.mergeProposals", { count: proposals }),
               }
             : {}),
         };
@@ -423,16 +426,13 @@ export async function decideItem(
           incoming: unknown;
         }>;
         const conflict = conflicts.find((c) => c.field === a.field);
-        if (!conflict) throw new ForgecyError("validation", "Conflict not found");
+        if (!conflict) throw localizedError("validation", "products.errors.conflictNotFound");
         const fresh = await assertMatchFresh(tx, item);
-        if (fresh?.stale) return { message: staleMessage(fresh.product.name) };
+        if (fresh?.stale) return stale(fresh.product.name);
         const meta = metaOfItem(item)[a.field];
         if (a.decision === "accept") {
           if (meta?.sensitive?.length && meta.confidence === "low" && !a.note?.trim())
-            throw new ForgecyError(
-              "validation",
-              "Sensitive field with low confidence: write a note to accept it.",
-            );
+            throw localizedError("validation", "products.errors.sensitiveLowConfidence");
           await applyFields(
             tx,
             user,
@@ -511,16 +511,18 @@ export async function decideItem(
   });
 }
 
-function staleMessage(name: string) {
-  return `"${name}" was changed after the analysis. The comparison has been updated: check again before deciding.`;
+function stale(name: string) {
+  const values: MessageValues = { name };
+  return {
+    message: englishMessage("products.review.stale", values),
+    messageRef: messageRef("products.review.stale", values),
+  };
 }
 
 function stateConflict() {
-  return new ForgecyError(
-    "conflict",
-    "Someone else has already decided this item. Reload the page.",
-    { code: "CONFLICT-STATE" },
-  );
+  return localizedError("conflict", "products.errors.itemDecided", undefined, {
+    code: "CONFLICT-STATE",
+  });
 }
 
 /** Write values on a product after an explicit decision, with history. */
@@ -590,8 +592,7 @@ export async function editItemField(
     const item = await lockItem(tx, input.clientId, input.importId, input.itemId);
     if (item.status !== "pending") throw stateConflict();
     const parsed = productFieldsSchema.shape[input.field].safeParse(input.value);
-    if (!parsed.success)
-      throw new ForgecyError("validation", `${fieldDef(input.field).label}: invalid value`);
+    if (!parsed.success) throw invalidFieldError(input.field);
     const draft = { ...draftOf(item) } as Record<string, unknown>;
     let meta = { ...metaOfItem(item) };
     if (isEmptyValue(parsed.data)) {
@@ -629,10 +630,10 @@ export async function acceptItemSensitive(
     const item = await lockItem(tx, input.clientId, input.importId, input.itemId);
     const meta = { ...metaOfItem(item) };
     const m = meta[input.field];
-    if (!m?.sensitive?.length) throw new ForgecyError("validation", "The field is not sensitive");
+    if (!m?.sensitive?.length) throw localizedError("validation", "products.errors.notSensitive");
     const note = input.note?.trim();
     if (m.confidence === "low" && !note)
-      throw new ForgecyError("validation", "Low confidence: write a note to accept the field.");
+      throw localizedError("validation", "products.errors.lowConfidenceNote");
     meta[input.field] = {
       ...m,
       acceptedBy: user.id,
@@ -657,6 +658,15 @@ export async function acceptItemSensitive(
   });
 }
 
+/** An item left out of a bulk approval: English `reason`, and `ref` or `blocker` for the interface. */
+export interface ExcludedItem {
+  id: string;
+  name: string;
+  reason: string;
+  ref?: MessageRef;
+  blocker?: ApprovalBlocker;
+}
+
 /**
  * "Approve selected" in the New tab: excludes and reports the items with
  * sensitive fields not accepted or missing required fields.
@@ -665,9 +675,9 @@ export async function approveItems(
   db: Database,
   user: ActingUser,
   input: { clientId: string; importId: string; itemIds: string[]; note?: string },
-): Promise<{ approved: number; excluded: Array<{ id: string; name: string; reason: string }> }> {
+): Promise<{ approved: number; excluded: ExcludedItem[] }> {
   assertCan(user.actor, "approve", input.clientId);
-  const excluded: Array<{ id: string; name: string; reason: string }> = [];
+  const excluded: ExcludedItem[] = [];
   let approved = 0;
   for (const id of [...new Set(input.itemIds)].slice(0, 2000)) {
     const [item] = await db
@@ -686,13 +696,19 @@ export async function approveItems(
       excluded.push({
         id,
         name: draft.name ?? "",
-        reason: "sensitive fields to accept one by one",
+        reason: englishMessage("products.skipped.sensitive"),
+        ref: messageRef("products.skipped.sensitive"),
       });
       continue;
     }
-    const blockers = approvalBlockers(draft, meta);
+    const blockers = approvalBlockerList(draft, meta);
     if (blockers.length) {
-      excluded.push({ id, name: draft.name ?? "", reason: blockers[0]! });
+      excluded.push({
+        id,
+        name: draft.name ?? "",
+        reason: blockerText(blockers[0]!),
+        blocker: blockers[0]!,
+      });
       continue;
     }
     try {
@@ -705,7 +721,13 @@ export async function approveItems(
       approved++;
     } catch (err) {
       if (err instanceof ForgecyError && err.code !== "permission_denied")
-        excluded.push({ id, name: draft.name ?? "", reason: err.message });
+        excluded.push({
+          id,
+          name: draft.name ?? "",
+          reason: err.message,
+          ...(err.ref ? { ref: err.ref } : {}),
+          ...(err.details?.blocker ? { blocker: err.details.blocker as ApprovalBlocker } : {}),
+        });
       else throw err;
     }
   }
@@ -737,7 +759,7 @@ export async function decideImage(
           eq(productImportFiles.kind, "image"),
         ),
       );
-    if (!file) throw new ForgecyError("not_found", "Image not found");
+    if (!file) throw localizedError("not_found", "products.errors.imageNotFound");
     if (input.action === "ignore") {
       await tx
         .update(productImportFiles)
@@ -749,7 +771,7 @@ export async function decideImage(
       input.action === "assign"
         ? input.itemId
         : ((file.suggestion as { itemId?: string } | null)?.itemId ?? undefined);
-    if (!itemId) throw new ForgecyError("validation", "Choose the product to assign the image to");
+    if (!itemId) throw localizedError("validation", "products.errors.chooseProductForImage");
     const item = await lockItem(tx, input.clientId, input.importId, itemId);
     const ref: ImageRef = {
       fileId: file.id,
@@ -837,10 +859,9 @@ export async function closeReview(
       .for("update");
     const undecidedMatches = items.filter((i) => i.status === "pending" && i.matchProductId);
     if (undecidedMatches.length)
-      throw new ForgecyError(
-        "validation",
-        `Decide on ${undecidedMatches.length} duplicates and conflicts first.`,
-      );
+      throw localizedError("validation", "products.errors.decideMatchesFirst", {
+        count: undecidedMatches.length,
+      });
     let proposed = 0;
     for (const item of items.filter((i) => i.status === "pending")) {
       const productId = await createFromItem(tx, user, item, "proposed");

@@ -1,6 +1,6 @@
 import { parse } from "csv-parse/sync";
 import { readSheet } from "read-excel-file/node";
-import { ImportError } from "../import/errors";
+import { importError } from "../import/errors";
 import { IMPORT_LIMITS } from "../import/limits";
 import { assertSafeOfficeFile } from "./zip";
 
@@ -34,10 +34,7 @@ export function decodeCsv(
     // Control characters other than tab/newline mean it is not a text file at all.
     // eslint-disable-next-line no-control-regex -- detecting binary content
     if (/[\u0000-\u0008\u000e-\u001f]/.test(text.slice(0, 4096)))
-      throw new ImportError(
-        "IMPORT-CSV-ENCODING",
-        "Unrecognized file encoding. Save it as UTF-8 with a comma or semicolon delimiter.",
-      );
+      throw importError("IMPORT-CSV-ENCODING", "products.errors.csvEncoding");
     return { text, encoding: "windows-1252" };
   }
 }
@@ -77,12 +74,13 @@ function countOutsideQuotes(line: string, d: string): number {
 function finalize(table: unknown[][], name: string): SheetData {
   const nonEmpty = table.filter((r) => r.some((c) => String(c ?? "").trim() !== ""));
   const [head, ...body] = nonEmpty;
-  if (!head) throw new ImportError("IMPORT-INVALID", `"${name}" contains no rows.`);
+  if (!head) throw importError("IMPORT-INVALID", "products.errors.sheetNoRows", { name });
   if (body.length > IMPORT_LIMITS.sheetRows)
-    throw new ImportError(
-      "IMPORT-TOO-LARGE",
-      `"${name}" has ${body.length.toLocaleString("en-GB")} rows: the limit is ${IMPORT_LIMITS.sheetRows.toLocaleString("en-GB")}. Split the file.`,
-    );
+    throw importError("IMPORT-TOO-LARGE", "products.errors.tooManyRows", {
+      name,
+      rows: body.length,
+      max: IMPORT_LIMITS.sheetRows,
+    });
   const headers = head.map((h, i) => String(h ?? "").trim() || `Column ${i + 1}`);
   const width = headers.length;
   const rows = body.map((r) => Array.from({ length: width }, (_, i) => cellToString(r[i])));
@@ -110,25 +108,20 @@ export function parseCsv(data: Uint8Array, name: string, opts: CsvOptions = {}):
       to: IMPORT_LIMITS.sheetRows + 2,
     }) as string[][];
   } catch {
-    throw new ImportError(
-      "IMPORT-CSV-ENCODING",
-      `Unrecognized encoding or delimiter in "${name}". Save it as UTF-8 with a comma or semicolon delimiter, or choose the encoding and delimiter here.`,
-    );
+    throw importError("IMPORT-CSV-ENCODING", "products.errors.csvDelimiter", { name });
   }
   if (table.length > IMPORT_LIMITS.sheetRows + 1) {
     // `to` stops early: count the real number of lines for the message.
     const lines = text.split(/\r?\n/).filter((l) => l.trim()).length - 1;
-    throw new ImportError(
-      "IMPORT-TOO-LARGE",
-      `"${name}" has ${lines.toLocaleString("en-GB")} rows: the limit is ${IMPORT_LIMITS.sheetRows.toLocaleString("en-GB")}. Split the file.`,
-    );
+    throw importError("IMPORT-TOO-LARGE", "products.errors.tooManyRows", {
+      name,
+      rows: lines,
+      max: IMPORT_LIMITS.sheetRows,
+    });
   }
   const sheet = finalize(table, name);
   if (sheet.headers.length < 2 && delimiter === ",")
-    throw new ImportError(
-      "IMPORT-CSV-ENCODING",
-      `Unrecognized encoding or delimiter in "${name}". Save it as UTF-8 with a comma or semicolon delimiter, or choose the encoding and delimiter here.`,
-    );
+    throw importError("IMPORT-CSV-ENCODING", "products.errors.csvDelimiter", { name });
   return { ...sheet, encoding, delimiter };
 }
 
@@ -139,7 +132,7 @@ export async function parseXlsx(data: Buffer, name: string): Promise<SheetData> 
   try {
     table = (await readSheet(data)) as unknown[][];
   } catch {
-    throw new ImportError("IMPORT-INVALID", `"${name}" is not a readable XLSX file.`);
+    throw importError("IMPORT-INVALID", "products.errors.xlsxUnreadable", { name });
   }
   return finalize(table, name);
 }

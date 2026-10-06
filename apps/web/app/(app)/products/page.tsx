@@ -3,17 +3,21 @@ import { asc, clients, getDb, isNull } from "@forgecy/db";
 import { Card } from "@forgecy/ui";
 import { Package } from "lucide-react";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/session";
 import { EmptyState } from "./_components/ui";
-import { plural } from "./_lib/labels";
 import { paths } from "./_lib/paths";
 
-export const metadata = { title: "Products" };
+export async function generateMetadata() {
+  const t = await getTranslations("products");
+  return { title: t("title") };
+}
 
 /** Entry from the sidebar: pick the client whose catalog to open (only clients, not prospects). */
 export default async function ProductsIndexPage() {
   await requireUser();
+  const t = await getTranslations("products");
   const db = getDb();
   const [rows, counts] = await Promise.all([
     db.select().from(clients).where(isNull(clients.archivedAt)).orderBy(asc(clients.name)),
@@ -32,16 +36,10 @@ export default async function ProductsIndexPage() {
   const prospects = rows.length - active.length;
   return (
     <>
-      <PageHeader
-        title="Products"
-        description="Each client’s catalog: descriptions, product sheets and photos to reuse in strategy and carousels."
-      />
+      <PageHeader title={t("title")} description={t("index.description")} />
       <Card className="p-0">
         {active.length === 0 ? (
-          <EmptyState icon={Package}>
-            No active clients. The product catalog becomes available once a prospect is converted
-            into a client.
-          </EmptyState>
+          <EmptyState icon={Package}>{t("index.noClients")}</EmptyState>
         ) : (
           <ul className="divide-y divide-subtle">
             {active.map((c) => {
@@ -55,8 +53,12 @@ export default async function ProductsIndexPage() {
                     <span className="text-body-md text-fg">{c.name}</span>
                     <span className="text-body-sm text-fg-muted">
                       {n?.total
-                        ? `${plural(n.total, "product", "products")} · ${n.approved} approved · ${n.proposed} to review`
-                        : "No products"}
+                        ? t("index.counts", {
+                            total: n.total,
+                            approved: n.approved,
+                            proposed: n.proposed,
+                          })
+                        : t("index.noProducts")}
                     </span>
                   </Link>
                 </li>
@@ -67,8 +69,7 @@ export default async function ProductsIndexPage() {
       </Card>
       {prospects > 0 ? (
         <p className="mt-4 text-body-sm text-fg-muted">
-          {plural(prospects, "prospect is", "prospects are")} not shown: the catalog opens once a
-          prospect is converted into a client.
+          {t("index.prospectsHidden", { count: prospects })}
         </p>
       ) : null}
     </>

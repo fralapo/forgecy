@@ -5,7 +5,9 @@ import { Button, cn } from "@forgecy/ui";
 import { Download, GitPullRequest, LayoutGrid, ShieldAlert, Table2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { useFormat } from "@/lib/use-format";
 import { ActionMessage, ConfirmDialog, useCatalogAction } from "../_components/client";
 import { CompletenessMeter, ProductStatusBadge, Thumb } from "../_components/ui";
 import { shortWhen } from "../_lib/labels";
@@ -44,6 +46,8 @@ export function CatalogView(props: {
 }) {
   const { rows, clientSlug } = props;
   const router = useRouter();
+  const t = useTranslations("products");
+  const format = useFormat();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const { pending, result, run } = useCatalogAction();
   const chosen = rows.filter((r) => selected.has(r.id));
@@ -83,13 +87,13 @@ export function CatalogView(props: {
         <div aria-live="polite" className="flex flex-wrap items-center gap-2 text-body-sm">
           {chosen.length ? (
             <>
-              <span className="text-fg">
-                {chosen.length === 1 ? "1 product selected" : `${chosen.length} products selected`}
-              </span>
+              <span className="text-fg">{t("list.selected", { count: chosen.length })}</span>
               <ConfirmDialog
-                title={`Approve ${approvable.length} products?`}
+                title={t("list.approveTitle", { count: approvable.length })}
                 confirmLabel={
-                  sensitive ? `Approve the other ${approvable.length}` : "Approve products"
+                  sensitive
+                    ? t("list.approveOthers", { count: approvable.length })
+                    : t("list.approveProducts")
                 }
                 disabled={approvable.length === 0}
                 onConfirm={(f) =>
@@ -101,25 +105,21 @@ export function CatalogView(props: {
                 }
                 trigger={(open) => (
                   <Button size="sm" onClick={open} disabled={pending}>
-                    Approve selected
+                    {t("list.approveSelected")}
                   </Button>
                 )}
               >
-                <p>They become usable in {props.clientName}’s carousels.</p>
-                {sensitive ? (
-                  <p>
-                    {sensitive} products have sensitive fields to accept one by one. They will be
-                    skipped.
-                  </p>
-                ) : null}
+                <p>{t("usableInCarousels", { client: props.clientName })}</p>
+                {sensitive ? <p>{t("list.sensitiveSkipped", { count: sensitive })}</p> : null}
                 {chosen.length - approvable.length - sensitive > 0 ? (
                   <p>
-                    {chosen.length - approvable.length - sensitive} products are not proposed or in
-                    draft: they will be skipped.
+                    {t("list.notApprovableSkipped", {
+                      count: chosen.length - approvable.length - sensitive,
+                    })}
                   </p>
                 ) : null}
                 <label className="block text-body-sm text-fg">
-                  Note (optional)
+                  {t("noteOptional")}
                   <textarea
                     name="note"
                     rows={2}
@@ -129,8 +129,8 @@ export function CatalogView(props: {
                 </label>
               </ConfirmDialog>
               <ConfirmDialog
-                title={`Reject ${chosen.length} products?`}
-                confirmLabel="Reject products"
+                title={t("list.rejectTitle", { count: chosen.length })}
+                confirmLabel={t("list.rejectProducts")}
                 onConfirm={(f) =>
                   bulk(
                     "reject",
@@ -140,12 +140,12 @@ export function CatalogView(props: {
                 }
                 trigger={(open) => (
                   <Button size="sm" variant="secondary" onClick={open} disabled={pending}>
-                    Reject selected
+                    {t("list.rejectSelected")}
                   </Button>
                 )}
               >
                 <label className="block text-body-sm text-fg">
-                  Reason (optional)
+                  {t("reasonOptional")}
                   <textarea
                     name="note"
                     rows={2}
@@ -155,8 +155,8 @@ export function CatalogView(props: {
                 </label>
               </ConfirmDialog>
               <ConfirmDialog
-                title={`Archive ${chosen.length} products?`}
-                confirmLabel="Archive products"
+                title={t("list.archiveTitle", { count: chosen.length })}
+                confirmLabel={t("list.archiveProducts")}
                 danger
                 onConfirm={() =>
                   bulk(
@@ -166,20 +166,18 @@ export function CatalogView(props: {
                 }
                 trigger={(open) => (
                   <Button size="sm" variant="secondary" onClick={open} disabled={pending}>
-                    Archive selected
+                    {t("list.archiveSelected")}
                   </Button>
                 )}
               >
-                <p>
-                  They will no longer be suggested in briefs. Carousels that use them stay
-                  unchanged.
-                </p>
+                <p>{t("list.archiveBody")}</p>
               </ConfirmDialog>
             </>
           ) : (
             <span className="text-fg-muted">
-              {props.total === 1 ? "1 product" : `${props.total} products`}
-              {props.filtered ? " with these filters" : ""}
+              {props.filtered
+                ? t("list.totalFiltered", { count: props.total })
+                : t("list.total", { count: props.total })}
             </span>
           )}
         </div>
@@ -187,10 +185,10 @@ export function CatalogView(props: {
           <Button asChild size="sm" variant="ghost">
             <a href={props.exportHref}>
               <Download aria-hidden />
-              Export CSV
+              {t("list.exportCsv")}
             </a>
           </Button>
-          <div role="group" aria-label="View" className="flex">
+          <div role="group" aria-label={t("list.view")} className="flex">
             <Button
               size="sm"
               variant={props.view === "table" ? "secondary" : "ghost"}
@@ -198,7 +196,7 @@ export function CatalogView(props: {
               onClick={() => router.push(paths.catalog(clientSlug, viewQuery("table")))}
             >
               <Table2 aria-hidden />
-              Table
+              {t("list.table")}
             </Button>
             <Button
               size="sm"
@@ -207,7 +205,7 @@ export function CatalogView(props: {
               onClick={() => router.push(paths.catalog(clientSlug, viewQuery("grid")))}
             >
               <LayoutGrid aria-hidden />
-              Grid
+              {t("list.grid")}
             </Button>
           </div>
         </div>
@@ -222,7 +220,7 @@ export function CatalogView(props: {
             <li key={r.id} className="relative rounded-lg border border-subtle bg-surface p-3">
               <input
                 type="checkbox"
-                aria-label={`Select ${r.name}`}
+                aria-label={t("selectItem", { name: r.name })}
                 checked={selected.has(r.id)}
                 onChange={() => toggle(r.id)}
                 className="absolute left-5 top-5 z-10 size-4"
@@ -244,13 +242,13 @@ export function CatalogView(props: {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[64rem] text-left text-body-sm">
-            <caption className="sr-only">Products</caption>
+            <caption className="sr-only">{t("list.caption")}</caption>
             <thead className="border-b border-subtle text-label text-fg-muted">
               <tr>
                 <th scope="col" className="w-10 px-4 py-3">
                   <input
                     type="checkbox"
-                    aria-label="Select all products on this page"
+                    aria-label={t("list.selectAll")}
                     checked={rows.length > 0 && selected.size === rows.length}
                     onChange={(e) =>
                       setSelected(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())
@@ -259,31 +257,31 @@ export function CatalogView(props: {
                   />
                 </th>
                 <th scope="col" className="px-2 py-3 font-medium">
-                  <span className="sr-only">Thumbnail</span>
+                  <span className="sr-only">{t("list.thumbnail")}</span>
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Name
+                  {t("list.name")}
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  SKU
+                  {t("list.sku")}
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Category
+                  {t("list.category")}
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Status
+                  {t("list.status")}
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Completeness
+                  {t("list.completeness")}
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Source
+                  {t("list.source")}
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Used in
+                  {t("list.usedIn")}
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
-                  Last modified
+                  {t("list.lastModified")}
                 </th>
               </tr>
             </thead>
@@ -299,7 +297,7 @@ export function CatalogView(props: {
                   <td className="px-4 py-2">
                     <input
                       type="checkbox"
-                      aria-label={`Select ${r.name}`}
+                      aria-label={t("selectItem", { name: r.name })}
                       checked={selected.has(r.id)}
                       onChange={() => toggle(r.id)}
                       className="size-4"
@@ -319,13 +317,13 @@ export function CatalogView(props: {
                       {r.sensitivePending ? (
                         <span className="inline-flex items-center gap-1">
                           <ShieldAlert aria-hidden className="size-4" />
-                          Sensitive fields to accept
+                          {t("list.sensitivePending")}
                         </span>
                       ) : null}
                       {r.openProposals ? (
                         <span className="inline-flex items-center gap-1">
                           <GitPullRequest aria-hidden className="size-4" />
-                          {r.openProposals === 1 ? "1 proposal" : `${r.openProposals} proposals`}
+                          {t("list.proposals", { count: r.openProposals })}
                         </span>
                       ) : null}
                     </span>
@@ -339,12 +337,11 @@ export function CatalogView(props: {
                     <CompletenessMeter level={r.completeness} />
                   </td>
                   <td className="px-4 py-2 text-fg-muted">
-                    {r.byAgent ? "Proposed by Brand Analyst · " : ""}
-                    {r.source}
+                    {r.byAgent ? t("list.byAgentSource", { source: r.source }) : r.source}
                   </td>
                   <td className="px-4 py-2 text-fg-muted">—</td>
                   <td className="px-4 py-2 text-fg-muted">
-                    {shortWhen(new Date(r.updated))}
+                    {shortWhen(t, format, new Date(r.updated))}
                     {r.updatedBy ? ` · ${r.updatedBy}` : ""}
                   </td>
                 </tr>
@@ -355,20 +352,24 @@ export function CatalogView(props: {
       )}
       {props.pages > 1 ? (
         <nav
-          aria-label="Pages"
+          aria-label={t("list.pages")}
           className="flex items-center justify-end gap-2 border-t border-subtle px-4 py-3 text-body-sm"
         >
           {props.page > 1 ? (
             <Button asChild size="sm" variant="secondary">
-              <Link href={paths.catalog(clientSlug, pageQuery(props.page - 1))}>Previous</Link>
+              <Link href={paths.catalog(clientSlug, pageQuery(props.page - 1))}>
+                {t("list.previous")}
+              </Link>
             </Button>
           ) : null}
           <span className="text-fg-muted">
-            Page {props.page} of {props.pages}
+            {t("list.pageOf", { page: props.page, pages: props.pages })}
           </span>
           {props.page < props.pages ? (
             <Button asChild size="sm" variant="secondary">
-              <Link href={paths.catalog(clientSlug, pageQuery(props.page + 1))}>Next</Link>
+              <Link href={paths.catalog(clientSlug, pageQuery(props.page + 1))}>
+                {t("list.next")}
+              </Link>
             </Button>
           ) : null}
         </nav>

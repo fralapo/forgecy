@@ -14,9 +14,11 @@ import {
   type ItemAction,
 } from "@forgecy/catalog";
 import { getDb } from "@forgecy/db";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
+import { firstIssue, refText } from "@/lib/i18n";
 import { requireUser } from "@/lib/session";
-import { actingUser, attempt } from "../../../../_lib/server";
+import { actingUser, attempt, skippedText } from "../../../../_lib/server";
 import type { ActionResult } from "../../../../_lib/types";
 
 const ids = z.object({ clientId: z.uuid(), importId: z.uuid() });
@@ -38,17 +40,6 @@ const itemActionSchema: z.ZodType<ItemAction> = z.discriminatedUnion("type", [
   }),
 ]);
 
-const done: Record<ItemAction["type"], string> = {
-  accept: "Accepted as Proposed.",
-  approve: "Product approved.",
-  discard: "Rejected.",
-  recover: "Moved back to New.",
-  merge: "Merged: the new fields are proposals on the existing product.",
-  keep_both: "Kept both.",
-  replace_fields: "Fields replaced.",
-  conflict: "Decision saved.",
-};
-
 export async function itemAction(input: {
   clientId: string;
   importId: string;
@@ -58,8 +49,10 @@ export async function itemAction(input: {
   const user = await requireUser();
   const data = ids.extend({ itemId: z.uuid(), action: itemActionSchema }).parse(input);
   return attempt(async () => {
+    const t = await getTranslations("products");
     const r = await decideItem(getDb(), actingUser(user), data);
-    return r.message ?? done[data.action.type];
+    if (r.message) return refText(r.messageRef, r.message);
+    return t(`review.done.${data.action.type}`);
   });
 }
 
@@ -73,10 +66,10 @@ export async function editItemAction(input: {
   const user = await requireUser();
   const data = ids.extend({ itemId: z.uuid(), field: fieldKey }).parse(input);
   const parsed = productFieldsSchema.shape[data.field].safeParse(input.value);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid value" };
+  if (!parsed.success) return { error: await firstIssue(parsed.error) };
   return attempt(async () => {
     await editItemField(getDb(), actingUser(user), { ...data, value: parsed.data });
-    return "Saved";
+    return (await getTranslations("products"))("review.saved");
   });
 }
 
@@ -93,7 +86,7 @@ export async function acceptItemSensitiveAction(input: {
     .parse(input);
   return attempt(async () => {
     await acceptItemSensitive(getDb(), actingUser(user), data);
-    return "Sensitive field accepted.";
+    return (await getTranslations("products"))("review.sensitiveAccepted");
   });
 }
 
@@ -108,10 +101,15 @@ export async function approveItemsAction(input: {
     .extend({ itemIds: z.array(z.uuid()).min(1).max(5000), note: z.string().max(1000).optional() })
     .parse(input);
   return attempt(async () => {
+    const t = await getTranslations("products");
     const r = await approveItems(getDb(), actingUser(user), data);
-    if (!r.excluded.length) return `Approved ${r.approved} products.`;
-    const reasons = [...new Set(r.excluded.map((e) => e.reason))].join("; ");
-    return `Approved ${r.approved} products. ${r.excluded.length} skipped: ${reasons}.`;
+    if (!r.excluded.length) return t("review.approvedCount", { count: r.approved });
+    const reasons = [...new Set(await Promise.all(r.excluded.map(skippedText)))].join("; ");
+    return t("review.approvedPartial", {
+      count: r.approved,
+      skipped: r.excluded.length,
+      reasons,
+    });
   });
 }
 
@@ -141,7 +139,7 @@ export async function discardPendingAction(input: {
   const data = ids.parse(input);
   return attempt(async () => {
     const n = await discardPending(getDb(), actingUser(user), data);
-    return n === 1 ? "Rejected 1 product." : `Rejected ${n} products.`;
+    return (await getTranslations("products"))("review.rejectedCount", { count: n });
   });
 }
 
@@ -153,6 +151,11 @@ export async function closeReviewAction(input: {
   const data = ids.parse(input);
   return attempt(async () => {
     const r = await closeReview(getDb(), actingUser(user), data);
-    return `Review closed: ${r.approved} approved · ${r.proposed} stay Proposed in the catalog · ${r.discarded} rejected · ${r.unassignedImages} images still to assign.`;
+    return (await getTranslations("products"))("review.closed", {
+      approved: r.approved,
+      proposed: r.proposed,
+      discarded: r.discarded,
+      images: r.unassignedImages,
+    });
   });
 }

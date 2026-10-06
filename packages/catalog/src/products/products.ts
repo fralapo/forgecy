@@ -1,4 +1,11 @@
-import { assertCan, ForgecyError, type ConfidenceLevel, type ProductStatus } from "@forgecy/core";
+import {
+  assertCan,
+  ForgecyError,
+  type ConfidenceLevel,
+  type MessageRef,
+  type ProductStatus,
+} from "@forgecy/core";
+import { englishMessage, localizedError, messageRef } from "@forgecy/i18n";
 import {
   and,
   eq,
@@ -25,7 +32,7 @@ import {
   type ProductFields,
 } from "./fields";
 import type { FieldMeta, FieldMetaMap, SourceRef } from "./meta";
-import { claimLabels, sensitiveFields } from "./sensitive";
+import { claimLabels, sensitiveFields, type ClaimKind } from "./sensitive";
 
 export type ProductRow = typeof products.$inferSelect;
 export type ProductImageRow = typeof productImages.$inferSelect;
@@ -73,22 +80,56 @@ export function pendingSensitive(fields: ProductDraft, meta: FieldMetaMap): Fiel
   });
 }
 
+/** One reason a product cannot be approved yet; the interface words it in the user's language. */
+export type ApprovalBlocker =
+  | { kind: "missing"; fields: FieldKey[] }
+  | { kind: "sensitive"; field: FieldKey; claim: ClaimKind };
+
 /**
  * Why a product cannot be approved yet (UXA-P6-11): name, category and short
  * description present, no sensitive field waiting. Empty list = approvable.
  */
-export function approvalBlockers(fields: ProductDraft, meta: FieldMetaMap): string[] {
-  const out: string[] = [];
+export function approvalBlockerList(fields: ProductDraft, meta: FieldMetaMap): ApprovalBlocker[] {
+  const out: ApprovalBlocker[] = [];
   const missing = (["name", "category", "shortDescription"] as const).filter((k) =>
     isEmptyValue(fields[k]),
   );
-  if (missing.length)
-    out.push(`Fill in ${missing.map((k) => fieldDef(k).label.toLowerCase()).join(", ")}`);
-  for (const k of pendingSensitive(fields, meta)) {
-    const kind = meta[k]!.sensitive![0]!;
-    out.push(`Accept the sensitive field "${fieldDef(k).label}" first (${claimLabels[kind]})`);
-  }
+  if (missing.length) out.push({ kind: "missing", fields: missing });
+  for (const k of pendingSensitive(fields, meta))
+    out.push({ kind: "sensitive", field: k, claim: meta[k]!.sensitive![0]! });
   return out;
+}
+
+/** English text of a blocker (logs, API, stored fallbacks). */
+export function blockerText(b: ApprovalBlocker): string {
+  return b.kind === "missing"
+    ? englishMessage("products.blockers.missing", {
+        fields: b.fields.map((k) => fieldDef(k).label.toLowerCase()).join(", "),
+      })
+    : englishMessage("products.blockers.sensitive", {
+        field: fieldDef(b.field).label,
+        claim: claimLabels[b.claim],
+      });
+}
+
+/** Blockers as English sentences. */
+export function approvalBlockers(fields: ProductDraft, meta: FieldMetaMap): string[] {
+  return approvalBlockerList(fields, meta).map(blockerText);
+}
+
+/** A validation error for a blocker: `details.blocker` lets the interface word it. */
+export function blockerError(b: ApprovalBlocker): ForgecyError {
+  return new ForgecyError("validation", blockerText(b), { blocker: b });
+}
+
+/** "{field}: invalid value"; `details.field` lets the interface name the field in its language. */
+export function invalidFieldError(field: FieldKey): ForgecyError {
+  return localizedError(
+    "validation",
+    "products.errors.fieldInvalid",
+    { field: fieldDef(field).label },
+    { field },
+  );
 }
 
 /** Recompute claim flags after a change; a person typing a value accepts it. */
@@ -128,7 +169,7 @@ export async function loadProduct(
     .select()
     .from(products)
     .where(and(eq(products.id, productId), eq(products.clientId, clientId)));
-  if (!row) throw new ForgecyError("not_found", "Product not found");
+  if (!row) throw localizedError("not_found", "products.errors.productNotFound");
   return row;
 }
 
@@ -155,7 +196,7 @@ export async function createProduct(
     sku: input.sku ?? "",
     category: input.category ?? "",
   });
-  if (!draft.name) throw new ForgecyError("validation", "Enter the product name");
+  if (!draft.name) throw localizedError("validation", "products.errors.enterName");
   const fields = { ...emptyFields(), ...draft };
   const now = new Date().toISOString();
   const meta: FieldMetaMap = {};
@@ -193,11 +234,9 @@ export async function createProduct(
 
 /** Optimistic concurrency: a stale revision means someone else saved first. */
 function revisionConflict(): ForgecyError {
-  return new ForgecyError(
-    "conflict",
-    "Someone else changed this product while you were editing it. Reload to see the differences.",
-    { code: "CONFLICT-DRAFT-REV" },
-  );
+  return localizedError("conflict", "products.errors.revisionConflict", undefined, {
+    code: "CONFLICT-DRAFT-REV",
+  });
 }
 
 /**
@@ -214,23 +253,19 @@ export async function updateProductFields(
     const row = await loadProduct(tx, input.clientId, input.productId);
     if (row.revision !== input.revision) throw revisionConflict();
     if (row.status === "archived")
-      throw new ForgecyError("conflict", "Restore the product before editing it");
+      throw localizedError("conflict", "products.errors.restoreBeforeEditing");
     const before = rowToFields(row);
     const after: ProductFields = { ...before };
     const changed: FieldKey[] = [];
     for (const k of Object.keys(input.patch) as FieldKey[]) {
       if (!fieldKeys.includes(k)) continue;
       const parsed = productFieldsSchema.shape[k].safeParse(input.patch[k]);
-      if (!parsed.success)
-        throw new ForgecyError(
-          "validation",
-          `${fieldDef(k).label}: ${parsed.error.issues[0]?.message ?? "invalid value"}`,
-        );
+      if (!parsed.success) throw invalidFieldError(k);
       if (sameValue(before[k], parsed.data)) continue;
       (after as Record<string, unknown>)[k] = parsed.data;
       changed.push(k);
     }
-    if (!after.name) throw new ForgecyError("validation", "The name is required");
+    if (!after.name) throw localizedError("validation", "products.errors.nameRequired");
     if (changed.length === 0) return row;
     const now = new Date().toISOString();
     let meta = { ...metaOf(row) };
@@ -281,10 +316,10 @@ export async function acceptSensitiveField(
     const row = await loadProduct(tx, input.clientId, input.productId);
     const meta = metaOf(row);
     const m = meta[input.field];
-    if (!m?.sensitive?.length) throw new ForgecyError("validation", "The field is not sensitive");
+    if (!m?.sensitive?.length) throw localizedError("validation", "products.errors.notSensitive");
     const note = input.note?.trim();
     if (m.confidence === "low" && !note)
-      throw new ForgecyError("validation", "Low confidence: write a note to accept the field");
+      throw localizedError("validation", "products.errors.lowConfidenceNote");
     meta[input.field] = {
       ...m,
       acceptedBy: user.id,
@@ -332,8 +367,18 @@ export type ProductTransition = keyof typeof TRANSITIONS;
 
 export interface TransitionResult {
   done: string[];
-  /** Products left out, with the reason ("sensitive fields", "changed by someone else"...). */
-  skipped: Array<{ id: string; name: string; reason: string; code?: string }>;
+  /**
+   * Products left out, with the reason ("sensitive fields", "changed by someone else"...):
+   * English in `reason`, for the interface in `ref` or `blocker`.
+   */
+  skipped: Array<{
+    id: string;
+    name: string;
+    reason: string;
+    code?: string;
+    ref?: MessageRef;
+    blocker?: ApprovalBlocker;
+  }>;
 }
 
 /**
@@ -354,7 +399,7 @@ export async function transitionProducts(
   },
 ): Promise<TransitionResult> {
   const t = TRANSITIONS[input.action];
-  if (!t) throw new ForgecyError("validation", "Invalid action");
+  if (!t) throw localizedError("validation", "products.errors.invalidAction");
   assertCan(user.actor, t.permission, input.clientId);
   const ids = [...new Set(input.ids)].slice(0, 1000);
   if (ids.length === 0) return { done: [], skipped: [] };
@@ -371,7 +416,8 @@ export async function transitionProducts(
         result.skipped.push({
           id: row.id,
           name: row.name,
-          reason: "changed by someone else in the meantime",
+          reason: englishMessage("products.skipped.changedMeanwhile"),
+          ref: messageRef("products.skipped.changedMeanwhile"),
           code: "CONFLICT-DRAFT-REV",
         });
         continue;
@@ -380,7 +426,8 @@ export async function transitionProducts(
         result.skipped.push({
           id: row.id,
           name: row.name,
-          reason: "incompatible status",
+          reason: englishMessage("products.skipped.incompatibleStatus"),
+          ref: messageRef("products.skipped.incompatibleStatus"),
           code: "CONFLICT-STATE",
         });
         continue;
@@ -393,15 +440,23 @@ export async function transitionProducts(
         revision: sql`${products.revision} + 1` as unknown as number,
       };
       if (input.action === "approve") {
-        const blockers = approvalBlockers(fields, meta);
+        const blockers = approvalBlockerList(fields, meta);
         if (blockers.length) {
-          result.skipped.push({
-            id: row.id,
-            name: row.name,
-            reason: pendingSensitive(fields, meta).length
-              ? "sensitive fields to accept one by one"
-              : blockers[0]!,
-          });
+          result.skipped.push(
+            pendingSensitive(fields, meta).length
+              ? {
+                  id: row.id,
+                  name: row.name,
+                  reason: englishMessage("products.skipped.sensitive"),
+                  ref: messageRef("products.skipped.sensitive"),
+                }
+              : {
+                  id: row.id,
+                  name: row.name,
+                  reason: blockerText(blockers[0]!),
+                  blocker: blockers[0]!,
+                },
+          );
           continue;
         }
         meta = Object.fromEntries(
@@ -453,7 +508,7 @@ export async function deleteProduct(
   await db.transaction(async (tx) => {
     const row = await loadProduct(tx, input.clientId, input.productId);
     if (input.typedName.trim() !== row.name.trim())
-      throw new ForgecyError("validation", "The typed name does not match");
+      throw localizedError("validation", "products.errors.typedNameMismatch");
     await tx.delete(products).where(eq(products.id, row.id));
     await recordAuditEvent(tx, {
       actor: user.actor,
@@ -571,9 +626,9 @@ export async function decideFieldProposal(
         ),
       )
       .for("update");
-    if (!p) throw new ForgecyError("not_found", "Proposal not found");
+    if (!p) throw localizedError("not_found", "products.errors.proposalNotFound");
     if (p.status !== "proposed")
-      throw new ForgecyError("conflict", "Someone else has already decided this proposal", {
+      throw localizedError("conflict", "products.errors.proposalDecided", undefined, {
         code: "CONFLICT-STATE",
       });
     const field = p.field as FieldKey;
@@ -582,16 +637,13 @@ export async function decideFieldProposal(
       const row = await loadProduct(tx, input.clientId, p.productId);
       const value = input.editedValue !== undefined ? input.editedValue : p.proposedValue;
       const parsed = productFieldsSchema.shape[field].safeParse(value);
-      if (!parsed.success) throw new ForgecyError("validation", "Invalid value");
+      if (!parsed.success) throw localizedError("validation", "products.errors.invalidValue");
       const fields = { ...rowToFields(row), [field]: parsed.data } as ProductFields;
       const edited = input.editedValue !== undefined;
       const flags = sensitiveFields(fields)[field];
       const note = input.note?.trim();
       if (flags?.length && proposalMeta.confidence === "low" && !note && !edited)
-        throw new ForgecyError(
-          "validation",
-          "Sensitive field with low confidence: write a note to accept it",
-        );
+        throw localizedError("validation", "products.errors.sensitiveLowConfidence");
       const meta = metaOf(row);
       meta[field] = {
         ...(edited
@@ -671,7 +723,7 @@ export async function updateProductImage(
       .select()
       .from(productImages)
       .where(and(eq(productImages.id, input.imageId), eq(productImages.clientId, input.clientId)));
-    if (!img) throw new ForgecyError("not_found", "Image not found");
+    if (!img) throw localizedError("not_found", "products.errors.imageNotFound");
     if (input.action === "primary") {
       await tx
         .update(productImages)

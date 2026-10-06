@@ -7,6 +7,7 @@ import {
 } from "@forgecy/catalog";
 import { clients, eq, getDb } from "@forgecy/db";
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { withUser } from "@/lib/api";
 import { env } from "@/lib/env";
 import { actingUser, getStorage, importErrorResponse } from "../../../../_lib/server";
@@ -32,7 +33,10 @@ export const POST = withUser(
     const declared = Number(request.headers.get("content-length") ?? "0");
     if (declared > MAX_UPLOAD_BYTES)
       return NextResponse.json(
-        { error: "IMPORT-TOO-LARGE", message: "The file exceeds the 200 MB limit." },
+        {
+          error: "IMPORT-TOO-LARGE",
+          message: (await getTranslations("products"))("errors.uploadTooLarge"),
+        },
         { status: 413 },
       );
     const relativePath = decodeURIComponent(request.headers.get("x-file-path") ?? "file").slice(
@@ -62,7 +66,7 @@ export const POST = withUser(
         await temp.cleanup();
       }
     } catch (err) {
-      const res = importErrorResponse(err);
+      const res = await importErrorResponse(err);
       if (res) return res;
       throw err;
     }

@@ -3,10 +3,10 @@
 import type { ColumnMapping } from "@forgecy/catalog/mapping";
 import { Badge, Button, Card, cn } from "@forgecy/ui";
 import { Sparkles } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { ActionMessage, useCatalogAction } from "../../_components/client";
 import { selectClass } from "../../_components/ui";
-import { confidenceText } from "../../_lib/labels";
 import { confirmMappingAction } from "./actions";
 
 export interface SheetView {
@@ -28,10 +28,11 @@ export function MappingStep(props: {
   sheets: SheetView[];
   targets: Array<{ value: string; label: string }>;
 }) {
+  const t = useTranslations("products");
   if (props.sheets.length === 0)
     return (
       <Card>
-        <p className="text-body-md text-fg-muted">All sheets are mapped: the analysis resumes.</p>
+        <p className="text-body-md text-fg-muted">{t("mapping.allMapped")}</p>
       </Card>
     );
   return (
@@ -56,12 +57,13 @@ function SheetMapping({
   clientName: string;
   targets: Array<{ value: string; label: string }>;
 }) {
+  const t = useTranslations("products");
   const [columns, setColumns] = useState(sheet.columns);
   const [touched, setTouched] = useState<Set<number>>(new Set());
   const [save, setSave] = useState(!sheet.savedName);
   const [saveName, setSaveName] = useState(
     sheet.savedName ??
-      (sheet.preset === "woocommerce" ? "Export WooCommerce" : "Standard price list"),
+      (sheet.preset === "woocommerce" ? t("mapping.defaultNameWoo") : t("mapping.defaultName")),
   );
   const action = useCatalogAction();
   const hasName = columns.includes("name");
@@ -71,35 +73,35 @@ function SheetMapping({
   return (
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-heading-sm">Mapping · {sheet.name}</h2>
+        <h2 className="text-heading-sm">{t("mapping.title", { name: sheet.name })}</h2>
         {sheet.savedName ? (
-          <Badge variant="info">Mapping “{sheet.savedName}” applied</Badge>
+          <Badge variant="info">{t("mapping.savedApplied", { name: sheet.savedName })}</Badge>
         ) : sheet.preset === "woocommerce" ? (
-          <Badge variant="info">Default “WooCommerce” mapping</Badge>
+          <Badge variant="info">{t("mapping.woocommerce")}</Badge>
         ) : fromAi ? (
           <Badge variant="info" icon={Sparkles}>
-            Proposed by Brand Analyst
+            {t("proposedByAgent")}
           </Badge>
         ) : null}
       </div>
       {!sheet.savedName ? (
         <p className="text-body-sm text-fg-muted">
-          First time for {clientName}: check the proposed mapping and save it for future imports.
+          {t("mapping.firstTime", { client: clientName })}
         </p>
       ) : null}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-body-sm">
-          <caption className="sr-only">File columns and product fields</caption>
+          <caption className="sr-only">{t("mapping.caption")}</caption>
           <thead className="border-b border-subtle text-label text-fg-muted">
             <tr>
               <th scope="col" className="py-2 pr-4 font-medium">
-                File column
+                {t("mapping.fileColumn")}
               </th>
               <th scope="col" className="py-2 pr-4 font-medium">
-                Product field
+                {t("mapping.productField")}
               </th>
               <th scope="col" className="py-2 font-medium">
-                Preview
+                {t("mapping.preview")}
               </th>
             </tr>
           </thead>
@@ -107,11 +109,11 @@ function SheetMapping({
             {sheet.headers.map((h, i) => (
               <tr key={i} className="border-b border-subtle last:border-0 align-top">
                 <th scope="row" className="py-2 pr-4 font-normal text-fg">
-                  {h || `Column ${i + 1}`}
+                  {h || t("mapping.column", { number: i + 1 })}
                 </th>
                 <td className="py-2 pr-4">
                   <select
-                    aria-label={`Field for column "${h}"`}
+                    aria-label={t("mapping.fieldFor", { header: h })}
                     className={cn(selectClass, "w-60")}
                     value={columns[i] ?? "ignore"}
                     onChange={(e) => {
@@ -127,8 +129,11 @@ function SheetMapping({
                   </select>
                   {sheet.confidence[i] && columns[i] !== "ignore" && !touched.has(i) ? (
                     <span className="mt-1 block text-fg-muted">
-                      {fromAi ? "Proposed by Brand Analyst · " : ""}
-                      {confidenceText[sheet.confidence[i]!]} confidence
+                      {fromAi
+                        ? t("mapping.agentConfidence", {
+                            confidence: t(`confidenceOf.${sheet.confidence[i]!}`),
+                          })
+                        : t(`confidenceOf.${sheet.confidence[i]!}`)}
                     </span>
                   ) : null}
                 </td>
@@ -150,13 +155,11 @@ function SheetMapping({
       </div>
       {!hasName ? (
         <p role="alert" className="text-body-sm text-error">
-          Map the column with the product name: it is required.
+          {t("mapping.nameRequired")}
         </p>
       ) : null}
       {hasName && !hasSku ? (
-        <p className="text-body-sm text-warning">
-          Without an SKU, duplicates are detected only by name and category.
-        </p>
+        <p className="text-body-sm text-warning">{t("mapping.noSku")}</p>
       ) : null}
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-body-sm text-fg">
@@ -166,11 +169,11 @@ function SheetMapping({
             onChange={(e) => setSave(e.target.checked)}
             className="size-4"
           />
-          Save this mapping for future {clientName} imports
+          {t("mapping.save", { client: clientName })}
         </label>
         {save ? (
           <input
-            aria-label="Mapping name"
+            aria-label={t("mapping.mappingName")}
             value={saveName}
             onChange={(e) => setSaveName(e.target.value)}
             maxLength={80}
@@ -198,7 +201,7 @@ function SheetMapping({
             )
           }
         >
-          Confirm mapping
+          {t("mapping.confirm")}
         </Button>
       </div>
     </Card>

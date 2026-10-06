@@ -46,8 +46,10 @@ export interface CatalogRow {
   revision: number;
   proposedByAgent: boolean;
   completeness: ReturnType<typeof completenessOf>;
+  /** English description of the origin (CSV export); `origin` lets the interface word it. */
   source: string;
   sourceKind: string;
+  origin: SourceRef | null;
   primaryImage: Pick<ProductImageRow, "id" | "storageKey" | "status" | "alt"> | null;
   openProposals: number;
   updatedAt: Date;
@@ -150,6 +152,7 @@ function toCatalogRow(
     completeness: completenessOf(fields, images.length),
     source: origin?.kind ? describeSource(origin) : "—",
     sourceKind: origin?.kind ?? "manual",
+    origin: origin?.kind ? origin : null,
     primaryImage: primary
       ? { id: primary.id, storageKey: primary.storageKey, status: primary.status, alt: primary.alt }
       : null,

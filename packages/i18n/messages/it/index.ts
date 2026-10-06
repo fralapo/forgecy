@@ -12,6 +12,7 @@ import home from "./home.json";
 import jobs from "./jobs.json";
 import mail from "./mail.json";
 import meta from "./meta.json";
+import products from "./products.json";
 import settings from "./settings.json";
 import shell from "./shell.json";
 import templates from "./templates.json";
@@ -31,6 +32,7 @@ export default {
   jobs,
   mail,
   meta,
+  products,
   settings,
   shell,
   templates,

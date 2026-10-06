@@ -6,7 +6,7 @@ import path from "node:path";
 import type { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { contentKey, type StorageDriver } from "@forgecy/files";
-import { ImportError } from "./import/errors";
+import { importError } from "./import/errors";
 
 export interface TempFile {
   path: string;
@@ -38,7 +38,7 @@ export async function spoolToTemp(
         for await (const chunk of source) {
           size += chunk.length;
           if (size > maxBytes)
-            throw new ImportError("IMPORT-TOO-LARGE", "The file exceeds the maximum allowed size.");
+            throw importError("IMPORT-TOO-LARGE", "products.errors.fileTooLarge");
           if (head.length < 4096) head.push(...chunk.subarray(0, 4096 - head.length));
           hash.update(chunk);
           yield chunk;
@@ -49,10 +49,7 @@ export async function spoolToTemp(
   } catch (err) {
     await cleanup();
     if (err instanceof Error && "code" in err && err.code === "ENOSPC")
-      throw new ImportError(
-        "DISK-FULL",
-        "Disk space is full: the files were not saved. Tell whoever runs the Forgecy server.",
-      );
+      throw importError("DISK-FULL", "products.errors.diskFull");
     throw err;
   }
   return { path: file, size, sha256: hash.digest("hex"), head: Uint8Array.from(head), cleanup };
@@ -110,7 +107,7 @@ export async function readStored(
     size += b.length;
     if (size > maxBytes) {
       stream.destroy();
-      throw new ImportError("IMPORT-TOO-LARGE", "The file exceeds the maximum allowed size.");
+      throw importError("IMPORT-TOO-LARGE", "products.errors.fileTooLarge");
     }
     chunks.push(b);
   }
