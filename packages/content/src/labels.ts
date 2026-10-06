@@ -68,3 +68,15 @@ export const agentLabels = {
 export function frequencyLabel(f: { count: number; unit: "week" | "month" } | null | undefined) {
   return f ? `${f.count} ${frequencyUnitLabels[f.unit]}` : "—";
 }
+
+/** Brand Guard coherence bands: only the band is shown, never the number (UX spec 12.6). */
+export const guardBandLabels: Record<
+  "critico" | "debole" | "discreto" | "buono" | "eccellente",
+  string
+> = {
+  critico: "Critica",
+  debole: "Debole",
+  discreto: "Discreta",
+  buono: "Buona",
+  eccellente: "Eccellente",
+};

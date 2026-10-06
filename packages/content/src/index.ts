@@ -4,6 +4,7 @@
 export * from "./document";
 export * from "./labels";
 export * from "./checks";
+export * from "./brand-guard";
 export * from "./access";
 export * from "./products";
 export * from "./theme";

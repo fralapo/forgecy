@@ -20,6 +20,7 @@ import {
 } from "@forgecy/db";
 import { LocalDiskDriver } from "@forgecy/files";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { setBrandGuard } from "../src/brand-guard";
 import {
   approveOutline,
   createCarousel,
@@ -171,6 +172,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
 
   afterAll(async () => {
     setProductSource(noProducts);
+    setBrandGuard(null);
     if (db && clientId) {
       await db.delete(clients).where(eq(clients.id, clientId));
       await db.delete(templates).where(eq(templates.key, templateKey));
@@ -442,6 +444,38 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
       ),
     ).toBe("CONFLICT-DRAFT-REV");
 
+    // Brand Guard registered: it checks the submitted version and gates approval.
+    const runs: Array<{ version: number | null | undefined; slides: number }> = [];
+    const finding = {
+      key: "hook_length:0:title",
+      check: "hook_length",
+      category: "editorial",
+      severity: "warning" as const,
+      slide: 0,
+      slot: "title",
+      message: "Titolo lungo",
+      status: "open" as const,
+    };
+    const report = {
+      checkedAt: new Date().toISOString(),
+      findings: [finding],
+      coherence: { band: "buono" as const },
+      notRun: [],
+    };
+    setBrandGuard({
+      run: async (_db, _actor, input) => {
+        runs.push({ version: input.subject.version, slides: input.content.slides.length });
+        return { report };
+      },
+      get: async () =>
+        runs.length ? { subjectVersion: runs.at(-1)!.version ?? null, report } : null,
+      confirmForApproval: async (_tx, _actor, input) => {
+        if (!input.acknowledgedKeys.includes(finding.key))
+          throw new ForgecyError("validation", "Ho visto", { code: "CHECKS-NOT-ACKNOWLEDGED" });
+        return { ok: true };
+      },
+    });
+
     const { version } = await submitForReview(db, anna, {
       clientId,
       id: c.id,
@@ -468,12 +502,25 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
     expect(await codeOf(prepareExport(db, anna, { clientId, id: c.id, draft: false }))).toBe(
       "EXPORT-NOT-APPROVED",
     );
+    expect(runs.at(-1)).toEqual({ version: version.number, slides: 7 });
+    expect(
+      await codeOf(
+        decideReview(db, bruno, {
+          clientId,
+          id: c.id,
+          versionId: version.id,
+          decision: "approved",
+        }),
+      ),
+    ).toBe("CHECKS-NOT-ACKNOWLEDGED");
     await decideReview(db, bruno, {
       clientId,
       id: c.id,
       versionId: version.id,
       decision: "approved",
+      acknowledged: [finding.key],
     });
+    setBrandGuard(null);
 
     const prepared = await prepareExport(db, anna, { clientId, id: c.id, draft: false });
     expect(prepared.version.id).toBe(version.id);

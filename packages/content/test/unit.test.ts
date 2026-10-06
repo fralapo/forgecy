@@ -4,6 +4,7 @@ import { defaultTokens, parseDocument as parseBrandDocument } from "@forgecy/bra
 import { findLayout, templateManifestSchema } from "@forgecy/carousel";
 import { describe, expect, it } from "vitest";
 import { imageSize } from "../src/assets";
+import { findingsToAcknowledge, toGuardContent } from "../src/brand-guard";
 import { computeChecks } from "../src/checks";
 import { carouselDocumentSchema, normalizeHashtag, perWeek } from "../src/document";
 import { slotsFromOutput } from "../src/pipeline";
@@ -207,5 +208,71 @@ describe("image size", () => {
     expect(imageSize(png)).toEqual({ width: 1080, height: 1350 });
     const gif = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x10, 0, 0x20, 0, 0, 0]);
     expect(imageSize(gif)).toEqual({ width: 16, height: 32 });
+  });
+});
+
+describe("brand guard mapping", () => {
+  it("describes slots with the template limits and AI images with their approval", () => {
+    const withImage = {
+      id: "s1",
+      layout: "cover",
+      slots: { title: "Ciao", image: { key: "clients/x/assets/a.png", alt: "" } },
+    };
+    const content = toGuardContent({
+      document: doc([withImage, ...body, cta], { caption: "Testo", hashtags: ["#a"] }),
+      manifest,
+      channel: "instagram",
+      assets: new Map([
+        [
+          "clients/x/assets/a.png",
+          { id: "a1", source: "ai", status: "draft", width: 1024, height: 1024 },
+        ],
+      ]),
+      product: {
+        id: "p1",
+        name: "Borraccia",
+        sku: null,
+        category: null,
+        price: "19,90 €",
+        description: "Acciaio inox, 750 ml",
+        highlights: ["Tiene il freddo 24 ore"],
+        revision: 1,
+        images: [],
+      },
+    });
+    expect(content.size).toEqual({ width: manifest.width, height: manifest.height });
+    expect(content.slides[0]!.role).toBe("cover");
+    expect(content.slides.at(-1)!.role).toBe("cta");
+    const title = content.slides[0]!.slots.find((x) => x.name === "title");
+    expect(title).toMatchObject({ kind: "text", role: "title", text: "Ciao" });
+    expect(title && "maxChars" in title && title.maxChars).toBeGreaterThan(0);
+    const image = content.slides[0]!.slots.find((x) => x.kind === "image");
+    expect(image).toMatchObject({ asset: { id: "a1", origin: "ai", approval: "draft" } });
+    expect(content.product).toMatchObject({ name: "Borraccia", price: "19,90 €" });
+    expect(content.brief).toEqual({ asksPrice: false });
+  });
+
+  it("asks «Ho visto» only on open errors and warnings", () => {
+    const f = (
+      key: string,
+      severity: "error" | "warning" | "note",
+      status: "open" | "ignored",
+    ) => ({
+      key,
+      check: "x",
+      category: "editorial",
+      severity,
+      slide: null,
+      slot: null,
+      message: "",
+      status,
+    });
+    const keys = findingsToAcknowledge({
+      checkedAt: "",
+      coherence: { band: "buono" },
+      notRun: [],
+      findings: [f("a", "error", "open"), f("b", "note", "open"), f("c", "warning", "ignored")],
+    }).map((x) => x.key);
+    expect(keys).toEqual(["a"]);
   });
 });

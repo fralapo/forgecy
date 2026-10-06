@@ -5,3 +5,4 @@
 export * from "./document";
 export * from "./labels";
 export * from "./checks";
+export type { GuardBand, GuardFinding, GuardReport, GuardSeverity } from "./brand-guard";

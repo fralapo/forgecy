@@ -63,6 +63,14 @@ import {
   type Outline,
   type OutlineInput,
 } from "./document";
+import {
+  brandGuard,
+  carouselSubject,
+  GUARDED_CHECK_PREFIXES,
+  toGuardContent,
+  type GuardAssetInfo,
+  type GuardReport,
+} from "./brand-guard";
 import { productSource } from "./products";
 import { clampSlideCount, getTemplate } from "./templates";
 
@@ -546,6 +554,11 @@ export async function saveDraft(
       updatedAt: c.draftUpdatedAt?.toISOString() ?? null,
     });
   if (status !== c.status) await audit(db, actor, "reopened", c, { from: c.status });
+  if (brandGuard())
+    await checkDocument(db, actor, { ...c, status: row.status }, doc, {
+      guard: "run",
+      version: null,
+    });
   return row;
 }
 
@@ -682,22 +695,28 @@ export interface ContentChecks {
   checks: ContentCheck[];
   errors: ContentCheck[];
   warnings: ContentCheck[];
+  /** Latest Brand Guard report, when the guard is registered and has run. */
+  guard: GuardReport | null;
 }
 
 async function libraryInfo(db: Executor, clientId: string, keys: string[]) {
   const map = new Map<string, AssetInfo>();
-  if (!keys.length) return map;
+  const guard = new Map<string, GuardAssetInfo>();
+  if (!keys.length) return { map, guard };
   const rows = await db
     .select({
+      id: assets.id,
       storageKey: assets.storageKey,
       status: assets.status,
       source: assets.source,
       alt: assets.alt,
+      width: assets.width,
+      height: assets.height,
       generation: assets.generation,
     })
     .from(assets)
     .where(and(eq(assets.clientId, clientId), inArray(assets.storageKey, keys)));
-  for (const r of rows)
+  for (const r of rows) {
     map.set(r.storageKey, {
       status: r.status,
       source: r.source,
@@ -706,7 +725,15 @@ async function libraryInfo(db: Executor, clientId: string, keys: string[]) {
         r.source === "ai" &&
         (r.generation as { commercialUse?: string } | null)?.commercialUse !== "verified",
     });
-  return map;
+    guard.set(r.storageKey, {
+      id: r.id,
+      source: r.source,
+      status: r.status,
+      width: r.width,
+      height: r.height,
+    });
+  }
+  return { map, guard };
 }
 
 export function imageKeys(doc: CarouselDocument): string[] {
@@ -717,12 +744,18 @@ export function imageKeys(doc: CarouselDocument): string[] {
   return [...keys];
 }
 
-/** Checks of a document of this carousel, with the brand and library data they need. */
+/**
+ * Checks of a document of this carousel, with the brand and library data they need.
+ * With the Brand Guard registered, `guard: "run"` checks the document again (on save
+ * and on submit) and `"read"` returns its latest report; the brand rules it owns are
+ * then left to it. A guard failure never stops the editor: the module's own checks stay.
+ */
 export async function checkDocument(
   db: Database,
   actor: Actor,
   c: ContentRow,
   doc: CarouselDocument,
+  options: { guard?: "run" | "read" | "none"; version?: number | null } = {},
 ): Promise<ContentChecks> {
   const [template, brand, library, product] = await Promise.all([
     getTemplate(db, c.clientId, c.templateKey, c.templateVersion).catch(() => null),
@@ -731,7 +764,7 @@ export async function checkDocument(
     c.productId ? productSource().get(db, c.clientId, c.productId) : Promise.resolve(null),
   ]);
   const brief = briefSchema.parse(c.brief ?? {});
-  const checks = computeChecks({
+  let checks = computeChecks({
     document: doc,
     manifest: template?.manifest ?? null,
     channel: c.channel as ContentChannel,
@@ -739,7 +772,7 @@ export async function checkDocument(
     ...(brand?.document.verbal.writingRules?.value.maxHashtags !== undefined
       ? { maxHashtags: brand.document.verbal.writingRules.value.maxHashtags }
       : {}),
-    assets: library,
+    assets: library.map,
     usePrice: brief.usePrice,
     wantsAltText: brief.outputs.altText,
     productRevision: c.productId
@@ -747,7 +780,39 @@ export async function checkDocument(
       : null,
     brandVersion: { used: c.brandVersionId, current: brand?.versionId ?? null },
   });
-  return { checks, errors: blockingChecks(checks), warnings: warningChecks(checks) };
+
+  const port = brandGuard();
+  let guard: GuardReport | null = null;
+  if (port && options.guard !== "none") {
+    const subject = carouselSubject(c.id, options.version);
+    try {
+      if (options.guard === "run" && doc.slides.length) {
+        const content = toGuardContent({
+          document: doc,
+          manifest: template?.manifest ?? null,
+          channel: c.channel as ContentChannel,
+          assets: library.guard,
+          product,
+          asksPrice: brief.usePrice,
+        });
+        guard = (
+          await port.run(db, actor, {
+            clientId: c.clientId,
+            subject,
+            content,
+            ...(c.brandVersionId ? { brandVersionId: c.brandVersionId } : {}),
+          })
+        ).report;
+      } else {
+        guard = (await port.get(db, actor, { clientId: c.clientId, subject }))?.report ?? null;
+      }
+    } catch {
+      guard = null;
+    }
+    if (guard)
+      checks = checks.filter((x) => !GUARDED_CHECK_PREFIXES.some((p) => x.id.startsWith(p)));
+  }
+  return { checks, errors: blockingChecks(checks), warnings: warningChecks(checks), guard };
 }
 
 // ---- Review and approval ----
@@ -765,13 +830,13 @@ export async function submitForReview(
   if (c.status === "changes_requested") c.status = nextStatus(actor, c, "draft");
   nextStatus(actor, c, "in_review");
   const doc = parseDocument(c.draft);
-  const { errors } = await checkDocument(db, actor, c, doc);
+  const { errors } = await checkDocument(db, actor, c, doc, { guard: "none" });
   if (errors.length)
     throw new ForgecyError("validation", "Risolvi i problemi bloccanti prima dell'invio", {
       code: "CHECKS-BLOCKING",
       checks: errors,
     });
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const v = await createVersion(tx, { content: c, document: doc, origin: "submit", actor });
     const [row] = await tx
       .update(contents)
@@ -790,6 +855,12 @@ export async function submitForReview(
     });
     return { content: row, version: v };
   });
+  if (brandGuard())
+    await checkDocument(db, actor, result.content, doc, {
+      guard: "run",
+      version: result.version.number,
+    });
+  return result;
 }
 
 export async function withdrawFromReview(
@@ -842,7 +913,23 @@ export async function decideReview(
   if (input.decision === "changes_requested") {
     if (note.length < 3) invalid("Scrivi cosa va cambiato");
   } else {
-    const { errors, warnings } = await checkDocument(db, actor, c, parseDocument(version.document));
+    // The guard's report must be about this very version: check it again if not.
+    const guardPort = brandGuard();
+    const latest = guardPort
+      ? await guardPort
+          .get(db, actor, { clientId: c.clientId, subject: carouselSubject(c.id, version.number) })
+          .catch(() => null)
+      : null;
+    const { errors, warnings } = await checkDocument(
+      db,
+      actor,
+      c,
+      parseDocument(version.document),
+      {
+        guard: guardPort && latest?.subjectVersion !== version.number ? "run" : "read",
+        version: version.number,
+      },
+    );
     if (errors.length)
       throw new ForgecyError("validation", "Ci sono problemi bloccanti", {
         code: "CHECKS-BLOCKING",
@@ -860,7 +947,15 @@ export async function decideReview(
       });
   }
   const to = nextStatus(actor, c, input.decision);
+  const port = brandGuard();
   return db.transaction(async (tx) => {
+    // «Ho visto» on every open guard error and warning; AI images not approved block.
+    if (port && input.decision === "approved")
+      await port.confirmForApproval(tx, actor, {
+        clientId: c.clientId,
+        subject: { ...carouselSubject(c.id), version: version.number },
+        acknowledgedKeys: acknowledged,
+      });
     await tx.insert(contentApprovals).values({
       contentId: c.id,
       versionId: version.id,
