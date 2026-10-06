@@ -5,6 +5,7 @@ import { packageFromFiles } from "../src/package";
 import { renderSlideHtml } from "../src/renderer";
 import { sampleSlide } from "../src/slide-schema";
 import { findLayout } from "../src/template-schema";
+import { slidesMarkdown } from "../src/texts";
 import { loadRepoTemplate, miniPackage } from "./helpers";
 
 const enc = new TextEncoder();
@@ -63,5 +64,23 @@ describe("template labels", () => {
     expect(Object.keys(templateTexts(repo, "it")).sort()).toEqual(
       Object.keys(templateTexts(repo, "en")).sort(),
     );
+  });
+});
+
+describe("texts.md", () => {
+  const pkg = packageFromFiles(miniPackage());
+  const slides = [{ id: "s1", layout: "only", slots: { title: "Ciao", items: ["Uno"] } }];
+  const meta = { client: "Acme", content: "Lancio", version: 2 };
+  const texts = { caption: "Didascalia", hashtags: ["acme"] };
+
+  it("writes its labels in the deliverable's language", () => {
+    const en = slidesMarkdown(pkg, slides as never, meta, texts);
+    expect(en).toContain("Acme · version 2 · Instagram 4:5");
+    expect(en).toContain("## Slide 1 · Text");
+    expect(en).toContain("## Caption");
+    const italian = slidesMarkdown(pkg, slides as never, meta, texts, "it");
+    expect(italian).toContain("Acme · versione 2");
+    expect(italian).toContain("## Didascalia");
+    expect(italian).not.toContain("## Caption");
   });
 });

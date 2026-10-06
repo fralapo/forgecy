@@ -11,6 +11,8 @@ import {
   type AuditEvidence,
   type ComparisonChannel,
   type FindingArea,
+  isLocale,
+  type Locale,
   type MessageRef,
   type ProspectObjective,
   type SocialChannel,
@@ -39,7 +41,7 @@ import {
   type PageData,
   type PlanItem,
 } from "@forgecy/db";
-import { englishMessage, messageRef } from "@forgecy/i18n";
+import { englishMessage, getTranslator, messageRef } from "@forgecy/i18n";
 import { UnrecoverableError, type JobContext } from "@forgecy/jobs";
 import {
   BRAND_ANALYST_CHANNELS,
@@ -65,19 +67,39 @@ import { channelLabel } from "../service/prospects";
 import { computeChannelMetrics } from "../social/metrics";
 import { domainOf, normalizeSiteUrl } from "../url";
 import { needsAttention, oneLine, runAgent, unrecoverable, type AuditHandlerDeps } from "./context";
+import { stored } from "../stored";
 import { screenshotImages } from "./images";
 
 type SourceRow = typeof auditSources.$inferSelect;
 type FindingInsert = typeof auditFindings.$inferInsert;
 
-// Stored as the finding title, which lands in the client report (English by default).
-const criterionLabel: Record<(typeof comparisonCriteria)[number], string> = {
-  color: "Dominant color",
-  tone: "Tone of voice",
-  cta: "Main call to action",
-  audience: "Audience it speaks to",
-  visual_style: "Visual style",
-};
+/**
+ * Texts written into findings that land in the client report (evidence labels, comparison
+ * titles and cells): in the report's language, English by default.
+ */
+function reportText(audit: Pick<AuditRow, "inputs">) {
+  const language: Locale = isLocale(audit.inputs.reportLanguage)
+    ? audit.inputs.reportLanguage
+    : "en";
+  return {
+    t: getTranslator(language, "deliverable"),
+    audit: getTranslator(language, "audit"),
+  };
+}
+type ReportText = ReturnType<typeof reportText>;
+
+function confidenceText(s: { text: string; ref: MessageRef }) {
+  return { confidenceReason: s.text, confidenceRef: s.ref };
+}
+
+function metricLabel(rt: ReportText, key: string, fallback: string): string {
+  const k = `social.card.label.${key}`;
+  return rt.audit.has(k as never) ? rt.audit(k as never) : fallback;
+}
+
+function criterionLabel(rt: ReportText, criterion: (typeof comparisonCriteria)[number]): string {
+  return rt.t(`auditReport.criterion.${criterion}`);
+}
 
 /** Text a quote from this page must be found in. */
 export function pageText(source: Pick<SourceRow, "title" | "data">): string {
@@ -103,9 +125,9 @@ function pathOf(url: string | null): string {
   }
 }
 
-function pageLabel(source: SourceRow): string {
+function pageLabel(rt: ReportText, source: SourceRow): string {
   const path = pathOf(source.url);
-  return path === "/" ? "Home" : path;
+  return path === "/" ? rt.t("auditReport.evidence.home") : path;
 }
 
 function pagePrompt(ref: string, source: SourceRow, maxText: number): string {
@@ -133,10 +155,10 @@ function pagePrompt(ref: string, source: SourceRow, maxText: number): string {
   );
 }
 
-function pageTarget(source: SourceRow, group?: string): RefTarget {
+function pageTarget(rt: ReportText, source: SourceRow, group?: string): RefTarget {
   return {
     type: "page",
-    label: pageLabel(source),
+    label: pageLabel(rt, source),
     sourceId: source.id,
     ...(source.url ? { url: source.url } : {}),
     text: pageText(source),
@@ -277,6 +299,7 @@ export async function runAnalyzeSite(
 ) {
   const { db } = deps;
   const { audit, client } = await load(deps, payload.auditId);
+  const rt = reportText(audit);
   const scan = await db.query.siteScans.findFirst({ where: eq(siteScans.id, payload.scanId) });
   if (!scan || scan.auditId !== audit.id) throw new UnrecoverableError("Scan not found");
   const pages = await collectedPages(db, scan.id);
@@ -292,7 +315,7 @@ export async function runAnalyzeSite(
 
   const checks = scan.extracted?.checks ?? [];
   const index = buildIndex([
-    ...pages.map((p, i): [string, RefTarget] => [`P${i + 1}`, pageTarget(p)]),
+    ...pages.map((p, i): [string, RefTarget] => [`P${i + 1}`, pageTarget(rt, p)]),
     ...checks.map((c): [string, RefTarget] => [
       `CHECK:${c.key}`,
       { type: "technical", label: c.label, text: c.detail, channel: "website" },
@@ -337,6 +360,7 @@ export async function runAnalyzeSite(
   let run;
   try {
     run = await runAgent(deps, ctx, {
+      language: audit.inputs.reportLanguage,
       client,
       role: "brand_analyst",
       task: "audit_analyze",
@@ -363,7 +387,7 @@ export async function runAnalyzeSite(
   for (const o of run.data.observations) {
     const v = verifyEvidence(o.evidence, index);
     if (!v.evidence.length) continue;
-    const { confidence, reason } = confidenceOf(v);
+    const { confidence, reason, ref } = confidenceOf(v);
     rows.push({
       auditId: audit.id,
       kind: "observation",
@@ -376,6 +400,7 @@ export async function runAnalyzeSite(
       suggestedPriority: o.suggestedPriority,
       confidence,
       confidenceReason: reason,
+      confidenceRef: ref,
       evidence: v.evidence,
       channel: "website",
       scanId: scan.id,
@@ -448,6 +473,7 @@ async function socialData(db: Database, auditId: string, channel: SocialChannel)
 }
 
 function socialIndexEntries(
+  rt: ReportText,
   channel: SocialChannel,
   data: Awaited<ReturnType<typeof socialData>>,
   prefix = "",
@@ -458,7 +484,7 @@ function socialIndexEntries(
       `${prefix}POST:${p.rowNumber}`,
       {
         type: "file_row",
-        label: `${label} · post of ${p.postedOn}`,
+        label: rt.t("auditReport.evidence.post", { channel: label, date: p.postedOn }),
         sourceId: p.sourceId,
         text: p.text ?? "",
         channel,
@@ -471,7 +497,14 @@ function socialIndexEntries(
         `${prefix}METRIC:${c.key}`,
         {
           type: "metric",
-          label: `${label} · ${c.label}: ${c.display}`,
+          label: rt.t("auditReport.evidence.metric", {
+            channel: label,
+            label: metricLabel(rt, c.key, c.label),
+            value:
+              c.shown?.unit === "perWeek"
+                ? rt.audit("social.card.perWeek", { value: c.shown.value })
+                : c.display,
+          }),
           text: c.display,
           channel,
           ...(c.date ? { capturedAt: c.date } : {}),
@@ -525,6 +558,7 @@ export async function runAnalyzeSocial(
 ) {
   const { db } = deps;
   const { audit, client } = await load(deps, payload.auditId);
+  const rt = reportText(audit);
   const data = await socialData(db, audit.id, payload.channel);
   const shotRows = await db
     .select({
@@ -547,12 +581,15 @@ export async function runAnalyzeSocial(
     throw needsAttention("audit.jobErrors.noSocialData");
   const shotName = new Map(shotRows.map((s) => [s.id, s]));
   const index = buildIndex([
-    ...socialIndexEntries(payload.channel, data),
+    ...socialIndexEntries(rt, payload.channel, data),
     ...shots.map(({ sourceId }, i): [string, RefTarget] => [
       `IMG:${i + 1}`,
       {
         type: "screenshot",
-        label: `${channelLabel[payload.channel]} · screenshot ${shotName.get(sourceId)?.fileName ?? i + 1}`,
+        label: rt.t("auditReport.evidence.screenshot", {
+          channel: channelLabel[payload.channel],
+          name: shotName.get(sourceId)?.fileName ?? String(i + 1),
+        }),
         sourceId,
         channel: payload.channel,
         capturedAt: shotName.get(sourceId)?.createdAt.toISOString().slice(0, 10),
@@ -560,6 +597,7 @@ export async function runAnalyzeSocial(
     ]),
   ]);
   const run = await runAgent(deps, ctx, {
+    language: audit.inputs.reportLanguage,
     client,
     role: "brand_analyst",
     task: "audit_analyze",
@@ -584,7 +622,7 @@ export async function runAnalyzeSocial(
     if (o.area === "linkedin_leads" && payload.channel !== "linkedin") continue;
     const v = verifyEvidence(o.evidence, index);
     if (!v.evidence.length) continue;
-    const { confidence, reason } = confidenceOf(v);
+    const { confidence, reason, ref } = confidenceOf(v);
     rows.push({
       auditId: audit.id,
       kind: "observation",
@@ -597,6 +635,7 @@ export async function runAnalyzeSocial(
       suggestedPriority: o.suggestedPriority,
       confidence,
       confidenceReason: reason,
+      confidenceRef: ref,
       evidence: v.evidence,
       channel: payload.channel,
       authorAgent: "brand_analyst",
@@ -621,6 +660,7 @@ export async function runProposeCompetitors(
 ) {
   const { db } = deps;
   const { audit, client } = await load(deps, payload.auditId);
+  const noWebsite = stored("audit.stored.unavailable.noWebsite");
   const existing = await db
     .select()
     .from(auditCompetitors)
@@ -628,6 +668,7 @@ export async function runProposeCompetitors(
   const scan = await latestProspectScan(db, audit.id);
   const home = scan ? (await collectedPages(db, scan.id))[0] : undefined;
   const run = await runAgent(deps, ctx, {
+    language: audit.inputs.reportLanguage,
     client,
     role: "strategist",
     task: "audit_analyze",
@@ -686,7 +727,8 @@ export async function runProposeCompetitors(
         proposedByAgent: "strategist",
         status: "proposed",
         sourceStatus: url ? "pending" : "unavailable",
-        sourceError: url ? null : "No website given",
+        sourceError: url ? null : noWebsite.text,
+        sourceErrorRef: url ? null : noWebsite.ref,
         position: position++,
       });
       if (domain) domains.add(domain);
@@ -724,6 +766,7 @@ async function compareCompetitors(
 ) {
   const { db } = deps;
   const { audit, client } = await load(deps, payload.auditId);
+  const rt = reportText(audit);
   const prospectScan = await latestProspectScan(db, audit.id);
   const prospectPages = prospectScan ? (await collectedPages(db, prospectScan.id)).slice(0, 4) : [];
   const competitors = await db
@@ -784,11 +827,12 @@ async function compareCompetitors(
   const entries: Array<[string, RefTarget]> = [];
   for (const co of companies)
     co.pages.forEach((p, i) => {
-      const t = pageTarget(p, co.ref);
+      const t = pageTarget(rt, p, co.ref);
       entries.push([`${co.ref}:P${i + 1}`, { ...t, label: `${co.name} · ${t.label}` }]);
     });
   const index = buildIndex(entries);
   const run = await runAgent(deps, ctx, {
+    language: audit.inputs.reportLanguage,
     client,
     role: "brand_analyst",
     task: "audit_analyze",
@@ -835,7 +879,7 @@ async function compareCompetitors(
     const firstCompetitor = v.targets
       .map((t) => companies.find((c) => c.ref === t.group)?.competitorId)
       .find(Boolean);
-    const { confidence, reason } = confidenceOf(v);
+    const { confidence, reason, ref } = confidenceOf(v);
     rows.push({
       auditId: audit.id,
       kind: "observation",
@@ -848,6 +892,7 @@ async function compareCompetitors(
       suggestedPriority: o.suggestedPriority,
       confidence,
       confidenceReason: reason,
+      confidenceRef: ref,
       evidence: v.evidence,
       channel: "website",
       competitorId: firstCompetitor ?? null,
@@ -888,6 +933,7 @@ export async function runCompareChannels(
 ) {
   const { db } = deps;
   const { audit, client } = await load(deps, payload.auditId);
+  const rt = reportText(audit);
   const scan = await latestProspectScan(db, audit.id);
   const pages = scan ? (await collectedPages(db, scan.id)).slice(0, 5) : [];
   const social = {
@@ -908,9 +954,9 @@ export async function runCompareChannels(
       comparisonChannels.includes(o.channel as ComparisonChannel),
   );
   const entries: Array<[string, RefTarget]> = [
-    ...pages.map((p, i): [string, RefTarget] => [`P${i + 1}`, pageTarget(p)]),
-    ...socialIndexEntries("instagram", social.instagram, "IG:"),
-    ...socialIndexEntries("facebook", social.facebook, "FB:"),
+    ...pages.map((p, i): [string, RefTarget] => [`P${i + 1}`, pageTarget(rt, p)]),
+    ...socialIndexEntries(rt, "instagram", social.instagram, "IG:"),
+    ...socialIndexEntries(rt, "facebook", social.facebook, "FB:"),
     ...observations.map((o, i): [string, RefTarget] => [
       `O${i + 1}`,
       {
@@ -924,6 +970,7 @@ export async function runCompareChannels(
   const index = buildIndex(entries);
   const ex = scan?.extracted ?? {};
   const run = await runAgent(deps, ctx, {
+    language: audit.inputs.reportLanguage,
     client,
     role: "brand_analyst",
     task: "audit_analyze",
@@ -994,7 +1041,7 @@ export async function runCompareChannels(
       if (!has[channel]) {
         cells[channel] = {
           value: null,
-          unavailableReason: "No data collected for this channel",
+          unavailableReason: rt.t("auditReport.cell.noData"),
         };
         continue;
       }
@@ -1005,7 +1052,7 @@ export async function runCompareChannels(
       if (cell.value && !v.evidence.length) {
         cells[channel] = {
           value: null,
-          unavailableReason: "Value without verifiable evidence: rejected",
+          unavailableReason: rt.t("auditReport.cell.unverified"),
         };
         continue;
       }
@@ -1013,7 +1060,7 @@ export async function runCompareChannels(
         value: cell.value,
         ...(cell.value
           ? {}
-          : { unavailableReason: cell.unavailableReason ?? "Not visible in the data" }),
+          : { unavailableReason: cell.unavailableReason ?? rt.t("auditReport.cell.notVisible") }),
         evidence: v.evidence,
       };
       all.push(...v.evidence);
@@ -1032,14 +1079,19 @@ export async function runCompareChannels(
       auditId: audit.id,
       kind: "comparison",
       area: "cross_channel",
-      title: criterionLabel[row.criterion],
+      title: criterionLabel(rt, row.criterion),
       description: row.rationale,
       priority: row.outcome === "to_align" ? "high" : "medium",
       suggestedPriority: row.outcome === "to_align" ? "high" : "medium",
       confidence,
-      confidenceReason: distinct
-        ? `Values verified on ${distinct} channels: ${[...new Set(labels)].slice(0, 3).join(", ")}`
-        : "No verified values",
+      ...confidenceText(
+        distinct
+          ? stored("audit.stored.confidence.channels", {
+              count: distinct,
+              what: [...new Set(labels)].slice(0, 3).join(", "),
+            })
+          : stored("audit.stored.confidence.noVerified"),
+      ),
       evidence: all.slice(0, 8),
       comparison,
       authorAgent: "brand_analyst",
@@ -1072,6 +1124,7 @@ export async function runDiagnose(
     ]),
   );
   const run = await runAgent(deps, ctx, {
+    language: audit.inputs.reportLanguage,
     client,
     role: "strategist",
     task: "audit_diagnose",
@@ -1133,7 +1186,7 @@ export async function runDiagnose(
       priority: p.suggestedPriority,
       suggestedPriority: p.suggestedPriority,
       confidence,
-      confidenceReason: `Based on ${parents.length} ${parents.length === 1 ? "accepted observation" : "accepted observations"}`,
+      ...confidenceText(stored("audit.stored.confidence.observations", { count: parents.length })),
       evidence,
       parentIds: parents.map((o) => o.id),
       authorAgent: "strategist",
@@ -1188,6 +1241,7 @@ export async function runPlan(
     .filter((c): c is SocialChannel => (socialChannels as readonly string[]).includes(c));
   if (!channels.length) throw needsAttention("audit.jobErrors.noSocialChannel");
   const run = await runAgent(deps, ctx, {
+    language: audit.inputs.reportLanguage,
     client,
     role: "strategist",
     task: "audit_plan",

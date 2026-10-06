@@ -2,6 +2,8 @@
   "errors": {
     "interruptedRetrying": "Worker interrupted: retrying.",
     "interruptedFinal": "Worker interrupted after the last attempt.",
-    "queueUnavailable": "Job queue unavailable."
+    "queueUnavailable": "Job queue unavailable.",
+    "exportCancelled": "Export cancelled.",
+    "templateNotFound": "Template not found."
   }
 }

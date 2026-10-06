@@ -39,6 +39,8 @@ import {
   type Tx,
 } from "./common";
 import { channelsWithData } from "./queries";
+import { stored } from "../stored";
+import type { MessageRef } from "@forgecy/core";
 
 type FindingRow = typeof auditFindings.$inferSelect;
 
@@ -283,9 +285,16 @@ export async function addFinding(
         recommendation: data.recommendation ?? null,
         priority: data.priority ?? "medium",
         confidence: confidenceFromEvidence(evidence.length),
-        confidenceReason: evidence.length
-          ? `${evidence.length} ${data.kind === "problem" ? "linked items" : "evidence items"} given by a person`
-          : "No evidence attached",
+        ...confidenceText(
+          evidence.length
+            ? stored(
+                data.kind === "problem"
+                  ? "audit.stored.confidence.linkedByPerson"
+                  : "audit.stored.confidence.evidenceByPerson",
+                { count: evidence.length },
+              )
+            : stored("audit.stored.confidence.noEvidence"),
+        ),
         status: "accepted",
         evidence,
         parentIds: data.parentIds,
@@ -595,4 +604,8 @@ export async function reportReadiness(db: Database, auditId: string): Promise<Re
       ...(stale ? { detail: `${stale} problems to recheck`, count: stale } : {}),
     },
   ];
+}
+
+function confidenceText(s: { text: string; ref: MessageRef }) {
+  return { confidenceReason: s.text, confidenceRef: s.ref };
 }

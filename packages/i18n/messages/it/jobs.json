@@ -2,6 +2,8 @@
   "errors": {
     "interruptedRetrying": "Worker interrotto: nuovo tentativo.",
     "interruptedFinal": "Worker interrotto dopo l’ultimo tentativo.",
-    "queueUnavailable": "Coda dei job non disponibile."
+    "queueUnavailable": "Coda dei job non disponibile.",
+    "exportCancelled": "Esportazione annullata.",
+    "templateNotFound": "Template non trovato."
   }
 }

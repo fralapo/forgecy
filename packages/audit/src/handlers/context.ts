@@ -42,6 +42,17 @@ export interface AgentRun<T> {
  * permission check runs here, server side, before anything is written.
  * Policy and budget stops end the job in "Needs attention" without retries.
  */
+/** The agent writes its texts in the report's language; quotes stay as found. */
+export function languageRule(language: string | null | undefined): string {
+  let name = "English";
+  try {
+    name = new Intl.DisplayNames(["en"], { type: "language" }).of(language || "en") ?? name;
+  } catch {
+    // Unknown code: English.
+  }
+  return `\n- Write every text in ${name}.`;
+}
+
 export async function runAgent<T>(
   deps: Pick<AuditHandlerDeps, "db" | "gateway">,
   ctx: Pick<JobContext, "jobId" | "row">,
@@ -57,6 +68,8 @@ export async function runAgent<T>(
     entityId: string;
     /** Screenshots for vision models; the gateway logs only their hash and size. */
     images?: InputImage[];
+    /** Language of the texts the agent writes (the report's language); English if absent. */
+    language?: string | null;
   },
 ): Promise<AgentRun<T>> {
   const policy: AiPolicy = input.client.aiPolicy;
@@ -68,7 +81,7 @@ export async function runAgent<T>(
       task: input.task,
       schema: input.schema,
       schemaName: input.schemaName,
-      system: input.system,
+      system: input.system + languageRule(input.language),
       input: input.prompt,
       ...(input.images?.length ? { images: input.images } : {}),
       clientId: input.client.id,

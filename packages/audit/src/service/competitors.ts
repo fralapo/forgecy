@@ -26,6 +26,7 @@ import {
   userIdOf,
   type AuditDeps,
 } from "./common";
+import { stored } from "../stored";
 
 type CompetitorRow = typeof auditCompetitors.$inferSelect;
 
@@ -120,7 +121,8 @@ export async function addCompetitor(
         confidence: "high",
         status: "confirmed",
         sourceStatus: data.websiteUrl ? "pending" : "unavailable",
-        sourceError: data.websiteUrl ? null : "No website given",
+        sourceError: data.websiteUrl ? null : noWebsite.text,
+        sourceErrorRef: data.websiteUrl ? null : noWebsite.ref,
         position: Number(next),
         createdBy: userId,
         confirmedBy: userId,
@@ -158,7 +160,8 @@ export async function editCompetitor(
       ...(urlChanged
         ? {
             sourceStatus: data.websiteUrl ? ("pending" as const) : ("unavailable" as const),
-            sourceError: data.websiteUrl ? null : "No website given",
+            sourceError: data.websiteUrl ? null : noWebsite.text,
+            sourceErrorRef: data.websiteUrl ? null : noWebsite.ref,
           }
         : {}),
     })
@@ -237,7 +240,11 @@ export async function confirmCompetitorList(
     await deps.db.transaction(async (tx) => {
       await tx
         .update(auditCompetitors)
-        .set({ status: "removed", removedReason: "Audit without competitors" })
+        .set({
+          status: "removed",
+          removedReason: withoutCompetitors.text,
+          removedRef: withoutCompetitors.ref,
+        })
         .where(
           and(eq(auditCompetitors.auditId, audit.id), eq(auditCompetitors.status, "proposed")),
         );
@@ -357,3 +364,6 @@ export async function requestCompetitorProposal(
     createdBy: userIdOf(actor),
   });
 }
+
+const noWebsite = stored("audit.stored.unavailable.noWebsite");
+const withoutCompetitors = stored("audit.stored.unavailable.auditWithoutCompetitors");

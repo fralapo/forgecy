@@ -1,8 +1,9 @@
+import { DEFAULT_LOCALE, type Locale } from "@forgecy/core";
+import { getTranslator } from "@forgecy/i18n";
 import type { BrandTheme } from "./brand";
-import { FORMATS } from "./formats";
 import type { TemplatePackage } from "./package";
 import type { Slide } from "./slide-schema";
-import { findLayout, slideRoleLabels } from "./template-schema";
+import { findLayout } from "./template-schema";
 
 /** What travels with the files: provenance written into slides.json and the PDF metadata. */
 export interface ExportMetadata {
@@ -30,39 +31,48 @@ export function captionText(t: CarouselTexts): string {
   return [t.caption?.trim() ?? "", hashtagLine(t.hashtags)].filter(Boolean).join("\n\n") + "\n";
 }
 
-function slotText(v: unknown): string[] {
+function slotText(v: unknown, imageAlt: (alt: string) => string): string[] {
   if (typeof v === "string") return [v.replace(/==/g, "")];
   if (Array.isArray(v)) return v.map((i) => `- ${String(i).replace(/==/g, "")}`);
   if (v && typeof v === "object" && "alt" in v) {
     const alt = String((v as { alt?: string }).alt ?? "");
-    return alt ? [`Image alt text: ${alt}`] : [];
+    return alt ? [imageAlt(alt)] : [];
   }
   return [];
 }
 
-/** `texts.md`: the copy of every slide, alt texts included, in slide order. */
+/** `texts.md`: the copy of every slide, alt texts included, in slide order and in the deliverable's language. */
 export function slidesMarkdown(
   pkg: TemplatePackage,
   slides: Slide[],
   meta: ExportMetadata,
   texts: CarouselTexts,
+  language: Locale = DEFAULT_LOCALE,
 ): string {
+  const t = getTranslator(language, "deliverable");
+  const tt = getTranslator(language, "templates");
+  const imageAlt = (alt: string) => t("carousel.texts.imageAlt", { alt });
   const out = [
     `# ${meta.content}`,
     "",
-    `${meta.client} · version ${meta.version} · ${FORMATS[pkg.manifest.format].label}`,
+    t("carousel.texts.meta", {
+      client: meta.client,
+      version: meta.version,
+      format: tt(`format.${pkg.manifest.format}`),
+    }),
     "",
   ];
   slides.forEach((s, i) => {
     const layout = findLayout(pkg.manifest, s.layout);
-    out.push(`## Slide ${i + 1} · ${layout ? slideRoleLabels[layout.role] : s.layout}`, "");
+    const role = layout ? tt(`slideRole.${layout.role}`) : s.layout;
+    out.push(`## ${t("carousel.texts.slide", { number: i + 1, role })}`, "");
     for (const slot of layout?.slots ?? []) {
-      const lines = slotText(s.slots[slot.name]);
+      const lines = slotText(s.slots[slot.name], imageAlt);
       if (lines.length) out.push(...lines, "");
     }
   });
   if (texts.caption || texts.hashtags?.length)
-    out.push("## Caption", "", captionText(texts).trimEnd(), "");
+    out.push(`## ${t("carousel.texts.caption")}`, "", captionText(texts).trimEnd(), "");
   return out.join("\n");
 }
 

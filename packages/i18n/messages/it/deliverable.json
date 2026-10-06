@@ -14,10 +14,35 @@
     "noEvidence": "Osservazione dell'agenzia",
     "fromCauses": "Nasce dalle osservazioni elencate qui sotto.",
     "noRecommendation": "Da approfondire insieme nella call di restituzione.",
-    "noSteps": "Fissiamo una call per decidere insieme le priorità."
+    "noSteps": "Fissiamo una call per decidere insieme le priorità.",
+    "evidence": {
+      "home": "Home",
+      "post": "{channel} · post del {date}",
+      "screenshot": "{channel} · screenshot {name}",
+      "metric": "{channel} · {label}: {value}"
+    },
+    "criterion": {
+      "color": "Colore dominante",
+      "tone": "Tono di voce",
+      "cta": "Invito all’azione principale",
+      "audience": "Pubblico a cui parla",
+      "visual_style": "Stile visivo"
+    },
+    "cell": {
+      "noData": "Nessun dato raccolto per questo canale",
+      "unverified": "Valore senza prove verificabili: scartato",
+      "notVisible": "Non visibile nei dati"
+    },
+    "pdfTitle": "Audit {date}"
   },
   "carousel": {
     "untitled": "Carosello senza titolo",
-    "imageNote": "Immagine “{slot}”: {brief}"
+    "imageNote": "Immagine “{slot}”: {brief}",
+    "texts": {
+      "meta": "{client} · versione {version} · {format}",
+      "slide": "Slide {number} · {role}",
+      "imageAlt": "Testo alternativo dell'immagine: {alt}",
+      "caption": "Didascalia"
+    }
   }
 }

@@ -14,10 +14,35 @@
     "noEvidence": "Agency observation",
     "fromCauses": "It comes from the observations listed below.",
     "noRecommendation": "To be discussed together in the follow-up call.",
-    "noSteps": "Let's schedule a call to agree on the priorities."
+    "noSteps": "Let's schedule a call to agree on the priorities.",
+    "evidence": {
+      "home": "Home",
+      "post": "{channel} · post of {date}",
+      "screenshot": "{channel} · screenshot {name}",
+      "metric": "{channel} · {label}: {value}"
+    },
+    "criterion": {
+      "color": "Dominant color",
+      "tone": "Tone of voice",
+      "cta": "Main call to action",
+      "audience": "Audience it speaks to",
+      "visual_style": "Visual style"
+    },
+    "cell": {
+      "noData": "No data collected for this channel",
+      "unverified": "Value without verifiable evidence: rejected",
+      "notVisible": "Not visible in the data"
+    },
+    "pdfTitle": "Audit {date}"
   },
   "carousel": {
     "untitled": "Untitled carousel",
-    "imageNote": "Image “{slot}”: {brief}"
+    "imageNote": "Image “{slot}”: {brief}",
+    "texts": {
+      "meta": "{client} · version {version} · {format}",
+      "slide": "Slide {number} · {role}",
+      "imageAlt": "Image alt text: {alt}",
+      "caption": "Caption"
+    }
   }
 }

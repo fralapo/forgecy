@@ -2,7 +2,7 @@
 // The functions passed to page.evaluate run in the browser: they need DOM types in any consumer.
 import { existsSync } from "node:fs";
 import type { Browser, BrowserContext, Page } from "playwright-core";
-import { CrawlError } from "../errors";
+import { CrawlError, crawlError } from "../errors";
 import type { HostCheck } from "../url";
 import { extractFromHtml, type FetchedPage, type PageFetcher } from "./fetcher";
 
@@ -88,10 +88,9 @@ export async function createBrowserFetcher(options: {
       args: ["--disable-dev-shm-usage"],
     });
   } catch (err) {
-    throw new CrawlError(
-      "AUD-BROWSER-UNAVAILABLE",
-      `Chromium unavailable: ${err instanceof Error ? err.message.split("\n")[0] : String(err)}`,
-    );
+    throw crawlError("AUD-BROWSER-UNAVAILABLE", "audit.stored.crawl.browserUnavailable", {
+      detail: err instanceof Error ? (err.message.split("\n")[0] ?? "") : String(err),
+    });
   }
 
   async function newContext(mobile: boolean): Promise<BrowserContext> {
@@ -147,9 +146,11 @@ export async function createBrowserFetcher(options: {
       await page.close().catch(() => undefined);
       const message = err instanceof Error ? err.message : String(err);
       if (/blockedbyclient/i.test(message))
-        throw new CrawlError("AUD-HOST-BLOCKED", `Address on the local network: ${url}`);
+        throw crawlError("AUD-HOST-BLOCKED", "audit.stored.crawl.addressLocal", { url });
       if (/timeout/i.test(message))
-        throw new CrawlError("AUD-CRAWL-TIMEOUT", `Timeout after ${timeoutMs / 1000} s`);
+        throw crawlError("AUD-CRAWL-TIMEOUT", "audit.stored.crawl.timeout", {
+          seconds: timeoutMs / 1000,
+        });
       throw new CrawlError("SOURCE-UNAVAILABLE", message.split("\n")[0] ?? message);
     }
   }

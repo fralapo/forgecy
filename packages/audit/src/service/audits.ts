@@ -38,6 +38,7 @@ import {
   type AuditDeps,
   type Tx,
 } from "./common";
+import { stored } from "../stored";
 
 /** Estimated AI cost of a full audit (UX Page 6). Shown as a range, never as a promise. */
 export const AUDIT_COST_RANGE_USD = { min: 1.5, max: 2.5 } as const;
@@ -212,7 +213,8 @@ export async function startAudit(
           channel: "website",
           profileUrl: websiteUrl,
           status: websiteUrl ? "collecting" : "unavailable",
-          unavailableReason: websiteUrl ? null : "No website given",
+          unavailableReason: websiteUrl ? null : noWebsite.text,
+          unavailableRef: websiteUrl ? null : noWebsite.ref,
           updatedBy: userId,
         },
         ...socialChannels
@@ -283,7 +285,12 @@ export async function rescanSite(
     });
     await tx
       .update(auditChannelStates)
-      .set({ status: "collecting", unavailableReason: null, updatedBy: userId })
+      .set({
+        status: "collecting",
+        unavailableReason: null,
+        unavailableRef: null,
+        updatedBy: userId,
+      })
       .where(
         and(eq(auditChannelStates.auditId, auditId), eq(auditChannelStates.channel, "website")),
       );
@@ -328,7 +335,7 @@ export async function cancelScan(deps: AuditDeps, actor: Actor, scanId: string):
   if (scan.jobId) await cancelJob(deps.db, requireQueues(deps), scan.jobId);
   await deps.db
     .update(siteScans)
-    .set({ status: "partial", error: "Scan stopped by a person", finishedAt: new Date() })
+    .set({ status: "partial", error: stopped.text, errorRef: stopped.ref, finishedAt: new Date() })
     .where(and(eq(siteScans.id, scanId), inArray(siteScans.status, ["pending", "collecting"])));
 }
 
@@ -362,3 +369,6 @@ export async function currentAudit(db: Database, clientId: string) {
     .limit(5);
   return rows.find((a) => ACTIVE_AUDIT_STATUSES.includes(a.status)) ?? rows[0] ?? null;
 }
+
+const noWebsite = stored("audit.stored.unavailable.noWebsite");
+const stopped = stored("audit.stored.crawl.stoppedByPerson");

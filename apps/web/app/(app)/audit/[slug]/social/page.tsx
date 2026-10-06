@@ -57,7 +57,7 @@ export default async function SocialPage({
 }) {
   const { slug } = await params;
   const { channel: channelParam } = await searchParams;
-  const { db, audit, readOnly, aiAllowed } = await sectionContext(slug);
+  const { db, audit, readOnly, aiAllowed, rt } = await sectionContext(slug);
   const views = await Promise.all(socialChannels.map((c) => getSocialView(db, audit.id, c)));
   const withProfile = views.filter((v) => v.state);
   const channel: SocialChannel =
@@ -152,7 +152,7 @@ export default async function SocialPage({
             <CardTitle>{t(`channel.${channel}`)}</CardTitle>
             <CardDescription>
               {view.state?.unavailableReason
-                ? view.state.unavailableReason
+                ? rt(view.state.unavailableRef, view.state.unavailableReason)
                 : view.state
                   ? t("social.addData")
                   : t("social.notListed")}
@@ -362,7 +362,7 @@ export default async function SocialPage({
         {aiAllowed ? <p className="text-body-sm text-fg-muted">{t("social.aiHint")}</p> : null}
         {view.findings.length ? (
           view.findings.map((f) => (
-            <FindingCard key={f.id} finding={toView(f)} sources={links} readOnly={readOnly} />
+            <FindingCard key={f.id} finding={toView(f, rt)} sources={links} readOnly={readOnly} />
           ))
         ) : (
           <p className="text-body-md text-fg-muted">{t("social.noObservations")}</p>
