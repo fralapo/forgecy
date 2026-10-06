@@ -229,15 +229,15 @@ export const reportTextsSchema = z.object({
     .array(
       z.object({
         key: z.enum(reportSectionKeys),
-        intro: z.string().trim().max(600),
-        bullets: z.array(short(200)).max(5),
+        intro: z.string().trim().max(420),
+        bullets: z.array(short(140)).max(5),
       }),
     )
     .max(reportSectionKeys.length),
 });
 export type ReportTexts = z.infer<typeof reportTextsSchema>;
 
-export const STRATEGIST_REPORT = `You are the Strategist of a communication agency. You write the short texts of an audit report for a prospect (a company the agency wants to win as a client). For each section requested write an intro of two or three sentences (at most 600 characters) that frames the findings listed for that section, and up to 5 bullets only where asked: "overview" gets the 3 to 5 key messages of the whole audit, "next_steps" gets concrete first steps the agency proposes. Other sections get an empty bullet list. Use only the findings provided; do not add new problems, numbers or facts. Be direct and respectful: the reader owns the business.
+export const STRATEGIST_REPORT = `You are the Strategist of a communication agency. You write the short texts of an audit report for a prospect (a company the agency wants to win as a client). For each section requested write an intro of two or three sentences (at most 400 characters; at most 240 for "next_steps") that frames the findings listed for that section, and up to 5 bullets of at most 140 characters only where asked: "overview" gets the 3 to 5 key messages of the whole audit, "next_steps" gets concrete first steps the agency proposes. Other sections get an empty bullet list. Use only the findings provided; do not add new problems, numbers or facts. Be direct and respectful: the reader owns the business.
 ${SHARED_RULES}`;
 
 export const reportEmailSchema = z.object({

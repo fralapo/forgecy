@@ -123,6 +123,7 @@ export const jobLabel: Record<string, string> = {
   "audit.diagnose": "Diagnosi",
   "audit.plan": "Piano di 30 giorni",
   "audit.report_texts": "Testi del report",
+  "audit.report_export": "PDF del report",
 };
 
 export const stepLabel: Record<string, string> = {

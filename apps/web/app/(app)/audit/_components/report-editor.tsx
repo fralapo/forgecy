@@ -17,7 +17,7 @@ export interface ReportFindingView {
 /** Sections whose bullets a person writes; the others list the audit findings. */
 const WITH_BULLETS = new Set<ReportSectionKey>(["overview", "next_steps"]);
 const NO_FINDINGS = new Set<ReportSectionKey>(["cover", "overview", "next_steps", "method"]);
-const LIMITS = { intro: 1200, bullet: 240, bullets: 6, emailBody: 2000 };
+const LIMITS = { intro: 420, nextStepsIntro: 240, bullet: 140, bullets: 5, emailBody: 2000 };
 
 const linesOf = (text: string) =>
   text
@@ -54,6 +54,15 @@ export function ReportEditor({
   const [body, setBody] = useState(report.emailBody ?? "");
   const [dirty, setDirty] = useState(false);
   const [state, setState] = useState<{ error?: string; ok?: string }>({});
+  const [seenRev, setSeenRev] = useState(report.rev);
+  if (seenRev !== report.rev && !dirty) {
+    // Saved here or changed elsewhere (e.g. texts from the agents): restart from the server.
+    setSeenRev(report.rev);
+    setSections(report.sections.map((s) => ({ ...s, bulletsText: s.bullets.join("\n") })));
+    setExcluded(new Set(report.excludedFindingIds));
+    setSubject(report.emailSubject ?? "");
+    setBody(report.emailBody ?? "");
+  }
 
   type Row = (typeof sections)[number];
   const change = <K extends keyof Row>(key: ReportSectionKey, field: K, value: Row[K]) => {
@@ -107,6 +116,7 @@ export function ReportEditor({
           const fixed = FIXED_REPORT_SECTIONS.includes(s.key);
           const list = findings[s.key] ?? [];
           const bulletCount = linesOf(s.bulletsText).length;
+          const introMax = s.key === "next_steps" ? LIMITS.nextStepsIntro : LIMITS.intro;
           return (
             <li key={s.key} className="rounded-lg border border-subtle bg-surface">
               <div className="flex flex-wrap items-center gap-3 p-4">
@@ -170,12 +180,12 @@ export function ReportEditor({
                         <textarea
                           id={`intro-${s.key}`}
                           value={s.intro}
-                          maxLength={LIMITS.intro}
+                          maxLength={introMax}
                           className={textareaClass}
                           onChange={(e) => change(s.key, "intro", e.target.value)}
                         />
                         <span className="text-body-sm text-fg-muted">
-                          {s.intro.length}/{LIMITS.intro} caratteri
+                          {s.intro.length}/{introMax} caratteri
                         </span>
                       </div>
                     ) : (

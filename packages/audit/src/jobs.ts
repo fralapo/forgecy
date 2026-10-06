@@ -1,4 +1,4 @@
-import { reportSectionKeys, socialChannels } from "@forgecy/core";
+import { reportSectionKeys, reportVariants, socialChannels } from "@forgecy/core";
 import { defineJob } from "@forgecy/jobs";
 import { z } from "zod";
 
@@ -79,6 +79,17 @@ export const auditReportTextsJob = defineJob({
   }),
 });
 
+/** PDF of a report version with the «Report di audit» template (renderer of M3). */
+export const auditReportExportJob = defineJob({
+  kind: "audit.report_export",
+  queue: "export",
+  payload: z.object({
+    reportId: z.uuid(),
+    variant: z.enum(reportVariants),
+    final: z.boolean(),
+  }),
+});
+
 export const auditJobs = [
   auditCrawlJob,
   auditAnalyzeSiteJob,
@@ -89,6 +100,7 @@ export const auditJobs = [
   auditDiagnoseJob,
   auditPlanJob,
   auditReportTextsJob,
+  auditReportExportJob,
 ] as const;
 
 /** Job kinds whose rows point at the audit (jobs.entity = "audit", jobs.entity_id = audit id). */

@@ -35,7 +35,7 @@ import {
   type Database,
 } from "@forgecy/db";
 import { z } from "zod";
-import { auditReportTextsJob } from "../jobs";
+import { auditReportExportJob, auditReportTextsJob } from "../jobs";
 import {
   aiAllowed,
   enqueueAuditJob,
@@ -46,6 +46,7 @@ import {
   type Tx,
 } from "./common";
 import { reportReadiness } from "./findings";
+import { fitText, textLength } from "../report/text";
 import { channelLabel } from "./prospects";
 
 export type ReportRow = typeof auditReports.$inferSelect;
@@ -79,7 +80,14 @@ const SECTION_TITLES: Record<"it" | "en", Record<ReportSectionKey, string>> = {
 };
 
 /** Limits of the free texts: what an A4 page can hold next to the findings. */
-export const REPORT_LIMITS = { intro: 1200, bullet: 240, bullets: 6, emailBody: 2000 } as const;
+/** Limits of the «Report di audit» template pages (section intro, list items). */
+export const REPORT_LIMITS = {
+  intro: 420,
+  nextStepsIntro: 240,
+  bullet: 140,
+  bullets: 5,
+  emailBody: 2000,
+} as const;
 
 const SOCIAL = new Set(["instagram", "facebook", "linkedin", "tiktok"]);
 
@@ -142,11 +150,14 @@ export function defaultSections(
     intro: "",
     bullets:
       key === "overview"
-        ? grouped.problems.slice(0, 5).map((p) => p.title)
+        ? grouped.problems
+            .slice(0, REPORT_LIMITS.bullets)
+            .map((p) => fitText(p.title, REPORT_LIMITS.bullet))
         : key === "next_steps"
           ? grouped.problems
               .map((p) => p.recommendation)
               .filter((r): r is string => Boolean(r))
+              .map((r) => fitText(r, REPORT_LIMITS.bullet))
               .slice(0, REPORT_LIMITS.bullets)
           : [],
   }));
@@ -247,7 +258,8 @@ export async function checkReportEvidence(
     const hasItems = (grouped[s.key] ?? []).some((f) => includedIds.has(f.id));
     if (!s.intro.trim() && !s.bullets.length && !hasItems)
       warnings.push({ section: s.key, message: "Sezione senza testo né elementi" });
-    if (s.intro.length > REPORT_LIMITS.intro)
+    const introMax = s.key === "next_steps" ? REPORT_LIMITS.nextStepsIntro : REPORT_LIMITS.intro;
+    if (textLength(s.intro) > introMax)
       warnings.push({ section: s.key, message: "Testo oltre il limite della pagina" });
   }
   return { ok: errors.length === 0, included: included.length, errors, warnings };
@@ -628,6 +640,43 @@ export async function deleteReportDraft(deps: AuditDeps, actor: Actor, id: strin
 }
 
 /**
+ * «Esporta PDF»: a draft PDF (watermark «Bozza») at any time before delivery, the
+ * final one only for an approved version with every included item backed by evidence.
+ */
+export async function requestReportExport(
+  deps: AuditDeps,
+  actor: Actor,
+  input: { reportId: string; variant: ReportVariant; final: boolean },
+) {
+  const { report, audit } = await loadReport(deps.db, input.reportId);
+  assertCan(actor, "reports.export", audit.clientId);
+  if (report.status === "superseded")
+    throw new ForgecyError("conflict", "Questa versione è stata sostituita da una più recente.");
+  if (input.final) {
+    assertCan(actor, "publish", audit.clientId);
+    if (report.status !== "approved" && report.status !== "exported")
+      throw new ForgecyError(
+        "conflict",
+        "Il PDF finale si esporta solo da una versione approvata da una persona.",
+      );
+    const check = await checkReportEvidence(deps.db, report);
+    if (!check.ok)
+      throw new ForgecyError(
+        "validation",
+        `${check.errors.length} elementi inclusi non hanno evidenza (REPORT-EVIDENCE-MISSING).`,
+      );
+  }
+  if (await hasActiveJob(deps.db, audit.id, auditReportExportJob.kind))
+    throw new ForgecyError("conflict", "Un PDF del report è già in preparazione.");
+  return enqueueAuditJob(deps, {
+    def: auditReportExportJob,
+    payload: { reportId: report.id, variant: input.variant, final: input.final },
+    audit,
+    createdBy: userIdOf(actor),
+  });
+}
+
+/**
  * Record a PDF produced by the export worker. The first final export moves the
  * version to exported and the audit to delivered.
  */
@@ -695,6 +744,8 @@ export interface ReportDocItem {
   recommendation: string | null;
   priority: FindingRow["priority"];
   evidence: string[];
+  /** Problems: titles of the included observations they rest on. */
+  causes: string[];
 }
 
 export interface ReportDocSection {
@@ -702,6 +753,8 @@ export interface ReportDocSection {
   title: string;
   intro: string;
   bullets: string[];
+  /** Short closing line (method: limits of the data). */
+  note: string;
   items: ReportDocItem[];
 }
 
@@ -716,40 +769,58 @@ export interface ReportDocument {
   sections: ReportDocSection[];
 }
 
-function methodLines(input: {
-  channels: Array<typeof auditChannelStates.$inferSelect>;
-  scans: Array<typeof siteScans.$inferSelect>;
-  competitors: number;
-  skipped: boolean;
-  plan: boolean;
-}): string[] {
+const METHOD_TEXT = {
+  it: {
+    intro:
+      "L'audit usa solo dati pubblici e materiali forniti. Ogni evidenza riporta la sua fonte; le proposte dell'AI sono state verificate da una persona dell'agenzia.",
+    note: "I dati social vengono da screenshot e file forniti, non sono raccolti in automatico. Un valore mancante è indicato come non disponibile, mai stimato.",
+    site: (date: string, pages: number) =>
+      `Sito: letto il ${date}, fino a ${pages} pagine pubbliche`,
+    channel: (label: string) => `${label}: screenshot, export o valori forniti`,
+    unavailable: (label: string) => `${label}: non disponibile`,
+    competitors: (n: number) => `Competitor: ${n} confermati, fino a 3 pagine ciascuno`,
+    noCompetitors: "Competitor: sezione esclusa su scelta dell'agenzia",
+    plan: "Piano di 30 giorni: proposto dallo Strategist, accettato dall'agenzia",
+  },
+  en: {
+    intro:
+      "The audit uses only public data and material provided to us. Every finding cites its source; AI proposals were checked by a person at the agency.",
+    note: "Social data comes from screenshots and files provided, never collected automatically. A missing value is marked as not available, never estimated.",
+    site: (date: string, pages: number) => `Website: read on ${date}, up to ${pages} public pages`,
+    channel: (label: string) => `${label}: screenshots, exports or values provided`,
+    unavailable: (label: string) => `${label}: not available`,
+    competitors: (n: number) => `Competitors: ${n} confirmed, up to 3 pages each`,
+    noCompetitors: "Competitors: left out by the agency",
+    plan: "30-day plan: proposed by the Strategist, accepted by the agency",
+  },
+} as const;
+
+/** The method page: what was read, from where, and the limits of the data. */
+function methodText(
+  language: "it" | "en",
+  input: {
+    channels: Array<typeof auditChannelStates.$inferSelect>;
+    scans: Array<typeof siteScans.$inferSelect>;
+    competitors: number;
+    skipped: boolean;
+    plan: boolean;
+  },
+): { intro: string; lines: string[]; note: string } {
+  const t = METHOD_TEXT[language];
   const lines: string[] = [];
   const site = input.scans.find((s) => !s.competitorId);
   if (site)
     lines.push(
-      `Sito: ${site.rootUrl}, letto il ${(site.finishedAt ?? site.createdAt).toISOString().slice(0, 10)} (fino a ${site.maxPages} pagine pubbliche, robots.txt rispettato).`,
+      t.site((site.finishedAt ?? site.createdAt).toISOString().slice(0, 10), site.maxPages),
     );
   for (const c of input.channels.filter((x) => x.channel !== "website")) {
     const label = channelLabel[c.channel];
-    if (c.status === "unavailable" || c.status === "skipped")
-      lines.push(
-        `${label}: non disponibile${c.unavailableReason ? ` (${c.unavailableReason})` : ""}.`,
-      );
-    else if (c.status === "collected" || c.status === "partial")
-      lines.push(`${label}: dati da screenshot, export o valori forniti, ognuno con fonte e data.`);
+    if (c.status === "unavailable" || c.status === "skipped") lines.push(t.unavailable(label));
+    else if (c.status === "collected" || c.status === "partial") lines.push(t.channel(label));
   }
-  lines.push(
-    input.skipped
-      ? "Competitor: sezione esclusa su scelta dell'agenzia."
-      : `Competitor: ${input.competitors} confermati, letti fino a 3 pagine pubbliche ciascuno.`,
-  );
-  lines.push(
-    "I dati social non sono raccolti in automatico: vengono da screenshot e file forniti. Un valore mancante è indicato come non disponibile, mai stimato.",
-  );
-  lines.push(
-    "Le osservazioni proposte dall'AI sono state verificate e accettate da una persona dell'agenzia.",
-  );
-  return lines;
+  lines.push(input.skipped ? t.noCompetitors : t.competitors(input.competitors));
+  if (input.plan) lines.push(t.plan);
+  return { intro: t.intro, lines, note: t.note };
 }
 
 /** Everything the template needs to render one variant of a report version. */
@@ -772,8 +843,12 @@ export async function buildReportDocument(
     db.query.appSettings.findFirst({ where: eq(appSettings.key, "agency") }),
   ]);
   const excluded = new Set(report.excludedFindingIds);
-  const grouped = groupFindings(findings.filter((f) => !excluded.has(f.id)));
+  const included = findings.filter((f) => !excluded.has(f.id));
+  const titles = new Map(included.map((f) => [f.id, f.title]));
+  const grouped = groupFindings(included);
+  const language = lang(profile?.reportLanguage);
   const keys = variant === "compact" ? new Set(COMPACT_REPORT_SECTIONS) : null;
+  const acceptedPlan = plan && (plan.status === "accepted" || plan.status === "edited");
   const toItem = (f: FindingRow): ReportDocItem => ({
     id: f.id,
     kind: f.kind,
@@ -786,36 +861,32 @@ export async function buildReportDocument(
       .map((e) => e.label)
       .filter((l, i, a): l is string => Boolean(l) && a.indexOf(l) === i)
       .slice(0, 4),
+    causes: f.parentIds.map((id) => titles.get(id)).filter((t): t is string => Boolean(t)),
   });
   const sections: ReportDocSection[] = report.sections
     .filter((s) => s.enabled && (!keys || keys.has(s.key)))
     .map((s) => {
-      const base = { key: s.key, title: s.title, intro: s.intro, bullets: s.bullets };
-      if (s.key === "method")
-        return {
-          ...base,
-          bullets: methodLines({
-            channels,
-            scans,
-            competitors: competitors.length,
-            skipped: audit.competitorsSkipped,
-            plan: plan?.status === "accepted" || plan?.status === "edited",
-          }).slice(0, variant === "compact" ? 3 : 10),
-          items: [],
-        };
+      const base = { key: s.key, title: s.title, intro: s.intro, bullets: s.bullets, note: "" };
+      if (s.key === "method") {
+        const m = methodText(language, {
+          channels,
+          scans,
+          competitors: competitors.length,
+          skipped: audit.competitorsSkipped,
+          plan: Boolean(acceptedPlan),
+        });
+        return { ...base, intro: s.intro || m.intro, bullets: m.lines, note: m.note, items: [] };
+      }
       if (s.key === "cover" || s.key === "overview") return { ...base, items: [] };
       if (s.key === "next_steps") {
-        const pillars =
-          plan && (plan.status === "accepted" || plan.status === "edited")
-            ? plan.pillars.map((p) => `${p.name}: ${p.goal}`)
-            : [];
-        return { ...base, bullets: [...s.bullets, ...pillars].slice(0, 8), items: [] };
+        const pillars = acceptedPlan ? plan.pillars.map((p) => `${p.name}: ${p.goal}`) : [];
+        return { ...base, bullets: [...s.bullets, ...pillars], items: [] };
       }
       return { ...base, items: grouped[s.key].map(toItem) };
     });
   const agencyValue = (agency?.value ?? null) as { name?: string } | null;
   return {
-    language: lang(profile?.reportLanguage),
+    language,
     agency: { name: agencyValue?.name ?? null },
     prospect: { name: client.name, websiteUrl: client.websiteUrl },
     version: report.version,

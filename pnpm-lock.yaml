@@ -212,6 +212,9 @@ importers:
       '@forgecy/ai':
         specifier: workspace:*
         version: link:../ai
+      '@forgecy/carousel':
+        specifier: workspace:*
+        version: link:../carousel
       '@forgecy/core':
         specifier: workspace:*
         version: link:../core

@@ -32,6 +32,7 @@ import {
   requestDiagnosis,
   requestPlan,
   requestReportChanges,
+  requestReportExport,
   requestReportTexts,
   requestSocialAnalysis,
   rescanSite,
@@ -60,6 +61,7 @@ import type {
   ComparisonOutcome,
   Level,
   ReportSectionKey,
+  ReportVariant,
   SocialChannel,
 } from "@forgecy/core";
 import { revalidatePath } from "next/cache";
@@ -384,6 +386,14 @@ export async function requestReportChangesAction(input: {
   return act((u, d) => requestReportChanges(d, u.actor, input).then(() => undefined), {
     queues: false,
   });
+}
+
+export async function requestReportExportAction(input: {
+  reportId: string;
+  variant: ReportVariant;
+  final: boolean;
+}) {
+  return act((u, d) => requestReportExport(d, u.actor, input).then((job) => job.id));
 }
 
 export async function deleteReportDraftAction(id: string) {

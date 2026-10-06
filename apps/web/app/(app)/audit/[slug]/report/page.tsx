@@ -2,6 +2,7 @@ import {
   buildReportDocument,
   checkReportEvidence,
   listReports,
+  reportExports,
   reportFindings,
   reportReadiness,
 } from "@forgecy/audit";
@@ -10,6 +11,8 @@ import { Badge, Card, CardDescription, CardHeader, CardTitle } from "@forgecy/ui
 import {
   Check,
   CircleDashed,
+  FileCheck2,
+  FileDown,
   FilePlus2,
   RefreshCw,
   Send,
@@ -21,6 +24,7 @@ import { requireUser } from "@/lib/session";
 import {
   composeReportAction,
   deleteReportDraftAction,
+  requestReportExportAction,
   requestReportTextsAction,
   submitReportAction,
   withdrawReportAction,
@@ -29,6 +33,7 @@ import { ActionButton } from "../../_components/action-button";
 import { ReportEditor, type ReportFindingView } from "../../_components/report-editor";
 import { ReportReview } from "../../_components/report-review";
 import { sectionContext } from "../../_lib/findings";
+import { fileUrl } from "../../_lib/server";
 import {
   formatDateTime,
   levelLabel,
@@ -99,11 +104,18 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
     );
   }
 
-  const [grouped, check, doc] = await Promise.all([
+  const [grouped, check, doc, exports] = await Promise.all([
     reportFindings(db, current),
     checkReportEvidence(db, current),
     buildReportDocument(db, current.id, "full"),
+    reportExports(db, current.id),
   ]);
+  const downloads = await Promise.all(
+    exports.slice(0, 6).map(async (e) => ({
+      ...e,
+      href: await fileUrl(e.storageKey, e.fileName),
+    })),
+  );
   const findings = Object.fromEntries(
     Object.entries(grouped).map(([k, list]) => [
       k,
@@ -151,7 +163,7 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
               </div>
             ) : null}
             <ReportEditor
-              key={`${current.id}-${current.rev}`}
+              key={current.id}
               report={{
                 id: current.id,
                 rev: current.rev,
@@ -283,6 +295,78 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
             >
               Crea una nuova versione
             </ActionButton>
+          ) : null}
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>PDF</CardTitle>
+            <CardDescription>
+              Il PDF usa il template «Report di audit». Le prove hanno la filigrana «Bozza»; il PDF
+              finale si esporta dopo l&apos;approvazione e consegna l&apos;audit.
+            </CardDescription>
+          </CardHeader>
+          {current.status !== "superseded" ? (
+            <div className="flex flex-wrap gap-2">
+              {(["full", "compact"] as const).map((variant) => (
+                <ActionButton
+                  key={`draft-${variant}`}
+                  action={requestReportExportAction.bind(null, {
+                    reportId: current.id,
+                    variant,
+                    final: false,
+                  })}
+                  icon={<FileDown aria-hidden />}
+                  variant="ghost"
+                  size="sm"
+                >
+                  {variant === "full" ? "Prova completa" : "Prova compatta"}
+                </ActionButton>
+              ))}
+            </div>
+          ) : null}
+          {!closed && (current.status === "approved" || current.status === "exported") ? (
+            <div className="flex flex-wrap gap-2">
+              {(["full", "compact"] as const).map((variant) => (
+                <ActionButton
+                  key={`final-${variant}`}
+                  action={requestReportExportAction.bind(null, {
+                    reportId: current.id,
+                    variant,
+                    final: true,
+                  })}
+                  icon={<FileCheck2 aria-hidden />}
+                  variant={variant === "full" ? "primary" : "secondary"}
+                  size="sm"
+                  confirm={
+                    current.status === "approved" && variant === "full"
+                      ? "Il PDF finale consegna l'audit: dopo non si modifica più. Continuare?"
+                      : undefined
+                  }
+                >
+                  {variant === "full" ? "PDF finale completo" : "PDF finale compatto"}
+                </ActionButton>
+              ))}
+            </div>
+          ) : null}
+          {downloads.length ? (
+            <ul className="flex flex-col gap-2">
+              {downloads.map((d) => (
+                <li key={d.id} className="flex flex-col text-body-sm">
+                  {d.href ? (
+                    <a href={d.href} className="text-link underline-offset-2 hover:underline">
+                      {d.fileName}
+                    </a>
+                  ) : (
+                    <span>{d.fileName}</span>
+                  )}
+                  <span className="text-fg-muted">
+                    {d.final ? "Finale" : "Bozza"} · {d.pages} pagine ·{" "}
+                    {formatDateTime(d.createdAt)}
+                  </span>
+                </li>
+              ))}
+            </ul>
           ) : null}
         </Card>
 

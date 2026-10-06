@@ -7,6 +7,7 @@ import {
 import { loadEnv } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
 import { createStorageFromEnv } from "@forgecy/files";
+import { sharedRenderBrowser } from "@forgecy/carousel/export";
 import { createQueues, handle, type JobHandlers } from "@forgecy/jobs";
 import { createBrowserFetcher, resolveChromiumPath } from "../crawl/browser";
 import { auditUserAgent } from "../crawl/fetcher";
@@ -19,6 +20,7 @@ import {
   auditDiagnoseJob,
   auditPlanJob,
   auditProposeCompetitorsJob,
+  auditReportExportJob,
   auditReportTextsJob,
 } from "../jobs";
 import { createHostCheck } from "../url";
@@ -34,6 +36,7 @@ import {
 import type { AuditHandlerDeps } from "./context";
 import { runCrawl } from "./crawl";
 import { runReportTexts } from "./report";
+import { runReportExport } from "./report-export";
 
 export type { AuditHandlerDeps } from "./context";
 
@@ -75,6 +78,8 @@ export function createAuditHandlers(
   getDeps: () => Promise<AuditHandlerDeps> = auditDepsFromEnv,
 ): JobHandlers {
   let deps: Promise<AuditHandlerDeps> | undefined;
+  // Report PDFs use the renderer's own Chromium (fixed raster flags), started on first use.
+  const renderBrowser = sharedRenderBrowser();
   const d = () => {
     deps ??= getDeps().catch((err: unknown) => {
       deps = undefined;
@@ -96,5 +101,8 @@ export function createAuditHandlers(
     ...handle(auditDiagnoseJob, async (p, ctx) => runDiagnose(await d(), p, ctx)),
     ...handle(auditPlanJob, async (p, ctx) => runPlan(await d(), p, ctx)),
     ...handle(auditReportTextsJob, async (p, ctx) => runReportTexts(await d(), p, ctx)),
+    ...handle(auditReportExportJob, async (p, ctx) =>
+      runReportExport({ ...(await d()), renderBrowser: () => renderBrowser.get() }, p, ctx),
+    ),
   };
 }
