@@ -180,6 +180,8 @@ export const siteScans = pgTable(
     /** Stable error code shown in the UI (SOURCE-UNAVAILABLE, AUD-ROBOTS-BLOCKED...). */
     errorCode: text("error_code"),
     error: text("error"),
+    /** `error` as a message reference, shown in the reader's language. */
+    errorRef: jsonb("error_ref").$type<MessageRef>(),
     jobId: uuid("job_id").references(() => jobs.id, { onDelete: "set null" }),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     startedAt: timestamp("started_at", { withTimezone: true }),
@@ -252,6 +254,7 @@ export const auditSources = pgTable(
     data: jsonb("data").$type<PageData & FileData>().notNull().default({}),
     /** Why a page was not read: robots.txt, login, timeout, HTTP error. */
     skipReason: text("skip_reason"),
+    skipRef: jsonb("skip_ref").$type<MessageRef>(),
     capturedAt: timestamp("captured_at", { withTimezone: true }).notNull().defaultNow(),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: createdAt(),
@@ -274,6 +277,8 @@ export const auditChannelStates = pgTable(
     profileUrl: text("profile_url"),
     status: sourceStatusEnum("status").notNull().default("pending"),
     unavailableReason: text("unavailable_reason"),
+    /** Null when a person typed the reason. */
+    unavailableRef: jsonb("unavailable_ref").$type<MessageRef>(),
     updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -341,8 +346,10 @@ export const auditCompetitors = pgTable(
     proposedByAgent: text("proposed_by_agent"),
     status: competitorStatusEnum("status").notNull().default("proposed"),
     removedReason: text("removed_reason"),
+    removedRef: jsonb("removed_ref").$type<MessageRef>(),
     sourceStatus: sourceStatusEnum("source_status").notNull().default("pending"),
     sourceError: text("source_error"),
+    sourceErrorRef: jsonb("source_error_ref").$type<MessageRef>(),
     position: integer("position").notNull().default(0),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     confirmedBy: uuid("confirmed_by").references(() => users.id, { onDelete: "set null" }),
@@ -399,6 +406,7 @@ export const auditFindings = pgTable(
     suggestedPriority: levelEnum("suggested_priority"),
     confidence: levelEnum("confidence").notNull().default("low"),
     confidenceReason: text("confidence_reason"),
+    confidenceRef: jsonb("confidence_ref").$type<MessageRef>(),
     status: findingStatusEnum("status").notNull().default("observed"),
     evidence: jsonb("evidence").$type<AuditEvidence[]>().notNull().default([]),
     /** Problems: the observations they rest on. */

@@ -319,8 +319,7 @@ export async function decideItem(
           .update(productImportItems)
           .set({
             status: "discarded",
-            discardReason:
-              a.reason?.trim().slice(0, 300) || englishMessage("products.discards.inReview"),
+            ...discardOf(a.reason),
             ...decided,
           })
           .where(eq(productImportItems.id, item.id));
@@ -331,7 +330,13 @@ export async function decideItem(
         if (item.status !== "discarded") throw stateConflict();
         await tx
           .update(productImportItems)
-          .set({ status: "pending", discardReason: null, decidedBy: null, decidedAt: null })
+          .set({
+            status: "pending",
+            discardReason: null,
+            discardRef: null,
+            decidedBy: null,
+            decidedAt: null,
+          })
           .where(eq(productImportItems.id, item.id));
         return {};
       }
@@ -797,6 +802,17 @@ export async function decideImage(
   });
 }
 
+/** Reason of a rejection in review: the person's words, or a message in the reader's language. */
+function discardOf(reason: string | undefined) {
+  const typed = reason?.trim().slice(0, 300);
+  return typed
+    ? { discardReason: typed, discardRef: null }
+    : {
+        discardReason: englishMessage("products.discards.inReview"),
+        discardRef: messageRef("products.discards.inReview"),
+      };
+}
+
 /** "Reject all undecided" (recoverable while the review is open). */
 export async function discardPending(
   db: Database,
@@ -810,7 +826,8 @@ export async function discardPending(
       .update(productImportItems)
       .set({
         status: "discarded",
-        discardReason: "Rejected in bulk in review",
+        discardReason: englishMessage("products.discards.inBulkReview"),
+        discardRef: messageRef("products.discards.inBulkReview"),
         decidedBy: user.id,
         decidedAt: new Date(),
       })

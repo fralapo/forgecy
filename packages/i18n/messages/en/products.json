@@ -194,7 +194,8 @@
     "rowNoName": "Row {row}: missing name",
     "rowNoParent": "Row {row}: variation without a parent product",
     "page": "Page {page}: {reason}",
-    "inReview": "Rejected in review"
+    "inReview": "Rejected in review",
+    "inBulkReview": "Rejected in bulk in review"
   },
   "matchReasons": {
     "sku": "Same SKU {sku}",
@@ -723,5 +724,10 @@
     "sensitiveAccepted": "Sensitive field accepted.",
     "proposalAccepted": "Proposal accepted.",
     "proposalRejected": "Proposal rejected."
+  },
+  "csv": {
+    "status": "Status",
+    "source": "Source",
+    "reason": "Reason"
   }
 }

@@ -14,7 +14,7 @@ import { getDb } from "@forgecy/db";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
-import { getFormat } from "@/lib/i18n";
+import { getFormat, refText } from "@/lib/i18n";
 import { Breadcrumb, ImportStatusBadge } from "../../../../_components/ui";
 import {
   blockerText,
@@ -109,14 +109,16 @@ export default async function ReviewPage({
               href: paths.product(client.slug, match.id),
             }
           : null,
-        matchReason: matchReasonText(t, i.matchReason),
+        matchReason: await refText(i.matchRef, matchReasonText(t, i.matchReason)),
         conflicts: i.conflicts as unknown as Array<{
           field: string;
           approved: unknown;
           incoming: unknown;
         }>,
         decisions: (i.conflictDecisions ?? {}) as Record<string, string>,
-        discardReason: i.discardReason ? discardText(t, i.discardReason) : null,
+        discardReason: i.discardReason
+          ? await refText(i.discardRef, discardText(t, i.discardReason))
+          : null,
         productHref: i.productId ? paths.product(client.slug, i.productId) : null,
       };
     }),
