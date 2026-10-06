@@ -100,25 +100,36 @@ export interface CatalogEntry {
   pkg?: TemplatePackage;
 }
 
-/** Every package folder (one with a template.json) under `root`, validated. */
+/**
+ * Every package folder (one with a template.json) under `root`, validated. Packages sit either
+ * directly under `root` or one level down in a grouping folder (`carousels/`, `reports/`);
+ * `folder` is the path relative to `root`.
+ */
 export async function scanTemplateDir(root = defaultTemplatesDir()): Promise<CatalogEntry[]> {
   if (!existsSync(root)) return [];
   const out: CatalogEntry[] = [];
-  const entries = (await readdir(root, { withFileTypes: true })).sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
-  for (const e of entries) {
-    if (!e.isDirectory() || e.name.startsWith(".")) continue;
-    const dir = path.join(root, e.name);
-    if (!existsSync(path.join(dir, MANIFEST_FILE))) continue;
-    const files = await readTemplateDir(dir);
-    const report = validateTemplatePackage(files);
-    out.push({
-      folder: e.name,
-      report,
-      ...(report.manifest ? { pkg: { manifest: report.manifest, files } } : {}),
-    });
+  async function scan(rel: string, depth: number) {
+    const entries = (await readdir(path.join(root, rel), { withFileTypes: true })).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+    for (const e of entries) {
+      if (!e.isDirectory() || e.name.startsWith(".")) continue;
+      const folder = rel ? `${rel}/${e.name}` : e.name;
+      const dir = path.join(root, folder);
+      if (!existsSync(path.join(dir, MANIFEST_FILE))) {
+        if (depth === 0) await scan(folder, 1);
+        continue;
+      }
+      const files = await readTemplateDir(dir);
+      const report = validateTemplatePackage(files);
+      out.push({
+        folder,
+        report,
+        ...(report.manifest ? { pkg: { manifest: report.manifest, files } } : {}),
+      });
+    }
   }
+  await scan("", 0);
   return out;
 }
 

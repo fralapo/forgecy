@@ -11,7 +11,7 @@ import {
 import { loadRepoTemplate } from "./helpers";
 
 describe("slide schemas from template.json", async () => {
-  const pkg = await loadRepoTemplate("editorial-ig-4x5");
+  const pkg = await loadRepoTemplate("carousels/editorial-ig-4x5");
   const m = pkg.manifest;
   const byId = (id: string) => sampleSlide(m.layouts.find((l) => l.id === id)!);
 
@@ -78,7 +78,7 @@ describe("report formats", () => {
   });
 
   it("accept the audit report: cover first, any page order after it", async () => {
-    const pkg = await loadRepoTemplate("report-audit-a4");
+    const pkg = await loadRepoTemplate("reports/report-audit-a4");
     const m = pkg.manifest;
     expect(m.kind).toBe("report");
     expect(m.channel).toBeUndefined();
@@ -145,7 +145,7 @@ describe("Docker worker image", () => {
 
 describe("export payload", async () => {
   const { carouselExportPayloadSchema } = await import("../src/jobs");
-  const pkg = await loadRepoTemplate("editorial-linkedin");
+  const pkg = await loadRepoTemplate("carousels/editorial-linkedin");
   const base = {
     clientId: "00000000-0000-4000-8000-000000000001",
     client: "Rossi Bakery",

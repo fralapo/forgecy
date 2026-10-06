@@ -1,8 +1,8 @@
 import type { ConfidenceLevel, ImageMatchMethod } from "@forgecy/core";
-import { fieldKeys, isEmptyValue, type FieldKey, type ProductDraft } from "./fields";
-import type { SourceRef } from "./meta";
-import type { ClaimKind } from "./sensitive";
-import { baseName, folderSegments, normalizeKey, normalizeSku } from "./text";
+import { fieldKeys, isEmptyValue, type FieldKey, type ProductDraft } from "../products/fields";
+import type { SourceRef } from "../products/meta";
+import type { ClaimKind } from "../products/sensitive";
+import { baseName, folderSegments, normalizeKey, normalizeSku } from "../parsers/text";
 
 export interface ImageRef {
   fileId: string;

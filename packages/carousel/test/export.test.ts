@@ -40,7 +40,7 @@ describe.skipIf(!enabled)("export with Chromium", () => {
   });
 
   it("exports PNG, PDF and ZIP with exact sizes, names and identical bytes on every run", async () => {
-    const pkg = await loadRepoTemplate("editorial-ig-4x5");
+    const pkg = await loadRepoTemplate("carousels/editorial-ig-4x5");
     const ids = ["cover", "text", "list", "data", "cta"];
     const slides = ids.map((id) => sampleSlide(pkg.manifest.layouts.find((l) => l.id === id)!));
     const input = {
@@ -107,7 +107,7 @@ describe.skipIf(!enabled)("export with Chromium", () => {
   }, 120_000);
 
   it("exports the audit report as an A4 PDF", async () => {
-    const pkg = await loadRepoTemplate("report-audit-a4");
+    const pkg = await loadRepoTemplate("reports/report-audit-a4");
     const slides = pkg.manifest.layouts.map(sampleSlide);
     const out = await exportCarousel(browser, {
       pkg,
@@ -126,7 +126,7 @@ describe.skipIf(!enabled)("export with Chromium", () => {
   }, 120_000);
 
   it("watermarks and renames a draft preview", async () => {
-    const pkg = await loadRepoTemplate("editorial-linkedin");
+    const pkg = await loadRepoTemplate("carousels/editorial-linkedin");
     const slides = pkg.manifest.layouts.slice(0, 5).map(sampleSlide);
     slides.push(sampleSlide(pkg.manifest.layouts.at(-1)!));
     const draft = await exportCarousel(browser, {
@@ -171,7 +171,7 @@ describe.skipIf(!enabled)("export with Chromium", () => {
   }, 60_000);
 
   it("runs the template editor render checks", async () => {
-    const pkg = await loadRepoTemplate("editorial-ig-4x5");
+    const pkg = await loadRepoTemplate("carousels/editorial-ig-4x5");
     const report = await renderCheckTemplate(browser, pkg, validateTemplatePackage(pkg.files));
     expect(
       report.checks.filter((c) => c.id === "render" || c.id === "overflow").map((c) => c.label),
@@ -185,7 +185,7 @@ describe.skipIf(!enabled)("export with Chromium", () => {
 
 describe("template ZIP import", () => {
   it("unpacks a zipped folder and refuses unsafe paths", async () => {
-    const pkg = await loadRepoTemplate("editorial-ig-4x5");
+    const pkg = await loadRepoTemplate("carousels/editorial-ig-4x5");
     const zipped: Record<string, Uint8Array> = {};
     for (const [k, v] of pkg.files) zipped[`editorial/${k}`] = v;
     zipped["editorial/.DS_Store"] = new Uint8Array([1]);

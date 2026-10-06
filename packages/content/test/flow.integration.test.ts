@@ -20,7 +20,7 @@ import {
 } from "@forgecy/db";
 import { LocalDiskDriver } from "@forgecy/files";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { setBrandGuard } from "../src/brand-guard";
+import { setBrandGuard } from "../src/carousels/brand-guard";
 import {
   approveOutline,
   createCarousel,
@@ -31,14 +31,14 @@ import {
   saveBrief,
   saveDraft,
   submitForReview,
-} from "../src/carousels";
+} from "../src/carousels/carousels";
 import {
   runGenerateOutline,
   runGenerateSlides,
   runProposePlan,
   runProposeStrategy,
   type PipelineDeps,
-} from "../src/pipeline";
+} from "../src/ai/pipeline";
 import {
   listProductUsage,
   noProducts,
@@ -63,7 +63,10 @@ async function codeOf(p: Promise<unknown>): Promise<string> {
 
 const manifest = JSON.parse(
   readFileSync(
-    path.resolve(import.meta.dirname, "../../../templates/editorial-ig-4x5/template.json"),
+    path.resolve(
+      import.meta.dirname,
+      "../../../templates/carousels/editorial-ig-4x5/template.json",
+    ),
     "utf8",
   ),
 );

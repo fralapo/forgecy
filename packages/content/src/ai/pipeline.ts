@@ -41,8 +41,8 @@ import {
 import type { StorageDriver } from "@forgecy/files";
 import { NeedsAttentionError, withLock } from "@forgecy/jobs";
 import type { z } from "zod";
-import { humanOnly, invalid, notFound, requireClient } from "./access";
-import { commercialUseFor, storeAsset } from "./assets";
+import { humanOnly, invalid, notFound, requireClient } from "../access";
+import { commercialUseFor, storeAsset } from "../assets";
 import {
   briefReady,
   createVersion,
@@ -50,7 +50,7 @@ import {
   isLocked,
   outlineOf,
   recordOutline,
-} from "./carousels";
+} from "../carousels/carousels";
 import {
   briefSchema,
   newSlideId,
@@ -60,8 +60,8 @@ import {
   type ContentSlide,
   type Outline,
   type Provenance,
-} from "./document";
-import { productSource, type ProductSummary } from "./products";
+} from "../document";
+import { productSource, type ProductSummary } from "../products";
 import {
   CONTENT_PROMPT_VERSION,
   EDIT_SLIDE_SYSTEM,
@@ -85,9 +85,9 @@ import {
   type CarouselPromptInput,
   type SlidesOutput,
 } from "./prompts";
-import { saveProposedPlan, saveStrategyProposals, type ProposedRubric } from "./strategy";
-import { clampSlideCount, getTemplate, pickLayout } from "./templates";
-import { frequencyLabel } from "./labels";
+import { saveProposedPlan, saveStrategyProposals, type ProposedRubric } from "../strategy";
+import { clampSlideCount, getTemplate, pickLayout } from "../carousels/templates";
+import { frequencyLabel } from "../labels";
 
 export interface PipelineDeps {
   db: Database;

@@ -5,7 +5,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./*": "./src/*.ts"
+    "./fields": "./src/products/fields.ts",
+    "./sensitive": "./src/products/sensitive.ts",
+    "./mapping": "./src/import/mapping.ts",
+    "./handlers": "./src/handlers.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

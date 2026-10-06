@@ -1,5 +1,5 @@
 {
-  "$schema": "../template.schema.json",
+  "$schema": "../../template.schema.json",
   "id": "editorial-linkedin",
   "name": "Editorial · LinkedIn document",
   "description": "LinkedIn PDF document with 8 layouts, the same structure as the Instagram carousel with a report-style layout.",

@@ -6,7 +6,7 @@
 import { confirmBrandCheckForApproval, getBrandCheck, runBrandCheck } from "@forgecy/brand-guard";
 import { approvedProducts } from "@forgecy/catalog";
 import { and, eq, products, type Database } from "@forgecy/db";
-import { setBrandGuard } from "./brand-guard";
+import { setBrandGuard } from "./carousels/brand-guard";
 import { setProductSource, type ProductSource, type ProductSummary } from "./products";
 
 type CatalogProduct = Awaited<ReturnType<typeof approvedProducts>>[number];

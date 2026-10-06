@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { confidenceLevels } from "@forgecy/core";
-import { fieldKeys, type FieldKey } from "./fields";
+import { fieldKeys, type FieldKey } from "../products/fields";
 import { mappingTargets, type MappingTarget } from "./mapping";
-import { claimKinds } from "./sensitive";
+import { claimKinds } from "../products/sensitive";
 
 /**
  * Brand Analyst prompts for the catalog import. Client files are untrusted: their

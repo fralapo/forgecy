@@ -1,7 +1,7 @@
 import { parse } from "csv-parse/sync";
 import { readSheet } from "read-excel-file/node";
-import { ImportError } from "./errors";
-import { IMPORT_LIMITS } from "./limits";
+import { ImportError } from "../import/errors";
+import { IMPORT_LIMITS } from "../import/limits";
 import { assertSafeOfficeFile } from "./zip";
 
 export interface SheetData {

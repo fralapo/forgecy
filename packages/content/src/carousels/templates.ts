@@ -13,7 +13,7 @@ import {
   type TemplateManifest,
 } from "@forgecy/carousel";
 import { and, eq, inArray, isNull, or, templates, type Database } from "@forgecy/db";
-import { notFound } from "./access";
+import { notFound } from "../access";
 
 export interface UsableTemplate {
   key: string;

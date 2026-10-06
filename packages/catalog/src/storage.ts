@@ -6,7 +6,7 @@ import path from "node:path";
 import type { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { contentKey, type StorageDriver } from "@forgecy/files";
-import { ImportError } from "./errors";
+import { ImportError } from "./import/errors";
 
 export interface TempFile {
   path: string;

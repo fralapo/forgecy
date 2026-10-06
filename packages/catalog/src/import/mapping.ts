@@ -1,7 +1,12 @@
 import { z } from "zod";
-import { sanitizeDraft, type FieldKey, type ProductDraft, type ProductVariant } from "./fields";
-import type { SourceRef } from "./meta";
-import { htmlToText, normalizeKey, splitList } from "./text";
+import {
+  sanitizeDraft,
+  type FieldKey,
+  type ProductDraft,
+  type ProductVariant,
+} from "../products/fields";
+import type { SourceRef } from "../products/meta";
+import { htmlToText, normalizeKey, splitList } from "../parsers/text";
 
 /** Mapping targets offered for each column (page 73, step 2). */
 export const mappingTargets = [

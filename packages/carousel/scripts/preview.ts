@@ -1,7 +1,7 @@
 /**
  * Render every layout of a template package to PNG, with sample and long texts, and
  * print validation and render issues. Usage:
- *   pnpm --filter @forgecy/carousel preview ../../templates/editorial-ig-4x5 /tmp/out
+ *   pnpm --filter @forgecy/carousel preview ../../templates/carousels/editorial-ig-4x5 /tmp/out
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";

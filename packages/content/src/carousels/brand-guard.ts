@@ -9,9 +9,9 @@
 import { FORMATS, findLayout, type TemplateManifest } from "@forgecy/carousel";
 import type { Actor } from "@forgecy/core";
 import type { Database } from "@forgecy/db";
-import type { Executor } from "./access";
-import type { CarouselDocument, ContentChannel } from "./document";
-import type { ProductSummary } from "./products";
+import type { Executor } from "../access";
+import type { CarouselDocument, ContentChannel } from "../document";
+import type { ProductSummary } from "../products";
 
 // ---- Input (same shape as the guard's GuardContent) ----
 

@@ -66,7 +66,7 @@ describe("renderSlideHtml", () => {
   });
 
   it("is deterministic and self-contained for the repository templates", async () => {
-    const pkg = await loadRepoTemplate("editorial-ig-4x5");
+    const pkg = await loadRepoTemplate("carousels/editorial-ig-4x5");
     for (const layout of pkg.manifest.layouts) {
       const a = renderSlideHtml({ pkg, slide: sampleSlide(layout), index: 1, total: 7 });
       const b = renderSlideHtml({ pkg, slide: sampleSlide(layout), index: 1, total: 7 });

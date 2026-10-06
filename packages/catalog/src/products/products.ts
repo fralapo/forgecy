@@ -11,7 +11,7 @@ import {
   type Database,
 } from "@forgecy/db";
 import { completenessOf } from "./completeness";
-import type { ActingUser, DbLike } from "./db";
+import type { ActingUser, DbLike } from "../db";
 import {
   emptyFields,
   fieldDef,

@@ -15,15 +15,20 @@ import {
 } from "@forgecy/db";
 import type { StorageDriver } from "@forgecy/files";
 import { z } from "zod";
-import type { ActingUser, DbLike } from "./db";
+import type { ActingUser, DbLike } from "../db";
 import { ImportError } from "./errors";
-import { heuristicProposal, inspectFile, type FileMeta, type MappingProposalData } from "./inspect";
+import {
+  heuristicProposal,
+  inspectFile,
+  type FileMeta,
+  type MappingProposalData,
+} from "../parsers/inspect";
 import type { ImportPhase } from "./jobs";
 import { IMPORT_LIMITS } from "./limits";
 import { columnMappingSchema, headerSignature, type ColumnMapping } from "./mapping";
-import { proposeRoute, routesFor, sniffFile } from "./sniff";
-import { readTempFile, storeTempFile, type TempFile } from "./storage";
-import { baseName, extensionOf } from "./text";
+import { proposeRoute, routesFor, sniffFile } from "../parsers/sniff";
+import { readTempFile, storeTempFile, type TempFile } from "../storage";
+import { baseName, extensionOf } from "../parsers/text";
 
 // eslint-disable-next-line no-control-regex -- stripping control characters is the point
 const CONTROL_CHARS = /[\u0000-\u001f]/g;
@@ -364,7 +369,7 @@ export async function rereadCsv(
     .where(and(eq(productImportFiles.id, input.fileId), eq(productImportFiles.importId, imp.id)));
   if (!file?.storageKey || file.format !== "csv")
     throw new ForgecyError("not_found", "CSV file not found");
-  const { readStored } = await import("./storage");
+  const { readStored } = await import("../storage");
   const data = await readStored(storage, file.storageKey, IMPORT_LIMITS.sheetBytes);
   const delimiter =
     { comma: ",", semicolon: ";", tab: "\t", pipe: "|" }[input.delimiter] ?? input.delimiter;
