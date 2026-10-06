@@ -29,6 +29,7 @@ import {
   isNull,
   jobsLog,
   ne,
+  notify,
   sql,
   type Database,
 } from "@forgecy/db";
@@ -635,19 +636,38 @@ export async function finishRun(db: Database, runId: string) {
   const counts = (await countsFor(db, [runId])).get(runId);
   if (!counts || counts.queued > 0 || counts.running > 0) return;
   const status = runOutcome(counts);
-  await db
+  const [closed] = await db
     .update(automationRuns)
     .set({ status, endedAt: new Date(), updatedAt: new Date() })
-    .where(
-      and(eq(automationRuns.id, runId), inArray(automationRuns.status, ["running", "paused"])),
-    );
+    .where(and(eq(automationRuns.id, runId), inArray(automationRuns.status, ["running", "paused"])))
+    .returning({ id: automationRuns.id });
   // The automation stays “active” only while a run is in progress.
   const [run] = await db.select().from(automationRuns).where(eq(automationRuns.id, runId));
-  if (run)
-    await db
-      .update(automations)
-      .set({ status: "draft", statusReason: null, updatedAt: new Date() })
-      .where(and(eq(automations.id, run.automationId), eq(automations.status, "active")));
+  if (!run) return;
+  await db
+    .update(automations)
+    .set({ status: "draft", statusReason: null, updatedAt: new Date() })
+    .where(and(eq(automations.id, run.automationId), eq(automations.status, "active")));
+  // Whoever started it hears once how it ended; a cancelled run was someone's own choice.
+  if (closed && status !== "cancelled") {
+    const [a] = await db
+      .select({ name: automations.name, clientId: automations.clientId })
+      .from(automations)
+      .where(eq(automations.id, run.automationId));
+    if (a)
+      await notify(db, {
+        kind: "automation_run_finished",
+        to: [run.startedBy],
+        clientId: a.clientId,
+        params: {
+          name: a.name,
+          completed: counts.completed,
+          failed: counts.failed,
+          total: counts.total,
+        },
+        href: `/automations/${run.automationId}?tab=runs&run=${run.id}`,
+      });
+  }
 }
 
 async function createRun(

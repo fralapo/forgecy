@@ -30,6 +30,7 @@ import {
   eq,
   inArray,
   isNull,
+  notify,
   recordAuditEvent,
   sql,
   type Database,
@@ -786,6 +787,14 @@ export async function submitForReview(
       clientId: input.clientId,
       meta: { number: draft.number, rev: draft.rev },
     });
+    await notify(tx, {
+      kind: "brand_review_requested",
+      to: "everyone",
+      except: actor.id,
+      clientId: input.clientId,
+      params: { version: draft.number },
+      href: (slug) => `/brand/${slug}/versions/${draft.number}/approve`,
+    });
   });
 }
 
@@ -813,6 +822,15 @@ export async function returnToDraft(
       clientId: input.clientId,
       meta: { number: draft.number },
     });
+    if (input.comment)
+      await notify(tx, {
+        kind: "brand_changes_requested",
+        to: [draft.submittedBy],
+        except: actor.id,
+        clientId: input.clientId,
+        params: { version: draft.number },
+        href: (slug) => `/brand/${slug}`,
+      });
   });
 }
 
@@ -958,6 +976,14 @@ export async function approveAndPublish(
           removedTokens,
         },
       });
+    await notify(tx, {
+      kind: "brand_published",
+      to: [draft.submittedBy, draft.createdBy, ...draft.editorIds],
+      except: actor.id,
+      clientId: input.clientId,
+      params: { version: draft.number },
+      href: (slug) => `/brand/${slug}`,
+    });
     return {
       versionId: draft.id,
       number: draft.number,

@@ -13,8 +13,11 @@ import {
   createDb,
   eq,
   jobs,
+  listNotifications,
+  markNotificationsRead,
   sql,
   templates,
+  unreadNotificationCount,
   users,
   type Database,
 } from "@forgecy/db";
@@ -533,6 +536,17 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
       acknowledged: [finding.key],
     });
     setBrandGuard(null);
+    // Bell: everyone but Anna heard about the review; Anna hears Bruno approved.
+    const toAnna = await listNotifications(db, anna.id);
+    expect(toAnna.map((n) => n.kind)).toContain("content_approved");
+    expect(toAnna.map((n) => n.kind)).not.toContain("content_review_requested");
+    const toBruno = await listNotifications(db, bruno.id, { unreadOnly: true });
+    const asked = toBruno.find((n) => n.kind === "content_review_requested");
+    expect(asked?.href).toMatch(new RegExp(`/carousels/${c.id}/review$`));
+    expect(asked?.params).toMatchObject({ version: version.number, title: c.title });
+    expect(await unreadNotificationCount(db, bruno.id)).toBeGreaterThan(0);
+    await markNotificationsRead(db, bruno.id);
+    expect(await unreadNotificationCount(db, bruno.id)).toBe(0);
 
     const prepared = await prepareExport(db, anna, { clientId, id: c.id, draft: false });
     expect(prepared.version.id).toBe(version.id);

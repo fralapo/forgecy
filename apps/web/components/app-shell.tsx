@@ -1,4 +1,6 @@
+import { getDb, unreadNotificationCount } from "@forgecy/db";
 import {
+  Bell,
   Building2,
   Fingerprint,
   GalleryHorizontal,
@@ -33,10 +35,28 @@ const nav = [
 
 export async function AppShell({ user, children }: { user: CurrentUser; children: ReactNode }) {
   const t = await getTranslations();
+  const unread = await unreadNotificationCount(getDb(), user.id);
   return (
     <div className="grid min-h-dvh grid-cols-[15rem_1fr]">
       <aside className="flex flex-col border-r border-subtle bg-surface">
-        <div className="px-6 py-5 font-display text-heading-md text-fg">{t("common.appName")}</div>
+        <div className="flex items-center justify-between gap-2 py-5 pr-3 pl-6">
+          <span className="font-display text-heading-md text-fg">{t("common.appName")}</span>
+          <Link
+            href="/notifications"
+            aria-label={t("notifications.bell", { count: unread })}
+            className="relative rounded-md p-2 text-fg-muted hover:bg-app hover:text-fg focus-visible:outline-2 focus-visible:outline-focus"
+          >
+            <Bell aria-hidden className="size-5" />
+            {unread > 0 ? (
+              <span
+                aria-hidden
+                className="absolute -top-0.5 -right-0.5 min-w-5 rounded-full bg-primary px-1 text-center text-label text-primary-foreground"
+              >
+                {unread > 99 ? "99+" : unread}
+              </span>
+            ) : null}
+          </Link>
+        </div>
         <SearchBox />
         <nav aria-label={t("shell.mainNavigation")} className="flex-1 px-3">
           <ul className="space-y-1">

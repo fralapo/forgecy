@@ -28,6 +28,7 @@ import {
   eq,
   inArray,
   ne,
+  notify,
   prospectProfiles,
   recordAuditEvent,
   siteScans,
@@ -526,6 +527,14 @@ export async function submitReport(
       actor,
     );
     await event(tx, actor, "audit.report.submit", row, audit.clientId);
+    await notify(tx, {
+      kind: "report_review_requested",
+      to: input.reviewerId ? [input.reviewerId] : "everyone",
+      except: userIdOf(actor),
+      clientId: audit.clientId,
+      params: { version: report.version },
+      href: (slug) => `/audit/${slug}/report`,
+    });
     return row;
   });
 }
@@ -596,6 +605,14 @@ export async function approveReport(
     await event(tx, actor, "audit.report.approve", row, audit.clientId, {
       selfApproved: report.submittedBy === userIdOf(actor),
     });
+    await notify(tx, {
+      kind: "report_approved",
+      to: [report.submittedBy],
+      except: userIdOf(actor),
+      clientId: audit.clientId,
+      params: { version: report.version },
+      href: (slug) => `/audit/${slug}/report`,
+    });
     return row;
   });
 }
@@ -620,6 +637,14 @@ export async function requestReportChanges(
       actor,
     );
     await event(tx, actor, "audit.report.request_changes", row, audit.clientId);
+    await notify(tx, {
+      kind: "report_changes_requested",
+      to: [report.submittedBy],
+      except: userIdOf(actor),
+      clientId: audit.clientId,
+      params: { version: report.version },
+      href: (slug) => `/audit/${slug}/report`,
+    });
     return row;
   });
 }
