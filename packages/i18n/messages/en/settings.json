@@ -6,7 +6,13 @@
     "language": "Interface language",
     "languageHint": "Only changes what you see. Client deliverables keep the language chosen for each client or content.",
     "automatic": "Automatic (browser: {language})",
-    "saved": "Language updated."
+    "saved": "Language updated.",
+    "theme": "Theme",
+    "themeSystem": "Same as the system",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeHint": "Saved on this browser.",
+    "themeSaved": "Theme updated."
   },
   "instance": {
     "title": "Instance",
