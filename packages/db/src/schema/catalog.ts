@@ -7,6 +7,7 @@ import {
   productImageStatuses,
   productImportStatuses,
   productStatuses,
+  type MessageRef,
 } from "@forgecy/core";
 import { sql } from "drizzle-orm";
 import {
@@ -279,6 +280,8 @@ export const productImportItems = pgTable(
       onDelete: "set null",
     }),
     matchReason: text("match_reason"),
+    /** `matchReason` as a message reference, shown in the reader's language. */
+    matchRef: jsonb("match_ref").$type<MessageRef>(),
     /** Snapshot of the matched product's revision when compared. */
     matchRevision: integer("match_revision"),
     /** Differences with approved values: [{ field, approved, incoming }]. */
@@ -288,6 +291,8 @@ export const productImportItems = pgTable(
     resolution: text("resolution"),
     productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
     discardReason: text("discard_reason"),
+    /** `discardReason` as a message reference; null for reasons typed by a person. */
+    discardRef: jsonb("discard_ref").$type<MessageRef>(),
     decidedBy: uuid("decided_by").references(() => users.id, { onDelete: "set null" }),
     decidedAt: timestamp("decided_at", { withTimezone: true }),
     createdAt: createdAt(),

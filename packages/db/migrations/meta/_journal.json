@@ -89,8 +89,22 @@
     {
       "idx": 12,
       "version": "7",
-      "when": 1791298114951,
-      "tag": "0012_mcp_connections",
+      "when": 1791299434746,
+      "tag": "0014_stored_text_refs",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791301795658,
+      "tag": "0015_client_approved_providers",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791303791450,
+      "tag": "0016_mcp_connections",
       "breakpoints": true
     }
   ]

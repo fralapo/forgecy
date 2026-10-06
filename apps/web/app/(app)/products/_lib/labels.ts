@@ -1,4 +1,5 @@
-import type { ApprovalBlocker, FileMeta, SourceRef } from "@forgecy/catalog";
+import type { ApprovalBlocker, CsvLabels, FileMeta, SourceRef } from "@forgecy/catalog";
+import { productStatuses, type ProductStatus } from "@forgecy/core";
 import type { FieldKey } from "@forgecy/catalog/fields";
 import type { Format } from "@forgecy/i18n";
 import type { useTranslations } from "next-intl";
@@ -78,12 +79,13 @@ export function blockerText(t: ProductsT, b: ApprovalBlocker): string {
 }
 
 /**
- * Reasons stored by the import in English (the schema has no reference column for them):
- * the known ones are translated here; reasons typed by a person or by the AI stay as written.
+ * Reasons stored in English before `discard_ref` existed: the known ones are translated
+ * here; reasons typed by a person stay as written.
  */
 export function discardText(t: ProductsT, reason: string): string {
   if (reason === "Product without a name") return t("discards.noName");
   if (reason === "Rejected in review") return t("discards.inReview");
+  if (reason === "Rejected in bulk in review") return t("discards.inBulkReview");
   let m = /^Row (\d+): missing name$/.exec(reason);
   if (m) return t("discards.rowNoName", { row: m[1]! });
   m = /^Row (\d+): variation without a parent product$/.exec(reason);
@@ -93,7 +95,7 @@ export function discardText(t: ProductsT, reason: string): string {
   return reason;
 }
 
-/** Why an imported row looks like a catalog product (stored in English by the import). */
+/** Why an imported row looks like a catalog product (rows stored before `match_ref`). */
 export function matchReasonText(t: ProductsT, reason: string | null): string {
   if (!reason) return t("matchReasons.possible");
   if (reason === "Same name and category") return t("matchReasons.nameCategory");
@@ -130,4 +132,19 @@ export function validFileText(t: ProductsT, f: { kind: string; meta: unknown }):
     default:
       return t("files.valid");
   }
+}
+
+/** Texts of the CSV exports in the language of the person exporting. */
+export function csvLabels(t: ProductsT): CsvLabels {
+  return {
+    status: t("csv.status"),
+    source: t("csv.source"),
+    reason: t("csv.reason"),
+    field: (key) => fieldLabel(t, key),
+    statusOf: (status) =>
+      productStatuses.includes(status as ProductStatus)
+        ? t(`status.${status as ProductStatus}`)
+        : status,
+    sourceOf: (row) => (row.origin ? sourceText(t, row.origin) : ""),
+  };
 }

@@ -32,6 +32,7 @@ import {
 import { ActionButton } from "../_components/action-button";
 import { DeleteProspect, PolicySelect } from "../_components/prospect-admin";
 import { ProspectForm } from "../_components/prospect-form";
+import { auditRefText } from "../_lib/findings";
 import { sourceStatusVariant } from "../_lib/labels";
 import { readinessDetail, readinessLabel } from "../_lib/readiness";
 import { readDeps } from "../_lib/server";
@@ -52,6 +53,7 @@ export default async function ProspectOverviewPage({
   const { client, profile, audit } = prospect;
   const t = await getTranslations("audit");
   const format = await getFormat();
+  const rt = await auditRefText();
   const usd = (value: number) =>
     format.number(value, { style: "currency", currency: "USD", currencyDisplay: "narrowSymbol" });
   const activeAudit =
@@ -281,7 +283,9 @@ export default async function ProspectOverviewPage({
                   <span className="text-body-md text-fg">{t(`channel.${c.channel}`)}</span>
                   <span className="flex items-center gap-2">
                     {c.unavailableReason ? (
-                      <span className="text-body-sm text-fg-muted">{c.unavailableReason}</span>
+                      <span className="text-body-sm text-fg-muted">
+                        {rt(c.unavailableRef, c.unavailableReason)}
+                      </span>
                     ) : null}
                     <Badge variant={sourceStatusVariant[c.status]}>
                       {t(`sourceStatus.${c.status}`)}

@@ -12,6 +12,7 @@ import { assertCan, ForgecyError, localeSchema, PermissionDeniedError } from "@f
 import { eq, getDb, users } from "@forgecy/db";
 import type { Route } from "next";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
@@ -19,6 +20,7 @@ import { env } from "@/lib/env";
 import { errorMessage, firstIssue, vmsg } from "@/lib/i18n";
 import { PASSWORD_MIN } from "@/lib/password";
 import { requireUser } from "@/lib/session";
+import { isTheme, THEME_COOKIE } from "@/lib/theme";
 import { createPasswordUser } from "@/lib/users";
 
 const newUserSchema = z.object({
@@ -68,6 +70,20 @@ export async function setCommercialUseAction(
   }
   revalidatePath("/settings/ai-providers");
   return { ok: true };
+}
+
+/** Saves the interface theme on this browser; empty means "follow the system". */
+export async function setThemeAction(theme: string): Promise<void> {
+  await requireUser();
+  const jar = await cookies();
+  if (isTheme(theme))
+    jar.set(THEME_COOKIE, theme, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 400,
+      sameSite: "lax",
+      httpOnly: true,
+    });
+  else jar.delete(THEME_COOKIE);
 }
 
 export type LocaleState = { error?: string; ok?: boolean };

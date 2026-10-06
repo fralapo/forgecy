@@ -4,6 +4,7 @@ import { ExportCancelledError, exportCarousel } from "@forgecy/carousel/export";
 import type { Actor, ReportVariant } from "@forgecy/core";
 import { auditReports, eq } from "@forgecy/db";
 import { contentKey, sha256 } from "@forgecy/files";
+import { getTranslator } from "@forgecy/i18n";
 import { UnrecoverableError, type JobContext } from "@forgecy/jobs";
 import type { Browser } from "playwright-core";
 import { reportSlides } from "../report/slides";
@@ -64,7 +65,9 @@ export async function runReportExport(
       language: doc.language,
       meta: {
         client: client.name,
-        content: `Audit ${doc.date}`,
+        content: getTranslator(doc.language, "deliverable")("auditReport.pdfTitle", {
+          date: doc.date,
+        }),
         version: report.version,
         ...(report.approvedAt ? { approvedAt: report.approvedAt.toISOString() } : {}),
       },
@@ -72,7 +75,8 @@ export async function runReportExport(
       isCancelled: () => ctx.isCancelled(),
     });
   } catch (err) {
-    if (err instanceof ExportCancelledError) throw new UnrecoverableError(err.message);
+    if (err instanceof ExportCancelledError)
+      throw Object.assign(new UnrecoverableError(err.message), { ref: err.ref });
     throw err;
   }
   const pdf = result.files.find((f) => f.kind === "pdf");

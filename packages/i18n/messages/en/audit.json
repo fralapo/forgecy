@@ -208,7 +208,7 @@
       "it": "Italian"
     },
     "aiPolicy": "AI policy",
-    "aiPolicyFixed": "External AI allowed. Only an Admin can change it.",
+    "aiPolicyFixed": "{policy}. Only an Admin can change it.",
     "saved": "Data saved.",
     "create": "Create prospect",
     "save": "Save changes"
@@ -882,6 +882,48 @@
       "dmy": "dd/mm/yyyy",
       "mdy": "mm/dd/yyyy",
       "ymd": "yyyy-mm-dd"
+    }
+  },
+  "stored": {
+    "crawl": {
+      "hostLocal": "{host} points to the local network: Forgecy does not read it.",
+      "robotsBlocked": "robots.txt does not allow reading the website. Forgecy does not bypass it.",
+      "unreachable": "We cannot reach {host}: {detail}",
+      "httpError": "{host} responds with error {status}.",
+      "addressLocal": "Address on the local network: {url}",
+      "timeout": "Timeout after {seconds} s",
+      "noResponse": "No response from {url}",
+      "browserUnavailable": "Chromium unavailable: {detail}",
+      "internal": "Internal error while reading the website. The details are in the worker logs.",
+      "timeLimit": "Time limit reached: pages already read were kept",
+      "stopped": "Scan stopped: pages already read were kept",
+      "stoppedByPerson": "Scan stopped by a person"
+    },
+    "skip": {
+      "robots": "Excluded by robots.txt",
+      "redirect": "Redirects to another website",
+      "login": "Requires login",
+      "http": "Error {status}",
+      "timeout": "Timeout",
+      "unreachable": "Unreachable"
+    },
+    "unavailable": {
+      "noWebsite": "No website given",
+      "channelSkipped": "Channel skipped",
+      "websiteUnreadable": "Website not readable",
+      "auditWithoutCompetitors": "Audit without competitors"
+    },
+    "confidence": {
+      "many": "{count} consistent elements: {what}",
+      "two": "2 elements: {what}",
+      "one": "One element only: {what}",
+      "channels": "Values verified on {count} channels: {what}",
+      "noVerified": "No verified values",
+      "observations": "Based on {count, plural, one {# accepted observation} other {# accepted observations}}",
+      "sourceRemoved": "A source was removed: recheck the evidence",
+      "evidenceByPerson": "{count, plural, one {# evidence item} other {# evidence items}} given by a person",
+      "linkedByPerson": "{count, plural, one {# linked item} other {# linked items}} given by a person",
+      "noEvidence": "No evidence attached"
     }
   }
 }

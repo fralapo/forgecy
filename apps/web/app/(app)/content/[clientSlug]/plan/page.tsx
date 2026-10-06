@@ -1,4 +1,4 @@
-import { FORMATS } from "@forgecy/carousel";
+import { FORMATS, type FormatId } from "@forgecy/carousel";
 import {
   channelLabels,
   getNewCarouselOptions,
@@ -6,7 +6,7 @@ import {
   planItemRowToInput,
   proposePlanJob,
   provenanceSchema,
-  releasedFormats,
+  offeredFormats,
   type CarouselParamsInput,
   type ContentChannel,
   type StrategyOverview,
@@ -19,7 +19,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
-import { getFormat, refText } from "@/lib/i18n";
+import { getFormat, getRefText, refText } from "@/lib/i18n";
 import { decidePlanItemAction } from "../../actions";
 import { ActionButton } from "../../_components/action-button";
 import {
@@ -32,6 +32,7 @@ import {
 import { RefreshWhile } from "../../_components/refresh-while";
 import { carouselPath } from "../../_lib/paths";
 import { loadClient } from "../../_lib/server";
+import { sourceLabels } from "../../_lib/provenance";
 
 export async function generateMetadata() {
   const t = await getTranslations("content.plan");
@@ -60,6 +61,8 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
   const { db, user, client } = await loadClient(clientSlug);
   const t = await getTranslations("content.plan");
   const tl = await getTranslations("content.labels");
+  const tf = await getTranslations("templates");
+  const rt = await getRefText();
   const format = await getFormat();
   const actor = user.actor;
   const [o, newOptions, [lastJob]] = await Promise.all([
@@ -87,9 +90,9 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
     rubrics: o.rubrics
       .filter((r) => r.status === "accepted")
       .map((r) => ({ id: r.id, name: r.name, pillarId: r.pillarId })),
-    formats: releasedFormats.map((id) => ({
+    formats: offeredFormats(newOptions.templates.map((t) => t.format)).map((id) => ({
       id,
-      label: FORMATS[id].label,
+      label: tf(`format.${id}`),
       channel: FORMATS[id].channel as ContentChannel,
     })),
     products: o.hasCatalog ? o.products.map((p) => ({ id: p.id, name: p.name })) : [],
@@ -140,7 +143,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
         ) : null}
         <p className="text-body-sm text-fg-muted">
           {channelLabels[item.channel as ContentChannel] ?? item.channel} ·{" "}
-          {FORMATS[item.format as keyof typeof FORMATS]?.label ?? item.format} ·{" "}
+          {item.format in FORMATS ? tf(`format.${item.format as FormatId}`) : item.format} ·{" "}
           {pillar ?? t("pillarRemoved")}
           {rubric ? ` › ${rubric}` : ""}
           {products ? ` · ${products}` : ""}
@@ -209,6 +212,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
           <AskPlanForm
             {...base}
             running={running}
+            formats={options.formats}
             disabledReason={
               !o.brand ? t("reason.brand") : !options.pillars.length ? t("reason.pillar") : null
             }
@@ -230,7 +234,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
                 count: proposed.items.length,
               })}
               agent={tl(`agent.${p ? p.agent : "planner"}`)}
-              sources={p?.sources.map((s) => ({ label: s.label })) ?? []}
+              sources={sourceLabels(p?.sources, rt)}
             >
               {p?.rationale ? <p className="text-body-sm text-fg">{p.rationale}</p> : null}
               {p?.instruction ? (

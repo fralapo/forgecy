@@ -7,6 +7,7 @@ import {
   type AiPolicy,
   type SocialChannel,
 } from "@forgecy/core";
+import { getDefaultAiPolicy } from "@forgecy/ai";
 import { localizedError } from "@forgecy/i18n";
 import {
   and,
@@ -104,7 +105,8 @@ export const prospectInputSchema = z
     reportLanguage: z.enum(["it", "en"]).default("en"),
     ownerId: z.uuid().optional(),
     socialUrls: socialUrlsSchema,
-    aiPolicy: z.enum(aiPolicies).default("external_allowed"),
+    /** Omitted: the default policy an Admin set for new clients. */
+    aiPolicy: z.enum(aiPolicies).optional(),
   })
   .superRefine((v, ctx) => {
     if (v.objectives.includes("other") && !v.otherObjective)
@@ -183,7 +185,10 @@ export async function createProspect(
 ): Promise<{ id: string; slug: string }> {
   assertCan(actor, "project.edit");
   const data = prospectInputSchema.parse(input);
-  if (data.aiPolicy !== "external_allowed") assertCan(actor, "ai.policies.manage");
+  const { policy: defaultPolicy } = await getDefaultAiPolicy(deps.db);
+  const aiPolicy = data.aiPolicy ?? defaultPolicy;
+  // Anyone gets the Admin's default; choosing another policy is an Admin decision.
+  if (aiPolicy !== defaultPolicy) assertCan(actor, "ai.policies.manage");
   const slug = await uniqueSlug(deps.db, data.name);
   const userId = userIdOf(actor);
   return deps.db.transaction(async (tx) => {
@@ -196,7 +201,7 @@ export async function createProspect(
         websiteUrl: data.websiteUrl ?? null,
         sector: data.sector ?? null,
         notes: data.notes ?? null,
-        aiPolicy: data.aiPolicy,
+        aiPolicy,
       })
       .returning({ id: clients.id });
     const id = row!.id;
@@ -216,7 +221,7 @@ export async function createProspect(
       entity: "client",
       entityId: id,
       clientId: id,
-      meta: { aiPolicy: data.aiPolicy },
+      meta: { aiPolicy },
     });
     return { id, slug };
   });

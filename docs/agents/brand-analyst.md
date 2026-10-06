@@ -6,6 +6,7 @@ Forgecy AI agent. Not a role for people: it proposes, it does not approve.
 - **Input:** Website pages and CSS, Audit findings, imported documents (brand_sources).
 - **Output:** Proposed changes to the Brand Identity (JSON Patch) with sources and server-computed confidence.
 - **Phase:** MVP, with the Audit (M2) and the Brand Identity (M4)
+- **Playbooks:** `website-review` and `positioning` (website), `social-content` (social channels), `positioning` (competitors). See [packages/ai/src/playbooks](../../packages/ai/src/playbooks/).
 
 ## Constraints
 

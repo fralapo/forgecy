@@ -1,0 +1,1 @@
+ALTER TABLE "clients" ADD COLUMN "approved_providers" "ai_provider"[] DEFAULT '{}' NOT NULL;

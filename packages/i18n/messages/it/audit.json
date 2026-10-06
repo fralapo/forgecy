@@ -208,7 +208,7 @@
       "it": "Italiano"
     },
     "aiPolicy": "Policy AI",
-    "aiPolicyFixed": "AI esterna consentita. Solo un Admin può modificarla.",
+    "aiPolicyFixed": "{policy}. Solo un Admin può modificarla.",
     "saved": "Dati salvati.",
     "create": "Crea prospect",
     "save": "Salva modifiche"
@@ -882,6 +882,48 @@
       "dmy": "gg/mm/aaaa",
       "mdy": "mm/gg/aaaa",
       "ymd": "aaaa-mm-gg"
+    }
+  },
+  "stored": {
+    "crawl": {
+      "hostLocal": "{host} punta alla rete locale: Forgecy non lo legge.",
+      "robotsBlocked": "robots.txt non permette di leggere il sito. Forgecy non lo aggira.",
+      "unreachable": "Non riusciamo a raggiungere {host}: {detail}",
+      "httpError": "{host} risponde con l’errore {status}.",
+      "addressLocal": "Indirizzo della rete locale: {url}",
+      "timeout": "Tempo scaduto dopo {seconds} s",
+      "noResponse": "Nessuna risposta da {url}",
+      "browserUnavailable": "Chromium non disponibile: {detail}",
+      "internal": "Errore interno durante la lettura del sito. I dettagli sono nei log del worker.",
+      "timeLimit": "Tempo massimo raggiunto: le pagine già lette sono state tenute",
+      "stopped": "Lettura interrotta: le pagine già lette sono state tenute",
+      "stoppedByPerson": "Lettura interrotta da una persona"
+    },
+    "skip": {
+      "robots": "Esclusa da robots.txt",
+      "redirect": "Rimanda a un altro sito",
+      "login": "Richiede l’accesso",
+      "http": "Errore {status}",
+      "timeout": "Tempo scaduto",
+      "unreachable": "Non raggiungibile"
+    },
+    "unavailable": {
+      "noWebsite": "Nessun sito indicato",
+      "channelSkipped": "Canale saltato",
+      "websiteUnreadable": "Sito non leggibile",
+      "auditWithoutCompetitors": "Audit senza concorrenti"
+    },
+    "confidence": {
+      "many": "{count} elementi coerenti: {what}",
+      "two": "2 elementi: {what}",
+      "one": "Un solo elemento: {what}",
+      "channels": "Valori verificati su {count} canali: {what}",
+      "noVerified": "Nessun valore verificato",
+      "observations": "Basata su {count, plural, one {# osservazione accettata} other {# osservazioni accettate}}",
+      "sourceRemoved": "Una fonte è stata rimossa: ricontrolla le prove",
+      "evidenceByPerson": "{count, plural, one {# prova indicata} other {# prove indicate}} da una persona",
+      "linkedByPerson": "{count, plural, one {# elemento collegato} other {# elementi collegati}} da una persona",
+      "noEvidence": "Nessuna prova allegata"
     }
   }
 }

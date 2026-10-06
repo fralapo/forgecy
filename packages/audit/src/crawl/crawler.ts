@@ -1,7 +1,7 @@
 import type { MessageRef } from "@forgecy/core";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import robotsParser from "robots-parser";
-import { CrawlError, type AuditErrorCode } from "../errors";
+import { CrawlError, crawlError, type AuditErrorCode } from "../errors";
 import { sameSite, type HostCheck } from "../url";
 import { AUDIT_USER_AGENT_TOKEN, type FetchedPage, type PageFetcher } from "./fetcher";
 
@@ -19,9 +19,19 @@ function detailOf(key: MessageKey, values?: MessageValues) {
   return { detail: englishMessage(key, values), detailRef: messageRef(key, values) };
 }
 
+function skip(
+  key: "robots" | "redirect" | "login" | "http" | "timeout" | "unreachable",
+  values?: MessageValues,
+) {
+  const k = `audit.stored.skip.${key}` as const;
+  return { reason: englishMessage(k, values), ref: messageRef(k, values) };
+}
+
 export interface SkippedPage {
   url: string;
+  /** English, for logs; `ref` is what the interface shows. */
   reason: string;
+  ref: MessageRef;
   code: AuditErrorCode | "LOGIN" | "HTTP";
 }
 
@@ -161,10 +171,9 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
   const home = canonicalUrl(root.toString());
 
   if (!(await options.hostCheck(home))) {
-    throw new CrawlError(
-      "AUD-HOST-BLOCKED",
-      `${root.hostname} points to the local network: Forgecy does not read it.`,
-    );
+    throw crawlError("AUD-HOST-BLOCKED", "audit.stored.crawl.hostLocal", {
+      host: root.hostname,
+    });
   }
 
   // 1. robots.txt
@@ -181,10 +190,7 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
     ...detailOf(robotsFound ? "audit.scan.robotsFound" : "audit.scan.robotsMissing"),
   });
   if (blockedAll) {
-    throw new CrawlError(
-      "AUD-ROBOTS-BLOCKED",
-      "robots.txt does not allow reading the website. Forgecy does not bypass it.",
-    );
+    throw crawlError("AUD-ROBOTS-BLOCKED", "audit.stored.crawl.robotsBlocked");
   }
 
   // 2. Home + discovery
@@ -198,17 +204,17 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
   } catch (err) {
     await progress({ step: "discovery", status: "failed" });
     if (err instanceof CrawlError) throw err;
-    throw new CrawlError(
-      "SOURCE-UNAVAILABLE",
-      `We cannot reach ${root.hostname}: ${(err instanceof Error ? err.message : String(err)).split("\n")[0]!.slice(0, 160)}`,
-    );
+    throw crawlError("SOURCE-UNAVAILABLE", "audit.stored.crawl.unreachable", {
+      host: root.hostname,
+      detail: (err instanceof Error ? err.message : String(err)).split("\n")[0]!.slice(0, 160),
+    });
   }
   if (homePage.status >= 400 || homePage.status === 0) {
     await progress({ step: "discovery", status: "failed" });
-    throw new CrawlError(
-      "SOURCE-UNAVAILABLE",
-      `${root.hostname} responds with error ${homePage.status}.`,
-    );
+    throw crawlError("SOURCE-UNAVAILABLE", "audit.stored.crawl.httpError", {
+      host: root.hostname,
+      status: homePage.status,
+    });
   }
   const sitemapUrls: string[] = [];
   for (const sm of robots.getSitemaps().length
@@ -254,7 +260,7 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
       break;
     }
     if (!isAllowed(url)) {
-      skipped.push({ url, reason: "Excluded by robots.txt", code: "AUD-ROBOTS-BLOCKED" });
+      skipped.push({ url, ...skip("robots"), code: "AUD-ROBOTS-BLOCKED" });
       continue;
     }
     try {
@@ -263,11 +269,11 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
         timeoutMs: Math.min(options.pageTimeoutMs, Math.max(1000, deadline - now())),
       });
       if (!sameSite(page.finalUrl, home)) {
-        skipped.push({ url, reason: "Redirects to another website", code: "HTTP" });
+        skipped.push({ url, ...skip("redirect"), code: "HTTP" });
       } else if (page.requiresLogin || LOGIN_PATH.test(new URL(page.finalUrl).pathname)) {
-        skipped.push({ url, reason: "Requires login", code: "LOGIN" });
+        skipped.push({ url, ...skip("login"), code: "LOGIN" });
       } else if (page.status >= 400) {
-        skipped.push({ url, reason: `Error ${page.status}`, code: "HTTP" });
+        skipped.push({ url, ...skip("http", { status: page.status }), code: "HTTP" });
       } else {
         pages.push(page);
         await options.onPage?.(page, pages.length - 1);
@@ -276,7 +282,7 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
       const code = err instanceof CrawlError ? err.code : "SOURCE-UNAVAILABLE";
       skipped.push({
         url,
-        reason: code === "AUD-CRAWL-TIMEOUT" ? "Timeout" : "Unreachable",
+        ...skip(code === "AUD-CRAWL-TIMEOUT" ? "timeout" : "unreachable"),
         code,
       });
     }

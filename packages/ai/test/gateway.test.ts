@@ -86,16 +86,14 @@ describe("policy", () => {
     expect(ledger.entries[0]?.status).toBe("blocked");
   });
 
-  it("external_restricted uses only approved providers", async () => {
-    const { gateway, anthropic, openai } = setup();
+  it("external_restricted uses only the providers approved for the client", async () => {
+    const { gateway, anthropic, openai, ledger } = setup();
+    ledger.setApprovedProviders(baseReq.clientId, ["openai"]);
     openai.push({ json: { title: "Hook", slides: 7 } });
-    const res = await gateway.generateObject({
-      ...baseReq,
-      clientPolicy: "external_restricted",
-      approvedProviders: ["openai"],
-    });
+    const res = await gateway.generateObject({ ...baseReq, clientPolicy: "external_restricted" });
     expect(res.provider).toBe("openai");
     expect(anthropic.calls).toHaveLength(0);
+    // A request can narrow the list (nothing confirmed yet) but never widen it.
     await expect(
       gateway.generateObject({
         ...baseReq,
@@ -103,6 +101,15 @@ describe("policy", () => {
         approvedProviders: [],
       }),
     ).rejects.toMatchObject({ code: "policy_blocked" });
+    ledger.setApprovedProviders(baseReq.clientId, []);
+    await expect(
+      gateway.generateObject({
+        ...baseReq,
+        clientPolicy: "external_restricted",
+        approvedProviders: ["anthropic", "openai"],
+      }),
+    ).rejects.toMatchObject({ code: "policy_blocked" });
+    expect(anthropic.calls).toHaveLength(0);
   });
 });
 
@@ -182,14 +189,11 @@ describe("errors and fallback", () => {
   });
 
   it("does not fall back when the fallback is not approved by policy", async () => {
-    const { gateway, anthropic, openai } = setup();
+    const { gateway, anthropic, openai, ledger } = setup();
+    ledger.setApprovedProviders(baseReq.clientId, ["anthropic"]);
     anthropic.push({ error: "server", status: 503 });
     await expect(
-      gateway.generateObject({
-        ...baseReq,
-        clientPolicy: "external_restricted",
-        approvedProviders: ["anthropic"],
-      }),
+      gateway.generateObject({ ...baseReq, clientPolicy: "external_restricted" }),
     ).rejects.toMatchObject({ kind: "server" });
     expect(openai.calls).toHaveLength(0);
   });

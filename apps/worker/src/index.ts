@@ -1,6 +1,7 @@
 import { JOB_LOCK_TTL_MS, loadEnv } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
-import { createJobWorker, recoverStaleJobs } from "@forgecy/jobs";
+import { maybeEnqueueNightlyBackup } from "@forgecy/backup";
+import { createJobWorker, createQueues, recoverStaleJobs } from "@forgecy/jobs";
 import pino from "pino";
 import { handlers } from "./handlers";
 import { startHealthServer } from "./health";
@@ -24,6 +25,19 @@ async function recover() {
 await recover();
 const recoveryTimer = setInterval(recover, 60_000);
 
+// Tonight's backup (Settings › Backup): checked every 10 minutes, enqueued once after 02:00.
+const producer = await createQueues(env.REDIS_URL);
+async function nightly() {
+  try {
+    const jobId = await maybeEnqueueNightlyBackup(db, producer);
+    if (jobId) logger.info({ jobId }, "nightly backup enqueued");
+  } catch (err) {
+    logger.error({ err }, "nightly backup check failed");
+  }
+}
+await nightly();
+const nightlyTimer = setInterval(nightly, 10 * 60_000);
+
 const health = startHealthServer(Number(process.env.WORKER_HEALTH_PORT ?? 3001), db, () => running);
 logger.info({ queues: worker.queues }, "worker ready");
 
@@ -32,8 +46,10 @@ async function shutdown(signal: string) {
   running = false;
   logger.info({ signal }, "shutting down");
   clearInterval(recoveryTimer);
+  clearInterval(nightlyTimer);
   health.close();
   await worker.close();
+  await producer.close();
   await db.$client.end();
   process.exit(0);
 }

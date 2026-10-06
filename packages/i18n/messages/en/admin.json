@@ -1,0 +1,353 @@
+{
+  "nav": {
+    "label": "Settings sections",
+    "general": "General",
+    "aiProviders": "AI providers",
+    "aiPolicies": "AI policies and budgets",
+    "smtp": "Email (SMTP)",
+    "storage": "Storage",
+    "health": "System health",
+    "backup": "Backup and restore"
+  },
+  "adminOnly": "This setting is reserved for Admin users.",
+  "aiPolicies": {
+    "title": "AI policies and budgets",
+    "description": "Where client data may go and how much AI may cost each month.",
+    "monthSpend": "{month} budget: {spent} of {limit} ({percent}%)",
+    "monthSpendNoLimit": "{month} spend: {spent} · no monthly limit",
+    "warning": "Warning",
+    "exhausted": "Exhausted",
+    "policies": {
+      "title": "The four policies",
+      "clients": "{count, plural, =0 {No clients} one {# client} other {# clients}}",
+      "external_allowed": "Briefs, texts and images can be sent to the configured AI providers.",
+      "external_restricted": "Only providers approved for this client, with a confirmation before sending the client’s files.",
+      "local_only": "No data leaves the agency’s network; a configured local model is needed. Never falls back to the cloud.",
+      "no_ai": "No AI features for this client: templates, editor and exports by hand."
+    },
+    "default": {
+      "title": "Default policy for new clients",
+      "hint": "Applies to clients created from now on; existing clients keep theirs.",
+      "setBy": "Set by {name} on {date}",
+      "neverSet": "Never changed: new clients start with external AI allowed.",
+      "label": "Default policy",
+      "save": "Save default policy",
+      "saved": "Default policy saved."
+    },
+    "clients": {
+      "title": "Clients",
+      "empty": "No clients. The default policy will apply to the first client you create.",
+      "name": "Client",
+      "policy": "Policy",
+      "policyFor": "Policy of {name}",
+      "budget": "Monthly budget (USD)",
+      "budgetFor": "Monthly budget of {name} in US dollars",
+      "spend": "Spend this month",
+      "noClientLimit": "No client limit: the agency budget applies",
+      "changed": "Policy changed.",
+      "changedCancelled": "Policy changed. {count, plural, one {# waiting job was cancelled.} other {# waiting jobs were cancelled.}}",
+      "localMissing": "No local model is configured: AI features of clients with this policy will not start.",
+      "providersFor": "Approved providers for {name}",
+      "providerNotConfigured": "{name} (not configured)",
+      "providersEmpty": "No provider approved yet: AI features of this client only use the local model.",
+      "providersSave": "Save approved providers",
+      "providersSaved": "Approved providers saved.",
+      "providersNone": "Choose at least one provider."
+    },
+    "agency": {
+      "title": "Agency budget",
+      "noBudget": "No monthly budget: AI spending has no limit.",
+      "label": "Monthly budget (USD)",
+      "hint": "Leave empty for no limit. The limit carries over to the next months until you change it.",
+      "forecast": "At the current pace: {amount} by the end of the month",
+      "thresholds": "70% · a warning to everyone · 100% · AI jobs do not start",
+      "monthReset": "The month is the calendar month in UTC; spending restarts on the 1st."
+    },
+    "budget": {
+      "save": "Save budget",
+      "saved": "Budget saved.",
+      "removed": "Limit removed.",
+      "alreadyExceeded": "Budget saved. It is already exceeded: AI jobs will not start until next month.",
+      "invalid": "Enter an amount in dollars greater than zero, with at most two decimals."
+    },
+    "spent": "{percent}% · {spent} of {limit}",
+    "spentNoLimit": "{spent}"
+  },
+  "smtp": {
+    "title": "Email (SMTP)",
+    "description": "The email server Forgecy uses for sign-in links and invitations, read from the server’s .env file.",
+    "status": {
+      "configured": "Configured",
+      "not_configured": "Not configured"
+    },
+    "mailpit": "Development environment: emails are caught by Mailpit and never reach real recipients. <link>Open Mailpit</link>",
+    "config": {
+      "title": "Configuration",
+      "host": "Server",
+      "port": "Port",
+      "security": "Security",
+      "tls": "TLS (implicit)",
+      "starttls": "STARTTLS when offered",
+      "username": "Username",
+      "password": "Password",
+      "passwordSet": "Set (never shown)",
+      "none": "Not set",
+      "from": "Sender",
+      "replyTo": "Reply-to",
+      "missing": "No SMTP server is set: sign-in by magic link is not available. Whoever manages the server sets SMTP_HOST and the other SMTP_* values in .env.",
+      "envHint": "Values come from .env; changing them needs a restart of the web and worker containers."
+    },
+    "test": {
+      "title": "Test email",
+      "never": "No test email sent yet.",
+      "lastOk": "Last test on {date} by {name}: delivered to the server.",
+      "lastFailed": "Last test on {date} by {name}: failed.",
+      "to": "Recipient",
+      "send": "Send test email",
+      "sent": "Test email sent to {to}. Check the inbox and the spam folder.",
+      "failed": "The test email was not sent. Check server, port, username and password in .env.",
+      "invalid": "Enter a valid email address."
+    },
+    "verify": {
+      "button": "Check connection",
+      "ok": "The SMTP server accepts the connection and the credentials.",
+      "failed": "The SMTP server cannot be reached or refuses the credentials."
+    },
+    "dns": {
+      "title": "Domain authentication",
+      "intro": "So that sign-in links do not end up in spam, the sender’s domain needs these DNS records (your email service gives the exact values):",
+      "spf": "SPF: authorises the email service to send for your domain.",
+      "dkim": "DKIM: signs each message with a key published in DNS.",
+      "dmarc": "DMARC: tells receivers what to do with messages that fail SPF or DKIM.",
+      "brevo": "Suggested service: Brevo (free plan for low volumes). Any SMTP service works."
+    }
+  },
+  "storage": {
+    "title": "Storage",
+    "description": "Where Forgecy keeps files and how much space they take. Moving files between storages is done from the command line.",
+    "lowSpace": "The disk is almost full (less than {percent}% free): uploads, renders, exports and backups may fail.",
+    "config": {
+      "title": "Configuration",
+      "driver": "Driver",
+      "path": "Folder",
+      "endpoint": "Endpoint",
+      "awsDefault": "AWS default",
+      "bucket": "Bucket",
+      "region": "Region",
+      "accessKey": "Access key",
+      "set": "Set (never shown)",
+      "notSet": "Not set",
+      "pathStyle": "Path-style URLs",
+      "yes": "Yes",
+      "no": "No",
+      "envHint": "Values come from .env; changing the driver needs a restart and moving the existing files."
+    },
+    "test": {
+      "button": "Run write test",
+      "running": "Testing…",
+      "ok": "Write, read and delete succeeded in {ms} ms.",
+      "failed": "The write test failed: check the folder permissions or the S3 credentials."
+    },
+    "space": {
+      "title": "Space",
+      "summary": "{free} free of {total}",
+      "s3Note": "Space of the server’s disk; the S3 store’s space is managed by the S3 service.",
+      "unknown": "Free space cannot be read on this system."
+    },
+    "usage": {
+      "title": "Files by area",
+      "area": "Area",
+      "files": "Files",
+      "size": "Size",
+      "empty": "No files yet.",
+      "backups": "Backups: {size}",
+      "truncated": "Many files: totals count only the first 200,000."
+    },
+    "size": {
+      "gb": "{value} GB",
+      "mb": "{value} MB",
+      "kb": "{value} KB"
+    }
+  },
+  "health": {
+    "title": "System health",
+    "description": "Whether the installation works and is ready for an upgrade. Restarts and upgrades are run on the server.",
+    "checkNow": "Check now",
+    "lastCheck": "Last check: {time} · refreshes every 30 seconds",
+    "overall": {
+      "ok": "All services operational",
+      "problems": "{count, plural, one {# service with problems} other {# services with problems}}"
+    },
+    "ms": "{value} ms",
+    "mb": "{value} MB",
+    "state": {
+      "healthy": "Operational",
+      "degraded": "Slow",
+      "down": "Unreachable",
+      "not_configured": "Not configured"
+    },
+    "services": {
+      "title": "Services",
+      "database": "Database",
+      "pgvector": "pgvector",
+      "redis": "Redis",
+      "worker": "Worker",
+      "storage": "Storage",
+      "smtp": "Email (SMTP)",
+      "open": "Open settings"
+    },
+    "details": {
+      "postgres": "PostgreSQL {version}",
+      "version": "Version {version}",
+      "latency": "Latency {value}",
+      "connections": "Connections {used} of {max}",
+      "size": "Size {value}",
+      "memory": "Memory used {value}",
+      "workers": "{count, plural, =0 {No worker connected} one {# worker connected} other {# workers connected}}",
+      "localDisk": "Local disk",
+      "s3": "S3-compatible"
+    },
+    "hint": {
+      "database": "Check that the postgres container is running: docker compose ps.",
+      "pgvector": "The vector extension is missing: run pnpm forgecy migrate.",
+      "redis": "Check that the redis container is running: docker compose ps.",
+      "worker": "No worker is listening: jobs stay queued. Restart it with docker compose restart worker.",
+      "storage": "Open the storage settings and run the write test.",
+      "smtp": "Set SMTP_HOST in .env."
+    },
+    "queue": {
+      "title": "Job queue",
+      "queued": "Queued",
+      "running": "Running",
+      "retrying": "Retrying",
+      "failed": "Failed",
+      "needs_attention": "Needs attention",
+      "name": "Queue",
+      "waiting": "Waiting",
+      "active": "Active",
+      "workers": "Workers"
+    },
+    "version": {
+      "title": "Version and upgrade",
+      "installed": "Installed version",
+      "migrations": "Migrations",
+      "migrationsApplied": "{applied} of {total} applied",
+      "lastMigration": "Last migration",
+      "pending": "{count, plural, one {# migration to apply:} other {# migrations to apply:}}",
+      "upgradeHint": "Upgrades take a backup first and run on the server:"
+    },
+    "failures": {
+      "title": "Recent failed jobs",
+      "empty": "No failed jobs.",
+      "when": "When",
+      "kind": "Job",
+      "error": "Error"
+    }
+  },
+  "backup": {
+    "title": "Backup and restore",
+    "description": "Backups of the database and files, kept in the server’s data/backups folder.",
+    "latest": "Last backup: {date} · {size} · {kind}",
+    "none": "No backup yet.",
+    "stale": "No backup in the last 24 hours: create one.",
+    "nightlyFailed": "Last night’s backup did not succeed.",
+    "kind": {
+      "manual": "Manual",
+      "nightly": "Nightly",
+      "pre_restore": "Before restore",
+      "cli": "Command line"
+    },
+    "size": {
+      "gb": "{value} GB",
+      "mb": "{value} MB",
+      "kb": "{value} KB"
+    },
+    "create": {
+      "title": "New backup",
+      "scope": "The database holds clients, audits, Brand Identity, contents, users, settings, the activity log and the encrypted BYOK keys. Files are uploads, generated images, templates and exports.",
+      "dbSize": "Database: {size}.",
+      "free": "Free space: {size}.",
+      "database": "Database (always included)",
+      "databaseRequired": "The database is always part of a backup.",
+      "media": "Files",
+      "submit": "Create backup",
+      "queued": "Backup started: it appears in the list when it is done.",
+      "alreadyRunning": "A backup is already running.",
+      "running": "Backup in progress: {progress}%",
+      "envNote": "The .env file is not included. Keep it separately: without FORGECY_ENCRYPTION_KEY the BYOK keys in the backup cannot be read."
+    },
+    "nightly": {
+      "title": "Automatic backup",
+      "on": "Nightly backup: on · once a day from {hour} (installation time), or as soon as Forgecy is running after that · database and files · kept {days} days",
+      "off": "Nightly backup: off",
+      "last": "Last run: {date} · {status}",
+      "lastFailed": "Last run: {date} · failed: {error}",
+      "turnOn": "Turn on nightly backup",
+      "turnOff": "Turn off nightly backup",
+      "confirmOff": "Without the nightly backup you risk losing several days of work. Turn it off?",
+      "turnedOn": "Nightly backup turned on.",
+      "turnedOff": "Nightly backup turned off."
+    },
+    "list": {
+      "title": "Available backups",
+      "empty": "No backups yet.",
+      "date": "Date",
+      "kind": "Type",
+      "scope": "Contents",
+      "scopeFull": "Database and files",
+      "scopeDb": "Database",
+      "size": "Size",
+      "version": "Version",
+      "by": "Created by",
+      "system": "Forgecy",
+      "expires": "Expires",
+      "never": "Never",
+      "actions": "Actions",
+      "download": "Download",
+      "delete": "Delete",
+      "confirmDelete": "Delete {name}? This cannot be undone.",
+      "deleted": "Backup deleted.",
+      "notFound": "Backup not found."
+    },
+    "restore": {
+      "title": "Restore",
+      "intro": "Restoring replaces the whole database (users, sessions and settings included) with the backup's, and copies its files back. Files added after the backup stay. Forgecy first makes a backup of the current state, so you can go back.",
+      "choose": "Backup to restore",
+      "choosePlaceholder": "Choose a backup",
+      "option": "{date} · {kind} · {size}",
+      "check": "Check backup",
+      "checking": "Checking the backup…",
+      "valid": "The backup can be restored.",
+      "summary": "Made on {date} · {scope} · Forgecy {version} · last migration {migration}",
+      "unknown": "unknown",
+      "migrations": "{count, plural, =0 {No migration to apply afterwards.} one {# migration will be applied afterwards.} other {# migrations will be applied afterwards.}}",
+      "impact": "What gets replaced: all the current data ({size} of database) is swapped for the backup's. Everyone is signed out, and jobs in progress are cancelled.",
+      "problem": {
+        "unreadable": "The archive can't be read: the file is damaged or isn't a Forgecy backup.",
+        "format": "This backup uses a format this version doesn't know.",
+        "newer_version": "This backup comes from a newer Forgecy version. Update Forgecy before restoring it."
+      },
+      "confirmLabel": "To confirm, type the agency name: {name}",
+      "confirmMismatch": "The name doesn't match.",
+      "submit": "Restore this backup",
+      "queued": "Restore started. The page follows its progress.",
+      "busy": "A backup or a restore is already in progress: wait until it ends.",
+      "notFound": "Backup not found.",
+      "status": {
+        "queued": "Restore of {backup} queued by {name} on {date}. Waiting for the worker…",
+        "running": "Restore of {backup} in progress, started by {name} on {date}. Other people see “Restore in progress” until it ends.",
+        "preRestore": "Backup of the previous state: {backup}",
+        "completed": "Restore of {backup} completed on {date}.",
+        "restart": "Restart the services so every part reads the restored data, then sign in again:",
+        "failed": "Restore of {backup} failed on {date}: {error}",
+        "failedHint": "If the database was partly replaced, restore the backup of the previous state from the list."
+      },
+      "upload": "To restore a file made elsewhere, copy it into the data/backups folder on the server: it then shows in the list.",
+      "maintenance": {
+        "title": "Restore in progress",
+        "body": "An Admin is restoring a backup. Forgecy is back when it ends; you will need to sign in again.",
+        "since": "Started on {date}."
+      }
+    }
+  }
+}

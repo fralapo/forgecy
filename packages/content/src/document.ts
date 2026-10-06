@@ -4,25 +4,48 @@
  * server and the worker use.
  */
 import { FORMATS, slideRoles, slideSchema, type FormatId, type Slide } from "@forgecy/carousel";
-import { confidenceLevels, contentObjectives, funnelStages } from "@forgecy/core";
+import { confidenceLevels, contentObjectives, funnelStages, messageRefSchema } from "@forgecy/core";
 import { z } from "zod";
 
 const text = (max: number) => z.string().trim().max(max);
 const required = (max: number) => z.string().trim().min(1).max(max);
 const list = <T extends z.ZodType>(item: T, max: number) => z.array(item).max(max).default([]);
 
-/** Formats released in this phase (MVP: Instagram 4:5 and LinkedIn document). */
+/**
+ * Social formats a content can use. The MVP ones are always offered; the v1 ones
+ * (Instagram 1:1, Stories, Facebook, TikTok) are offered once a published template
+ * declares them (see `offeredFormats`).
+ */
 export const releasedFormats = Object.values(FORMATS)
-  .filter((f) => f.phase === "mvp")
+  .filter((f) => f.kind === "carousel")
   .map((f) => f.id);
 export const releasedFormatSchema = z.enum(releasedFormats as [FormatId, ...FormatId[]]);
 
-export const contentChannels = ["instagram", "linkedin"] as const;
+export const contentChannels = ["instagram", "linkedin", "facebook", "tiktok"] as const;
 export type ContentChannel = (typeof contentChannels)[number];
 export const contentChannelSchema = z.enum(contentChannels);
 
 /** Caption limits per channel (UXA-P4-04). */
-export const captionLimits: Record<ContentChannel, number> = { instagram: 2200, linkedin: 3000 };
+export const captionLimits: Record<ContentChannel, number> = {
+  instagram: 2200,
+  linkedin: 3000,
+  facebook: 63206,
+  tiktok: 4000,
+};
+
+/** Default format of each channel, used when the Planner proposes a plan item. */
+export const channelFormat: Record<ContentChannel, FormatId> = {
+  instagram: "ig_4x5",
+  linkedin: "linkedin_doc",
+  facebook: "fb_4x5",
+  tiktok: "tiktok_photo",
+};
+
+/** Formats to offer: the MVP ones, plus every format a published template declares. */
+export function offeredFormats(publishedTemplateFormats: Iterable<string>): FormatId[] {
+  const declared = new Set(publishedTemplateFormats);
+  return releasedFormats.filter((id) => FORMATS[id].phase === "mvp" || declared.has(id));
+}
 
 export const contentLanguages = [
   { code: "en", label: "English" },
@@ -52,7 +75,9 @@ export function perWeek(f: Frequency | null | undefined): number {
 
 export const proposalSourceSchema = z.object({
   kind: z.enum(["brand", "audit", "strategy", "catalog", "brief"]),
+  /** English text; `ref` shows it in the reader's language. */
   label: z.string().max(200),
+  ref: messageRefSchema.optional(),
 });
 
 export const provenanceSchema = z.object({
@@ -99,7 +124,7 @@ export const rubricInputSchema = z.object({
   hookExample: text(200).default(""),
   cta: text(200).default(""),
   templateKey: z.string().max(64).nullable().default(null),
-  channels: list(contentChannelSchema, 2),
+  channels: list(contentChannelSchema, contentChannels.length),
   ownerId: z.uuid().nullable().default(null),
   productIds: list(z.uuid(), 20),
 });

@@ -27,7 +27,7 @@ import {
   type SlotValue,
   type TemplateManifest,
 } from "@forgecy/carousel";
-import { ForgecyError, type Actor, type AgentRole, type ProviderId } from "@forgecy/core";
+import { ForgecyError, isLocale, type Actor, type AgentRole, type ProviderId } from "@forgecy/core";
 import {
   and,
   contentPillars,
@@ -39,7 +39,13 @@ import {
   type Database,
 } from "@forgecy/db";
 import type { StorageDriver } from "@forgecy/files";
-import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
+import {
+  englishMessage,
+  getTranslator,
+  messageRef,
+  type MessageKey,
+  type MessageValues,
+} from "@forgecy/i18n";
 import { NeedsAttentionError, withLock } from "@forgecy/jobs";
 import type { z } from "zod";
 import { humanOnly, invalid, notFound, requireClient } from "../access";
@@ -54,10 +60,12 @@ import {
 } from "../carousels/carousels";
 import {
   briefSchema,
+  channelFormat,
   newSlideId,
   normalizeHashtag,
   parseDocument,
   type CarouselDocument,
+  type ContentChannel,
   type ContentSlide,
   type Outline,
   type Provenance,
@@ -171,6 +179,11 @@ async function brandContextFor(
   return ctx;
 }
 
+/** Texts the code writes into a carousel, in its language (English when not translated). */
+function deliverableText(language: string) {
+  return getTranslator(isLocale(language) ? language : "en", "deliverable");
+}
+
 /** Agent system prompt + the cacheable brand block; the variable part goes with the input. */
 function withBrand(system: string, brand: BrandContext) {
   return {
@@ -186,10 +199,19 @@ type CommonAi = Pick<
 
 // ---- Planner ----
 
+/** A provenance source: English label plus a reference shown in the reader's language. */
+function source(
+  kind: Provenance["sources"][number]["kind"],
+  key: MessageKey,
+  values?: MessageValues,
+) {
+  return { kind, label: englishMessage(key, values), ref: messageRef(key, values) };
+}
+
 export async function runProposeStrategy(
   deps: PipelineDeps,
   ctx: PipelineContext,
-  input: { clientId: string; instruction: string },
+  input: { clientId: string; instruction: string; language?: string },
 ) {
   const ai = requireAi(deps);
   const actor = agent("strategist", ctx);
@@ -235,6 +257,7 @@ export async function runProposeStrategy(
           existingRubrics: rubrics,
           products: products.slice(0, 40),
           instruction: input.instruction,
+          language: input.language ?? "en",
         }),
       clientId: input.clientId,
       clientPolicy: client.aiPolicy,
@@ -258,9 +281,9 @@ export async function runProposeStrategy(
     model: res.model,
     rationale: out.rationale,
     sources: [
-      { kind: "brand", label: `Brand Identity v${brandCtx.versionNumber}` },
-      ...(pillars.length ? [{ kind: "strategy" as const, label: "Current strategy" }] : []),
-      ...(products.length ? [{ kind: "catalog" as const, label: "Product catalog" }] : []),
+      source("brand", "content.labels.source.brand", { version: brandCtx.versionNumber }),
+      ...(pillars.length ? [source("strategy", "content.labels.source.strategy")] : []),
+      ...(products.length ? [source("catalog", "content.labels.source.catalog")] : []),
     ],
     confidence: pillars.length || audience.length ? "medium" : "low",
     ...(input.instruction ? { instruction: input.instruction } : {}),
@@ -318,16 +341,15 @@ async function publishedIdentity(db: Database, actor: Actor, clientId: string) {
   return identity;
 }
 
-/** MVP format of each channel. */
-export const channelFormat: Record<"instagram" | "linkedin", FormatId> = {
-  instagram: "ig_4x5",
-  linkedin: "linkedin_doc",
-};
-
 export async function runProposePlan(
   deps: PipelineDeps,
   ctx: PipelineContext,
-  input: { clientId: string; instruction: string; channels: ("instagram" | "linkedin")[] },
+  input: {
+    clientId: string;
+    instruction: string;
+    language?: string;
+    channels: ContentChannel[];
+  },
 ) {
   const ai = requireAi(deps);
   const actor = agent("strategist", ctx);
@@ -363,6 +385,7 @@ export async function runProposePlan(
         prefix +
         planUserPrompt({
           clientName: client.name,
+          language: input.language ?? "en",
           channels: input.channels,
           pillars: pillars.map((p) => ({
             id: p.id,
@@ -404,8 +427,11 @@ export async function runProposePlan(
         model: res.model,
         rationale: res.data.rationale,
         sources: [
-          { kind: "brand", label: `Brand Identity v${brandCtx.versionNumber}` },
-          { kind: "strategy", label: `${pillars.length} pillars, ${rubrics.length} rubrics` },
+          source("brand", "content.labels.source.brand", { version: brandCtx.versionNumber }),
+          source("strategy", "content.labels.source.strategyCounts", {
+            pillars: pillars.length,
+            rubrics: rubrics.length,
+          }),
         ],
         confidence: rubrics.length ? "high" : "medium",
         ...(input.instruction ? { instruction: input.instruction } : {}),
@@ -711,7 +737,7 @@ export async function runGenerateSlides(
         ...(out?.imageBriefs.length
           ? {
               note: out.imageBriefs
-                .map((b) => `Image “${b.slot}”: ${b.brief}`)
+                .map((b) => deliverableText(s.c.language)("carousel.imageNote", b))
                 .join("\n")
                 .slice(0, 300),
             }
@@ -802,7 +828,7 @@ export async function runEditSlide(
       const error = attention(key);
       await deps.db
         .update(contentSlideEdits)
-        .set({ status: "failed", note: error.message, jobId: ctx.jobId })
+        .set({ status: "failed", note: error.message, noteRef: error.ref, jobId: ctx.jobId })
         .where(eq(contentSlideEdits.id, edit.id));
       throw error;
     };
@@ -887,7 +913,12 @@ export async function runEditSlide(
       if (err instanceof NeedsAttentionError) {
         await deps.db
           .update(contentSlideEdits)
-          .set({ status: "failed", note: err.message.slice(0, 300), jobId: ctx.jobId })
+          .set({
+            status: "failed",
+            note: err.message.slice(0, 300),
+            noteRef: err.ref ?? null,
+            jobId: ctx.jobId,
+          })
           .where(and(eq(contentSlideEdits.id, edit.id), eq(contentSlideEdits.status, "queued")));
       }
       throw err;
@@ -998,6 +1029,7 @@ export async function runGenerateImage(
         brief: input.brief,
         slideText,
         imagery: imageryGuidelines(identity),
+        language: c.language,
       }),
       ...common,
       inputSummary: {

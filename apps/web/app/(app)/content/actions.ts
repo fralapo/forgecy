@@ -51,6 +51,7 @@ import {
   type BriefInput,
   type CarouselDocumentInput,
   type CarouselParamsInput,
+  type ContentChannel,
   type OutlineInput,
   type PillarInputRaw,
   type PlanItemInputRaw,
@@ -62,6 +63,7 @@ import { getDb, type Database } from "@forgecy/db";
 import { localizedError } from "@forgecy/i18n";
 import { enqueueJob, type JobDefinition } from "@forgecy/jobs";
 import { revalidatePath } from "next/cache";
+import { getLocale } from "next-intl/server";
 import { z } from "zod";
 import { errorMessage } from "@/lib/i18n";
 import { getQueues } from "@/lib/queues";
@@ -231,7 +233,13 @@ export async function askPlannerAction(input: {
     return enqueue(
       ctx,
       proposeStrategyJob,
-      { clientId, instruction: input.instruction.slice(0, 500), requestedBy: ctx.userId },
+      {
+        clientId,
+        instruction: input.instruction.slice(0, 500),
+        // The Planner writes in the language of the person who asks.
+        language: await getLocale(),
+        requestedBy: ctx.userId,
+      },
       { clientId, entity: "client", entityId: clientId },
     );
   });
@@ -243,7 +251,7 @@ export async function askPlanAction(input: {
   slug: string;
   clientId: string;
   instruction: string;
-  channels: ("instagram" | "linkedin")[];
+  channels: ContentChannel[];
 }) {
   return run(input.slug, async (ctx) => {
     const clientId = uuid.parse(input.clientId);
@@ -256,6 +264,7 @@ export async function askPlanAction(input: {
         clientId,
         instruction: input.instruction.slice(0, 500),
         channels: input.channels,
+        language: await getLocale(),
         requestedBy: ctx.userId,
       },
       { clientId, entity: "client", entityId: clientId },

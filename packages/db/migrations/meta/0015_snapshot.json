@@ -1,6 +1,6 @@
 {
-  "id": "58ac13ab-db4c-45af-b4e7-2ff9c487a5af",
-  "prevId": "86447949-19f9-4cf7-a5a6-3c4f8b7b545f",
+  "id": "3b117431-2615-41b6-b245-611cfca6b0da",
+  "prevId": "03efeb12-7d48-4e1b-8769-45253ec6a20d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -448,6 +448,14 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'external_allowed'"
+        },
+        "approved_providers": {
+          "name": "approved_providers",
+          "type": "ai_provider[]",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
         },
         "archived_at": {
           "name": "archived_at",
@@ -1338,135 +1346,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.mcp_connections": {
-      "name": "mcp_connections",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "provider": {
-          "name": "provider",
-          "type": "ai_provider",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "server_url": {
-          "name": "server_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "encrypted_state": {
-          "name": "encrypted_state",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "oauth_state": {
-          "name": "oauth_state",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_error": {
-          "name": "last_error",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "connected_by": {
-          "name": "connected_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "connected_at": {
-          "name": "connected_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "mcp_connections_provider_uq": {
-          "name": "mcp_connections_provider_uq",
-          "columns": [
-            {
-              "expression": "provider",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mcp_connections_oauth_state_idx": {
-          "name": "mcp_connections_oauth_state_idx",
-          "columns": [
-            {
-              "expression": "oauth_state",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mcp_connections_connected_by_users_id_fk": {
-          "name": "mcp_connections_connected_by_users_id_fk",
-          "tableFrom": "mcp_connections",
-          "tableTo": "users",
-          "columnsFrom": [
-            "connected_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.audit_channels": {
       "name": "audit_channels",
       "schema": "",
@@ -1508,6 +1387,12 @@
         "unavailable_reason": {
           "name": "unavailable_reason",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unavailable_ref": {
+          "name": "unavailable_ref",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -1652,6 +1537,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "removed_ref": {
+          "name": "removed_ref",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "source_status": {
           "name": "source_status",
           "type": "audit_source_status",
@@ -1663,6 +1554,12 @@
         "source_error": {
           "name": "source_error",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_error_ref": {
+          "name": "source_error_ref",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -1851,6 +1748,12 @@
         "confidence_reason": {
           "name": "confidence_reason",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "confidence_ref": {
+          "name": "confidence_ref",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -3056,6 +2959,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "skip_ref": {
+          "name": "skip_ref",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "captured_at": {
           "name": "captured_at",
           "type": "timestamp with time zone",
@@ -3618,6 +3527,12 @@
         "error": {
           "name": "error",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_ref": {
+          "name": "error_ref",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -4329,6 +4244,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "title_ref": {
+          "name": "title_ref",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "changes": {
           "name": "changes",
           "type": "jsonb",
@@ -4338,6 +4259,12 @@
         "rationale": {
           "name": "rationale",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rationale_ref": {
+          "name": "rationale_ref",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -4409,6 +4336,12 @@
         "stale_reason": {
           "name": "stale_reason",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stale_ref": {
+          "name": "stale_ref",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -4994,6 +4927,12 @@
         "status_detail": {
           "name": "status_detail",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status_detail_ref": {
+          "name": "status_detail_ref",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -7101,6 +7040,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "note_ref": {
+          "name": "note_ref",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "job_id": {
           "name": "job_id",
           "type": "uuid",
@@ -8759,6 +8704,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "match_ref": {
+          "name": "match_ref",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "match_revision": {
           "name": "match_revision",
           "type": "integer",
@@ -8794,6 +8745,12 @@
         "discard_reason": {
           "name": "discard_reason",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "discard_ref": {
+          "name": "discard_ref",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -9851,9 +9808,7 @@
         "openrouter",
         "google",
         "local",
-        "deepseek",
-        "higgsfield",
-        "weave"
+        "deepseek"
       ]
     },
     "public.budget_scope": {

@@ -305,7 +305,13 @@
     },
     "versionShort": "v{number}",
     "templateVersion": "{name} · v{version}",
-    "templateChannel": "{name} · {channel, select, linkedin {LinkedIn} other {Instagram}}"
+    "templateChannel": "{name} · {channel, select, linkedin {LinkedIn} facebook {Facebook} tiktok {TikTok} other {Instagram}}",
+    "source": {
+      "brand": "Brand Identity v{version}",
+      "strategy": "Current strategy",
+      "catalog": "Product catalog",
+      "strategyCounts": "{pillars, plural, one {# pillar} other {# pillars}}, {rubrics, plural, one {# rubric} other {# rubrics}}"
+    }
   },
   "strategy": {
     "metaTitle": "Content strategy",
@@ -636,6 +642,33 @@
       "note": "Note (optional)",
       "notePlaceholder": "E.g. before the review with the client",
       "submit": "Save version"
+    },
+    "compare": {
+      "from": "From",
+      "to": "To",
+      "submit": "Compare",
+      "back": "Back to the versions",
+      "missing": "Version {number} doesn’t exist.",
+      "same": "Choose two different versions.",
+      "title": "Version {left} and version {right} side by side",
+      "count": "{count, plural, =0 {No differences} one {# slide differs} other {# slides differ}}",
+      "narrow": "The comparison needs a wider screen.",
+      "notThere": "Not in version {number}",
+      "slideOf": "Slide {number} of version {version}",
+      "slide": "Slide {left} → {right}",
+      "change": {
+        "same": "Same",
+        "changed": "Changed",
+        "added": "Added",
+        "removed": "Removed"
+      },
+      "moved": "Moved",
+      "parts": "Changed: {parts}",
+      "part": {
+        "layout": "Layout",
+        "tone": "Tone"
+      },
+      "caption": "Caption and hashtags"
     }
   },
   "editor": {

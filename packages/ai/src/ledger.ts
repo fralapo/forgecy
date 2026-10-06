@@ -1,5 +1,18 @@
 import type { AiPolicy, ProviderId } from "@forgecy/core";
-import { and, budgets, eq, gte, isNull, jobsLog, lt, sql, type Database } from "@forgecy/db";
+import {
+  and,
+  budgets,
+  clients,
+  desc,
+  eq,
+  gte,
+  isNull,
+  jobsLog,
+  lt,
+  lte,
+  sql,
+  type Database,
+} from "@forgecy/db";
 
 export type BudgetScope = { scope: "agency" } | { scope: "client"; clientId: string };
 
@@ -32,8 +45,14 @@ export interface LedgerEntry {
 export interface AiLedger {
   /** Sum of jobs_log cost for the month starting at `month` ("YYYY-MM-01", UTC). */
   monthSpendMicroUsd(scope: BudgetScope, month: string): Promise<number>;
+  /** The limit in force for `month`: the latest one set in that month or before (budgets carry over). */
   budgetFor(scope: BudgetScope, month: string): Promise<BudgetLimit | null>;
   record(entry: LedgerEntry): Promise<void>;
+  /**
+   * external_restricted: the providers an Admin approved for this client (page 61).
+   * Optional so older test ledgers keep working; the gateway then uses the request's list.
+   */
+  approvedProviders?(clientId: string): Promise<readonly ProviderId[]>;
 }
 
 /** "YYYY-MM-01" for the UTC month containing `date`. */
@@ -73,9 +92,10 @@ export function createDbLedger(db: Pick<Database, "select" | "insert">): AiLedge
             scope.scope === "client"
               ? eq(budgets.scopeId, scope.clientId)
               : isNull(budgets.scopeId),
-            eq(budgets.month, month),
+            lte(budgets.month, month),
           ),
         )
+        .orderBy(desc(budgets.month))
         .limit(1);
       const row = rows[0];
       return row
@@ -103,6 +123,13 @@ export function createDbLedger(db: Pick<Database, "select" | "insert">): AiLedge
         endedAt: entry.endedAt ?? null,
       });
     },
+    async approvedProviders(clientId) {
+      const [row] = await db
+        .select({ approvedProviders: clients.approvedProviders })
+        .from(clients)
+        .where(eq(clients.id, clientId));
+      return row?.approvedProviders ?? [];
+    },
   };
 }
 
@@ -110,17 +137,25 @@ export function createDbLedger(db: Pick<Database, "select" | "insert">): AiLedge
 export interface MemoryLedger extends AiLedger {
   readonly entries: LedgerEntry[];
   setBudget(scope: BudgetScope, month: string, limit: BudgetLimit): void;
+  setApprovedProviders(clientId: string, providers: readonly ProviderId[]): void;
 }
 
 export function createMemoryLedger(): MemoryLedger {
   const entries: LedgerEntry[] = [];
   const limits = new Map<string, BudgetLimit>();
+  const approved = new Map<string, readonly ProviderId[]>();
   const key = (scope: BudgetScope, month: string) =>
     `${scope.scope === "client" ? `client:${scope.clientId}` : "agency"}@${month}`;
   return {
     entries,
     setBudget(scope, month, limit) {
       limits.set(key(scope, month), limit);
+    },
+    setApprovedProviders(clientId, providers) {
+      approved.set(clientId, [...providers]);
+    },
+    async approvedProviders(clientId) {
+      return approved.get(clientId) ?? [];
     },
     async monthSpendMicroUsd(scope, month) {
       const { start, end } = monthRange(month);
@@ -130,7 +165,14 @@ export function createMemoryLedger(): MemoryLedger {
         .reduce((sum, e) => sum + e.costMicroUsd, 0);
     },
     async budgetFor(scope, month) {
-      return limits.get(key(scope, month)) ?? null;
+      const prefix = key(scope, "");
+      let best: { month: string; limit: BudgetLimit } | null = null;
+      for (const [k, limit] of limits) {
+        if (!k.startsWith(prefix)) continue;
+        const m = k.slice(prefix.length);
+        if (m <= month && (!best || m > best.month)) best = { month: m, limit };
+      }
+      return best?.limit ?? null;
     },
     async record(entry) {
       entries.push(structuredClone(entry));

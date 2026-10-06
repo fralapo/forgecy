@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  channelLabels,
+  contentChannels,
   funnelSchema,
   type ContentChannel,
   type Frequency,
@@ -351,10 +353,10 @@ function PillarFields({
 
 // ---- Rubric ----
 
-const channelOptions: { value: ContentChannel; label: string }[] = [
-  { value: "instagram", label: "Instagram" },
-  { value: "linkedin", label: "LinkedIn" },
-];
+const channelOptions: { value: ContentChannel; label: string }[] = contentChannels.map((c) => ({
+  value: c,
+  label: channelLabels[c],
+}));
 
 export function RubricForm(props: {
   slug: string;

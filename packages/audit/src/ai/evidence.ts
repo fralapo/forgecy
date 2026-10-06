@@ -4,7 +4,9 @@ import {
   type AuditEvidence,
   type EvidenceType,
   type Level,
+  type MessageRef,
 } from "@forgecy/core";
+import { stored } from "../stored";
 import { quoteFound } from "./agents";
 
 /** What a reference id given to the model (P1, CHECK:h1, POST:12, O3…) points at. */
@@ -94,14 +96,15 @@ export function verifyEvidence(
 export function confidenceOf(v: Pick<VerifiedEvidence, "distinct" | "labels">): {
   confidence: Level;
   reason: string;
+  ref: MessageRef;
 } {
   const confidence = confidenceFromEvidence(v.distinct);
   const what = v.labels.slice(0, 4).join(", ");
-  const reason =
+  const s =
     v.distinct >= 3
-      ? `${v.distinct} consistent elements: ${what}`
+      ? stored("audit.stored.confidence.many", { count: v.distinct, what })
       : v.distinct === 2
-        ? `2 elements: ${what}`
-        : `One element only: ${what}`;
-  return { confidence, reason };
+        ? stored("audit.stored.confidence.two", { what })
+        : stored("audit.stored.confidence.one", { what });
+  return { confidence, reason: s.text, ref: s.ref };
 }

@@ -9,5 +9,9 @@
     "pressButton": "Press the button to sign in. The link works only once and expires in {minutes, plural, one {# minute} other {# minutes}}.",
     "button": "Sign in to {app}",
     "copyAddress": "If the button doesn’t work, copy this address into your browser:"
+  },
+  "test": {
+    "subject": "Test email from {app}",
+    "body": "This is a test email sent by {name} from {app}. If you are reading it, email works: sign-in links and invitations will arrive."
   }
 }

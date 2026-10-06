@@ -300,6 +300,13 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
         .map((i) => i.discardReason)
         .sort(),
     ).toEqual(["Page 3: unreadable table", "Row 4: missing name"]);
+    // …and a reference, so the review shows the reason in the reader's language.
+    expect(
+      items
+        .filter((i) => i.status === "discarded")
+        .map((i) => i.discardRef?.key)
+        .sort(),
+    ).toEqual(["products.discards.page", "products.discards.rowNoName"]);
     // Conflict with the approved value, never resolved automatically.
     const crema = byName("Face cream 50 ml");
     expect(itemTab(crema)).toBe("conflicts");

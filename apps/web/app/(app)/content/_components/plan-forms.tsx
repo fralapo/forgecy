@@ -1,9 +1,11 @@
 "use client";
 
-import type {
-  CarouselParamsInput,
-  ContentChannel,
-  PlanItemInputRaw,
+import {
+  channelLabels,
+  contentChannels,
+  type CarouselParamsInput,
+  type ContentChannel,
+  type PlanItemInputRaw,
 } from "@forgecy/content/client";
 import { AiProposal, Button, Input, Label } from "@forgecy/ui";
 import { LayoutTemplate, Sparkles } from "lucide-react";
@@ -29,10 +31,11 @@ export interface PlanOptions {
   products: { id: string; name: string }[];
 }
 
-const channels: { value: ContentChannel; label: string }[] = [
-  { value: "instagram", label: "Instagram" },
-  { value: "linkedin", label: "LinkedIn" },
-];
+/** Channels that have at least one offered format, in the canonical order. */
+const channelsOf = (formats: PlanOptions["formats"]) =>
+  contentChannels
+    .filter((c) => formats.some((f) => f.channel === c))
+    .map((c) => ({ value: c, label: channelLabels[c] }));
 
 // ---- Add / edit an item ----
 
@@ -113,7 +116,7 @@ function PlanItemFields({
                 set({ channel, ...(f ? { format: f.id as PlanItemInputRaw["format"] } : {}) });
               }}
             >
-              {channels.map((c) => (
+              {channelsOf(options.formats).map((c) => (
                 <option key={c.value} value={c.value}>
                   {c.label}
                 </option>
@@ -225,10 +228,12 @@ export function AskPlanForm({
   clientId,
   running,
   disabledReason,
+  formats,
 }: {
   slug: string;
   clientId: string;
   running: boolean;
+  formats: PlanOptions["formats"];
   disabledReason?: string | null;
 }) {
   const [instruction, setInstruction] = useState("");
@@ -254,7 +259,12 @@ export function AskPlanForm({
         );
       }}
     >
-      <Checks legend={t("channels")} options={channels} value={chosen} onChange={setChosen} />
+      <Checks
+        legend={t("channels")}
+        options={channelsOf(formats)}
+        value={chosen}
+        onChange={setChosen}
+      />
       <div className="space-y-1">
         <Label htmlFor={id}>{t("instructionLabel")}</Label>
         <textarea

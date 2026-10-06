@@ -1,6 +1,7 @@
 import { ForgecyError, loadEnv } from "@forgecy/core";
 import { type StorageDriver, contentKey, createStorageFromEnv, sha256 } from "@forgecy/files";
 import { type JobContext, NeedsAttentionError, UnrecoverableError, handle } from "@forgecy/jobs";
+import { englishMessage, messageRef } from "@forgecy/i18n";
 import type { Browser } from "playwright-core";
 import {
   dbTemplateSource,
@@ -69,7 +70,8 @@ async function runExport(deps: CarouselHandlerDeps, p: CarouselExportPayload, ct
       isCancelled: () => ctx.isCancelled(),
     });
   } catch (err) {
-    if (err instanceof ExportCancelledError) throw new UnrecoverableError(err.message);
+    if (err instanceof ExportCancelledError)
+      throw Object.assign(new UnrecoverableError(err.message), { ref: err.ref });
     throw err;
   }
 
@@ -108,7 +110,12 @@ export function carouselHandlers(deps: CarouselHandlerDeps) {
     ...handle(carouselExportJob, (payload, ctx) => runExport(deps, payload, ctx)),
     ...handle(templateValidateJob, async (payload, ctx) => {
       const row = await getTemplateRow(ctx.db, payload.templateRowId);
-      if (!row) throw new NeedsAttentionError("Template not found");
+      if (!row)
+        throw new NeedsAttentionError(
+          englishMessage("jobs.errors.templateNotFound"),
+          undefined,
+          messageRef("jobs.errors.templateNotFound"),
+        );
       const pkg = await loadTemplatePackage(deps.storage, row);
       const report = validateTemplatePackage(pkg.files);
       await ctx.progress(30);

@@ -4,6 +4,7 @@
 export * from "./document";
 export * from "./labels";
 export * from "./carousels/checks";
+export * from "./carousels/compare";
 export * from "./carousels/brand-guard";
 export * from "./access";
 export * from "./products";

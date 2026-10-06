@@ -21,7 +21,7 @@ import { assertCan, brandSourceKinds, ForgecyError, PermissionDeniedError } from
 import { getDb } from "@forgecy/db";
 import { enqueueJob } from "@forgecy/jobs";
 import { revalidatePath } from "next/cache";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { errorMessage, firstIssue, vmsg } from "@/lib/i18n";
 import { getQueues } from "@/lib/queues";
@@ -298,6 +298,7 @@ export async function importSourceAction(input: {
         clientId: uuid.parse(input.clientId),
         sourceId: uuid.parse(input.sourceId),
         requestedBy: userId,
+        language: await getLocale(),
       },
       clientId: input.clientId,
       entity: "brand_source",

@@ -655,7 +655,20 @@
     "comparedWith": "v{number} rispetto alla v{previous}",
     "firstVersion": "v{number} · prima versione",
     "openReadOnly": "Apri i blocchi in sola lettura: <strategy>Strategia</strategy>, <verbal>Identità verbale</verbal>, <visual>Identità visiva</visual>, <content>Contenuti</content>.",
-    "number": "v{number}"
+    "number": "v{number}",
+    "compareTitle": "v{left} e v{right} a confronto",
+    "compareCount": "{count, plural, =0 {Nessuna differenza} one {# campo diverso} other {# campi diversi}}",
+    "compareFrom": "Da",
+    "compareTo": "A",
+    "compare": "Confronta",
+    "compareSideBySide": "Confronta affiancata con v{previous}",
+    "showAll": "Mostra tutti i campi",
+    "onlyDifferences": "Solo le differenze",
+    "backToVersions": "Torna alle versioni",
+    "compareNarrow": "Il confronto richiede uno schermo più largo.",
+    "compareSame": "Scegli due versioni diverse.",
+    "compareMissing": "La versione v{number} non esiste.",
+    "field": "Campo"
   },
   "approve": {
     "notOpen": "La v{number} non è una bozza aperta: le versioni approvate non si possono modificare. <link>Vai allo storico</link>.",
@@ -738,5 +751,58 @@
     "archiveUnsupported": "Archivio non supportato: carica PDF, PPTX, DOCX, immagini, SVG o font.",
     "fontTooLarge": "Font troppo grande: il massimo è 10 MB.",
     "formatNotAllowed": "Formato non consentito: carica PDF, PPTX, DOCX, immagini (PNG, JPEG, WebP, GIF), SVG, font (TTF, OTF, WOFF, WOFF2) o testo."
+  },
+  "import": {
+    "status": {
+      "reading": "Lettura in corso",
+      "pagesRead": "{count, plural, one {# pagina letta} other {# pagine lette}}",
+      "proposals": "{count, plural, one {# proposta} other {# proposte}}",
+      "skipped": "{count} già presenti o non valide",
+      "noProvider": "Nessun provider AI configurato: solo estrazione automatica",
+      "aiOff": "Funzioni AI disattivate per questo cliente",
+      "noText": "Nessun testo da interpretare",
+      "aiNotRun": "Interpretazione AI non eseguita: {message}",
+      "aiFailed": "Interpretazione AI non riuscita"
+    },
+    "warnings": {
+      "firstPages": "Sono state lette solo le prime {max} pagine",
+      "pdfNoText": "Nessun testo selezionabile: il PDF sembra fatto di immagini. Colori e testi vanno inseriti a mano.",
+      "fontFromFileName": "Nome del font ricavato dal nome del file",
+      "firstSlides": "Sono state lette solo le prime {max} slide"
+    },
+    "errors": {
+      "damaged": "Non leggibile: il file è danneggiato o protetto da password.",
+      "wordEmpty": "Documento Word senza contenuto leggibile.",
+      "pdfProtected": "Non leggibile: PDF protetto. Carica una versione senza password.",
+      "pdfDamaged": "Non leggibile: il PDF è danneggiato."
+    },
+    "rationale": {
+      "color": "Colore trovato nel file ({count, plural, one {# occorrenza} other {# occorrenze}}).",
+      "fontImported": "Font importato: conferma ruolo e licenza.",
+      "fontTheme": "Font indicato nel tema del documento.",
+      "logo": "File del logo importato: conferma il ruolo della variante."
+    },
+    "locators": {
+      "theme": "Tema del documento",
+      "documentStart": "Inizio del documento",
+      "section": "Sezione {number}: {title}",
+      "sectionNamed": "Sezione: {title}",
+      "slide": "Slide {number}",
+      "page": "p. {number}",
+      "svg": "File SVG",
+      "start": "Inizio",
+      "note": "Nota"
+    },
+    "quotes": {
+      "themeColor": "Colore del tema {slot}",
+      "slideColor": "Colore usato nelle slide",
+      "drawingColor": "Colore usato nel disegno"
+    },
+    "colorTitle": "Colore {name} {hex}",
+    "stale": {
+      "fieldChanged": "Il campo è cambiato dopo la proposta",
+      "restored": "La bozza v{number} è stata sostituita da un ripristino",
+      "sourceRemoved": "La fonte della proposta è stata rimossa"
+    }
   }
 }

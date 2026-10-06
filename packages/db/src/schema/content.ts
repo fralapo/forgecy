@@ -13,6 +13,7 @@ import {
   contentVersionOrigins,
   funnelStages,
   strategyItemStatuses,
+  type MessageRef,
 } from "@forgecy/core";
 import { sql } from "drizzle-orm";
 import {
@@ -346,6 +347,8 @@ export const contentSlideEdits = pgTable(
     before: jsonb("before").$type<Json>(),
     after: jsonb("after").$type<Json>(),
     note: text("note"),
+    /** `note` as a message reference when written by code (a failure). */
+    noteRef: jsonb("note_ref").$type<MessageRef>(),
     jobId: uuid("job_id").references(() => jobs.id, { onDelete: "set null" }),
     model: text("model"),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),

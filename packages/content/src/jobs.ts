@@ -2,6 +2,7 @@
 import { exportOutputs } from "@forgecy/carousel";
 import { defineJob } from "@forgecy/jobs";
 import { z } from "zod";
+import { contentChannels, languageSchema } from "./document";
 
 const base = {
   clientId: z.uuid(),
@@ -9,12 +10,14 @@ const base = {
   requestedBy: z.uuid().nullish(),
 };
 const instruction = z.string().trim().max(500).default("");
+/** Language the Planner writes in: the interface language of the person who asked. */
+const language = languageSchema.default("en");
 
 /** Planner: pillars and rubrics as proposals. */
 export const proposeStrategyJob = defineJob({
   kind: "content.propose_strategy",
   queue: "ai",
-  payload: z.object({ ...base, instruction }),
+  payload: z.object({ ...base, instruction, language }),
 });
 
 /** Planner: a 30-day plan as a new proposed plan. */
@@ -24,10 +27,11 @@ export const proposePlanJob = defineJob({
   payload: z.object({
     ...base,
     instruction,
+    language,
     channels: z
-      .array(z.enum(["instagram", "linkedin"]))
+      .array(z.enum(contentChannels))
       .min(1)
-      .max(2)
+      .max(contentChannels.length)
       .default(["instagram"]),
   }),
 });

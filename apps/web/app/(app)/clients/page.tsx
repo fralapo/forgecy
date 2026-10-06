@@ -1,3 +1,4 @@
+import { getDefaultAiPolicy } from "@forgecy/ai";
 import { Badge, Card } from "@forgecy/ui";
 import { asc, clients, getDb, isNull } from "@forgecy/db";
 import type { Route } from "next";
@@ -26,6 +27,7 @@ function areaLinks(c: { slug: string; status: string }) {
 
 export default async function ClientsPage() {
   await requireUser();
+  const { policy: defaultPolicy } = await getDefaultAiPolicy(getDb());
   const t = await getTranslations("clients");
   const te = await getTranslations("enums");
   const rows = await getDb()
@@ -66,7 +68,9 @@ export default async function ClientsPage() {
                 {rows.map((c) => (
                   <tr key={c.id} className="border-b border-subtle last:border-0">
                     <td className="px-6 py-3 text-fg">
-                      {c.name}
+                      <Link href={`/clients/${c.slug}` as Route} className={linkClass}>
+                        {c.name}
+                      </Link>
                       {c.websiteUrl ? (
                         <span className="block text-fg-muted">{c.websiteUrl}</span>
                       ) : null}
@@ -96,7 +100,7 @@ export default async function ClientsPage() {
         </Card>
         <Card className="p-6">
           <h2 className="text-heading-sm text-fg">{t("new.title")}</h2>
-          <NewClientForm />
+          <NewClientForm defaultPolicy={defaultPolicy} />
         </Card>
       </div>
     </>

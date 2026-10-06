@@ -49,7 +49,7 @@ type Duplicate = { id: string; name: string; slug: string; reason: "domain" | "n
 
 export function ProspectForm(
   props:
-    | { mode: "create"; isAdmin: boolean }
+    | { mode: "create"; isAdmin: boolean; defaultPolicy: AiPolicy }
     | { mode: "edit"; clientId: string; rev: number; initial: ProspectFormValues },
 ) {
   const router = useRouter();
@@ -256,7 +256,7 @@ export function ProspectForm(
                 id="aiPolicy"
                 name="aiPolicy"
                 className={selectClass}
-                defaultValue="external_allowed"
+                defaultValue={props.defaultPolicy}
               >
                 {aiPolicies.map((p) => (
                   <option key={p} value={p}>
@@ -265,7 +265,9 @@ export function ProspectForm(
                 ))}
               </select>
             ) : (
-              <p className="text-body-sm text-fg-muted">{t("prospectForm.aiPolicyFixed")}</p>
+              <p className="text-body-sm text-fg-muted">
+                {t("prospectForm.aiPolicyFixed", { policy: te(props.defaultPolicy) })}
+              </p>
             )}
           </div>
         ) : null}

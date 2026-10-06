@@ -6,7 +6,13 @@
     "language": "Lingua dell’interfaccia",
     "languageHint": "Cambia solo ciò che vedi tu. I deliverable per i clienti mantengono la lingua scelta per ogni cliente o contenuto.",
     "automatic": "Automatica (browser: {language})",
-    "saved": "Lingua aggiornata."
+    "saved": "Lingua aggiornata.",
+    "theme": "Tema",
+    "themeSystem": "Come il sistema",
+    "themeLight": "Chiaro",
+    "themeDark": "Scuro",
+    "themeHint": "Salvato su questo browser.",
+    "themeSaved": "Tema aggiornato."
   },
   "instance": {
     "title": "Istanza",

@@ -1,6 +1,6 @@
 import type { PageData } from "@forgecy/db";
 import { parse, type HTMLElement } from "node-html-parser";
-import { CrawlError } from "../errors";
+import { crawlError } from "../errors";
 import type { HostCheck } from "../url";
 
 /** What a fetcher returns for one page. Colors and fonts need a browser; HTML-only leaves them empty. */
@@ -144,7 +144,7 @@ export function createHtmlFetcher(options: {
       let res: Response | undefined;
       for (let hop = 0; hop < 5; hop++) {
         if (!(await options.hostCheck(current)))
-          throw new CrawlError("AUD-HOST-BLOCKED", `Address on the local network: ${current}`);
+          throw crawlError("AUD-HOST-BLOCKED", "audit.stored.crawl.addressLocal", { url: current });
         res = await doFetch(current, {
           redirect: "manual",
           headers: { "user-agent": options.userAgent, accept: "text/html,*/*;q=0.8" },
@@ -157,7 +157,7 @@ export function createHtmlFetcher(options: {
         }
         break;
       }
-      if (!res) throw new CrawlError("SOURCE-UNAVAILABLE", `No response from ${url}`);
+      if (!res) throw crawlError("SOURCE-UNAVAILABLE", "audit.stored.crawl.noResponse", { url });
       const type = res.headers.get("content-type") ?? "";
       const html = type.includes("html") ? await res.text() : "";
       const extracted = extractFromHtml(html, current);

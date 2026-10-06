@@ -54,10 +54,6 @@ export async function runReportTexts(
     db.query.auditPlans.findFirst({ where: eq(auditPlans.auditId, audit.id) }),
     reportFindings(db, report),
   ]);
-  const languageRule =
-    profile?.reportLanguage === "it"
-      ? "\nWrite every text in Italian: this overrides the language rule above."
-      : "";
   const instruction = payload.instruction
     ? dataBlock("agency instruction", oneLine(payload.instruction, 500))
     : "";
@@ -94,7 +90,8 @@ export async function runReportTexts(
       task: "audit_report",
       schema: reportTextsSchema,
       schemaName: "report_texts",
-      system: STRATEGIST_REPORT + languageRule,
+      system: STRATEGIST_REPORT,
+      language: profile?.reportLanguage,
       prompt: [
         prospectContext(audit, client),
         `Sections to write: ${keys.join(", ")}.`,
@@ -127,7 +124,8 @@ export async function runReportTexts(
       task: "audit_report",
       schema: reportEmailSchema,
       schemaName: "report_email",
-      system: COPYWRITER_EMAIL + languageRule,
+      system: COPYWRITER_EMAIL,
+      language: profile?.reportLanguage,
       prompt: [
         prospectContext(audit, client),
         dataBlock(

@@ -199,6 +199,7 @@ export async function listSources(db: Database, actor: Actor, clientId: string) 
       size: brandSources.size,
       status: brandSources.status,
       statusDetail: brandSources.statusDetail,
+      statusDetailRef: brandSources.statusDetailRef,
       note: brandSources.note,
       capturedAt: brandSources.capturedAt,
       pageCount: sql<number>`coalesce(jsonb_array_length(${brandSources.pages}), 0)::int`,

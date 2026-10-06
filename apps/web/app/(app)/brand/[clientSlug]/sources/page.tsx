@@ -2,7 +2,7 @@ import { createStorageFromEnv } from "@forgecy/files";
 import { Badge, Card } from "@forgecy/ui";
 import { getTranslations } from "next-intl/server";
 import { env } from "@/lib/env";
-import { getFormat } from "@/lib/i18n";
+import { getFormat, getRefText } from "@/lib/i18n";
 import { ActionButton } from "../../_components/action-button";
 import { LinkSourceForm, UploadSourceForm } from "../../_components/source-forms";
 import { importSourceAction, removeSourceAction } from "../../actions";
@@ -24,6 +24,7 @@ export default async function SourcesPage({
   const [{ clientSlug }, sp] = await Promise.all([params, searchParams]);
   const t = await getTranslations("brand");
   const format = await getFormat();
+  const rt = await getRefText();
   const size = (n: number) =>
     n > 1024 * 1024
       ? t("sources.size", {
@@ -100,7 +101,11 @@ export default async function SourcesPage({
                       {s.pageCount ? ` · ${t("sources.partsRead", { count: s.pageCount })}` : ""}
                     </span>
                     {s.statusDetail ? (
-                      <span className="block text-fg-muted">{s.statusDetail}</span>
+                      <span className="block text-fg-muted">
+                        {s.statusDetailRef?.length
+                          ? s.statusDetailRef.map((r) => rt(r, "")).join(" · ")
+                          : s.statusDetail}
+                      </span>
                     ) : null}
                   </td>
                   <td className="px-4 py-3">

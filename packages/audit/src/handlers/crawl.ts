@@ -1,4 +1,4 @@
-import { AUDIT_LIMITS } from "@forgecy/core";
+import { AUDIT_LIMITS, type MessageRef } from "@forgecy/core";
 import {
   and,
   auditChannelStates,
@@ -18,6 +18,7 @@ import { crawlSite, type CrawlProgress, type CrawlResult } from "../crawl/crawle
 import { aggregateExtraction, technicalChecks } from "../crawl/extract";
 import { createHtmlFetcher, type FetchedPage, type PageFetcher } from "../crawl/fetcher";
 import { auditErrorCode, CrawlError } from "../errors";
+import { stored } from "../stored";
 import {
   auditAnalyzeSiteJob,
   auditCompareCompetitorsJob,
@@ -152,19 +153,25 @@ export async function runCrawl(
     const code = known ?? "SOURCE-UNAVAILABLE";
     // Unknown errors (file system, driver) carry paths and internals: log them, show a plain message.
     if (!known) ctx.logger.error({ jobId: ctx.jobId, err }, "site scan failed");
-    const message = known
-      ? err instanceof Error
-        ? err.message
-        : String(err)
-      : "Internal error while reading the website. The details are in the worker logs.";
+    const internal = stored("audit.stored.crawl.internal");
+    const message = known ? (err instanceof Error ? err.message : String(err)) : internal.text;
+    // A crawl error carries its translation; a raw driver message has none.
+    const errorRef = known ? (err instanceof CrawlError ? (err.ref ?? null) : null) : internal.ref;
     steps = steps.map((s) =>
       s.status === "pending" || s.status === "running" ? { ...s, status: "skipped" } : s,
     );
     await db
       .update(siteScans)
-      .set({ status: "failed", errorCode: code, error: message, finishedAt: new Date(), steps })
+      .set({
+        status: "failed",
+        errorCode: code,
+        error: message,
+        errorRef,
+        finishedAt: new Date(),
+        steps,
+      })
       .where(eq(siteScans.id, scan.id));
-    await afterScan(deps, { ...scan, status: "failed", error: message }, 0);
+    await afterScan(deps, { ...scan, status: "failed", error: message, errorRef }, 0);
     return { status: "failed", code };
   } finally {
     await fetcher.close().catch(() => undefined);
@@ -182,6 +189,7 @@ export async function runCrawl(
       status: "skipped",
       url: s.url,
       skipReason: s.reason,
+      skipRef: s.ref,
       createdBy: scan.createdBy,
     });
   }
@@ -208,9 +216,9 @@ export async function runCrawl(
         : "collected";
   const stopped =
     result.stoppedEarly === "timeout"
-      ? "Time limit reached: pages already read were kept"
+      ? stored("audit.stored.crawl.timeLimit")
       : result.stoppedEarly === "cancelled"
-        ? "Scan stopped: pages already read were kept"
+        ? stored("audit.stored.crawl.stopped")
         : null;
   await db
     .update(siteScans)
@@ -219,13 +227,27 @@ export async function runCrawl(
       robots: result.robots,
       extracted,
       ...(result.stoppedEarly === "timeout" ? { errorCode: "AUD-CRAWL-TIMEOUT" } : {}),
-      error: stopped,
+      error: stopped?.text ?? null,
+      errorRef: stopped?.ref ?? null,
       finishedAt: new Date(),
     })
     .where(eq(siteScans.id, scan.id));
   await afterScan(deps, { ...scan, status }, result.pages.length);
   await ctx.progress(100);
   return { status, pages: result.pages.length, skipped: result.skipped.length };
+}
+
+/** Why a website could not be read, as `{ [text]: English, [ref]: reference }`. */
+function scanFailure<T extends string, R extends string>(
+  scan: Pick<ScanRow, "error" | "errorRef">,
+  text: T,
+  ref: R,
+) {
+  const fallback = stored("audit.stored.unavailable.websiteUnreadable");
+  return {
+    [text]: scan.error ?? fallback.text,
+    [ref]: scan.error ? (scan.errorRef ?? null) : fallback.ref,
+  } as Record<T, string> & Record<R, MessageRef | null>;
 }
 
 /** Next steps once a reading ends (also after a failure). */
@@ -241,7 +263,9 @@ async function afterScan(deps: AuditHandlerDeps, scan: ScanRow, pages: number) {
       .update(auditChannelStates)
       .set({
         status: scan.status === "failed" ? "failed" : "collected",
-        unavailableReason: scan.status === "failed" ? (scan.error ?? "Website not readable") : null,
+        ...(scan.status === "failed"
+          ? scanFailure(scan, "unavailableReason", "unavailableRef")
+          : { unavailableReason: null, unavailableRef: null }),
       })
       .where(
         and(eq(auditChannelStates.auditId, audit.id), eq(auditChannelStates.channel, "website")),
@@ -302,7 +326,9 @@ async function afterScan(deps: AuditHandlerDeps, scan: ScanRow, pages: number) {
     .set({
       sourceStatus:
         scan.status === "failed" ? "failed" : scan.status === "partial" ? "partial" : "collected",
-      sourceError: scan.status === "failed" ? (scan.error ?? "Website not readable") : null,
+      ...(scan.status === "failed"
+        ? scanFailure(scan, "sourceError", "sourceErrorRef")
+        : { sourceError: null, sourceErrorRef: null }),
     })
     .where(eq(auditCompetitors.id, scan.competitorId));
   const open = await db

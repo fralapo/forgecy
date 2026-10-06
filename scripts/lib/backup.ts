@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { backupsDir, createBackupArchive } from "../../packages/backup/src/archive";
 import { composePostgresRunning, run } from "./shell";
 
 const PG_IMAGE = "pgvector/pgvector:pg17";
@@ -96,28 +97,13 @@ function pgClientTool(
 }
 
 export async function backup(): Promise<string> {
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const work = mkdtempSync(join(tmpdir(), "forgecy-backup-"));
-  try {
-    writeFileSync(join(work, "db.sql"), dumpDatabase());
-    writeFileSync(
-      join(work, "manifest.json"),
-      JSON.stringify(
-        { format: 1, createdAt: new Date().toISOString(), media: existsSync(mediaDir) },
-        null,
-        2,
-      ),
-    );
-    const backups = join(dataDir, "backups");
-    mkdirSync(backups, { recursive: true });
-    const file = join(backups, `forgecy-${stamp}.tar.gz`);
-    const args = ["-czf", file, "-C", work, "db.sql", "manifest.json"];
-    if (existsSync(mediaDir)) args.push("-C", resolve(mediaDir, ".."), mediaDir.split("/").pop()!);
-    run("tar", args);
-    return file;
-  } finally {
-    rmSync(work, { recursive: true, force: true });
-  }
+  const file = await createBackupArchive({
+    dataDir,
+    mediaDir,
+    kind: "cli",
+    dump: async (target) => writeFileSync(target, dumpDatabase()),
+  });
+  return join(backupsDir(dataDir), file.name);
 }
 
 export async function restore(archive: string): Promise<void> {
