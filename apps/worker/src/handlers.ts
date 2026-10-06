@@ -4,6 +4,7 @@ import { loadEnv } from "@forgecy/core";
 import { resolveMediaRoot } from "@forgecy/files";
 import { carouselWorkerHandlers } from "@forgecy/carousel/export";
 import { brandHandlers } from "@forgecy/brand/handlers";
+import { brandBookHandlers } from "@forgecy/brand-book/handlers";
 import { contentHandlers } from "@forgecy/content/handlers";
 import { catalogHandlers } from "@forgecy/catalog/handlers";
 import { handle, systemPingJob, type JobHandlers } from "@forgecy/jobs";
@@ -23,6 +24,7 @@ export const handlers: JobHandlers = {
   }),
   ...carouselWorkerHandlers(),
   ...brandHandlers,
+  ...brandBookHandlers(),
   ...contentHandlers,
   ...catalogHandlers,
   ...backupHandlers({

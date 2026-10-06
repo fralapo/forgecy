@@ -1,0 +1,692 @@
+{
+  "$schema": "../../template.schema.json",
+  "id": "brand-book-a4",
+  "name": "Brand Book · A4",
+  "description": "The client's Brand Book as an A4 PDF in the client's own colors and fonts: strategy, verbal and visual identity, content and channels, do and don't, signed by the agency.",
+  "version": "1.0.0",
+  "kind": "report",
+  "format": "report_a4",
+  "width": 1240,
+  "height": 1754,
+  "slides": {
+    "min": 3,
+    "max": 40,
+    "default": 16
+  },
+  "styles": ["styles.css"],
+  "fonts": [
+    {
+      "family": "Space Grotesk",
+      "file": "fonts/space-grotesk.woff2",
+      "weight": "300 700",
+      "license": "OFL-1.1"
+    },
+    {
+      "family": "Inter",
+      "file": "fonts/inter.woff2",
+      "weight": "100 900",
+      "license": "OFL-1.1"
+    }
+  ],
+  "colorRoles": {
+    "--fc-bg": {
+      "role": "background",
+      "fallback": "#FFFFFF"
+    },
+    "--fc-surface": {
+      "role": "surface",
+      "fallback": "#F3F2EE"
+    },
+    "--fc-text": {
+      "role": "text.primary",
+      "fallback": "#16161A"
+    },
+    "--fc-muted": {
+      "role": "text.secondary",
+      "fallback": "#55555F"
+    },
+    "--fc-accent": {
+      "role": "accent",
+      "fallback": "#2F55D4"
+    },
+    "--fc-cta-bg": {
+      "role": "cta.bg",
+      "fallback": "#16161A"
+    },
+    "--fc-cta-text": {
+      "role": "cta.text",
+      "fallback": "#FFFFFF"
+    }
+  },
+  "fontRoles": {
+    "--fc-font-heading": {
+      "role": "heading",
+      "fallback": "Space Grotesk"
+    },
+    "--fc-font-body": {
+      "role": "body",
+      "fallback": "Inter"
+    }
+  },
+  "typeScale": [20, 24, 28, 32, 40, 56, 72, 96, 160],
+  "rules": {
+    "ctaOnlyLast": false,
+    "logoOnCover": true,
+    "pageNumbers": true,
+    "maxImagesPerSlide": 0,
+    "notes": "A book the client keeps: one idea per page, in the client's colors and fonts, signed by the agency on the last page."
+  },
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "Cover",
+      "role": "cover",
+      "position": "first",
+      "file": "layouts/cover.html",
+      "slots": [
+        {
+          "name": "kicker",
+          "type": "text",
+          "label": "Kicker",
+          "maxChars": 40,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 40,
+          "maxLines": 2,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "subtitle",
+          "type": "text",
+          "label": "Subtitle",
+          "maxChars": 200,
+          "maxLines": 4
+        },
+        {
+          "name": "version",
+          "type": "text",
+          "label": "Version",
+          "maxChars": 24,
+          "maxLines": 1
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "label": "Date",
+          "maxChars": 24,
+          "maxLines": 1
+        },
+        {
+          "name": "prepared_by",
+          "type": "text",
+          "label": "Prepared by",
+          "maxChars": 48,
+          "maxLines": 2
+        }
+      ],
+      "sample": {
+        "kicker": "Brand Book",
+        "title": "Rossi ==Coffee==",
+        "subtitle": "Good coffee for people who work.",
+        "version": "Version 3",
+        "date": "October 2026",
+        "prepared_by": "Example Agency"
+      }
+    },
+    {
+      "id": "contents",
+      "name": "Contents",
+      "role": "contents",
+      "file": "layouts/contents.html",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 40,
+          "maxLines": 1,
+          "required": true
+        },
+        {
+          "name": "items",
+          "type": "list",
+          "label": "Sections",
+          "maxChars": 32,
+          "maxItems": 8,
+          "required": true
+        },
+        {
+          "name": "footer",
+          "type": "text",
+          "label": "Footer",
+          "maxChars": 100,
+          "maxLines": 1
+        }
+      ],
+      "sample": {
+        "title": "Contents",
+        "items": [
+          "Strategy",
+          "Verbal identity",
+          "Visual identity",
+          "Content and channels",
+          "Do and don't"
+        ],
+        "footer": "Brand Identity created by Example Agency · Version 3 · October 2026"
+      }
+    },
+    {
+      "id": "section",
+      "name": "Section",
+      "role": "section",
+      "file": "layouts/section.html",
+      "slots": [
+        {
+          "name": "number",
+          "type": "text",
+          "label": "Number",
+          "maxChars": 4,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 32,
+          "maxLines": 2,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "intro",
+          "type": "text",
+          "label": "Introduction",
+          "maxChars": 420,
+          "maxLines": 7
+        },
+        {
+          "name": "footer",
+          "type": "text",
+          "label": "Footer",
+          "maxChars": 100,
+          "maxLines": 1
+        }
+      ],
+      "sample": {
+        "number": "01",
+        "title": "==Strategy==",
+        "intro": "Who we are, who we speak to and what we promise. Everything else in this book follows from these choices.",
+        "footer": "Brand Identity created by Example Agency · Version 3 · October 2026"
+      }
+    },
+    {
+      "id": "statement",
+      "name": "Statement",
+      "role": "text",
+      "file": "layouts/statement.html",
+      "slots": [
+        {
+          "name": "label",
+          "type": "text",
+          "label": "Label",
+          "maxChars": 40,
+          "maxLines": 1
+        },
+        {
+          "name": "statement",
+          "type": "text",
+          "label": "Statement",
+          "maxChars": 180,
+          "maxLines": 6,
+          "required": true
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "label": "Body",
+          "maxChars": 700,
+          "maxLines": 12
+        },
+        {
+          "name": "footer",
+          "type": "text",
+          "label": "Footer",
+          "maxChars": 100,
+          "maxLines": 1
+        }
+      ],
+      "sample": {
+        "label": "Positioning",
+        "statement": "For people who work long days, Rossi is the coffee that keeps the morning ritual.",
+        "body": "Unlike chains, we roast in small batches and deliver within 48 hours of roasting. Our promise is simple: every cup tastes like the first one of the day.",
+        "footer": "Brand Identity created by Example Agency · Version 3 · October 2026"
+      }
+    },
+    {
+      "id": "list",
+      "name": "List",
+      "role": "list",
+      "file": "layouts/list.html",
+      "slots": [
+        {
+          "name": "label",
+          "type": "text",
+          "label": "Label",
+          "maxChars": 40,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 80,
+          "maxLines": 2,
+          "required": true
+        },
+        {
+          "name": "intro",
+          "type": "text",
+          "label": "Introduction",
+          "maxChars": 240,
+          "maxLines": 4
+        },
+        {
+          "name": "items",
+          "type": "list",
+          "label": "Items",
+          "maxChars": 160,
+          "maxItems": 8,
+          "required": true
+        },
+        {
+          "name": "footer",
+          "type": "text",
+          "label": "Footer",
+          "maxChars": 100,
+          "maxLines": 1
+        }
+      ],
+      "sample": {
+        "label": "Strategy",
+        "title": "Our values",
+        "intro": "Four values guide every decision, from sourcing to the tone of a reply.",
+        "items": [
+          "Care · We know where every bean comes from",
+          "Craft · Small batches, roasted by hand",
+          "Honesty · Clear prices, no fine print",
+          "Warmth · We talk like a neighbour, not a brand"
+        ],
+        "footer": "Brand Identity created by Example Agency · Version 3 · October 2026"
+      }
+    },
+    {
+      "id": "comparison",
+      "name": "Comparison",
+      "role": "comparison",
+      "file": "layouts/comparison.html",
+      "slots": [
+        {
+          "name": "label",
+          "type": "text",
+          "label": "Label",
+          "maxChars": 40,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 80,
+          "maxLines": 2,
+          "required": true
+        },
+        {
+          "name": "left_label",
+          "type": "text",
+          "label": "Left heading",
+          "maxChars": 24,
+          "maxLines": 1,
+          "required": true
+        },
+        {
+          "name": "left",
+          "type": "list",
+          "label": "Left",
+          "maxChars": 70,
+          "maxItems": 8
+        },
+        {
+          "name": "right_label",
+          "type": "text",
+          "label": "Right heading",
+          "maxChars": 24,
+          "maxLines": 1,
+          "required": true
+        },
+        {
+          "name": "right",
+          "type": "list",
+          "label": "Right",
+          "maxChars": 70,
+          "maxItems": 8
+        },
+        {
+          "name": "footer",
+          "type": "text",
+          "label": "Footer",
+          "maxChars": 100,
+          "maxLines": 1
+        }
+      ],
+      "sample": {
+        "label": "Verbal identity",
+        "title": "We are, we are not",
+        "left_label": "We are",
+        "left": ["Warm", "Direct", "Expert"],
+        "right_label": "We are not",
+        "right": ["Cheesy", "Rude", "Pedantic"],
+        "footer": "Brand Identity created by Example Agency · Version 3 · October 2026"
+      }
+    },
+    {
+      "id": "palette",
+      "name": "Palette",
+      "role": "palette",
+      "file": "layouts/palette.html",
+      "slots": [
+        {
+          "name": "label",
+          "type": "text",
+          "label": "Label",
+          "maxChars": 40,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 60,
+          "maxLines": 2,
+          "required": true
+        },
+        {
+          "name": "intro",
+          "type": "text",
+          "label": "Introduction",
+          "maxChars": 300,
+          "maxLines": 4
+        },
+        {
+          "name": "swatch_background",
+          "type": "text",
+          "label": "Background color",
+          "maxChars": 40,
+          "maxLines": 3
+        },
+        {
+          "name": "swatch_surface",
+          "type": "text",
+          "label": "Surface color",
+          "maxChars": 40,
+          "maxLines": 3
+        },
+        {
+          "name": "swatch_text",
+          "type": "text",
+          "label": "Text color",
+          "maxChars": 40,
+          "maxLines": 3
+        },
+        {
+          "name": "swatch_accent",
+          "type": "text",
+          "label": "Accent color",
+          "maxChars": 40,
+          "maxLines": 3
+        },
+        {
+          "name": "swatch_cta",
+          "type": "text",
+          "label": "Call-to-action color",
+          "maxChars": 40,
+          "maxLines": 3
+        },
+        {
+          "name": "colors",
+          "type": "list",
+          "label": "Reference palette",
+          "maxChars": 44,
+          "maxItems": 10
+        },
+        {
+          "name": "footer",
+          "type": "text",
+          "label": "Footer",
+          "maxChars": 100,
+          "maxLines": 1
+        }
+      ],
+      "sample": {
+        "label": "Visual identity",
+        "title": "Colors",
+        "intro": "The roles below are how the palette is applied; the reference colors are the official values.",
+        "swatch_background": "Background · #FFFFFF",
+        "swatch_surface": "Surface · #F3F2EE",
+        "swatch_text": "Text · #16161A",
+        "swatch_accent": "Accent · #2F55D4",
+        "swatch_cta": "Call to action · #16161A",
+        "colors": ["Rossi blue · #2F55D4", "Cream · #F3F2EE", "Ink · #16161A"],
+        "footer": "Brand Identity created by Example Agency · Version 3 · October 2026"
+      }
+    },
+    {
+      "id": "typography",
+      "name": "Typography",
+      "role": "typography",
+      "file": "layouts/typography.html",
+      "slots": [
+        {
+          "name": "label",
+          "type": "text",
+          "label": "Label",
+          "maxChars": 40,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 60,
+          "maxLines": 2,
+          "required": true
+        },
+        {
+          "name": "heading_family",
+          "type": "text",
+          "label": "Heading font",
+          "maxChars": 28,
+          "maxLines": 1,
+          "required": true
+        },
+        {
+          "name": "heading_detail",
+          "type": "text",
+          "label": "Heading details",
+          "maxChars": 80,
+          "maxLines": 3
+        },
+        {
+          "name": "body_family",
+          "type": "text",
+          "label": "Body font",
+          "maxChars": 28,
+          "maxLines": 1
+        },
+        {
+          "name": "body_detail",
+          "type": "text",
+          "label": "Body details",
+          "maxChars": 80,
+          "maxLines": 3
+        },
+        {
+          "name": "sample_heading",
+          "type": "text",
+          "label": "Heading sample",
+          "maxChars": 60,
+          "maxLines": 2
+        },
+        {
+          "name": "sample_body",
+          "type": "text",
+          "label": "Body sample",
+          "maxChars": 240,
+          "maxLines": 4
+        },
+        {
+          "name": "footer",
+          "type": "text",
+          "label": "Footer",
+          "maxChars": 100,
+          "maxLines": 1
+        }
+      ],
+      "sample": {
+        "label": "Visual identity",
+        "title": "Typography",
+        "heading_family": "Space Grotesk",
+        "heading_detail": "Titles and numbers · 500 to 700",
+        "body_family": "Inter",
+        "body_detail": "Text and captions · 400 and 600",
+        "sample_heading": "Good coffee for people who work",
+        "sample_body": "We roast in small batches and deliver within 48 hours, so every cup tastes like the first one of the day.",
+        "footer": "Brand Identity created by Example Agency · Version 3 · October 2026"
+      }
+    },
+    {
+      "id": "logo",
+      "name": "Logo",
+      "role": "logo",
+      "file": "layouts/logo.html",
+      "slots": [
+        {
+          "name": "label",
+          "type": "text",
+          "label": "Label",
+          "maxChars": 40,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 60,
+          "maxLines": 2,
+          "required": true
+        },
+        {
+          "name": "intro",
+          "type": "text",
+          "label": "Introduction",
+          "maxChars": 200,
+          "maxLines": 3
+        },
+        {
+          "name": "rules",
+          "type": "list",
+          "label": "Rules",
+          "maxChars": 80,
+          "maxItems": 4
+        },
+        {
+          "name": "forbidden",
+          "type": "list",
+          "label": "Not allowed",
+          "maxChars": 80,
+          "maxItems": 4
+        },
+        {
+          "name": "footer",
+          "type": "text",
+          "label": "Footer",
+          "maxChars": 100,
+          "maxLines": 1
+        }
+      ],
+      "sample": {
+        "label": "Visual identity",
+        "title": "Logo",
+        "intro": "The primary logo on light backgrounds; the negative version on dark ones.",
+        "rules": [
+          "Clear space: the height of the R on every side",
+          "Minimum size: 24 px",
+          "Backgrounds: white, cream or Rossi blue"
+        ],
+        "forbidden": [
+          "Do not stretch or rotate it",
+          "Do not change its colors",
+          "Do not place it on busy photos"
+        ],
+        "footer": "Brand Identity created by Example Agency · Version 3 · October 2026"
+      }
+    },
+    {
+      "id": "signature",
+      "name": "Signature",
+      "role": "signature",
+      "position": "last",
+      "file": "layouts/signature.html",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 60,
+          "maxLines": 2,
+          "required": true
+        },
+        {
+          "name": "agency",
+          "type": "text",
+          "label": "Agency",
+          "maxChars": 40,
+          "maxLines": 2,
+          "required": true
+        },
+        {
+          "name": "version",
+          "type": "text",
+          "label": "Version",
+          "maxChars": 40,
+          "maxLines": 1
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "label": "Date",
+          "maxChars": 24,
+          "maxLines": 1
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "label": "Note",
+          "maxChars": 300,
+          "maxLines": 4
+        }
+      ],
+      "sample": {
+        "title": "Brand Identity created by",
+        "agency": "Example Agency",
+        "version": "Version 3",
+        "date": "October 2026",
+        "note": "This book describes the approved version of the Brand Identity. Later changes are published as new versions."
+      }
+    }
+  ]
+}

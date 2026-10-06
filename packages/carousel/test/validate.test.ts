@@ -13,6 +13,7 @@ describe("validateTemplatePackage", () => {
       "carousels/editorial-linkedin",
       "carousels/editorial-stories-9x16",
       "carousels/editorial-tiktok-photo",
+      "reports/brand-book-a4",
       "reports/report-audit-a4",
     ]);
     for (const e of entries) expect(e.report.issues.map(formatIssue), e.folder).toEqual([]);

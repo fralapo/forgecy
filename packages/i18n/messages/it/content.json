@@ -301,7 +301,12 @@
       "finding": "Evidenza",
       "problem": "Problema",
       "next_steps": "Prossimi passi",
-      "method": "Metodo"
+      "method": "Metodo",
+      "contents": "Indice",
+      "palette": "Palette",
+      "typography": "Tipografia",
+      "logo": "Logo",
+      "signature": "Firma"
     },
     "versionShort": "v{number}",
     "templateVersion": "{name} · v{version}",

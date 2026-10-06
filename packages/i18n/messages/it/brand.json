@@ -851,7 +851,51 @@
     "download": "Scarica",
     "errors": {
       "noParts": "Scegli almeno un file da includere.",
-      "noPublished": "Questa versione non è approvata: si esportano solo versioni pubblicate o archiviate."
+      "noPublished": "Questa versione non è approvata: si esportano solo versioni pubblicate o archiviate.",
+      "notFound": "Brand Book non trovato.",
+      "noSections": "Scegli almeno una sezione.",
+      "templateMissing": "Nessun template Brand Book pubblicato: importa e pubblica «Brand Book · A4» dalla pagina Template.",
+      "notDraft": "Questo Brand Book non è più una bozza.",
+      "notRendered": "L'anteprima non è ancora pronta: approvala dopo averla vista.",
+      "noteRequired": "Hai preparato tu questo Brand Book: aggiungi una nota di almeno {min} caratteri per approvarlo tu stesso.",
+      "notApproved": "Approva l'anteprima prima di esportare il PDF definitivo."
+    },
+    "clientTitle": "Brand Book per il cliente",
+    "clientIntro": "Un PDF con i colori e i font del cliente, firmato dall'agenzia. Non contiene mai prompt, punteggi interni o regole per gli agenti. L'anteprima porta la filigrana «Bozza» finché una persona non la approva.",
+    "language": "Lingua del manuale",
+    "languages": {
+      "en": "Inglese",
+      "it": "Italiano"
+    },
+    "sections": "Sezioni",
+    "sectionNames": {
+      "strategy": "Strategia",
+      "verbal": "Identità verbale",
+      "visual": "Identità visiva",
+      "content": "Contenuti e canali",
+      "dos": "Da fare e da evitare"
+    },
+    "sectionEmpty": "Niente da mostrare in questa versione. <link>Completala</link> o lasciala fuori.",
+    "generatePreview": "Genera anteprima",
+    "previewQueued": "BB-{number} è in preparazione: l'anteprima compare nell'elenco quando è pronta.",
+    "templateMissing": "Nessun template Brand Book pubblicato. <link>Importa e pubblica «Brand Book · A4»</link> dalla pagina Template.",
+    "rendering": "Preparazione del PDF…",
+    "renderAgain": "Rigenera",
+    "openPreview": "Apri anteprima",
+    "approve": "Approva",
+    "approveNote": "Nota di approvazione",
+    "approveNoteSelf": "Hai preparato tu questo manuale: spiega perché lo approvi tu stesso (almeno {min} caratteri).",
+    "approvedBy": "Approvato da {name} il {date}",
+    "exportFinal": "Esporta PDF definitivo",
+    "exportQueued": "Il PDF definitivo è in preparazione.",
+    "pages": "{count, plural, one {# pagina} other {# pagine}}",
+    "jobErrors": {
+      "noLongerApproved": "Il Brand Book non è più approvato: approva di nuovo l'anteprima.",
+      "versionMissing": "La versione della Brand Identity di questo manuale non è più disponibile.",
+      "templateMissing": "Il template Brand Book non è più pubblicato: pubblicalo di nuovo dalla pagina Template.",
+      "templateUnfit": "Al template Brand Book manca una pagina che serve a questo manuale: {detail}",
+      "bookUnfit": "Il manuale non rientra nel template: {detail}",
+      "noPdf": "Il renderer non ha prodotto il PDF."
     }
   }
 }

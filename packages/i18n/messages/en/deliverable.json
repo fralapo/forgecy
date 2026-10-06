@@ -44,5 +44,129 @@
       "imageAlt": "Image alt text: {alt}",
       "caption": "Caption"
     }
+  },
+  "brandBook": {
+    "kicker": "Brand Book",
+    "version": "Version {number}",
+    "contents": "Contents",
+    "footer": "Brand Identity created by {agency} · Version {number} · {date}",
+    "footerNoAgency": "Brand Identity · Version {number} · {date}",
+    "signatureTitle": "Brand Identity created by",
+    "signatureNote": "This book describes the approved version {number} of the Brand Identity. Later changes are published as new versions.",
+    "sections": {
+      "strategy": {
+        "title": "Strategy",
+        "intro": "Who we are, who we speak to and what we promise. Everything else in this book follows from these choices."
+      },
+      "verbal": {
+        "title": "Verbal identity",
+        "intro": "How we sound: the voice that stays the same everywhere and the rules every text follows."
+      },
+      "visual": {
+        "title": "Visual identity",
+        "intro": "How we look: logo, colors, typography and images."
+      },
+      "content": {
+        "title": "Content and channels",
+        "intro": "What we talk about and how each channel carries the brand."
+      },
+      "dos": {
+        "title": "Do and don't",
+        "intro": "The quick checks before anything goes out."
+      }
+    },
+    "pages": {
+      "positioning": "Positioning",
+      "promise": "Promise",
+      "missionVision": "Mission and vision",
+      "values": "Values",
+      "audience": "Who we speak to",
+      "messages": "Key messages",
+      "voice": "Voice",
+      "tone": "Tone of voice",
+      "weAre": "We are, we are not",
+      "weAreLabel": "We are",
+      "weAreNotLabel": "We are not",
+      "writing": "Writing rules",
+      "words": "Words",
+      "preferredWords": "Words we use",
+      "forbiddenWords": "Words we avoid",
+      "logo": "Logo",
+      "colors": "Colors",
+      "colorsIntro": "The swatches show how the palette is applied; the reference colors are the official values.",
+      "typography": "Typography",
+      "imagery": "Images",
+      "pillars": "Content pillars",
+      "channels": "Channels",
+      "dos": "Do and don't",
+      "doLabel": "Do",
+      "dontLabel": "Don't"
+    },
+    "roles": {
+      "background": "Background",
+      "surface": "Surface",
+      "text": "Text",
+      "accent": "Accent",
+      "cta": "Call to action"
+    },
+    "typeRoles": {
+      "display": "Titles",
+      "body": "Text",
+      "data": "Numbers and data"
+    },
+    "weights": "Weights {weights}",
+    "fallback": "Fallback: {font}",
+    "tone": "{left} / {right}: {value} out of 5",
+    "axes": {
+      "formal": {
+        "left": "Formal",
+        "right": "Informal"
+      },
+      "technical": {
+        "left": "Technical",
+        "right": "Simple"
+      },
+      "serious": {
+        "left": "Serious",
+        "right": "Ironic"
+      },
+      "institutional": {
+        "left": "Institutional",
+        "right": "Human"
+      },
+      "conservative": {
+        "left": "Conservative",
+        "right": "Bold"
+      }
+    },
+    "logoRules": {
+      "clearSpace": "Clear space: {value}",
+      "minSize": "Minimum size: {value} px",
+      "backgrounds": "Backgrounds: {value}"
+    },
+    "imagery": {
+      "subjects": "Subjects: {value}",
+      "settings": "Settings: {value}",
+      "framing": "Framing: {value}",
+      "lighting": "Light: {value}",
+      "colorMood": "Color mood: {value}",
+      "people": "People: {value}",
+      "illustration": "Illustration: {value}",
+      "forbidden": "Never: {value}"
+    },
+    "writing": {
+      "person": "We address the reader {value, select, tu {informally (tu)} lei {formally (lei)} voi {as a group (voi)} noi {as “we”} other {impersonally}}",
+      "emoji": "Emoji: {value, select, no {never} limited {sparingly} other {allowed}}",
+      "maxSentenceWords": "Sentences of at most {value} words",
+      "maxHashtags": "At most {value} hashtags",
+      "anglicisms": "English words: {value, select, avoid {avoid them} limited {few} other {allowed}}",
+      "exclamations": "Exclamation marks: {value, select, no {never} limited {rarely} other {allowed}}",
+      "capitalization": "Capitalization: {value}",
+      "numbers": "Numbers: {value}",
+      "ctaStyle": "Calls to action: {value}",
+      "headlineStyle": "Headlines: {value}",
+      "captionStyle": "Captions: {value}",
+      "notes": "{value}"
+    }
   }
 }

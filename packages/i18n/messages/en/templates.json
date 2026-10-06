@@ -39,7 +39,12 @@
     "finding": "Finding",
     "problem": "Problem",
     "next_steps": "Next steps",
-    "method": "Method"
+    "method": "Method",
+    "contents": "Contents",
+    "palette": "Palette",
+    "typography": "Typography",
+    "logo": "Logo",
+    "signature": "Signature"
   },
   "badge": {
     "validationErrors": "{count, plural, one {# validation error} other {# validation errors}}",

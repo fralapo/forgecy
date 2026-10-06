@@ -11,10 +11,13 @@ Starter templates in Forgecy's canonical format: grouped by kind (`carousels/`, 
 | `carousels/editorial-fb-4x5`       | Facebook 4:5 · 1080×1350  | 8       |
 | `carousels/editorial-tiktok-photo` | TikTok photo · 1080×1920  | 8       |
 | `reports/report-audit-a4`          | A4 report · PDF 150 dpi   | 6       |
+| `reports/brand-book-a4`            | A4 report · PDF 150 dpi   | 10      |
 
 The Instagram 1:1, Stories, Facebook and TikTok templates share the editorial structure; each adapts type sizes to its format, and Stories says “Tap” instead of “Swipe”. A format becomes selectable in contents once a published template declares it.
 
 `report-audit-a4` is the audit report (`kind: "report"`, no `channel`): cover, section, finding with evidence and recommendation, problem, next steps, method. The PDF comes out in true A4 format; there is also the `report_16x9` format (1920×1080) for reports to be projected.
+
+`brand-book-a4` is the client's Brand Book, rendered in the client's own colors and fonts: cover, contents, section, statement, list, comparison, palette, typography, logo and the agency's signature on the last page. Every inner page has a `footer` slot for the line “Brand Identity created by [agency] · Version n · date”.
 
 Rules for writing a template:
 

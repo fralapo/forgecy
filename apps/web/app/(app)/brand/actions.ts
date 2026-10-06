@@ -17,8 +17,22 @@ import {
   type DocumentSectionKey,
   type TokenTree,
 } from "@forgecy/brand";
-import { brandSystemParts, exportBrandSystem } from "@forgecy/brand-book";
-import { assertCan, brandSourceKinds, ForgecyError, PermissionDeniedError } from "@forgecy/core";
+import {
+  approveClientBook,
+  bookSections,
+  brandSystemParts,
+  createClientBook,
+  exportBrandSystem,
+  exportClientBook,
+  rerenderClientBook,
+} from "@forgecy/brand-book";
+import {
+  assertCan,
+  brandSourceKinds,
+  localeSchema,
+  ForgecyError,
+  PermissionDeniedError,
+} from "@forgecy/core";
 import { getDb } from "@forgecy/db";
 import { createStorageFromEnv } from "@forgecy/files";
 import { enqueueJob } from "@forgecy/jobs";
@@ -328,5 +342,74 @@ export async function exportBrandSystemAction(input: {
       { clientId: uuid.parse(input.clientId), versionId: uuid.parse(input.versionId), parts },
     );
     return { number: row.number };
+  });
+}
+
+export async function createClientBookAction(input: {
+  slug: string;
+  clientId: string;
+  versionId: string;
+  sections: string[];
+  language: string;
+}) {
+  slugSchema.parse(input.slug);
+  const sections = z.array(z.enum(bookSections)).min(1).max(10).parse(input.sections);
+  const language = localeSchema.parse(input.language);
+  return run(input.slug, async ({ actor }) => {
+    const row = await createClientBook({ db: getDb(), queues: await getQueues() }, actor, {
+      clientId: uuid.parse(input.clientId),
+      versionId: uuid.parse(input.versionId),
+      sections,
+      language,
+    });
+    return { number: row.number };
+  });
+}
+
+export async function rerenderClientBookAction(input: {
+  slug: string;
+  clientId: string;
+  exportId: string;
+}) {
+  slugSchema.parse(input.slug);
+  return run(input.slug, async ({ actor }) => {
+    await rerenderClientBook({ db: getDb(), queues: await getQueues() }, actor, {
+      clientId: uuid.parse(input.clientId),
+      exportId: uuid.parse(input.exportId),
+    });
+    return {};
+  });
+}
+
+export async function approveClientBookAction(input: {
+  slug: string;
+  clientId: string;
+  exportId: string;
+  note: string;
+}) {
+  slugSchema.parse(input.slug);
+  const note = z.string().max(2000).parse(input.note);
+  return run(input.slug, async ({ actor }) => {
+    await approveClientBook(getDb(), actor, {
+      clientId: uuid.parse(input.clientId),
+      exportId: uuid.parse(input.exportId),
+      note,
+    });
+    return {};
+  });
+}
+
+export async function exportClientBookAction(input: {
+  slug: string;
+  clientId: string;
+  exportId: string;
+}) {
+  slugSchema.parse(input.slug);
+  return run(input.slug, async ({ actor }) => {
+    await exportClientBook({ db: getDb(), queues: await getQueues() }, actor, {
+      clientId: uuid.parse(input.clientId),
+      exportId: uuid.parse(input.exportId),
+    });
+    return {};
   });
 }

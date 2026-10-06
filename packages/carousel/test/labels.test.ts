@@ -56,6 +56,7 @@ describe("template labels", () => {
     "carousels/editorial-linkedin",
     "carousels/editorial-stories-9x16",
     "carousels/editorial-tiktok-photo",
+    "reports/brand-book-a4",
     "reports/report-audit-a4",
   ])("%s ships every label in English and Italian", async (folder) => {
     const repo = await loadRepoTemplate(folder);
