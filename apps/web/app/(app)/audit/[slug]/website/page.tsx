@@ -20,6 +20,8 @@ const checkKeys = [
   "lang",
   "viewport",
   "load_time",
+  "structured_data",
+  "ai_crawlers",
 ] as const;
 const checkKeyOf = (key: string) => checkKeys.find((k) => k === key) ?? null;
 
