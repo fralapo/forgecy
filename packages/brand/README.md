@@ -5,7 +5,7 @@ tokens, brand book import and the brand block of generation prompts.
 
 ## Stable API for other modules
 
-Contents, carousels, the brand check and exports read the **published** version
+Content, carousels, the brand check and exports read the **published** version
 only, through these functions, and store `versionId` on what they generate:
 
 ```ts
@@ -41,7 +41,7 @@ const ctx = await loadBrandContext(db, actor, clientId, {
 - A version is immutable from `approved` onward. A database trigger (`brand_versions_guard`) rejects any change to
   content, number or approval data, and only allows `approved → published → archived`.
 - One published version per client and one open draft, with partial unique indexes.
-- Publishing requires a changelog of at least 20 characters and a "Ho visto" on every open check.
+- Publishing requires a changelog of at least 20 characters and a "Seen" on every open check.
   A self-approval (approving a draft you edited or submitted) also requires a note.
 - Sensitive fields (positioning, promise, tone, values, audience, palette...) are accepted one by one. When the
   confidence is low or the proposal is in conflict, accepting also requires a note.

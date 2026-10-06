@@ -1,8 +1,8 @@
 {
   "$schema": "../template.schema.json",
   "id": "editorial-ig-4x5",
-  "name": "Editoriale · Instagram 4:5",
-  "description": "Carosello educativo a 8 layout: copertina, testo, elenco, citazione, dato, problema-soluzione, confronto e CTA.",
+  "name": "Editorial · Instagram 4:5",
+  "description": "Educational carousel with 8 layouts: cover, text, list, quote, data, problem-solution, comparison and CTA.",
   "version": "1.0.0",
   "kind": "carousel",
   "channel": "instagram",
@@ -39,21 +39,21 @@
     "logoOnCover": true,
     "pageNumbers": true,
     "maxImagesPerSlide": 1,
-    "notes": "Una sola idea per slide. Il titolo della copertina è l'hook: breve, concreto, leggibile in miniatura."
+    "notes": "One idea per slide. The cover title is the hook: short, concrete, readable as a thumbnail."
   },
   "layouts": [
     {
       "id": "cover",
-      "name": "Copertina",
+      "name": "Cover",
       "role": "cover",
       "position": "first",
       "file": "layouts/cover.html",
       "slots": [
-        { "name": "kicker", "type": "text", "label": "Occhiello", "maxChars": 32, "maxLines": 1 },
+        { "name": "kicker", "type": "text", "label": "Kicker", "maxChars": 32, "maxLines": 1 },
         {
           "name": "title",
           "type": "text",
-          "label": "Titolo",
+          "label": "Title",
           "maxChars": 70,
           "maxLines": 4,
           "required": true,
@@ -62,39 +62,39 @@
         {
           "name": "subtitle",
           "type": "text",
-          "label": "Sottotitolo",
+          "label": "Subtitle",
           "maxChars": 110,
           "maxLines": 3
         },
         {
           "name": "image",
           "type": "image",
-          "label": "Immagine",
+          "label": "Image",
           "minWidth": 1080,
           "minHeight": 620
         }
       ],
       "sample": {
-        "kicker": "Guida pratica",
-        "title": "Fattura elettronica: i 5 errori che ==costano caro==",
-        "subtitle": "Cosa controllare prima di inviare, in meno di un minuto.",
+        "kicker": "Practical guide",
+        "title": "E-invoicing: 5 mistakes that ==cost you dearly==",
+        "subtitle": "What to check before sending, in under a minute.",
         "image": {
-          "asset": "assets/esempio-foto.svg",
-          "alt": "Illustrazione astratta di un documento"
+          "asset": "assets/example-photo.svg",
+          "alt": "Abstract illustration of a document"
         }
       }
     },
     {
       "id": "text",
-      "name": "Testo",
+      "name": "Text",
       "role": "text",
       "file": "layouts/text.html",
       "slots": [
-        { "name": "kicker", "type": "text", "label": "Occhiello", "maxChars": 28, "maxLines": 1 },
+        { "name": "kicker", "type": "text", "label": "Kicker", "maxChars": 28, "maxLines": 1 },
         {
           "name": "title",
           "type": "text",
-          "label": "Titolo",
+          "label": "Title",
           "maxChars": 60,
           "maxLines": 3,
           "required": true,
@@ -103,28 +103,28 @@
         {
           "name": "body",
           "type": "text",
-          "label": "Testo",
+          "label": "Text",
           "maxChars": 300,
           "maxLines": 9,
           "required": true
         }
       ],
       "sample": {
-        "kicker": "Errore 1",
-        "title": "Partita IVA del cliente ==sbagliata==",
-        "body": "Basta una cifra fuori posto e il Sistema di Interscambio scarta la fattura. Copia i dati dall'anagrafica, non dall'email: è lì che nascono gli errori."
+        "kicker": "Mistake 1",
+        "title": "==Wrong== customer VAT number",
+        "body": "One wrong digit and the e-invoicing system rejects the invoice. Copy the details from your customer records, not from emails: that is where mistakes start."
       }
     },
     {
       "id": "list",
-      "name": "Elenco",
+      "name": "List",
       "role": "list",
       "file": "layouts/list.html",
       "slots": [
         {
           "name": "title",
           "type": "text",
-          "label": "Titolo",
+          "label": "Title",
           "maxChars": 56,
           "maxLines": 2,
           "required": true,
@@ -133,7 +133,7 @@
         {
           "name": "items",
           "type": "list",
-          "label": "Voci",
+          "label": "Items",
           "minItems": 2,
           "maxItems": 5,
           "maxChars": 64,
@@ -141,25 +141,25 @@
         }
       ],
       "sample": {
-        "title": "Prima di inviare, controlla",
+        "title": "Before sending, check",
         "items": [
-          "Codice destinatario o PEC",
-          "Partita IVA e codice fiscale",
-          "Aliquota e natura IVA",
-          "Data e numero progressivo"
+          "Recipient code or certified email",
+          "VAT number and tax code",
+          "VAT rate and VAT code",
+          "Date and sequential number"
         ]
       }
     },
     {
       "id": "quote",
-      "name": "Citazione",
+      "name": "Quote",
       "role": "quote",
       "file": "layouts/quote.html",
       "slots": [
         {
           "name": "quote",
           "type": "text",
-          "label": "Citazione",
+          "label": "Quote",
           "maxChars": 160,
           "maxLines": 6,
           "required": true
@@ -167,29 +167,29 @@
         {
           "name": "author",
           "type": "text",
-          "label": "Autore",
+          "label": "Author",
           "maxChars": 40,
           "maxLines": 1,
           "required": true
         },
-        { "name": "role", "type": "text", "label": "Ruolo", "maxChars": 56, "maxLines": 1 }
+        { "name": "role", "type": "text", "label": "Role", "maxChars": 56, "maxLines": 1 }
       ],
       "sample": {
-        "quote": "Da quando controlliamo le fatture con una checklist, gli scarti sono spariti.",
+        "quote": "Since we started checking invoices with a checklist, rejections have disappeared.",
         "author": "Laura Bianchi",
-        "role": "Amministrazione, Rossi S.r.l."
+        "role": "Accounts, Rossi S.r.l."
       }
     },
     {
       "id": "data",
-      "name": "Dato",
+      "name": "Data",
       "role": "data",
       "file": "layouts/data.html",
       "slots": [
         {
           "name": "value",
           "type": "text",
-          "label": "Numero",
+          "label": "Number",
           "maxChars": 6,
           "maxLines": 1,
           "required": true
@@ -197,29 +197,29 @@
         {
           "name": "label",
           "type": "text",
-          "label": "Didascalia",
+          "label": "Caption",
           "maxChars": 90,
           "maxLines": 3,
           "required": true
         },
-        { "name": "source", "type": "text", "label": "Fonte", "maxChars": 80, "maxLines": 2 }
+        { "name": "source", "type": "text", "label": "Source", "maxChars": 80, "maxLines": 2 }
       ],
       "sample": {
-        "value": "1 su 8",
-        "label": "fatture scartate per un errore nei dati del cliente",
-        "source": "Esempio dimostrativo, non un dato reale"
+        "value": "1 in 8",
+        "label": "invoices rejected because of a mistake in the customer details",
+        "source": "Illustrative example, not real data"
       }
     },
     {
       "id": "problem-solution",
-      "name": "Problema e soluzione",
+      "name": "Problem and solution",
       "role": "problem_solution",
       "file": "layouts/problem-solution.html",
       "slots": [
         {
           "name": "title",
           "type": "text",
-          "label": "Titolo",
+          "label": "Title",
           "maxChars": 48,
           "maxLines": 2,
           "required": true,
@@ -228,7 +228,7 @@
         {
           "name": "problem",
           "type": "text",
-          "label": "Problema",
+          "label": "Problem",
           "maxChars": 150,
           "maxLines": 4,
           "required": true
@@ -236,28 +236,28 @@
         {
           "name": "solution",
           "type": "text",
-          "label": "Soluzione",
+          "label": "Solution",
           "maxChars": 150,
           "maxLines": 4,
           "required": true
         }
       ],
       "sample": {
-        "title": "Lo scarto arriva dopo giorni",
-        "problem": "Te ne accorgi quando il cliente chiede dove sia la fattura, e la scadenza è vicina.",
-        "solution": "Controlla le ricevute del Sistema di Interscambio ogni mattina: bastano due minuti."
+        "title": "The rejection arrives days later",
+        "problem": "You find out when the customer asks where the invoice is, and the deadline is close.",
+        "solution": "Check the e-invoicing system receipts every morning: it takes two minutes."
       }
     },
     {
       "id": "comparison",
-      "name": "Confronto",
+      "name": "Comparison",
       "role": "comparison",
       "file": "layouts/comparison.html",
       "slots": [
         {
           "name": "title",
           "type": "text",
-          "label": "Titolo",
+          "label": "Title",
           "maxChars": 48,
           "maxLines": 2,
           "required": true,
@@ -266,7 +266,7 @@
         {
           "name": "left_title",
           "type": "text",
-          "label": "Titolo colonna A",
+          "label": "Column A title",
           "maxChars": 18,
           "maxLines": 1,
           "required": true
@@ -274,7 +274,7 @@
         {
           "name": "left",
           "type": "list",
-          "label": "Voci colonna A",
+          "label": "Column A items",
           "minItems": 2,
           "maxItems": 4,
           "maxChars": 44,
@@ -283,7 +283,7 @@
         {
           "name": "right_title",
           "type": "text",
-          "label": "Titolo colonna B",
+          "label": "Column B title",
           "maxChars": 18,
           "maxLines": 1,
           "required": true
@@ -291,7 +291,7 @@
         {
           "name": "right",
           "type": "list",
-          "label": "Voci colonna B",
+          "label": "Column B items",
           "minItems": 2,
           "maxItems": 4,
           "maxChars": 44,
@@ -299,16 +299,16 @@
         }
       ],
       "sample": {
-        "title": "A mano o con una checklist",
-        "left_title": "A mano",
-        "left": ["Dati copiati dalle email", "Controlli a memoria", "Scarti scoperti tardi"],
-        "right_title": "Con checklist",
-        "right": ["Dati dall'anagrafica", "Quattro controlli fissi", "Ricevute lette ogni giorno"]
+        "title": "By hand or with a checklist",
+        "left_title": "By hand",
+        "left": ["Details copied from emails", "Checks from memory", "Rejections found late"],
+        "right_title": "With a checklist",
+        "right": ["Details from customer records", "Four fixed checks", "Receipts read every day"]
       }
     },
     {
       "id": "cta",
-      "name": "Invito all'azione",
+      "name": "Call to action",
       "role": "cta",
       "position": "last",
       "file": "layouts/cta.html",
@@ -316,26 +316,26 @@
         {
           "name": "title",
           "type": "text",
-          "label": "Titolo",
+          "label": "Title",
           "maxChars": 56,
           "maxLines": 3,
           "required": true,
           "highlight": true
         },
-        { "name": "body", "type": "text", "label": "Testo", "maxChars": 130, "maxLines": 4 },
+        { "name": "body", "type": "text", "label": "Text", "maxChars": 130, "maxLines": 4 },
         {
           "name": "action",
           "type": "text",
-          "label": "Azione",
+          "label": "Action",
           "maxChars": 28,
           "maxLines": 1,
           "required": true
         }
       ],
       "sample": {
-        "title": "Vuoi la ==checklist== completa?",
-        "body": "Scrivici in privato la parola FATTURA e te la mandiamo in PDF.",
-        "action": "Scrivi FATTURA in DM"
+        "title": "Want the full ==checklist==?",
+        "body": "Send us the word INVOICE in a DM and we will send it as a PDF.",
+        "action": "DM us INVOICE"
       }
     }
   ]

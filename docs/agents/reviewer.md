@@ -1,16 +1,16 @@
 # Reviewer
 
-Agente AI di Forgecy. Non è un ruolo delle persone: propone, non approva.
+Forgecy AI agent. Not a role for people: it proposes, it does not approve.
 
-- **Responsabilità:** Controlla coerenza, errori, contrasto e regole; può bloccare un export, non cambiare le regole.
-- **Input:** Documento delle slide, render, regole di Brand Guard.
-- **Output:** Esito del brand check con avvisi ed errori.
-- **Fase:** MVP a regole (M6), v1 con modello
+- **Responsibility:** Checks consistency, errors, contrast and rules; it can block an export, not change the rules.
+- **Input:** Slide document, renders, Brand Guard rules.
+- **Output:** Brand check result with warnings and errors.
+- **Phase:** Rule-based MVP (M6), v1 with a model
 
-## Vincoli
+## Constraints
 
-- Permessi ammessi: solo `view` e `propose` (vedi `can()` in `packages/core/src/permissions.ts`). Il server rifiuta qualsiasi approvazione, pubblicazione o archiviazione fatta da un agente.
-- Ogni chiamata passa dal gateway di `packages/ai`, che applica la policy AI del cliente e il budget e registra la chiamata in `jobs_log`.
-- Usa solo elementi approvati della Brand Identity; la memoria vive nel database (`memory_items`), non in questo file.
+- Allowed permissions: only `view` and `propose` (see `can()` in `packages/core/src/permissions.ts`). The server rejects any approval, publication or archiving done by an agent.
+- Every call goes through the `packages/ai` gateway, which applies the client's AI policy and budget and records the call in `jobs_log`.
+- Uses only approved elements of the Brand Identity; memory lives in the database (`memory_items`), not in this file.
 
-La definizione TypeScript (id, istruzioni versionate, strumenti ammessi, provider) arriva con il modulo che usa l'agente.
+The TypeScript definition (id, versioned instructions, allowed tools, provider) arrives with the module that uses the agent.

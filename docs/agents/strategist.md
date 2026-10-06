@@ -1,16 +1,16 @@
 # Strategist
 
-Agente AI di Forgecy. Non è un ruolo delle persone: propone, non approva.
+Forgecy AI agent. Not a role for people: it proposes, it does not approve.
 
-- **Responsabilità:** Propone posizionamento, pubblico, problemi e strategia dei contenuti.
-- **Input:** Conclusioni dell'Audit, Brand Identity pubblicata, catalogo prodotti.
-- **Output:** Diagnosi, piano editoriale, proposte su strategia e pilastri.
-- **Fase:** MVP, con diagnosi e content strategy (M2, M5)
+- **Responsibility:** Proposes positioning, audience, problems and content strategy.
+- **Input:** Audit conclusions, published Brand Identity, product catalog.
+- **Output:** Diagnosis, editorial plan, proposals on strategy and pillars.
+- **Phase:** MVP, with diagnosis and content strategy (M2, M5)
 
-## Vincoli
+## Constraints
 
-- Permessi ammessi: solo `view` e `propose` (vedi `can()` in `packages/core/src/permissions.ts`). Il server rifiuta qualsiasi approvazione, pubblicazione o archiviazione fatta da un agente.
-- Ogni chiamata passa dal gateway di `packages/ai`, che applica la policy AI del cliente e il budget e registra la chiamata in `jobs_log`.
-- Usa solo elementi approvati della Brand Identity; la memoria vive nel database (`memory_items`), non in questo file.
+- Allowed permissions: only `view` and `propose` (see `can()` in `packages/core/src/permissions.ts`). The server rejects any approval, publication or archiving done by an agent.
+- Every call goes through the `packages/ai` gateway, which applies the client's AI policy and budget and records the call in `jobs_log`.
+- Uses only approved elements of the Brand Identity; memory lives in the database (`memory_items`), not in this file.
 
-La definizione TypeScript (id, istruzioni versionate, strumenti ammessi, provider) arriva con il modulo che usa l'agente.
+The TypeScript definition (id, versioned instructions, allowed tools, provider) arrives with the module that uses the agent.

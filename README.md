@@ -4,83 +4,83 @@
 
 # Forgecy
 
-**Il motore creativo dell'agenzia: dai brief ai caroselli brandizzati.**
+**The agency's creative engine: from briefs to branded carousels.**
 
-[![Stato: in sviluppo][status-shield]][status-url]
-[![Ultimo commit][commit-shield]][commit-url]
-[![Licenza: AGPL-3.0][license-shield]][license-url]
+[![Status: in development][status-shield]][status-url]
+[![Last commit][commit-shield]][commit-url]
+[![License: AGPL-3.0][license-shield]][license-url]
 
 </div>
 
-## Cos'è
+## What it is
 
-Forgecy è uno strumento interno per un'agenzia di comunicazione, open source e self-hosted. Analizza prospect e clienti, ne definisce la brand identity e arriva a caroselli social statici pronti da consegnare, con colori, font e tono di voce del brand già applicati.
+Forgecy is an internal tool for a communications agency, open source and self-hosted. It analyzes prospects and clients, defines their brand identity and gets to static social carousels ready to deliver, with the brand's colors, fonts and tone of voice already applied.
 
-Gira sulla macchina dell'agenzia con Docker Compose, senza servizi cloud obbligatori. Gli unici costi sono quelli delle API dei provider AI che l'agenzia decide di collegare (Anthropic, OpenAI, OpenRouter, Google); i modelli locali via Ollama o LM Studio sono supportati.
+It runs on the agency's machine with Docker Compose, with no mandatory cloud services. The only costs are the APIs of the AI providers the agency chooses to connect (Anthropic, OpenAI, OpenRouter, Google); local models via Ollama or LM Studio are supported.
 
-## Come funziona
+## How it works
 
-1. **Prospect e Audit**: analisi di sito, social e competitor, con diagnosi, piano di 30 giorni e report PDF in cui ogni osservazione cita la sua evidenza.
-2. **Brand Identity**: strategia, voce, identità visiva con design token, versionata e approvata da una persona dell'agenzia.
-3. **Content strategy e brief**: pilastri, rubriche e brief strutturati per canale.
-4. **Carosello**: scaletta e slide generate dentro i template dell'agenzia, immagini statiche AI facoltative.
-5. **Revisione**: editor slide per slide, brand check e approvazione interna.
-6. **Export**: PNG, PDF e ZIP nelle misure esatte dei canali.
+1. **Prospects and Audit**: analysis of website, social channels and competitors, with a diagnosis, a 30-day plan and a PDF report where every observation cites its finding.
+2. **Brand Identity**: strategy, voice, visual identity with design tokens, versioned and approved by a person at the agency.
+3. **Content strategy and briefs**: pillars, rubrics and structured briefs per channel.
+4. **Carousel**: outline and slides generated inside the agency's templates, optional static AI images.
+5. **Review**: slide-by-slide editor, brand check and internal approval.
+6. **Export**: PNG, PDF and ZIP in the exact sizes of each channel.
 
-Gli agenti AI analizzano e propongono; approva e pubblica sempre una persona. Niente video, in nessuna fase.
+AI agents analyze and propose; a person always approves and publishes. No video, at any stage.
 
-## Installazione (Docker)
+## Installation (Docker)
 
-Serve Docker con Compose.
+You need Docker with Compose.
 
 ```bash
-cp .env.example .env          # imposta almeno POSTGRES_PASSWORD e BETTER_AUTH_SECRET (openssl rand -base64 32)
+cp .env.example .env          # set at least POSTGRES_PASSWORD and BETTER_AUTH_SECRET (openssl rand -base64 32)
 docker compose up -d --build  # postgres, redis, migrate, web, worker
 ```
 
-Apri `http://localhost:3000`: al primo avvio crei l'account Admin. I dati stanno in `./data` (database, file, backup).
+Open `http://localhost:3000`: on first start you create the Admin account. Data lives in `./data` (database, files, backups).
 
-Profili facoltativi: `--profile dev` (Mailpit su `:8025` per le email), `--profile s3` (storage S3 con SeaweedFS), `--profile https` (Caddy per HTTPS in rete interna).
+Optional profiles: `--profile dev` (Mailpit on `:8025` for emails), `--profile s3` (S3 storage with SeaweedFS), `--profile https` (Caddy for HTTPS on the internal network).
 
-| Comando                                 | Cosa fa                                                  |
-| --------------------------------------- | -------------------------------------------------------- |
-| `pnpm forgecy start` / `stop`           | Avvia o ferma lo stack                                   |
-| `pnpm forgecy backup`                   | Archivio `.tar.gz` con database e file in `data/backups` |
-| `pnpm forgecy restore <archivio> --yes` | Ripristina database e file                               |
-| `pnpm forgecy upgrade`                  | Backup, nuova build, migrazioni, riavvio                 |
-| `pnpm forgecy health`                   | Controlla web e worker                                   |
+| Command                                | What it does                                                |
+| -------------------------------------- | ----------------------------------------------------------- |
+| `pnpm forgecy start` / `stop`          | Starts or stops the stack                                   |
+| `pnpm forgecy backup`                  | `.tar.gz` archive with database and files in `data/backups` |
+| `pnpm forgecy restore <archive> --yes` | Restores database and files                                 |
+| `pnpm forgecy upgrade`                 | Backup, new build, migrations, restart                      |
+| `pnpm forgecy health`                  | Checks web and worker                                       |
 
-## Sviluppo
+## Development
 
-Servono Node.js 22 (>= 22.18), pnpm 10 e Docker per i servizi.
+You need Node.js 22 (>= 22.18), pnpm 10 and Docker for the services.
 
 ```bash
 pnpm install
-docker compose -f docker-compose.dev.yml up -d   # Postgres con pgvector, Redis, Mailpit
+docker compose -f docker-compose.dev.yml up -d   # Postgres with pgvector, Redis, Mailpit
 cp .env.example .env                             # DATABASE_URL=postgres://forgecy:forgecy@localhost:5432/forgecy
 pnpm db:migrate && pnpm db:seed
-pnpm dev                                         # web su :3000, worker con health su :3001
+pnpm dev                                         # web on :3000, worker with health on :3001
 ```
 
-`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` sono gli stessi controlli della CI. Architettura, pacchetti e convenzioni sono in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); le regole per chi sviluppa (anche con Claude Code) in [CLAUDE.md](CLAUDE.md); le decisioni in [docs/adr](docs/adr).
+`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` are the same checks CI runs. Architecture, packages and conventions are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); the rules for contributors (including with Claude Code) in [CLAUDE.md](CLAUDE.md); decisions in [docs/adr](docs/adr).
 
-## Stato
+## Status
 
-- [x] Raccolta dei requisiti
-- [x] Scheda tecnica (documento interno)
-- [x] Fondamenta (M1): monorepo, database, accesso, gateway AI, coda dei job, storage, design system, Docker, CI
-- [ ] Audit dei prospect con report PDF (M2–M3)
-- [ ] Brand Identity, content strategy e caroselli (M4–M6)
+- [x] Requirements gathering
+- [x] Technical specification (internal document)
+- [x] Foundations (M1): monorepo, database, sign-in, AI gateway, job queue, storage, design system, Docker, CI
+- [ ] Prospect audits with PDF report (M2–M3)
+- [ ] Brand Identity, content strategy and carousels (M4–M6)
 
-## Licenza
+## License
 
-Forgecy è distribuito con licenza [GNU Affero General Public License v3.0](LICENSE) (`AGPL-3.0-only`). Puoi usarlo, modificarlo e installarlo per la tua agenzia; se offri una versione modificata ad altri attraverso la rete, devi rendere disponibile a quegli utenti anche il suo codice sorgente.
+Forgecy is released under the [GNU Affero General Public License v3.0](LICENSE) (`AGPL-3.0-only`). You can use, modify and install it for your agency; if you offer a modified version to others over a network, you must also make its source code available to those users.
 
-<p align="right">(<a href="#readme-top">torna su</a>)</p>
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-[status-shield]: https://img.shields.io/badge/stato-in%20sviluppo-blue?style=flat-square
+[status-shield]: https://img.shields.io/badge/status-in%20development-blue?style=flat-square
 [status-url]: https://github.com/fralapo/forgecy
 [commit-shield]: https://img.shields.io/github/last-commit/fralapo/forgecy?style=flat-square
 [commit-url]: https://github.com/fralapo/forgecy/commits/main
-[license-shield]: https://img.shields.io/badge/licenza-AGPL--3.0-blue?style=flat-square
+[license-shield]: https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square
 [license-url]: LICENSE

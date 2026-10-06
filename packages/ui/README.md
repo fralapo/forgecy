@@ -1,24 +1,24 @@
 # @forgecy/ui
 
-Token, stili e componenti dell'interfaccia di Forgecy (shadcn/ui personalizzato solo tramite token).
+Tokens, styles and components of the Forgecy interface (shadcn/ui customized only through tokens).
 
-## Dove vivono i token
+## Where the tokens live
 
-- **Sorgente unica:** `tokens/forgecy.tokens.json`, formato W3C DTCG 2025.10. Tre livelli: colori di riferimento (`color.*`), token semantici per tema (`semantic.light.*`, `semantic.dark.*`, stessi percorsi), più font, scala tipografica, raggi, spazi, linee, ombre e movimento.
-- **Generato:** `src/generated/tokens.css` (versionato). Contiene le variabili `--fc-*` per il tema chiaro (`:root`) e scuro (`[data-theme="dark"]`), le variabili di shadcn/ui (`--background`, `--primary`, `--ring`…) e il blocco `@theme inline` di Tailwind 4.
-- Le modifiche ai token passano da pull request approvata dal Product Owner.
+- **Single source:** `tokens/forgecy.tokens.json`, W3C DTCG 2025.10 format. Three levels: reference colors (`color.*`), semantic tokens per theme (`semantic.light.*`, `semantic.dark.*`, same paths), plus fonts, type scale, radii, spacing, lines, shadows and motion.
+- **Generated:** `src/generated/tokens.css` (versioned). It contains the `--fc-*` variables for the light theme (`:root`) and dark theme (`[data-theme="dark"]`), the shadcn/ui variables (`--background`, `--primary`, `--ring`…) and the Tailwind 4 `@theme inline` block.
+- Token changes go through a pull request approved by the Product Owner.
 
-## Rigenerare
+## Regenerating
 
 ```sh
-pnpm tokens                         # dalla radice, oppure pnpm --filter @forgecy/ui tokens
-pnpm --filter @forgecy/ui tokens:check   # fallisce se tokens.css non è aggiornato
-pnpm --filter @forgecy/ui test           # Brand Guard: contrasti WCAG 2.2 in chiaro e scuro
+pnpm tokens                         # from the root, or pnpm --filter @forgecy/ui tokens
+pnpm --filter @forgecy/ui tokens:check   # fails if tokens.css is not up to date
+pnpm --filter @forgecy/ui test           # Brand Guard: WCAG 2.2 contrast in light and dark
 ```
 
-Lo script si ferma se una coppia di token semantici scende sotto il contrasto minimo (4,5:1 testo, 3:1 controlli e focus).
+The script stops if a pair of semantic tokens falls below the minimum contrast (4.5:1 text, 3:1 controls and focus).
 
-## Uso nell'app
+## Use in the app
 
 ```css
 @import "tailwindcss";
@@ -26,8 +26,8 @@ Lo script si ferma se una coppia di token semantici scende sotto il contrasto mi
 @source "../../../packages/ui/src";
 ```
 
-Classi principali: `bg-app`, `bg-surface`, `text-fg`, `text-fg-muted`, `text-link`, `border-subtle`, `border-control`, `bg-primary`, `text-primary-foreground`, `text-success|warning|error`, `bg-highlight`, `font-display`, `font-body`, `font-mono`, `text-heading-xl…mono-md`, `rounded-sm…xl`, `shadow-dropdown`, `shadow-modal`. La palette e la scala di testo predefinite di Tailwind sono disattivate.
+Main classes: `bg-app`, `bg-surface`, `text-fg`, `text-fg-muted`, `text-link`, `border-subtle`, `border-control`, `bg-primary`, `text-primary-foreground`, `text-success|warning|error`, `bg-highlight`, `font-display`, `font-body`, `font-mono`, `text-heading-xl…mono-md`, `rounded-sm…xl`, `shadow-dropdown`, `shadow-modal`. Tailwind's default palette and text scale are disabled.
 
-## Regola
+## Rule
 
-**Nessun colore, font, raggio o misura scritto a mano fuori dai token.** Si usano solo i token semantici (classi sopra o variabili `--fc-*`); mai esadecimali, `bg-white`, `text-[13px]` o simili. Lo stato non si comunica mai solo con il colore: sempre icona Lucide ed etichetta.
+**No color, font, radius or size written by hand outside the tokens.** Use only the semantic tokens (classes above or `--fc-*` variables); never hex values, `bg-white`, `text-[13px]` or the like. State is never conveyed by color alone: always a Lucide icon and a label.

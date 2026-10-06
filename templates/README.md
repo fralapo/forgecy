@@ -1,23 +1,23 @@
-# Template dell'agenzia
+# Agency templates
 
-Template iniziali nel formato canonico di Forgecy: una cartella per template con `template.json` (slot, limiti di testo, ruoli colore e font, safe zone, regole), `layouts/*.html`, `styles.css`, `fonts/` e `assets/`. Figma, Canva, PDF e PNG sono solo riferimenti: ogni template si ricostruisce qui in HTML e CSS.
+Starter templates in Forgecy's canonical format: one folder per template with `template.json` (slots, text limits, color and font roles, safe zone, rules), `layouts/*.html`, `styles.css`, `fonts/` and `assets/`. Figma, Canva, PDF and PNG are only references: every template is rebuilt here in HTML and CSS.
 
-| Cartella             | Formato                   | Layout |
-| -------------------- | ------------------------- | ------ |
-| `editorial-ig-4x5`   | Instagram 4:5 · 1080×1350 | 8      |
-| `editorial-linkedin` | Documento LinkedIn · PDF  | 8      |
-| `report-audit-a4`    | Report A4 · PDF 150 dpi   | 6      |
+| Folder               | Format                    | Layouts |
+| -------------------- | ------------------------- | ------- |
+| `editorial-ig-4x5`   | Instagram 4:5 · 1080×1350 | 8       |
+| `editorial-linkedin` | LinkedIn document · PDF   | 8       |
+| `report-audit-a4`    | A4 report · PDF 150 dpi   | 6       |
 
-`report-audit-a4` è il report d'audit (`kind: "report"`, senza `channel`): copertina, sezione, evidenza con prova e raccomandazione, problema, prossimi passi, metodo. Il PDF esce in formato A4 reale; esiste anche il formato `report_16x9` (1920×1080) per report da proiettare.
+`report-audit-a4` is the audit report (`kind: "report"`, no `channel`): cover, section, finding with evidence and recommendation, problem, next steps, method. The PDF comes out in true A4 format; there is also the `report_16x9` format (1920×1080) for reports to be projected.
 
-Regole per scrivere un template:
+Rules for writing a template:
 
-- Ogni slot è un elemento con `data-slot="nome"` dichiarato in `template.json`: i testi in qualsiasi elemento, gli elenchi in `<ul>`/`<ol>` con un `<li>` di esempio, le immagini in `<img>`. Il renderer inserisce i valori come testo; uno slot vuoto riceve `data-empty` e viene nascosto.
-- Elementi automatici: `data-fc="page"`, `"total"`, `"logo"`, `"brand-name"`, `"handle"`.
-- Colori e font solo da variabili `--fc-*` legate a un ruolo in `colorRoles` e `fontRoles`; nessun colore scritto a mano, `font-size` solo dalla `typeScale`. Variabili del renderer: `--fc-width`, `--fc-height`, `--fc-safe-top|right|bottom|left`.
-- Varianti con `[data-tone="inverse"]`, `[data-first]`, `[data-last]` sulla radice `.fc-slide`.
-- Niente script, link esterni, `@import` o `@font-face`: font e immagini stanno nel pacchetto.
+- Every slot is an element with `data-slot="name"` declared in `template.json`: text in any element, lists in `<ul>`/`<ol>` with one sample `<li>`, images in `<img>`. The renderer inserts the values as text; an empty slot gets `data-empty` and is hidden.
+- Automatic elements: `data-fc="page"`, `"total"`, `"logo"`, `"brand-name"`, `"handle"`.
+- Colors and fonts only from `--fc-*` variables bound to a role in `colorRoles` and `fontRoles`; no hand-written colors, `font-size` only from the `typeScale`. Renderer variables: `--fc-width`, `--fc-height`, `--fc-safe-top|right|bottom|left`.
+- Variants with `[data-tone="inverse"]`, `[data-first]`, `[data-last]` on the `.fc-slide` root.
+- No scripts, external links, `@import` or `@font-face`: fonts and images live in the package.
 
-Per usarli si importano dalla pagina Template (sezione «Da importare») o come ZIP: diventano bozze nel catalogo e vanno pubblicati. Una modifica a un template già pubblicato richiede di aumentare `version` in `template.json`.
+To use them, import them from the Templates page (section “To import from the agency’s folder”) or as a ZIP: they become drafts in the catalog and must be published. A change to an already published template requires bumping `version` in `template.json`.
 
-Verifica: `pnpm --filter @forgecy/carousel preview ../../templates/<cartella> /tmp/out`. I font sono Space Grotesk e Inter (SIL Open Font License 1.1, licenze in `fonts/`).
+Check: `pnpm --filter @forgecy/carousel preview ../../templates/<folder> /tmp/out`. The fonts are Space Grotesk and Inter (SIL Open Font License 1.1, licenses in `fonts/`).

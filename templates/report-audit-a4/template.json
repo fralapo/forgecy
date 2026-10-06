@@ -1,9 +1,9 @@
 {
   "$schema": "../template.schema.json",
   "id": "report-audit-a4",
-  "name": "Report di audit · A4",
-  "description": "Report d'audit di un prospect in PDF A4: copertina, sezioni, evidenze con prova e raccomandazione, problemi, prossimi passi e metodo.",
-  "version": "1.0.0",
+  "name": "Audit report · A4",
+  "description": "A prospect's audit report as an A4 PDF: cover, sections, findings with evidence and recommendation, problems, next steps and method.",
+  "version": "1.1.0",
   "kind": "report",
   "format": "report_a4",
   "width": 1240,
@@ -74,12 +74,12 @@
     "logoOnCover": true,
     "pageNumbers": true,
     "maxImagesPerSlide": 1,
-    "notes": "Report da leggere e stampare: una pagina per evidenza, ogni evidenza con la sua prova e una raccomandazione concreta."
+    "notes": "A report to read and print: one page per finding, each finding with its evidence and a concrete recommendation."
   },
   "layouts": [
     {
       "id": "cover",
-      "name": "Copertina",
+      "name": "Cover",
       "role": "cover",
       "position": "first",
       "file": "layouts/cover.html",
@@ -87,14 +87,14 @@
         {
           "name": "kicker",
           "type": "text",
-          "label": "Occhiello",
+          "label": "Kicker",
           "maxChars": 40,
           "maxLines": 1
         },
         {
           "name": "title",
           "type": "text",
-          "label": "Titolo",
+          "label": "Title",
           "maxChars": 80,
           "maxLines": 3,
           "required": true,
@@ -103,14 +103,14 @@
         {
           "name": "subtitle",
           "type": "text",
-          "label": "Sottotitolo",
+          "label": "Subtitle",
           "maxChars": 160,
           "maxLines": 3
         },
         {
           "name": "client",
           "type": "text",
-          "label": "Cliente",
+          "label": "Client",
           "maxChars": 48,
           "maxLines": 2,
           "required": true
@@ -118,55 +118,55 @@
         {
           "name": "date",
           "type": "text",
-          "label": "Data",
+          "label": "Date",
           "maxChars": 24,
           "maxLines": 1
         },
         {
           "name": "prepared_by",
           "type": "text",
-          "label": "Preparato da",
+          "label": "Prepared by",
           "maxChars": 48,
           "maxLines": 2
         },
         {
           "name": "image",
           "type": "image",
-          "label": "Immagine",
+          "label": "Image",
           "minWidth": 1080,
           "minHeight": 600
         }
       ],
       "sample": {
-        "kicker": "Audit digitale",
-        "title": "Dove Rossi Srl ==perde clienti== online",
-        "subtitle": "Sito, social e ricerca: cosa funziona, cosa no e da dove partire.",
+        "kicker": "Digital audit",
+        "title": "Where Rossi Srl ==loses clients== online",
+        "subtitle": "Website, social and search: what works, what doesn't and where to start.",
         "client": "Rossi Srl",
-        "date": "Ottobre 2026",
-        "prepared_by": "Agenzia Esempio",
+        "date": "October 2026",
+        "prepared_by": "Example Agency",
         "image": {
-          "asset": "assets/esempio-foto.svg",
-          "alt": "Schermata di esempio"
+          "asset": "assets/example-photo.svg",
+          "alt": "Example screenshot"
         }
       }
     },
     {
       "id": "section",
-      "name": "Sezione",
+      "name": "Section",
       "role": "section",
       "file": "layouts/section.html",
       "slots": [
         {
           "name": "number",
           "type": "text",
-          "label": "Numero",
+          "label": "Number",
           "maxChars": 4,
           "maxLines": 1
         },
         {
           "name": "title",
           "type": "text",
-          "label": "Titolo",
+          "label": "Title",
           "maxChars": 60,
           "maxLines": 2,
           "required": true,
@@ -175,54 +175,54 @@
         {
           "name": "intro",
           "type": "text",
-          "label": "Introduzione",
+          "label": "Introduction",
           "maxChars": 420,
           "maxLines": 7
         },
         {
           "name": "items",
           "type": "list",
-          "label": "Elenco",
+          "label": "List",
           "maxChars": 140,
           "maxItems": 6
         }
       ],
       "sample": {
         "number": "02",
-        "title": "Il ==sito== oggi",
-        "intro": "Abbiamo analizzato velocità, struttura e contenuti delle pagine principali, confrontandole con tre concorrenti diretti della zona.",
+        "title": "The ==website== today",
+        "intro": "We analyzed the speed, structure and content of the main pages and compared them with three direct local competitors.",
         "items": [
-          "Tempo di caricamento su mobile oltre 6 secondi",
-          "Nessuna pagina dedicata ai servizi principali",
-          "Modulo di contatto in fondo alla home, senza invito all'azione",
-          "Schede prodotto senza prezzi né disponibilità"
+          "Mobile load time over 6 seconds",
+          "No dedicated pages for the main services",
+          "Contact form at the bottom of the home page, with no call to action",
+          "Product pages without prices or availability"
         ]
       }
     },
     {
       "id": "finding",
-      "name": "Evidenza",
+      "name": "Finding",
       "role": "finding",
       "file": "layouts/finding.html",
       "slots": [
         {
           "name": "label",
           "type": "text",
-          "label": "Etichetta",
+          "label": "Label",
           "maxChars": 40,
           "maxLines": 1
         },
         {
           "name": "severity",
           "type": "text",
-          "label": "Priorità",
+          "label": "Priority",
           "maxChars": 24,
           "maxLines": 1
         },
         {
           "name": "title",
           "type": "text",
-          "label": "Titolo",
+          "label": "Title",
           "maxChars": 90,
           "maxLines": 3,
           "required": true,
@@ -231,7 +231,7 @@
         {
           "name": "description",
           "type": "text",
-          "label": "Descrizione",
+          "label": "Description",
           "maxChars": 360,
           "maxLines": 5,
           "required": true
@@ -239,7 +239,7 @@
         {
           "name": "evidence",
           "type": "text",
-          "label": "Prova",
+          "label": "Evidence",
           "maxChars": 260,
           "maxLines": 4,
           "required": true
@@ -247,49 +247,49 @@
         {
           "name": "evidence_image",
           "type": "image",
-          "label": "Immagine della prova",
+          "label": "Evidence image",
           "minWidth": 800,
           "minHeight": 400
         },
         {
           "name": "recommendation",
           "type": "text",
-          "label": "Raccomandazione",
+          "label": "Recommendation",
           "maxChars": 280,
           "maxLines": 4,
           "required": true
         }
       ],
       "sample": {
-        "label": "Evidenza 3 · Sito",
-        "severity": "Priorità alta",
-        "title": "La home non dice ==cosa fate== nei primi tre secondi",
-        "description": "Il primo schermo mostra una foto di repertorio e uno slogan generico. Chi arriva da Google deve scorrere due volte prima di capire che l'azienda installa impianti fotovoltaici.",
-        "evidence": "Registrazioni di sessione: il 58% dei visitatori da mobile esce senza scorrere oltre il primo schermo.",
+        "label": "Finding 3 · Website",
+        "severity": "High priority",
+        "title": "The home page doesn't say ==what you do== in the first three seconds",
+        "description": "The first screen shows a stock photo and a generic slogan. Visitors from Google have to scroll twice before they understand the company installs solar panels.",
+        "evidence": "Session recordings: 58% of mobile visitors leave without scrolling past the first screen.",
         "evidence_image": {
-          "asset": "assets/esempio-foto.svg",
-          "alt": "Schermata di esempio"
+          "asset": "assets/example-photo.svg",
+          "alt": "Example screenshot"
         },
-        "recommendation": "Riscrivere il titolo della home con servizio e zona («Impianti fotovoltaici a Bergamo»), aggiungere un pulsante per il preventivo e una prova sociale sotto."
+        "recommendation": "Rewrite the home page title with service and area (“Solar panels in Bergamo”), add a quote request button and social proof below it."
       }
     },
     {
       "id": "problem",
-      "name": "Problema",
+      "name": "Problem",
       "role": "problem",
       "file": "layouts/problem.html",
       "slots": [
         {
           "name": "label",
           "type": "text",
-          "label": "Etichetta",
+          "label": "Label",
           "maxChars": 40,
           "maxLines": 1
         },
         {
           "name": "title",
           "type": "text",
-          "label": "Titolo",
+          "label": "Title",
           "maxChars": 90,
           "maxLines": 3,
           "required": true,
@@ -298,7 +298,7 @@
         {
           "name": "description",
           "type": "text",
-          "label": "Descrizione",
+          "label": "Description",
           "maxChars": 420,
           "maxLines": 6,
           "required": true
@@ -306,40 +306,40 @@
         {
           "name": "impact",
           "type": "text",
-          "label": "Impatto",
+          "label": "Impact",
           "maxChars": 200,
           "maxLines": 3
         },
         {
           "name": "causes",
           "type": "list",
-          "label": "Cause",
+          "label": "Causes",
           "maxChars": 100,
           "maxItems": 4
         }
       ],
       "sample": {
-        "label": "Problema principale",
-        "title": "I contatti arrivano, ma ==nessuno li segue==",
-        "description": "Le richieste dal sito finiscono in una casella condivisa letta una volta a settimana. Nessuno sa quante sono, chi le ha gestite e quante diventano clienti.",
-        "impact": "Stimiamo 15–20 richieste al mese senza risposta entro 48 ore.",
+        "label": "Main problem",
+        "title": "Leads come in, but ==nobody follows up==",
+        "description": "Website enquiries land in a shared inbox that is read once a week. Nobody knows how many there are, who handled them or how many become clients.",
+        "impact": "We estimate 15–20 enquiries a month with no reply within 48 hours.",
         "causes": [
-          "Nessun avviso quando arriva una richiesta",
-          "Moduli diversi che scrivono a indirizzi diversi",
-          "Nessun registro delle richieste gestite"
+          "No alert when an enquiry arrives",
+          "Different forms sending to different addresses",
+          "No log of handled enquiries"
         ]
       }
     },
     {
       "id": "next-steps",
-      "name": "Prossimi passi",
+      "name": "Next steps",
       "role": "next_steps",
       "file": "layouts/next-steps.html",
       "slots": [
         {
           "name": "title",
           "type": "text",
-          "label": "Titolo",
+          "label": "Title",
           "maxChars": 60,
           "maxLines": 2,
           "required": true,
@@ -348,14 +348,14 @@
         {
           "name": "intro",
           "type": "text",
-          "label": "Introduzione",
+          "label": "Introduction",
           "maxChars": 240,
           "maxLines": 3
         },
         {
           "name": "steps",
           "type": "list",
-          "label": "Passi",
+          "label": "Steps",
           "maxChars": 120,
           "minItems": 1,
           "maxItems": 5,
@@ -364,33 +364,33 @@
         {
           "name": "note",
           "type": "text",
-          "label": "Nota",
+          "label": "Note",
           "maxChars": 160,
           "maxLines": 2
         }
       ],
       "sample": {
-        "title": "Da dove ==partire==",
-        "intro": "Tre interventi in ordine di impatto: i primi due si fanno in un mese senza rifare il sito.",
+        "title": "Where to ==start==",
+        "intro": "Three actions in order of impact: the first two take a month, without rebuilding the website.",
         "steps": [
-          "Nuovo primo schermo della home con servizio, zona e preventivo",
-          "Un unico modulo con avviso immediato e registro delle richieste",
-          "Pagine dedicate ai tre servizi più cercati in zona",
-          "Piano editoriale di due post a settimana su Instagram e LinkedIn"
+          "New home page first screen with service, area and quote",
+          "A single form with instant alerts and an enquiry log",
+          "Dedicated pages for the three most searched local services",
+          "Editorial plan of two posts a week on Instagram and LinkedIn"
         ],
-        "note": "Ne parliamo insieme nella call di restituzione: portate le domande."
+        "note": "We'll go through it together in the follow-up call: bring your questions."
       }
     },
     {
       "id": "method",
-      "name": "Metodo",
+      "name": "Method",
       "role": "method",
       "file": "layouts/method.html",
       "slots": [
         {
           "name": "title",
           "type": "text",
-          "label": "Titolo",
+          "label": "Title",
           "maxChars": 60,
           "maxLines": 2,
           "required": true
@@ -398,35 +398,35 @@
         {
           "name": "intro",
           "type": "text",
-          "label": "Introduzione",
+          "label": "Introduction",
           "maxChars": 280,
           "maxLines": 4
         },
         {
           "name": "items",
           "type": "list",
-          "label": "Fonti e strumenti",
+          "label": "Sources and tools",
           "maxChars": 90,
           "maxItems": 6
         },
         {
           "name": "note",
           "type": "text",
-          "label": "Limiti",
+          "label": "Limitations",
           "maxChars": 200,
           "maxLines": 3
         }
       ],
       "sample": {
-        "title": "Come abbiamo lavorato",
-        "intro": "L'audit si basa solo su dati pubblici e sugli accessi che ci avete dato. Ogni evidenza riporta la sua fonte.",
+        "title": "How we worked",
+        "intro": "The audit relies only on public data and on the access you gave us. Every finding states its source.",
         "items": [
-          "Sito: analisi di 24 pagine su mobile e desktop",
-          "Ricerca: posizionamento su 40 parole chiave locali",
-          "Social: ultimi 90 giorni di Instagram e LinkedIn",
-          "Concorrenti: tre aziende scelte con voi"
+          "Website: 24 pages analyzed on mobile and desktop",
+          "Search: ranking for 40 local keywords",
+          "Social: last 90 days of Instagram and LinkedIn",
+          "Competitors: three companies chosen with you"
         ],
-        "note": "Periodo analizzato: luglio–settembre 2026. I dati di traffico sono stime dove non avevamo accesso agli strumenti."
+        "note": "Period analyzed: July–September 2026. Traffic figures are estimates where we had no access to the tools."
       }
     }
   ]

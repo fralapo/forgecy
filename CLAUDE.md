@@ -1,27 +1,27 @@
-# Forgecy · istruzioni per chi sviluppa (persone e agenti)
+# Forgecy · guide for contributors (people and agents)
 
-Forgecy è uno strumento interno di agenzia, open source e self-hosted: audit dei prospect, Brand Identity, content strategy e caroselli statici. Solo statico, niente video in nessuna fase.
+Forgecy is an internal agency tool, open source and self-hosted: prospect audits, Brand Identity, content strategy and static carousels. Static only, no video at any stage.
 
-## Comandi
+## Commands
 
-- `pnpm install` · `pnpm dev` (web su :3000, worker con health su :3001)
+- `pnpm install` · `pnpm dev` (web on :3000, worker with health on :3001)
 - `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build` · `pnpm format`
-- `pnpm db:generate` (dopo ogni modifica allo schema) · `pnpm db:migrate` · `pnpm db:seed`
-- `pnpm tokens` (rigenera `packages/ui/src/generated/tokens.css` da `packages/ui/tokens/forgecy.tokens.json`)
+- `pnpm db:generate` (after every schema change) · `pnpm db:migrate` · `pnpm db:seed`
+- `pnpm tokens` (regenerates `packages/ui/src/generated/tokens.css` from `packages/ui/tokens/forgecy.tokens.json`)
 - `pnpm forgecy <start|stop|migrate|seed|backup|restore|upgrade|health>`
 
-## Regole
+## Rules
 
-- TypeScript strict ovunque, ESM, nessun `any` senza motivo.
-- Schemi Zod ed enum condivisi in `packages/core`; gli enum del database li importano da lì.
-- Nessuna parte chiama un provider AI direttamente: tutto passa da `packages/ai` (policy del cliente, budget, `jobs_log`).
-- L'AI non scrive mai HTML: sceglie layout e riempie slot che il renderer inserisce come testo.
-- Gli agenti AI propongono e non approvano: `can()` in `packages/core` lo impone lato server.
-- Ogni query filtra per permessi; nessuna risorsa si legge solo conoscendo l'id.
-- Interfaccia: solo token di `@forgecy/ui`, niente colori o misure scritti a mano (il lint lo blocca), icone Lucide, testi in italiano.
-- Segreti solo in `.env`; mai nei log, mai nel client.
-- Ogni modifica allo schema ha la sua migrazione generata; la CI fallisce se schema e migrazioni divergono.
-- Le decisioni che cambiano la scheda tecnica vanno in `docs/adr/`.
-- Dipendenze solo open source e gratuite; gli unici costi ammessi sono le API dei provider AI scelti dall'agenzia.
+- TypeScript strict everywhere, ESM, no `any` without a reason.
+- Shared Zod schemas and enums live in `packages/core`; database enums import them from there.
+- No part calls an AI provider directly: everything goes through `packages/ai` (client policy, budget, `jobs_log`).
+- The AI never writes HTML: it picks layouts and fills slots that the renderer inserts as text.
+- AI agents propose and do not approve: `can()` in `packages/core` enforces this server-side.
+- Every query filters by permissions; no resource can be read just by knowing its id.
+- Interface: only `@forgecy/ui` tokens, no hand-written colors or sizes (lint blocks them), Lucide icons, UI text in English.
+- Secrets only in `.env`; never in logs, never in the client.
+- Every schema change has its generated migration; CI fails if schema and migrations diverge.
+- Decisions that change the technical specification go in `docs/adr/`.
+- Only free, open-source dependencies; the only allowed costs are the APIs of the AI providers chosen by the agency.
 
-La mappa dei pacchetti e i confini di cartella sono in `docs/ARCHITECTURE.md`.
+The package map and folder boundaries are in `docs/ARCHITECTURE.md`.

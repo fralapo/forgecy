@@ -1,6 +1,6 @@
 # @forgecy/ai
 
-Gateway AI di Forgecy. **Nessuna parte di Forgecy chiama un provider direttamente**: tutto passa da `createAiGateway()`.
+Forgecy's AI gateway. **No part of Forgecy calls a provider directly**: everything goes through `createAiGateway()`.
 
 ```ts
 const providers = createProvidersFromEnv(env);
@@ -21,27 +21,27 @@ const { data } = await ai.generateObject({
 });
 ```
 
-## Regole
+## Rules
 
-- **Policy prima di tutto**: `checkAiPolicy` (da `@forgecy/core`) viene applicata prima di ogni richiesta. `no_ai` blocca; `local_only` usa solo `routing.local` e, se manca, si ferma con un errore chiaro (mai fallback al cloud); `external_restricted` usa solo i provider approvati.
-- **Budget**: prima di ogni job si somma la spesa del mese da `jobs_log` per agenzia e cliente. Avviso a `warn_at_percent`, blocco al 100% con `ForgecyError("budget_exceeded")`.
-- **Output strutturato**: lo schema Zod diventa JSON Schema (`z.toJSONSchema`), il provider lo riceve nel suo formato (Anthropic `output_config.format`, OpenAI-compatibili `response_format: json_schema`), e la risposta passa sempre da Zod. Se fallisce, un secondo tentativo riceve l'errore di validazione; dopo 2 errori il job fallisce.
-- **Errori**: riprovabili (429, 5xx, rete, timeout) e rifiuti → fallback del task, se la policy lo consente. Non riprovabili (400, auth) → errore subito. `max_tokens` → errore esplicito. Gli SDK ritentano già 429/5xx internamente (`maxRetries`).
-- **Log**: ogni tentativo, anche bloccato, scrive una riga in `jobs_log`: provider, modello, policy, chi ha autorizzato, token, costo in micro-USD e `input_summary` con **nomi dei campi, dimensioni e hash SHA-256, mai il contenuto**. Per dati aggiuntivi usa `inputSummary.fields` (vengono hashati) o `meta` (solo valori non sensibili).
-- **Immagini in input (vision)**: `generateObject({ ..., images: [{ data, mimeType, id? }] })` manda le immagini (PNG, JPEG, WebP, GIF; massimo 20, 3,75 MB l'una) nel primo messaggio, prima del testo. Valgono le stesse policy, budget e log: in `input_summary.images` finiscono solo `id`, SHA-256, byte e tipo. Con `local_only` serve un modello locale con vision (es. `qwen2.5vl` o `llama3.2-vision` su Ollama).
-- **Prezzi**: `src/pricing.ts` è una tabella modificabile. Va verificata sulle pagine dei provider; i modelli assenti costano 0 e sono segnalati (`unpriced: true`).
-- **Chiavi BYOK**: `encryptSecret` / `decryptSecret` (AES-256-GCM con `FORGECY_ENCRYPTION_KEY`); in chiaro solo `keyHint` (ultimi 4 caratteri). Mai nei log.
+- **Policy first**: `checkAiPolicy` (from `@forgecy/core`) is applied before every request. `no_ai` blocks; `local_only` uses only `routing.local` and, if it is missing, stops with a clear error (never a cloud fallback); `external_restricted` uses only the approved providers.
+- **Budget**: before every job the month's spend is summed from `jobs_log` per agency and client. Warning at `warn_at_percent`, block at 100% with `ForgecyError("budget_exceeded")`.
+- **Structured output**: the Zod schema becomes JSON Schema (`z.toJSONSchema`), the provider receives it in its own format (Anthropic `output_config.format`, OpenAI-compatible `response_format: json_schema`), and the response always goes through Zod. If it fails, a second attempt receives the validation error; after 2 errors the job fails.
+- **Errors**: retryable (429, 5xx, network, timeout) and refusals → the task's fallback, if the policy allows it. Non-retryable (400, auth) → error immediately. `max_tokens` → explicit error. The SDKs already retry 429/5xx internally (`maxRetries`).
+- **Log**: every attempt, even a blocked one, writes a row in `jobs_log`: provider, model, policy, who authorized it, tokens, cost in micro-USD and `input_summary` with **field names, sizes and SHA-256 hashes, never the content**. For extra data use `inputSummary.fields` (they get hashed) or `meta` (non-sensitive values only).
+- **Input images (vision)**: `generateObject({ ..., images: [{ data, mimeType, id? }] })` sends the images (PNG, JPEG, WebP, GIF; at most 20, 3.75 MB each) in the first message, before the text. The same policies, budget and log apply: only `id`, SHA-256, bytes and type end up in `input_summary.images`. With `local_only` you need a local model with vision (e.g. `qwen2.5vl` or `llama3.2-vision` on Ollama).
+- **Prices**: `src/pricing.ts` is an editable table. It must be checked against the providers' pages; missing models cost 0 and are flagged (`unpriced: true`).
+- **BYOK keys**: `encryptSecret` / `decryptSecret` (AES-256-GCM with `FORGECY_ENCRYPTION_KEY`); only `keyHint` (last 4 characters) in plain text. Never in logs.
 
-## Aggiungere un provider
+## Adding a provider
 
-1. Se è compatibile con l'API OpenAI, basta `createOpenAICompatibleProvider({ id, apiKey, baseURL })`. Altrimenti crea `src/providers/<nome>.ts` che implementa `TextProvider` (o `ImageProvider` per le immagini): traduce `jsonSchema` nel formato del provider, normalizza `stopReason` e `usage`, e converte gli errori con `classifyError()` o `AiProviderError`.
-2. Se serve un nuovo `ProviderId`, aggiungilo in `@forgecy/core` (`providerIds`) e nella migrazione dell'enum `ai_provider`.
-3. Registralo in `createProvidersFromEnv` solo quando la sua configurazione esiste.
-4. Aggiungi i prezzi in `pricing.ts`.
-5. Test con `fetch` finto (vedi `test/adapters.test.ts`): niente rete nei test.
-6. Prima di attivarlo come primario o fallback per un task, verifica i prompt sul set fisso di 10 brief di prova.
+1. If it is compatible with the OpenAI API, `createOpenAICompatibleProvider({ id, apiKey, baseURL })` is enough. Otherwise create `src/providers/<name>.ts` implementing `TextProvider` (or `ImageProvider` for images): it translates `jsonSchema` into the provider's format, normalizes `stopReason` and `usage`, and converts errors with `classifyError()` or `AiProviderError`.
+2. If a new `ProviderId` is needed, add it in `@forgecy/core` (`providerIds`) and in the migration of the `ai_provider` enum.
+3. Register it in `createProvidersFromEnv` only when its configuration exists.
+4. Add the prices in `pricing.ts`.
+5. Test with a fake `fetch` (see `test/adapters.test.ts`): no network in tests.
+6. Before enabling it as primary or fallback for a task, check the prompts on the fixed set of 10 test briefs.
 
-## Da verificare
+## To verify
 
-- `providers/google-images.ts`: endpoint `generateContent`, ID modelli e forma della risposta (Google documenta anche `/v1beta/interactions`).
-- Prezzi di immagini Google, modelli OpenRouter e modelli locali.
+- `providers/google-images.ts`: `generateContent` endpoint, model IDs and response shape (Google also documents `/v1beta/interactions`).
+- Prices of Google images, OpenRouter models and local models.

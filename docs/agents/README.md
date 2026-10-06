@@ -1,3 +1,3 @@
-# Agenti
+# Agents
 
-Ogni cartella descrive un agente AI di Forgecy: ruolo, input, output e vincoli. Le istruzioni sono versionate qui; la memoria resta nel database. Nessun agente può approvare o pubblicare: propone e lascia la decisione a una persona.
+Each file describes one Forgecy AI agent: role, input, output and constraints. The instructions are versioned here; memory stays in the database. No agent can approve or publish: it proposes and leaves the decision to a person.
