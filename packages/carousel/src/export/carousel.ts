@@ -1,6 +1,7 @@
 import type { Browser } from "playwright-core";
 import type { BrandTheme } from "../brand";
 import { exportFileNames } from "../filenames";
+import { pdfPageSize } from "../formats";
 import type { ExportOutput } from "../jobs";
 import type { TemplatePackage } from "../package";
 import { type RenderOptions, type ResolvedAssets, renderSlideHtml } from "../renderer";
@@ -119,7 +120,8 @@ export async function exportCarousel(
   let pdf: Uint8Array | undefined;
   if (input.outputs.includes("pdf") || wantZip) {
     await progress(85, "Composizione PDF");
-    pdf = await pngsToPdf(pngs, m.width, m.height, {
+    const page = pdfPageSize(m.format);
+    pdf = await pngsToPdf(pngs, page.width, page.height, {
       title: `${meta.content} · v${meta.version}`,
       author: meta.client,
       subject: `${m.name} ${m.version} · ${m.format}`,

@@ -9,8 +9,29 @@ describe("validateTemplatePackage", () => {
     expect(entries.map((e) => e.folder).sort()).toEqual([
       "editoriale-ig-4x5",
       "editoriale-linkedin",
+      "report-audit-a4",
     ]);
     for (const e of entries) expect(e.report.issues.map(formatIssue), e.folder).toEqual([]);
+  });
+
+  it("ties kind and channel to the format: reports have no channel", () => {
+    const report = (manifest: Record<string, unknown>) =>
+      validateTemplatePackage(miniPackage({ manifest })).issues.map(formatIssue).join("\n");
+    const a4 = { format: "report_a4", width: 1240, height: 1754 };
+    expect(report({ ...a4, kind: "report", channel: undefined })).not.toMatch(/canale|kind/);
+    expect(report({ ...a4, kind: "report" })).toContain("non ha un canale");
+    expect(report({ ...a4, channel: undefined })).toContain('kind "report"');
+    expect(report({ kind: "report" })).toContain('kind "carousel"');
+    expect(report({ channel: undefined })).toContain("canale instagram");
+    expect(report({ slides: { min: 1, max: 30, default: 2 } })).toContain("massimo ≤ 20");
+    expect(
+      report({
+        ...a4,
+        kind: "report",
+        channel: undefined,
+        slides: { min: 1, max: 40, default: 8 },
+      }),
+    ).not.toMatch(/pagine/);
   });
 
   it("reports hardcoded colors and off-scale sizes with file and line", () => {
