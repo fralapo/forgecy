@@ -1,6 +1,7 @@
 {
   "name": "@forgecy/worker",
   "version": "0.1.0",
+  "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,6 +13,7 @@
   "dependencies": {
     "@forgecy/ai": "workspace:*",
     "@forgecy/brand": "workspace:*",
+    "@forgecy/carousel": "workspace:*",
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",
     "@forgecy/files": "workspace:*",

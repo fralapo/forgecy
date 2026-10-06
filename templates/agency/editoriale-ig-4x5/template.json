@@ -1,0 +1,342 @@
+{
+  "$schema": "../template.schema.json",
+  "id": "editoriale-ig-4x5",
+  "name": "Editoriale · Instagram 4:5",
+  "description": "Carosello educativo a 8 layout: copertina, testo, elenco, citazione, dato, problema-soluzione, confronto e CTA.",
+  "version": "1.0.0",
+  "kind": "carousel",
+  "channel": "instagram",
+  "format": "ig_4x5",
+  "width": 1080,
+  "height": 1350,
+  "slides": { "min": 5, "max": 10, "default": 7 },
+  "styles": ["styles.css"],
+  "fonts": [
+    {
+      "family": "Space Grotesk",
+      "file": "fonts/space-grotesk.woff2",
+      "weight": "300 700",
+      "license": "OFL-1.1"
+    },
+    { "family": "Inter", "file": "fonts/inter.woff2", "weight": "100 900", "license": "OFL-1.1" }
+  ],
+  "colorRoles": {
+    "--fc-bg": { "role": "background", "fallback": "#F5F3EE" },
+    "--fc-surface": { "role": "surface", "fallback": "#FFFFFF" },
+    "--fc-text": { "role": "text.primary", "fallback": "#16161A" },
+    "--fc-muted": { "role": "text.secondary", "fallback": "#55555F" },
+    "--fc-accent": { "role": "accent", "fallback": "#2F55D4" },
+    "--fc-cta-bg": { "role": "cta.bg", "fallback": "#16161A" },
+    "--fc-cta-text": { "role": "cta.text", "fallback": "#FFFFFF" }
+  },
+  "fontRoles": {
+    "--fc-font-heading": { "role": "heading", "fallback": "Space Grotesk" },
+    "--fc-font-body": { "role": "body", "fallback": "Inter" }
+  },
+  "typeScale": [24, 28, 32, 36, 48, 56, 64, 72, 88, 220],
+  "rules": {
+    "ctaOnlyLast": true,
+    "logoOnCover": true,
+    "pageNumbers": true,
+    "maxImagesPerSlide": 1,
+    "notes": "Una sola idea per slide. Il titolo della copertina è l'hook: breve, concreto, leggibile in miniatura."
+  },
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "Copertina",
+      "role": "cover",
+      "position": "first",
+      "file": "layouts/cover.html",
+      "slots": [
+        { "name": "kicker", "type": "text", "label": "Occhiello", "maxChars": 32, "maxLines": 1 },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Titolo",
+          "maxChars": 70,
+          "maxLines": 4,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "subtitle",
+          "type": "text",
+          "label": "Sottotitolo",
+          "maxChars": 110,
+          "maxLines": 3
+        },
+        {
+          "name": "image",
+          "type": "image",
+          "label": "Immagine",
+          "minWidth": 1080,
+          "minHeight": 620
+        }
+      ],
+      "sample": {
+        "kicker": "Guida pratica",
+        "title": "Fattura elettronica: i 5 errori che ==costano caro==",
+        "subtitle": "Cosa controllare prima di inviare, in meno di un minuto.",
+        "image": {
+          "asset": "assets/esempio-foto.svg",
+          "alt": "Illustrazione astratta di un documento"
+        }
+      }
+    },
+    {
+      "id": "text",
+      "name": "Testo",
+      "role": "text",
+      "file": "layouts/text.html",
+      "slots": [
+        { "name": "kicker", "type": "text", "label": "Occhiello", "maxChars": 28, "maxLines": 1 },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Titolo",
+          "maxChars": 60,
+          "maxLines": 3,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "label": "Testo",
+          "maxChars": 300,
+          "maxLines": 9,
+          "required": true
+        }
+      ],
+      "sample": {
+        "kicker": "Errore 1",
+        "title": "Partita IVA del cliente ==sbagliata==",
+        "body": "Basta una cifra fuori posto e il Sistema di Interscambio scarta la fattura. Copia i dati dall'anagrafica, non dall'email: è lì che nascono gli errori."
+      }
+    },
+    {
+      "id": "list",
+      "name": "Elenco",
+      "role": "list",
+      "file": "layouts/list.html",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Titolo",
+          "maxChars": 56,
+          "maxLines": 2,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "items",
+          "type": "list",
+          "label": "Voci",
+          "minItems": 2,
+          "maxItems": 5,
+          "maxChars": 64,
+          "required": true
+        }
+      ],
+      "sample": {
+        "title": "Prima di inviare, controlla",
+        "items": [
+          "Codice destinatario o PEC",
+          "Partita IVA e codice fiscale",
+          "Aliquota e natura IVA",
+          "Data e numero progressivo"
+        ]
+      }
+    },
+    {
+      "id": "quote",
+      "name": "Citazione",
+      "role": "quote",
+      "file": "layouts/quote.html",
+      "slots": [
+        {
+          "name": "quote",
+          "type": "text",
+          "label": "Citazione",
+          "maxChars": 160,
+          "maxLines": 6,
+          "required": true
+        },
+        {
+          "name": "author",
+          "type": "text",
+          "label": "Autore",
+          "maxChars": 40,
+          "maxLines": 1,
+          "required": true
+        },
+        { "name": "role", "type": "text", "label": "Ruolo", "maxChars": 56, "maxLines": 1 }
+      ],
+      "sample": {
+        "quote": "Da quando controlliamo le fatture con una checklist, gli scarti sono spariti.",
+        "author": "Laura Bianchi",
+        "role": "Amministrazione, Rossi S.r.l."
+      }
+    },
+    {
+      "id": "data",
+      "name": "Dato",
+      "role": "data",
+      "file": "layouts/data.html",
+      "slots": [
+        {
+          "name": "value",
+          "type": "text",
+          "label": "Numero",
+          "maxChars": 6,
+          "maxLines": 1,
+          "required": true
+        },
+        {
+          "name": "label",
+          "type": "text",
+          "label": "Didascalia",
+          "maxChars": 90,
+          "maxLines": 3,
+          "required": true
+        },
+        { "name": "source", "type": "text", "label": "Fonte", "maxChars": 80, "maxLines": 2 }
+      ],
+      "sample": {
+        "value": "1 su 8",
+        "label": "fatture scartate per un errore nei dati del cliente",
+        "source": "Esempio dimostrativo, non un dato reale"
+      }
+    },
+    {
+      "id": "problem-solution",
+      "name": "Problema e soluzione",
+      "role": "problem_solution",
+      "file": "layouts/problem-solution.html",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Titolo",
+          "maxChars": 48,
+          "maxLines": 2,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "problem",
+          "type": "text",
+          "label": "Problema",
+          "maxChars": 150,
+          "maxLines": 4,
+          "required": true
+        },
+        {
+          "name": "solution",
+          "type": "text",
+          "label": "Soluzione",
+          "maxChars": 150,
+          "maxLines": 4,
+          "required": true
+        }
+      ],
+      "sample": {
+        "title": "Lo scarto arriva dopo giorni",
+        "problem": "Te ne accorgi quando il cliente chiede dove sia la fattura, e la scadenza è vicina.",
+        "solution": "Controlla le ricevute del Sistema di Interscambio ogni mattina: bastano due minuti."
+      }
+    },
+    {
+      "id": "comparison",
+      "name": "Confronto",
+      "role": "comparison",
+      "file": "layouts/comparison.html",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Titolo",
+          "maxChars": 48,
+          "maxLines": 2,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "left_title",
+          "type": "text",
+          "label": "Titolo colonna A",
+          "maxChars": 18,
+          "maxLines": 1,
+          "required": true
+        },
+        {
+          "name": "left",
+          "type": "list",
+          "label": "Voci colonna A",
+          "minItems": 2,
+          "maxItems": 4,
+          "maxChars": 44,
+          "required": true
+        },
+        {
+          "name": "right_title",
+          "type": "text",
+          "label": "Titolo colonna B",
+          "maxChars": 18,
+          "maxLines": 1,
+          "required": true
+        },
+        {
+          "name": "right",
+          "type": "list",
+          "label": "Voci colonna B",
+          "minItems": 2,
+          "maxItems": 4,
+          "maxChars": 44,
+          "required": true
+        }
+      ],
+      "sample": {
+        "title": "A mano o con una checklist",
+        "left_title": "A mano",
+        "left": ["Dati copiati dalle email", "Controlli a memoria", "Scarti scoperti tardi"],
+        "right_title": "Con checklist",
+        "right": ["Dati dall'anagrafica", "Quattro controlli fissi", "Ricevute lette ogni giorno"]
+      }
+    },
+    {
+      "id": "cta",
+      "name": "Invito all'azione",
+      "role": "cta",
+      "position": "last",
+      "file": "layouts/cta.html",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Titolo",
+          "maxChars": 56,
+          "maxLines": 3,
+          "required": true,
+          "highlight": true
+        },
+        { "name": "body", "type": "text", "label": "Testo", "maxChars": 130, "maxLines": 4 },
+        {
+          "name": "action",
+          "type": "text",
+          "label": "Azione",
+          "maxChars": 28,
+          "maxLines": 1,
+          "required": true
+        }
+      ],
+      "sample": {
+        "title": "Vuoi la ==checklist== completa?",
+        "body": "Scrivici in privato la parola FATTURA e te la mandiamo in PDF.",
+        "action": "Scrivi FATTURA in DM"
+      }
+    }
+  ]
+}

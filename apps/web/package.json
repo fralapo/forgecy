@@ -1,6 +1,7 @@
 {
   "name": "@forgecy/web",
   "version": "0.1.0",
+  "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,6 +17,7 @@
     "@fontsource-variable/space-grotesk": "^5.3.0",
     "@forgecy/ai": "workspace:*",
     "@forgecy/brand": "workspace:*",
+    "@forgecy/carousel": "workspace:*",
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",
     "@forgecy/files": "workspace:*",

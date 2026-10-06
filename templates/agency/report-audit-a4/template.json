@@ -1,0 +1,433 @@
+{
+  "$schema": "../template.schema.json",
+  "id": "report-audit-a4",
+  "name": "Report di audit · A4",
+  "description": "Report d'audit di un prospect in PDF A4: copertina, sezioni, evidenze con prova e raccomandazione, problemi, prossimi passi e metodo.",
+  "version": "1.0.0",
+  "kind": "report",
+  "format": "report_a4",
+  "width": 1240,
+  "height": 1754,
+  "slides": {
+    "min": 4,
+    "max": 40,
+    "default": 12
+  },
+  "styles": ["styles.css"],
+  "fonts": [
+    {
+      "family": "Space Grotesk",
+      "file": "fonts/space-grotesk.woff2",
+      "weight": "300 700",
+      "license": "OFL-1.1"
+    },
+    {
+      "family": "Inter",
+      "file": "fonts/inter.woff2",
+      "weight": "100 900",
+      "license": "OFL-1.1"
+    }
+  ],
+  "colorRoles": {
+    "--fc-bg": {
+      "role": "background",
+      "fallback": "#FFFFFF"
+    },
+    "--fc-surface": {
+      "role": "surface",
+      "fallback": "#F3F2EE"
+    },
+    "--fc-text": {
+      "role": "text.primary",
+      "fallback": "#16161A"
+    },
+    "--fc-muted": {
+      "role": "text.secondary",
+      "fallback": "#55555F"
+    },
+    "--fc-accent": {
+      "role": "accent",
+      "fallback": "#2F55D4"
+    },
+    "--fc-cta-bg": {
+      "role": "cta.bg",
+      "fallback": "#16161A"
+    },
+    "--fc-cta-text": {
+      "role": "cta.text",
+      "fallback": "#FFFFFF"
+    }
+  },
+  "fontRoles": {
+    "--fc-font-heading": {
+      "role": "heading",
+      "fallback": "Space Grotesk"
+    },
+    "--fc-font-body": {
+      "role": "body",
+      "fallback": "Inter"
+    }
+  },
+  "typeScale": [20, 24, 28, 32, 40, 56, 72, 96, 160],
+  "rules": {
+    "ctaOnlyLast": false,
+    "logoOnCover": true,
+    "pageNumbers": true,
+    "maxImagesPerSlide": 1,
+    "notes": "Report da leggere e stampare: una pagina per evidenza, ogni evidenza con la sua prova e una raccomandazione concreta."
+  },
+  "layouts": [
+    {
+      "id": "cover",
+      "name": "Copertina",
+      "role": "cover",
+      "position": "first",
+      "file": "layouts/cover.html",
+      "slots": [
+        {
+          "name": "kicker",
+          "type": "text",
+          "label": "Occhiello",
+          "maxChars": 40,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Titolo",
+          "maxChars": 80,
+          "maxLines": 3,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "subtitle",
+          "type": "text",
+          "label": "Sottotitolo",
+          "maxChars": 160,
+          "maxLines": 3
+        },
+        {
+          "name": "client",
+          "type": "text",
+          "label": "Cliente",
+          "maxChars": 48,
+          "maxLines": 2,
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "label": "Data",
+          "maxChars": 24,
+          "maxLines": 1
+        },
+        {
+          "name": "prepared_by",
+          "type": "text",
+          "label": "Preparato da",
+          "maxChars": 48,
+          "maxLines": 2
+        },
+        {
+          "name": "image",
+          "type": "image",
+          "label": "Immagine",
+          "minWidth": 1080,
+          "minHeight": 600
+        }
+      ],
+      "sample": {
+        "kicker": "Audit digitale",
+        "title": "Dove Rossi Srl ==perde clienti== online",
+        "subtitle": "Sito, social e ricerca: cosa funziona, cosa no e da dove partire.",
+        "client": "Rossi Srl",
+        "date": "Ottobre 2026",
+        "prepared_by": "Agenzia Esempio",
+        "image": {
+          "asset": "assets/esempio-foto.svg",
+          "alt": "Schermata di esempio"
+        }
+      }
+    },
+    {
+      "id": "section",
+      "name": "Sezione",
+      "role": "section",
+      "file": "layouts/section.html",
+      "slots": [
+        {
+          "name": "number",
+          "type": "text",
+          "label": "Numero",
+          "maxChars": 4,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Titolo",
+          "maxChars": 60,
+          "maxLines": 2,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "intro",
+          "type": "text",
+          "label": "Introduzione",
+          "maxChars": 420,
+          "maxLines": 7
+        },
+        {
+          "name": "items",
+          "type": "list",
+          "label": "Elenco",
+          "maxChars": 140,
+          "maxItems": 6
+        }
+      ],
+      "sample": {
+        "number": "02",
+        "title": "Il ==sito== oggi",
+        "intro": "Abbiamo analizzato velocità, struttura e contenuti delle pagine principali, confrontandole con tre concorrenti diretti della zona.",
+        "items": [
+          "Tempo di caricamento su mobile oltre 6 secondi",
+          "Nessuna pagina dedicata ai servizi principali",
+          "Modulo di contatto in fondo alla home, senza invito all'azione",
+          "Schede prodotto senza prezzi né disponibilità"
+        ]
+      }
+    },
+    {
+      "id": "finding",
+      "name": "Evidenza",
+      "role": "finding",
+      "file": "layouts/finding.html",
+      "slots": [
+        {
+          "name": "label",
+          "type": "text",
+          "label": "Etichetta",
+          "maxChars": 40,
+          "maxLines": 1
+        },
+        {
+          "name": "severity",
+          "type": "text",
+          "label": "Priorità",
+          "maxChars": 24,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Titolo",
+          "maxChars": 90,
+          "maxLines": 3,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "label": "Descrizione",
+          "maxChars": 360,
+          "maxLines": 5,
+          "required": true
+        },
+        {
+          "name": "evidence",
+          "type": "text",
+          "label": "Prova",
+          "maxChars": 260,
+          "maxLines": 4,
+          "required": true
+        },
+        {
+          "name": "evidence_image",
+          "type": "image",
+          "label": "Immagine della prova",
+          "minWidth": 800,
+          "minHeight": 400
+        },
+        {
+          "name": "recommendation",
+          "type": "text",
+          "label": "Raccomandazione",
+          "maxChars": 280,
+          "maxLines": 4,
+          "required": true
+        }
+      ],
+      "sample": {
+        "label": "Evidenza 3 · Sito",
+        "severity": "Priorità alta",
+        "title": "La home non dice ==cosa fate== nei primi tre secondi",
+        "description": "Il primo schermo mostra una foto di repertorio e uno slogan generico. Chi arriva da Google deve scorrere due volte prima di capire che l'azienda installa impianti fotovoltaici.",
+        "evidence": "Registrazioni di sessione: il 58% dei visitatori da mobile esce senza scorrere oltre il primo schermo.",
+        "evidence_image": {
+          "asset": "assets/esempio-foto.svg",
+          "alt": "Schermata di esempio"
+        },
+        "recommendation": "Riscrivere il titolo della home con servizio e zona («Impianti fotovoltaici a Bergamo»), aggiungere un pulsante per il preventivo e una prova sociale sotto."
+      }
+    },
+    {
+      "id": "problem",
+      "name": "Problema",
+      "role": "problem",
+      "file": "layouts/problem.html",
+      "slots": [
+        {
+          "name": "label",
+          "type": "text",
+          "label": "Etichetta",
+          "maxChars": 40,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Titolo",
+          "maxChars": 90,
+          "maxLines": 3,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "label": "Descrizione",
+          "maxChars": 420,
+          "maxLines": 6,
+          "required": true
+        },
+        {
+          "name": "impact",
+          "type": "text",
+          "label": "Impatto",
+          "maxChars": 200,
+          "maxLines": 3
+        },
+        {
+          "name": "causes",
+          "type": "list",
+          "label": "Cause",
+          "maxChars": 100,
+          "maxItems": 4
+        }
+      ],
+      "sample": {
+        "label": "Problema principale",
+        "title": "I contatti arrivano, ma ==nessuno li segue==",
+        "description": "Le richieste dal sito finiscono in una casella condivisa letta una volta a settimana. Nessuno sa quante sono, chi le ha gestite e quante diventano clienti.",
+        "impact": "Stimiamo 15–20 richieste al mese senza risposta entro 48 ore.",
+        "causes": [
+          "Nessun avviso quando arriva una richiesta",
+          "Moduli diversi che scrivono a indirizzi diversi",
+          "Nessun registro delle richieste gestite"
+        ]
+      }
+    },
+    {
+      "id": "next-steps",
+      "name": "Prossimi passi",
+      "role": "next_steps",
+      "file": "layouts/next-steps.html",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Titolo",
+          "maxChars": 60,
+          "maxLines": 2,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "intro",
+          "type": "text",
+          "label": "Introduzione",
+          "maxChars": 240,
+          "maxLines": 3
+        },
+        {
+          "name": "steps",
+          "type": "list",
+          "label": "Passi",
+          "maxChars": 120,
+          "minItems": 1,
+          "maxItems": 5,
+          "required": true
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "label": "Nota",
+          "maxChars": 160,
+          "maxLines": 2
+        }
+      ],
+      "sample": {
+        "title": "Da dove ==partire==",
+        "intro": "Tre interventi in ordine di impatto: i primi due si fanno in un mese senza rifare il sito.",
+        "steps": [
+          "Nuovo primo schermo della home con servizio, zona e preventivo",
+          "Un unico modulo con avviso immediato e registro delle richieste",
+          "Pagine dedicate ai tre servizi più cercati in zona",
+          "Piano editoriale di due post a settimana su Instagram e LinkedIn"
+        ],
+        "note": "Ne parliamo insieme nella call di restituzione: portate le domande."
+      }
+    },
+    {
+      "id": "method",
+      "name": "Metodo",
+      "role": "method",
+      "file": "layouts/method.html",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Titolo",
+          "maxChars": 60,
+          "maxLines": 2,
+          "required": true
+        },
+        {
+          "name": "intro",
+          "type": "text",
+          "label": "Introduzione",
+          "maxChars": 280,
+          "maxLines": 4
+        },
+        {
+          "name": "items",
+          "type": "list",
+          "label": "Fonti e strumenti",
+          "maxChars": 90,
+          "maxItems": 6
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "label": "Limiti",
+          "maxChars": 200,
+          "maxLines": 3
+        }
+      ],
+      "sample": {
+        "title": "Come abbiamo lavorato",
+        "intro": "L'audit si basa solo su dati pubblici e sugli accessi che ci avete dato. Ogni evidenza riporta la sua fonte.",
+        "items": [
+          "Sito: analisi di 24 pagine su mobile e desktop",
+          "Ricerca: posizionamento su 40 parole chiave locali",
+          "Social: ultimi 90 giorni di Instagram e LinkedIn",
+          "Concorrenti: tre aziende scelte con voi"
+        ],
+        "note": "Periodo analizzato: luglio–settembre 2026. I dati di traffico sono stime dove non avevamo accesso agli strumenti."
+      }
+    }
+  ]
+}
