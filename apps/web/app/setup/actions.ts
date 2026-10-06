@@ -8,9 +8,11 @@ import { PASSWORD_MIN } from "@/lib/password";
 import { countUsers, createPasswordUser, withSetupLock } from "@/lib/users";
 
 const setupSchema = z.object({
-  name: z.string().trim().min(1, vmsg("yourNameRequired")),
-  email: z.email(vmsg("emailInvalid")),
-  password: z.string().min(PASSWORD_MIN, vmsg("passwordTooShort", { min: PASSWORD_MIN })),
+  name: z.string().trim().min(1, vmsg("validation.yourNameRequired")),
+  email: z.email(vmsg("validation.emailInvalid")),
+  password: z
+    .string()
+    .min(PASSWORD_MIN, vmsg("validation.passwordTooShort", { min: PASSWORD_MIN })),
 });
 
 export type SetupState = { error?: string };

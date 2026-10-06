@@ -75,8 +75,8 @@
     {
       "idx": 10,
       "version": "7",
-      "when": 1791285709613,
-      "tag": "0010_user_locale",
+      "when": 1791286414672,
+      "tag": "0010_interface_language",
       "breakpoints": true
     }
   ]

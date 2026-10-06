@@ -9,8 +9,9 @@ export type ForgecyErrorCode =
   | "unavailable";
 
 /**
- * Points to a translated message in the `errors` namespace of @forgecy/i18n
- * (`{ key: "products.notFound", values: { name } }`). Build it with `localizedError`.
+ * Points to a translated message of @forgecy/i18n by its full key
+ * (`{ key: "products.errors.notFound", values: { name } }`). Build it with
+ * `localizedError` or `messageRef` from @forgecy/i18n.
  */
 export type MessageRef = {
   key: string;
@@ -44,3 +45,11 @@ export const httpStatusFor: Record<ForgecyErrorCode, number> = {
   provider_error: 502,
   unavailable: 503,
 };
+
+/** The message reference an error carries (ForgecyError, NeedsAttentionError...), if any. */
+export function messageRefOf(err: unknown): MessageRef | null {
+  const ref = (err as { ref?: unknown } | null)?.ref;
+  return ref && typeof ref === "object" && typeof (ref as MessageRef).key === "string"
+    ? (ref as MessageRef)
+    : null;
+}

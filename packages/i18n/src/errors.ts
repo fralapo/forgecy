@@ -6,30 +6,31 @@ type Leaves<T, P extends string = ""> = {
   [K in keyof T & string]: T[K] extends string ? `${P}${K}` : Leaves<T[K], `${P}${K}.`>;
 }[keyof T & string];
 
-/** Keys of the `errors` namespace, e.g. "adminOnly" or "products.notFound". */
-export type ErrorKey = Leaves<typeof en.errors>;
-export type ErrorValues = Record<string, string | number>;
+/** Full key of any message, e.g. "errors.adminOnly" or "products.errors.notFound". */
+export type MessageKey = Leaves<typeof en>;
+export type MessageValues = Record<string, string | number>;
 
-const english = createTranslator({ locale: "en", messages: en, namespace: "errors" });
+const english = createTranslator({ locale: "en", messages: en });
 
-/** The English text of an error message, for logs and the API. */
-export function englishError(key: ErrorKey, values?: ErrorValues): string {
-  return (english as (key: string, values?: ErrorValues) => string)(key, values);
+/** The English text of a message, for logs, the API and stored fallbacks. */
+export function englishMessage(key: MessageKey, values?: MessageValues): string {
+  return (english as unknown as (key: string, values?: MessageValues) => string)(key, values);
 }
 
-export function errorRef(key: ErrorKey, values?: ErrorValues): MessageRef {
+/** A reference to a message, stored or thrown now and translated when shown. */
+export function messageRef(key: MessageKey, values?: MessageValues): MessageRef {
   return values ? { key, values } : { key };
 }
 
 /**
  * A ForgecyError whose message the interface shows in the user's language:
- * `throw localizedError("not_found", "products.notFound")`.
+ * `throw localizedError("not_found", "products.errors.notFound")`.
  */
 export function localizedError(
   code: ForgecyErrorCode,
-  key: ErrorKey,
-  values?: ErrorValues,
+  key: MessageKey,
+  values?: MessageValues,
   details?: Record<string, unknown>,
 ): ForgecyError {
-  return new ForgecyError(code, englishError(key, values), details, errorRef(key, values));
+  return new ForgecyError(code, englishMessage(key, values), details, messageRef(key, values));
 }

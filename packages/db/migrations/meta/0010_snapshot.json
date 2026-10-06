@@ -1,5 +1,5 @@
 {
-  "id": "e850cb93-b349-4fec-a8f5-1042b48402d5",
+  "id": "3730c229-c9d3-4eb0-b4a6-db18081a75f3",
   "prevId": "922e4f4a-a70f-44d7-a2cc-3b83038f71af",
   "version": "7",
   "dialect": "postgresql",
@@ -753,6 +753,12 @@
         "error": {
           "name": "error",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_ref": {
+          "name": "error_ref",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },

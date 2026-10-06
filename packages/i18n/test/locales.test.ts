@@ -39,9 +39,9 @@ describe("getTranslator", () => {
 describe("localizedError", async () => {
   const { localizedError } = await import("../src");
   it("carries the English message and a reference for the interface", () => {
-    const err = localizedError("permission_denied", "adminOnly");
+    const err = localizedError("permission_denied", "errors.adminOnly");
     expect(err.message).toBe("This setting is reserved for Admin users.");
-    expect(err.ref).toEqual({ key: "adminOnly" });
+    expect(err.ref).toEqual({ key: "errors.adminOnly" });
     expect(err.code).toBe("permission_denied");
   });
 });

@@ -220,6 +220,9 @@ importers:
       '@forgecy/db':
         specifier: workspace:*
         version: link:../db
+      '@forgecy/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       openai:
         specifier: ^7.28.0
         version: 7.28.0(@aws-sdk/credential-provider-node@3.972.84)(@smithy/signature-v4@5.7.4)(zod@4.6.5)
@@ -254,6 +257,9 @@ importers:
       '@forgecy/files':
         specifier: workspace:*
         version: link:../files
+      '@forgecy/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@forgecy/jobs':
         specifier: workspace:*
         version: link:../jobs
@@ -303,6 +309,9 @@ importers:
       '@forgecy/files':
         specifier: workspace:*
         version: link:../files
+      '@forgecy/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@forgecy/jobs':
         specifier: workspace:*
         version: link:../jobs
@@ -340,6 +349,9 @@ importers:
       '@forgecy/db':
         specifier: workspace:*
         version: link:../db
+      '@forgecy/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@forgecy/ui':
         specifier: workspace:*
         version: link:../ui
@@ -374,6 +386,9 @@ importers:
       '@forgecy/files':
         specifier: workspace:*
         version: link:../files
+      '@forgecy/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@forgecy/jobs':
         specifier: workspace:*
         version: link:../jobs
@@ -420,6 +435,9 @@ importers:
       '@forgecy/files':
         specifier: workspace:*
         version: link:../files
+      '@forgecy/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@forgecy/jobs':
         specifier: workspace:*
         version: link:../jobs
@@ -493,6 +511,9 @@ importers:
       '@forgecy/files':
         specifier: workspace:*
         version: link:../files
+      '@forgecy/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@forgecy/jobs':
         specifier: workspace:*
         version: link:../jobs
@@ -609,6 +630,9 @@ importers:
       '@forgecy/db':
         specifier: workspace:*
         version: link:../db
+      '@forgecy/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       bullmq:
         specifier: ^6.3.11
         version: 6.3.11(ioredis@5.11.1)(pg@8.23.1)

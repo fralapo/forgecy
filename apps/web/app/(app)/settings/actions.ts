@@ -12,9 +12,11 @@ import { requireUser } from "@/lib/session";
 import { createPasswordUser } from "@/lib/users";
 
 const newUserSchema = z.object({
-  name: z.string().trim().min(1, vmsg("nameRequired")),
-  email: z.email(vmsg("emailInvalid")),
-  password: z.string().min(PASSWORD_MIN, vmsg("passwordTooShort", { min: PASSWORD_MIN })),
+  name: z.string().trim().min(1, vmsg("validation.nameRequired")),
+  email: z.email(vmsg("validation.emailInvalid")),
+  password: z
+    .string()
+    .min(PASSWORD_MIN, vmsg("validation.passwordTooShort", { min: PASSWORD_MIN })),
   isAdmin: z
     .literal("on")
     .optional()

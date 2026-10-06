@@ -12,10 +12,10 @@ const optionalUrl = z
   .string()
   .trim()
   .transform((v) => (v === "" ? undefined : v))
-  .pipe(z.url({ protocol: /^https?$/, message: vmsg("websiteInvalid") }).optional());
+  .pipe(z.url({ protocol: /^https?$/, message: vmsg("validation.websiteInvalid") }).optional());
 
 const clientSchema = z.object({
-  name: z.string().trim().min(1, vmsg("nameRequired")).max(120),
+  name: z.string().trim().min(1, vmsg("validation.nameRequired")).max(120),
   status: z.enum(clientStatuses).default("prospect"),
   websiteUrl: optionalUrl,
   sector: z.string().trim().max(80).optional(),

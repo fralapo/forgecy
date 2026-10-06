@@ -5,6 +5,7 @@ import common from "./common.json";
 import enums from "./enums.json";
 import errors from "./errors.json";
 import home from "./home.json";
+import jobs from "./jobs.json";
 import mail from "./mail.json";
 import meta from "./meta.json";
 import settings from "./settings.json";
@@ -18,6 +19,7 @@ export default {
   enums,
   errors,
   home,
+  jobs,
   mail,
   meta,
   settings,

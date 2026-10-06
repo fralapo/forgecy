@@ -9,6 +9,7 @@ import {
   uuid,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import type { MessageRef } from "@forgecy/core";
 import { users } from "./auth";
 import { clients } from "./clients";
 import { createdAt, id, updatedAt } from "./_common";
@@ -36,6 +37,8 @@ export const jobs = pgTable(
     progress: integer("progress").notNull().default(0),
     attempts: integer("attempts").notNull().default(0),
     error: text("error"),
+    /** Translatable form of `error` (a key of @forgecy/i18n), shown in the reader's language. */
+    errorRef: jsonb("error_ref").$type<MessageRef>(),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     startedAt: timestamp("started_at", { withTimezone: true }),
     endedAt: timestamp("ended_at", { withTimezone: true }),
