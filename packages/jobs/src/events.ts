@@ -1,4 +1,4 @@
-import { TERMINAL_JOB_STATUSES, type JobStatus } from "@forgecy/core";
+import { TERMINAL_JOB_STATUSES, type JobStatus, type MessageRef } from "@forgecy/core";
 import { eq, jobs, type Database } from "@forgecy/db";
 
 export interface JobEvent {
@@ -8,6 +8,8 @@ export interface JobEvent {
   progress: number;
   attempts: number;
   error: string | null;
+  /** Translatable form of `error`; the interface prefers it when present. */
+  errorRef: MessageRef | null;
   result: Record<string, unknown> | null;
   updatedAt: Date;
   terminal: boolean;
@@ -40,6 +42,7 @@ export async function* subscribeJobEvents(
         progress: jobs.progress,
         attempts: jobs.attempts,
         error: jobs.error,
+        errorRef: jobs.errorRef,
         result: jobs.result,
         updatedAt: jobs.updatedAt,
       })

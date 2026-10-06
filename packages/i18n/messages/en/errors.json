@@ -1,0 +1,14 @@
+{
+  "code": {
+    "not_found": "Not found.",
+    "conflict": "Someone else changed this in the meantime. Reload the page.",
+    "validation": "Check the data you entered.",
+    "permission_denied": "You don’t have permission for this action.",
+    "policy_blocked": "The client’s AI policy doesn’t allow this.",
+    "budget_exceeded": "The AI budget for this period has been used up.",
+    "provider_error": "The AI provider didn’t respond. Try again in a moment.",
+    "unavailable": "The service is unavailable right now. Try again in a moment."
+  },
+  "adminOnly": "This setting is reserved for Admin users.",
+  "userExists": "A user with this email already exists."
+}

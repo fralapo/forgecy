@@ -1,32 +1,35 @@
 "use client";
 
 import { Button, Input, Label } from "@forgecy/ui";
+import { useTranslations } from "next-intl";
 import { useActionState } from "react";
+import { PASSWORD_MIN } from "@/lib/password";
 import { createFirstAdmin, type SetupState } from "./actions";
 
 export function SetupForm() {
   const [state, action, pending] = useActionState<SetupState, FormData>(createFirstAdmin, {});
+  const t = useTranslations("auth.setup");
   return (
     <form action={action} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
+        <Label htmlFor="name">{t("name")}</Label>
         <Input id="name" name="name" autoComplete="name" required />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">{t("email")}</Label>
         <Input id="email" name="email" type="email" autoComplete="email" required />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">{t("password")}</Label>
         <Input
           id="password"
           name="password"
           type="password"
           autoComplete="new-password"
-          minLength={12}
+          minLength={PASSWORD_MIN}
           required
         />
-        <p className="text-body-sm text-fg-muted">At least 12 characters.</p>
+        <p className="text-body-sm text-fg-muted">{t("passwordHint", { min: PASSWORD_MIN })}</p>
       </div>
       {state.error ? (
         <p role="alert" className="text-body-sm text-error">
@@ -34,7 +37,7 @@ export function SetupForm() {
         </p>
       ) : null}
       <Button type="submit" className="w-full" disabled={pending}>
-        Create the Admin account
+        {t("submit")}
       </Button>
     </form>
   );

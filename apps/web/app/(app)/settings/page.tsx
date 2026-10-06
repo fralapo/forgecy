@@ -1,61 +1,76 @@
 import { Badge, Card } from "@forgecy/ui";
 import { asc, getDb, users } from "@forgecy/db";
+import { LOCALES, loadMessages, negotiateLocale } from "@forgecy/i18n";
+import { headers } from "next/headers";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { env } from "@/lib/env";
 import { requireUser } from "@/lib/session";
+import { LanguageForm } from "./language-form";
 import { NewUserForm } from "./new-user-form";
 import { WorkerCheck } from "./worker-check";
 
-export const metadata = { title: "Settings" };
-
-const authModeLabel = {
-  local: "Local",
-  intranet: "Intranet",
-  team: "Team (magic link and Google)",
-} as const;
+export async function generateMetadata() {
+  const t = await getTranslations("settings");
+  return { title: t("title") };
+}
 
 export default async function SettingsPage() {
   const user = await requireUser();
+  const t = await getTranslations("settings");
+  const te = await getTranslations("enums");
+  const tc = await getTranslations("common");
   const people = user.isAdmin ? await getDb().select().from(users).orderBy(asc(users.name)) : [];
+  // Each language is listed by its own name, taken from its own messages.
+  const languages = await Promise.all(
+    LOCALES.map(async (code) => ({ code, name: (await loadMessages(code)).meta.languageName })),
+  );
+  const browser = negotiateLocale((await headers()).get("accept-language"));
   // Only whether a key is configured, never the key itself.
   const providers = [
     { name: "Anthropic", ready: Boolean(env.ANTHROPIC_API_KEY) },
     { name: "OpenAI", ready: Boolean(env.OPENAI_API_KEY) },
     { name: "OpenRouter", ready: Boolean(env.OPENROUTER_API_KEY) },
-    { name: "Google (images)", ready: Boolean(env.GOOGLE_AI_API_KEY) },
-    { name: "Local model", ready: env.LOCAL_LLM_ENABLED },
+    { name: t("providers.googleImages"), ready: Boolean(env.GOOGLE_AI_API_KEY) },
+    { name: t("providers.localModel"), ready: env.LOCAL_LLM_ENABLED },
   ];
 
   return (
     <>
-      <PageHeader title="Settings" description="Access, agency people and AI providers." />
+      <PageHeader title={t("title")} description={t("description")} />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-6">
-          <h2 className="text-heading-sm text-fg">Instance</h2>
+          <h2 className="text-heading-sm text-fg">{t("preferences.title")}</h2>
+          <LanguageForm
+            current={user.locale ?? ""}
+            languages={languages}
+            browserLanguage={languages.find((l) => l.code === browser)?.name ?? browser}
+          />
+        </Card>
+        <Card className="p-6">
+          <h2 className="text-heading-sm text-fg">{t("instance.title")}</h2>
           <dl className="mt-4 grid grid-cols-[10rem_1fr] gap-y-2 text-body-sm">
-            <dt className="text-fg-muted">Access</dt>
-            <dd className="text-fg">{authModeLabel[env.FORGECY_AUTH_MODE]}</dd>
-            <dt className="text-fg-muted">File storage</dt>
+            <dt className="text-fg-muted">{t("instance.access")}</dt>
+            <dd className="text-fg">{te(`authMode.${env.FORGECY_AUTH_MODE}`)}</dd>
+            <dt className="text-fg-muted">{t("instance.storage")}</dt>
             <dd className="text-fg">
-              {env.STORAGE_DRIVER === "local" ? "Local disk" : "S3-compatible"}
+              {te(env.STORAGE_DRIVER === "local" ? "storageDriver.local" : "storageDriver.s3")}
             </dd>
-            <dt className="text-fg-muted">Default AI provider</dt>
+            <dt className="text-fg-muted">{t("instance.defaultProvider")}</dt>
             <dd className="font-mono text-fg">{env.AI_DEFAULT_PROVIDER}</dd>
           </dl>
           {user.isAdmin ? <WorkerCheck /> : null}
         </Card>
         <Card className="p-6">
-          <h2 className="text-heading-sm text-fg">AI providers</h2>
-          <p className="mt-2 text-body-sm text-fg-muted">
-            Keys are set in the server’s .env file. The only costs are the providers’ API charges.
-          </p>
+          <h2 className="text-heading-sm text-fg">{t("providers.title")}</h2>
+          <p className="mt-2 text-body-sm text-fg-muted">{t("providers.hint")}</p>
           <ul className="mt-4 space-y-2">
             {providers.map((p) => (
               <li key={p.name} className="flex items-center justify-between text-body-sm">
                 <span className="text-fg">{p.name}</span>
                 <Badge variant={p.ready ? "success" : "neutral"}>
-                  {p.ready ? "Configured" : "Not configured"}
+                  {t(p.ready ? "providers.configured" : "providers.notConfigured")}
                 </Badge>
               </li>
             ))}
@@ -65,14 +80,14 @@ export default async function SettingsPage() {
               href="/settings/ai-providers"
               className="mt-4 inline-block text-body-sm text-link underline"
             >
-              Commercial use of images
+              {t("providers.commercialUseLink")}
             </Link>
           ) : null}
         </Card>
         {user.isAdmin ? (
           <>
             <Card className="p-6">
-              <h2 className="text-heading-sm text-fg">People</h2>
+              <h2 className="text-heading-sm text-fg">{t("people.title")}</h2>
               <ul className="mt-4 divide-y divide-subtle">
                 {people.map((p) => (
                   <li key={p.id} className="flex items-center justify-between py-2 text-body-sm">
@@ -81,15 +96,17 @@ export default async function SettingsPage() {
                       <span className="text-fg-muted">{p.email}</span>
                     </span>
                     <span className="flex gap-2">
-                      {p.isAdmin ? <Badge>Admin</Badge> : null}
-                      {!p.active ? <Badge variant="warning">Deactivated</Badge> : null}
+                      {p.isAdmin ? <Badge>{tc("role.admin")}</Badge> : null}
+                      {!p.active ? (
+                        <Badge variant="warning">{t("people.deactivated")}</Badge>
+                      ) : null}
                     </span>
                   </li>
                 ))}
               </ul>
             </Card>
             <Card className="p-6">
-              <h2 className="text-heading-sm text-fg">Add a person</h2>
+              <h2 className="text-heading-sm text-fg">{t("newUser.title")}</h2>
               <NewUserForm />
             </Card>
           </>

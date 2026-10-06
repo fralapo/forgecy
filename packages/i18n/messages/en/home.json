@@ -1,0 +1,27 @@
+{
+  "greeting": "Hi {name}",
+  "flow": "Prospect, Audit, Diagnosis, Brand identity, Content strategy, Carousel, Review, Export.",
+  "step": "{number}. {title}",
+  "steps": {
+    "audit": {
+      "title": "Audit",
+      "text": "Analyze a prospect's website, social profiles and competitors, and deliver the report as a PDF."
+    },
+    "templates": {
+      "title": "Templates",
+      "text": "Import and publish the agency's templates: reports and carousels use only published ones."
+    },
+    "brand": {
+      "title": "Brand Identity",
+      "text": "The client's strategy, voice and visual identity, approved by a person."
+    },
+    "products": {
+      "title": "Products",
+      "text": "The client's catalog: only approved products make it into content."
+    },
+    "content": {
+      "title": "Content",
+      "text": "Strategy, plan, carousels, review and export to PNG, PDF and ZIP."
+    }
+  }
+}

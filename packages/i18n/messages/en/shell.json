@@ -1,0 +1,15 @@
+{
+  "mainNavigation": "Main navigation",
+  "nav": {
+    "overview": "Overview",
+    "clients": "Clients",
+    "audit": "Audit",
+    "products": "Products",
+    "templates": "Templates",
+    "brand": "Brand Identity",
+    "content": "Content",
+    "settings": "Settings",
+    "design": "Design system"
+  },
+  "signOut": "Sign out"
+}

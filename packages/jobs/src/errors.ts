@@ -1,3 +1,4 @@
+import type { MessageRef } from "@forgecy/core";
 import { UnrecoverableError } from "bullmq";
 
 /**
@@ -8,6 +9,8 @@ export class NeedsAttentionError extends Error {
   constructor(
     message: string,
     readonly details?: Record<string, unknown>,
+    /** Translatable form of the message; build it with `messageRef` from @forgecy/i18n. */
+    readonly ref?: MessageRef,
   ) {
     super(message);
     this.name = "NeedsAttentionError";

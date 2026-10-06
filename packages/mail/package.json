@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@forgecy/core": "workspace:*",
+    "@forgecy/i18n": "workspace:*",
     "nodemailer": "^10.0.15"
   },
   "devDependencies": {

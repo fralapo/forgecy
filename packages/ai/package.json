@@ -13,9 +13,10 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",
-    "@anthropic-ai/sdk": "^0.131.0",
+    "@forgecy/i18n": "workspace:*",
     "openai": "^7.28.0",
     "zod": "^4.6.5"
   },

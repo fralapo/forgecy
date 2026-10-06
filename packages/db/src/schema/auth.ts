@@ -4,6 +4,7 @@
  * Forgecy Product Owner. Passwords live in `accounts.password` (provider "credential").
  */
 import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { LOCALES } from "@forgecy/core";
 import { createdAt, id, updatedAt } from "./_common";
 
 export const users = pgTable("users", {
@@ -15,6 +16,8 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").notNull().default(false),
   isProductOwner: boolean("is_product_owner").notNull().default(false),
   active: boolean("active").notNull().default(true),
+  /** Interface language chosen by the person (`en`, `it`); null follows the browser. */
+  locale: text("locale", { enum: LOCALES }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

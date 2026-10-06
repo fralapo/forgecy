@@ -3,18 +3,25 @@ import "@fontsource-variable/jetbrains-mono";
 import "@fontsource-variable/space-grotesk";
 import "./globals.css";
 import type { Metadata } from "next";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
-export const metadata: Metadata = {
-  title: { default: "Forgecy", template: "%s · Forgecy" },
-  description: "The agency's creative engine.",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("meta");
+  return {
+    title: { default: "Forgecy", template: "%s · Forgecy" },
+    description: t("description"),
+    robots: { index: false, follow: false },
+  };
+}
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-dvh bg-app font-body text-fg antialiased">{children}</body>
+    <html lang={await getLocale()}>
+      <body className="min-h-dvh bg-app font-body text-fg antialiased">
+        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+      </body>
     </html>
   );
 }

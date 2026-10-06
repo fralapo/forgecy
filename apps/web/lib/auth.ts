@@ -1,5 +1,6 @@
 import "server-only";
 import { getDb, schema } from "@forgecy/db";
+import { isLocale, negotiateLocale } from "@forgecy/i18n";
 import { createMailer, renderMagicLinkEmail } from "@forgecy/mail";
 import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
@@ -7,6 +8,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink } from "better-auth/plugins";
 import { env } from "./env";
+import { PASSWORD_MIN } from "./password";
 
 const db = getDb();
 const teamMode = env.FORGECY_AUTH_MODE === "team";
@@ -52,13 +54,14 @@ export const auth = betterAuth({
       isAdmin: { type: "boolean", defaultValue: false, input: false },
       isProductOwner: { type: "boolean", defaultValue: false, input: false },
       active: { type: "boolean", defaultValue: true, input: false },
+      locale: { type: "string", required: false, input: false },
     },
   },
   emailAndPassword: {
     enabled: true,
     // Accounts are created by the first-run setup or by an Admin, never by self sign-up.
     disableSignUp: true,
-    minPasswordLength: 12,
+    minPasswordLength: PASSWORD_MIN,
   },
   socialProviders: googleEnabled
     ? {
@@ -98,11 +101,19 @@ export const auth = betterAuth({
             expiresIn: env.FORGECY_MAGIC_LINK_TTL_MINUTES * 60,
             storeToken: "hashed",
             disableSignUp: env.FORGECY_ALLOWED_EMAIL_DOMAINS.length === 0,
-            sendMagicLink: async ({ email, url }) => {
-              const message = renderMagicLinkEmail({
+            sendMagicLink: async ({ email, url }, ctx) => {
+              // The person's saved language, otherwise the language of the browser asking.
+              const user = await db.query.users.findFirst({
+                where: (u, { eq }) => eq(u.email, email.toLowerCase()),
+                columns: { locale: true },
+              });
+              const message = await renderMagicLinkEmail({
                 url,
                 minutes: env.FORGECY_MAGIC_LINK_TTL_MINUTES,
                 appName: "Forgecy",
+                locale: isLocale(user?.locale)
+                  ? user.locale
+                  : negotiateLocale(ctx?.request?.headers.get("accept-language")),
               });
               await createMailer(env).sendMail({ to: email, ...message });
             },

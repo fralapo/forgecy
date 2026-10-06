@@ -1,0 +1,71 @@
+{
+  "title": "Settings",
+  "description": "Your preferences, access, agency people and AI providers.",
+  "preferences": {
+    "title": "Preferences",
+    "language": "Interface language",
+    "languageHint": "Only changes what you see. Client deliverables keep the language chosen for each client or content.",
+    "automatic": "Automatic (browser: {language})",
+    "saved": "Language updated."
+  },
+  "instance": {
+    "title": "Instance",
+    "access": "Access",
+    "storage": "File storage",
+    "defaultProvider": "Default AI provider"
+  },
+  "providers": {
+    "title": "AI providers",
+    "hint": "Keys are set in the server’s .env file. The only costs are the providers’ API charges.",
+    "configured": "Configured",
+    "notConfigured": "Not configured",
+    "googleImages": "Google (images)",
+    "localModel": "Local model",
+    "commercialUseLink": "Commercial use of images"
+  },
+  "people": {
+    "title": "People",
+    "deactivated": "Deactivated"
+  },
+  "newUser": {
+    "title": "Add a person",
+    "name": "Name",
+    "email": "Email",
+    "password": "Initial password",
+    "isAdmin": "Admin (settings, keys, budget and backups)",
+    "created": "Account created.",
+    "submit": "Create account"
+  },
+  "worker": {
+    "check": "Check the worker",
+    "completed": "The worker responds",
+    "error": "Queue unreachable"
+  },
+  "aiProviders": {
+    "title": "AI providers",
+    "description": "Commercial use of generated images: an Admin verifies it by reading the provider’s terms.",
+    "primary": "Primary",
+    "secondary": "Secondary",
+    "status": {
+      "pending_verification": "Pending verification",
+      "verified": "Verified",
+      "rejected": "Not allowed"
+    },
+    "available": "Available for clients whose policy allows it.",
+    "unavailable": "Not used with real clients: image generation is off for every client.",
+    "verifiedBy": "Verified by",
+    "consultedOn": "Terms consulted on",
+    "terms": "Terms",
+    "note": "Note",
+    "form": {
+      "summary": "Update commercial use status",
+      "status": "Status",
+      "termsUrl": "URL of the terms consulted",
+      "termsUrlPlaceholder": "https://",
+      "termsUrlHint": "Required for “Verified”.",
+      "consultedOn": "Date consulted",
+      "note": "Note",
+      "updated": "Status updated."
+    }
+  }
+}

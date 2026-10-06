@@ -7,6 +7,7 @@ export * from "./content-status";
 export * from "./env";
 export * from "./errors";
 export * from "./jobs";
+export * from "./locale";
 export * from "./permissions";
 export * from "./review-status";
 export * from "./brand-check";

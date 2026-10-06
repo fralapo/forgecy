@@ -16,6 +16,7 @@
     "@forgecy/brand": "workspace:*",
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",
+    "@forgecy/i18n": "workspace:*",
     "@forgecy/ui": "workspace:*",
     "pngjs": "^7.0.0",
     "zod": "^4.6.5"

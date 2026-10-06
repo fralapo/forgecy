@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 // In development the whole monorepo shares the root .env (Docker passes real env vars).
 const rootEnv = new URL("../../.env", import.meta.url).pathname;
@@ -20,6 +21,7 @@ const nextConfig: NextConfig = {
     "@forgecy/content",
     "@forgecy/catalog",
     "@forgecy/files",
+    "@forgecy/i18n",
     "@forgecy/jobs",
     "@forgecy/mail",
     "@forgecy/ui",
@@ -31,4 +33,7 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
 };
 
-export default nextConfig;
+// Interface text comes from packages/i18n/messages, one folder per language (docs/I18N.md).
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
+
+export default withNextIntl(nextConfig);

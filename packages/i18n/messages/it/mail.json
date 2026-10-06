@@ -1,0 +1,13 @@
+{
+  "magicLink": {
+    "subject": "Il tuo link di accesso a {app}",
+    "greeting": "Ciao,",
+    "openLink": "per accedere a {app}, apri questo link:",
+    "expires": "Il link funziona una sola volta e scade tra {minutes, plural, one {# minuto} other {# minuti}}.",
+    "ignore": "Se non l’hai richiesto, ignora questa email: nessuno può accedere senza il link.",
+    "heading": "Accedi a {app}",
+    "pressButton": "Premi il pulsante per accedere. Il link funziona una sola volta e scade tra {minutes, plural, one {# minuto} other {# minuti}}.",
+    "button": "Accedi a {app}",
+    "copyAddress": "Se il pulsante non funziona, copia questo indirizzo nel browser:"
+  }
+}

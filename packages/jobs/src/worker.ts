@@ -1,5 +1,5 @@
 import { UnrecoverableError, Worker, type Job } from "bullmq";
-import { JOB_MAX_ATTEMPTS } from "@forgecy/core";
+import { JOB_MAX_ATTEMPTS, messageRefOf } from "@forgecy/core";
 import { and, eq, inArray, jobs, sql, type Database } from "@forgecy/db";
 import type { z } from "zod";
 import { FORGECY_BACKOFF, forgecyBackoff } from "./backoff";
@@ -96,6 +96,7 @@ export function createProcessor(db: Database, handlers: JobHandlers, logger: Job
         attempts: sql`${jobs.attempts} + 1`,
         startedAt: sql`coalesce(${jobs.startedAt}, now())`,
         error: null,
+        errorRef: null,
       })
       .where(and(eq(jobs.id, id), inArray(jobs.status, [...ACTIVE])))
       .returning();
@@ -154,6 +155,7 @@ export function createProcessor(db: Database, handlers: JobHandlers, logger: Job
         progress: 100,
         result,
         error: null,
+        errorRef: null,
         endedAt: new Date(),
       });
       logger.info(log, "job completed");
@@ -167,6 +169,7 @@ export function createProcessor(db: Database, handlers: JobHandlers, logger: Job
       await finish(db, id, {
         status,
         error: message,
+        errorRef: messageRefOf(err),
         ...(final ? { endedAt: new Date() } : {}),
       }).catch((dbErr) =>
         logger.error({ ...log, err: errorMessage(dbErr) }, "could not persist job failure"),

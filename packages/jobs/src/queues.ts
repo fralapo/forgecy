@@ -1,6 +1,7 @@
 import { Queue } from "bullmq";
 import { ForgecyError } from "@forgecy/core";
 import { and, eq, inArray, jobs, type Database } from "@forgecy/db";
+import { englishMessage, messageRef } from "@forgecy/i18n";
 import type { z } from "zod";
 import { defaultJobOptions } from "./backoff";
 import { errorMessage } from "./errors";
@@ -122,7 +123,8 @@ export async function enqueueJob<S extends z.ZodType>(
       .update(jobs)
       .set({
         status: "failed",
-        error: `Queue unavailable: ${errorMessage(err)}`,
+        error: `${englishMessage("jobs.errors.queueUnavailable")} ${errorMessage(err)}`,
+        errorRef: messageRef("jobs.errors.queueUnavailable"),
         endedAt: new Date(),
       })
       .where(eq(jobs.id, row.id));

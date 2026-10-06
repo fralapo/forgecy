@@ -1,7 +1,8 @@
 import "server-only";
-import type { Actor } from "@forgecy/core";
+import { isLocale, type Actor, type Locale } from "@forgecy/core";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { auth } from "./auth";
 
 export type CurrentUser = {
@@ -10,11 +11,16 @@ export type CurrentUser = {
   email: string;
   isAdmin: boolean;
   isProductOwner: boolean;
+  /** Interface language the person chose; null follows the browser. */
+  locale: Locale | null;
   actor: Actor;
 };
 
-/** The signed-in user, validated against the database (the proxy only checks the cookie). */
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+/**
+ * The signed-in user, validated against the database (the proxy only checks the cookie).
+ * Cached per request: pages and the i18n request config share one lookup.
+ */
+export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session || !session.user.active) return null;
   const { user } = session;
@@ -24,9 +30,10 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     email: user.email,
     isAdmin: user.isAdmin,
     isProductOwner: user.isProductOwner,
+    locale: isLocale(user.locale) ? user.locale : null,
     actor: { type: "user", id: user.id, isAdmin: user.isAdmin, active: user.active },
   };
-}
+});
 
 export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();

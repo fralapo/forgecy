@@ -1,17 +1,22 @@
 "use server";
 
 import { setCommercialUse } from "@forgecy/content";
-import { assertCan, ForgecyError, PermissionDeniedError } from "@forgecy/core";
+import { assertCan, localeSchema, PermissionDeniedError } from "@forgecy/core";
 import { eq, getDb, users } from "@forgecy/db";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
+import { errorMessage, firstIssue, vmsg } from "@/lib/i18n";
+import { PASSWORD_MIN } from "@/lib/password";
 import { requireUser } from "@/lib/session";
 import { createPasswordUser } from "@/lib/users";
 
 const newUserSchema = z.object({
-  name: z.string().trim().min(1, "Enter the name"),
-  email: z.email("Invalid email"),
-  password: z.string().min(12, "The password must be at least 12 characters long"),
+  name: z.string().trim().min(1, vmsg("validation.nameRequired")),
+  email: z.email(vmsg("validation.emailInvalid")),
+  password: z
+    .string()
+    .min(PASSWORD_MIN, vmsg("validation.passwordTooShort", { min: PASSWORD_MIN })),
   isAdmin: z
     .literal("on")
     .optional()
@@ -24,12 +29,12 @@ export async function createUserAction(_prev: NewUserState, form: FormData): Pro
   const admin = await requireUser();
   assertCan(admin.actor, "users.manage");
   const parsed = newUserSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid data" };
+  if (!parsed.success) return { error: await firstIssue(parsed.error) };
   const exists = await getDb().query.users.findFirst({
     where: eq(users.email, parsed.data.email.toLowerCase()),
     columns: { id: true },
   });
-  if (exists) return { error: "A user with this email already exists." };
+  if (exists) return { error: (await getTranslations("errors"))("userExists") };
   await createPasswordUser({ ...parsed.data, createdBy: admin.id });
   revalidatePath("/settings");
   return { ok: true };
@@ -46,10 +51,24 @@ export async function setCommercialUseAction(
     await setCommercialUse(getDb(), admin.actor, Object.fromEntries(form));
   } catch (err) {
     if (err instanceof PermissionDeniedError)
-      return { error: "This setting is reserved for Admin users." };
-    if (err instanceof ForgecyError) return { error: err.message };
+      return { error: (await getTranslations("errors"))("adminOnly") };
+    const error = await errorMessage(err);
+    if (error) return { error };
     throw err;
   }
   revalidatePath("/settings/ai-providers");
+  return { ok: true };
+}
+
+export type LocaleState = { error?: string; ok?: boolean };
+
+/** Saves the person's interface language; empty means "follow the browser". */
+export async function setLocaleAction(_prev: LocaleState, form: FormData): Promise<LocaleState> {
+  const user = await requireUser();
+  const raw = form.get("locale");
+  const parsed = localeSchema.nullable().safeParse(raw === "" || raw === null ? null : raw);
+  if (!parsed.success) return { error: await firstIssue(parsed.error) };
+  await getDb().update(users).set({ locale: parsed.data }).where(eq(users.id, user.id));
+  revalidatePath("/", "layout");
   return { ok: true };
 }

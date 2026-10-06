@@ -1,0 +1,8 @@
+{
+  "invalid": "Dati non validi",
+  "nameRequired": "Inserisci il nome",
+  "yourNameRequired": "Inserisci il tuo nome",
+  "emailInvalid": "Email non valida",
+  "passwordTooShort": "La password deve avere almeno {min} caratteri",
+  "websiteInvalid": "Indirizzo del sito non valido"
+}

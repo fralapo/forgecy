@@ -15,6 +15,7 @@
   "dependencies": {
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",
+    "@forgecy/i18n": "workspace:*",
     "bullmq": "^6.3.11",
     "ioredis": "^5.11.1",
     "zod": "^4.6.5"

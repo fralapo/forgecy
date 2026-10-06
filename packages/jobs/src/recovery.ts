@@ -1,5 +1,6 @@
 import { JOB_LOCK_TTL_MS, JOB_MAX_ATTEMPTS } from "@forgecy/core";
 import { and, eq, jobs, lt, type Database } from "@forgecy/db";
+import { englishMessage, messageRef } from "@forgecy/i18n";
 import { jobDefinitions } from "./registry";
 import type { JobQueues } from "./queues";
 
@@ -33,10 +34,15 @@ export async function recoverStaleJobs(
       .update(jobs)
       .set(
         retry
-          ? { status: "retrying", error: "Worker interrupted: retrying" }
+          ? {
+              status: "retrying",
+              error: englishMessage("jobs.errors.interruptedRetrying"),
+              errorRef: messageRef("jobs.errors.interruptedRetrying"),
+            }
           : {
               status: "failed",
-              error: "Worker interrupted after the last attempt",
+              error: englishMessage("jobs.errors.interruptedFinal"),
+              errorRef: messageRef("jobs.errors.interruptedFinal"),
               endedAt: new Date(),
             },
       )

@@ -22,6 +22,7 @@
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",
     "@forgecy/files": "workspace:*",
+    "@forgecy/i18n": "workspace:*",
     "@forgecy/jobs": "workspace:*",
     "zod": "^4.6.5"
   },

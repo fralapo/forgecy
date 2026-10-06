@@ -2,34 +2,32 @@ import { Badge, Card } from "@forgecy/ui";
 import { asc, clients, getDb, isNull } from "@forgecy/db";
 import type { Route } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/session";
 import { NewClientForm } from "./new-client-form";
 
-export const metadata = { title: "Clients" };
+export async function generateMetadata() {
+  const t = await getTranslations("clients");
+  return { title: t("title") };
+}
 
-const statusLabel = { prospect: "Prospect", active: "Active", archived: "Archived" } as const;
 const linkClass = "text-link underline-offset-2 hover:underline";
 
 /** Where each client's work lives: the audit for prospects, the three modules for clients. */
-function areaLinks(c: { slug: string; status: keyof typeof statusLabel }) {
-  if (c.status === "prospect") return [{ label: "Audit", href: `/audit/${c.slug}` }];
+function areaLinks(c: { slug: string; status: string }) {
+  if (c.status === "prospect") return [{ label: "audit", href: `/audit/${c.slug}` }] as const;
   return [
-    { label: "Brand", href: `/brand/${c.slug}` },
-    { label: "Content", href: `/content/${c.slug}` },
-    { label: "Products", href: `/products/${c.slug}` },
-  ];
+    { label: "brand", href: `/brand/${c.slug}` },
+    { label: "content", href: `/content/${c.slug}` },
+    { label: "products", href: `/products/${c.slug}` },
+  ] as const;
 }
-
-const policyLabel = {
-  external_allowed: "External AI allowed",
-  external_restricted: "External AI restricted",
-  local_only: "Local AI only",
-  no_ai: "No AI",
-} as const;
 
 export default async function ClientsPage() {
   await requireUser();
+  const t = await getTranslations("clients");
+  const te = await getTranslations("enums");
   const rows = await getDb()
     .select()
     .from(clients)
@@ -37,35 +35,30 @@ export default async function ClientsPage() {
     .orderBy(asc(clients.name));
   return (
     <>
-      <PageHeader
-        title="Clients"
-        description="The agency's prospects and clients, each with its own AI policy."
-      />
+      <PageHeader title={t("title")} description={t("description")} />
       <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
         <Card className="overflow-hidden p-0">
           {rows.length === 0 ? (
-            <p className="p-6 text-body-md text-fg-muted">
-              No clients yet. Add the first prospect.
-            </p>
+            <p className="p-6 text-body-md text-fg-muted">{t("empty")}</p>
           ) : (
             <table className="w-full text-left text-body-sm">
-              <caption className="sr-only">Client list</caption>
+              <caption className="sr-only">{t("table.caption")}</caption>
               <thead className="border-b border-subtle text-label text-fg-muted">
                 <tr>
                   <th scope="col" className="px-6 py-3 font-medium">
-                    Name
+                    {t("table.name")}
                   </th>
                   <th scope="col" className="px-6 py-3 font-medium">
-                    Status
+                    {t("table.status")}
                   </th>
                   <th scope="col" className="px-6 py-3 font-medium">
-                    Industry
+                    {t("table.industry")}
                   </th>
                   <th scope="col" className="px-6 py-3 font-medium">
-                    AI policy
+                    {t("table.aiPolicy")}
                   </th>
                   <th scope="col" className="px-6 py-3 font-medium">
-                    Open
+                    {t("table.open")}
                   </th>
                 </tr>
               </thead>
@@ -79,17 +72,17 @@ export default async function ClientsPage() {
                       ) : null}
                     </td>
                     <td className="px-6 py-3">
-                      <Badge>{statusLabel[c.status]}</Badge>
+                      <Badge>{te(`clientStatus.${c.status}`)}</Badge>
                     </td>
                     <td className="px-6 py-3 text-fg-muted">{c.sector ?? "—"}</td>
-                    <td className="px-6 py-3 text-fg-muted">{policyLabel[c.aiPolicy]}</td>
+                    <td className="px-6 py-3 text-fg-muted">{te(`aiPolicy.${c.aiPolicy}`)}</td>
                     <td className="px-6 py-3">
                       <ul className="flex flex-wrap gap-x-3 gap-y-1">
                         {areaLinks(c).map((l) => (
                           <li key={l.label}>
                             <Link href={l.href as Route} className={linkClass}>
-                              {l.label}
-                              <span className="sr-only"> for {c.name}</span>
+                              {t(`areas.${l.label}`)}{" "}
+                              <span className="sr-only">{t("areaFor", { client: c.name })}</span>
                             </Link>
                           </li>
                         ))}
@@ -102,7 +95,7 @@ export default async function ClientsPage() {
           )}
         </Card>
         <Card className="p-6">
-          <h2 className="text-heading-sm text-fg">New client</h2>
+          <h2 className="text-heading-sm text-fg">{t("new.title")}</h2>
           <NewClientForm />
         </Card>
       </div>

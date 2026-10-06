@@ -4,6 +4,7 @@ import nextPlugin from "@next/eslint-plugin-next";
 import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 import tseslint from "typescript-eslint";
+import forgecy from "./scripts/eslint/no-hardcoded-text.js";
 
 export default tseslint.config(
   {
@@ -60,5 +61,21 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  { files: ["apps/web/**/*.tsx"], plugins: { forgecy } },
+  {
+    // Interface text lives in packages/i18n/messages (docs/I18N.md). Each module joins this
+    // list once its pages read their text from the message files.
+    files: [
+      "apps/web/app/layout.tsx",
+      "apps/web/app/login/**/*.tsx",
+      "apps/web/app/setup/**/*.tsx",
+      "apps/web/components/**/*.tsx",
+      "apps/web/app/(app)/layout.tsx",
+      "apps/web/app/(app)/page.tsx",
+      "apps/web/app/(app)/clients/**/*.tsx",
+      "apps/web/app/(app)/settings/**/*.tsx",
+    ],
+    rules: { "forgecy/no-hardcoded-text": "error" },
   },
 );

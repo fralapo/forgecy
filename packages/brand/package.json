@@ -17,6 +17,7 @@
     "@forgecy/core": "workspace:*",
     "@forgecy/db": "workspace:*",
     "@forgecy/files": "workspace:*",
+    "@forgecy/i18n": "workspace:*",
     "@forgecy/jobs": "workspace:*",
     "@forgecy/ui": "workspace:*",
     "fflate": "^0.8.3",
