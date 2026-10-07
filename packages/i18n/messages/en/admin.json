@@ -8,7 +8,12 @@
     "storage": "Storage",
     "health": "System health",
     "backup": "Backup and restore",
-    "importExport": "Import/export"
+    "importExport": "Import/export",
+    "group": {
+      "workspace": "Workspace",
+      "ai": "AI",
+      "system": "System"
+    }
   },
   "adminOnly": "This setting is reserved for Admin users.",
   "aiPolicies": {
