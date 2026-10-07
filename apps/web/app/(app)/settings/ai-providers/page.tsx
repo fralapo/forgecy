@@ -153,7 +153,7 @@ export default async function AiProvidersPage({
 
   return (
     <>
-      <PageHeader title={t("title")} description={t("description")} />
+      <PageHeader title={t("title")} />
       {mcpResult === "connected" || mcpResult === "error" ? (
         <p
           role={mcpResult === "error" ? "alert" : "status"}
@@ -229,7 +229,11 @@ export default async function AiProvidersPage({
           }}
         />
       </Card>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="mb-4">
+        <h2 className="text-heading-sm text-fg">{tp("commercialUseLink")}</h2>
+        <p className="text-body-sm text-fg-muted">{t("description")}</p>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
         {order.map((p) => {
           const isReady = ready(p);
           const connection = isMcpImageProvider(p) ? connections.get(p) : undefined;
@@ -238,13 +242,13 @@ export default async function AiProvidersPage({
           const badge = statusBadge[status];
           const Icon = providerIcons[p];
           return (
-            <Card key={p} className="flex flex-col gap-4 p-6">
-              <div className="flex flex-wrap items-start justify-between gap-2">
+            <details key={p} className="rounded-lg border border-subtle bg-surface p-6 text-fg">
+              <summary className="flex cursor-pointer flex-wrap items-start justify-between gap-2">
                 <div>
-                  <h2 className="flex items-center gap-2 text-heading-sm text-fg">
+                  <span className="flex items-center gap-2 text-heading-sm text-fg">
                     <Icon aria-hidden className="size-4 text-fg-muted" strokeWidth={1.5} />
                     {providerNames[p]}
-                  </h2>
+                  </span>
                   <p className="text-body-sm text-fg-muted">{t(roleOf(p))}</p>
                   <p className="font-mono text-body-sm text-fg-muted">
                     {imageRoute.find((r) => r.provider === p)?.model ?? imageModelForUi(p)}
@@ -264,63 +268,65 @@ export default async function AiProvidersPage({
                     {t(`status.${status}`)}
                   </Badge>
                 </div>
+              </summary>
+              <div className="mt-4 flex flex-col gap-4">
+                <p className="text-body-sm text-fg">
+                  {t(status === "verified" ? "available" : "unavailable")}
+                </p>
+                {isMcpImageProvider(p) ? (
+                  <div className="grid gap-3 rounded-md border border-subtle p-4">
+                    <p className="text-body-sm text-fg-muted">{tm("hint.higgsfield")}</p>
+                    {connection?.connectedAt && connection.status === "connected" ? (
+                      <p className="text-body-sm text-fg">
+                        {tm("connectedOn")} {format.date(connection.connectedAt, "long")}
+                      </p>
+                    ) : null}
+                    {connection?.lastError ? (
+                      <p className="break-words text-body-sm text-error">
+                        {tm("lastError")}: {connection.lastError}
+                      </p>
+                    ) : null}
+                    <McpConnection provider={p} connected={connection?.status === "connected"} />
+                  </div>
+                ) : null}
+                <dl className="grid grid-cols-[9rem_1fr] gap-y-2 text-body-sm">
+                  <dt className="text-fg-muted">{t("verifiedBy")}</dt>
+                  <dd className="text-fg">{review?.updatedBy?.name ?? "—"}</dd>
+                  <dt className="text-fg-muted">{t("consultedOn")}</dt>
+                  <dd className="text-fg">
+                    {review?.consultedOn
+                      ? format.date(`${review.consultedOn}T12:00:00`, "long")
+                      : "—"}
+                  </dd>
+                  <dt className="text-fg-muted">{t("terms")}</dt>
+                  <dd className="min-w-0 break-all text-fg">
+                    {review?.termsUrl ? (
+                      <a
+                        href={review.termsUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="text-link underline"
+                      >
+                        {review.termsUrl}
+                      </a>
+                    ) : (
+                      "—"
+                    )}
+                  </dd>
+                  <dt className="text-fg-muted">{t("note")}</dt>
+                  <dd className="text-fg">{review?.note ?? "—"}</dd>
+                </dl>
+                <CommercialUseForm
+                  provider={p}
+                  initial={{
+                    status,
+                    termsUrl: review?.termsUrl ?? "",
+                    consultedOn: review?.consultedOn ?? "",
+                    note: review?.note ?? "",
+                  }}
+                />
               </div>
-              <p className="text-body-sm text-fg">
-                {t(status === "verified" ? "available" : "unavailable")}
-              </p>
-              {isMcpImageProvider(p) ? (
-                <div className="grid gap-3 rounded-md border border-subtle p-4">
-                  <p className="text-body-sm text-fg-muted">{tm("hint.higgsfield")}</p>
-                  {connection?.connectedAt && connection.status === "connected" ? (
-                    <p className="text-body-sm text-fg">
-                      {tm("connectedOn")} {format.date(connection.connectedAt, "long")}
-                    </p>
-                  ) : null}
-                  {connection?.lastError ? (
-                    <p className="break-words text-body-sm text-error">
-                      {tm("lastError")}: {connection.lastError}
-                    </p>
-                  ) : null}
-                  <McpConnection provider={p} connected={connection?.status === "connected"} />
-                </div>
-              ) : null}
-              <dl className="grid grid-cols-[9rem_1fr] gap-y-2 text-body-sm">
-                <dt className="text-fg-muted">{t("verifiedBy")}</dt>
-                <dd className="text-fg">{review?.updatedBy?.name ?? "—"}</dd>
-                <dt className="text-fg-muted">{t("consultedOn")}</dt>
-                <dd className="text-fg">
-                  {review?.consultedOn
-                    ? format.date(`${review.consultedOn}T12:00:00`, "long")
-                    : "—"}
-                </dd>
-                <dt className="text-fg-muted">{t("terms")}</dt>
-                <dd className="min-w-0 break-all text-fg">
-                  {review?.termsUrl ? (
-                    <a
-                      href={review.termsUrl}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="text-link underline"
-                    >
-                      {review.termsUrl}
-                    </a>
-                  ) : (
-                    "—"
-                  )}
-                </dd>
-                <dt className="text-fg-muted">{t("note")}</dt>
-                <dd className="text-fg">{review?.note ?? "—"}</dd>
-              </dl>
-              <CommercialUseForm
-                provider={p}
-                initial={{
-                  status,
-                  termsUrl: review?.termsUrl ?? "",
-                  consultedOn: review?.consultedOn ?? "",
-                  note: review?.note ?? "",
-                }}
-              />
-            </Card>
+            </details>
           );
         })}
       </div>

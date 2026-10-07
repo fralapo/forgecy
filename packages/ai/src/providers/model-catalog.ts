@@ -27,14 +27,37 @@ export interface CatalogModel {
   name: string;
   /** Unix seconds; 0 when the provider did not report one (e.g. DeepSeek's list). */
   created: number;
+  /** Whether this model can generate images, so the image-model field can hide chat models. */
+  imageCapable: boolean;
 }
 
-/** Parses each provider's own list shape into the common {id, name, created}. */
+/**
+ * Whether a model generates images, from whatever metadata its provider's list gives us.
+ * OpenRouter reports architecture.output_modalities; OpenAI's /v1/models has no modality
+ * field at all, so its GPT Image / DALL·E models are recognized by id instead. Anthropic
+ * and DeepSeek offer no image-generation models through these endpoints.
+ */
+function isImageCapable(
+  provider: ByokProviderId,
+  id: string,
+  raw: Record<string, unknown>,
+): boolean {
+  if (provider === "openrouter") {
+    const architecture = raw.architecture as Record<string, unknown> | undefined;
+    const outputs = architecture?.output_modalities;
+    return Array.isArray(outputs) && outputs.includes("image");
+  }
+  if (provider === "openai") return /^(gpt-image|dall-e)/.test(id);
+  return false;
+}
+
+/** Parses each provider's own list shape into the common {id, name, created, imageCapable}. */
 function normalize(provider: ByokProviderId, json: unknown): CatalogModel[] {
   const data = (json as { data?: unknown[] } | undefined)?.data ?? [];
   return data.flatMap((raw): CatalogModel[] => {
     const m = raw as Record<string, unknown>;
     if (typeof m.id !== "string") return [];
+    const imageCapable = isImageCapable(provider, m.id, m);
     if (provider === "anthropic") {
       // Anthropic's models report `created_at` as an ISO 8601 string, not unix seconds.
       const parsed = typeof m.created_at === "string" ? Date.parse(m.created_at) / 1000 : NaN;
@@ -43,6 +66,7 @@ function normalize(provider: ByokProviderId, json: unknown): CatalogModel[] {
           id: m.id,
           name: typeof m.display_name === "string" ? m.display_name : m.id,
           created: Number.isFinite(parsed) ? parsed : 0,
+          imageCapable,
         },
       ];
     }
@@ -51,6 +75,7 @@ function normalize(provider: ByokProviderId, json: unknown): CatalogModel[] {
         id: m.id,
         name: typeof m.name === "string" ? m.name : m.id,
         created: typeof m.created === "number" ? m.created : 0,
+        imageCapable,
       },
     ];
   });
