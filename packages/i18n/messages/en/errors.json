@@ -10,5 +10,10 @@
     "unavailable": "The service is unavailable right now. Try again in a moment."
   },
   "adminOnly": "This setting is reserved for Admin users.",
-  "userExists": "A user with this email already exists."
+  "userExists": "A user with this email already exists.",
+  "notFoundPage": {
+    "title": "Page not found",
+    "body": "This page doesn’t exist or you don’t have access to it.",
+    "home": "Back to the home page"
+  }
 }
