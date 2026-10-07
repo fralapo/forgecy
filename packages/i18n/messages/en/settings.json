@@ -103,6 +103,36 @@
         "startFailed": "The provider did not accept the connection. Check the server address in .env and try again."
       }
     },
+    "siwc": {
+      "title": "Sign in with ChatGPT",
+      "description": "Connect your own ChatGPT account instead of using the agency's OpenAI API key for your requests.",
+      "connect": "Continue with ChatGPT",
+      "disconnect": "Disconnect",
+      "connectedAs": "Signed in as {name} ({email})",
+      "lastError": "Last error",
+      "planSharing": {
+        "active": "Your ChatGPT plan is used for eligible requests.",
+        "pending": "Plan sharing is not available yet: OpenAI has not published this for third-party apps. Connecting only confirms your identity today; requests still use the agency's OpenAI API key."
+      },
+      "notConfigured": {
+        "title": "Awaiting OpenAI approval",
+        "description": "OpenAI currently issues a client id only to approved partners. Request one at developers.openai.com/siwc/request-client-id; once granted, enter it below (or set OPENAI_SIWC_CLIENT_ID in .env) to turn this on."
+      },
+      "adminClientId": {
+        "label": "OpenAI SIWC client id",
+        "placeholder": "client id from OpenAI",
+        "save": "Save",
+        "saved": "Client id saved."
+      },
+      "result": {
+        "connected": "ChatGPT account connected.",
+        "error": "The connection did not complete: see the last error above."
+      },
+      "errors": {
+        "notConfigured": "OpenAI has not issued a client id yet.",
+        "startFailed": "ChatGPT did not accept the connection. Try again."
+      }
+    },
     "routing": {
       "title": "Services and models",
       "description": "Choose which service and which model Forgecy uses. Changes apply to new jobs within a few seconds.",

@@ -20,6 +20,8 @@ export * from "./mcp/client";
 export * from "./mcp/images";
 export * from "./mcp/registry";
 export * from "./mcp/connections";
+export * from "./siwc/oauth";
+export * from "./siwc/connections";
 export * from "./routing-settings";
 export * from "./agent-tasks";
 export * from "./agents";

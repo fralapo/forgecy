@@ -2,10 +2,13 @@
 
 import {
   beginMcpConnection,
+  beginSiwcConnection,
   disconnectMcp,
+  disconnectSiwc,
   imageProviderIds,
   mcpImageProviderIds,
   saveAiRoutingSettings,
+  setSiwcClientId,
 } from "@forgecy/ai";
 import { setCommercialUse } from "@forgecy/content";
 import { assertCan, ForgecyError, localeSchema, PermissionDeniedError } from "@forgecy/core";
@@ -184,5 +187,52 @@ export async function saveRoutingAction(
   }
   revalidatePath("/settings/ai-providers");
   revalidatePath("/settings");
+  return { ok: true };
+}
+
+export type SiwcConnectState = { error?: string };
+
+/** “Continue with ChatGPT”: the person's own account, never a shared or pooled login. */
+export async function connectSiwcAction(
+  _prev: SiwcConnectState,
+  _form: FormData,
+): Promise<SiwcConnectState> {
+  const user = await requireUser();
+  const t = await getTranslations("settings.aiProviders.siwc");
+  let url: string;
+  try {
+    url = await beginSiwcConnection(getDb(), user.actor, env);
+  } catch (err) {
+    if (err instanceof ForgecyError && err.code === "unavailable")
+      return { error: t("errors.notConfigured") };
+    if (err instanceof ForgecyError) return { error: t("errors.startFailed") };
+    throw err;
+  }
+  revalidatePath("/settings/ai-providers");
+  redirect(url as Route);
+}
+
+export async function disconnectSiwcAction(): Promise<void> {
+  const user = await requireUser();
+  await disconnectSiwc(getDb(), user.actor, env);
+  revalidatePath("/settings/ai-providers");
+}
+
+export type SiwcClientIdState = { error?: string; ok?: boolean };
+
+/** Admin only: overrides OPENAI_SIWC_CLIENT_ID from the interface once OpenAI issues one. */
+export async function setSiwcClientIdAction(
+  _prev: SiwcClientIdState,
+  form: FormData,
+): Promise<SiwcClientIdState> {
+  const admin = await requireUser();
+  try {
+    await setSiwcClientId(getDb(), admin.actor, String(form.get("clientId") ?? ""));
+  } catch (err) {
+    if (err instanceof PermissionDeniedError)
+      return { error: (await getTranslations("errors"))("adminOnly") };
+    throw err;
+  }
+  revalidatePath("/settings/ai-providers");
   return { ok: true };
 }

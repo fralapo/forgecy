@@ -1,9 +1,11 @@
 import {
   defaultModelFor,
+  getSiwcConnection,
   imageModelFor,
   imageProviderIds,
   imageProviderOrder,
   isMcpImageProvider,
+  isSiwcConfigured,
   listMcpConnections,
   loadAiRoutingSettings,
   textProviderIds,
@@ -12,16 +14,18 @@ import {
 import { getCommercialUseReviews, type ImageProvider } from "@forgecy/content";
 import { getDb } from "@forgecy/db";
 import { Badge, Card } from "@forgecy/ui";
-import { BadgeCheck, Hourglass, XCircle } from "lucide-react";
+import { BadgeCheck, Hourglass, MessageCircle, XCircle } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { currentRouting } from "@/lib/ai";
 import { env } from "@/lib/env";
 import { getFormat } from "@/lib/i18n";
 import { requireUser } from "@/lib/session";
+import { providerIcons } from "../_lib/provider-icons";
 import { CommercialUseForm } from "./commercial-use-form";
 import { McpConnection } from "./mcp-connection";
 import { RoutingForm } from "./routing-form";
+import { SiwcConnection } from "./siwc-connection";
 
 export async function generateMetadata() {
   const t = await getTranslations("settings.aiProviders");
@@ -74,7 +78,7 @@ const statusBadge = {
 export default async function AiProvidersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mcp?: string }>;
+  searchParams: Promise<{ mcp?: string; siwc?: string }>;
 }) {
   const user = await requireUser();
   const t = await getTranslations("settings.aiProviders");
@@ -90,9 +94,11 @@ export default async function AiProvidersPage({
     );
   const format = await getFormat();
   const tm = await getTranslations("settings.aiProviders.mcp");
-  const { mcp: mcpResult } = await searchParams;
+  const { mcp: mcpResult, siwc: siwcResult } = await searchParams;
   const reviews = await getCommercialUseReviews(getDb());
   const connections = await listMcpConnections(getDb());
+  const siwcConfigured = await isSiwcConfigured(getDb(), env);
+  const siwcConnection = await getSiwcConnection(getDb(), user.id, env);
   const ready = (p: ImageProvider) =>
     isMcpImageProvider(p) ? connections.get(p)?.status === "connected" : !!keyReady[p];
   const tr = await getTranslations("settings.aiProviders.routing");
@@ -124,6 +130,14 @@ export default async function AiProvidersPage({
           className={`mb-6 text-body-sm ${mcpResult === "error" ? "text-error" : "text-success"}`}
         >
           {tm(`result.${mcpResult}`)}
+        </p>
+      ) : null}
+      {siwcResult === "connected" || siwcResult === "error" ? (
+        <p
+          role={siwcResult === "error" ? "alert" : "status"}
+          className={`mb-6 text-body-sm ${siwcResult === "error" ? "text-error" : "text-success"}`}
+        >
+          {(await getTranslations("settings.aiProviders.siwc"))(`result.${siwcResult}`)}
         </p>
       ) : null}
       <Card className="mb-6 grid gap-4 p-6">
@@ -159,6 +173,19 @@ export default async function AiProvidersPage({
           }}
         />
       </Card>
+      <Card className="mb-6 flex flex-col gap-4 p-6">
+        <div className="flex items-center gap-2">
+          <MessageCircle aria-hidden className="size-5 text-fg-muted" strokeWidth={1.5} />
+          <h2 className="text-heading-sm text-fg">
+            {(await getTranslations("settings.aiProviders.siwc"))("title")}
+          </h2>
+        </div>
+        <SiwcConnection
+          configured={siwcConfigured}
+          isAdmin={user.isAdmin}
+          connection={siwcConnection}
+        />
+      </Card>
       <div className="grid gap-6 lg:grid-cols-2">
         {order.map((p) => {
           const isReady = ready(p);
@@ -166,11 +193,15 @@ export default async function AiProvidersPage({
           const review = reviews.get(p);
           const status = review?.status ?? "pending_verification";
           const badge = statusBadge[status];
+          const Icon = providerIcons[p];
           return (
             <Card key={p} className="flex flex-col gap-4 p-6">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <h2 className="text-heading-sm text-fg">{providerNames[p]}</h2>
+                  <h2 className="flex items-center gap-2 text-heading-sm text-fg">
+                    <Icon aria-hidden className="size-4 text-fg-muted" strokeWidth={1.5} />
+                    {providerNames[p]}
+                  </h2>
                   <p className="text-body-sm text-fg-muted">{t(roleOf(p))}</p>
                   <p className="font-mono text-body-sm text-fg-muted">
                     {imageRoute.find((r) => r.provider === p)?.model ?? imageModelFor(p, env)}

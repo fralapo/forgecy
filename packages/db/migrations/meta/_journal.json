@@ -190,6 +190,13 @@
       "when": 1791357714673,
       "tag": "0028_asset_rights",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791372451063,
+      "tag": "0029_siwc_connections",
+      "breakpoints": true
     }
   ]
 }

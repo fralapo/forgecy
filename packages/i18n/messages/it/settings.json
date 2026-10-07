@@ -103,6 +103,36 @@
         "startFailed": "Il provider non ha accettato il collegamento. Controlla l’indirizzo del server nel file .env e riprova."
       }
     },
+    "siwc": {
+      "title": "Accedi con ChatGPT",
+      "description": "Collega il tuo account ChatGPT personale invece di usare la chiave API OpenAI dell'agenzia per le tue richieste.",
+      "connect": "Continua con ChatGPT",
+      "disconnect": "Disconnetti",
+      "connectedAs": "Accesso effettuato come {name} ({email})",
+      "lastError": "Ultimo errore",
+      "planSharing": {
+        "active": "Il tuo piano ChatGPT viene usato per le richieste idonee.",
+        "pending": "La condivisione del piano non è ancora disponibile: OpenAI non ha pubblicato questa funzione per le app di terze parti. Il collegamento conferma solo la tua identità; le richieste usano ancora la chiave API OpenAI dell'agenzia."
+      },
+      "notConfigured": {
+        "title": "In attesa dell'approvazione di OpenAI",
+        "description": "OpenAI rilascia al momento un client id solo ai partner approvati. Richiedilo su developers.openai.com/siwc/request-client-id; una volta ottenuto, inseriscilo qui sotto (oppure impostalo in .env come OPENAI_SIWC_CLIENT_ID) per attivare la funzione."
+      },
+      "adminClientId": {
+        "label": "Client id OpenAI SIWC",
+        "placeholder": "client id fornito da OpenAI",
+        "save": "Salva",
+        "saved": "Client id salvato."
+      },
+      "result": {
+        "connected": "Account ChatGPT collegato.",
+        "error": "Il collegamento non è andato a buon fine: vedi l'ultimo errore sopra."
+      },
+      "errors": {
+        "notConfigured": "OpenAI non ha ancora rilasciato un client id.",
+        "startFailed": "ChatGPT non ha accettato la connessione. Riprova."
+      }
+    },
     "routing": {
       "title": "Servizi e modelli",
       "description": "Scegli quale servizio e quale modello usa Forgecy. Le modifiche valgono per le nuove attività entro pochi secondi.",

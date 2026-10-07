@@ -99,6 +99,18 @@ export const envSchema = z.object({
   LOCAL_LLM_ENABLED: bool,
   LOCAL_LLM_BASE_URL: z.string().default("http://localhost:11434/v1"),
   LOCAL_LLM_MODEL: z.string().optional(),
+
+  /**
+   * “Sign in with ChatGPT” (OpenAI OAuth): lets a person connect their own ChatGPT
+   * account in Settings > AI providers, as an alternative to the agency's OpenAI API key.
+   * OpenAI currently issues client ids only to approved partners (Settings > AI providers
+   * shows this as “Awaiting OpenAI approval” until one is set). Not a secret; an Admin
+   * can also set it from the interface (overrides this default), which is why it is not
+   * required to be sourced only from .env like FORGECY_ENCRYPTION_KEY.
+   */
+  OPENAI_SIWC_CLIENT_ID: z.string().optional(),
+  /** Only for a confidential OAuth client; a public client (the default) omits it. */
+  OPENAI_SIWC_CLIENT_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
