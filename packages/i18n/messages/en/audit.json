@@ -536,33 +536,33 @@
   "scan": {
     "robotsFound": "robots.txt found",
     "robotsMissing": "No robots.txt: reading allowed",
-    "discovery": "{count} pages to read (maximum {max})",
+    "discovery": "{count, plural, one {# page} other {# pages}} to read (maximum {max})",
     "progress": "Pages read {read}/{total}",
-    "screenshots": "{pages} pages read · {shots} screenshots",
+    "screenshots": "{pages, plural, one {# page} other {# pages}} read · {shots, plural, one {# screenshot} other {# screenshots}}",
     "noChromium": "Chromium unavailable: no screenshots",
-    "extraction": "{count} pages analyzed",
+    "extraction": "{count, plural, one {# page} other {# pages}} analyzed",
     "checks": "{failed} of {total} checks to improve",
     "analysisPending": "Observations in progress",
     "analysisNoPages": "No pages read",
     "analysisNoAi": "AI not allowed by the policy: observations by hand",
     "analysisRunning": "Brand Analyst at work",
-    "analysisDone": "{count} observations to review",
-    "analysisDoneDropped": "{count} observations to review ({dropped} rejected for lack of verifiable evidence)"
+    "analysisDone": "{count, plural, one {# observation} other {# observations}} to review",
+    "analysisDoneDropped": "{count, plural, one {# observation} other {# observations}} to review ({dropped} rejected for lack of verifiable evidence)"
   },
   "check": {
     "h1": {
       "label": "One H1 heading per page",
-      "failed": "{count} pages without an H1",
+      "failed": "{count, plural, one {# page} other {# pages}} without an H1",
       "ok": "Every page has an H1"
     },
     "multiple_h1": {
       "label": "A single H1",
-      "failed": "{count} pages with more than one H1",
+      "failed": "{count, plural, one {# page} other {# pages}} with more than one H1",
       "ok": "No page with more than one H1"
     },
     "meta_description": {
       "label": "Meta description",
-      "failed": "{count} pages without a meta description",
+      "failed": "{count, plural, one {# page} other {# pages}} without a meta description",
       "ok": "Present everywhere"
     },
     "img_alt": {
@@ -571,17 +571,17 @@
     },
     "lang": {
       "label": "Page language declared",
-      "failed": "{count} pages without a lang attribute",
+      "failed": "{count, plural, one {# page} other {# pages}} without a lang attribute",
       "ok": "Declared everywhere"
     },
     "viewport": {
       "label": "Mobile-friendly pages (meta viewport)",
-      "failed": "{count} pages without a meta viewport",
+      "failed": "{count, plural, one {# page} other {# pages}} without a meta viewport",
       "ok": "Present"
     },
     "load_time": {
       "label": "Loads in under 4 seconds",
-      "failed": "{count} pages over 4 s (measured from the Forgecy server)",
+      "failed": "{count, plural, one {# page} other {# pages}} over 4 s (measured from the Forgecy server)",
       "ok": "All under 4 s (measured from the Forgecy server)"
     },
     "structured_data": {
@@ -659,7 +659,7 @@
     "versionOpen": "v{version} is still open: work on that one.",
     "policyNoAiTexts": "This prospect’s policy does not allow AI: write the texts by hand.",
     "textsInProgress": "The report texts are already being prepared.",
-    "evidenceMissingFix": "{count, plural, one {# included item has} other {# included items have}} no evidence: fix or exclude them (REPORT-EVIDENCE-MISSING).",
+    "evidenceMissingFix": "{count, plural, one {# included item has no evidence: fix or exclude it} other {# included items have no evidence: fix or exclude them}} (REPORT-EVIDENCE-MISSING).",
     "ownApprovalNote": "You are approving content you submitted: add a note for the record.",
     "evidenceMissing": "{count, plural, one {# included item has} other {# included items have}} no evidence (REPORT-EVIDENCE-MISSING).",
     "changesRequired": "Write what needs to change.",
@@ -793,7 +793,7 @@
         "avg_likes": "Average likes"
       },
       "unavailable": "Unavailable",
-      "perWeek": "{value} posts a week",
+      "perWeek": "{value, plural, one {# post} other {# posts}} a week",
       "reason": {
         "noData": "No data provided",
         "noDatedPosts": "No dated posts",
@@ -803,11 +803,11 @@
         "noText": "No post text in the data"
       },
       "derived": {
-        "sumPosts": "Sum of {count} imported posts",
-        "datedPosts": "{count} dated posts in the last 4 weeks",
-        "averagePosts": "Average over {count} posts",
+        "sumPosts": "Sum of {count, plural, one {# imported post} other {# imported posts}}",
+        "datedPosts": "{count, plural, one {# dated post} other {# dated posts}} in the last 4 weeks",
+        "averagePosts": "Average over {count, plural, one {# post} other {# posts}}",
         "rateFormula": "Calculated as: interactions ÷ followers",
-        "postsWithText": "{count} posts with text"
+        "postsWithText": "{count, plural, one {# post} other {# posts}} with text"
       },
       "file": "File: {name}",
       "imported": "imported",

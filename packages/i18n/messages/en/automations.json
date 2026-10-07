@@ -146,7 +146,7 @@
       "noLimit": "No monthly limit",
       "fits": "Fits the budget",
       "confirm": "Uses more than 90% of the budget left: confirmation needed",
-      "exceeds": "Exceeds the budget: the run will stop after about {count} items",
+      "exceeds": "Exceeds the budget: the run will stop after about {count, plural, one {# item} other {# items}}",
       "exhausted": "The monthly AI budget is used up",
       "confirmCost": "I confirm the estimated cost",
       "start": "Start {count, plural, one {# carousel} other {# carousels}}",
