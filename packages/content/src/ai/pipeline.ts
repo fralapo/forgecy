@@ -199,8 +199,11 @@ function withBrand(system: string, brand: BrandContext) {
 
 type CommonAi = Pick<
   GenerateObjectRequest<unknown>,
-  "clientId" | "clientPolicy" | "authorizedBy" | "jobId" | "contentId"
+  "clientId" | "clientPolicy" | "authorizedBy" | "jobId" | "contentId" | "sends"
 >;
+
+/** Every content prompt carries texts of the client's Brand Identity (page 61). */
+const SENDS_BRAND_TEXTS = ["brand_texts"] as const;
 
 // ---- Planner ----
 
@@ -266,6 +269,7 @@ export async function runProposeStrategy(
         }),
       clientId: input.clientId,
       clientPolicy: client.aiPolicy,
+      sends: SENDS_BRAND_TEXTS,
       authorizedBy: ctx.requestedBy,
       jobId: ctx.jobId,
       inputSummary: {
@@ -410,6 +414,7 @@ export async function runProposePlan(
         }),
       clientId: input.clientId,
       clientPolicy: client.aiPolicy,
+      sends: SENDS_BRAND_TEXTS,
       authorizedBy: ctx.requestedBy,
       jobId: ctx.jobId,
       inputSummary: {
@@ -538,6 +543,7 @@ async function carouselSetup(
   const common: CommonAi = {
     clientId,
     clientPolicy: client.aiPolicy,
+    sends: SENDS_BRAND_TEXTS,
     authorizedBy: ctx.requestedBy,
     jobId: ctx.jobId,
     contentId,
@@ -1089,6 +1095,7 @@ export async function runGenerateImage(
   const common: CommonAi = {
     clientId: input.clientId,
     clientPolicy: client.aiPolicy,
+    sends: SENDS_BRAND_TEXTS,
     authorizedBy: ctx.requestedBy,
     jobId: ctx.jobId,
     contentId: input.contentId,

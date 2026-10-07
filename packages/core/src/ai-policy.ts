@@ -22,6 +22,20 @@ export const providerIds = [
 ] as const;
 export type ProviderId = (typeof providerIds)[number];
 
+/**
+ * Kinds of client files and texts an external_restricted client may send to its
+ * approved providers (page 61). A kind left unchecked never leaves Forgecy: the
+ * gateway sends such a request only to a local model.
+ */
+export const sendableAssetTypes = [
+  "brand_assets",
+  "client_photos",
+  "audit_screenshots",
+  "documents",
+  "brand_texts",
+] as const;
+export type SendableAssetType = (typeof sendableAssetTypes)[number];
+
 export function isLocalProvider(provider: ProviderId): boolean {
   return provider === "local";
 }

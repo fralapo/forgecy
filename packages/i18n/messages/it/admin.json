@@ -53,7 +53,19 @@
       "providersEmpty": "Ancora nessun provider ammesso: le funzioni AI di questo cliente usano solo il modello locale.",
       "providersSave": "Salva provider ammessi",
       "providersSaved": "Provider ammessi salvati.",
-      "providersNone": "Scegli almeno un provider."
+      "providersNone": "Scegli almeno un provider.",
+      "assetsFor": "File che {name} può inviare",
+      "asset": {
+        "brand_assets": "Logo e asset di marca",
+        "client_photos": "Foto e immagini del cliente",
+        "audit_screenshots": "Screenshot dell'audit",
+        "documents": "Documenti caricati (brand book, PDF, cataloghi)",
+        "brand_texts": "Testi della Brand Identity"
+      },
+      "assetsHelp": "I tipi non spuntati non lasciano mai Forgecy: quei lavori usano solo il modello locale, o si fermano se manca. Quelli spuntati richiedono comunque una conferma prima dell'invio dei file.",
+      "assetsSave": "Salva i file che si possono inviare",
+      "assetsSaved": "File che si possono inviare salvati.",
+      "assetsInvalid": "Tipo di file sconosciuto."
     },
     "agency": {
       "title": "Budget dell’agenzia",

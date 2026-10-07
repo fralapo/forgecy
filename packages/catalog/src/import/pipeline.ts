@@ -191,6 +191,7 @@ async function callAi<T>(
       // external_restricted: nothing leaves until the person confirms sending these files
       // (page 73); then only the providers approved for the client (page 61).
       ...(run.options.aiConfirmed ? {} : { approvedProviders: [] }),
+      sends: ["documents"],
       authorizedBy: run.options.aiConfirmedBy ?? run.createdBy,
       jobId: run.ctx.jobId ?? null,
       inputSummary: { meta: { importId: run.importId, ...req.meta } },

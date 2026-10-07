@@ -1,0 +1,2 @@
+CREATE TYPE "public"."ai_sendable_asset" AS ENUM('brand_assets', 'client_photos', 'audit_screenshots', 'documents', 'brand_texts');--> statement-breakpoint
+ALTER TABLE "clients" ADD COLUMN "sendable_assets" "ai_sendable_asset"[] DEFAULT '{brand_assets,client_photos,audit_screenshots,documents,brand_texts}' NOT NULL;

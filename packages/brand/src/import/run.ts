@@ -341,6 +341,7 @@ export async function runSourceImport(
           }),
           clientId: input.clientId,
           clientPolicy: client.aiPolicy,
+          sends: ["documents"],
           authorizedBy: ctx.requestedBy ?? null,
           jobId: ctx.jobId,
           inputSummary: {

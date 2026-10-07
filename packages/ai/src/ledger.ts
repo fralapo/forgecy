@@ -1,4 +1,10 @@
-import type { AgentRole, AiPolicy, ProviderId } from "@forgecy/core";
+import {
+  sendableAssetTypes,
+  type AgentRole,
+  type AiPolicy,
+  type ProviderId,
+  type SendableAssetType,
+} from "@forgecy/core";
 import {
   and,
   budgets,
@@ -54,6 +60,11 @@ export interface AiLedger {
    * Optional so older test ledgers keep working; the gateway then uses the request's list.
    */
   approvedProviders?(clientId: string): Promise<readonly ProviderId[]>;
+  /**
+   * external_restricted: the kinds of files and texts this client may send to its
+   * approved providers (page 61). Optional: without it every kind is allowed.
+   */
+  sendableAssets?(clientId: string): Promise<readonly SendableAssetType[]>;
   /** Approved memories of a client for an agent, added to its prompt (spec page 56). */
   agentMemory?(
     clientId: string,
@@ -136,6 +147,13 @@ export function createDbLedger(db: Pick<Database, "select" | "insert">): AiLedge
         .where(eq(clients.id, clientId));
       return row?.approvedProviders ?? [];
     },
+    async sendableAssets(clientId) {
+      const [row] = await db
+        .select({ sendableAssets: clients.sendableAssets })
+        .from(clients)
+        .where(eq(clients.id, clientId));
+      return row?.sendableAssets ?? [];
+    },
     agentMemory: (clientId, agent) => approvedMemoriesFor(db, clientId, agent),
   };
 }
@@ -145,12 +163,14 @@ export interface MemoryLedger extends AiLedger {
   readonly entries: LedgerEntry[];
   setBudget(scope: BudgetScope, month: string, limit: BudgetLimit): void;
   setApprovedProviders(clientId: string, providers: readonly ProviderId[]): void;
+  setSendableAssets(clientId: string, kinds: readonly SendableAssetType[]): void;
 }
 
 export function createMemoryLedger(): MemoryLedger {
   const entries: LedgerEntry[] = [];
   const limits = new Map<string, BudgetLimit>();
   const approved = new Map<string, readonly ProviderId[]>();
+  const sendable = new Map<string, readonly SendableAssetType[]>();
   const key = (scope: BudgetScope, month: string) =>
     `${scope.scope === "client" ? `client:${scope.clientId}` : "agency"}@${month}`;
   return {
@@ -163,6 +183,12 @@ export function createMemoryLedger(): MemoryLedger {
     },
     async approvedProviders(clientId) {
       return approved.get(clientId) ?? [];
+    },
+    setSendableAssets(clientId, kinds) {
+      sendable.set(clientId, [...kinds]);
+    },
+    async sendableAssets(clientId) {
+      return sendable.get(clientId) ?? sendableAssetTypes;
     },
     async monthSpendMicroUsd(scope, month) {
       const { start, end } = monthRange(month);

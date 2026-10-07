@@ -84,7 +84,9 @@ export async function runAgent<T>(
       schemaName: input.schemaName,
       system: input.system + languageRule(input.language),
       input: input.prompt,
-      ...(input.images?.length ? { images: input.images } : {}),
+      ...(input.images?.length
+        ? { images: input.images, sends: ["audit_screenshots" as const] }
+        : {}),
       clientId: input.client.id,
       clientPolicy: policy,
       authorizedBy: ctx.row.createdBy,
