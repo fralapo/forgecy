@@ -14,7 +14,25 @@
     "commercialUse": "Slide {slide}: commercial use of the AI image provider not verified yet",
     "altMissing": "Slide {slide}: the image alt text is missing",
     "productChanged": "The product changed in the catalog after the copy was written",
-    "brandChanged": "A new Brand Identity was published after the carousel was created"
+    "brandChanged": "A new Brand Identity was published after the carousel was created",
+    "slideRule": {
+      "controlChars": "Slide {slide}: control characters are not allowed",
+      "tooLong": "Slide {slide}: “{label}” has {length} characters, the limit is {max}",
+      "tooManyLines": "Slide {slide}: “{label}” can have at most {max} lines",
+      "noHighlight": "Slide {slide}: highlighting is not allowed in this field",
+      "unknownSlot": "Slide {slide}: the layout “{layout}” has no field “{name}”",
+      "required": "Slide {slide}: “{label}” is required",
+      "expectedText": "Slide {slide}: a text is expected",
+      "expectedList": "Slide {slide}: a list of texts is expected",
+      "expectedImage": "Slide {slide}: an image is expected",
+      "itemCount": "Slide {slide}: “{label}” needs {min} to {max} items",
+      "itemEmpty": "Slide {slide}: “{label}” has an empty item (item {item})",
+      "slideCount": "The template allows {min} to {max} slides, the carousel has {count}",
+      "onlyFirst": "Slide {slide}: this layout can only be the first slide",
+      "onlyLast": "Slide {slide}: this layout can only be the last slide",
+      "ctaOnlyLast": "Slide {slide}: the call to action goes only on the last slide",
+      "maxImages": "Slide {slide}: at most {max} images per slide"
+    }
   },
   "guard": {
     "finding": {

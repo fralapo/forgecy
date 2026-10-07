@@ -7,6 +7,7 @@
  */
 import {
   buildCarouselSchema,
+  slideRuleOf,
   findLayout,
   visibleLength,
   type TemplateManifest,
@@ -37,6 +38,16 @@ const say = (key: CheckKey, values?: MessageValues) => ({
   message: englishMessage(key, values),
   ref: messageRef(key, values),
 });
+
+/** The check text of a slide-schema issue; Zod's own issues keep their English text. */
+function slideIssueText(issue: { message: string; params?: unknown }, slide: number | undefined) {
+  const rule = slideRuleOf(issue);
+  if (rule)
+    return say(`review.checks.slideRule.${rule.rule}`, { ...rule.values, slide: slide ?? 0 });
+  return slide
+    ? say("review.checks.slideIssue", { slide, issue: issue.message })
+    : { message: issue.message };
+}
 
 export interface AssetInfo {
   status: "draft" | "approved" | "rejected";
@@ -100,9 +111,7 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
         add({
           id: `template:${slide?.id ?? "all"}:${issue.path.slice(1).join(".") || "slides"}`,
           severity: "error",
-          ...(slide
-            ? say("review.checks.slideIssue", { slide: String(idx! + 1), issue: issue.message })
-            : { message: issue.message }),
+          ...slideIssueText(issue, slide ? idx! + 1 : undefined),
           ...(slide ? { slideId: slide.id } : {}),
         });
       }
