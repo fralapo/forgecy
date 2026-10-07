@@ -1,7 +1,7 @@
 /** Read models of the content pages. Every query checks `view` on the client. */
 import { loadClientMemorySettings } from "@forgecy/ai";
 import { getPublishedBrandIdentity } from "@forgecy/brand";
-import { assertCan, type Actor, type MessageRef } from "@forgecy/core";
+import { assertCan, type Actor, type Locale, type MessageRef } from "@forgecy/core";
 import { englishMessage, messageRef } from "@forgecy/i18n";
 import {
   and,
@@ -331,11 +331,17 @@ export async function getCarouselWorkspace(
 export type CarouselWorkspace = Awaited<ReturnType<typeof getCarouselWorkspace>>;
 
 /** Data for the “New carousel” form. */
-export async function getNewCarouselOptions(db: Database, actor: Actor, clientId: string) {
+export async function getNewCarouselOptions(
+  db: Database,
+  actor: Actor,
+  clientId: string,
+  /** Interface language for template names. */
+  locale?: Locale,
+) {
   assertCan(actor, "view", clientId);
   const [brand, templates, pillars, rubrics, products, settings] = await Promise.all([
     getPublishedBrandIdentity(db, actor, clientId),
-    listUsableTemplates(db, clientId),
+    listUsableTemplates(db, clientId, locale ? { locale } : {}),
     db
       .select({ id: contentPillars.id, name: contentPillars.name })
       .from(contentPillars)

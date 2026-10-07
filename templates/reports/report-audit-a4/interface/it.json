@@ -1,0 +1,68 @@
+{
+  "name": "Report di audit · A4",
+  "description": "Il report di audit di un prospect come PDF A4: copertina, sezioni, rilievi con evidenza e raccomandazione, problemi, prossimi passi e metodo.",
+  "notes": "Un report da leggere e stampare: una pagina per rilievo, ognuno con la sua evidenza e una raccomandazione concreta.",
+  "layouts": {
+    "cover": {
+      "name": "Copertina",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "subtitle": "Sottotitolo",
+        "client": "Cliente",
+        "date": "Data",
+        "prepared_by": "Preparato da",
+        "image": "Immagine"
+      }
+    },
+    "section": {
+      "name": "Sezione",
+      "slots": {
+        "number": "Numero",
+        "title": "Titolo",
+        "intro": "Introduzione",
+        "items": "Elenco"
+      }
+    },
+    "finding": {
+      "name": "Rilievo",
+      "slots": {
+        "label": "Etichetta",
+        "severity": "Priorità",
+        "title": "Titolo",
+        "description": "Descrizione",
+        "evidence": "Evidenza",
+        "evidence_image": "Immagine dell’evidenza",
+        "recommendation": "Raccomandazione"
+      }
+    },
+    "problem": {
+      "name": "Problema",
+      "slots": {
+        "label": "Etichetta",
+        "title": "Titolo",
+        "description": "Descrizione",
+        "impact": "Impatto",
+        "causes": "Cause"
+      }
+    },
+    "next-steps": {
+      "name": "Prossimi passi",
+      "slots": {
+        "title": "Titolo",
+        "intro": "Introduzione",
+        "steps": "Passi",
+        "note": "Nota"
+      }
+    },
+    "method": {
+      "name": "Metodo",
+      "slots": {
+        "title": "Titolo",
+        "intro": "Introduzione",
+        "items": "Fonti e strumenti",
+        "note": "Limiti"
+      }
+    }
+  }
+}

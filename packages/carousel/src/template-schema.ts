@@ -210,6 +210,28 @@ export const compositionRulesSchema = z.object({
   notes: z.string().max(500).default(""),
 });
 
+/**
+ * Interface texts of a template in one language: its name, description and notes, and the
+ * names of its layouts and slots. English lives in template.json itself; other languages come
+ * from `interface/<code>.json` in the package (see interface-labels.ts). Missing keys fall back
+ * to English.
+ */
+export const templateInterfaceLabelsSchema = z.object({
+  name: z.string().min(1).max(60).optional(),
+  description: z.string().max(240).optional(),
+  notes: z.string().max(500).optional(),
+  layouts: z
+    .record(
+      z.string(),
+      z.object({
+        name: z.string().min(1).max(60).optional(),
+        slots: z.record(z.string(), z.string().min(1).max(60)).optional(),
+      }),
+    )
+    .optional(),
+});
+export type TemplateInterfaceLabels = z.infer<typeof templateInterfaceLabelsSchema>;
+
 export const templateManifestSchema = z
   .object({
     $schema: z.string().optional(),
@@ -244,6 +266,8 @@ export const templateManifestSchema = z
     /** Allowed `font-size` values in px; empty = no check. */
     typeScale: z.array(z.number().positive()).max(30).default([]),
     layouts: z.array(layoutSchema).min(1).max(24),
+    /** Interface texts per language code, filled from `interface/*.json` when the package is read. */
+    translations: z.record(z.string(), templateInterfaceLabelsSchema).optional(),
     rules: compositionRulesSchema.default({
       ctaOnlyLast: true,
       logoOnCover: true,

@@ -719,10 +719,22 @@ function SlidePreview({
   stale: boolean;
 }) {
   const t = useTranslations("content.editor.preview");
-  const width = 384;
+  // 384 px wide, narrower when the column is (phones).
+  const figure = useRef<HTMLElement>(null);
+  const [room, setRoom] = useState(384);
+  useEffect(() => {
+    const el = figure.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) setRoom(entry.contentRect.width);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const width = Math.min(384, room);
   const scale = width / manifest.width;
   return (
-    <figure className="space-y-2">
+    <figure ref={figure} className="space-y-2">
       <div
         className="overflow-hidden rounded-md border border-subtle bg-app"
         style={{ width: manifest.width * scale, height: manifest.height * scale }}

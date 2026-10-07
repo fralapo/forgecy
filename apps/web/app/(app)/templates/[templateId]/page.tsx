@@ -19,8 +19,10 @@ import { revalidateAction, transitionAction } from "../actions";
 import { SlideFrame } from "../slide-frame";
 import { ErrorNotice, StatusBadge, ValidationBadge } from "../status";
 import { checkText, issueText } from "../validation-text";
+import { getManifestLocalizer } from "@/lib/template-labels";
 
 /** Widest thumbnail that fits a layout column on a wide screen (A4 pages are 1240 px). */
+// 14.5rem: the layout grid below keeps each column at least this wide.
 const THUMB_MAX_WIDTH = 232;
 
 const CHECK = {
@@ -85,7 +87,7 @@ export default async function TemplateDetailPage({
   const db = getDb();
   const row = await getTemplateRow(db, templateId);
   if (!row) notFound();
-  const m = row.manifest as TemplateManifest;
+  const m = (await getManifestLocalizer())(row.manifest as TemplateManifest);
   const validation = storedValidation(row);
   const status = row.status as TemplateStatus;
   const manage = can(user.actor, "templates.manage");
@@ -109,7 +111,7 @@ export default async function TemplateDetailPage({
   return (
     <>
       <PageHeader
-        title={t("detail.title", { name: row.name, version: row.version })}
+        title={t("detail.title", { name: m.name, version: row.version })}
         description={t("detail.description", {
           description: m.description,
           format: t(`format.${m.format}`),
@@ -148,7 +150,7 @@ export default async function TemplateDetailPage({
               ))}
             </nav>
           </div>
-          <ul className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          <ul className="grid grid-cols-[repeat(auto-fill,minmax(14.5rem,1fr))] gap-6">
             {m.layouts.map((layout) => (
               <li key={layout.id} className="space-y-2">
                 <SlideFrame
@@ -171,14 +173,17 @@ export default async function TemplateDetailPage({
                   {layout.slots
                     .map((s) =>
                       s.type === "image"
-                        ? t("detail.slot.image", { name: s.name })
+                        ? t("detail.slot.image", { name: s.label ?? s.name })
                         : s.type === "list"
                           ? t("detail.slot.list", {
-                              name: s.name,
+                              name: s.label ?? s.name,
                               items: String(s.maxItems),
                               chars: String(s.maxChars),
                             })
-                          : t("detail.slot.text", { name: s.name, chars: String(s.maxChars) }),
+                          : t("detail.slot.text", {
+                              name: s.label ?? s.name,
+                              chars: String(s.maxChars),
+                            }),
                     )
                     .join(", ")}
                 </p>

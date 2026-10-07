@@ -3,7 +3,7 @@
   "id": "brand-book-a4",
   "name": "Brand Book · A4",
   "description": "The client's Brand Book as an A4 PDF in the client's own colors and fonts: strategy, verbal and visual identity, content and channels, do and don't, signed by the agency.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "kind": "report",
   "format": "report_a4",
   "width": 1240,

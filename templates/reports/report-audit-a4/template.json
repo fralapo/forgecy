@@ -3,7 +3,7 @@
   "id": "report-audit-a4",
   "name": "Audit report · A4",
   "description": "A prospect's audit report as an A4 PDF: cover, sections, findings with evidence and recommendation, problems, next steps and method.",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "kind": "report",
   "format": "report_a4",
   "width": 1240,

@@ -3,7 +3,7 @@
   "id": "editorial-stories-9x16",
   "name": "Editorial · Stories 9:16",
   "description": "Instagram Stories sequence with 8 layouts: one idea per frame, texts kept clear of the profile header and the reply bar.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "kind": "carousel",
   "channel": "instagram",
   "format": "stories_9x16",

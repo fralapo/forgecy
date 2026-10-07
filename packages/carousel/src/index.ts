@@ -2,6 +2,7 @@
 export * from "./brand";
 export * from "./filenames";
 export * from "./formats";
+export * from "./interface-labels";
 export * from "./jobs";
 export * from "./labels";
 export * from "./package";

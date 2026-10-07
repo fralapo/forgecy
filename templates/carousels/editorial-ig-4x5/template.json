@@ -3,7 +3,7 @@
   "id": "editorial-ig-4x5",
   "name": "Editorial · Instagram 4:5",
   "description": "Educational carousel with 8 layouts: cover, text, list, quote, data, problem-solution, comparison and CTA.",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "kind": "carousel",
   "channel": "instagram",
   "format": "ig_4x5",

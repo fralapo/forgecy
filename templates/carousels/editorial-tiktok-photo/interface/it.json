@@ -1,0 +1,73 @@
+{
+  "name": "Editoriale · TikTok photo",
+  "description": "Carosello di foto TikTok con 8 layout: testi lontani dalla didascalia e dai pulsanti delle azioni.",
+  "notes": "Un’idea per schermata, leggibile in due secondi. Tieni il testo dentro l’area sicura: l’app copre i bordi.",
+  "layouts": {
+    "cover": {
+      "name": "Copertina",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "subtitle": "Sottotitolo",
+        "image": "Immagine"
+      }
+    },
+    "text": {
+      "name": "Testo",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "body": "Testo"
+      }
+    },
+    "list": {
+      "name": "Elenco",
+      "slots": {
+        "title": "Titolo",
+        "items": "Voci"
+      }
+    },
+    "quote": {
+      "name": "Citazione",
+      "slots": {
+        "quote": "Citazione",
+        "author": "Autore",
+        "role": "Ruolo"
+      }
+    },
+    "data": {
+      "name": "Dato",
+      "slots": {
+        "value": "Numero",
+        "label": "Didascalia",
+        "source": "Fonte"
+      }
+    },
+    "problem-solution": {
+      "name": "Problema e soluzione",
+      "slots": {
+        "title": "Titolo",
+        "problem": "Problema",
+        "solution": "Soluzione"
+      }
+    },
+    "comparison": {
+      "name": "Confronto",
+      "slots": {
+        "title": "Titolo",
+        "left_title": "Titolo colonna A",
+        "left": "Voci colonna A",
+        "right_title": "Titolo colonna B",
+        "right": "Voci colonna B"
+      }
+    },
+    "cta": {
+      "name": "CTA",
+      "slots": {
+        "title": "Titolo",
+        "body": "Testo",
+        "action": "Azione"
+      }
+    }
+  }
+}

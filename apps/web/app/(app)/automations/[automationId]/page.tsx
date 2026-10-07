@@ -26,6 +26,7 @@ import { carouselPath, carouselsPath, planPath } from "../../content/_lib/paths"
 import { AutomationEditor } from "../_components/automation-editor";
 import { RunControls } from "../_components/run-controls";
 import { AutomationStatusBadge, usd } from "../_components/status";
+import { interfaceLocale } from "@/lib/template-labels";
 
 export async function generateMetadata() {
   const t = await getTranslations("automations");
@@ -64,7 +65,7 @@ export default async function AutomationPage({
   const base = `/automations/${a.id}`;
 
   const [options, plan, cost, budgets, routing] = await Promise.all([
-    getNewCarouselOptions(db, user.actor, a.clientId),
+    getNewCarouselOptions(db, user.actor, a.clientId, await interfaceLocale()),
     a.source === "plan" ? planItemsFor(db, user.actor, a.clientId) : Promise.resolve([]),
     costPerItem(db),
     budgetsLeft(db, a.clientId),

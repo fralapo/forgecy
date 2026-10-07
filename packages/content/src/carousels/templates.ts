@@ -6,12 +6,14 @@
 import { compareVersions } from "@forgecy/carousel/catalog";
 import {
   findLayout,
+  localizeManifest,
   templateManifestSchema,
   type FormatId,
   type LayoutDef,
   type SlideRole,
   type TemplateManifest,
 } from "@forgecy/carousel";
+import type { Locale } from "@forgecy/core";
 import { and, eq, inArray, isNull, or, templates, type Database } from "@forgecy/db";
 import { notFound } from "../access";
 
@@ -25,18 +27,20 @@ export interface UsableTemplate {
   manifest: TemplateManifest;
 }
 
-function parseRow(row: typeof templates.$inferSelect): UsableTemplate | null {
+/** `locale` localizes the texts shown to people (name, layout and slot names); omit it for AI and checks. */
+function parseRow(row: typeof templates.$inferSelect, locale?: Locale): UsableTemplate | null {
   const r = templateManifestSchema.safeParse(row.manifest);
   // Only carousel templates bound to a channel (report templates have none).
   if (!r.success || r.data.kind !== "carousel" || !r.data.channel) return null;
+  const manifest = locale ? localizeManifest(r.data, locale) : r.data;
   return {
     key: row.key,
     version: row.version,
-    name: row.name,
-    description: r.data.description,
+    name: manifest === r.data ? row.name : manifest.name,
+    description: manifest.description,
     format: r.data.format,
     channel: r.data.channel,
-    manifest: r.data,
+    manifest,
   };
 }
 
@@ -44,7 +48,7 @@ function parseRow(row: typeof templates.$inferSelect): UsableTemplate | null {
 export async function listUsableTemplates(
   db: Database,
   clientId: string,
-  filter: { format?: FormatId } = {},
+  filter: { format?: FormatId; locale?: Locale } = {},
 ): Promise<UsableTemplate[]> {
   const rows = await db
     .select()
@@ -63,7 +67,7 @@ export async function listUsableTemplates(
     if (!cur || compareVersions(row.version, cur.version) > 0) newest.set(row.key, row);
   }
   return [...newest.values()]
-    .map(parseRow)
+    .map((row) => parseRow(row, filter.locale))
     .filter((t): t is UsableTemplate => t !== null)
     .sort((a, b) => a.name.localeCompare(b.name, "en-GB"));
 }

@@ -3,6 +3,7 @@ import { briefSchema, getNewCarouselOptions, type CarouselParamsInput } from "@f
 import { getTranslations } from "next-intl/server";
 import { CarouselBriefForms } from "../../../_components/carousel-brief-forms";
 import { loadCarousel } from "../_lib/workspace";
+import { interfaceLocale } from "@/lib/template-labels";
 
 export async function generateMetadata() {
   const t = await getTranslations("content.brief");
@@ -20,7 +21,7 @@ export default async function CarouselBriefPage({
   const { db, user, client, ws } = await loadCarousel(clientSlug, contentId);
   const c = ws.content;
   const t = await getTranslations("content.brief");
-  const options = await getNewCarouselOptions(db, user.actor, client.id);
+  const options = await getNewCarouselOptions(db, user.actor, client.id, await interfaceLocale());
   const editable = EDITABLE.includes(c.status) && !ws.locked;
   const parsed = briefSchema.safeParse(c.brief ?? {});
   const brief = parsed.success ? parsed.data : briefSchema.parse({});
