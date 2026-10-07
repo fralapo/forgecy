@@ -44,7 +44,8 @@
     "password": "Password iniziale",
     "isAdmin": "Admin (impostazioni, chiavi, budget e backup)",
     "created": "Account creato.",
-    "submit": "Crea account"
+    "submit": "Crea account",
+    "username": "Utente"
   },
   "worker": {
     "check": "Verifica il worker",

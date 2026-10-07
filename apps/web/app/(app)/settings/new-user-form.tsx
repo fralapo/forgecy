@@ -13,12 +13,8 @@ export function NewUserForm() {
   return (
     <form action={action} className="mt-4 space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="user-name">{t("name")}</Label>
-        <Input id="user-name" name="name" required />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="user-email">{t("email")}</Label>
-        <Input id="user-email" name="email" type="email" required />
+        <Label htmlFor="user-username">{t("username")}</Label>
+        <Input id="user-username" name="username" autoComplete="off" required />
       </div>
       <div className="space-y-2">
         <Label htmlFor="user-password">{t("password")}</Label>

@@ -12,6 +12,7 @@ import { env } from "@/lib/env";
 import { requireUser } from "@/lib/session";
 import { getTheme } from "@/lib/theme";
 import { providerIcons } from "./_lib/provider-icons";
+import { emailToUsername } from "@/lib/username";
 import { EmailNotificationsForm } from "./email-notifications-form";
 import { LanguageForm } from "./language-form";
 import { NewUserForm } from "./new-user-form";
@@ -134,7 +135,7 @@ export default async function SettingsPage() {
                   <li key={p.id} className="flex items-center justify-between py-2 text-body-sm">
                     <span>
                       <span className="block text-fg">{p.name}</span>
-                      <span className="text-fg-muted">{p.email}</span>
+                      <span className="text-fg-muted">{emailToUsername(p.email)}</span>
                     </span>
                     <span className="flex gap-2">
                       {p.isAdmin ? <Badge>{tc("role.admin")}</Badge> : null}

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 import { authClient } from "@/lib/auth-client";
+import { usernameToEmail } from "@/lib/username";
 
 /** Only same-site relative paths are accepted as post-login destinations. */
 function safeNext(next: string | null): string {
@@ -26,7 +27,7 @@ export function LoginForm({ magicLink, google }: { magicLink: boolean; google: b
     setPending(true);
     setError(null);
     const { error } = await authClient.signIn.email({
-      email: String(form.get("email")),
+      email: usernameToEmail(String(form.get("email"))),
       password: String(form.get("password")),
     });
     setPending(false);
@@ -54,8 +55,8 @@ export function LoginForm({ magicLink, google }: { magicLink: boolean; google: b
     <div className="space-y-6">
       <form onSubmit={onPassword} className="space-y-4" noValidate>
         <div className="space-y-2">
-          <Label htmlFor="email">{t("email")}</Label>
-          <Input id="email" name="email" type="email" autoComplete="email" required />
+          <Label htmlFor="email">{t("username")}</Label>
+          <Input id="email" name="email" autoComplete="username" required />
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">{t("password")}</Label>

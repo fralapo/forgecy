@@ -31,11 +31,15 @@ import { errorMessage, firstIssue, vmsg } from "@/lib/i18n";
 import { PASSWORD_MIN } from "@/lib/password";
 import { requireUser } from "@/lib/session";
 import { isTheme, THEME_COOKIE } from "@/lib/theme";
+import { emailToUsername, usernameToEmail } from "@/lib/username";
 import { createPasswordUser } from "@/lib/users";
 
 const newUserSchema = z.object({
-  name: z.string().trim().min(1, vmsg("validation.nameRequired")),
-  email: z.email(vmsg("validation.emailInvalid")),
+  username: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9._-]+(@[A-Za-z0-9.-]+)?$/, vmsg("validation.usernameInvalid"))
+    .transform(usernameToEmail),
   password: z
     .string()
     .min(PASSWORD_MIN, vmsg("validation.passwordTooShort", { min: PASSWORD_MIN })),
@@ -53,11 +57,18 @@ export async function createUserAction(_prev: NewUserState, form: FormData): Pro
   const parsed = newUserSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: await firstIssue(parsed.error) };
   const exists = await getDb().query.users.findFirst({
-    where: eq(users.email, parsed.data.email.toLowerCase()),
+    where: eq(users.email, parsed.data.username),
     columns: { id: true },
   });
   if (exists) return { error: (await getTranslations("errors"))("userExists") };
-  await createPasswordUser({ ...parsed.data, createdBy: admin.id });
+  const { username: email, password, isAdmin } = parsed.data;
+  await createPasswordUser({
+    name: emailToUsername(email),
+    email,
+    password,
+    isAdmin,
+    createdBy: admin.id,
+  });
   revalidatePath("/settings");
   return { ok: true };
 }

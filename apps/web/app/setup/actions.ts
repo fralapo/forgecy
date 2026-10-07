@@ -5,11 +5,15 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { firstIssue, vmsg } from "@/lib/i18n";
 import { PASSWORD_MIN } from "@/lib/password";
+import { emailToUsername, usernameToEmail } from "@/lib/username";
 import { countUsers, createPasswordUser, withSetupLock } from "@/lib/users";
 
 const setupSchema = z.object({
-  name: z.string().trim().min(1, vmsg("validation.yourNameRequired")),
-  email: z.email(vmsg("validation.emailInvalid")),
+  username: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9._-]+(@[A-Za-z0-9.-]+)?$/, vmsg("validation.usernameInvalid"))
+    .transform(usernameToEmail),
   password: z
     .string()
     .min(PASSWORD_MIN, vmsg("validation.passwordTooShort", { min: PASSWORD_MIN })),
@@ -22,12 +26,19 @@ export async function createFirstAdmin(_prev: SetupState, form: FormData): Promi
   if (!parsed.success) return { error: await firstIssue(parsed.error) };
   const created = await withSetupLock(async () => {
     if ((await countUsers()) > 0) return false;
-    await createPasswordUser({ ...parsed.data, isAdmin: true, isProductOwner: true });
+    const { username: email, password } = parsed.data;
+    await createPasswordUser({
+      name: emailToUsername(email),
+      email,
+      password,
+      isAdmin: true,
+      isProductOwner: true,
+    });
     return true;
   });
   if (!created) redirect("/login");
   await auth.api.signInEmail({
-    body: { email: parsed.data.email, password: parsed.data.password },
+    body: { email: parsed.data.username, password: parsed.data.password },
   });
   redirect("/");
 }

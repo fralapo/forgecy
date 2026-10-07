@@ -12,12 +12,8 @@ export function SetupForm() {
   return (
     <form action={action} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name">{t("name")}</Label>
-        <Input id="name" name="name" autoComplete="name" required />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="email">{t("email")}</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" required />
+        <Label htmlFor="username">{t("username")}</Label>
+        <Input id="username" name="username" autoComplete="username" required />
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">{t("password")}</Label>
