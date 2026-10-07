@@ -19,7 +19,6 @@ export const providerIcons: Record<ProviderId, LucideIcon> = {
   google: Image,
   local: Cpu,
   higgsfield: Image,
-  weave: Image,
 };
 
 /** Icon for the “Sign in with ChatGPT” card, which is not itself a provider id. */

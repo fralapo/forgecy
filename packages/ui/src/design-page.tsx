@@ -341,16 +341,20 @@ export function DesignPage({ className, texts }: DesignPageProps) {
   const failed = guard.filter((r) => !r.pass).length;
 
   return (
-    <main className={cn("mx-auto flex max-w-6xl flex-col gap-12 px-6 py-12 text-fg", className)}>
+    <div className={cn("mx-auto flex max-w-6xl flex-col gap-12 py-12 text-fg", className)}>
       <header className="flex flex-col gap-4">
         <p className="text-label uppercase text-fg-muted">{texts.kicker}</p>
         <h1 className="font-display text-heading-xl">{texts.title}</h1>
         <p className="max-w-prose text-body-lg text-fg-muted">{texts.intro}</p>
         <div>
           {failed === 0 ? (
-            <Badge variant="success">{texts.guardAllPass(guard.length)}</Badge>
+            <Badge variant="success" className="whitespace-normal">
+              {texts.guardAllPass(guard.length)}
+            </Badge>
           ) : (
-            <Badge variant="error">{texts.guardSomeFail(failed)}</Badge>
+            <Badge variant="error" className="whitespace-normal">
+              {texts.guardSomeFail(failed)}
+            </Badge>
           )}
         </div>
       </header>
@@ -442,6 +446,6 @@ export function DesignPage({ className, texts }: DesignPageProps) {
           <ComponentShowcase idPrefix="design-dark" texts={texts} />
         </div>
       </Section>
-    </main>
+    </div>
   );
 }

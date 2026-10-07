@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-10-06
+- Update 2026-10-07: Figma Weave was removed (`weave` provider, its MCP adapter, settings/UI, env vars). Jacopo could not connect his Weave subscription — Figma's OAuth kept answering 403 to Forgecy as an unlisted MCP client (see Consequences below) — so the integration never worked for any install. Higgsfield is unaffected and stays as described below.
 
 ## Context
 

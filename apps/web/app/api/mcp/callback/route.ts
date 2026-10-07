@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/lib/session";
 export const dynamic = "force-dynamic";
 
 /**
- * OAuth redirect of the MCP providers (Higgsfield, Figma Weave). The Admin who clicked
+ * OAuth redirect of the MCP providers (Higgsfield). The Admin who clicked
  * “Connect” lands here; the result shows on Settings > AI providers.
  */
 export async function GET(req: NextRequest) {

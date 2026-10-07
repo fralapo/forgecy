@@ -104,7 +104,7 @@ export const aiConnections = pgTable(
 );
 
 /**
- * Image providers reached over MCP with OAuth (Higgsfield, Figma Weave): one agency-wide
+ * Image providers reached over MCP with OAuth (Higgsfield): one agency-wide
  * connection per provider. `encryptedState` holds the OAuth client registration, tokens and
  * the PKCE verifier of a pending authorization, encrypted with FORGECY_ENCRYPTION_KEY.
  * `oauthState` is the random `state` of a pending authorization, used by the callback.

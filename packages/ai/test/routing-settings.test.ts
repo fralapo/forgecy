@@ -13,7 +13,7 @@ const env = {
   AI_DEFAULT_PROVIDER: "anthropic",
   LOCAL_LLM_ENABLED: false,
   OPENROUTER_API_KEY: "o",
-  WEAVE_IMAGE_MODEL: "nano banana 2",
+  HIGGSFIELD_IMAGE_MODEL: "flux_2",
 } as RoutingEnv;
 
 const image = (id: ImageProvider["id"]): ImageProvider => ({
@@ -27,7 +27,11 @@ const providers: ProviderSet = {
     anthropic: createFakeTextProvider("anthropic"),
     openrouter: createFakeTextProvider("openrouter"),
   },
-  image: { openrouter: image("openrouter"), weave: image("weave"), openai: image("openai") },
+  image: {
+    openrouter: image("openrouter"),
+    higgsfield: image("higgsfield"),
+    openai: image("openai"),
+  },
 };
 
 describe("Admin routing settings", () => {
@@ -57,15 +61,15 @@ describe("Admin routing settings", () => {
   it("orders images as chosen, skips unconnected MCP and switched-off services", () => {
     const settings = {
       images: [
-        { provider: "weave" as const, model: "" },
+        { provider: "higgsfield" as const, model: "" },
         { provider: "openrouter" as const, model: "black-forest-labs/flux.2-pro" },
       ],
     };
     const off = resolveRouting(env, providers, settings);
     expect(off.images).toEqual([{ provider: "openrouter", model: "black-forest-labs/flux.2-pro" }]);
-    const on = resolveRouting(env, providers, settings, new Set(["weave"]));
-    expect(on.images.map((i) => i.provider)).toEqual(["weave", "openrouter"]);
-    expect(on.routing.image?.primary).toEqual({ provider: "weave", model: "nano banana 2" });
+    const on = resolveRouting(env, providers, settings, new Set(["higgsfield"]));
+    expect(on.images.map((i) => i.provider)).toEqual(["higgsfield", "openrouter"]);
+    expect(on.routing.image?.primary).toEqual({ provider: "higgsfield", model: "flux_2" });
     expect(on.routing.image?.fallback?.provider).toBe("openrouter");
   });
 

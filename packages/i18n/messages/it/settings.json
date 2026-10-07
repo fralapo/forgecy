@@ -80,8 +80,7 @@
     },
     "mcp": {
       "hint": {
-        "higgsfield": "Usa i crediti del tuo abbonamento Higgsfield. Accedi su Higgsfield; Forgecy non vede mai la password.",
-        "weave": "Esegue i modelli di Figma Weave tramite il server MCP di Figma e consuma crediti Weave (piano Starter o superiore, account Figma collegato in Weave). Al massimo {max} crediti per immagine."
+        "higgsfield": "Usa i crediti del tuo abbonamento Higgsfield. Accedi su Higgsfield; Forgecy non vede mai la password."
       },
       "status": {
         "connected": "Collegato",
