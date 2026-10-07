@@ -64,7 +64,6 @@ describe("MCP helpers", () => {
       text: "plain",
     });
   });
-
 });
 
 describe("Higgsfield over MCP", () => {

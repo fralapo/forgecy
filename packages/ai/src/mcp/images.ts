@@ -184,4 +184,3 @@ export function createHiggsfieldImageProvider(opts: HiggsfieldImageOptions): Ima
     },
   };
 }
-

@@ -34,15 +34,15 @@ const { data } = await ai.generateObject({
 
 ## Providers
 
-| Provider     | Text | Images | Key / setting                                                         |
-| ------------ | ---- | ------ | --------------------------------------------------------------------- |
-| `anthropic`  | yes  | no     | `ANTHROPIC_API_KEY`                                                   |
-| `openai`     | yes  | yes    | `OPENAI_API_KEY`                                                      |
-| `openrouter` | yes  | yes    | `OPENROUTER_API_KEY`, image model `OPENROUTER_IMAGE_MODEL`            |
-| `deepseek`   | yes  | no     | `DEEPSEEK_API_KEY` (JSON via `json_object`, schema in prompt)         |
-| `google`     | no   | yes    | `GOOGLE_AI_API_KEY`                                                   |
-| `local`      | yes  | no     | `LOCAL_LLM_ENABLED`, `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`          |
-| `higgsfield` | no   | yes    | MCP + OAuth (Connect in Settings), `HIGGSFIELD_IMAGE_MODEL`           |
+| Provider     | Text | Images | Key / setting                                                 |
+| ------------ | ---- | ------ | ------------------------------------------------------------- |
+| `anthropic`  | yes  | no     | `ANTHROPIC_API_KEY`                                           |
+| `openai`     | yes  | yes    | `OPENAI_API_KEY`                                              |
+| `openrouter` | yes  | yes    | `OPENROUTER_API_KEY`, image model `OPENROUTER_IMAGE_MODEL`    |
+| `deepseek`   | yes  | no     | `DEEPSEEK_API_KEY` (JSON via `json_object`, schema in prompt) |
+| `google`     | no   | yes    | `GOOGLE_AI_API_KEY`                                           |
+| `local`      | yes  | no     | `LOCAL_LLM_ENABLED`, `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`  |
+| `higgsfield` | no   | yes    | MCP + OAuth (Connect in Settings), `HIGGSFIELD_IMAGE_MODEL`   |
 
 Image providers are tried in the order of `IMAGE_PROVIDERS` (default `openai,google,openrouter`): first configured one primary, next one fallback. Logging in with a ChatGPT account is not supported (see `docs/adr/0006`).
 
