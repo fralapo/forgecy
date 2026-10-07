@@ -102,6 +102,8 @@ export interface RestoreStatus {
   backup: string;
   /** Name of the person who started it: the users table may change with the restore. */
   requestedBy: string;
+  /** Their user id: everyone else sees the maintenance page while it runs (page 67). */
+  requestedById?: string;
   requestedAt: string;
   updatedAt?: string;
   preRestoreBackup?: string;

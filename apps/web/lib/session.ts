@@ -2,6 +2,7 @@ import "server-only";
 import { isLocale, type Actor, type Locale } from "@forgecy/core";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { maintenanceFor } from "./maintenance";
 import { cache } from "react";
 import { auth } from "./auth";
 
@@ -38,6 +39,8 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  // During a restore pages and actions send everyone but its Admin to the 503 page.
+  if (await maintenanceFor(user)) redirect("/maintenance");
   return user;
 }
 
