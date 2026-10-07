@@ -105,7 +105,7 @@
     },
     "routing": {
       "title": "Servizi e modelli",
-      "description": "Scegli quale servizio e quale modello usa Forgecy. Le modifiche valgono per i nuovi lavori entro pochi secondi.",
+      "description": "Scegli quale servizio e quale modello usa Forgecy. Le modifiche valgono per le nuove attività entro pochi secondi.",
       "inUse": "In uso adesso",
       "textInUse": "Testo: {model}",
       "imageInUse": "Immagini: {model}",

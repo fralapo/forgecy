@@ -68,11 +68,11 @@
     },
     "sectionsLabel": "Sections of the automation",
     "next": {
-      "incomplete": "Next action: you · Complete {count, plural, one {# item} other {# items}} marked as incomplete",
-      "start": "Next action: you · Start the automation",
+      "incomplete": "Next action: Complete {count, plural, one {# item} other {# items}} marked as incomplete",
+      "start": "Next action: Start the automation",
       "running": "Running: {done} of {total} carousels",
-      "review": "Next action: you · Review {count, plural, one {# draft} other {# drafts}} created",
-      "retry": "Next action: you · Retry {count, plural, one {# failed item} other {# failed items}}",
+      "review": "Next action: Review {count, plural, one {# draft} other {# drafts}} created",
+      "retry": "Next action: Retry {count, plural, one {# failed item} other {# failed items}}",
       "none": "No pending action",
       "paused": "Paused: resume to continue with the queued items"
     },

@@ -24,7 +24,7 @@
       "external_allowed": "Brief, testi e immagini possono essere inviati ai provider AI configurati.",
       "external_restricted": "Solo provider approvati per questo cliente, con conferma prima di inviare file del cliente.",
       "local_only": "Nessun dato esce dalla rete dell’agenzia; serve un modello locale configurato. Mai fallback verso il cloud.",
-      "no_ai": "Nessuna funzione AI su questo cliente: template, editor ed export manuali."
+      "no_ai": "Nessuna funzione AI su questo cliente: template, editor ed esportazioni manuali."
     },
     "default": {
       "title": "Policy predefinita per i nuovi clienti",
@@ -62,7 +62,7 @@
         "documents": "Documenti caricati (brand book, PDF, cataloghi)",
         "brand_texts": "Testi della Brand Identity"
       },
-      "assetsHelp": "I tipi non spuntati non lasciano mai Forgecy: quei lavori usano solo il modello locale, o si fermano se manca. Quelli spuntati richiedono comunque una conferma prima dell’invio dei file.",
+      "assetsHelp": "I tipi non spuntati non lasciano mai Forgecy: quelle attività usano solo il modello locale, o si fermano se manca. Quelli spuntati richiedono comunque una conferma prima dell’invio dei file.",
       "assetsSave": "Salva i file che si possono inviare",
       "assetsSaved": "File che si possono inviare salvati.",
       "assetsInvalid": "Tipo di file sconosciuto."
@@ -73,14 +73,14 @@
       "label": "Budget mensile (USD)",
       "hint": "Lascia vuoto per nessun limite. Il limite vale anche per i mesi successivi finché non lo cambi.",
       "forecast": "Al ritmo attuale: {amount} a fine mese",
-      "thresholds": "70% · avviso a tutti · 100% · i lavori AI non partono",
+      "thresholds": "70% · avviso a tutti · 100% · le attività AI non partono",
       "monthReset": "Il mese è quello di calendario in UTC; la spesa riparte dal giorno 1."
     },
     "budget": {
       "save": "Salva budget",
       "saved": "Budget salvato.",
       "removed": "Limite rimosso.",
-      "alreadyExceeded": "Budget salvato. È già superato: i lavori AI non partiranno fino al mese prossimo.",
+      "alreadyExceeded": "Budget salvato. È già superato: le attività AI non partiranno fino al mese prossimo.",
       "invalid": "Inserisci un importo in dollari maggiore di zero, con al massimo due decimali."
     },
     "spent": "{percent}% · {spent} di {limit}",
@@ -138,7 +138,7 @@
   "storage": {
     "title": "Storage",
     "description": "Dove Forgecy conserva i file e quanto spazio occupano. Lo spostamento dei file tra storage diversi si fa da riga di comando.",
-    "lowSpace": "Il disco è quasi pieno (meno del {percent}% libero): upload, render, export e backup possono fallire.",
+    "lowSpace": "Il disco è quasi pieno (meno del {percent}% libero): upload, render, esportazioni e backup possono fallire.",
     "config": {
       "title": "Configurazione",
       "driver": "Driver",

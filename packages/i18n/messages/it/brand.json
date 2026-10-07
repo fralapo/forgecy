@@ -67,7 +67,7 @@
     "proposed": "Proposta",
     "accepted": "Accettata",
     "rejected": "Rifiutata",
-    "stale": "Superata"
+    "stale": "Sostituita"
   },
   "confidence": {
     "high": "Attendibilità alta",
@@ -83,7 +83,7 @@
     "aiOnly": "Solo deduzione dell’AI"
   },
   "sourceKind": {
-    "brand_book": "Brand book",
+    "brand_book": "Brand Book",
     "document": "Documento del cliente",
     "interview": "Intervista",
     "questionnaire": "Questionario",
@@ -491,7 +491,7 @@
         "verified": "Verificata"
       },
       "funnel": {
-        "awareness": "Awareness",
+        "awareness": "Notorietà",
         "consideration": "Considerazione",
         "conversion": "Conversione",
         "loyalty": "Fidelizzazione"
@@ -577,9 +577,9 @@
     "partsRead": "{count, plural, one {# parte letta} other {# parti lette}}",
     "readAgain": "Rileggi",
     "remove": "Rimuovi",
-    "removeConfirm": "Rimuovere la fonte? Le proposte in attesa che la citano diventano superate. Il file e lo storico vengono conservati.",
+    "removeConfirm": "Rimuovere la fonte? Le proposte in attesa che la citano diventano sostituite. Il file e lo storico vengono conservati.",
     "importTitle": "Importa il brand book",
-    "importNoAi": "Le funzioni AI sono disattivate per questo cliente: estraiamo solo testo, colori e font, senza proposte interpretate.",
+    "importNoAi": "Le funzioni AI sono disattivate per questo cliente: viene estratto solo il testo, i colori e i font, senza proposte interpretate.",
     "importAi": "Testo, colori e font diventano proposte con la pagina da cui provengono. Nulla entra nella bozza senza una persona.",
     "linkTitle": "Aggiungi un link o una nota",
     "upload": {
@@ -631,10 +631,10 @@
     "edit": "Modifica",
     "reject": "Rifiuta",
     "failed": "Operazione non riuscita",
-    "superseded": "Il campo è cambiato dopo la proposta: la proposta è superata.",
+    "superseded": "Il campo è cambiato dopo la proposta: la proposta è sostituita.",
     "rejectedCount": "{count, plural, one {# proposta rifiutata.} other {# proposte rifiutate.}}",
     "acceptedCount": "{count, plural, one {# accettata} other {# accettate}}.",
-    "acceptedWithStale": "{count, plural, one {# accettata} other {# accettate}}, {stale, plural, one {# superata} other {# superate}} perché il campo era cambiato.",
+    "acceptedWithStale": "{count, plural, one {# accettata} other {# accettate}}, {stale, plural, one {# sostituita} other {# sostituite}} perché il campo era cambiato.",
     "selected": "{count, plural, one {# selezionata} other {# selezionate}}",
     "selectHint": "Seleziona le proposte non sensibili per decidere in blocco.",
     "acceptSelected": "Accetta le selezionate",
@@ -831,9 +831,9 @@
     "generating": "Generazione in corso…",
     "generated": "BB-{number} è pronto: scaricalo dall’elenco.",
     "noPublished": "Ancora niente da esportare: prima pubblica una versione della Brand Identity.",
-    "historyTitle": "Export",
-    "historyEmpty": "Nessun export.",
-    "colExport": "Export",
+    "historyTitle": "Esportazioni",
+    "historyEmpty": "Nessuna esportazione.",
+    "colExport": "Esportazione",
     "colDetails": "Dettagli",
     "number": "BB-{number}",
     "type": {

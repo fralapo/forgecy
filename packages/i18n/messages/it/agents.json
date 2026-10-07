@@ -8,9 +8,9 @@
     "brand_analyst": "Brand Analyst",
     "strategist": "Strategist",
     "copywriter": "Copywriter",
-    "art_director": "Art Director AI",
+    "art_director": "Art Director",
     "reviewer": "Reviewer",
-    "creative_director": "Creative Director AI"
+    "creative_director": "Creative Director"
   },
   "role": {
     "brand_analyst": "Legge siti, screenshot, export dei social e brand book; propone osservazioni e valori di Brand Identity.",
@@ -24,7 +24,7 @@
     "brand_analyst": {
       "1": "Sito e screenshot del prospect",
       "2": "Export dei social",
-      "3": "Brand book e cataloghi caricati"
+      "3": "Brand Book e cataloghi caricati"
     },
     "strategist": {
       "1": "Osservazioni accettate dell’audit",
@@ -123,11 +123,11 @@
     "permissions": "Permessi",
     "model": "Modello",
     "instructions": "Istruzioni",
-    "runs": "Run (30 giorni)",
+    "runs": "Esecuzioni (30 giorni)",
     "cost": "Costo del mese",
     "statusColumn": "Stato",
     "open": "Apri {name}",
-    "runsValue": "{runs, plural, one {# run} other {# run}}",
+    "runsValue": "{runs, plural, one {# esecuzione} other {# esecuzioni}}",
     "failedValue": "{failed, plural, one {# fallita} other {# fallite}}",
     "variesByTask": "Varia per compito",
     "noTasks": "Nessun modello linguistico",
@@ -142,7 +142,7 @@
       "overview": "Panoramica",
       "tasks": "Compiti e modelli",
       "instructions": "Istruzioni",
-      "runs": "Run",
+      "runs": "Esecuzioni",
       "stats": "Statistiche"
     },
     "roleTitle": "Ruolo",
@@ -156,7 +156,7 @@
       "2": "Rispetta la policy AI del cliente.",
       "3": "Non supera mai le regole vincolanti: parole vietate, claim non ammessi, uso del logo."
     },
-    "statsRuns": "Run negli ultimi 30 giorni",
+    "statsRuns": "Esecuzioni negli ultimi 30 giorni",
     "statsFailed": "Fallite",
     "statsCost": "Costo del mese"
   },
@@ -176,11 +176,11 @@
     "default": "Segui le impostazioni AI",
     "notReady": "{name} (non configurato)",
     "modelHint": "Lascia vuoto il modello per usare quello predefinito del servizio. Un servizio senza chiave viene saltato e valgono le impostazioni AI.",
-    "saved": "Modelli salvati. Le nuove run li usano.",
+    "saved": "Modelli salvati. Le nuove esecuzioni li usano.",
     "settingsLink": "Apri le impostazioni AI"
   },
   "instructions": {
-    "intro": "Istruzioni che l’agenzia aggiunge al prompt di questo agente, dopo le sue regole di base. Le regole di base vincono sempre. Ogni run registra la versione usata.",
+    "intro": "Istruzioni che l’agenzia aggiunge al prompt di questo agente, dopo le sue regole di base. Le regole di base vincono sempre. Ogni esecuzione registra la versione usata.",
     "published": "Versione in uso",
     "publishedOn": "Versione {version}, pubblicata il {date} da {name}",
     "nonePublished": "Nessuna istruzione pubblicata: l’agente usa solo il suo prompt di base.",
@@ -204,7 +204,7 @@
     "changelogLabel": "Che cosa cambia in questa versione",
     "changelogHint": "Obbligatorio, almeno 3 caratteri.",
     "publish": "Pubblica la versione {version}",
-    "published_ok": "Versione {version} pubblicata. Le nuove run la usano.",
+    "published_ok": "Versione {version} pubblicata. Le nuove esecuzioni la usano.",
     "discard": "Scarta bozza",
     "discarded": "Bozza scartata.",
     "unknownAuthor": "Utente rimosso"
@@ -225,7 +225,7 @@
       "error": "Fallita",
       "blocked": "Bloccata"
     },
-    "limitNote": "Le ultime {count} run."
+    "limitNote": "Le ultime {count} esecuzioni."
   },
   "activation": {
     "title": "Stato dell’agente",
@@ -241,7 +241,7 @@
     "activated": "{name} è di nuovo attivo."
   },
   "errors": {
-    "disabled": "{agent, select, brand_analyst {L’agente Brand Analyst è disattivato} strategist {L’agente Strategist è disattivato} copywriter {L’agente Copywriter è disattivato} art_director {L’agente Art Director AI è disattivato} reviewer {L’agente Reviewer è disattivato} other {Questo agente è disattivato}}. Un Admin può riattivarlo dalla pagina Agenti.",
+    "disabled": "{agent, select, brand_analyst {L’agente Brand Analyst è disattivato} strategist {L’agente Strategist è disattivato} copywriter {L’agente Copywriter è disattivato} art_director {L’agente Art Director è disattivato} reviewer {L’agente Reviewer è disattivato} other {Questo agente è disattivato}}. Un Admin può riattivarlo dalla pagina Agenti.",
     "typedKeyMismatch": "Digita esattamente {key} per confermare.",
     "invalidRoutes": "Non è stato possibile salvare i modelli: controlla servizi e compiti.",
     "tooLong": "Le istruzioni sono troppo lunghe: al massimo {max} caratteri.",
@@ -249,8 +249,8 @@
     "noDraft": "Non c’è una bozza da pubblicare: salvane prima una."
   },
   "run": {
-    "title": "Run di {agent} · {task}",
-    "titleNoAgent": "Run · {task}",
+    "title": "Esecuzione di {agent} · {task}",
+    "titleNoAgent": "Esecuzione · {task}",
     "breadcrumb": "Agenti",
     "context": "Contesto",
     "agent": "Agente",
@@ -265,7 +265,7 @@
     "authorization": "Autorizzazione",
     "startedBy": "Avviato da {name} il {date}",
     "startedBySystem": "Avviato dal sistema il {date}",
-    "neverAgent": "Un run non ha mai come autore un agente.",
+    "neverAgent": "Un’esecuzione non ha mai come autore un agente.",
     "inputs": "Input inviati",
     "inputsIntro": "Forgecy registra che cosa è stato inviato senza il contenuto: la dimensione e un’impronta (SHA-256) di ogni parte.",
     "field": "Parte",
@@ -282,7 +282,7 @@
     },
     "output": "Output",
     "outputRef": "Risultato salvato come",
-    "noOutput": "Nessun risultato salvato per questo run.",
+    "noOutput": "Nessun risultato salvato per questa esecuzione.",
     "errors": "Errori e tentativi",
     "noErrors": "Nessun errore · {count, plural, one {# tentativo} other {# tentativi}}",
     "blocked": "Bloccato prima di chiamare il modello",
@@ -296,7 +296,7 @@
       "other": "Non consentito dalla policy AI del cliente."
     },
     "summary": "Riepilogo tecnico",
-    "id": "Id del run",
+    "id": "Id dell’esecuzione",
     "status": "Stato",
     "model": "Modello",
     "provider": "Servizio",
@@ -311,9 +311,9 @@
     "copySummary": "Copia riepilogo",
     "copied": "Copiato",
     "openAgent": "Apri l’agente",
-    "openRun": "Apri run",
-    "notFound": "Questo run non esiste.",
-    "current": "Questo run",
+    "openRun": "Apri esecuzione",
+    "notFound": "Questa esecuzione non esiste.",
+    "current": "Questa esecuzione",
     "seconds": "{value, number} s"
   },
   "memory": {
@@ -322,7 +322,7 @@
     "breadcrumb": "Memoria",
     "counts": "{candidate, plural, one {# candidata} other {# candidate}} · {approved, plural, one {# approvata} other {# approvate}}",
     "onlyApproved": "Solo le memorie approvate entrano nel contesto degli agenti.",
-    "nextAction": "Prossima azione: tu · {count, plural, one {# memoria candidata da decidere} other {# memorie candidate da decidere}}",
+    "nextAction": "Prossima azione: {count, plural, one {# memoria candidata da decidere} other {# memorie candidate da decidere}}",
     "open": "Memoria",
     "openAll": "Memoria degli agenti",
     "filters": {
@@ -396,7 +396,7 @@
       "confidence": "Attendibilità",
       "reason": "Motivo: {reason}",
       "origin": "Origine",
-      "openRun": "Apri la run",
+      "openRun": "Apri l’esecuzione",
       "source": "Fonte",
       "decision": "Decisione",
       "decidedBy": "{status} da {name} · {date}",
@@ -405,7 +405,7 @@
       "versions": "Cronologia versioni",
       "versionLine": "v{version} · {author} · {date}",
       "usedIn": "Usata in",
-      "usedInNone": "Nessuna run l’ha ancora usata.",
+      "usedInNone": "Nessuna esecuzione l’ha ancora usata.",
       "close": "Chiudi dettaglio"
     },
     "actions": {
@@ -499,17 +499,17 @@
     "proposalsTitle": "Proposte decise negli ultimi 90 giorni",
     "accepted": "Accettate",
     "rejected": "Rifiutate",
-    "stale": "Superate",
+    "stale": "Sostituite",
     "rateTitle": "Proposte accettate",
-    "weeksTitle": "Run per settimana",
+    "weeksTitle": "Esecuzioni per settimana",
     "week": "Settimana",
     "weekOf": "Settimana del {date}",
-    "runs": "Run",
+    "runs": "Esecuzioni",
     "failed": "Fallite",
     "failuresTitle": "Fallimenti per motivo (90 giorni)",
-    "failuresNone": "Nessuna run fallita o bloccata negli ultimi 90 giorni.",
+    "failuresNone": "Nessuna esecuzione fallita o bloccata negli ultimi 90 giorni.",
     "reason": "Motivo",
-    "count": "Run",
+    "count": "Esecuzioni",
     "error": "Errore del provider o di validazione",
     "costTitle": "Costo per mese",
     "month": "Mese",
@@ -522,7 +522,7 @@
   },
   "preview": {
     "title": "Prova su un esempio",
-    "intro": "Esegue un compito con la bozza qui sopra su un esempio che scrivi tu. Non usa dati dei clienti; la run viene registrata e costa come le altre.",
+    "intro": "Esegue un compito con la bozza qui sopra su un esempio che scrivi tu. Non usa dati dei clienti; l’esecuzione viene registrata e costa come le altre.",
     "task": "Compito",
     "example": "Input di esempio",
     "exampleHint": "Un brief o un testo come quelli che riceve questo compito, fino a {max} caratteri. Non incollare dati dei clienti.",

@@ -68,11 +68,11 @@
     },
     "sectionsLabel": "Sezioni dell’automazione",
     "next": {
-      "incomplete": "Prossima azione: tu · Completa {count, plural, one {# elemento segnato come incompleto} other {# elementi segnati come incompleti}}",
-      "start": "Prossima azione: tu · Avvia l’automazione",
+      "incomplete": "Prossima azione: Completa {count, plural, one {# elemento segnato come incompleto} other {# elementi segnati come incompleti}}",
+      "start": "Prossima azione: Avvia l’automazione",
       "running": "In corso: {done} di {total} caroselli",
-      "review": "Prossima azione: tu · Rivedi {count, plural, one {# bozza creata} other {# bozze create}}",
-      "retry": "Prossima azione: tu · Riprova {count, plural, one {# elemento non riuscito} other {# elementi non riusciti}}",
+      "review": "Prossima azione: Rivedi {count, plural, one {# bozza creata} other {# bozze create}}",
+      "retry": "Prossima azione: Riprova {count, plural, one {# elemento non riuscito} other {# elementi non riusciti}}",
       "none": "Nessuna azione in sospeso",
       "paused": "In pausa: riprendi per continuare con gli elementi in coda"
     },
