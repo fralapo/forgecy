@@ -269,7 +269,8 @@
       "nightly": "Nightly",
       "pre_restore": "Before restore",
       "pre_import": "Before a client import",
-      "cli": "Command line"
+      "cli": "Command line",
+      "upload": "Uploaded"
     },
     "size": {
       "gb": "{value} GB",
@@ -356,12 +357,26 @@
         "failed": "Restore of {backup} failed on {date}: {error}",
         "failedHint": "If the database was partly replaced, restore the backup of the previous state from the list."
       },
-      "upload": "To restore a file made elsewhere, copy it into the data/backups folder on the server: it then shows in the list.",
       "maintenance": {
         "title": "Restore in progress",
         "body": "An Admin is restoring a backup. Forgecy is back when it ends; you will need to sign in again.",
         "since": "Started on {date}."
       }
+    },
+    "upload": {
+      "title": "Upload a backup file",
+      "hint": "A .tar.gz made by Forgecy, for example on another machine. It is checked before it is kept, then it shows in the list and in the menu above.",
+      "label": "Backup file",
+      "submit": "Upload backup",
+      "cancel": "Cancel upload",
+      "uploading": "Uploading… {percent}%",
+      "done": "Uploaded as {name}: choose it above to check and restore it.",
+      "notArchive": "Choose a .tar.gz file made by Forgecy.",
+      "invalid": "This file is not a Forgecy backup or it is damaged.",
+      "diskFull": "Not enough space on the server for this file.",
+      "denied": "This setting is reserved to Admin users.",
+      "failed": "The upload did not succeed. Try again.",
+      "cancelled": "Upload cancelled."
     }
   }
 }

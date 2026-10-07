@@ -1,10 +1,10 @@
 "use client";
 
 import { Button, Input, Label } from "@forgecy/ui";
-import { Archive, History, SearchCheck, Trash2 } from "lucide-react";
+import { Archive, History, SearchCheck, Trash2, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useFormat } from "@/lib/use-format";
 import { ActionFeedback } from "../_components/action-feedback";
 import type { AdminActionResult } from "../_lib/admin-action";
@@ -258,6 +258,132 @@ function CheckSummary({
       </p>
       <p>{t("migrations", { count: check.migrationsToApply })}</p>
       <p>{impact}</p>
+    </div>
+  );
+}
+
+/**
+ * Restore origin "Upload a backup file" (page 67): the .tar.gz goes as the request body,
+ * with progress and "Cancel upload"; once kept, it shows in the list and in the menu above.
+ */
+export function BackupUploadForm({ busy }: { busy: boolean }) {
+  const t = useTranslations("admin.backup.upload");
+  const router = useRouter();
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [percent, setPercent] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  const send = () => {
+    if (!file) return;
+    if (!/\.tar\.gz$|\.tgz$/i.test(file.name)) return setError(t("notArchive"));
+    setError(null);
+    setDone(null);
+    setPercent(0);
+    const xhr = new XMLHttpRequest();
+    xhrRef.current = xhr;
+    xhr.open("POST", "/api/system/backups/upload");
+    xhr.setRequestHeader("Content-Type", "application/gzip");
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) setPercent(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onerror = () => {
+      setPercent(null);
+      setError(t("failed"));
+    };
+    xhr.onabort = () => {
+      setPercent(null);
+      setError(t("cancelled"));
+    };
+    xhr.onload = () => {
+      let body: { name?: string; error?: string } = {};
+      try {
+        body = JSON.parse(xhr.responseText) as typeof body;
+      } catch {
+        // A server error page: shown as a failed upload.
+      }
+      setPercent(null);
+      if (xhr.status === 200 && body.name) {
+        setDone(t("done", { name: body.name }));
+        setFile(null);
+        if (inputRef.current) inputRef.current.value = "";
+        router.refresh();
+        return;
+      }
+      setError(
+        body.error === "BACKUP-INVALID"
+          ? t("invalid")
+          : body.error === "DISK-FULL"
+            ? t("diskFull")
+            : xhr.status === 403
+              ? t("denied")
+              : t("failed"),
+      );
+    };
+    xhr.send(file);
+  };
+
+  const uploading = percent !== null;
+  return (
+    <div className="mt-6 flex flex-col gap-3 border-t border-subtle pt-4">
+      <div>
+        <h3 className="text-body font-medium text-fg">{t("title")}</h3>
+        <p id="backup-upload-hint" className="mt-1 text-body-sm text-fg-muted">
+          {t("hint")}
+        </p>
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="backup-upload">{t("label")}</Label>
+        <input
+          ref={inputRef}
+          id="backup-upload"
+          type="file"
+          accept=".tar.gz,.tgz,application/gzip"
+          aria-describedby="backup-upload-hint"
+          disabled={uploading || busy}
+          className="w-full max-w-md rounded-md border border-control bg-surface px-3 py-2 text-body-sm text-fg"
+          onChange={(e) => {
+            setError(null);
+            setDone(null);
+            setFile(e.target.files?.[0] ?? null);
+          }}
+        />
+      </div>
+      {uploading ? (
+        <div className="flex max-w-md flex-col gap-1" aria-live="polite">
+          <progress value={percent} max={100} className="h-2 w-full accent-primary" />
+          <p className="text-body-sm text-fg-muted">{t("uploading", { percent })}</p>
+        </div>
+      ) : null}
+      {error ? (
+        <p role="alert" className="text-body-sm text-error">
+          {error}
+        </p>
+      ) : null}
+      {done ? (
+        <p role="status" className="text-body-sm text-fg">
+          {done}
+        </p>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={!file || uploading || busy}
+          onClick={send}
+        >
+          <Upload aria-hidden className="size-4" />
+          {t("submit")}
+        </Button>
+        {uploading ? (
+          <Button type="button" variant="ghost" onClick={() => xhrRef.current?.abort()}>
+            <X aria-hidden className="size-4" />
+            {t("cancel")}
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }

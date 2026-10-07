@@ -3,12 +3,20 @@
  * the restore itself replaces the database and copies the media files back. Because
  * the jobs table is replaced too, progress is kept in `data/backups/restore-status.json`.
  */
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { createWriteStream, existsSync } from "node:fs";
+import { mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { pipeline } from "node:stream/promises";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { appSettings, eq, type Database } from "@forgecy/db";
-import { BACKUP_FORMAT, backupPath, backupsDir, runTool, type BackupManifest } from "./archive";
+import {
+  BACKUP_FORMAT,
+  backupPath,
+  backupsDir,
+  runTool,
+  type BackupFile,
+  type BackupManifest,
+} from "./archive";
 
 export type RestoreProblem = "unreadable" | "format" | "newer_version";
 
@@ -137,3 +145,70 @@ export function restoreInProgress(status: RestoreStatus | null, now: Date = new 
 }
 
 const STALE_MS = 2 * 60 * 60 * 1000;
+
+/** The uploaded file is not a Forgecy backup (no readable manifest, or another format). */
+export class BackupInvalidError extends Error {
+  constructor() {
+    super("Not a Forgecy backup, or a damaged one");
+    this.name = "BackupInvalidError";
+  }
+}
+
+/**
+ * A backup made elsewhere, uploaded from Settings › Backup (page 67). It is written under
+ * a temporary name, kept only when its manifest reads as a Forgecy backup, and then
+ * listed like the others with the date it was made and the type "upload".
+ */
+export async function saveUploadedBackup(
+  dataDir: string,
+  body: NodeJS.ReadableStream | AsyncIterable<Uint8Array>,
+  opts: { now?: Date; uploadedBy?: string | null } = {},
+): Promise<BackupFile> {
+  const now = opts.now ?? new Date();
+  const dir = backupsDir(dataDir);
+  await mkdir(dir, { recursive: true });
+  const stamp = now.toISOString().replace(/[:.]/g, "-");
+  let name = `forgecy-upload-${stamp}.tar.gz`;
+  for (let i = 2; existsSync(join(dir, name)) || existsSync(join(dir, `${name}.partial`)); i++)
+    name = `forgecy-upload-${stamp}-${i}.tar.gz`;
+  const file = backupPath(dataDir, name);
+  const partial = `${file}.partial`;
+  const work = await mkdtemp(join(tmpdir(), "forgecy-upload-"));
+  try {
+    await pipeline(body, createWriteStream(partial));
+    let manifest: BackupManifest;
+    try {
+      await runTool("tar", ["-xzf", partial, "-C", work, "manifest.json"]);
+      manifest = JSON.parse(await readFile(join(work, "manifest.json"), "utf8")) as BackupManifest;
+    } catch {
+      throw new BackupInvalidError();
+    }
+    if (manifest.format !== BACKUP_FORMAT || typeof manifest.createdAt !== "string")
+      throw new BackupInvalidError();
+    await rename(partial, file);
+    const sizeBytes = (await stat(file)).size;
+    const createdAt = new Date(manifest.createdAt);
+    const sidecar: BackupManifest & { sizeBytes: number; uploadedAt: string } = {
+      ...manifest,
+      kind: "upload",
+      createdBy: opts.uploadedBy ?? manifest.createdBy ?? null,
+      sizeBytes,
+      uploadedAt: now.toISOString(),
+    };
+    await writeFile(`${file}.json`, JSON.stringify(sidecar, null, 2));
+    return {
+      name,
+      sizeBytes,
+      createdAt: Number.isNaN(createdAt.getTime()) ? now : createdAt,
+      kind: "upload",
+      media: manifest.media,
+      appVersion: manifest.appVersion ?? null,
+      lastMigration: manifest.lastMigration ?? null,
+      createdBy: sidecar.createdBy ?? null,
+      expiresAt: null,
+    };
+  } finally {
+    await rm(partial, { force: true });
+    await rm(work, { recursive: true, force: true });
+  }
+}
