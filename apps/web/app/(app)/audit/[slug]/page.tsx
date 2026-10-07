@@ -59,6 +59,29 @@ export default async function ProspectOverviewPage({
   const activeAudit =
     audit && audit.status !== "archived" && audit.status !== "delivered" ? audit : null;
 
+  // Converted to client: the audit stays readable as history, the prospect controls go away.
+  if (client.status !== "prospect")
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("overview.converted.title")}</CardTitle>
+          <CardDescription>
+            {t("overview.converted.description", { name: client.name })}
+          </CardDescription>
+        </CardHeader>
+        <div className="flex flex-wrap gap-3">
+          <Button asChild variant="primary">
+            <Link href={`/audit/${slug}/report` as Route}>
+              {t("overview.converted.openReport")}
+            </Link>
+          </Button>
+          <Button asChild variant="secondary">
+            <Link href={`/clients/${slug}` as Route}>{t("overview.converted.openClient")}</Link>
+          </Button>
+        </div>
+      </Card>
+    );
+
   const editForm = (
     <ProspectForm
       mode="edit"
