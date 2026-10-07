@@ -1,4 +1,10 @@
-import { checkDocument, findingsToAcknowledge, imageKeys, parseDocument } from "@forgecy/content";
+import {
+  assetCommercialUse,
+  checkDocument,
+  findingsToAcknowledge,
+  imageKeys,
+  parseDocument,
+} from "@forgecy/content";
 import { findLayout } from "@forgecy/carousel";
 import { can } from "@forgecy/core";
 import { and, contentVersions, eq } from "@forgecy/db";
@@ -58,18 +64,12 @@ export default async function ReviewPage({
     pendingAssets.map((a) => a.storageKey),
   );
   const pendingImages: PendingImage[] = pendingAssets.map((a) => {
-    const g = (a.generation ?? {}) as { commercialUse?: string };
     return {
       id: a.id,
       alt: a.alt,
       thumb: thumbs.get(a.storageKey) ?? null,
       source: a.source,
-      commercialUse:
-        a.source !== "ai"
-          ? null
-          : g.commercialUse === "verified" || g.commercialUse === "rejected"
-            ? g.commercialUse
-            : "pending_verification",
+      commercialUse: assetCommercialUse(a),
     };
   });
 

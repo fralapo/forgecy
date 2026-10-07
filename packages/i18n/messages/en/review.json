@@ -11,7 +11,7 @@
     "assetMissing": "Slide {slide}: image not in the client's library",
     "aiAssetUnapproved": "Slide {slide}: AI image to approve before the carousel is approved",
     "assetUnapproved": "Slide {slide}: image not approved",
-    "commercialUse": "Slide {slide}: commercial use of the AI image provider not verified yet",
+    "commercialUse": "Slide {slide}: commercial use of the image not verified yet (provider terms or rights to confirm)",
     "altMissing": "Slide {slide}: the image alt text is missing",
     "productChanged": "The product changed in the catalog after the copy was written",
     "brandChanged": "A new Brand Identity was published after the carousel was created"

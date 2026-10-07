@@ -41,7 +41,7 @@ const say = (key: CheckKey, values?: MessageValues) => ({
 export interface AssetInfo {
   status: "draft" | "approved" | "rejected";
   source: "upload" | "ai" | "product";
-  /** For AI images: commercial use of the provider not yet verified by the agency. */
+  /** AI image whose provider terms are not verified, or an upload whose rights nobody confirmed. */
   commercialUsePending?: boolean;
   alt: string;
 }
@@ -194,7 +194,7 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
           ),
           slideId: s.id,
         });
-      if (a.source === "ai" && a.commercialUsePending)
+      if (a.commercialUsePending)
         add({
           id: `asset:commercial:${s.id}:${slot}`,
           severity: "warning",

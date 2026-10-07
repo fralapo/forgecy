@@ -42,6 +42,7 @@
     "directionReasonRequired": "Scrivi perché la direzione non va bene",
     "imageDecided": "Immagine non trovata o già decisa",
     "imageNotFound": "Immagine non trovata",
+    "rightsNoteRequired": "Per un'immagine con licenza serve un riferimento alla licenza nella nota",
     "pillarNotFound": "Pilastro non trovato",
     "pillarNotActive": "Il pilastro non è attivo",
     "rubricNotFound": "Rubrica non trovata",
@@ -181,6 +182,22 @@
     "empty": "Nessuna immagine nella libreria.",
     "emptyFiltered": "Nessuna immagine corrisponde a questi filtri.",
     "commercialRejected": "Uso commerciale non consentito",
+    "rights": {
+      "confirmedBadge": "Diritti confermati",
+      "pendingBadge": "Diritti da confermare",
+      "summary": "Diritti: {basis}, confermati il {date}",
+      "basis": "Base per l'uso commerciale",
+      "note": "Licenza o fonte",
+      "notePlaceholder": "Riferimento della licenza, sito stock o chi l'ha fornita",
+      "confirm": "Conferma i diritti",
+      "update": "Aggiorna i diritti",
+      "bases": {
+        "own": "Creata dall'agenzia",
+        "client_supplied": "Fornita dal cliente",
+        "licensed": "Con licenza (stock o altro)",
+        "public_domain": "Pubblico dominio o CC0"
+      }
+    },
     "commercialPending": "Uso commerciale da verificare",
     "dimensions": "{width}×{height} px",
     "sizeKb": "{size} KB",

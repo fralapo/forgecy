@@ -15,6 +15,7 @@ import {
   createPillar,
   createRubric,
   creativeDirectionJob,
+  confirmAssetRights,
   decideAsset,
   decidePlanItem,
   decideReview,
@@ -694,6 +695,24 @@ export async function updateAltAction(input: {
       clientId: uuid.parse(input.clientId),
       id: uuid.parse(input.id),
       alt: input.alt,
+    });
+    return {};
+  });
+}
+
+export async function confirmRightsAction(input: {
+  slug: string;
+  clientId: string;
+  id: string;
+  basis: string;
+  note: string;
+}) {
+  return run(input.slug, async ({ db, actor }) => {
+    await confirmAssetRights(db, actor, {
+      clientId: input.clientId,
+      id: input.id,
+      basis: input.basis,
+      note: input.note,
     });
     return {};
   });

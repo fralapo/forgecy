@@ -1,8 +1,10 @@
 import {
+  assetCommercialUse,
   commercialUseFor,
   hasProductCatalog,
   listAssets,
   productSource,
+  readAssetRights,
   type AssetRow,
   type CommercialUse,
 } from "@forgecy/content";
@@ -14,7 +16,11 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { getFormat } from "@/lib/i18n";
 import { ActionButton } from "../../_components/action-button";
-import { LibraryAltForm, LibraryDecision } from "../../_components/library-asset-controls";
+import {
+  LibraryAltForm,
+  LibraryDecision,
+  LibraryRightsForm,
+} from "../../_components/library-asset-controls";
 import { LibraryUploadForm } from "../../_components/library-upload";
 import { libraryPath } from "../../_lib/paths";
 import { loadClient, thumbnailUrls } from "../../_lib/server";
@@ -188,6 +194,8 @@ export default async function LibraryPage({
             const use = gen?.provider
               ? (commercial.get(gen.provider) ?? gen.commercialUse)
               : gen?.commercialUse;
+            const rights = a.source === "upload" ? readAssetRights(a.rights) : null;
+            const uploadUse = a.source === "upload" ? assetCommercialUse(a) : null;
             const ref = { slug: client.slug, clientId: client.id, id: a.id };
             return (
               <li key={a.id}>
@@ -201,6 +209,11 @@ export default async function LibraryPage({
                     {gen && use !== "verified" ? (
                       <Badge variant={use === "rejected" ? "error" : "warning"}>
                         {use === "rejected" ? t("commercialRejected") : t("commercialPending")}
+                      </Badge>
+                    ) : null}
+                    {uploadUse ? (
+                      <Badge variant={rights ? "success" : "warning"}>
+                        {rights ? t("rights.confirmedBadge") : t("rights.pendingBadge")}
                       </Badge>
                     ) : null}
                   </div>
@@ -230,6 +243,21 @@ export default async function LibraryPage({
                     <p className="text-body-sm text-error">
                       {t("rejectedReason", { reason: a.rejectedReason })}
                     </p>
+                  ) : null}
+                  {rights ? (
+                    <p className="text-body-sm text-fg-muted">
+                      {t("rights.summary", {
+                        basis: t(`rights.bases.${rights.basis}`),
+                        date: format.date(new Date(rights.confirmedAt), "dateTime"),
+                      })}
+                      {rights.note ? ` · ${rights.note}` : ""}
+                    </p>
+                  ) : null}
+                  {a.source === "upload" && canUpload ? (
+                    <LibraryRightsForm
+                      {...ref}
+                      initial={rights ? { basis: rights.basis, note: rights.note } : null}
+                    />
                   ) : null}
                   {canDecide ? <LibraryAltForm {...ref} alt={a.alt} /> : null}
                   {a.status === "draft" && canDecide ? <LibraryDecision {...ref} /> : null}
