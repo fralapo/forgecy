@@ -739,30 +739,32 @@ function FieldValue({ def, value }: { def: FieldDef; value: unknown }) {
   const t = useTranslations("products");
   if (def.kind === "variants")
     return (
-      <table className="mt-1 text-body-sm">
-        <thead className="text-fg-muted">
-          <tr>
-            <th scope="col" className="pr-4 text-left font-medium">
-              {t("product.attribute")}
-            </th>
-            <th scope="col" className="pr-4 text-left font-medium">
-              {t("product.value")}
-            </th>
-            <th scope="col" className="text-left font-medium">
-              {t("product.variantSku")}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {(value as ProductVariant[]).map((v, i) => (
-            <tr key={i}>
-              <td className="pr-4">{v.attribute}</td>
-              <td className="pr-4">{v.value}</td>
-              <td className="font-mono">{v.sku ?? "—"}</td>
+      <div className="overflow-x-auto">
+        <table className="mt-1 text-body-sm">
+          <thead className="text-fg-muted">
+            <tr>
+              <th scope="col" className="pr-4 text-left font-medium">
+                {t("product.attribute")}
+              </th>
+              <th scope="col" className="pr-4 text-left font-medium">
+                {t("product.value")}
+              </th>
+              <th scope="col" className="text-left font-medium">
+                {t("product.variantSku")}
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {(value as ProductVariant[]).map((v, i) => (
+              <tr key={i}>
+                <td className="pr-4">{v.attribute}</td>
+                <td className="pr-4">{v.value}</td>
+                <td className="font-mono">{v.sku ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     );
   if (Array.isArray(value))
     return (

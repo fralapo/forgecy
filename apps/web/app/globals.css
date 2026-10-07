@@ -3,3 +3,18 @@
 
 /* Scan the shared UI package for class names. */
 @source "../../../packages/ui/src";
+
+/*
+ * Grid items default to their content's minimum width, so one wide table widens the whole page
+ * on a phone. Inside the main area they may shrink, and wide content scrolls in its own
+ * `overflow-x-auto` box instead. Table cells keep their content width so columns stay readable.
+ */
+@layer base {
+  main .grid:not(td .grid, th .grid) > * {
+    min-width: 0;
+  }
+  /* Positioned descendants (e.g. sr-only captions) would otherwise escape the scroll box. */
+  main .overflow-x-auto {
+    position: relative;
+  }
+}

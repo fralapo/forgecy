@@ -43,59 +43,61 @@ export default async function ClientsPage() {
           {rows.length === 0 ? (
             <p className="p-6 text-body-md text-fg-muted">{t("empty")}</p>
           ) : (
-            <table className="w-full text-left text-body-sm">
-              <caption className="sr-only">{t("table.caption")}</caption>
-              <thead className="border-b border-subtle text-label text-fg-muted">
-                <tr>
-                  <th scope="col" className="px-6 py-3 font-medium">
-                    {t("table.name")}
-                  </th>
-                  <th scope="col" className="px-6 py-3 font-medium">
-                    {t("table.status")}
-                  </th>
-                  <th scope="col" className="px-6 py-3 font-medium">
-                    {t("table.industry")}
-                  </th>
-                  <th scope="col" className="px-6 py-3 font-medium">
-                    {t("table.aiPolicy")}
-                  </th>
-                  <th scope="col" className="px-6 py-3 font-medium">
-                    {t("table.open")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((c) => (
-                  <tr key={c.id} className="border-b border-subtle last:border-0">
-                    <td className="px-6 py-3 text-fg">
-                      <Link href={`/clients/${c.slug}` as Route} className={linkClass}>
-                        {c.name}
-                      </Link>
-                      {c.websiteUrl ? (
-                        <span className="block text-fg-muted">{c.websiteUrl}</span>
-                      ) : null}
-                    </td>
-                    <td className="px-6 py-3">
-                      <Badge>{te(`clientStatus.${c.status}`)}</Badge>
-                    </td>
-                    <td className="px-6 py-3 text-fg-muted">{c.sector ?? "—"}</td>
-                    <td className="px-6 py-3 text-fg-muted">{te(`aiPolicy.${c.aiPolicy}`)}</td>
-                    <td className="px-6 py-3">
-                      <ul className="flex flex-wrap gap-x-3 gap-y-1">
-                        {areaLinks(c).map((l) => (
-                          <li key={l.label}>
-                            <Link href={l.href as Route} className={linkClass}>
-                              {t(`areas.${l.label}`)}{" "}
-                              <span className="sr-only">{t("areaFor", { client: c.name })}</span>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-body-sm">
+                <caption className="sr-only">{t("table.caption")}</caption>
+                <thead className="border-b border-subtle text-label text-fg-muted">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 font-medium">
+                      {t("table.name")}
+                    </th>
+                    <th scope="col" className="px-6 py-3 font-medium">
+                      {t("table.status")}
+                    </th>
+                    <th scope="col" className="px-6 py-3 font-medium">
+                      {t("table.industry")}
+                    </th>
+                    <th scope="col" className="px-6 py-3 font-medium">
+                      {t("table.aiPolicy")}
+                    </th>
+                    <th scope="col" className="px-6 py-3 font-medium">
+                      {t("table.open")}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rows.map((c) => (
+                    <tr key={c.id} className="border-b border-subtle last:border-0">
+                      <td className="px-6 py-3 text-fg">
+                        <Link href={`/clients/${c.slug}` as Route} className={linkClass}>
+                          {c.name}
+                        </Link>
+                        {c.websiteUrl ? (
+                          <span className="block text-fg-muted">{c.websiteUrl}</span>
+                        ) : null}
+                      </td>
+                      <td className="px-6 py-3">
+                        <Badge>{te(`clientStatus.${c.status}`)}</Badge>
+                      </td>
+                      <td className="px-6 py-3 text-fg-muted">{c.sector ?? "—"}</td>
+                      <td className="px-6 py-3 text-fg-muted">{te(`aiPolicy.${c.aiPolicy}`)}</td>
+                      <td className="px-6 py-3">
+                        <ul className="flex flex-wrap gap-x-3 gap-y-1">
+                          {areaLinks(c).map((l) => (
+                            <li key={l.label}>
+                              <Link href={l.href as Route} className={linkClass}>
+                                {t(`areas.${l.label}`)}{" "}
+                                <span className="sr-only">{t("areaFor", { client: c.name })}</span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </Card>
         <Card className="p-6">

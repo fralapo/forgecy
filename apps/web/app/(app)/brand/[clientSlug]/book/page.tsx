@@ -137,108 +137,110 @@ export default async function BrandBookPage({
         {exportsList.length === 0 ? (
           <p className="p-4 text-body-md text-fg-muted">{t("book.historyEmpty")}</p>
         ) : (
-          <table className="mt-2 w-full text-left text-body-sm">
-            <caption className="sr-only">{t("book.historyTitle")}</caption>
-            <thead className="border-b border-subtle text-label text-fg-muted">
-              <tr>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  {t("book.colExport")}
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  {t("book.colDetails")}
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  <span className="sr-only">{t("book.download")}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {exportsList.map((e) => {
-                const href = links.get(e.id);
-                return (
-                  <tr key={e.id} className="border-b border-subtle align-top last:border-0">
-                    <td className="px-4 py-3">
-                      <span className="text-heading-sm text-fg">
-                        {t("book.number", { number: e.number })}
-                      </span>
-                      <span className="mt-1 flex flex-wrap gap-1">
-                        <Badge variant="neutral">{t(`book.type.${e.type}`)}</Badge>
-                        <Badge
-                          variant={
-                            e.status === "exported" || e.status === "approved"
-                              ? "success"
-                              : "neutral"
-                          }
-                        >
-                          {t(`book.status.${e.status}`)}
-                        </Badge>
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-fg">
-                      {t("book.fromVersion", { number: e.brandVersionNumber })}
-                      <span className="block text-fg-muted">
-                        {t("book.createdBy", {
-                          name: names.get(e.createdBy ?? "") ?? "—",
-                          date: format.date(e.createdAt, "dateTime"),
-                        })}
-                      </span>
-                      <span className="block text-fg-muted">
-                        {e.type === "client_book" && e.pages
-                          ? t("book.pages", { count: e.pages })
-                          : t("book.partCount", { count: e.parts.length })}
-                        {e.bytes ? ` · ${size(e.bytes)}` : ""}
-                      </span>
-                      {e.approvedBy && e.approvedAt ? (
+          <div className="overflow-x-auto">
+            <table className="mt-2 w-full text-left text-body-sm">
+              <caption className="sr-only">{t("book.historyTitle")}</caption>
+              <thead className="border-b border-subtle text-label text-fg-muted">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("book.colExport")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("book.colDetails")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    <span className="sr-only">{t("book.download")}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {exportsList.map((e) => {
+                  const href = links.get(e.id);
+                  return (
+                    <tr key={e.id} className="border-b border-subtle align-top last:border-0">
+                      <td className="px-4 py-3">
+                        <span className="text-heading-sm text-fg">
+                          {t("book.number", { number: e.number })}
+                        </span>
+                        <span className="mt-1 flex flex-wrap gap-1">
+                          <Badge variant="neutral">{t(`book.type.${e.type}`)}</Badge>
+                          <Badge
+                            variant={
+                              e.status === "exported" || e.status === "approved"
+                                ? "success"
+                                : "neutral"
+                            }
+                          >
+                            {t(`book.status.${e.status}`)}
+                          </Badge>
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-fg">
+                        {t("book.fromVersion", { number: e.brandVersionNumber })}
                         <span className="block text-fg-muted">
-                          {t("book.approvedBy", {
-                            name: names.get(e.approvedBy) ?? "—",
-                            date: format.date(e.approvedAt, "dateTime"),
+                          {t("book.createdBy", {
+                            name: names.get(e.createdBy ?? "") ?? "—",
+                            date: format.date(e.createdAt, "dateTime"),
                           })}
                         </span>
-                      ) : null}
-                    </td>
-                    <td className="space-y-2 px-4 py-3 text-right">
-                      {e.status === "draft" && !href ? (
-                        <span className="inline-flex items-center gap-1 text-fg-muted">
-                          <LoaderCircle aria-hidden className="size-4" />
-                          {t("book.rendering")}
+                        <span className="block text-fg-muted">
+                          {e.type === "client_book" && e.pages
+                            ? t("book.pages", { count: e.pages })
+                            : t("book.partCount", { count: e.parts.length })}
+                          {e.bytes ? ` · ${size(e.bytes)}` : ""}
                         </span>
-                      ) : null}
-                      {href && (e.status === "draft" || e.status === "approved") ? (
-                        <a
-                          href={href}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1"
-                        >
-                          <Eye aria-hidden className="size-4" />
-                          {t("book.openPreview")}
-                        </a>
-                      ) : null}
-                      {href && (e.status === "exported" || e.status === "superseded") ? (
-                        <a href={href} className="inline-flex items-center gap-1">
-                          <Download aria-hidden className="size-4" />
-                          {t("book.download")}
-                        </a>
-                      ) : null}
-                      {e.type === "client_book" &&
-                      (e.status === "draft" || e.status === "approved") ? (
-                        <ClientBookActions
-                          slug={client.slug}
-                          clientId={client.id}
-                          exportId={e.id}
-                          status={e.status}
-                          rendered={Boolean(e.storageKey)}
-                          ownBook={e.createdBy === user.id}
-                          noteMin={SELF_APPROVAL_NOTE_MIN}
-                        />
-                      ) : null}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                        {e.approvedBy && e.approvedAt ? (
+                          <span className="block text-fg-muted">
+                            {t("book.approvedBy", {
+                              name: names.get(e.approvedBy) ?? "—",
+                              date: format.date(e.approvedAt, "dateTime"),
+                            })}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="space-y-2 px-4 py-3 text-right">
+                        {e.status === "draft" && !href ? (
+                          <span className="inline-flex items-center gap-1 text-fg-muted">
+                            <LoaderCircle aria-hidden className="size-4" />
+                            {t("book.rendering")}
+                          </span>
+                        ) : null}
+                        {href && (e.status === "draft" || e.status === "approved") ? (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1"
+                          >
+                            <Eye aria-hidden className="size-4" />
+                            {t("book.openPreview")}
+                          </a>
+                        ) : null}
+                        {href && (e.status === "exported" || e.status === "superseded") ? (
+                          <a href={href} className="inline-flex items-center gap-1">
+                            <Download aria-hidden className="size-4" />
+                            {t("book.download")}
+                          </a>
+                        ) : null}
+                        {e.type === "client_book" &&
+                        (e.status === "draft" || e.status === "approved") ? (
+                          <ClientBookActions
+                            slug={client.slug}
+                            clientId={client.id}
+                            exportId={e.id}
+                            status={e.status}
+                            rendered={Boolean(e.storageKey)}
+                            ownBook={e.createdBy === user.id}
+                            noteMin={SELF_APPROVAL_NOTE_MIN}
+                          />
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </Card>
     </div>

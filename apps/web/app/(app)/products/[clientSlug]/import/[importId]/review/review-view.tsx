@@ -565,55 +565,57 @@ function ItemDetail({
           {diffs.length === 0 ? (
             <p className="text-fg-muted">{t("review.noDifferences")}</p>
           ) : (
-            <table className="w-full">
-              <thead className="text-left text-fg-muted">
-                <tr>
-                  {open && pending ? (
-                    <th scope="col">
-                      <span className="sr-only">{t("review.replace")}</span>
-                    </th>
-                  ) : null}
-                  <th scope="col" className="font-medium">
-                    {t("review.field")}
-                  </th>
-                  <th scope="col" className="font-medium">
-                    {t("review.catalogValue")}
-                  </th>
-                  <th scope="col" className="font-medium">
-                    {t("review.fromFile")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {diffs.map((d) => (
-                  <tr key={d.key} className="border-t border-subtle align-top">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="text-left text-fg-muted">
+                  <tr>
                     {open && pending ? (
-                      <td className="py-1 pr-2">
-                        <input
-                          type="checkbox"
-                          aria-label={t("review.replaceField", { field: fieldLabel(t, d.key) })}
-                          checked={replace.has(d.key)}
-                          onChange={() =>
-                            setReplace((s) => {
-                              const n = new Set(s);
-                              if (n.has(d.key)) n.delete(d.key);
-                              else n.add(d.key);
-                              return n;
-                            })
-                          }
-                          className="size-4"
-                        />
-                      </td>
+                      <th scope="col">
+                        <span className="sr-only">{t("review.replace")}</span>
+                      </th>
                     ) : null}
-                    <td className="py-1 pr-2 text-fg-muted">{fieldLabel(t, d.key)}</td>
-                    <td className="py-1 pr-2">
-                      {formatValue(d.key, item.match!.fields[d.key]) || "—"}
-                    </td>
-                    <td className="py-1 font-medium">{formatValue(d.key, item.fields[d.key])}</td>
+                    <th scope="col" className="font-medium">
+                      {t("review.field")}
+                    </th>
+                    <th scope="col" className="font-medium">
+                      {t("review.catalogValue")}
+                    </th>
+                    <th scope="col" className="font-medium">
+                      {t("review.fromFile")}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {diffs.map((d) => (
+                    <tr key={d.key} className="border-t border-subtle align-top">
+                      {open && pending ? (
+                        <td className="py-1 pr-2">
+                          <input
+                            type="checkbox"
+                            aria-label={t("review.replaceField", { field: fieldLabel(t, d.key) })}
+                            checked={replace.has(d.key)}
+                            onChange={() =>
+                              setReplace((s) => {
+                                const n = new Set(s);
+                                if (n.has(d.key)) n.delete(d.key);
+                                else n.add(d.key);
+                                return n;
+                              })
+                            }
+                            className="size-4"
+                          />
+                        </td>
+                      ) : null}
+                      <td className="py-1 pr-2 text-fg-muted">{fieldLabel(t, d.key)}</td>
+                      <td className="py-1 pr-2">
+                        {formatValue(d.key, item.match!.fields[d.key]) || "—"}
+                      </td>
+                      <td className="py-1 font-medium">{formatValue(d.key, item.fields[d.key])}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           {open && pending ? (
             <div className="flex flex-wrap gap-2">

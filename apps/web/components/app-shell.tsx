@@ -18,6 +18,7 @@ import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import type { CurrentUser } from "@/lib/session";
 import { SearchBox } from "./search-box";
+import { ShellNav } from "./shell-nav";
 import { SignOutButton } from "./sign-out-button";
 
 // Module threads add their entries here (Audit, Brand Identity, Content, Templates...).
@@ -39,9 +40,9 @@ export async function AppShell({ user, children }: { user: CurrentUser; children
   const t = await getTranslations();
   const unread = await unreadNotificationCount(getDb(), user.id);
   return (
-    <div className="grid min-h-dvh grid-cols-[15rem_1fr]">
-      <aside className="flex flex-col border-r border-subtle bg-surface">
-        <div className="flex items-center justify-between gap-2 py-5 pr-3 pl-6">
+    <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_1fr]">
+      <ShellNav appName={t("common.appName")}>
+        <div className="flex items-center justify-between gap-2 py-5 pr-14 pl-6 lg:pr-3">
           <span className="font-display text-heading-md text-fg">{t("common.appName")}</span>
           <Link
             href="/notifications"
@@ -82,8 +83,8 @@ export async function AppShell({ user, children }: { user: CurrentUser; children
           </p>
           <SignOutButton />
         </div>
-      </aside>
-      <main className="min-w-0 px-8 py-8">{children}</main>
+      </ShellNav>
+      <main className="min-w-0 px-4 py-6 sm:px-8 sm:py-8">{children}</main>
     </div>
   );
 }

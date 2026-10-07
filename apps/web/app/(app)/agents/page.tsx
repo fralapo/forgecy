@@ -22,16 +22,15 @@ export async function generateMetadata() {
 
 export const dynamic = "force-dynamic";
 
+// Permissions sit under the role and the status under the name, so the table fits at 1280 px.
 const columns = [
   "agent",
   "roleColumn",
-  "permissions",
   "model",
   "instructions",
   "runs",
   "cost",
   "accepted",
-  "statusColumn",
 ] as const;
 
 /** Agents list (spec page 54): every user reads it, costs included. */
@@ -113,10 +112,13 @@ export default async function AgentsPage() {
                         <span className="font-mono text-fg-muted">{a}</span>
                       </span>
                     </Link>
+                    <Badge variant={c.active ? "success" : "neutral"} className="mt-2 ml-6">
+                      {t(c.active ? "status.active" : "status.inactive")}
+                    </Badge>
                   </td>
-                  <td className="min-w-64 max-w-sm px-4 py-3 text-fg">{t(`role.${a}`)}</td>
-                  <td className="px-4 py-3">
-                    <ul className="flex flex-wrap gap-1">
+                  <td className="min-w-56 max-w-sm px-4 py-3 text-fg">
+                    <p>{t(`role.${a}`)}</p>
+                    <ul aria-label={t("list.permissions")} className="mt-2 flex flex-wrap gap-1">
                       {AGENT_CAPABILITIES[a].map((cap) => (
                         <li
                           key={cap}
@@ -151,11 +153,6 @@ export default async function AgentsPage() {
                     {money(s.monthCostMicroUsd)}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-fg">{accepted(a)}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={c.active ? "success" : "neutral"}>
-                      {t(c.active ? "status.active" : "status.inactive")}
-                    </Badge>
-                  </td>
                 </tr>
               );
             })}

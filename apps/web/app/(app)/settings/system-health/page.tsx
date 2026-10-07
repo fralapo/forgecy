@@ -200,36 +200,38 @@ export default async function SystemHealthPage() {
             ))}
           </dl>
           {queues ? (
-            <table className="mt-6 w-full text-left text-body-sm">
-              <thead className="text-fg-muted">
-                <tr className="border-b border-subtle">
-                  <th scope="col" className="py-2 font-normal">
-                    {t("queue.name")}
-                  </th>
-                  <th scope="col" className="py-2 text-right font-normal">
-                    {t("queue.waiting")}
-                  </th>
-                  <th scope="col" className="py-2 text-right font-normal">
-                    {t("queue.active")}
-                  </th>
-                  <th scope="col" className="py-2 text-right font-normal">
-                    {t("queue.workers")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-subtle">
-                {queues.map((x) => (
-                  <tr key={x.name}>
-                    <td className="py-2 font-mono text-fg">{x.name}</td>
-                    <td className="py-2 text-right text-fg">
-                      {format.number(x.waiting + x.delayed)}
-                    </td>
-                    <td className="py-2 text-right text-fg">{format.number(x.active)}</td>
-                    <td className="py-2 text-right text-fg">{format.number(x.workers)}</td>
+            <div className="overflow-x-auto">
+              <table className="mt-6 w-full text-left text-body-sm">
+                <thead className="text-fg-muted">
+                  <tr className="border-b border-subtle">
+                    <th scope="col" className="py-2 font-normal">
+                      {t("queue.name")}
+                    </th>
+                    <th scope="col" className="py-2 text-right font-normal">
+                      {t("queue.waiting")}
+                    </th>
+                    <th scope="col" className="py-2 text-right font-normal">
+                      {t("queue.active")}
+                    </th>
+                    <th scope="col" className="py-2 text-right font-normal">
+                      {t("queue.workers")}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-subtle">
+                  {queues.map((x) => (
+                    <tr key={x.name}>
+                      <td className="py-2 font-mono text-fg">{x.name}</td>
+                      <td className="py-2 text-right text-fg">
+                        {format.number(x.waiting + x.delayed)}
+                      </td>
+                      <td className="py-2 text-right text-fg">{format.number(x.active)}</td>
+                      <td className="py-2 text-right text-fg">{format.number(x.workers)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : null}
         </Card>
         <Card id="version" className="p-6">
@@ -271,32 +273,34 @@ export default async function SystemHealthPage() {
           {failures.length === 0 ? (
             <p className="mt-4 text-body-sm text-fg-muted">{t("failures.empty")}</p>
           ) : (
-            <table className="mt-4 w-full text-left text-body-sm">
-              <thead className="text-fg-muted">
-                <tr className="border-b border-subtle">
-                  <th scope="col" className="py-2 pr-4 font-normal">
-                    {t("failures.when")}
-                  </th>
-                  <th scope="col" className="py-2 pr-4 font-normal">
-                    {t("failures.kind")}
-                  </th>
-                  <th scope="col" className="py-2 font-normal">
-                    {t("failures.error")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-subtle">
-                {failures.map((j) => (
-                  <tr key={j.id} className="align-top">
-                    <td className="py-2 pr-4 whitespace-nowrap text-fg">
-                      {format.date(j.updatedAt, "dateTime")}
-                    </td>
-                    <td className="py-2 pr-4 font-mono text-fg">{j.kind}</td>
-                    <td className="py-2 break-words text-fg-muted">{j.message}</td>
+            <div className="overflow-x-auto">
+              <table className="mt-4 w-full text-left text-body-sm">
+                <thead className="text-fg-muted">
+                  <tr className="border-b border-subtle">
+                    <th scope="col" className="py-2 pr-4 font-normal">
+                      {t("failures.when")}
+                    </th>
+                    <th scope="col" className="py-2 pr-4 font-normal">
+                      {t("failures.kind")}
+                    </th>
+                    <th scope="col" className="py-2 font-normal">
+                      {t("failures.error")}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-subtle">
+                  {failures.map((j) => (
+                    <tr key={j.id} className="align-top">
+                      <td className="py-2 pr-4 whitespace-nowrap text-fg">
+                        {format.date(j.updatedAt, "dateTime")}
+                      </td>
+                      <td className="py-2 pr-4 font-mono text-fg">{j.kind}</td>
+                      <td className="py-2 break-words text-fg-muted">{j.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </Card>
       </section>
