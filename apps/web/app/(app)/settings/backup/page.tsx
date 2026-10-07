@@ -26,6 +26,7 @@ import {
   DeleteBackupButton,
   NightlySwitch,
   RefreshWhileRunning,
+  BackupUploadForm,
   RestoreForm,
 } from "./forms";
 
@@ -248,7 +249,7 @@ export default async function BackupPage() {
           impact={t("restore.impact", { size: dbInfo ? bytes(dbInfo.sizeBytes) : "—" })}
           busy={restoring || Boolean(running)}
         />
-        <p className="mt-4 text-body-sm text-fg-muted">{t("restore.upload")}</p>
+        <BackupUploadForm busy={restoring} />
       </Card>
     </>
   );

@@ -269,7 +269,8 @@
       "nightly": "Notturno",
       "pre_restore": "Prima del ripristino",
       "pre_import": "Prima di un import cliente",
-      "cli": "Riga di comando"
+      "cli": "Riga di comando",
+      "upload": "Caricato"
     },
     "size": {
       "gb": "{value} GB",
@@ -356,12 +357,26 @@
         "failed": "Ripristino di {backup} non riuscito il {date}: {error}",
         "failedHint": "Se il database è stato sostituito in parte, ripristina dall’elenco il backup dello stato precedente."
       },
-      "upload": "Per ripristinare un file creato altrove, copialo nella cartella data/backups del server: compare così nell’elenco.",
       "maintenance": {
         "title": "Ripristino in corso",
         "body": "Un utente Admin sta ripristinando un backup. Forgecy torna disponibile quando finisce; dovrai accedere di nuovo.",
         "since": "Avviato il {date}."
       }
+    },
+    "upload": {
+      "title": "Carica un file di backup",
+      "hint": "Un .tar.gz creato da Forgecy, per esempio su un'altra macchina. Viene controllato prima di essere tenuto, poi compare nell'elenco e nel menu qui sopra.",
+      "label": "File di backup",
+      "submit": "Carica backup",
+      "cancel": "Annulla upload",
+      "uploading": "Caricamento… {percent}%",
+      "done": "Caricato come {name}: sceglilo qui sopra per controllarlo e ripristinarlo.",
+      "notArchive": "Scegli un file .tar.gz creato da Forgecy.",
+      "invalid": "Questo file non è un backup di Forgecy o è danneggiato.",
+      "diskFull": "Spazio insufficiente sul server per questo file.",
+      "denied": "Questa impostazione è riservata agli utenti Admin.",
+      "failed": "Il caricamento non è riuscito. Riprova.",
+      "cancelled": "Caricamento annullato."
     }
   }
 }

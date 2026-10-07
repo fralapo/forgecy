@@ -1,14 +1,27 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  createReadStream,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { Readable } from "node:stream";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  BackupInvalidError,
   backupsDir,
   createBackupArchive,
   inspectBackup,
+  listBackups,
   readRestoreStatus,
   restoreArchive,
   restoreInProgress,
+  saveUploadedBackup,
   writeRestoreStatus,
 } from "../src";
 
@@ -44,6 +57,32 @@ describe("restore", () => {
     const broken = "forgecy-2026-01-01T00-00-00-000Z.tar.gz";
     writeFileSync(join(backupsDir(dataDir), broken), "not an archive");
     expect((await inspectBackup(dataDir, broken, shipped)).problems).toEqual(["unreadable"]);
+  });
+
+  it("keeps an uploaded backup with its own date and refuses anything else", async () => {
+    const { name, createdAt } = await make("0001_b");
+    const elsewhere = mkdtempSync(join(tmpdir(), "forgecy-upload-src-"));
+    const copy = join(elsewhere, "from-another-machine.tar.gz");
+    writeFileSync(copy, readFileSync(join(backupsDir(dataDir), name)));
+    const now = new Date("2026-10-07T08:00:00Z");
+    const saved = await saveUploadedBackup(dataDir, createReadStream(copy), {
+      now,
+      uploadedBy: "user-1",
+    });
+    expect(saved).toMatchObject({ kind: "upload", createdBy: "user-1", expiresAt: null });
+    expect(saved.name).toMatch(/^forgecy-upload-2026-10-07T08-00-00-000Z\.tar\.gz$/);
+    const listed = (await listBackups(dataDir)).find((b) => b.name === saved.name);
+    expect(listed).toMatchObject({ kind: "upload", lastMigration: "0001_b" });
+    expect(listed?.createdAt.toISOString()).toBe(createdAt.toISOString());
+    expect((await inspectBackup(dataDir, saved.name, shipped)).problems).toEqual([]);
+
+    await expect(
+      saveUploadedBackup(dataDir, Readable.from([Buffer.from("not an archive")]), { now }),
+    ).rejects.toBeInstanceOf(BackupInvalidError);
+    // Nothing of the refused file is left behind.
+    expect(readdirSync(backupsDir(dataDir)).filter((f) => f.includes("upload")).length).toBe(2);
+    expect(existsSync(join(backupsDir(dataDir), `${saved.name}.partial`))).toBe(false);
+    rmSync(elsewhere, { recursive: true, force: true });
   });
 
   it("loads the dump and copies the media back", async () => {
