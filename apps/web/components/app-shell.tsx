@@ -22,6 +22,8 @@ import { ShellNav } from "./shell-nav";
 import { SignOutButton } from "./sign-out-button";
 
 // Module threads add their entries here (Audit, Brand Identity, Content, Templates...).
+// Every href must have a page under app/(app) — that's the only way it renders inside this
+// shell; see app-shell.test.ts.
 const nav = [
   { href: "/", label: "overview", icon: LayoutDashboard },
   { href: "/clients", label: "clients", icon: Building2 },
