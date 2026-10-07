@@ -5,6 +5,10 @@ import { loadAgentConfigs, withAgents } from "./agents";
 import type { Routing } from "./gateway";
 import { connectedMcpProviders, isMcpImageProvider, type McpEnv } from "./mcp/registry";
 import {
+  resolveOpenRouterLiveDefaults,
+  type OpenRouterLiveDefaults,
+} from "./providers/openrouter-catalog";
+import {
   defaultModelFor,
   defaultRoutingFromEnv,
   imageModelFor,
@@ -121,16 +125,26 @@ export interface ResolvedRouting {
 /**
  * Routing from the Admin's settings, keeping only providers that are usable now: a key in
  * the environment, or (MCP) a live connection. Unusable choices fall back to the env default.
+ *
+ * `liveDefaults` is OpenRouter's catalog-derived "latest DeepSeek Flash" / "latest GPT image
+ * model" (see openrouter-catalog.ts): when the Admin leaves a model field empty and the
+ * chosen provider is OpenRouter, it wins over the hardcoded fallback constant.
  */
 export function resolveRouting(
   env: RoutingEnv,
   providers: ProviderSet,
   settings: AiRoutingSettings,
   connectedMcp: ReadonlySet<ProviderId> = new Set(),
+  liveDefaults: OpenRouterLiveDefaults = {},
 ): ResolvedRouting {
   const routing = defaultRoutingFromEnv(env, providers);
   const textRef = (p: TextProviderId, m: string): ModelRef | undefined =>
-    providers.text[p] ? { provider: p, model: m || defaultModelFor(p, env) } : undefined;
+    providers.text[p]
+      ? {
+          provider: p,
+          model: m || (p === "openrouter" && liveDefaults.text) || defaultModelFor(p, env),
+        }
+      : undefined;
   const primary = settings.text && textRef(settings.text.provider, settings.text.model);
   if (primary) {
     const fb = settings.text?.fallback;
@@ -149,7 +163,13 @@ export function resolveRouting(
     settings.images ?? imageProviderOrder(env).map((p) => ({ provider: p, model: "" }));
   const images = chosen
     .filter((i) => usable(i.provider))
-    .map((i) => ({ provider: i.provider, model: i.model || imageModelFor(i.provider, env) }));
+    .map((i) => ({
+      provider: i.provider,
+      model:
+        i.model ||
+        (i.provider === "openrouter" && liveDefaults.image) ||
+        imageModelFor(i.provider, env),
+    }));
   delete routing.image;
   if (images[0])
     routing.image = { primary: images[0], ...(images[1] ? { fallback: images[1] } : {}) };
@@ -171,14 +191,18 @@ export function createRoutingSource(
     const now = Date.now();
     if (!cached || now - cached.at > cacheMs) {
       const value = (async () => {
-        const [settings, connected, agents] = await Promise.all([
+        const [settings, connected, agents, liveDefaults] = await Promise.all([
           loadAiRoutingSettings(db),
           env.FORGECY_ENCRYPTION_KEY
             ? connectedMcpProviders(db)
             : Promise.resolve(new Set<ProviderId>()),
           loadAgentConfigs(db),
+          // Only worth asking OpenRouter when it's actually configured for text or images.
+          providers.text.openrouter || providers.image.openrouter
+            ? resolveOpenRouterLiveDefaults()
+            : Promise.resolve({} as OpenRouterLiveDefaults),
         ]);
-        const resolved = resolveRouting(env, providers, settings, connected);
+        const resolved = resolveRouting(env, providers, settings, connected, liveDefaults);
         // Agent configuration (switched off, model per task, instructions) on top.
         return { ...resolved, routing: withAgents(resolved.routing, agents, providers, env) };
       })();

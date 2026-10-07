@@ -10,6 +10,7 @@ import {
   isSiwcConfigured,
   listMcpConnections,
   loadAiRoutingSettings,
+  resolveOpenRouterLiveDefaults,
   textProviderIds,
   type ByokProviderId,
   type TextProviderId,
@@ -126,6 +127,13 @@ export default async function AiProvidersPage({
   const tr = await getTranslations("settings.aiProviders.routing");
   const settings = await loadAiRoutingSettings(getDb());
   const { routing, images: imageRoute } = await currentRouting();
+  // OpenRouter's catalog, fetched live so the placeholder shown below is never a stale guess.
+  // (resolveOpenRouterLiveDefaults never throws: a fetch failure just means {}.)
+  const liveDefaults = await resolveOpenRouterLiveDefaults();
+  const defaultModelForUi = (id: TextProviderId) =>
+    (id === "openrouter" && liveDefaults.text) || defaultModelFor(id, env);
+  const imageModelForUi = (id: ImageProvider) =>
+    (id === "openrouter" && liveDefaults.image) || imageModelFor(id, env);
   // The first two usable image providers in the chosen order are primary and fallback.
   const roleOf = (p: ImageProvider) =>
     imageRoute[0]?.provider === p
@@ -181,13 +189,13 @@ export default async function AiProvidersPage({
             id,
             name: id === "local" ? tp("localModel") : textNames[id],
             ready: isByok(id) ? byokReady(id) : textReady[id],
-            defaultModel: defaultModelFor(id, env),
+            defaultModel: defaultModelForUi(id),
           }))}
           images={imageProviderIds.map((id) => ({
             id,
             name: providerNames[id],
             ready: ready(id),
-            defaultModel: imageModelFor(id, env),
+            defaultModel: imageModelForUi(id),
           }))}
           initial={{
             text: settings.text ?? { provider: env.AI_DEFAULT_PROVIDER, model: "" },
@@ -239,7 +247,7 @@ export default async function AiProvidersPage({
                   </h2>
                   <p className="text-body-sm text-fg-muted">{t(roleOf(p))}</p>
                   <p className="font-mono text-body-sm text-fg-muted">
-                    {imageRoute.find((r) => r.provider === p)?.model ?? imageModelFor(p, env)}
+                    {imageRoute.find((r) => r.provider === p)?.model ?? imageModelForUi(p)}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">

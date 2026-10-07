@@ -177,7 +177,7 @@
     },
     "routing": {
       "title": "Servizi e modelli",
-      "description": "Scegli quale servizio e quale modello usa Forgecy. Le modifiche valgono per le nuove attività entro pochi secondi.",
+      "description": "Scegli quale servizio e quale modello usa Forgecy: testo e immagini si scelgono separatamente, quindi puoi mescolare i servizi (ad esempio OpenAI per il testo e OpenRouter per le immagini) oppure usare lo stesso per entrambi. Le modifiche valgono per le nuove attività entro pochi secondi.",
       "inUse": "In uso adesso",
       "textInUse": "Testo: {model}",
       "imageInUse": "Immagini: {model}",
@@ -187,7 +187,7 @@
       "model": "Modello",
       "fallbackProvider": "Servizio di riserva",
       "none": "Nessuno",
-      "modelHint": "Lascia vuoto il modello per usare quello predefinito del servizio. Con OpenRouter usa i suoi id, ad esempio deepseek/deepseek-chat o openai/gpt-6.1-sol.",
+      "modelHint": "Lascia vuoto il modello per usare quello predefinito del servizio. Scrivi per cercare tra i modelli attuali del servizio (o incolla un id qualsiasi): l’elenco si aggiorna da solo quando il servizio aggiunge o ritira modelli. Con OpenRouter in particolare, un modello lasciato vuoto usa il più recente DeepSeek Flash per il testo e il più recente modello GPT per le immagini.",
       "imagesTitle": "Immagini",
       "imagesHint": "Numera i servizi nell’ordine in cui provarli; si usano i primi due pronti (principale e riserva). “Spento” non usa mai quel servizio.",
       "position": "Ordine",
