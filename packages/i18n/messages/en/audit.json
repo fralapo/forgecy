@@ -531,7 +531,13 @@
     "beforeReport": "Before the report",
     "goToReport": "Go to the report",
     "archiveAuditConfirm": "Archive this audit? The data stays available and you can start a new one.",
-    "archiveAudit": "Archive audit"
+    "archiveAudit": "Archive audit",
+    "converted": {
+      "title": "Now a client",
+      "description": "The audit of {name} is kept as history: the report stays readable, the prospect controls are gone.",
+      "openReport": "Open the report",
+      "openClient": "Open the client page"
+    }
   },
   "scan": {
     "robotsFound": "robots.txt found",

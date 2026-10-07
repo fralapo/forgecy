@@ -140,13 +140,18 @@ export async function listProspects(
   }));
 }
 
+/**
+ * A prospect and its current audit. A prospect converted to client keeps its audit pages as
+ * history (the client page links to them); a client that never had an audit has none.
+ */
 export async function getProspectBySlug(db: Database, slug: string) {
   const client = await db.query.clients.findFirst({ where: eq(clients.slug, slug) });
-  if (!client || client.status !== "prospect") return null;
+  if (!client) return null;
+  const audit = await currentAudit(db, client.id);
+  if (client.status !== "prospect" && !audit) return null;
   const profile = await db.query.prospectProfiles.findFirst({
     where: eq(prospectProfiles.clientId, client.id),
   });
-  const audit = await currentAudit(db, client.id);
   return { client, profile: profile ?? null, audit };
 }
 

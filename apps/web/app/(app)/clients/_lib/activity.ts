@@ -222,7 +222,9 @@ export function activityHref(
     case "product":
       return entityId ? `/products/${clientSlug}/${entityId}` : `/products/${clientSlug}`;
     case "product_import":
-      return entityId ? `/products/${clientSlug}/import/${entityId}` : `/products/${clientSlug}`;
+      return entityId
+        ? `/products/${clientSlug}/import/${entityId}/review`
+        : `/products/${clientSlug}`;
     case "template":
       return entityId ? `/templates/${entityId}` : "/templates";
     default:

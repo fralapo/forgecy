@@ -234,7 +234,7 @@ export default async function AiPoliciesPage() {
                   {overview.clients.map((c) => (
                     <tr key={c.clientId} className="align-top">
                       <td className="py-3 pr-4">
-                        <Link href={`/audit/${c.slug}` as Route} className="text-link underline">
+                        <Link href={`/clients/${c.slug}` as Route} className="text-link underline">
                           {c.name}
                         </Link>
                         <span className="block text-fg-muted">

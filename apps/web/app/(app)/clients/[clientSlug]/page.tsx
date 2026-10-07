@@ -404,9 +404,14 @@ export default async function ClientOverviewPage({
         <Section
           id="audits"
           title={
-            <Link href={`/audit/${slug}` as Route} className="hover:underline">
-              {t("audits.title")}
-            </Link>
+            // A client that was never a prospect has no audit pages.
+            o.audits.length > 0 || client.status === "prospect" ? (
+              <Link href={`/audit/${slug}` as Route} className="hover:underline">
+                {t("audits.title")}
+              </Link>
+            ) : (
+              t("audits.title")
+            )
           }
         >
           {o.audits.length === 0 ? (
