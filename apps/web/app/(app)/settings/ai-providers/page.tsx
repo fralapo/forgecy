@@ -170,38 +170,14 @@ export default async function AiProvidersPage({
           {(await getTranslations("settings.aiProviders.siwc"))(`result.${siwcResult}`)}
         </p>
       ) : null}
-      <Card className="mb-6 grid gap-4 p-6">
-        <div>
-          <h2 className="text-heading-sm text-fg">{tr("title")}</h2>
-          <p className="text-body-sm text-fg-muted">{tr("description")}</p>
-        </div>
-        <div className="grid gap-1 text-body-sm">
-          <span className="text-fg-muted">{tr("inUse")}</span>
-          <span className="font-mono text-fg">
-            {tr("textInUse", { model: ref(routing.default.primary) })}
-          </span>
-          <span className="font-mono text-fg">
-            {imageRoute[0] ? tr("imageInUse", { model: ref(imageRoute[0]) }) : tr("noImage")}
-          </span>
-        </div>
-        <RoutingForm
-          text={textProviderIds.map((id) => ({
-            id,
-            name: id === "local" ? tp("localModel") : textNames[id],
-            ready: isByok(id) ? byokReady(id) : textReady[id],
-            defaultModel: defaultModelForUi(id),
-          }))}
-          images={imageProviderIds.map((id) => ({
-            id,
-            name: providerNames[id],
-            ready: ready(id),
-            defaultModel: imageModelForUi(id),
-          }))}
-          initial={{
-            text: settings.text ?? { provider: env.AI_DEFAULT_PROVIDER, model: "" },
-            images: chosenImages,
-          }}
-        />
+      <Card className="mb-6 grid gap-1 p-4 text-body-sm">
+        <span className="text-fg-muted">{tr("inUse")}</span>
+        <span className="font-mono text-fg">
+          {tr("textInUse", { model: ref(routing.default.primary) })}
+        </span>
+        <span className="font-mono text-fg">
+          {imageRoute[0] ? tr("imageInUse", { model: ref(imageRoute[0]) }) : tr("noImage")}
+        </span>
       </Card>
       <Card className="mb-6 flex flex-col gap-4 p-6">
         <div className="flex items-center gap-2">
@@ -227,6 +203,30 @@ export default async function AiProvidersPage({
           configured={siwcConfigured}
           isAdmin={user.isAdmin}
           connection={siwcConnection}
+        />
+      </Card>
+      <Card className="mb-6 grid gap-4 p-6">
+        <div>
+          <h2 className="text-heading-sm text-fg">{tr("title")}</h2>
+          <p className="text-body-sm text-fg-muted">{tr("description")}</p>
+        </div>
+        <RoutingForm
+          text={textProviderIds.map((id) => ({
+            id,
+            name: id === "local" ? tp("localModel") : textNames[id],
+            ready: isByok(id) ? byokReady(id) : textReady[id],
+            defaultModel: defaultModelForUi(id),
+          }))}
+          images={imageProviderIds.map((id) => ({
+            id,
+            name: providerNames[id],
+            ready: ready(id),
+            defaultModel: imageModelForUi(id),
+          }))}
+          initial={{
+            text: settings.text ?? { provider: env.AI_DEFAULT_PROVIDER, model: "" },
+            images: chosenImages,
+          }}
         />
       </Card>
       <div className="grid gap-6 lg:grid-cols-2">
