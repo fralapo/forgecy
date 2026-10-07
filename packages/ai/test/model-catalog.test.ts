@@ -122,4 +122,11 @@ describe("model-catalog", () => {
     expect(MODEL_LIST_ENDPOINTS.openrouter).toContain("openrouter.ai");
     expect(MODEL_LIST_ENDPOINTS.deepseek).toContain("api.deepseek.com");
   });
+
+  it("asks OpenRouter for image models explicitly (its /models defaults to text-only otherwise)", () => {
+    // openrouter.ai/docs/api/api-reference/models/get-models: output_modalities defaults
+    // to "text" when omitted, which would silently drop every image-generation model
+    // (GPT Image included) from the catalog we fetch.
+    expect(MODEL_LIST_ENDPOINTS.openrouter).toContain("output_modalities=text,image");
+  });
 });
