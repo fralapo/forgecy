@@ -80,7 +80,7 @@ export const envSchema = z.object({
   OPENROUTER_IMAGE_MODEL: z.string().optional(),
   /**
    * Image providers in order of preference, comma separated (the first configured one is
-   * primary, the next the fallback). Default: openai,google,openrouter,higgsfield,weave.
+   * primary, the next the fallback). Default: openai,google,openrouter,higgsfield.
    */
   IMAGE_PROVIDERS: z.string().optional(),
   /**
@@ -90,12 +90,6 @@ export const envSchema = z.object({
   HIGGSFIELD_MCP_URL: z.url().default("https://mcp.higgsfield.ai/mcp"),
   /** Model passed to Higgsfield's generate_image; empty uses the server's default. */
   HIGGSFIELD_IMAGE_MODEL: z.string().optional(),
-  /** Figma Weave runs through Figma's remote MCP server (needs a Weave plan). */
-  FIGMA_MCP_URL: z.url().default("https://mcp.figma.com/mcp"),
-  /** Weave model, looked up by name with weave_find_model. */
-  WEAVE_IMAGE_MODEL: z.string().default("nano banana 2"),
-  /** Highest Weave credit cost accepted per image; a dearer quote stops the job. */
-  WEAVE_MAX_CREDITS_PER_IMAGE: z.coerce.number().positive().default(20),
   LOCAL_LLM_ENABLED: bool,
   LOCAL_LLM_BASE_URL: z.string().default("http://localhost:11434/v1"),
   LOCAL_LLM_MODEL: z.string().optional(),

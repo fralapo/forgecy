@@ -293,7 +293,6 @@ export const imageProviders = [
   "google",
   "openrouter",
   "higgsfield",
-  "weave",
 ] as const satisfies readonly ProviderId[];
 export type ImageProvider = (typeof imageProviders)[number];
 

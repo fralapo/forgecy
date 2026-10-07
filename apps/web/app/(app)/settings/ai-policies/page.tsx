@@ -49,7 +49,6 @@ const providerName: Record<Exclude<ProviderId, "local">, string> = {
   google: "Google",
   deepseek: "DeepSeek",
   higgsfield: "Higgsfield (MCP)",
-  weave: "Figma Weave (MCP)",
 };
 
 function providerChoices(connectedMcp: ReadonlySet<string>): ProviderChoice[] {
@@ -60,7 +59,6 @@ function providerChoices(connectedMcp: ReadonlySet<string>): ProviderChoice[] {
     google: env.GOOGLE_AI_API_KEY,
     deepseek: env.DEEPSEEK_API_KEY,
     higgsfield: connectedMcp.has("higgsfield") ? "connected" : undefined,
-    weave: connectedMcp.has("weave") ? "connected" : undefined,
   };
   return restrictableProviders.flatMap((id) =>
     id === "local" ? [] : [{ id, name: providerName[id], configured: Boolean(keys[id]) }],

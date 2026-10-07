@@ -51,12 +51,32 @@ export const aiRoutingSettingsSchema = z.object({
 });
 export type AiRoutingSettings = z.infer<typeof aiRoutingSettingsSchema>;
 
+/** Drops image entries naming a provider a previous version supported (e.g. "weave") but this one no longer does. */
+function dropUnknownImageProviders(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+  const v = value as Record<string, unknown>;
+  if (!Array.isArray(v.images)) return v;
+  return {
+    ...v,
+    images: v.images.filter(
+      (i) =>
+        i &&
+        typeof i === "object" &&
+        (imageProviderIds as readonly string[]).includes(
+          (i as { provider?: unknown }).provider as string,
+        ),
+    ),
+  };
+}
+
 export async function loadAiRoutingSettings(db: Database): Promise<AiRoutingSettings> {
   const [row] = await db
     .select({ value: appSettings.value })
     .from(appSettings)
     .where(eq(appSettings.key, SETTINGS_KEY));
-  const parsed = aiRoutingSettingsSchema.safeParse(row?.value ?? {});
+  // A saved choice naming a provider that was since removed (e.g. "weave") is dropped
+  // instead of failing the whole settings row, so the rest of the Admin's choices stick.
+  const parsed = aiRoutingSettingsSchema.safeParse(dropUnknownImageProviders(row?.value ?? {}));
   return parsed.success ? parsed.data : {};
 }
 

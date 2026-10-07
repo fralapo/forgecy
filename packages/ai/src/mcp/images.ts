@@ -6,12 +6,10 @@ import type {
   ImageGenerationInput,
   ImageGenerationStatus,
   ImageProvider,
-  ImageSize,
 } from "../types";
 import {
   collectUrls,
   downloadImages,
-  findByKey,
   findString,
   inlineImages,
   nearestOption,
@@ -179,133 +177,6 @@ export function createHiggsfieldImageProvider(opts: HiggsfieldImageOptions): Ima
         runs.push(await settle("higgsfield", result, input.timeoutMs, opts.fetch, poll));
       }
       return jobs.start(runs, input.model || "default");
-    },
-    getStatus: (jobId) => jobs.advance(jobId),
-    async cancel(jobId) {
-      jobs.drop(jobId);
-    },
-  };
-}
-
-// ---- Figma Weave (through the Figma MCP server) ----
-
-export interface WeaveImageOptions {
-  caller: McpToolCaller;
-  /** Highest credit quote accepted per run; a dearer quote fails the job without spending. */
-  maxCreditsPerImage: number;
-  fetch?: typeof fetch;
-}
-
-interface ContractField {
-  name: string;
-  required: boolean;
-  options: string[];
-}
-
-/** weave_find_model returns `inputs` and `params` as lists or maps; normalize both. */
-export function contractFields(found: unknown): ContractField[] {
-  const contract = (findByKey(found, /^contract$/i) ?? found) as Record<string, unknown>;
-  const out: ContractField[] = [];
-  for (const group of ["inputs", "params"]) {
-    const g = contract?.[group];
-    const entries: Array<[string, Record<string, unknown>]> = Array.isArray(g)
-      ? (g as Array<Record<string, unknown>>).map((f) => [String(f.name ?? f.key ?? ""), f])
-      : g && typeof g === "object"
-        ? Object.entries(g as Record<string, Record<string, unknown>>)
-        : [];
-    for (const [name, f] of entries) {
-      if (!name) continue;
-      const options = f.options ?? f.enum ?? f.allowedValues ?? f.values;
-      out.push({
-        name,
-        required: f.required === true,
-        options: Array.isArray(options)
-          ? options.map((o) => String((o as { value?: unknown })?.value ?? o))
-          : [],
-      });
-    }
-  }
-  return out;
-}
-
-export function weaveInput(fields: ContractField[], prompt: string, size: ImageSize) {
-  const input: Record<string, unknown> = {};
-  const promptField = fields.find((f) => /prompt/i.test(f.name) && !/negative/i.test(f.name));
-  input[promptField?.name ?? "prompt"] = prompt;
-  const aspect = fields.find((f) => /aspect|ratio/i.test(f.name));
-  if (aspect) {
-    const option = nearestOption(aspect.options, size);
-    if (option) input[aspect.name] = option;
-  }
-  return input;
-}
-
-/**
- * Weave models run directly: weave_find_model (by name) → weave_run_model (first call only
- * quotes the credit cost; the second, with `acknowledgedCost`, runs) → weave_get_model_run_output.
- * The Forgecy user who asked for the image is the approval; WEAVE_MAX_CREDITS_PER_IMAGE caps it.
- */
-export function createWeaveImageProvider(opts: WeaveImageOptions): ImageProvider {
-  const jobs = createAsyncJobs("weave");
-  const models = new Map<string, { id: string; fields: ContractField[] }>();
-
-  async function resolveModel(name: string) {
-    const cached = models.get(name);
-    if (cached) return cached;
-    const found = await opts.caller.callTool("weave_find_model", { query: name });
-    const id = findString(found, /^(id|modelId|model_id)$/i);
-    if (!id)
-      throw new AiProviderError("not_found", `weave: no model matches "${name}"`, {
-        provider: "weave",
-      });
-    const model = { id, fields: contractFields(found) };
-    models.set(name, model);
-    return model;
-  }
-
-  async function runOnce(modelId: string, input: Record<string, unknown>) {
-    const quote = await opts.caller.callTool("weave_run_model", { id: modelId, input });
-    const status = findString(quote, /^status$/i) ?? "";
-    if (/inputs_required/i.test(status))
-      throw new AiProviderError(
-        "bad_request",
-        `weave: the model needs more inputs (${JSON.stringify(quote).slice(0, 300)})`,
-        { provider: "weave" },
-      );
-    if (!/cost_confirmation_required/i.test(status)) return quote;
-    const cost = Number(findByKey(quote, /^cost$/i));
-    if (!Number.isFinite(cost) || cost > opts.maxCreditsPerImage)
-      throw new AiProviderError(
-        "bad_request",
-        `weave: quoted ${Number.isFinite(cost) ? cost : "an unknown number of"} credits per image, above WEAVE_MAX_CREDITS_PER_IMAGE (${opts.maxCreditsPerImage})`,
-        { provider: "weave" },
-      );
-    return opts.caller.callTool("weave_run_model", { id: modelId, input, acknowledgedCost: cost });
-  }
-
-  const poll = (id: string) =>
-    opts.caller.callTool("weave_get_model_run_output", { predictionIds: [id] });
-
-  return {
-    id: "weave",
-    async generate(input: ImageGenerationInput) {
-      const model = await resolveModel(input.model);
-      const args = weaveInput(model.fields, input.prompt, input.size);
-      const runs: Run[] = [];
-      for (let i = 0; i < input.variants; i++) {
-        const started = await runOnce(model.id, args);
-        const predictionId = findString(started, /^(predictionIds?|prediction_?id|id)$/i);
-        if (!predictionId) {
-          runs.push(await settle("weave", started, input.timeoutMs, opts.fetch, undefined));
-          continue;
-        }
-        runs.push({
-          state: "polling",
-          poll: async () =>
-            settle("weave", await poll(predictionId), input.timeoutMs, opts.fetch, poll),
-        });
-      }
-      return jobs.start(runs, input.model);
     },
     getStatus: (jobId) => jobs.advance(jobId),
     async cancel(jobId) {

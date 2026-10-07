@@ -33,7 +33,6 @@ const providerNames: Record<ImageProvider, string> = {
   google: "Google Gemini",
   openrouter: "OpenRouter",
   higgsfield: "Higgsfield (MCP)",
-  weave: "Figma Weave (MCP)",
 };
 
 /** Providers configured by API key; MCP ones are ready once connected. */
@@ -196,11 +195,7 @@ export default async function AiProvidersPage({
               </p>
               {isMcpImageProvider(p) ? (
                 <div className="grid gap-3 rounded-md border border-subtle p-4">
-                  <p className="text-body-sm text-fg-muted">
-                    {p === "weave"
-                      ? tm("hint.weave", { max: env.WEAVE_MAX_CREDITS_PER_IMAGE })
-                      : tm("hint.higgsfield")}
-                  </p>
+                  <p className="text-body-sm text-fg-muted">{tm("hint.higgsfield")}</p>
                   {connection?.connectedAt && connection.status === "connected" ? (
                     <p className="text-body-sm text-fg">
                       {tm("connectedOn")} {format.date(connection.connectedAt, "long")}
