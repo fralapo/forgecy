@@ -52,10 +52,10 @@
     "itemAlreadyArchived": "Voce non trovata o già archiviata",
     "itemNotArchived": "Voce non trovata o non archiviata",
     "proposalNotFound": "Proposta non trovata",
-    "proposalDecided": "Questa proposta è già stata decisa o è superata",
+    "proposalDecided": "Questa proposta è già stata decisa o è stata sostituita",
     "acceptPillarFirst": "Accetta prima il pilastro di questa rubrica",
     "planNotFound": "Piano non trovato",
-    "planSuperseded": "Questo piano è stato superato",
+    "planSuperseded": "Questo piano è stato sostituito",
     "planEmpty": "Il piano proposto non contiene voci valide",
     "itemDecided": "Voce già decisa o non trovata",
     "planNotProposed": "Si può usare solo un piano proposto",
@@ -74,22 +74,22 @@
     "noteTooLong": "Nota troppo lunga",
     "verifiedNeedsTerms": "“Verificato” richiede l’URL dei termini che hai controllato",
     "brandNotPublished": "Pubblica prima la Brand Identity del cliente",
-    "briefTooShort": "Scrivi un Brief di almeno 20 caratteri",
+    "briefTooShort": "Scrivi un brief di almeno 20 caratteri",
     "approveOutlineFirst": "Approva la scaletta prima di generare le slide"
   },
   "jobErrors": {
     "policyBlocked": "La policy AI del cliente non consente questa generazione (impostazioni del cliente)",
     "aiAuth": "La chiave del provider AI non è valida o è scaduta",
-    "aiRefusal": "Il modello ha rifiutato la richiesta: rivedi il Brief",
-    "aiInvalidOutput": "Il modello non ha prodotto un risultato valido dopo due tentativi: riprova o semplifica il Brief",
-    "aiTruncated": "La risposta del modello è stata troncata: riduci il numero di slide o il Brief",
+    "aiRefusal": "Il modello ha rifiutato la richiesta: rivedi il brief",
+    "aiInvalidOutput": "Il modello non ha prodotto un risultato valido dopo due tentativi: riprova o semplifica il brief",
+    "aiTruncated": "La risposta del modello è stata troncata: riduci il numero di slide o il brief",
     "aiProvider": "Errore del provider AI: {message}",
     "noAiProvider": "Nessun provider AI configurato: aggiungi una chiave nelle impostazioni",
     "brandNotPublished": "La Brand Identity del cliente non è pubblicata",
     "acceptPillarFirst": "Accetta almeno un pilastro prima di chiedere un piano",
     "notEditable": "Il carosello non si può modificare in questo stato",
     "anotherGeneration": "Un’altra generazione sta lavorando su questo carosello",
-    "briefTooShort": "Il Brief deve avere almeno 20 caratteri",
+    "briefTooShort": "Il brief deve avere almeno 20 caratteri",
     "approveOutlineFirst": "Approva la scaletta prima di generare le slide",
     "imageSlotNotFound": "Slot immagine non trovato nella slide",
     "noImageProvider": "Nessun provider di immagini configurato",
@@ -232,13 +232,13 @@
       "month": "{count} al mese"
     },
     "funnel": {
-      "awareness": "Awareness",
+      "awareness": "Notorietà",
       "consideration": "Considerazione",
       "conversion": "Conversione",
       "loyalty": "Fidelizzazione"
     },
     "objective": {
-      "awareness": "Awareness",
+      "awareness": "Notorietà",
       "education": "Formazione",
       "conversion": "Conversione",
       "community": "Community"
@@ -253,7 +253,7 @@
     "planStatus": {
       "proposed": "Proposto",
       "active": "In uso",
-      "superseded": "Superato"
+      "superseded": "Sostituito"
     },
     "contentStatus": {
       "draft": "Bozza",
@@ -318,7 +318,7 @@
       "comparison": "Confronto",
       "cta": "CTA",
       "section": "Sezione",
-      "finding": "Evidenza",
+      "finding": "Rilievo",
       "problem": "Problema",
       "next_steps": "Prossimi passi",
       "method": "Metodo",
@@ -411,7 +411,7 @@
       "template": "Template",
       "templateNone": "Nessuno",
       "hookFormula": "Formula dell’Hook",
-      "hookExample": "Esempio di Hook",
+      "hookExample": "Esempio di hook",
       "cta": "CTA",
       "channels": "Canali",
       "products": "Prodotti collegati"
@@ -545,7 +545,7 @@
   "brief": {
     "metaTitle": "Brief · Carosello",
     "locked": "L’AI sta lavorando su questo carosello: i campi tornano modificabili quando finisce.",
-    "notEditable": "Il Brief non si può modificare in questo stato.",
+    "notEditable": "Il brief non si può modificare in questo stato.",
     "saved": "Salvato",
     "params": {
       "resetSlidesConfirm": "Cambiare template o formato ricrea le slide: i testi attuali delle slide vanno persi (restano nelle versioni salvate). Continuare?",
@@ -589,7 +589,7 @@
       "altText": "Testo alternativo delle immagini",
       "designerNotes": "Note per il designer",
       "hashtags": "Hashtag",
-      "save": "Salva Brief"
+      "save": "Salva brief"
     }
   },
   "direction": {
@@ -601,7 +601,7 @@
       "proposed": "Da decidere",
       "accepted": "Accettata",
       "rejected": "Rifiutata",
-      "stale": "Superata"
+      "stale": "Sostituita"
     },
     "concept": "Concept",
     "thread": "Filo conduttore",
@@ -630,7 +630,7 @@
   },
   "outline": {
     "metaTitle": "Scaletta · Carosello",
-    "stale": "Il Brief è cambiato dopo questa scaletta: rigenerala o rivedila prima di approvarla.",
+    "stale": "Il brief è cambiato dopo questa scaletta: rigenerala o rivedila prima di approvarla.",
     "title": "Scaletta",
     "titleNumber": "Scaletta n. {number}",
     "approvedOn": "Approvata il {date}",
@@ -641,8 +641,8 @@
     "regenerate": "Rigenera slide",
     "generate": "Genera slide",
     "openEditor": "Apri l’editor",
-    "briefRequired": "Scrivi un Brief di almeno 20 caratteri per generare la scaletta.",
-    "openBrief": "Apri il Brief",
+    "briefRequired": "Scrivi un brief di almeno 20 caratteri per generare la scaletta.",
+    "openBrief": "Apri il brief",
     "previous": "Scalette precedenti",
     "noPrevious": "Nessuna scaletta precedente.",
     "previousItem": "n. {number} · {origin}",
@@ -847,7 +847,7 @@
         "title": "Immagini AI da approvare",
         "commercialUse": {
           "verified": "Uso commerciale verificato",
-          "pending_verification": "Uso commerciale del provider da verificare",
+          "pending_verification": "Uso commerciale da verificare",
           "rejected": "Uso commerciale rifiutato"
         },
         "inUse": "In uso",

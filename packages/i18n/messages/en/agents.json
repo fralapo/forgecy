@@ -8,9 +8,9 @@
     "brand_analyst": "Brand Analyst",
     "strategist": "Strategist",
     "copywriter": "Copywriter",
-    "art_director": "Art Director AI",
+    "art_director": "Art Director",
     "reviewer": "Reviewer",
-    "creative_director": "Creative Director AI"
+    "creative_director": "Creative Director"
   },
   "role": {
     "brand_analyst": "Reads websites, screenshots, social exports and brand books; proposes findings and Brand Identity values.",
@@ -241,7 +241,7 @@
     "activated": "{name} is active again."
   },
   "errors": {
-    "disabled": "{agent, select, brand_analyst {The Brand Analyst agent} strategist {The Strategist agent} copywriter {The Copywriter agent} art_director {The Art Director AI agent} reviewer {The Reviewer agent} other {This agent}} is switched off. An Admin can switch it on from the Agents page.",
+    "disabled": "{agent, select, brand_analyst {The Brand Analyst agent} strategist {The Strategist agent} copywriter {The Copywriter agent} art_director {The Art Director agent} reviewer {The Reviewer agent} other {This agent}} is switched off. An Admin can switch it on from the Agents page.",
     "typedKeyMismatch": "Type {key} exactly to confirm.",
     "invalidRoutes": "The models could not be saved: check the services and tasks.",
     "tooLong": "The instructions are too long: at most {max} characters.",
@@ -322,7 +322,7 @@
     "breadcrumb": "Memory",
     "counts": "{candidate, plural, one {# candidate} other {# candidates}} · {approved, plural, one {# approved} other {# approved}}",
     "onlyApproved": "Only approved memories reach the agents' prompts.",
-    "nextAction": "Next action: you · {count, plural, one {# candidate memory to decide} other {# candidate memories to decide}}",
+    "nextAction": "Next action: {count, plural, one {# candidate memory to decide} other {# candidate memories to decide}}",
     "open": "Memory",
     "openAll": "Agents' memory",
     "filters": {

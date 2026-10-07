@@ -110,7 +110,7 @@
     "in_review": "In revisione",
     "approved": "Approvato",
     "exported": "Esportato",
-    "superseded": "Superato"
+    "superseded": "Sostituito"
   },
   "objective": {
     "more_leads": "Più contatti e richieste di preventivo",
@@ -179,7 +179,7 @@
   "reportReview": {
     "note": "Nota o richiesta di modifica",
     "ownSubmission": "Hai inviato tu questa versione: per approvarla serve una nota per il registro.",
-    "approve": "Segna revisione completata",
+    "approve": "Chiudi la revisione",
     "requestChanges": "Richiedi modifiche"
   },
   "prospectForm": {
@@ -403,7 +403,7 @@
     "withdraw": "Ritira dalla revisione",
     "newVersion": "Crea una nuova versione",
     "pdf": "PDF",
-    "pdfDescription": "Il PDF usa il Template “Audit report”. La Strategy Presentation aggiunge alla diagnosi la Brand Identity e la Content Strategy proposte. Le prove riportano la filigrana “Bozza”; i PDF definitivi si esportano dopo l’approvazione.",
+    "pdfDescription": "Il PDF usa il template “Audit report”. La Strategy Presentation aggiunge alla diagnosi la Brand Identity e la Content Strategy proposte. Le prove riportano la filigrana “Bozza”; i PDF definitivi si esportano dopo l’approvazione.",
     "exportFailed": "L’ultimo PDF non è stato creato.",
     "exportFailedWithError": "L’ultimo PDF non è stato creato: {error}",
     "proof": {
@@ -596,9 +596,9 @@
     }
   },
   "errors": {
-    "fileUnreadable": "Non riusciamo a leggere il file. Esportalo in UTF-8 con separatore virgola o punto e virgola.",
+    "fileUnreadable": "Impossibile leggere il file. Esportalo in UTF-8 con separatore virgola o punto e virgola.",
     "fileNoRows": "Il file non ha righe di dati dopo l’intestazione.",
-    "xlsxUnreadable": "Non riusciamo a leggere il file XLSX.",
+    "xlsxUnreadable": "Impossibile leggere il file XLSX.",
     "sheetNoRows": "Il foglio non ha righe di dati dopo l’intestazione.",
     "mapDateColumn": "Associa almeno la colonna della data.",
     "prospectNotFound": "Prospect non trovato",
@@ -664,7 +664,7 @@
     "evidenceMissing": "{count, plural, one {# elemento incluso non ha evidenze} other {# elementi inclusi non hanno evidenze}} (REPORT-EVIDENCE-MISSING).",
     "changesRequired": "Scrivi cosa va cambiato.",
     "draftOnlyDelete": "Si possono eliminare solo le bozze mai mandate in revisione.",
-    "superseded": "Questa versione è stata superata da una più recente.",
+    "superseded": "Questa versione è stata sostituita da una più recente.",
     "finalNeedsApproval": "Il PDF definitivo si può esportare solo da una versione approvata da una persona.",
     "pdfInProgress": "È già in preparazione un PDF del report.",
     "dataConflict": "Qualcuno ha modificato questi dati nel frattempo. Ricarica la pagina per vedere la versione aggiornata.",
@@ -687,9 +687,9 @@
     "noSocialChannel": "Per il piano aggiungi almeno un canale social al prospect.",
     "auditClosed": "L’audit è chiuso.",
     "noLongerApproved": "La versione non è più approvata: il PDF definitivo non è stato creato.",
-    "templateMissing": "Il Template “Audit report” non è pubblicato: importalo e pubblicalo dal catalogo dei Template.",
-    "templateUnfit": "Il Template pubblicato non è adatto a un report: {detail}",
-    "reportUnfit": "Il report non entra nel Template: {detail}",
+    "templateMissing": "Il template “Audit report” non è pubblicato: importalo e pubblicalo dal catalogo dei template.",
+    "templateUnfit": "Il template pubblicato non è adatto a un report: {detail}",
+    "reportUnfit": "Il report non entra nel template: {detail}",
     "noPdf": "Il renderer non ha prodotto il PDF",
     "reportBusy": "Il report è cambiato troppe volte mentre si scrivevano i testi. Riprova.",
     "notDraft": "Il report non è più una bozza: i testi non sono stati modificati."
@@ -901,7 +901,7 @@
     "crawl": {
       "hostLocal": "{host} punta alla rete locale: Forgecy non lo legge.",
       "robotsBlocked": "robots.txt non permette di leggere il sito. Forgecy non lo aggira.",
-      "unreachable": "Non riusciamo a raggiungere {host}: {detail}",
+      "unreachable": "Impossibile raggiungere {host}: {detail}",
       "httpError": "{host} risponde con l’errore {status}.",
       "addressLocal": "Indirizzo della rete locale: {url}",
       "timeout": "Tempo scaduto dopo {seconds} s",
@@ -934,9 +934,9 @@
       "noVerified": "Nessun valore verificato",
       "observations": "Basata su {count, plural, one {# osservazione accettata} other {# osservazioni accettate}}",
       "sourceRemoved": "Una fonte è stata rimossa: ricontrolla le prove",
-      "evidenceByPerson": "{count, plural, one {# prova indicata} other {# prove indicate}} da una persona",
+      "evidenceByPerson": "{count, plural, one {# evidenza indicata} other {# evidenze indicate}} da una persona",
       "linkedByPerson": "{count, plural, one {# elemento collegato} other {# elementi collegati}} da una persona",
-      "noEvidence": "Nessuna prova allegata"
+      "noEvidence": "Nessuna evidenza allegata"
     }
   }
 }

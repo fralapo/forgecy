@@ -36,13 +36,13 @@
     "newCarouselBlocked": "Pubblica prima la Brand Identity di questo cliente per creare caroselli.",
     "next": {
       "label": "Prossima azione",
-      "approveVersion": "tu · Approva la versione {number} della Brand Identity",
-      "approveCarousel": "tu · Approva o chiedi modifiche: «{title}»",
-      "reviewProposals": "tu · Rivedi {count, plural, one {# proposta di Brand Identity} other {# proposte di Brand Identity}}",
+      "approveVersion": "Approva la versione {number} della Brand Identity",
+      "approveCarousel": "Approva o chiedi modifiche: «{title}»",
+      "reviewProposals": "Rivedi {count, plural, one {# proposta di Brand Identity} other {# proposte di Brand Identity}}",
       "reviewProposalsCta": "Rivedi proposte",
-      "continueAudit": "tu · Continua l’audit",
+      "continueAudit": "Continua l’audit",
       "openAudit": "Apri audit",
-      "createCarousel": "tu · Crea un carosello",
+      "createCarousel": "Crea un carosello",
       "openApproval": "Apri approvazione",
       "none": "Nessuna azione in sospeso"
     },

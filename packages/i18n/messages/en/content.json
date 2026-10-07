@@ -847,7 +847,7 @@
         "title": "AI images to approve",
         "commercialUse": {
           "verified": "Commercial use verified",
-          "pending_verification": "Provider’s commercial use to be verified",
+          "pending_verification": "Commercial use to be verified",
           "rejected": "Commercial use rejected"
         },
         "inUse": "In use",

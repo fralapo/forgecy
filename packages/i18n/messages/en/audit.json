@@ -179,7 +179,7 @@
   "reportReview": {
     "note": "Note or change request",
     "ownSubmission": "You submitted this version yourself: approving it requires a note for the log.",
-    "approve": "Mark review complete",
+    "approve": "Complete review",
     "requestChanges": "Request changes"
   },
   "prospectForm": {
