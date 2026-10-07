@@ -1,0 +1,116 @@
+{
+  "name": "Brand Book · A4",
+  "description": "Il Brand Book del cliente come PDF A4, nei colori e nei font del cliente: strategia, identità verbale e visiva, contenuti e canali, cosa fare e cosa evitare, firmato dall’agenzia.",
+  "notes": "Un libro che il cliente conserva: un’idea per pagina, nei colori e nei font del cliente, firmato dall’agenzia nell’ultima pagina.",
+  "layouts": {
+    "cover": {
+      "name": "Copertina",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "subtitle": "Sottotitolo",
+        "version": "Versione",
+        "date": "Data",
+        "prepared_by": "Preparato da"
+      }
+    },
+    "contents": {
+      "name": "Indice",
+      "slots": {
+        "title": "Titolo",
+        "items": "Sezioni",
+        "footer": "Piè di pagina"
+      }
+    },
+    "section": {
+      "name": "Sezione",
+      "slots": {
+        "number": "Numero",
+        "title": "Titolo",
+        "intro": "Introduzione",
+        "footer": "Piè di pagina"
+      }
+    },
+    "statement": {
+      "name": "Dichiarazione",
+      "slots": {
+        "label": "Etichetta",
+        "statement": "Dichiarazione",
+        "body": "Testo",
+        "footer": "Piè di pagina"
+      }
+    },
+    "list": {
+      "name": "Elenco",
+      "slots": {
+        "label": "Etichetta",
+        "title": "Titolo",
+        "intro": "Introduzione",
+        "items": "Voci",
+        "footer": "Piè di pagina"
+      }
+    },
+    "comparison": {
+      "name": "Confronto",
+      "slots": {
+        "label": "Etichetta",
+        "title": "Titolo",
+        "left_label": "Intestazione a sinistra",
+        "left": "Sinistra",
+        "right_label": "Intestazione a destra",
+        "right": "Destra",
+        "footer": "Piè di pagina"
+      }
+    },
+    "palette": {
+      "name": "Palette",
+      "slots": {
+        "label": "Etichetta",
+        "title": "Titolo",
+        "intro": "Introduzione",
+        "swatch_background": "Colore di sfondo",
+        "swatch_surface": "Colore della superficie",
+        "swatch_text": "Colore del testo",
+        "swatch_accent": "Colore di accento",
+        "swatch_cta": "Colore della CTA",
+        "colors": "Palette di riferimento",
+        "footer": "Piè di pagina"
+      }
+    },
+    "typography": {
+      "name": "Tipografia",
+      "slots": {
+        "label": "Etichetta",
+        "title": "Titolo",
+        "heading_family": "Font dei titoli",
+        "heading_detail": "Dettagli dei titoli",
+        "body_family": "Font del testo",
+        "body_detail": "Dettagli del testo",
+        "sample_heading": "Esempio di titolo",
+        "sample_body": "Esempio di testo",
+        "footer": "Piè di pagina"
+      }
+    },
+    "logo": {
+      "name": "Logo",
+      "slots": {
+        "label": "Etichetta",
+        "title": "Titolo",
+        "intro": "Introduzione",
+        "rules": "Regole",
+        "forbidden": "Da evitare",
+        "footer": "Piè di pagina"
+      }
+    },
+    "signature": {
+      "name": "Firma",
+      "slots": {
+        "title": "Titolo",
+        "agency": "Agenzia",
+        "version": "Versione",
+        "date": "Data",
+        "note": "Nota"
+      }
+    }
+  }
+}

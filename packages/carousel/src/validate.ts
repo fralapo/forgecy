@@ -3,6 +3,7 @@ import { englishMessage, type MessageKey, type MessageValues, messageRef } from 
 import { parseHTML } from "linkedom";
 import { z } from "zod";
 import { resolvePackagePath } from "./css";
+import { withInterfaceLabels } from "./interface-labels";
 import {
   MANIFEST_FILE,
   type TemplatePackage,
@@ -360,7 +361,7 @@ export function validateTemplatePackage(files: ReadonlyMap<string, Uint8Array>):
     add("manifest", "templates.checks.manifest");
     return { ok: false, checks, issues };
   }
-  const m = parsed.manifest;
+  const m = withInterfaceLabels(parsed.manifest, files);
   const pkg: TemplatePackage = { manifest: m, files };
   add("manifest", "templates.checks.manifest");
 

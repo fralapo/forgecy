@@ -3,7 +3,7 @@
   "id": "editorial-fb-4x5",
   "name": "Editorial · Facebook 4:5",
   "description": "Facebook carousel with 8 layouts, the same structure as the Instagram 4:5 carousel.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "kind": "carousel",
   "channel": "facebook",
   "format": "fb_4x5",

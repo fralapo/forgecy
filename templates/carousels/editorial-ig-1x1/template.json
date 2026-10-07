@@ -3,7 +3,7 @@
   "id": "editorial-ig-1x1",
   "name": "Editorial · Instagram 1:1",
   "description": "Square Instagram carousel with 8 layouts: shorter texts than the 4:5 version, same structure.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "kind": "carousel",
   "channel": "instagram",
   "format": "ig_1x1",

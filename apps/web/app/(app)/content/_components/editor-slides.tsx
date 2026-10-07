@@ -127,9 +127,11 @@ export function SlideList({
                 <span className="block text-body-sm text-fg">
                   {i + 1}. {layout ? layout.name : s.layout}
                 </span>
-                <span className="block text-label text-fg-muted">
-                  {layout ? tl(layout.role) : t("layoutMissing")}
-                </span>
+                {!layout ? (
+                  <span className="block text-label text-fg-muted">{t("layoutMissing")}</span>
+                ) : tl(layout.role).toLocaleLowerCase() !== layout.name.toLocaleLowerCase() ? (
+                  <span className="block text-label text-fg-muted">{tl(layout.role)}</span>
+                ) : null}
               </button>
               {errors || warnings ? (
                 <span className="mt-1 flex flex-wrap gap-1">
@@ -294,7 +296,7 @@ export function SlidePanel({
       <h2 id="slide-title" className="text-heading-sm text-fg">
         {t("title", { number: index + 1 })}
       </h2>
-      <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
+      <div className="grid gap-3">
         <div className="space-y-1">
           <Label htmlFor="slide-layout">{t("layout")}</Label>
           <select

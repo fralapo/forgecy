@@ -16,6 +16,7 @@ import { requireUser } from "@/lib/session";
 import { importFolderAction } from "./actions";
 import { SlideFrame } from "./slide-frame";
 import { ErrorNotice, StatusBadge, ValidationBadge } from "./status";
+import { getManifestLocalizer } from "@/lib/template-labels";
 
 export async function generateMetadata() {
   const t = await getTranslations("templates");
@@ -53,6 +54,7 @@ export default async function TemplatesPage({
       )
     : [];
 
+  const localize = await getManifestLocalizer();
   return (
     <>
       <PageHeader title={t("title")} description={t("description")} />
@@ -63,7 +65,7 @@ export default async function TemplatesPage({
         <ul className="mb-10 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {[...byKey.values()].map((versions) => {
             const row = headline(versions);
-            const m = row.manifest as TemplateManifest;
+            const m = localize(row.manifest as TemplateManifest);
             const cover = m.layouts[0];
             const others = versions.length - 1;
             return (
@@ -72,7 +74,7 @@ export default async function TemplatesPage({
                   {cover ? (
                     <SlideFrame
                       src={`/render/templates/${row.id}/${cover.id}`}
-                      title={t("catalog.coverTitle", { name: row.name })}
+                      title={t("catalog.coverTitle", { name: m.name })}
                       width={m.width}
                       height={m.height}
                       scale={0.25}
@@ -81,7 +83,7 @@ export default async function TemplatesPage({
                   <div className="space-y-1">
                     <h2 className="text-heading-sm text-fg">
                       <Link href={`/templates/${row.id}`} className="hover:underline">
-                        {row.name}
+                        {m.name}
                       </Link>
                     </h2>
                     <p className="text-body-sm text-fg-muted">
@@ -145,7 +147,7 @@ export default async function TemplatesPage({
                         <p className="font-medium text-fg">
                           {pkg
                             ? t("import.folderName", {
-                                name: pkg.manifest.name,
+                                name: localize(pkg.manifest).name,
                                 version: pkg.manifest.version,
                               })
                             : folder}

@@ -1,0 +1,73 @@
+{
+  "name": "Editoriale · Instagram 4:5",
+  "description": "Carosello educativo con 8 layout: copertina, testo, elenco, citazione, dato, problema e soluzione, confronto e CTA.",
+  "notes": "Un’idea per slide. Il titolo della copertina è l’hook: breve, concreto, leggibile come miniatura.",
+  "layouts": {
+    "cover": {
+      "name": "Copertina",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "subtitle": "Sottotitolo",
+        "image": "Immagine"
+      }
+    },
+    "text": {
+      "name": "Testo",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "body": "Testo"
+      }
+    },
+    "list": {
+      "name": "Elenco",
+      "slots": {
+        "title": "Titolo",
+        "items": "Voci"
+      }
+    },
+    "quote": {
+      "name": "Citazione",
+      "slots": {
+        "quote": "Citazione",
+        "author": "Autore",
+        "role": "Ruolo"
+      }
+    },
+    "data": {
+      "name": "Dato",
+      "slots": {
+        "value": "Numero",
+        "label": "Didascalia",
+        "source": "Fonte"
+      }
+    },
+    "problem-solution": {
+      "name": "Problema e soluzione",
+      "slots": {
+        "title": "Titolo",
+        "problem": "Problema",
+        "solution": "Soluzione"
+      }
+    },
+    "comparison": {
+      "name": "Confronto",
+      "slots": {
+        "title": "Titolo",
+        "left_title": "Titolo colonna A",
+        "left": "Voci colonna A",
+        "right_title": "Titolo colonna B",
+        "right": "Voci colonna B"
+      }
+    },
+    "cta": {
+      "name": "CTA",
+      "slots": {
+        "title": "Titolo",
+        "body": "Testo",
+        "action": "Azione"
+      }
+    }
+  }
+}

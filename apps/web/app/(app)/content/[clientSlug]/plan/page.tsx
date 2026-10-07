@@ -33,6 +33,7 @@ import { RefreshWhile } from "../../_components/refresh-while";
 import { carouselPath } from "../../_lib/paths";
 import { loadClient } from "../../_lib/server";
 import { sourceLabels } from "../../_lib/provenance";
+import { interfaceLocale } from "@/lib/template-labels";
 
 export async function generateMetadata() {
   const t = await getTranslations("content.plan");
@@ -67,7 +68,7 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
   const actor = user.actor;
   const [o, newOptions, [lastJob]] = await Promise.all([
     getStrategyOverview(db, actor, client.id),
-    getNewCarouselOptions(db, actor, client.id),
+    getNewCarouselOptions(db, actor, client.id, await interfaceLocale()),
     db
       .select({ status: jobs.status, error: jobs.error, errorRef: jobs.errorRef })
       .from(jobs)

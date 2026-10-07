@@ -3,7 +3,7 @@
   "id": "editorial-tiktok-photo",
   "name": "Editorial · TikTok photo",
   "description": "TikTok photo carousel with 8 layouts: texts kept clear of the caption and the action buttons.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "kind": "carousel",
   "channel": "tiktok",
   "format": "tiktok_photo",

@@ -24,6 +24,7 @@ import { AskPlannerForm } from "../_components/strategy-planner";
 import { StrategyProposalCard } from "../_components/strategy-proposal";
 import { loadClient } from "../_lib/server";
 import { sourceLabels } from "../_lib/provenance";
+import { interfaceLocale } from "@/lib/template-labels";
 
 export async function generateMetadata() {
   const t = await getTranslations("content.strategy");
@@ -71,7 +72,7 @@ export default async function StrategyPage({
   const actor = user.actor;
   const o = await getStrategyOverview(db, actor, client.id);
   const [templates, [lastJob]] = await Promise.all([
-    listUsableTemplates(db, client.id),
+    listUsableTemplates(db, client.id, { locale: await interfaceLocale() }),
     db
       .select({
         status: jobs.status,

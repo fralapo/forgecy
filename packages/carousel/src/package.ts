@@ -1,5 +1,6 @@
 import type { MessageRef } from "@forgecy/core";
 import { englishMessage, localizedError, messageRef } from "@forgecy/i18n";
+import { withInterfaceLabels } from "./interface-labels";
 import { manifestIssueRef, type TemplateManifest, templateManifestSchema } from "./template-schema";
 
 /**
@@ -98,7 +99,7 @@ export function packageFromFiles(files: ReadonlyMap<string, Uint8Array>): Templa
           errors: parsed.errors,
         });
   }
-  return { manifest: parsed.manifest, files };
+  return { manifest: withInterfaceLabels(parsed.manifest, files), files };
 }
 
 const MIME: Record<string, string> = {

@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { CarouselNewForm, type PlanSeed } from "../../../_components/carousel-new-form";
 import { carouselPath, carouselsPath } from "../../../_lib/paths";
 import { loadClient } from "../../../_lib/server";
+import { interfaceLocale } from "@/lib/template-labels";
 
 export async function generateMetadata() {
   const t = await getTranslations("content.newCarousel");
@@ -24,7 +25,7 @@ export default async function NewCarouselPage({
   const t = await getTranslations("content.newCarousel");
   const planId = typeof sp.plan === "string" ? sp.plan : null;
   const [options, item] = await Promise.all([
-    getNewCarouselOptions(db, user.actor, client.id),
+    getNewCarouselOptions(db, user.actor, client.id, await interfaceLocale()),
     planId ? getPlanItem(db, user.actor, client.id, planId) : null,
   ]);
   const plan: PlanSeed | null =
