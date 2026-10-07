@@ -87,6 +87,7 @@ export function backupHandlers(env: BackupEnv): JobHandlers {
         backup: payload.backup,
         requestedBy: payload.requestedBy,
         requestedAt: started?.requestedAt ?? new Date().toISOString(),
+        ...(started?.requestedById ? { requestedById: started.requestedById } : {}),
       };
       let preRestoreBackup: string | undefined;
       try {

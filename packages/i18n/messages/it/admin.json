@@ -358,9 +358,12 @@
         "failedHint": "Se il database è stato sostituito in parte, ripristina dall’elenco il backup dello stato precedente."
       },
       "maintenance": {
-        "title": "Ripristino in corso",
-        "body": "Un utente Admin sta ripristinando un backup. Forgecy torna disponibile quando finisce; dovrai accedere di nuovo.",
-        "since": "Avviato il {date}."
+        "title": "Forgecy è in manutenzione",
+        "body": "È in corso un ripristino avviato da {name} alle {time}. Le sessioni riprenderanno al termine; il lavoro successivo al backup scelto non sarà presente.",
+        "code": "Codice",
+        "retryNow": "Riprova ora",
+        "retryIn": "{seconds, plural, one {Nuovo tentativo tra # secondo} other {Nuovo tentativo tra # secondi}}",
+        "retrying": "Nuovo tentativo…"
       }
     },
     "upload": {

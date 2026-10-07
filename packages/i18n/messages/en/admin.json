@@ -358,9 +358,12 @@
         "failedHint": "If the database was partly replaced, restore the backup of the previous state from the list."
       },
       "maintenance": {
-        "title": "Restore in progress",
-        "body": "An Admin is restoring a backup. Forgecy is back when it ends; you will need to sign in again.",
-        "since": "Started on {date}."
+        "title": "Forgecy is under maintenance",
+        "body": "A restore started by {name} at {time} is in progress. Sessions resume when it ends; work done after the chosen backup will not be there.",
+        "code": "Code",
+        "retryNow": "Retry now",
+        "retryIn": "{seconds, plural, one {Retrying in # second} other {Retrying in # seconds}}",
+        "retrying": "Retrying…"
       }
     },
     "upload": {

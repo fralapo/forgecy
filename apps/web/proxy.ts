@@ -6,6 +6,12 @@ import { type NextRequest, NextResponse } from "next/server";
  * exists; every page and route still validates the session on the server.
  */
 export function proxy(request: NextRequest) {
+  // The maintenance page during a restore answers 503, signed in or not (spec page 70).
+  if (request.nextUrl.pathname === "/maintenance")
+    return NextResponse.rewrite(request.nextUrl, {
+      status: 503,
+      headers: { "retry-after": "15" },
+    });
   if (!getSessionCookie(request)) {
     const url = new URL("/login", request.url);
     url.searchParams.set("next", request.nextUrl.pathname);

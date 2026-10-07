@@ -173,6 +173,7 @@ export async function startRestoreAction(
     state: "queued",
     backup: name,
     requestedBy: user.name,
+    requestedById: user.id,
     requestedAt,
   });
   const job = await enqueueJob(db, await getQueues(), {
