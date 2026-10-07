@@ -4,14 +4,20 @@ import { decryptSecret, encryptSecret, keyHint as lastFour } from "./crypto";
 
 /**
  * Agency-wide BYOK API keys pasted in Settings > AI providers, as an alternative to
- * setting the provider's env var. Only OpenAI today (the provider Jacopo asked for
- * this alongside Sign in with ChatGPT); `ai_connections` already supports the other
- * providers in `packages/core/src/ai-policy.ts` if that is ever extended.
+ * setting the provider's env var. Every provider whose env var is a single bearer-style
+ * key (`${PROVIDER}_API_KEY`); local models have no key and MCP providers (Higgsfield)
+ * use OAuth instead.
  */
-export const byokProviderIds = ["openai"] as const;
+export const byokProviderIds = ["openai", "anthropic", "openrouter", "deepseek"] as const;
 export type ByokProviderId = (typeof byokProviderIds)[number];
 
 export type ByokEnv = Pick<Env, "FORGECY_ENCRYPTION_KEY">;
+type ByokApiKeyEnv = ByokEnv & {
+  OPENAI_API_KEY?: string;
+  ANTHROPIC_API_KEY?: string;
+  OPENROUTER_API_KEY?: string;
+  DEEPSEEK_API_KEY?: string;
+};
 
 function requireKey(env: ByokEnv): string {
   if (!env.FORGECY_ENCRYPTION_KEY)
@@ -110,10 +116,18 @@ export async function removeAgencyApiKey(
   });
 }
 
+const envKeyOf = (env: ByokApiKeyEnv, provider: ByokProviderId): string | undefined =>
+  ({
+    openai: env.OPENAI_API_KEY,
+    anthropic: env.ANTHROPIC_API_KEY,
+    openrouter: env.OPENROUTER_API_KEY,
+    deepseek: env.DEEPSEEK_API_KEY,
+  })[provider];
+
 /** The key to actually use: the agency's pasted key if active, else the env var. */
 export async function resolveApiKey(
   db: Database,
-  env: ByokEnv & { OPENAI_API_KEY?: string },
+  env: ByokApiKeyEnv,
   provider: ByokProviderId,
 ): Promise<string | undefined> {
   if (env.FORGECY_ENCRYPTION_KEY) {
@@ -124,16 +138,21 @@ export async function resolveApiKey(
     if (row && row.status === "active")
       return decryptSecret(row.encryptedKey, env.FORGECY_ENCRYPTION_KEY);
   }
-  return provider === "openai" ? env.OPENAI_API_KEY : undefined;
+  return envKeyOf(env, provider);
 }
 
-/** `env`, with the agency's pasted key substituted in where one is saved and active. */
-export async function resolveAiEnv<E extends ByokEnv & { OPENAI_API_KEY?: string }>(
-  db: Database,
-  env: E,
-): Promise<E> {
-  const openaiKey = await resolveApiKey(db, env, "openai");
-  return { ...env, OPENAI_API_KEY: openaiKey };
+/** `env`, with the agency's pasted keys substituted in wherever one is saved and active. */
+export async function resolveAiEnv<E extends ByokApiKeyEnv>(db: Database, env: E): Promise<E> {
+  const [openai, anthropic, openrouter, deepseek] = await Promise.all(
+    byokProviderIds.map((p) => resolveApiKey(db, env, p)),
+  );
+  return {
+    ...env,
+    OPENAI_API_KEY: openai,
+    ANTHROPIC_API_KEY: anthropic,
+    OPENROUTER_API_KEY: openrouter,
+    DEEPSEEK_API_KEY: deepseek,
+  };
 }
 
 export interface ApiKeyTestResult {
@@ -149,14 +168,23 @@ export async function testApiKey(
 ): Promise<ApiKeyTestResult> {
   const endpoints: Record<ByokProviderId, string> = {
     openai: "https://api.openai.com/v1/models",
+    anthropic: "https://api.anthropic.com/v1/models",
+    openrouter: "https://openrouter.ai/api/v1/models",
+    deepseek: "https://api.deepseek.com/models",
   };
+  const key = apiKey.trim();
+  const headers: Record<string, string> =
+    provider === "anthropic"
+      ? { "x-api-key": key, "anthropic-version": "2023-06-01" }
+      : { Authorization: `Bearer ${key}` };
   try {
-    const res = await fetchFn(endpoints[provider], {
-      headers: { Authorization: `Bearer ${apiKey.trim()}` },
-    });
+    const res = await fetchFn(endpoints[provider], { headers });
     if (res.ok) return { ok: true };
-    const body = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
-    return { ok: false, error: body?.error?.message ?? `HTTP ${res.status}` };
+    const body = (await res.json().catch(() => null)) as {
+      error?: { message?: string } | string;
+    } | null;
+    const message = typeof body?.error === "string" ? body.error : body?.error?.message;
+    return { ok: false, error: message ?? `HTTP ${res.status}` };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }

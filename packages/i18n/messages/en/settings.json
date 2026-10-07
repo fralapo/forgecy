@@ -103,12 +103,9 @@
       }
     },
     "apiKey": {
-      "cardTitle": "OpenAI API key",
-      "title": "Use the agency's own API key",
-      "hint": "Create a key on your OpenAI project (billing must be enabled there; a ChatGPT Plus or Pro subscription does not cover API usage):",
-      "link": "platform.openai.com/api-keys",
+      "cardTitle": "API keys",
+      "title": "{name} API key",
       "label": "API key",
-      "placeholder": "sk-proj-...",
       "current": "Current key: •••• {hint}",
       "save": "Save",
       "test": "Test",
@@ -119,7 +116,33 @@
       "errors": {
         "empty": "Paste a key first.",
         "unavailable": "Set FORGECY_ENCRYPTION_KEY in .env first: it encrypts the key.",
-        "noneConfigured": "No key to test: paste one above, or set OPENAI_API_KEY in .env."
+        "noneConfigured": "No key to test: paste one above, or set it in .env."
+      },
+      "providers": {
+        "openai": {
+          "name": "OpenAI",
+          "hint": "Create a key on your OpenAI project (billing must be enabled there; a ChatGPT Plus or Pro subscription does not cover API usage):",
+          "link": "platform.openai.com/api-keys",
+          "placeholder": "sk-proj-..."
+        },
+        "anthropic": {
+          "name": "Anthropic",
+          "hint": "Create a key on your Anthropic console (billing must be enabled there):",
+          "link": "console.anthropic.com/settings/keys",
+          "placeholder": "sk-ant-..."
+        },
+        "openrouter": {
+          "name": "OpenRouter",
+          "hint": "Create a key and add credits on OpenRouter (one key reaches many providers' models):",
+          "link": "openrouter.ai/keys",
+          "placeholder": "sk-or-v1-..."
+        },
+        "deepseek": {
+          "name": "DeepSeek",
+          "hint": "Create a key on your DeepSeek account (billing must be enabled there):",
+          "link": "platform.deepseek.com/api_keys",
+          "placeholder": "sk-..."
+        }
       }
     },
     "siwc": {

@@ -103,12 +103,9 @@
       }
     },
     "apiKey": {
-      "cardTitle": "Chiave API OpenAI",
-      "title": "Usa una chiave API dell'agenzia",
-      "hint": "Crea una chiave sul tuo progetto OpenAI (la fatturazione API deve essere attiva lì; un abbonamento ChatGPT Plus o Pro non copre l'uso dell'API):",
-      "link": "platform.openai.com/api-keys",
+      "cardTitle": "Chiavi API",
+      "title": "Chiave API {name}",
       "label": "Chiave API",
-      "placeholder": "sk-proj-...",
       "current": "Chiave attuale: •••• {hint}",
       "save": "Salva",
       "test": "Verifica",
@@ -119,7 +116,33 @@
       "errors": {
         "empty": "Incolla prima una chiave.",
         "unavailable": "Imposta prima FORGECY_ENCRYPTION_KEY nel file .env: cifra la chiave.",
-        "noneConfigured": "Nessuna chiave da verificare: incollane una qui sopra, oppure imposta OPENAI_API_KEY nel file .env."
+        "noneConfigured": "Nessuna chiave da verificare: incollane una qui sopra, oppure impostala nel file .env."
+      },
+      "providers": {
+        "openai": {
+          "name": "OpenAI",
+          "hint": "Crea una chiave sul tuo progetto OpenAI (la fatturazione API deve essere attiva lì; un abbonamento ChatGPT Plus o Pro non copre l'uso dell'API):",
+          "link": "platform.openai.com/api-keys",
+          "placeholder": "sk-proj-..."
+        },
+        "anthropic": {
+          "name": "Anthropic",
+          "hint": "Crea una chiave sulla console Anthropic (la fatturazione deve essere attiva lì):",
+          "link": "console.anthropic.com/settings/keys",
+          "placeholder": "sk-ant-..."
+        },
+        "openrouter": {
+          "name": "OpenRouter",
+          "hint": "Crea una chiave e aggiungi credito su OpenRouter (una sola chiave raggiunge i modelli di molti provider):",
+          "link": "openrouter.ai/keys",
+          "placeholder": "sk-or-v1-..."
+        },
+        "deepseek": {
+          "name": "DeepSeek",
+          "hint": "Crea una chiave sul tuo account DeepSeek (la fatturazione deve essere attiva lì):",
+          "link": "platform.deepseek.com/api_keys",
+          "placeholder": "sk-..."
+        }
       }
     },
     "siwc": {

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ByokProviderId } from "@forgecy/ai";
 import { Button, Input, Label } from "@forgecy/ui";
 import { FlaskConical, KeyRound, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -13,12 +14,21 @@ import {
 } from "../actions";
 
 interface Props {
+  provider: ByokProviderId;
   connection: { keyHint: string; status: "active" | "disabled" } | null;
 }
 
-/** Settings > AI providers: the agency's own OpenAI API key, pasted here instead of .env. */
-export function ApiKeyForm({ connection }: Props) {
+const providerLinkHref: Record<ByokProviderId, string> = {
+  openai: "https://platform.openai.com/api-keys",
+  anthropic: "https://console.anthropic.com/settings/keys",
+  openrouter: "https://openrouter.ai/keys",
+  deepseek: "https://platform.deepseek.com/api_keys",
+};
+
+/** Settings > AI providers: the agency's own API key for one provider, pasted here instead of .env. */
+export function ApiKeyForm({ provider, connection }: Props) {
   const t = useTranslations("settings.aiProviders.apiKey");
+  const tp = useTranslations(`settings.aiProviders.apiKey.providers.${provider}`);
   const [saveState, saveAction, saving] = useActionState<ApiKeyState, FormData>(
     setApiKeyAction,
     {},
@@ -32,17 +42,17 @@ export function ApiKeyForm({ connection }: Props) {
     <div className="grid gap-3 rounded-md border border-subtle p-4">
       <div className="flex items-center gap-2">
         <KeyRound aria-hidden className="size-4 text-fg-muted" strokeWidth={1.5} />
-        <p className="text-body-sm text-fg">{t("title")}</p>
+        <p className="text-body-sm text-fg">{t("title", { name: tp("name") })}</p>
       </div>
       <p className="text-body-sm text-fg-muted">
-        {t("hint")}{" "}
+        {tp("hint")}{" "}
         <a
-          href="https://platform.openai.com/api-keys"
+          href={providerLinkHref[provider]}
           target="_blank"
           rel="noreferrer noopener"
           className="text-link underline"
         >
-          {t("link")}
+          {tp("link")}
         </a>
       </p>
       {connection ? (
@@ -51,14 +61,15 @@ export function ApiKeyForm({ connection }: Props) {
         </p>
       ) : null}
       <form action={saveAction} className="flex flex-wrap items-end gap-2">
+        <input type="hidden" name="provider" value={provider} />
         <div className="grid gap-1">
-          <Label htmlFor="openai-api-key">{t("label")}</Label>
+          <Label htmlFor={`${provider}-api-key`}>{t("label")}</Label>
           <Input
-            id="openai-api-key"
+            id={`${provider}-api-key`}
             name="apiKey"
             type="password"
             autoComplete="off"
-            placeholder={t("placeholder")}
+            placeholder={tp("placeholder")}
             className="w-72"
           />
         </div>

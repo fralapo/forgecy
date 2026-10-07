@@ -3,6 +3,7 @@
 import {
   beginMcpConnection,
   beginSiwcConnection,
+  byokProviderIds,
   disconnectMcp,
   disconnectSiwc,
   imageProviderIds,
@@ -13,6 +14,7 @@ import {
   setAgencyApiKey,
   setSiwcClientId,
   testApiKey,
+  type ByokProviderId,
 } from "@forgecy/ai";
 import { setCommercialUse } from "@forgecy/content";
 import { assertCan, ForgecyError, localeSchema, PermissionDeniedError } from "@forgecy/core";
@@ -197,12 +199,19 @@ export async function saveRoutingAction(
 
 export type ApiKeyState = { error?: string; ok?: boolean };
 
-/** Admin only: pastes the agency's own OpenAI key, stored encrypted (never logged or sent back). */
+const byokProviderFromForm = (form: FormData): ByokProviderId => {
+  const parsed = z.enum(byokProviderIds).safeParse(form.get("provider"));
+  if (!parsed.success) throw new ForgecyError("validation", "Unknown provider");
+  return parsed.data;
+};
+
+/** Admin only: pastes the agency's own key for a provider, stored encrypted (never logged or sent back). */
 export async function setApiKeyAction(_prev: ApiKeyState, form: FormData): Promise<ApiKeyState> {
   const admin = await requireUser();
   const t = await getTranslations("settings.aiProviders.apiKey");
   try {
-    await setAgencyApiKey(getDb(), admin.actor, env, "openai", String(form.get("apiKey") ?? ""));
+    const provider = byokProviderFromForm(form);
+    await setAgencyApiKey(getDb(), admin.actor, env, provider, String(form.get("apiKey") ?? ""));
   } catch (err) {
     if (err instanceof PermissionDeniedError)
       return { error: (await getTranslations("errors"))("adminOnly") };
@@ -215,9 +224,9 @@ export async function setApiKeyAction(_prev: ApiKeyState, form: FormData): Promi
   return { ok: true };
 }
 
-export async function removeApiKeyAction(): Promise<void> {
+export async function removeApiKeyAction(form: FormData): Promise<void> {
   const admin = await requireUser();
-  await removeAgencyApiKey(getDb(), admin.actor, "openai");
+  await removeAgencyApiKey(getDb(), admin.actor, byokProviderFromForm(form));
   resetProviders();
   revalidatePath("/settings/ai-providers");
 }
@@ -231,10 +240,11 @@ export async function testApiKeyAction(
 ): Promise<ApiKeyTestState> {
   await requireUser();
   const t = await getTranslations("settings.aiProviders.apiKey");
+  const provider = byokProviderFromForm(form);
   const pasted = String(form.get("apiKey") ?? "").trim();
-  const key = pasted || (await resolveApiKey(getDb(), env, "openai"));
+  const key = pasted || (await resolveApiKey(getDb(), env, provider));
   if (!key) return { tested: true, ok: false, error: t("errors.noneConfigured") };
-  const result = await testApiKey("openai", key);
+  const result = await testApiKey(provider, key);
   return { tested: true, ok: result.ok, error: result.error };
 }
 

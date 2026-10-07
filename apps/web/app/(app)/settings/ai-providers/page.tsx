@@ -1,4 +1,5 @@
 import {
+  byokProviderIds,
   defaultModelFor,
   getAgencyApiKey,
   getSiwcConnection,
@@ -10,6 +11,7 @@ import {
   listMcpConnections,
   loadAiRoutingSettings,
   textProviderIds,
+  type ByokProviderId,
   type TextProviderId,
 } from "@forgecy/ai";
 import { getCommercialUseReviews, type ImageProvider } from "@forgecy/content";
@@ -100,13 +102,26 @@ export default async function AiProvidersPage({
   const connections = await listMcpConnections(getDb());
   const siwcConfigured = await isSiwcConfigured(getDb(), env);
   const siwcConnection = await getSiwcConnection(getDb(), user.id, env);
-  const apiKeyConnection = await getAgencyApiKey(getDb(), "openai");
-  const openaiReady = Boolean(env.OPENAI_API_KEY) || apiKeyConnection?.status === "active";
+  const apiKeyConnections = new Map(
+    await Promise.all(
+      byokProviderIds.map(async (p) => [p, await getAgencyApiKey(getDb(), p)] as const),
+    ),
+  );
+  const byokEnvKey: Record<ByokProviderId, string | undefined> = {
+    openai: env.OPENAI_API_KEY,
+    anthropic: env.ANTHROPIC_API_KEY,
+    openrouter: env.OPENROUTER_API_KEY,
+    deepseek: env.DEEPSEEK_API_KEY,
+  };
+  const byokReady = (p: ByokProviderId) =>
+    Boolean(byokEnvKey[p]) || apiKeyConnections.get(p)?.status === "active";
+  const isByok = (p: string): p is ByokProviderId =>
+    (byokProviderIds as readonly string[]).includes(p);
   const ready = (p: ImageProvider) =>
     isMcpImageProvider(p)
       ? connections.get(p)?.status === "connected"
-      : p === "openai"
-        ? openaiReady
+      : isByok(p)
+        ? byokReady(p)
         : !!keyReady[p];
   const tr = await getTranslations("settings.aiProviders.routing");
   const settings = await loadAiRoutingSettings(getDb());
@@ -165,7 +180,7 @@ export default async function AiProvidersPage({
           text={textProviderIds.map((id) => ({
             id,
             name: id === "local" ? tp("localModel") : textNames[id],
-            ready: id === "openai" ? openaiReady : textReady[id],
+            ready: isByok(id) ? byokReady(id) : textReady[id],
             defaultModel: defaultModelFor(id, env),
           }))}
           images={imageProviderIds.map((id) => ({
@@ -187,7 +202,11 @@ export default async function AiProvidersPage({
             {(await getTranslations("settings.aiProviders.apiKey"))("cardTitle")}
           </h2>
         </div>
-        <ApiKeyForm connection={apiKeyConnection} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          {byokProviderIds.map((p) => (
+            <ApiKeyForm key={p} provider={p} connection={apiKeyConnections.get(p) ?? null} />
+          ))}
+        </div>
       </Card>
       <Card className="mb-6 flex flex-col gap-4 p-6">
         <div className="flex items-center gap-2">
