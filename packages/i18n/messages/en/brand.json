@@ -554,7 +554,7 @@
     "saved": "Tokens saved.",
     "saving": "Saving…",
     "save": "Save tokens",
-    "hexPlaceholder": "0044CC"
+    "hexPlaceholder": "#0044CC"
   },
   "diff": {
     "none": "No differences.",
@@ -852,7 +852,7 @@
     "download": "Download",
     "errors": {
       "noParts": "Choose at least one file to include.",
-      "noPublished": "This version is not approved: only published or archived versions can be exported.",
+      "noPublished": "This version is not published: only published or archived versions can be exported.",
       "notFound": "Brand Book not found.",
       "noSections": "Choose at least one section.",
       "templateMissing": "No published Brand Book template: import and publish “Brand Book · A4” from the Templates page.",

@@ -193,7 +193,7 @@
     "draftChanges": "{count, plural, one {# modifica rispetto alla versione pubblicata} other {# modifiche rispetto alla versione pubblicata}}",
     "published": "Pubblicata",
     "blocksHeading": "Blocchi",
-    "missing": "Manca: {items}",
+    "missing": "Da completare: {items}",
     "complete": "Completo",
     "changesInDraft": "{count, plural, one {# modifica nella bozza} other {# modifiche nella bozza}}",
     "palette": "Palette",
@@ -258,7 +258,7 @@
     },
     "strategy": {
       "oneLiner": "Frase di sintesi",
-      "oneLinerHint": "Chi siete e perché contate, in meno di 20 parole.",
+      "oneLinerHint": "Chi è il cliente e perché conta, in meno di 20 parole.",
       "insight": "Insight",
       "positioning": "Posizionamento",
       "promise": "Promessa",
@@ -443,7 +443,7 @@
         "technical": "Tecnico / Semplice",
         "serious": "Serio / Ironico",
         "institutional": "Istituzionale / Umano",
-        "conservative": "Conservativo / Audace"
+        "conservative": "Tradizionale / Audace"
       },
       "person": {
         "tu": "Tu (informale)",
@@ -554,7 +554,7 @@
     "saved": "Token salvati.",
     "saving": "Salvataggio…",
     "save": "Salva i token",
-    "hexPlaceholder": "0044CC"
+    "hexPlaceholder": "#0044CC"
   },
   "diff": {
     "none": "Nessuna differenza.",
@@ -619,7 +619,7 @@
     "inConflict": "{count, plural, one {In conflitto con # altra} other {In conflitto con # altre}}",
     "inConflictSuggested": "{count, plural, one {In conflitto con # altra} other {In conflitto con # altre}} · fonte più autorevole",
     "nowInDraft": "Ora nella bozza",
-    "proposed": "Proposto",
+    "proposed": "Proposta",
     "sources": "Fonti",
     "noSource": "Nessuna fonte indicata: verifica prima di accettare.",
     "reviewedBy": "{status} da {name}",
@@ -664,7 +664,7 @@
     "compareFrom": "Da",
     "compareTo": "A",
     "compare": "Confronta",
-    "compareSideBySide": "Confronta affiancata con v{previous}",
+    "compareSideBySide": "Confronta fianco a fianco con la v{previous}",
     "showAll": "Mostra tutti i campi",
     "onlyDifferences": "Solo le differenze",
     "backToVersions": "Torna alle versioni",
@@ -740,7 +740,7 @@
     "fieldNotProposable": "Il campo non si può modificare con una proposta: {path}",
     "singleValue": "{field} è un valore singolo",
     "notAList": "{field} non è un elenco",
-    "alreadyEmpty": "{field} è già vuoto",
+    "alreadyEmpty": "Il campo {field} è già vuoto",
     "useAppend": "Per aggiungere, usa {pointer}",
     "alreadyIn": "“{value}” è già in {field}",
     "itemMissing": "L’elemento {index} non esiste in {field}",
@@ -809,8 +809,8 @@
     }
   },
   "book": {
-    "systemTitle": "Internal Brand System",
-    "systemIntro": "Uno ZIP per l'agenzia e i suoi agenti: l'identità in JSON, i token di design, le regole per gli agenti, le fonti e la confidenza di ogni campo. Nasce da una versione approvata, mai da una bozza.",
+    "systemTitle": "Brand System interno",
+    "systemIntro": "Uno ZIP per l’agenzia e i suoi agenti: l’identità in JSON, i token di design, le regole per gli agenti, le fonti e l’attendibilità di ogni campo. Nasce da una versione approvata, mai da una bozza.",
     "internalWarning": "Contiene regole interne e prompt: non condividerlo con il cliente.",
     "version": "Versione della Brand Identity",
     "versionPublished": "Versione {number} · pubblicata il {date}",
@@ -822,14 +822,14 @@
       "tokens": "Token di design (piatti, DTCG e CSS)",
       "agent_rules": "Regole che ricevono gli agenti",
       "sources": "Fonti",
-      "scores": "Confidenza di ogni campo",
+      "scores": "Attendibilità di ogni campo",
       "examples": "Esempi approvati e rifiutati",
       "changelog": "Cronologia delle modifiche",
       "assets": "File del logo e dei font"
     },
     "generate": "Genera ZIP",
     "generating": "Generazione in corso…",
-    "generated": "BB-{number} è pronto: scaricalo dall'elenco.",
+    "generated": "BB-{number} è pronto: scaricalo dall’elenco.",
     "noPublished": "Ancora niente da esportare: prima pubblica una versione della Brand Identity.",
     "historyTitle": "Export",
     "historyEmpty": "Nessun export.",
@@ -852,17 +852,17 @@
     "download": "Scarica",
     "errors": {
       "noParts": "Scegli almeno un file da includere.",
-      "noPublished": "Questa versione non è approvata: si esportano solo versioni pubblicate o archiviate.",
+      "noPublished": "Questa versione non è pubblicata: si esportano solo versioni pubblicate o archiviate.",
       "notFound": "Brand Book non trovato.",
       "noSections": "Scegli almeno una sezione.",
       "templateMissing": "Nessun template Brand Book pubblicato: importa e pubblica «Brand Book · A4» dalla pagina Template.",
       "notDraft": "Questo Brand Book non è più una bozza.",
-      "notRendered": "L'anteprima non è ancora pronta: approvala dopo averla vista.",
+      "notRendered": "L’anteprima non è ancora pronta: approvala dopo averla vista.",
       "noteRequired": "Hai preparato tu questo Brand Book: aggiungi una nota di almeno {min} caratteri per approvarlo tu stesso.",
-      "notApproved": "Approva l'anteprima prima di esportare il PDF definitivo."
+      "notApproved": "Approva l’anteprima prima di esportare il PDF definitivo."
     },
     "clientTitle": "Brand Book per il cliente",
-    "clientIntro": "Un PDF con i colori e i font del cliente, firmato dall'agenzia. Non contiene mai prompt, punteggi interni o regole per gli agenti. L'anteprima porta la filigrana «Bozza» finché una persona non la approva.",
+    "clientIntro": "Un PDF con i colori e i font del cliente, firmato dall’agenzia. Non contiene mai prompt, punteggi interni o regole per gli agenti. L’anteprima porta la filigrana «Bozza» finché una persona non la approva.",
     "language": "Lingua del manuale",
     "languages": {
       "en": "Inglese",
@@ -878,7 +878,7 @@
     },
     "sectionEmpty": "Niente da mostrare in questa versione. <link>Completala</link> o lasciala fuori.",
     "generatePreview": "Genera anteprima",
-    "previewQueued": "BB-{number} è in preparazione: l'anteprima compare nell'elenco quando è pronta.",
+    "previewQueued": "BB-{number} è in preparazione: l’anteprima compare nell’elenco quando è pronta.",
     "templateMissing": "Nessun template Brand Book pubblicato. <link>Importa e pubblica «Brand Book · A4»</link> dalla pagina Template.",
     "rendering": "Preparazione del PDF…",
     "renderAgain": "Rigenera",
@@ -891,7 +891,7 @@
     "exportQueued": "Il PDF definitivo è in preparazione.",
     "pages": "{count, plural, one {# pagina} other {# pagine}}",
     "jobErrors": {
-      "noLongerApproved": "Il Brand Book non è più approvato: approva di nuovo l'anteprima.",
+      "noLongerApproved": "Il Brand Book non è più approvato: approva di nuovo l’anteprima.",
       "versionMissing": "La versione della Brand Identity di questo manuale non è più disponibile.",
       "templateMissing": "Il template Brand Book non è più pubblicato: pubblicalo di nuovo dalla pagina Template.",
       "templateUnfit": "Al template Brand Book manca una pagina che serve a questo manuale: {detail}",
