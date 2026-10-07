@@ -25,7 +25,6 @@ export function SetupForm() {
           minLength={PASSWORD_MIN}
           required
         />
-        <p className="text-body-sm text-fg-muted">{t("passwordHint", { min: PASSWORD_MIN })}</p>
       </div>
       {state.error ? (
         <p role="alert" className="text-body-sm text-error">
