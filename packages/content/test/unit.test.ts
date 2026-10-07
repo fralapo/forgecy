@@ -5,7 +5,7 @@ import { FORMATS, findLayout, templateManifestSchema } from "@forgecy/carousel";
 import { describe, expect, it } from "vitest";
 import { imageSize } from "../src/assets";
 import { findingsToAcknowledge, toGuardContent } from "../src/carousels/brand-guard";
-import { computeChecks } from "../src/carousels/checks";
+import { computeChecks, trimCaptionToLimit } from "../src/carousels/checks";
 import { compareCarouselVersions } from "../src/carousels/compare";
 import {
   carouselDocumentSchema,
@@ -72,7 +72,7 @@ describe("checks", () => {
     expect(checks).toEqual([]);
   });
 
-  it("blocks template violations and over-long captions", () => {
+  it("blocks template violations and warns on over-long captions", () => {
     const long = { id: "s5", layout: "text", slots: { title: "x".repeat(61), body: "ok" } };
     const checks = computeChecks({
       document: doc([cover, long, ...body, cta], { caption: "a".repeat(2201) }),
@@ -82,7 +82,8 @@ describe("checks", () => {
     expect(checks.some((c) => c.id.startsWith("template:s5:") && c.severity === "error")).toBe(
       true,
     );
-    expect(checks.some((c) => c.id === "caption:length")).toBe(true);
+    // Over the caption limit warns (the platform decides), it does not block.
+    expect(checks.find((c) => c.id === "caption:length")?.severity).toBe("warning");
     // LinkedIn allows 3000.
     const li = computeChecks({
       document: doc([cover, ...body, cta], { caption: "a".repeat(2500) }),
@@ -90,6 +91,15 @@ describe("checks", () => {
       channel: "linkedin",
     });
     expect(li.some((c) => c.id === "caption:length")).toBe(false);
+  });
+
+  it("trims a caption to the limit at a word break", () => {
+    expect(trimCaptionToLimit("short", 10)).toBe("short");
+    const text = `${"word ".repeat(50)}tail`;
+    const out = trimCaptionToLimit(text, 100);
+    expect(out.length).toBeLessThanOrEqual(100);
+    expect(out.endsWith("word")).toBe(true);
+    expect([...trimCaptionToLimit("é".repeat(30), 10)]).toHaveLength(10);
   });
 
   it("warns on forbidden words, prices and a missing final CTA", () => {

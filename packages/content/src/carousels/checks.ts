@@ -21,6 +21,24 @@ import {
 } from "../document";
 import { channelLabels } from "../labels";
 
+/**
+ * A caption cut to `limit` visible characters, at the last word break when one falls
+ * in the final fifth (the editor's “Trim to limit”). Shorter captions come back as is.
+ */
+export function trimCaptionToLimit(caption: string, limit: number): string {
+  if (visibleLength(caption) <= limit) return caption;
+  const chars = [...caption];
+  const cut = chars.slice(0, limit);
+  let end = cut.length;
+  for (let i = cut.length - 1; i >= Math.floor(cut.length * 0.8); i--) {
+    if (/\s/.test(cut[i]!)) {
+      end = i;
+      break;
+    }
+  }
+  return cut.slice(0, end).join("").trimEnd();
+}
+
 export type CheckSeverity = "error" | "warning";
 
 export interface ContentCheck {
@@ -124,7 +142,7 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
   if (captionLen > limit)
     add({
       id: "caption:length",
-      severity: "error",
+      severity: "warning",
       ...say("review.checks.captionLength", {
         count: String(captionLen),
         channel: channelLabels[input.channel],

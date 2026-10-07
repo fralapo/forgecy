@@ -11,7 +11,7 @@ import {
   type ContentCheck,
   type GuardReport,
 } from "@forgecy/content/client";
-import { GUARDED_CHECK_PREFIXES } from "@forgecy/content/client";
+import { GUARDED_CHECK_PREFIXES, trimCaptionToLimit } from "@forgecy/content/client";
 import { visibleLength, type TemplateManifest } from "@forgecy/carousel";
 import type { ContentStatus } from "@forgecy/core";
 import { Badge, Button, Input, Label } from "@forgecy/ui";
@@ -463,7 +463,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
           <p
             id="doc-caption-count"
             className={
-              captionLen > limit ? "text-body-sm text-error" : "text-body-sm text-fg-muted"
+              captionLen > limit ? "text-body-sm text-warning" : "text-body-sm text-fg-muted"
             }
           >
             {t("captionCount", {
@@ -472,6 +472,25 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               channel: channelLabels[props.channel],
             })}
           </p>
+          {captionLen > limit ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-body-sm text-fg-muted">
+                {t("captionOver", { over: format.number(captionLen - limit, countOptions) })}
+              </p>
+              {readOnly ? null : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    update((d) => ({ ...d, caption: trimCaptionToLimit(d.caption, limit) }))
+                  }
+                >
+                  {t("captionTrim")}
+                </Button>
+              )}
+            </div>
+          ) : null}
         </div>
         <div className="space-y-1">
           <Label htmlFor="doc-hashtags">{t("hashtags")}</Label>

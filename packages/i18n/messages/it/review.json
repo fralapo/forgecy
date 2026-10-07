@@ -4,7 +4,7 @@
     "templateMissing": "Template non disponibile",
     "slideIssue": "Slide {slide}: {issue}",
     "lastNotCta": "L’ultima slide non è una call to action",
-    "captionLength": "Didascalia di {count} caratteri: il limite di {channel} è {max}",
+    "captionLength": "Didascalia di {count} caratteri: oltre il limite di {max} di {channel}, la piattaforma potrebbe rifiutarla o tagliarla",
     "hashtags": "{count} hashtag: la Brand Identity ne consente al massimo {max}",
     "forbiddenWord": "Parola vietata dalla Brand Identity: “{word}”",
     "price": "Il testo cita un prezzo ma il Brief non lo consente",

@@ -737,6 +737,8 @@
     "captionSection": "Didascalia e hashtag",
     "caption": "Didascalia",
     "captionCount": "{count} / {limit} caratteri ({channel})",
+    "captionTrim": "Taglia al limite",
+    "captionOver": "Oltre il limite di {over}. Taglia la didascalia, oppure tienila e segna l'avviso come visto in revisione.",
     "hashtags": "Hashtag",
     "hashtagsPlaceholder": "#esempio #altro",
     "hashtagsHint": "{count, plural, one {# hashtag} other {# hashtag}}. Separali con uno spazio.",
