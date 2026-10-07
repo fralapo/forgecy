@@ -3,7 +3,7 @@
     "noSlides": "Il carosello non ha slide",
     "templateMissing": "Template non disponibile",
     "slideIssue": "Slide {slide}: {issue}",
-    "lastNotCta": "L’ultima slide non è una call to action",
+    "lastNotCta": "L’ultima slide non è una CTA",
     "captionLength": "Didascalia di {count} caratteri: il limite di {channel} è {max}",
     "hashtags": "{count} hashtag: la Brand Identity ne consente al massimo {max}",
     "forbiddenWord": "Parola vietata dalla Brand Identity: “{word}”",
@@ -11,7 +11,7 @@
     "assetMissing": "Slide {slide}: immagine non presente nella libreria del cliente",
     "aiAssetUnapproved": "Slide {slide}: immagine AI da approvare prima di approvare il carosello",
     "assetUnapproved": "Slide {slide}: immagine non approvata",
-    "commercialUse": "Slide {slide}: uso commerciale dell'immagine non ancora verificato (termini del provider o diritti da confermare)",
+    "commercialUse": "Slide {slide}: uso commerciale dell’immagine non ancora verificato (termini del provider o diritti da confermare)",
     "altMissing": "Slide {slide}: manca il testo alternativo dell’immagine",
     "productChanged": "Il prodotto è cambiato nel catalogo dopo la stesura dei testi",
     "brandChanged": "È stata pubblicata una nuova Brand Identity dopo la creazione del carosello",
@@ -30,7 +30,7 @@
       "slideCount": "Il template ammette da {min} a {max} slide, il carosello ne ha {count}",
       "onlyFirst": "Slide {slide}: questo layout può essere solo la prima slide",
       "onlyLast": "Slide {slide}: questo layout può essere solo l’ultima slide",
-      "ctaOnlyLast": "Slide {slide}: la call to action va solo sull’ultima slide",
+      "ctaOnlyLast": "Slide {slide}: la CTA va solo sull’ultima slide",
       "maxImages": "Slide {slide}: al massimo {max} immagini per slide"
     }
   },

@@ -1,7 +1,7 @@
 {
   "errors": {
     "carouselNotFound": "Carosello non trovato",
-    "aiWorking": "L’AI sta lavorando su questo carosello: attendi che finisca o annulla il job",
+    "aiWorking": "L’AI sta lavorando su questo carosello: attendi che finisca o annulla l’attività",
     "clientArchived": "Il cliente è archiviato",
     "brandNotPublishedForCarousel": "Pubblica la Brand Identity del cliente prima di creare un carosello",
     "audienceNotInBrand": "Pubblico non presente nella Brand Identity pubblicata",
@@ -20,7 +20,7 @@
     "withdrawBeforeRestore": "Ritira il carosello dalla revisione prima di ripristinare",
     "versionNotFound": "Versione non trovata",
     "editNotFound": "Modifica non trovata",
-    "editDecided": "Su questa modifica è già stato deciso",
+    "editDecided": "Questa modifica è già stata decisa",
     "slideGone": "La slide non esiste più",
     "slideChangedAfterEdit": "La slide è stata cambiata dopo la modifica dell’AI: annullala a mano",
     "notInReview": "Il carosello non è in revisione",
@@ -42,7 +42,7 @@
     "directionReasonRequired": "Scrivi perché la direzione non va bene",
     "imageDecided": "Immagine non trovata o già decisa",
     "imageNotFound": "Immagine non trovata",
-    "rightsNoteRequired": "Per un'immagine con licenza serve un riferimento alla licenza nella nota",
+    "rightsNoteRequired": "Per un’immagine con licenza serve un riferimento alla licenza nella nota",
     "pillarNotFound": "Pilastro non trovato",
     "pillarNotActive": "Il pilastro non è attivo",
     "rubricNotFound": "Rubrica non trovata",
@@ -68,7 +68,7 @@
     "templateWrongFormat": "Il template “{name}” è per un altro formato",
     "fixBeforeSending": "Correggi i problemi bloccanti prima dell’invio",
     "blockingProblems": "Ci sono problemi bloccanti",
-    "confirmSeen": "Conferma “Visto” su ogni avviso",
+    "confirmSeen": "Conferma “Ho visto” su ogni avviso",
     "termsUrlInvalid": "URL dei termini non valido",
     "dateInvalid": "Data non valida",
     "noteTooLong": "Nota troppo lunga",
@@ -145,7 +145,7 @@
       "running": "{job}: in corso",
       "progress": "Avanzamento: {job}",
       "needsAttention": "{job} richiede attenzione",
-      "failed": "{job} non riuscito"
+      "failed": "{job}: operazione non riuscita"
     }
   },
   "library": {
@@ -186,13 +186,13 @@
       "confirmedBadge": "Diritti confermati",
       "pendingBadge": "Diritti da confermare",
       "summary": "Diritti: {basis}, confermati il {date}",
-      "basis": "Base per l'uso commerciale",
+      "basis": "Base per l’uso commerciale",
       "note": "Licenza o fonte",
-      "notePlaceholder": "Riferimento della licenza, sito stock o chi l'ha fornita",
+      "notePlaceholder": "Riferimento della licenza, sito stock o chi l’ha fornita",
       "confirm": "Conferma i diritti",
       "update": "Aggiorna i diritti",
       "bases": {
-        "own": "Creata dall'agenzia",
+        "own": "Creata dall’agenzia",
         "client_supplied": "Fornita dal cliente",
         "licensed": "Con licenza (stock o altro)",
         "public_domain": "Pubblico dominio o CC0"
@@ -200,7 +200,7 @@
     },
     "commercialPending": "Uso commerciale da verificare",
     "dimensions": "{width}×{height} px",
-    "sizeKb": "{size} KB",
+    "sizeKb": "{size} kB",
     "sizeMb": "{size} MB",
     "model": "Modello",
     "cost": "Costo",
@@ -295,7 +295,7 @@
       "editSlide": "Modifica di una slide",
       "generateImage": "Generazione delle immagini",
       "export": "Esportazione",
-      "other": "Job in corso"
+      "other": "Attività in corso"
     },
     "versionOrigin": {
       "ai": "Generata dall’AI",
@@ -349,7 +349,7 @@
       "frequency": "Frequenza",
       "audience": "Pubblico",
       "themes": "Temi",
-      "cta": "Call to action",
+      "cta": "CTA",
       "products": "Prodotti",
       "channels": "Canali",
       "template": "Template",
@@ -395,7 +395,7 @@
       "funnel": "Funnel",
       "funnelNone": "Non specificato",
       "goal": "Obiettivo",
-      "cta": "Call to action",
+      "cta": "CTA",
       "emotion": "Emozione",
       "themes": "Temi",
       "avoid": "Da evitare",
@@ -412,7 +412,7 @@
       "templateNone": "Nessuno",
       "hookFormula": "Formula dell’Hook",
       "hookExample": "Esempio di Hook",
-      "cta": "Call to action",
+      "cta": "CTA",
       "channels": "Canali",
       "products": "Prodotti collegati"
     },
@@ -576,7 +576,7 @@
       "problem": "Problema del pubblico",
       "audienceNote": "Nota sul pubblico",
       "promise": "Messaggio chiave",
-      "cta": "Call to action",
+      "cta": "CTA",
       "constraints": "Vincoli",
       "constraintsHint": "Uno per riga (fino a 20).",
       "tone": "Variazione di tono",
@@ -594,8 +594,8 @@
   },
   "direction": {
     "title": "Direzione creativa",
-    "description": "Il Creative Director propone un concept e cosa fa e mostra ogni slide. Quando la accetti, il Copywriter e l'Art Director la seguono.",
-    "none": "Ancora nessuna direzione. Puoi scrivere l'outline anche senza.",
+    "description": "Il Creative Director propone un concept e cosa fa e mostra ogni slide. Quando la accetti, il Copywriter e l’Art Director la seguono.",
+    "none": "Ancora nessuna direzione. Puoi scrivere la scaletta anche senza.",
     "numberTitle": "Direzione {number}",
     "status": {
       "proposed": "Da decidere",
@@ -612,7 +612,7 @@
     "rationale": "Perché: {rationale}",
     "byline": "{model} · {date}",
     "instruction": "Le tue indicazioni: “{instruction}”",
-    "followed": "Il Copywriter e l'Art Director seguono questa direzione.",
+    "followed": "Il Copywriter e l’Art Director seguono questa direzione.",
     "accept": "Accetta",
     "reject": "Rifiuta",
     "rejectReason": "Perché non va bene?",
@@ -623,9 +623,9 @@
     "history": "Direzioni precedenti",
     "form": {
       "instruction": "Indicazioni per il Creative Director (facoltative)",
-      "instructionPlaceholder": "Es. un'idea più audace, gioca sul prima/dopo",
+      "instructionPlaceholder": "Es. un’idea più audace, gioca sul prima/dopo",
       "propose": "Proponi una direzione",
-      "again": "Proponine un'altra"
+      "again": "Proponine un’altra"
     }
   },
   "outline": {
@@ -672,7 +672,7 @@
       "point": "Punto",
       "note": "Nota",
       "addSlide": "Aggiungi slide",
-      "cta": "Call to action",
+      "cta": "CTA",
       "caption": "Didascalia",
       "hashtags": "Hashtag",
       "hashtagsPlaceholder": "#esempio #altro",
@@ -727,9 +727,9 @@
       "parts": "Modificato: {parts}",
       "part": {
         "layout": "Layout",
-        "tone": "Tono"
+        "tone": "Variante di colore"
       },
-      "caption": "Caption e hashtag"
+      "caption": "Didascalia e hashtag"
     }
   },
   "editor": {

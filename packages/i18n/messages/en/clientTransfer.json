@@ -28,7 +28,7 @@
       "activity": "Client activity",
       "activityHint": "The client's activity log as CSV. It is not imported back."
     },
-    "excludeUnapprovedAi": "Leave out AI images not approved",
+    "excludeUnapprovedAi": "Leave out unapproved AI images",
     "includeAgencyTemplates": "Include the agency templates the client used",
     "submit": "Export client",
     "confirm": "Export {client}? The package is built in the background; you can leave this page.",
@@ -109,7 +109,7 @@
     },
     "problems": {
       "unreadable": "This file is not a Forgecy client package or it is damaged.",
-      "format": "This file is not a Forgecy client package or it is damaged.",
+      "format": "This package uses a format this version does not know.",
       "newerVersion": "The package comes from a newer Forgecy. Update Forgecy before importing this package.",
       "checksum": "Some files in the package do not match their checksum: the package is damaged. Export it again.",
       "unknownTable": "The package contains data this version of Forgecy does not know. Update Forgecy before importing it."

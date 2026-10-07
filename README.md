@@ -25,7 +25,7 @@ It runs on the agency's machine with Docker Compose, with no mandatory cloud ser
 3. **Content strategy and briefs**: pillars, rubrics and structured briefs per channel, drawing on the client's product catalog.
 4. **Carousel**: outline and slides generated inside the agency's templates, optional static AI images.
 5. **Review**: slide-by-slide editor, brand check and internal approval.
-6. **Export**: PNG, PDF and ZIP in the exact sizes of each channel (Instagram 4:5 and LinkedIn document today).
+6. **Export**: PNG, PDF and ZIP in the exact sizes of each channel (Instagram 4:5 and 1:1, Stories 9:16, Facebook 4:5, TikTok photo and LinkedIn document).
 
 AI agents analyze and propose; a person always approves and publishes. No video, at any stage.
 

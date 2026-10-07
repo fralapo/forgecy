@@ -119,7 +119,7 @@
     "warranty": "Warranty"
   },
   "kinds": {
-    "sheet": "Product sheet",
+    "sheet": "Spreadsheet",
     "pdf": "Client PDF",
     "image": "Image",
     "text": "Text",
@@ -666,7 +666,7 @@
     "rejectTitle": "Reject “{name}”?",
     "reject": "Reject product",
     "duplicate": "Duplicate product",
-    "openSourceImport": "Open source import",
+    "openSourceImport": "Open originating import",
     "archiveTitle": "Archive “{name}”?",
     "archive": "Archive product",
     "archiveBody": "It can no longer be selected in briefs. Carousels that use it stay unchanged.",
@@ -707,7 +707,7 @@
     "noCommercial": "No commercial data",
     "onePerLine": "(one item per line)",
     "variantsHint": "(attribute | value | SKU, one per line)",
-    "openSource": "Open source",
+    "openSource": "View source file",
     "confirmSensitive": "Confirm that the value is correct and can be used in content.",
     "attribute": "Attribute",
     "value": "Value",

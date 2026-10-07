@@ -58,11 +58,11 @@
       "asset": {
         "brand_assets": "Logo e asset di marca",
         "client_photos": "Foto e immagini del cliente",
-        "audit_screenshots": "Screenshot dell'audit",
+        "audit_screenshots": "Screenshot dell’audit",
         "documents": "Documenti caricati (brand book, PDF, cataloghi)",
         "brand_texts": "Testi della Brand Identity"
       },
-      "assetsHelp": "I tipi non spuntati non lasciano mai Forgecy: quei lavori usano solo il modello locale, o si fermano se manca. Quelli spuntati richiedono comunque una conferma prima dell'invio dei file.",
+      "assetsHelp": "I tipi non spuntati non lasciano mai Forgecy: quei lavori usano solo il modello locale, o si fermano se manca. Quelli spuntati richiedono comunque una conferma prima dell’invio dei file.",
       "assetsSave": "Salva i file che si possono inviare",
       "assetsSaved": "File che si possono inviare salvati.",
       "assetsInvalid": "Tipo di file sconosciuto."
@@ -263,7 +263,7 @@
     "latest": "Ultimo backup: {date} · {size} · {kind}",
     "none": "Ancora nessun backup.",
     "stale": "Nessun backup nelle ultime 24 ore: creane uno.",
-    "nightlyFailed": "Il backup notturno di stanotte non è riuscito.",
+    "nightlyFailed": "Il backup notturno non è riuscito.",
     "kind": {
       "manual": "Manuale",
       "nightly": "Notturno",
@@ -293,7 +293,7 @@
     },
     "nightly": {
       "title": "Backup automatico",
-      "on": "Backup notturno: attivo · una volta al giorno dalle {hour} (ora dell’installazione), o appena Forgecy è acceso dopo quell’ora · database e file · conservati {days} giorni",
+      "on": "Backup notturno: attivo · una volta al giorno dalle {hour} (ora dell’installazione), o appena Forgecy è in esecuzione dopo quell’ora · database e file · conservati {days} giorni",
       "off": "Backup notturno: spento",
       "last": "Ultima esecuzione: {date} · {status}",
       "lastFailed": "Ultima esecuzione: {date} · non riuscita: {error}",
@@ -368,7 +368,7 @@
     },
     "upload": {
       "title": "Carica un file di backup",
-      "hint": "Un .tar.gz creato da Forgecy, per esempio su un'altra macchina. Viene controllato prima di essere tenuto, poi compare nell'elenco e nel menu qui sopra.",
+      "hint": "Un .tar.gz creato da Forgecy, per esempio su un’altra macchina. Viene controllato prima di essere tenuto, poi compare nell’elenco e nel menu qui sopra.",
       "label": "File di backup",
       "submit": "Carica backup",
       "cancel": "Annulla upload",

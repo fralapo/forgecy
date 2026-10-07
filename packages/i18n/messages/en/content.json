@@ -66,9 +66,9 @@
     "templateUnavailable": "Template “{key}” not available",
     "badTransition": "Cannot move from “{from}” to “{to}”",
     "templateWrongFormat": "Template “{name}” is for another format",
-    "fixBeforeSending": "Fix the blocking problems before sending",
-    "blockingProblems": "There are blocking problems",
-    "confirmSeen": "Confirm “Seen” on every warning",
+    "fixBeforeSending": "Fix the blocking issues before sending",
+    "blockingProblems": "There are blocking issues",
+    "confirmSeen": "Confirm “I’ve seen it” on every warning",
     "termsUrlInvalid": "Invalid terms URL",
     "dateInvalid": "Invalid date",
     "noteTooLong": "Note too long",
@@ -200,7 +200,7 @@
     },
     "commercialPending": "Commercial use to be verified",
     "dimensions": "{width}×{height} px",
-    "sizeKb": "{size} KB",
+    "sizeKb": "{size} kB",
     "sizeMb": "{size} MB",
     "model": "Model",
     "cost": "Cost",
@@ -727,7 +727,7 @@
       "parts": "Changed: {parts}",
       "part": {
         "layout": "Layout",
-        "tone": "Tone"
+        "tone": "Color variant"
       },
       "caption": "Caption and hashtags"
     }

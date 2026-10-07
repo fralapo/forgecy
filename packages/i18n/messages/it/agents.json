@@ -27,7 +27,7 @@
       "3": "Brand book e cataloghi caricati"
     },
     "strategist": {
-      "1": "Osservazioni accettate dell'audit",
+      "1": "Osservazioni accettate dell’audit",
       "2": "Brand Identity pubblicata",
       "3": "Prodotti del cliente"
     },
@@ -81,7 +81,7 @@
     "creative_director": {
       "1": "Direzione creativa (Proposta)",
       "2": "Intento di ogni slide",
-      "3": "Filo visivo per l'Art Director"
+      "3": "Filo visivo per l’Art Director"
     }
   },
   "capability": {
@@ -102,10 +102,10 @@
   },
   "task": {
     "scan": "Lettura del sito",
-    "audit_analyze": "Osservazioni dell'audit",
-    "audit_diagnose": "Diagnosi dell'audit",
-    "audit_plan": "Piano dell'audit",
-    "audit_report": "Report dell'audit",
+    "audit_analyze": "Osservazioni dell’audit",
+    "audit_diagnose": "Diagnosi dell’audit",
+    "audit_plan": "Piano dell’audit",
+    "audit_report": "Report dell’audit",
     "content_strategy": "Content strategy",
     "outline": "Scaletta del carosello",
     "slides": "Testi delle slide",
@@ -137,7 +137,7 @@
   },
   "detail": {
     "back": "Tutti gli agenti",
-    "tabsLabel": "Sezioni dell'agente",
+    "tabsLabel": "Sezioni dell’agente",
     "tabs": {
       "overview": "Panoramica",
       "tasks": "Compiti e modelli",
@@ -180,10 +180,10 @@
     "settingsLink": "Apri le impostazioni AI"
   },
   "instructions": {
-    "intro": "Istruzioni che l'agenzia aggiunge al prompt di questo agente, dopo le sue regole di base. Le regole di base vincono sempre. Ogni run registra la versione usata.",
+    "intro": "Istruzioni che l’agenzia aggiunge al prompt di questo agente, dopo le sue regole di base. Le regole di base vincono sempre. Ogni run registra la versione usata.",
     "published": "Versione in uso",
     "publishedOn": "Versione {version}, pubblicata il {date} da {name}",
-    "nonePublished": "Nessuna istruzione pubblicata: l'agente usa solo il suo prompt di base.",
+    "nonePublished": "Nessuna istruzione pubblicata: l’agente usa solo il suo prompt di base.",
     "emptyPublished": "La versione {version} ha rimosso le istruzioni.",
     "historyTitle": "Versioni",
     "version": "Versione",
@@ -198,7 +198,7 @@
     "draftTitle": "Bozza della versione {version}",
     "newDraft": "Nuova versione",
     "text": "Istruzioni",
-    "textHint": "Al massimo {max} caratteri. Scrivi regole che l'agente deve seguire per ogni cliente, per esempio il tono o le parole da evitare.",
+    "textHint": "Al massimo {max} caratteri. Scrivi regole che l’agente deve seguire per ogni cliente, per esempio il tono o le parole da evitare.",
     "saveDraft": "Salva bozza",
     "draftSaved": "Bozza salvata.",
     "changelogLabel": "Che cosa cambia in questa versione",
@@ -228,9 +228,9 @@
     "limitNote": "Le ultime {count} run."
   },
   "activation": {
-    "title": "Stato dell'agente",
-    "activeBody": "L'agente è attivo: le sue funzioni sono disponibili per ogni cliente.",
-    "inactiveBody": "L'agente è disattivato: le sue funzioni sono ferme per ogni cliente finché non lo riattivi.",
+    "title": "Stato dell’agente",
+    "activeBody": "L’agente è attivo: le sue funzioni sono disponibili per ogni cliente.",
+    "inactiveBody": "L’agente è disattivato: le sue funzioni sono ferme per ogni cliente finché non lo riattivi.",
     "deactivate": "Disattiva agente",
     "activate": "Attiva agente",
     "confirmTitle": "Disattivare {name}?",
@@ -241,12 +241,12 @@
     "activated": "{name} è di nuovo attivo."
   },
   "errors": {
-    "disabled": "{agent, select, brand_analyst {L'agente Brand Analyst è disattivato} strategist {L'agente Strategist è disattivato} copywriter {L'agente Copywriter è disattivato} art_director {L'agente Art Director AI è disattivato} reviewer {L'agente Reviewer è disattivato} other {Questo agente è disattivato}}. Un Admin può riattivarlo dalla pagina Agenti.",
+    "disabled": "{agent, select, brand_analyst {L’agente Brand Analyst è disattivato} strategist {L’agente Strategist è disattivato} copywriter {L’agente Copywriter è disattivato} art_director {L’agente Art Director AI è disattivato} reviewer {L’agente Reviewer è disattivato} other {Questo agente è disattivato}}. Un Admin può riattivarlo dalla pagina Agenti.",
     "typedKeyMismatch": "Digita esattamente {key} per confermare.",
     "invalidRoutes": "Non è stato possibile salvare i modelli: controlla servizi e compiti.",
     "tooLong": "Le istruzioni sono troppo lunghe: al massimo {max} caratteri.",
     "changelogRequired": "Descrivi che cosa cambia in questa versione (da 3 a 500 caratteri).",
-    "noDraft": "Non c'è una bozza da pubblicare: salvane prima una."
+    "noDraft": "Non c’è una bozza da pubblicare: salvane prima una."
   },
   "run": {
     "title": "Run di {agent} · {task}",
@@ -259,7 +259,7 @@
     "noClient": "Nessun cliente",
     "job": "Lavoro",
     "jobStatus": "Stato del lavoro",
-    "instructions": "Istruzioni dell'agente",
+    "instructions": "Istruzioni dell’agente",
     "promptVersion": "Versione del prompt",
     "action": "Passo",
     "authorization": "Autorizzazione",
@@ -267,7 +267,7 @@
     "startedBySystem": "Avviato dal sistema il {date}",
     "neverAgent": "Un run non ha mai come autore un agente.",
     "inputs": "Input inviati",
-    "inputsIntro": "Forgecy registra che cosa è stato inviato senza il contenuto: la dimensione e un'impronta (SHA-256) di ogni parte.",
+    "inputsIntro": "Forgecy registra che cosa è stato inviato senza il contenuto: la dimensione e un’impronta (SHA-256) di ogni parte.",
     "field": "Parte",
     "size": "Dimensione",
     "hash": "Impronta",
@@ -289,9 +289,9 @@
     "attemptsTitle": "Tentativi dello stesso passo",
     "fallback": "Servizio di riserva",
     "reason": {
-      "no_ai": "La policy AI del cliente non consente l'AI.",
+      "no_ai": "La policy AI del cliente non consente l’AI.",
       "local_unavailable": "Il cliente consente solo modelli locali e nessuno è configurato.",
-      "agent_disabled": "L'agente è disattivato.",
+      "agent_disabled": "L’agente è disattivato.",
       "budget_exceeded": "Il budget AI è esaurito.",
       "other": "Non consentito dalla policy AI del cliente."
     },
@@ -310,7 +310,7 @@
     "copy": "Copia id",
     "copySummary": "Copia riepilogo",
     "copied": "Copiato",
-    "openAgent": "Apri l'agente",
+    "openAgent": "Apri l’agente",
     "openRun": "Apri run",
     "notFound": "Questo run non esiste.",
     "current": "Questo run",
@@ -359,7 +359,7 @@
     "sensitive": "Sensibile",
     "sensitiveHint": "Riguarda la Brand Identity: si decide una per una.",
     "confidence": {
-      "label": "Confidenza",
+      "label": "Attendibilità",
       "high": "Alta",
       "medium": "Media",
       "low": "Bassa"
@@ -383,7 +383,7 @@
       "body": "Gli agenti le useranno dalle prossime generazioni.",
       "confirm": "Approva memorie",
       "cancel": "Annulla",
-      "hint": "Si approvano insieme solo le candidate non sensibili con confidenza media o alta.",
+      "hint": "Si approvano insieme solo le candidate non sensibili con attendibilità media o alta.",
       "done": "{count, plural, one {# memoria approvata} other {# memorie approvate}}: gli agenti le useranno dalle prossime generazioni."
     },
     "detail": {
@@ -393,7 +393,7 @@
       "client": "Cliente",
       "category": "Categoria",
       "status": "Stato",
-      "confidence": "Confidenza",
+      "confidence": "Attendibilità",
       "reason": "Motivo: {reason}",
       "origin": "Origine",
       "openRun": "Apri la run",
@@ -405,13 +405,13 @@
       "versions": "Cronologia versioni",
       "versionLine": "v{version} · {author} · {date}",
       "usedIn": "Usata in",
-      "usedInNone": "Nessuna run l'ha ancora usata.",
+      "usedInNone": "Nessuna run l’ha ancora usata.",
       "close": "Chiudi dettaglio"
     },
     "actions": {
       "approve": "Approva memoria",
       "note": "Nota",
-      "noteHint": "Obbligatoria a confidenza bassa.",
+      "noteHint": "Obbligatoria ad attendibilità bassa.",
       "approved": "Memoria approvata: gli agenti la useranno dalle prossime generazioni.",
       "reject": "Rifiuta memoria",
       "rejectTitle": "Rifiutare questa memoria?",
@@ -462,7 +462,7 @@
         "contact": "Contatto",
         "visit": "Visita"
       },
-      "notSet": "Non impostato: vale il default del template o dell'agenzia.",
+      "notSet": "Non impostato: vale il default del template o dell’agenzia.",
       "meta": "v{version} · {name} · {date}",
       "metaNoName": "v{version} · {date}",
       "save": "Salva",
@@ -479,14 +479,14 @@
       "noAi": "La policy AI del cliente è no_ai: gli agenti non possono proporre memorie.",
       "alreadyDecided": "Questa memoria è già stata decisa nel frattempo.",
       "alreadyDecidedBy": "{name} ha già deciso questa memoria nel frattempo.",
-      "noteRequired": "A confidenza bassa, per approvare serve una nota (almeno 3 caratteri).",
-      "notBulk": "Le memorie sensibili o a confidenza bassa si approvano una per una.",
+      "noteRequired": "Con attendibilità bassa, per approvare serve una nota (almeno 3 caratteri).",
+      "notBulk": "Le memorie sensibili o ad attendibilità bassa si approvano una per una.",
       "reasonRequired": "Scrivi un motivo (da 3 a 500 caratteri).",
       "chooseClient": "Scegli un cliente.",
       "setting": {
         "slide_count": "Il numero di slide deve essere tra 3 e 20.",
-        "format": "Scegli un formato dall'elenco.",
-        "language": "Scegli una lingua dall'elenco.",
+        "format": "Scegli un formato dall’elenco.",
+        "language": "Scegli una lingua dall’elenco.",
         "default_cta": "Scrivi una CTA di massimo 60 caratteri e scegline il tipo."
       }
     }
@@ -518,7 +518,7 @@
     "kept": "Mantenute",
     "reverted": "Annullate",
     "editsNone": "Nessuna istruzione su slide decisa negli ultimi 90 giorni.",
-    "sources": "Contate da proposte di Brand Identity, osservazioni dell'audit, proposte di strategia, campi prodotto e memorie."
+    "sources": "Contate da proposte di Brand Identity, osservazioni dell’audit, proposte di strategia, campi prodotto e memorie."
   },
   "preview": {
     "title": "Prova su un esempio",
@@ -529,16 +529,16 @@
     "estimate": "Circa {cost} per prova con {model}.",
     "estimateUnknown": "Usa {model}; il costo viene registrato dopo la prova.",
     "run": "Prova la bozza",
-    "running": "Esecuzione dell'esempio…",
+    "running": "Esecuzione dell’esempio…",
     "resultTitle": "Risultato",
-    "followed": "Come le istruzioni l'hanno guidato",
+    "followed": "Come le istruzioni l’hanno guidato",
     "meta": "{model} · {cost}",
-    "noAi": "La policy AI predefinita dell'agenzia è no_ai: la prova del prompt non è disponibile.",
+    "noAi": "La policy AI predefinita dell’agenzia è no_ai: la prova del prompt non è disponibile.",
     "noTasks": "Questo agente non ha compiti con un modello linguistico da provare.",
     "errors": {
       "task": "Scegli uno dei compiti di questo agente.",
       "example": "Scrivi un esempio da 3 a {max} caratteri.",
-      "noAi": "La policy AI predefinita dell'agenzia è no_ai: la prova del prompt non è disponibile."
+      "noAi": "La policy AI predefinita dell’agenzia è no_ai: la prova del prompt non è disponibile."
     }
   }
 }
