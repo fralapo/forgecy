@@ -3,10 +3,12 @@ import {
   assertCan,
   isLocalProvider,
   providerIds,
+  sendableAssetTypes,
   type Actor,
   type AiPolicy,
   type ClientStatus,
   type ProviderId,
+  type SendableAssetType,
 } from "@forgecy/core";
 import {
   and,
@@ -127,6 +129,39 @@ export async function setApprovedProviders(
   });
 }
 
+/**
+ * Admin only. The kinds of files and texts an external_restricted client may send to
+ * its approved providers (page 61); the gateway keeps the others on a local model.
+ */
+export async function setSendableAssets(
+  db: Database,
+  actor: Actor,
+  clientId: string,
+  kinds: readonly SendableAssetType[],
+): Promise<void> {
+  assertCan(actor, "ai.policies.manage", clientId);
+  const next = sendableAssetTypes.filter((k) => kinds.includes(k));
+  await db.transaction(async (tx) => {
+    const [before] = await tx
+      .select({ sendableAssets: clients.sendableAssets })
+      .from(clients)
+      .where(eq(clients.id, clientId));
+    if (!before) throw new Error(`Client not found: ${clientId}`);
+    await tx
+      .update(clients)
+      .set({ sendableAssets: next, updatedAt: new Date() })
+      .where(eq(clients.id, clientId));
+    await recordAuditEvent(tx, {
+      actor,
+      action: "sendable_assets_changed",
+      entity: "client",
+      entityId: clientId,
+      clientId,
+      meta: { from: before.sendableAssets, to: next },
+    });
+  });
+}
+
 export type BudgetTarget = { scope: "agency" } | { scope: "client"; clientId: string };
 
 /**
@@ -188,6 +223,7 @@ export interface ClientBudgetLine extends BudgetLine {
   status: ClientStatus;
   aiPolicy: AiPolicy;
   approvedProviders: ProviderId[];
+  sendableAssets: SendableAssetType[];
 }
 
 export interface BudgetOverview {
@@ -235,6 +271,7 @@ export async function getBudgetOverview(
         status: clients.status,
         aiPolicy: clients.aiPolicy,
         approvedProviders: clients.approvedProviders,
+        sendableAssets: clients.sendableAssets,
       })
       .from(clients)
       .where(isNull(clients.archivedAt))
@@ -271,6 +308,7 @@ export async function getBudgetOverview(
       status: c.status,
       aiPolicy: c.aiPolicy,
       approvedProviders: c.approvedProviders,
+      sendableAssets: c.sendableAssets,
       ...line(c.id, spendFor.get(c.id) ?? 0),
     })),
   };

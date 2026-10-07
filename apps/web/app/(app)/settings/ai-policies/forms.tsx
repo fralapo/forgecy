@@ -1,6 +1,12 @@
 "use client";
 
-import { aiPolicies, type AiPolicy, type ProviderId } from "@forgecy/core";
+import {
+  aiPolicies,
+  sendableAssetTypes,
+  type AiPolicy,
+  type ProviderId,
+  type SendableAssetType,
+} from "@forgecy/core";
 import { Button, Input, Label } from "@forgecy/ui";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -13,6 +19,7 @@ import {
   setBudgetAction,
   setClientPolicyAction,
   setDefaultPolicyAction,
+  setSendableAssetsAction,
 } from "./actions";
 
 function useAction() {
@@ -194,6 +201,45 @@ export function ApprovedProvidersForm({
       ) : null}
       <Button type="submit" variant="secondary" className="self-start" disabled={pending}>
         {t("providersSave")}
+      </Button>
+      <ActionFeedback result={result} />
+    </form>
+  );
+}
+
+/** external_restricted: which kinds of client files and texts may leave Forgecy (page 61). */
+export function SendableAssetsForm({
+  clientId,
+  name,
+  sendable,
+}: {
+  clientId: string;
+  name: string;
+  sendable: SendableAssetType[];
+}) {
+  const t = useTranslations("admin.aiPolicies.clients");
+  const { pending, result, run } = useAction();
+  return (
+    <form
+      className="mt-3 flex flex-col gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const picked = new FormData(e.currentTarget).getAll("asset").map(String);
+        run(() => setSendableAssetsAction(clientId, picked));
+      }}
+    >
+      <fieldset className="flex flex-col gap-1">
+        <legend className="mb-1 text-body-sm text-fg">{t("assetsFor", { name })}</legend>
+        {sendableAssetTypes.map((k) => (
+          <Label key={k} className="flex items-center gap-2 font-normal">
+            <input type="checkbox" name="asset" value={k} defaultChecked={sendable.includes(k)} />
+            {t(`asset.${k}`)}
+          </Label>
+        ))}
+      </fieldset>
+      <p className="text-body-sm text-fg-muted">{t("assetsHelp")}</p>
+      <Button type="submit" variant="secondary" className="self-start" disabled={pending}>
+        {t("assetsSave")}
       </Button>
       <ActionFeedback result={result} />
     </form>

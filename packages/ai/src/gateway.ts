@@ -2,9 +2,11 @@ import type { z } from "zod";
 import {
   checkAiPolicy,
   ForgecyError,
+  isLocalProvider,
   type AgentRole,
   type AiPolicy,
   type ProviderId,
+  type SendableAssetType,
 } from "@forgecy/core";
 import { messageRef } from "@forgecy/i18n";
 import {
@@ -95,6 +97,12 @@ interface CommonRequest {
   clientPolicy: AiPolicy;
   /** Narrows the client's approved providers (external_restricted); it cannot add any. */
   approvedProviders?: readonly ProviderId[];
+  /**
+   * Kinds of client files and texts this request carries (page 61). For an
+   * external_restricted client, a kind the Admin did not allow keeps the request
+   * on a local model; without one the request is blocked.
+   */
+  sends?: readonly SendableAssetType[];
   authorizedBy?: string | null;
   contentId?: string | null;
   jobId?: string | null;
@@ -309,6 +317,23 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
       const decision = checkAiPolicy(req.clientPolicy, c.provider, approved);
       if (decision.allowed) allowed.push(c);
       else firstDenial ??= decision.reason;
+    }
+    if (req.clientPolicy === "external_restricted" && req.sends?.length && allowed.length) {
+      const sendable =
+        req.clientId && ledger.sendableAssets ? await ledger.sendableAssets(req.clientId) : null;
+      const refused = sendable ? req.sends.filter((k) => !sendable.includes(k)) : [];
+      if (refused.length) {
+        // Those files never leave Forgecy: only a local model may read them.
+        const onSite = allowed.filter((c) => isLocalProvider(c.provider));
+        if (!onSite.length && local && configured(local.provider)) onSite.push(local);
+        if (!onSite.length)
+          return block(
+            "asset_type_not_allowed",
+            `Policy external_restricted does not allow sending ${refused.join(", ")} for this client`,
+            route.primary,
+          );
+        allowed.splice(0, allowed.length, ...onSite);
+      }
     }
     if (allowed.length === 0) {
       return block(

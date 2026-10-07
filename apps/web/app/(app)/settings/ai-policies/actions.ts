@@ -7,9 +7,16 @@ import {
   setApprovedProviders,
   setDefaultAiPolicy,
   setMonthlyBudget,
+  setSendableAssets,
 } from "@forgecy/ai";
 import { setProspectPolicy } from "@forgecy/audit";
-import { aiPolicies, PermissionDeniedError, type AiPolicy, type ProviderId } from "@forgecy/core";
+import {
+  aiPolicies,
+  PermissionDeniedError,
+  sendableAssetTypes,
+  type AiPolicy,
+  type ProviderId,
+} from "@forgecy/core";
 import { getDb } from "@forgecy/db";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
@@ -105,6 +112,26 @@ export async function setBudgetAction(
     ok: true,
     message: percent !== null && percent >= 100 ? t("alreadyExceeded") : t("saved"),
   };
+}
+
+export async function setSendableAssetsAction(
+  clientId: string,
+  kinds: string[],
+): Promise<AdminActionResult> {
+  const user = await requireUser();
+  const t = await getTranslations("admin.aiPolicies.clients");
+  const parsed = z
+    .object({ clientId: z.uuid(), kinds: z.array(z.enum(sendableAssetTypes)) })
+    .safeParse({ clientId, kinds });
+  if (!parsed.success) return { ok: false, error: t("assetsInvalid"), code: "INPUT-INVALID" };
+  try {
+    await setSendableAssets(getDb(), user.actor, parsed.data.clientId, parsed.data.kinds);
+  } catch (err) {
+    if (err instanceof PermissionDeniedError) return deniedResult();
+    throw err;
+  }
+  revalidatePath(PATH);
+  return { ok: true, message: t("assetsSaved") };
 }
 
 export async function setApprovedProvidersAction(

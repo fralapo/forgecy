@@ -53,7 +53,19 @@
       "providersEmpty": "No provider approved yet: AI features of this client only use the local model.",
       "providersSave": "Save approved providers",
       "providersSaved": "Approved providers saved.",
-      "providersNone": "Choose at least one provider."
+      "providersNone": "Choose at least one provider.",
+      "assetsFor": "Files that {name} may send",
+      "asset": {
+        "brand_assets": "Logo and brand assets",
+        "client_photos": "Photos and images of the client",
+        "audit_screenshots": "Audit screenshots",
+        "documents": "Uploaded documents (brand book, PDF, catalogs)",
+        "brand_texts": "Brand Identity texts"
+      },
+      "assetsHelp": "Unchecked kinds never leave Forgecy: those jobs run only on the local model, or stop when there is none. Checked kinds still need a confirmation before files are sent.",
+      "assetsSave": "Save files that may be sent",
+      "assetsSaved": "Files that may be sent saved.",
+      "assetsInvalid": "Unknown kind of file."
     },
     "agency": {
       "title": "Agency budget",

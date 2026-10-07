@@ -113,6 +113,54 @@ describe("policy", () => {
   });
 });
 
+describe("files that may be sent (external_restricted)", () => {
+  it("keeps a request with a kind the Admin did not allow on the local model", async () => {
+    const { gateway, anthropic, openai, local, ledger } = setup();
+    ledger.setApprovedProviders(baseReq.clientId, ["anthropic"]);
+    ledger.setSendableAssets(baseReq.clientId, ["brand_texts"]);
+    anthropic.push({ json: { title: "Allowed", slides: 3 } });
+    const ok = await gateway.generateObject({
+      ...baseReq,
+      clientPolicy: "external_restricted",
+      sends: ["brand_texts"],
+    });
+    expect(ok.provider).toBe("anthropic");
+    local.push({ json: { title: "On site", slides: 3 } });
+    const kept = await gateway.generateObject({
+      ...baseReq,
+      clientPolicy: "external_restricted",
+      sends: ["audit_screenshots"],
+    });
+    expect(kept.provider).toBe("local");
+    expect(anthropic.calls).toHaveLength(1);
+    expect(openai.calls).toHaveLength(0);
+  });
+
+  it("blocks it when there is no local model, and ignores the rule for other policies", async () => {
+    const { gateway, anthropic, ledger } = setup({ local: false });
+    ledger.setApprovedProviders(baseReq.clientId, ["anthropic"]);
+    ledger.setSendableAssets(baseReq.clientId, []);
+    await expect(
+      gateway.generateObject({
+        ...baseReq,
+        clientPolicy: "external_restricted",
+        sends: ["documents"],
+      }),
+    ).rejects.toMatchObject({
+      code: "policy_blocked",
+      details: { reason: "asset_type_not_allowed" },
+    });
+    expect(anthropic.calls).toHaveLength(0);
+    anthropic.push({ json: { title: "Allowed", slides: 3 } });
+    const res = await gateway.generateObject({
+      ...baseReq,
+      clientPolicy: "external_allowed",
+      sends: ["documents"],
+    });
+    expect(res.provider).toBe("anthropic");
+  });
+});
+
 describe("structured output", () => {
   it("retries once with the validation error, then succeeds", async () => {
     const { gateway, anthropic, ledger } = setup();

@@ -21,6 +21,7 @@ import { AdminOnly } from "../_components/admin-only";
 import { UsageBar } from "../_components/usage-bar";
 import {
   ApprovedProvidersForm,
+  SendableAssetsForm,
   BudgetForm,
   ClientPolicySelect,
   DefaultPolicyForm,
@@ -252,6 +253,13 @@ export default async function AiPoliciesPage() {
                             name={c.name}
                             choices={choices}
                             approved={c.approvedProviders}
+                          />
+                        ) : null}
+                        {c.aiPolicy === "external_restricted" ? (
+                          <SendableAssetsForm
+                            clientId={c.clientId}
+                            name={c.name}
+                            sendable={c.sendableAssets}
                           />
                         ) : null}
                       </td>
