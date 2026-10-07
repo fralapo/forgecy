@@ -103,6 +103,26 @@
         "startFailed": "The provider did not accept the connection. Check the server address in .env and try again."
       }
     },
+    "apiKey": {
+      "cardTitle": "OpenAI API key",
+      "title": "Use the agency's own API key",
+      "hint": "Create a key on your OpenAI project (billing must be enabled there; a ChatGPT Plus or Pro subscription does not cover API usage):",
+      "link": "platform.openai.com/api-keys",
+      "label": "API key",
+      "placeholder": "sk-proj-...",
+      "current": "Current key: •••• {hint}",
+      "save": "Save",
+      "test": "Test",
+      "remove": "Remove",
+      "saved": "Key saved.",
+      "testOk": "The key works.",
+      "testFailed": "The key did not work: {error}",
+      "errors": {
+        "empty": "Paste a key first.",
+        "unavailable": "Set FORGECY_ENCRYPTION_KEY in .env first: it encrypts the key.",
+        "noneConfigured": "No key to test: paste one above, or set OPENAI_API_KEY in .env."
+      }
+    },
     "siwc": {
       "title": "Sign in with ChatGPT",
       "description": "Connect your own ChatGPT account instead of using the agency's OpenAI API key for your requests.",

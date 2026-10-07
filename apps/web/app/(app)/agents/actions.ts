@@ -114,7 +114,7 @@ export async function previewAgentAction(
     return { ok: false, error: (await getTranslations("agents"))("preview.errors.task") };
   try {
     const res = await previewAgentInstructions(
-      { db: getDb(), gateway: webGateway() },
+      { db: getDb(), gateway: await webGateway() },
       user.actor,
       agent.data,
       input,

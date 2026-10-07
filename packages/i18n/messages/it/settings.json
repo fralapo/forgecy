@@ -103,6 +103,26 @@
         "startFailed": "Il provider non ha accettato il collegamento. Controlla l’indirizzo del server nel file .env e riprova."
       }
     },
+    "apiKey": {
+      "cardTitle": "Chiave API OpenAI",
+      "title": "Usa una chiave API dell'agenzia",
+      "hint": "Crea una chiave sul tuo progetto OpenAI (la fatturazione API deve essere attiva lì; un abbonamento ChatGPT Plus o Pro non copre l'uso dell'API):",
+      "link": "platform.openai.com/api-keys",
+      "label": "Chiave API",
+      "placeholder": "sk-proj-...",
+      "current": "Chiave attuale: •••• {hint}",
+      "save": "Salva",
+      "test": "Verifica",
+      "remove": "Rimuovi",
+      "saved": "Chiave salvata.",
+      "testOk": "La chiave funziona.",
+      "testFailed": "La chiave non ha funzionato: {error}",
+      "errors": {
+        "empty": "Incolla prima una chiave.",
+        "unavailable": "Imposta prima FORGECY_ENCRYPTION_KEY nel file .env: cifra la chiave.",
+        "noneConfigured": "Nessuna chiave da verificare: incollane una qui sopra, oppure imposta OPENAI_API_KEY nel file .env."
+      }
+    },
     "siwc": {
       "title": "Accedi con ChatGPT",
       "description": "Collega il tuo account ChatGPT personale invece di usare la chiave API OpenAI dell'agenzia per le tue richieste.",

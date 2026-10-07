@@ -2,6 +2,7 @@ import {
   createAiGateway,
   createDbLedger,
   createProvidersFromEnv,
+  resolveAiEnv,
   settingsRouting,
 } from "@forgecy/ai";
 import { loadEnv } from "@forgecy/core";
@@ -23,8 +24,10 @@ const stepLabels: Record<ImportPhase, string> = {
 };
 
 /** Dependencies built from the environment (worker process). */
-export function catalogDepsFromEnv(ctx: Pick<JobContext, "db" | "logger">): PipelineDeps {
-  const env = loadEnv();
+export async function catalogDepsFromEnv(
+  ctx: Pick<JobContext, "db" | "logger">,
+): Promise<PipelineDeps> {
+  const env = await resolveAiEnv(ctx.db, loadEnv());
   const providers = createProvidersFromEnv(env);
   const hasText = Object.keys(providers.text).length > 0;
   return {
@@ -45,11 +48,11 @@ export function catalogDepsFromEnv(ctx: Pick<JobContext, "db" | "logger">): Pipe
 
 /** Worker handlers of the catalog: `...catalogHandlers` in apps/worker/src/handlers.ts. */
 export function createCatalogHandlers(
-  depsFor: (ctx: JobContext) => PipelineDeps = catalogDepsFromEnv,
+  depsFor: (ctx: JobContext) => Promise<PipelineDeps> = catalogDepsFromEnv,
 ) {
   return handle(catalogImportJob, async (payload, ctx) => {
     try {
-      const result = await runImportPhase(depsFor(ctx), payload.importId, payload.phase, {
+      const result = await runImportPhase(await depsFor(ctx), payload.importId, payload.phase, {
         jobId: ctx.jobId,
         progress: (p) => ctx.progress(p),
         heartbeat: () => ctx.heartbeat(),

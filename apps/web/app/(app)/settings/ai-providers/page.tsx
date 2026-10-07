@@ -1,5 +1,6 @@
 import {
   defaultModelFor,
+  getAgencyApiKey,
   getSiwcConnection,
   imageModelFor,
   imageProviderIds,
@@ -14,7 +15,7 @@ import {
 import { getCommercialUseReviews, type ImageProvider } from "@forgecy/content";
 import { getDb } from "@forgecy/db";
 import { Badge, Card } from "@forgecy/ui";
-import { BadgeCheck, Hourglass, MessageCircle, XCircle } from "lucide-react";
+import { BadgeCheck, Hourglass, KeyRound, MessageCircle, XCircle } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { currentRouting } from "@/lib/ai";
@@ -22,6 +23,7 @@ import { env } from "@/lib/env";
 import { getFormat } from "@/lib/i18n";
 import { requireUser } from "@/lib/session";
 import { providerIcons } from "../_lib/provider-icons";
+import { ApiKeyForm } from "./api-key-form";
 import { CommercialUseForm } from "./commercial-use-form";
 import { McpConnection } from "./mcp-connection";
 import { RoutingForm } from "./routing-form";
@@ -99,8 +101,14 @@ export default async function AiProvidersPage({
   const connections = await listMcpConnections(getDb());
   const siwcConfigured = await isSiwcConfigured(getDb(), env);
   const siwcConnection = await getSiwcConnection(getDb(), user.id, env);
+  const apiKeyConnection = await getAgencyApiKey(getDb(), "openai");
+  const openaiReady = Boolean(env.OPENAI_API_KEY) || apiKeyConnection?.status === "active";
   const ready = (p: ImageProvider) =>
-    isMcpImageProvider(p) ? connections.get(p)?.status === "connected" : !!keyReady[p];
+    isMcpImageProvider(p)
+      ? connections.get(p)?.status === "connected"
+      : p === "openai"
+        ? openaiReady
+        : !!keyReady[p];
   const tr = await getTranslations("settings.aiProviders.routing");
   const settings = await loadAiRoutingSettings(getDb());
   const { routing, images: imageRoute } = await currentRouting();
@@ -158,7 +166,7 @@ export default async function AiProvidersPage({
           text={textProviderIds.map((id) => ({
             id,
             name: id === "local" ? tp("localModel") : textNames[id],
-            ready: textReady[id],
+            ready: id === "openai" ? openaiReady : textReady[id],
             defaultModel: defaultModelFor(id, env),
           }))}
           images={imageProviderIds.map((id) => ({
@@ -172,6 +180,15 @@ export default async function AiProvidersPage({
             images: chosenImages,
           }}
         />
+      </Card>
+      <Card className="mb-6 flex flex-col gap-4 p-6">
+        <div className="flex items-center gap-2">
+          <KeyRound aria-hidden className="size-5 text-fg-muted" strokeWidth={1.5} />
+          <h2 className="text-heading-sm text-fg">
+            {(await getTranslations("settings.aiProviders.apiKey"))("cardTitle")}
+          </h2>
+        </div>
+        <ApiKeyForm connection={apiKeyConnection} />
       </Card>
       <Card className="mb-6 flex flex-col gap-4 p-6">
         <div className="flex items-center gap-2">

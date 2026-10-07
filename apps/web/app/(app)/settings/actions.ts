@@ -7,8 +7,12 @@ import {
   disconnectSiwc,
   imageProviderIds,
   mcpImageProviderIds,
+  removeAgencyApiKey,
+  resolveApiKey,
   saveAiRoutingSettings,
+  setAgencyApiKey,
   setSiwcClientId,
+  testApiKey,
 } from "@forgecy/ai";
 import { setCommercialUse } from "@forgecy/content";
 import { assertCan, ForgecyError, localeSchema, PermissionDeniedError } from "@forgecy/core";
@@ -19,6 +23,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
+import { resetProviders } from "@/lib/ai";
 import { env } from "@/lib/env";
 import { errorMessage, firstIssue, vmsg } from "@/lib/i18n";
 import { PASSWORD_MIN } from "@/lib/password";
@@ -188,6 +193,49 @@ export async function saveRoutingAction(
   revalidatePath("/settings/ai-providers");
   revalidatePath("/settings");
   return { ok: true };
+}
+
+export type ApiKeyState = { error?: string; ok?: boolean };
+
+/** Admin only: pastes the agency's own OpenAI key, stored encrypted (never logged or sent back). */
+export async function setApiKeyAction(_prev: ApiKeyState, form: FormData): Promise<ApiKeyState> {
+  const admin = await requireUser();
+  const t = await getTranslations("settings.aiProviders.apiKey");
+  try {
+    await setAgencyApiKey(getDb(), admin.actor, env, "openai", String(form.get("apiKey") ?? ""));
+  } catch (err) {
+    if (err instanceof PermissionDeniedError)
+      return { error: (await getTranslations("errors"))("adminOnly") };
+    if (err instanceof ForgecyError)
+      return { error: t(`errors.${err.code === "validation" ? "empty" : "unavailable"}`) };
+    throw err;
+  }
+  resetProviders();
+  revalidatePath("/settings/ai-providers");
+  return { ok: true };
+}
+
+export async function removeApiKeyAction(): Promise<void> {
+  const admin = await requireUser();
+  await removeAgencyApiKey(getDb(), admin.actor, "openai");
+  resetProviders();
+  revalidatePath("/settings/ai-providers");
+}
+
+export type ApiKeyTestState = { tested?: true; ok?: boolean; error?: string };
+
+/** Pasted (unsaved) key if given, else the one already configured (saved key, else env var). */
+export async function testApiKeyAction(
+  _prev: ApiKeyTestState,
+  form: FormData,
+): Promise<ApiKeyTestState> {
+  await requireUser();
+  const t = await getTranslations("settings.aiProviders.apiKey");
+  const pasted = String(form.get("apiKey") ?? "").trim();
+  const key = pasted || (await resolveApiKey(getDb(), env, "openai"));
+  if (!key) return { tested: true, ok: false, error: t("errors.noneConfigured") };
+  const result = await testApiKey("openai", key);
+  return { tested: true, ok: result.ok, error: result.error };
 }
 
 export type SiwcConnectState = { error?: string };

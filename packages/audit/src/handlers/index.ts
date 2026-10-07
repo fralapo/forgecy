@@ -2,6 +2,7 @@ import {
   createAiGateway,
   createDbLedger,
   createProvidersFromEnv,
+  resolveAiEnv,
   settingsRouting,
 } from "@forgecy/ai";
 import { loadEnv } from "@forgecy/core";
@@ -42,8 +43,8 @@ export type { AuditHandlerDeps } from "./context";
 
 /** Deps from the environment: DB, storage, a producer for follow-up jobs, the AI gateway. */
 export async function auditDepsFromEnv(): Promise<AuditHandlerDeps> {
-  const env = loadEnv();
   const db = getDb();
+  const env = await resolveAiEnv(db, loadEnv());
   const providers = createProvidersFromEnv(env);
   const userAgent = auditUserAgent();
   const hostCheck = createHostCheck({

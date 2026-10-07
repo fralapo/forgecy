@@ -6,6 +6,7 @@ export * from "./pricing";
 export * from "./ledger";
 export * from "./settings";
 export * from "./crypto";
+export * from "./connections";
 export * from "./gateway";
 export * from "./registry";
 export * from "./providers/anthropic";
