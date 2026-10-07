@@ -4,7 +4,7 @@
     "templateMissing": "Template not available",
     "slideIssue": "Slide {slide}: {issue}",
     "lastNotCta": "The last slide is not a call to action",
-    "captionLength": "Caption of {count} characters: the {channel} limit is {max}",
+    "captionLength": "Caption of {count} characters: over the {channel} limit of {max}, the platform may reject or cut it",
     "hashtags": "{count, plural, one {# hashtag} other {# hashtags}}: the Brand Identity allows at most {max}",
     "forbiddenWord": "Word forbidden by the Brand Identity: “{word}”",
     "price": "The copy mentions a price but the brief does not allow it",

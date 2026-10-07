@@ -754,6 +754,8 @@
     "captionSection": "Caption and hashtags",
     "caption": "Caption",
     "captionCount": "{count} / {limit} characters ({channel})",
+    "captionTrim": "Trim to limit",
+    "captionOver": "Over the limit by {over}. Trim it, or keep it and mark the warning as seen at review.",
     "hashtags": "Hashtags",
     "hashtagsPlaceholder": "#example #another",
     "hashtagsHint": "{count, plural, one {# hashtag} other {# hashtags}}. Separate them with a space.",
