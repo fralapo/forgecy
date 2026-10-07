@@ -372,7 +372,7 @@
     "observationsDetail": "{count} ancora da rivedere",
     "competitors": "Elenco dei competitor confermato",
     "problems": "Da {min} a {max} problemi accettati",
-    "problemsDetail": "{count} accettati",
+    "problemsDetail": "{count, plural, one {# accettato} other {# accettati}}",
     "stale": "Diagnosi aggiornata",
     "staleDetail": "{count, plural, one {# problema da ricontrollare} other {# problemi da ricontrollare}}"
   },
@@ -525,8 +525,8 @@
       "description": "Avviato il {date}. I canali social non vengono letti in automatico: carichi tu screenshot, export o valori.",
       "competitors": "Competitor",
       "withoutCompetitors": "Audit senza competitor",
-      "confirmed": "{count} confermati",
-      "proposed": "{count} proposti, da confermare"
+      "confirmed": "{count, plural, one {# confermato} other {# confermati}}",
+      "proposed": "{count, plural, one {# proposto} other {# proposti}}, da confermare"
     },
     "beforeReport": "Prima del report",
     "goToReport": "Vai al report",
@@ -536,53 +536,53 @@
   "scan": {
     "robotsFound": "robots.txt trovato",
     "robotsMissing": "Nessun robots.txt: lettura consentita",
-    "discovery": "{count} pagine da leggere (massimo {max})",
+    "discovery": "{count, plural, one {# pagina} other {# pagine}} da leggere (massimo {max})",
     "progress": "Pagine lette {read}/{total}",
-    "screenshots": "{pages} pagine lette · {shots} screenshot",
+    "screenshots": "{pages, plural, one {# pagina letta} other {# pagine lette}} · {shots} screenshot",
     "noChromium": "Chromium non disponibile: niente screenshot",
-    "extraction": "{count} pagine analizzate",
-    "checks": "{failed} controlli su {total} da migliorare",
+    "extraction": "{count, plural, one {# pagina analizzata} other {# pagine analizzate}}",
+    "checks": "{failed, plural, one {# controllo} other {# controlli}} su {total} da migliorare",
     "analysisPending": "Osservazioni in corso",
     "analysisNoPages": "Nessuna pagina letta",
     "analysisNoAi": "AI non consentita dalla policy: osservazioni a mano",
     "analysisRunning": "Brand Analyst al lavoro",
-    "analysisDone": "{count} osservazioni da rivedere",
-    "analysisDoneDropped": "{count} osservazioni da rivedere ({dropped} scartate per mancanza di evidenze verificabili)"
+    "analysisDone": "{count, plural, one {# osservazione} other {# osservazioni}} da rivedere",
+    "analysisDoneDropped": "{count, plural, one {# osservazione} other {# osservazioni}} da rivedere ({dropped, plural, one {# scartata} other {# scartate}} per mancanza di evidenze verificabili)"
   },
   "check": {
     "h1": {
       "label": "Un titolo H1 per pagina",
-      "failed": "{count} pagine senza H1",
+      "failed": "{count, plural, one {# pagina} other {# pagine}} senza H1",
       "ok": "Ogni pagina ha un H1"
     },
     "multiple_h1": {
       "label": "Un solo H1",
-      "failed": "{count} pagine con più di un H1",
+      "failed": "{count, plural, one {# pagina} other {# pagine}} con più di un H1",
       "ok": "Nessuna pagina con più di un H1"
     },
     "meta_description": {
       "label": "Meta description",
-      "failed": "{count} pagine senza meta description",
+      "failed": "{count, plural, one {# pagina} other {# pagine}} senza meta description",
       "ok": "Presente ovunque"
     },
     "img_alt": {
       "label": "Testo alternativo delle immagini",
-      "detail": "{missing} immagini su {total} senza attributo alt"
+      "detail": "{missing, plural, one {# immagine} other {# immagini}} su {total} senza attributo alt"
     },
     "lang": {
       "label": "Lingua della pagina dichiarata",
-      "failed": "{count} pagine senza attributo lang",
+      "failed": "{count, plural, one {# pagina} other {# pagine}} senza attributo lang",
       "ok": "Dichiarata ovunque"
     },
     "viewport": {
       "label": "Pagine adatte al mobile (meta viewport)",
-      "failed": "{count} pagine senza meta viewport",
+      "failed": "{count, plural, one {# pagina} other {# pagine}} senza meta viewport",
       "ok": "Presente"
     },
     "load_time": {
       "label": "Caricamento in meno di 4 secondi",
-      "failed": "{count} pagine oltre i 4 s (misurato dal server Forgecy)",
-      "ok": "Tutte sotto i 4 s (misurato dal server Forgecy)"
+      "failed": "{count, plural, one {# pagina oltre i 4 s} other {# pagine oltre i 4 s}} (misurate dal server Forgecy)",
+      "ok": "Tutte sotto i 4 s (misurate dal server Forgecy)"
     },
     "structured_data": {
       "label": "Attività descritta nei dati strutturati",
@@ -821,7 +821,7 @@
     "remove": "Rimuovi",
     "toImport": "da importare",
     "rowsImported": "{count, plural, one {# riga importata} other {# righe importate}}",
-    "rowsImportedSkipped": "{count, plural, one {# riga importata} other {# righe importate}}, {skipped} saltate",
+    "rowsImportedSkipped": "{count, plural, one {# riga importata} other {# righe importate}}, {skipped, plural, one {# saltata} other {# saltate}}",
     "removeFileConfirm": "Rimuovere il file e le righe importate?",
     "screenshotAlt": "Screenshot {name}",
     "screenshot": "Screenshot",
@@ -870,7 +870,7 @@
     "column": "Colonna {number}",
     "fieldFor": "Campo per la colonna {column}",
     "validRows": "{count, plural, one {# riga valida} other {# righe valide}}. I numeri non esatti (intervalli, “circa”) restano vuoti, mai stimati.",
-    "validRowsSkipped": "{count, plural, one {# riga valida} other {# righe valide}} · {skipped} saltate (es. riga {row}: data non valida). I numeri non esatti (intervalli, “circa”) restano vuoti, mai stimati.",
+    "validRowsSkipped": "{count, plural, one {# riga valida} other {# righe valide}} · {skipped, plural, one {# saltata} other {# saltate}} (es. riga {row}: data non valida). I numeri non esatti (intervalli, “circa”) restano vuoti, mai stimati.",
     "imported": "{count, plural, one {Importata # riga.} other {Importate # righe.}}",
     "import": "{count, plural, one {Importa # riga} other {Importa # righe}}",
     "cancel": "Annulla",

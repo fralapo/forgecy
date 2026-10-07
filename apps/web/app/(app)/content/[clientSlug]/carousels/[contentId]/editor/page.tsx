@@ -1,5 +1,5 @@
 import { getPublishedBrandIdentity } from "@forgecy/brand";
-import { briefSchema, type ContentChannel } from "@forgecy/content";
+import { assetCommercialUse, briefSchema, type ContentChannel } from "@forgecy/content";
 import { eq, users } from "@forgecy/db";
 import { getTranslations } from "next-intl/server";
 import { getRefText } from "@/lib/i18n";
@@ -49,12 +49,7 @@ export default async function EditorPage({
       width: a.width,
       height: a.height,
       thumb: thumbs.get(a.storageKey) ?? null,
-      commercialUse:
-        a.source === "ai"
-          ? g.commercialUse === "verified" || g.commercialUse === "rejected"
-            ? g.commercialUse
-            : "pending_verification"
-          : null,
+      commercialUse: assetCommercialUse(a),
       slideId: g.slideId ?? null,
       slot: g.slot ?? null,
       forThisContent: a.contentId === c.id,

@@ -7,6 +7,7 @@
  */
 import {
   buildCarouselSchema,
+  slideRuleOf,
   findLayout,
   visibleLength,
   type TemplateManifest,
@@ -56,10 +57,20 @@ const say = (key: CheckKey, values?: MessageValues) => ({
   ref: messageRef(key, values),
 });
 
+/** The check text of a slide-schema issue; Zod's own issues keep their English text. */
+function slideIssueText(issue: { message: string; params?: unknown }, slide: number | undefined) {
+  const rule = slideRuleOf(issue);
+  if (rule)
+    return say(`review.checks.slideRule.${rule.rule}`, { ...rule.values, slide: slide ?? 0 });
+  return slide
+    ? say("review.checks.slideIssue", { slide, issue: issue.message })
+    : { message: issue.message };
+}
+
 export interface AssetInfo {
   status: "draft" | "approved" | "rejected";
   source: "upload" | "ai" | "product";
-  /** For AI images: commercial use of the provider not yet verified by the agency. */
+  /** AI image whose provider terms are not verified, or an upload whose rights nobody confirmed. */
   commercialUsePending?: boolean;
   alt: string;
 }
@@ -118,9 +129,7 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
         add({
           id: `template:${slide?.id ?? "all"}:${issue.path.slice(1).join(".") || "slides"}`,
           severity: "error",
-          ...(slide
-            ? say("review.checks.slideIssue", { slide: String(idx! + 1), issue: issue.message })
-            : { message: issue.message }),
+          ...slideIssueText(issue, slide ? idx! + 1 : undefined),
           ...(slide ? { slideId: slide.id } : {}),
         });
       }
@@ -212,7 +221,7 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
           ),
           slideId: s.id,
         });
-      if (a.source === "ai" && a.commercialUsePending)
+      if (a.commercialUsePending)
         add({
           id: `asset:commercial:${s.id}:${slot}`,
           severity: "warning",

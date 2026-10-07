@@ -11,10 +11,28 @@
     "assetMissing": "Slide {slide}: immagine non presente nella libreria del cliente",
     "aiAssetUnapproved": "Slide {slide}: immagine AI da approvare prima di approvare il carosello",
     "assetUnapproved": "Slide {slide}: immagine non approvata",
-    "commercialUse": "Slide {slide}: uso commerciale del fornitore dell’immagine AI non ancora verificato",
+    "commercialUse": "Slide {slide}: uso commerciale dell'immagine non ancora verificato (termini del provider o diritti da confermare)",
     "altMissing": "Slide {slide}: manca il testo alternativo dell’immagine",
     "productChanged": "Il prodotto è cambiato nel catalogo dopo la stesura dei testi",
-    "brandChanged": "È stata pubblicata una nuova Brand Identity dopo la creazione del carosello"
+    "brandChanged": "È stata pubblicata una nuova Brand Identity dopo la creazione del carosello",
+    "slideRule": {
+      "controlChars": "Slide {slide}: i caratteri di controllo non sono ammessi",
+      "tooLong": "Slide {slide}: “{label}” ha {length} caratteri, il limite è {max}",
+      "tooManyLines": "Slide {slide}: “{label}” può avere al massimo {max} righe",
+      "noHighlight": "Slide {slide}: l’evidenziazione non è ammessa in questo campo",
+      "unknownSlot": "Slide {slide}: il layout “{layout}” non ha il campo “{name}”",
+      "required": "Slide {slide}: “{label}” è obbligatorio",
+      "expectedText": "Slide {slide}: serve un testo",
+      "expectedList": "Slide {slide}: serve un elenco di testi",
+      "expectedImage": "Slide {slide}: serve un’immagine",
+      "itemCount": "Slide {slide}: “{label}” richiede da {min} a {max} voci",
+      "itemEmpty": "Slide {slide}: “{label}” ha una voce vuota (voce {item})",
+      "slideCount": "Il template ammette da {min} a {max} slide, il carosello ne ha {count}",
+      "onlyFirst": "Slide {slide}: questo layout può essere solo la prima slide",
+      "onlyLast": "Slide {slide}: questo layout può essere solo l’ultima slide",
+      "ctaOnlyLast": "Slide {slide}: la call to action va solo sull’ultima slide",
+      "maxImages": "Slide {slide}: al massimo {max} immagini per slide"
+    }
   },
   "guard": {
     "finding": {
@@ -32,7 +50,7 @@
       "avoidTopic": "{slide, select, caption {Didascalia} other {Slide {slide} · {slot}}}: cita “{found}”, un tema da evitare per questo brand.",
       "sentenceLength": "{slide, select, caption {Didascalia} other {Slide {slide} · {slot}}}: una frase ha {count} parole, il brand ne vuole al massimo {max}.",
       "emoji": "{slide, select, caption {Didascalia} other {Slide {slide} · {slot}}}: {count} emoji; {rule, select, no {il brand non le usa} other {il brand le usa con parsimonia}}.",
-      "exclamation": "{slide, select, caption {Didascalia} other {Slide {slide} · {slot}}}: {count} punti esclamativi; {rule, select, no {il brand non li usa} other {il brand li usa con parsimonia}}.",
+      "exclamation": "{slide, select, caption {Didascalia} other {Slide {slide} · {slot}}}: {count, plural, one {# punto esclamativo} other {# punti esclamativi}}; {rule, select, no {il brand non li usa} other {il brand li usa con parsimonia}}.",
       "hashtags": "Didascalia: {count} hashtag, il brand ne usa al massimo {max}.",
       "sensitiveClaim": "{slide, select, caption {Didascalia} other {Slide {slide} · {slot}}}: “{found}” è un’asserzione ({kind, select, superlative {superlativo} ranking {classifica} exclusivity {esclusività} guarantee {garanzia} absolute {assoluto} certification {certificazione} free {gratuità} health {salute} environmental {ambientale} other {{kind}}}) senza prova approvata.",
       "priceNotInSheet": "{slide, select, caption {Didascalia} other {Slide {slide} · {slot}}}: il prezzo “{found}” non è nella scheda prodotto di “{product}”.",

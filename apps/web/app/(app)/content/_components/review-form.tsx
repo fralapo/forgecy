@@ -171,7 +171,7 @@ export function ReviewForm({
             {pendingImages.map((a) => (
               <li key={a.id} className="space-y-2 rounded-md border border-subtle p-2">
                 <Thumb url={a.thumb} alt={a.alt} />
-                {a.source === "ai" ? (
+                {a.commercialUse ? (
                   <Badge variant={a.commercialUse === "verified" ? "success" : "warning"}>
                     {a.commercialUse === "verified"
                       ? t("images.verified")

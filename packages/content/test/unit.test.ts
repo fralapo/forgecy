@@ -3,7 +3,7 @@ import path from "node:path";
 import { defaultTokens, parseDocument as parseBrandDocument } from "@forgecy/brand";
 import { FORMATS, findLayout, templateManifestSchema } from "@forgecy/carousel";
 import { describe, expect, it } from "vitest";
-import { imageSize } from "../src/assets";
+import { assetCommercialUse, imageSize, readAssetRights } from "../src/assets";
 import { findingsToAcknowledge, toGuardContent } from "../src/carousels/brand-guard";
 import { computeChecks, trimCaptionToLimit } from "../src/carousels/checks";
 import { compareCarouselVersions } from "../src/carousels/compare";
@@ -100,6 +100,49 @@ describe("checks", () => {
     expect(out.length).toBeLessThanOrEqual(100);
     expect(out.endsWith("word")).toBe(true);
     expect([...trimCaptionToLimit("é".repeat(30), 10)]).toHaveLength(10);
+  });
+
+  it("derives the commercial-use status of an image", () => {
+    const rights = {
+      basis: "own",
+      note: "",
+      confirmedBy: "u",
+      confirmedAt: "2026-10-07T00:00:00Z",
+    };
+    const up = (r: unknown) => ({ source: "upload" as const, generation: null, rights: r });
+    expect(assetCommercialUse(up(null))).toBe("pending_verification");
+    expect(assetCommercialUse(up(rights))).toBe("verified");
+    expect(assetCommercialUse(up({ basis: "x" }))).toBe("pending_verification");
+    expect(
+      assetCommercialUse({ source: "ai", generation: { commercialUse: "rejected" }, rights: null }),
+    ).toBe("rejected");
+    expect(assetCommercialUse({ source: "ai", generation: {}, rights: null })).toBe(
+      "pending_verification",
+    );
+    expect(assetCommercialUse({ source: "product", generation: null, rights: null })).toBeNull();
+    expect(readAssetRights(rights)?.basis).toBe("own");
+  });
+
+  it("flags an uploaded image whose rights nobody confirmed", () => {
+    const withImage = {
+      id: "s1",
+      layout: "cover",
+      slots: { title: "Hello", image: { key: "clients/x/assets/a.png", alt: "" } },
+    };
+    const run = (pending: boolean) =>
+      computeChecks({
+        document: doc([withImage, ...body, cta]),
+        manifest,
+        channel: "instagram",
+        assets: new Map([
+          [
+            "clients/x/assets/a.png",
+            { status: "approved", source: "upload", commercialUsePending: pending, alt: "x" },
+          ],
+        ]),
+      });
+    expect(run(true).find((c) => c.id === "asset:commercial:s1:image")?.severity).toBe("warning");
+    expect(run(false).some((c) => c.id.startsWith("asset:commercial:"))).toBe(false);
   });
 
   it("warns on forbidden words, prices and a missing final CTA", () => {

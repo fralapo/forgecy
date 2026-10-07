@@ -274,7 +274,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
             status: a.status,
             source: a.source,
             alt: a.alt,
-            commercialUsePending: a.source === "ai" && a.commercialUse !== "verified",
+            commercialUsePending: a.commercialUse !== null && a.commercialUse !== "verified",
           },
         ]),
       ),

@@ -57,6 +57,39 @@ export function visibleLength(text: string): number {
   return [...text.replace(MARK, "")].length;
 }
 
+/** Which rule a slide issue breaks, with the values its interface message needs (see `review.checks.slideRule`). */
+export interface SlideRuleParams {
+  rule: SlideRule;
+  values?: Record<string, string | number>;
+}
+export const SLIDE_RULES = [
+  "controlChars",
+  "tooLong",
+  "tooManyLines",
+  "noHighlight",
+  "unknownSlot",
+  "required",
+  "expectedText",
+  "expectedList",
+  "expectedImage",
+  "itemCount",
+  "itemEmpty",
+  "slideCount",
+  "onlyFirst",
+  "onlyLast",
+  "ctaOnlyLast",
+  "maxImages",
+] as const;
+export type SlideRule = (typeof SLIDE_RULES)[number];
+
+/** The rule a Zod issue of a slide schema reports, when it is one of ours. */
+export function slideRuleOf(i: { params?: unknown }): SlideRuleParams | undefined {
+  const p = i.params as Partial<SlideRuleParams> | undefined;
+  return p && typeof p.rule === "string" && (SLIDE_RULES as readonly string[]).includes(p.rule)
+    ? (p as SlideRuleParams)
+    : undefined;
+}
+
 function checkText(
   slot: TextSlotDef | ListSlotDef,
   text: string,
@@ -64,23 +97,41 @@ function checkText(
   path: (string | number)[],
 ) {
   if (CONTROL.test(text))
-    ctx.addIssue({ code: "custom", path, message: "Control characters are not allowed" });
+    ctx.addIssue({
+      code: "custom",
+      path,
+      message: "Control characters are not allowed",
+      params: { rule: "controlChars" },
+    });
   const len = visibleLength(text);
   if (len > slot.maxChars)
     ctx.addIssue({
       code: "custom",
       path,
       message: `“${slot.label ?? slot.name}”: ${len} characters out of ${slot.maxChars}`,
-      params: { reason: "too_long", length: len, max: slot.maxChars },
+      params: {
+        reason: "too_long",
+        rule: "tooLong",
+        values: { label: slot.label ?? slot.name, length: len, max: slot.maxChars },
+      },
     });
   if (slot.type === "text" && slot.maxLines && text.split("\n").length > slot.maxLines)
     ctx.addIssue({
       code: "custom",
       path,
       message: `“${slot.label ?? slot.name}”: at most ${slot.maxLines} lines`,
+      params: {
+        rule: "tooManyLines",
+        values: { label: slot.label ?? slot.name, max: slot.maxLines },
+      },
     });
   if (!slot.highlight && text.includes("=="))
-    ctx.addIssue({ code: "custom", path, message: "Highlighting is not allowed in this slot" });
+    ctx.addIssue({
+      code: "custom",
+      path,
+      message: "Highlighting is not allowed in this slot",
+      params: { rule: "noHighlight" },
+    });
 }
 
 /** Check one slide against its layout; issues land on `ctx` with paths relative to the slide. */
@@ -97,6 +148,7 @@ export function checkSlideAgainstLayout(
         code: "custom",
         path: [...base, "slots", name],
         message: `Slot "${name}" does not exist in layout ${layout.id}`,
+        params: { rule: "unknownSlot", values: { name, layout: layout.id } },
       });
   }
   for (const slot of layout.slots) {
@@ -112,18 +164,29 @@ export function checkSlideAgainstLayout(
           code: "custom",
           path,
           message: `“${slot.label ?? slot.name}” is required`,
+          params: { rule: "required", values: { label: slot.label ?? slot.name } },
         });
       continue;
     }
     if (slot.type === "text") {
       if (typeof value !== "string") {
-        ctx.addIssue({ code: "custom", path, message: "Expected a text" });
+        ctx.addIssue({
+          code: "custom",
+          path,
+          message: "Expected a text",
+          params: { rule: "expectedText" },
+        });
         continue;
       }
       checkText(slot, value, ctx, path);
     } else if (slot.type === "list") {
       if (!Array.isArray(value)) {
-        ctx.addIssue({ code: "custom", path, message: "Expected a list of texts" });
+        ctx.addIssue({
+          code: "custom",
+          path,
+          message: "Expected a list of texts",
+          params: { rule: "expectedList" },
+        });
         continue;
       }
       if (value.length > slot.maxItems || value.length < slot.minItems)
@@ -131,6 +194,10 @@ export function checkSlideAgainstLayout(
           code: "custom",
           path,
           message: `“${slot.label ?? slot.name}”: ${slot.minItems} to ${slot.maxItems} items`,
+          params: {
+            rule: "itemCount",
+            values: { label: slot.label ?? slot.name, min: slot.minItems, max: slot.maxItems },
+          },
         });
       value.forEach((item, i) => {
         // An empty item would export as a blank numbered row.
@@ -139,11 +206,17 @@ export function checkSlideAgainstLayout(
             code: "custom",
             path: [...path, i],
             message: `“${slot.label ?? slot.name}”: item ${i + 1} is empty`,
+            params: { rule: "itemEmpty", values: { label: slot.label ?? slot.name, item: i + 1 } },
           });
         else checkText(slot, item, ctx, [...path, i]);
       });
     } else if (typeof value !== "object" || Array.isArray(value)) {
-      ctx.addIssue({ code: "custom", path, message: "Expected an image" });
+      ctx.addIssue({
+        code: "custom",
+        path,
+        message: "Expected an image",
+        params: { rule: "expectedImage" },
+      });
     }
   }
 }
@@ -167,6 +240,7 @@ export function buildCarouselSchema(template: TemplateManifest) {
         code: "custom",
         path: [],
         message: `The template allows ${min} to ${max} slides (now ${slides.length})`,
+        params: { rule: "slideCount", values: { min, max, count: slides.length } },
       });
     slides.forEach((s, i) => {
       const layout = findLayout(template, s.layout);
@@ -177,18 +251,21 @@ export function buildCarouselSchema(template: TemplateManifest) {
           code: "custom",
           path: [i, "layout"],
           message: `${label}: only as the first slide`,
+          params: { rule: "onlyFirst" },
         });
       if (layout.position === "last" && i !== slides.length - 1)
         ctx.addIssue({
           code: "custom",
           path: [i, "layout"],
           message: `${label}: only as the last slide`,
+          params: { rule: "onlyLast" },
         });
       if (template.rules.ctaOnlyLast && layout.role === "cta" && i !== slides.length - 1)
         ctx.addIssue({
           code: "custom",
           path: [i, "layout"],
           message: "The CTA goes only on the last slide",
+          params: { rule: "ctaOnlyLast" },
         });
       const images = layout.slots.filter((sl) => sl.type === "image" && s.slots[sl.name]).length;
       if (images > template.rules.maxImagesPerSlide)
@@ -196,6 +273,7 @@ export function buildCarouselSchema(template: TemplateManifest) {
           code: "custom",
           path: [i, "slots"],
           message: `At most ${template.rules.maxImagesPerSlide} images per slide`,
+          params: { rule: "maxImages", values: { max: template.rules.maxImagesPerSlide } },
         });
     });
   });

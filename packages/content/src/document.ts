@@ -260,3 +260,7 @@ export function normalizeHashtag(tag: string): string {
 export function newSlideId(): string {
   return `s_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
 }
+
+/** Bases on which a person confirms the right to use an uploaded image commercially. */
+export const assetRightsBases = ["own", "client_supplied", "licensed", "public_domain"] as const;
+export type AssetRightsBasis = (typeof assetRightsBases)[number];

@@ -24,6 +24,7 @@ import {
 import { assertValidUpload, contentKey, sha256, type StorageDriver } from "@forgecy/files";
 import { z } from "zod";
 import { conflict, humanOnly, invalid, notFound, parseOrThrow, type Executor } from "./access";
+import { assetRightsBases, type AssetRightsBasis } from "./document";
 import { productSource } from "./products";
 
 export type AssetRow = typeof assets.$inferSelect;
@@ -429,4 +430,80 @@ export async function commercialUseFor(
     .where(eq(appSettings.key, reviewKey(provider)));
   const parsed = review ? reviewValueSchema.safeParse(review.value) : null;
   return parsed?.success ? parsed.data.status : "pending_verification";
+}
+
+export type AssetRights = {
+  basis: AssetRightsBasis;
+  /** Licence reference or where the right comes from; required for a licensed image. */
+  note: string;
+  confirmedBy: string;
+  confirmedAt: string;
+};
+
+const rightsInput = z.object({
+  clientId: z.uuid(),
+  id: z.uuid(),
+  basis: z.enum(assetRightsBases),
+  note: z.string().trim().max(500).default(""),
+});
+
+/** Parses the stored `rights` of an image; null when absent or malformed. */
+export function readAssetRights(value: unknown): AssetRights | null {
+  const v = value as Partial<AssetRights> | null;
+  if (!v || typeof v !== "object" || !assetRightsBases.includes(v.basis as AssetRightsBasis))
+    return null;
+  return {
+    basis: v.basis as AssetRightsBasis,
+    note: typeof v.note === "string" ? v.note : "",
+    confirmedBy: typeof v.confirmedBy === "string" ? v.confirmedBy : "",
+    confirmedAt: typeof v.confirmedAt === "string" ? v.confirmedAt : "",
+  };
+}
+
+/**
+ * Commercial-use status of an image: AI images follow the provider review recorded at
+ * generation, uploads need a person to confirm the rights, product photos come from the
+ * client's own catalog (null: nothing to verify).
+ */
+export function assetCommercialUse(a: {
+  source: AssetRow["source"];
+  generation: unknown;
+  rights: unknown;
+}): CommercialUse | null {
+  if (a.source === "ai") {
+    const g = (a.generation ?? {}) as { commercialUse?: string };
+    return g.commercialUse === "verified" || g.commercialUse === "rejected"
+      ? g.commercialUse
+      : "pending_verification";
+  }
+  if (a.source === "upload") return readAssetRights(a.rights) ? "verified" : "pending_verification";
+  return null;
+}
+
+/** A person confirms they may use an uploaded image commercially (and says on what basis). */
+export async function confirmAssetRights(db: Database, actor: Actor, input: unknown) {
+  const i = parseOrThrow(rightsInput, input);
+  humanOnly(actor, "assets.upload", i.clientId);
+  if (i.basis === "licensed" && i.note.length < 3) invalid("content.errors.rightsNoteRequired");
+  const rights: AssetRights = {
+    basis: i.basis,
+    note: i.note,
+    confirmedBy: actor.id,
+    confirmedAt: new Date().toISOString(),
+  };
+  const [row] = await db
+    .update(assets)
+    .set({ rights })
+    .where(and(eq(assets.id, i.id), eq(assets.clientId, i.clientId), eq(assets.source, "upload")))
+    .returning({ id: assets.id });
+  if (!row) notFound("content.errors.imageNotFound");
+  await recordAuditEvent(db, {
+    actor,
+    action: "content.asset_rights_confirmed",
+    entity: "asset",
+    entityId: row.id,
+    clientId: i.clientId,
+    meta: { basis: i.basis },
+  });
+  return row;
 }

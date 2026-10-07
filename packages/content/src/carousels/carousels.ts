@@ -79,6 +79,7 @@ import {
   type GuardAssetInfo,
   type GuardReport,
 } from "./brand-guard";
+import { assetCommercialUse } from "../assets";
 import { productSource } from "../products";
 import { clampSlideCount, getTemplate } from "./templates";
 
@@ -728,6 +729,7 @@ async function libraryInfo(db: Executor, clientId: string, keys: string[]) {
       width: assets.width,
       height: assets.height,
       generation: assets.generation,
+      rights: assets.rights,
     })
     .from(assets)
     .where(and(eq(assets.clientId, clientId), inArray(assets.storageKey, keys)));
@@ -736,9 +738,9 @@ async function libraryInfo(db: Executor, clientId: string, keys: string[]) {
       status: r.status,
       source: r.source,
       alt: r.alt,
-      commercialUsePending:
-        r.source === "ai" &&
-        (r.generation as { commercialUse?: string } | null)?.commercialUse !== "verified",
+      commercialUsePending: ["pending_verification", "rejected"].includes(
+        assetCommercialUse(r) ?? "",
+      ),
     });
     guard.set(r.storageKey, {
       id: r.id,

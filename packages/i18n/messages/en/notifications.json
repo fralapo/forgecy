@@ -15,7 +15,7 @@
     "report_review_requested": "{client}: audit report v{version} is waiting for review.",
     "report_approved": "{client}: audit report v{version} was approved.",
     "report_changes_requested": "{client}: changes requested on audit report v{version}.",
-    "automation_run_finished": "{client}: “{name}” finished, {completed} of {total} carousels created{failed, plural, =0 {} other {, # failed}}.",
+    "automation_run_finished": "{client}: “{name}” finished, {completed} of {total, plural, one {# carousel} other {# carousels}} created{failed, plural, =0 {} other {, # failed}}.",
     "client_export_ready": "{client}: the full export is ready to download.",
     "client_import_done": "{client} imported: {versions, plural, one {# version} other {# versions}}, {carousels, plural, one {# carousel} other {# carousels}}, {audits, plural, one {# audit} other {# audits}}.",
     "client_import_failed": "The import of “{file}” did not succeed. Nothing was changed."
