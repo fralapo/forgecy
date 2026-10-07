@@ -21,13 +21,17 @@ function isByokProvider(value: string | null): value is ByokProviderId {
  * AI providers (see live-model-field.tsx). Admin only. OpenRouter's catalog is public;
  * the other three need the agency's own pasted key (or env var) — with none configured,
  * this returns an empty list rather than an error, so the field just falls back to free
- * text.
+ * text. `kind=image` keeps only models that can generate images (the image-provider
+ * fields); anything else (including an absent `kind`) keeps only the rest, so a text
+ * field never suggests an image-only model and vice versa.
  */
 export const GET = withUser(async (user, request: Request) => {
   assertCan(user.actor, "ai.providers.manage");
-  const provider = new URL(request.url).searchParams.get("provider");
+  const params = new URL(request.url).searchParams;
+  const provider = params.get("provider");
   if (!isByokProvider(provider))
     return NextResponse.json({ error: "invalid_provider" }, { status: 400 });
+  const wantImages = params.get("kind") === "image";
   try {
     const apiKey =
       provider === "openrouter" ? undefined : await resolveApiKey(getDb(), env, provider);
@@ -35,7 +39,10 @@ export const GET = withUser(async (user, request: Request) => {
     return NextResponse.json({
       // Newest first, capped so the page's datalist stays light; any other id still
       // works if typed or pasted directly, the cap only limits what's suggested.
-      models: [...models].sort((a, b) => b.created - a.created).slice(0, 400),
+      models: models
+        .filter((m) => m.imageCapable === wantImages)
+        .sort((a, b) => b.created - a.created)
+        .slice(0, 400),
     });
   } catch {
     return NextResponse.json({ models: [] });

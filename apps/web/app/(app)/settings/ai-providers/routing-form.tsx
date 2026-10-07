@@ -34,8 +34,10 @@ function ReadyBadge({ ready, label }: { ready: boolean; label: string }) {
 
 /**
  * Free choice of service and model: the text provider and model (with an optional
- * fallback) and the image providers in order of use. Unconfigured providers can be
- * chosen too; they are skipped until their key or connection exists.
+ * fallback) and the primary/fallback image providers. Unconfigured providers can be
+ * chosen too; they are skipped until their key or connection exists. Image choice
+ * mirrors the text one (primary + fallback blocks) since only the first two ready
+ * image providers are ever tried — a third or fourth choice has no effect.
  */
 export function RoutingForm({
   text,
@@ -53,20 +55,16 @@ export function RoutingForm({
   const tc = useTranslations("common");
   const [textProvider, setTextProvider] = useState(initial.text.provider);
   const [fallbackProvider, setFallbackProvider] = useState(initial.text.fallback?.provider ?? "");
-  const position = (id: string) => {
-    const i = initial.images.findIndex((x) => x.provider === id);
-    return i < 0 ? "" : String(i + 1);
-  };
-  const [positions, setPositions] = useState<Record<string, string>>(() =>
-    Object.fromEntries(images.map((o) => [o.id, position(o.id)])),
-  );
+  const [primaryImage, setPrimaryImage] = useState(initial.images[0]?.provider ?? "");
+  const [secondaryImage, setSecondaryImage] = useState(initial.images[1]?.provider ?? "");
   const label = (o: ProviderOption) => (o.ready ? o.name : t("notReady", { name: o.name }));
   const textDefault = (id: string | undefined) => text.find((o) => o.id === id)?.defaultModel ?? "";
+  const imageDefault = (id: string | undefined) =>
+    images.find((o) => o.id === id)?.defaultModel ?? "";
   const selectedText = text.find((o) => o.id === textProvider);
   const selectedFallback = text.find((o) => o.id === fallbackProvider);
-  const roleLabel = (pos: string) =>
-    pos === "1" ? ta("primary") : pos === "2" ? ta("secondary") : pos === "" ? t("off") : pos;
-  const roleVariant = (pos: string) => (pos === "1" || pos === "2" ? "success" : "neutral");
+  const selectedPrimaryImage = images.find((o) => o.id === primaryImage);
+  const selectedSecondaryImage = images.find((o) => o.id === secondaryImage);
 
   return (
     <form action={action} className="grid gap-6">
@@ -104,6 +102,7 @@ export function RoutingForm({
               {catalogProviderOf(textProvider) ? (
                 <LiveModelField
                   provider={catalogProviderOf(textProvider)!}
+                  kind="text"
                   id="rt-text-model"
                   name="text.model"
                   defaultValue={initial.text.model}
@@ -152,6 +151,7 @@ export function RoutingForm({
               {catalogProviderOf(fallbackProvider) ? (
                 <LiveModelField
                   provider={catalogProviderOf(fallbackProvider)!}
+                  kind="text"
                   id="rt-fb-model"
                   name="text.fallback.model"
                   defaultValue={initial.text.fallback?.model ?? ""}
@@ -174,59 +174,114 @@ export function RoutingForm({
       <fieldset className="grid gap-4">
         <legend className="text-label text-fg">{t("imagesTitle")}</legend>
         <p className="text-body-sm text-fg-muted">{t("imagesHint")}</p>
-        <ul className="grid gap-3">
-          {images.map((o) => (
-            <li
-              key={o.id}
-              className="grid items-end gap-2 rounded-md border border-subtle p-3 sm:grid-cols-[1fr_8rem_1fr]"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-body-sm text-fg">{o.name}</span>
-                <ReadyBadge ready={o.ready} label={tp(o.ready ? "configured" : "notConfigured")} />
-              </div>
-              <div className="grid gap-1">
-                <Label htmlFor={`rt-img-${o.id}-pos`}>{t("position")}</Label>
-                <select
-                  id={`rt-img-${o.id}-pos`}
-                  name={`image.${o.id}.position`}
-                  value={positions[o.id] ?? ""}
-                  onChange={(e) => setPositions((p) => ({ ...p, [o.id]: e.target.value }))}
-                  className={controlClass}
-                >
-                  <option value="">{t("off")}</option>
-                  {images.map((_, i) => (
-                    <option key={i} value={String(i + 1)}>
-                      {i + 1}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 rounded-md border border-subtle p-4">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-label text-fg">{ta("primary")}</span>
+              {selectedPrimaryImage ? (
+                <ReadyBadge
+                  ready={selectedPrimaryImage.ready}
+                  label={tp(selectedPrimaryImage.ready ? "configured" : "notConfigured")}
+                />
+              ) : null}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="rt-img-primary-provider">{t("provider")}</Label>
+              <select
+                id="rt-img-primary-provider"
+                value={primaryImage}
+                onChange={(e) => setPrimaryImage(e.target.value)}
+                className={controlClass}
+              >
+                <option value="">{t("none")}</option>
+                {images.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {label(o)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="rt-img-primary-model">{t("model")}</Label>
+              {primaryImage && catalogProviderOf(primaryImage) ? (
+                <LiveModelField
+                  provider={catalogProviderOf(primaryImage)!}
+                  kind="image"
+                  id="rt-img-primary-model"
+                  name={`image.${primaryImage}.model`}
+                  defaultValue={initial.images[0]?.model ?? ""}
+                  placeholder={imageDefault(primaryImage)}
+                />
+              ) : (
+                <Input
+                  id="rt-img-primary-model"
+                  name={primaryImage ? `image.${primaryImage}.model` : undefined}
+                  disabled={!primaryImage}
+                  defaultValue={initial.images[0]?.model ?? ""}
+                  placeholder={imageDefault(primaryImage)}
+                  maxLength={200}
+                />
+              )}
+            </div>
+            {primaryImage ? (
+              <input type="hidden" name={`image.${primaryImage}.position`} value="1" />
+            ) : null}
+          </div>
+          <div className="grid gap-3 rounded-md border border-subtle p-4">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-label text-fg-muted">{ta("secondary")}</span>
+              {selectedSecondaryImage ? (
+                <ReadyBadge
+                  ready={selectedSecondaryImage.ready}
+                  label={tp(selectedSecondaryImage.ready ? "configured" : "notConfigured")}
+                />
+              ) : null}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="rt-img-secondary-provider">{t("provider")}</Label>
+              <select
+                id="rt-img-secondary-provider"
+                value={secondaryImage}
+                onChange={(e) => setSecondaryImage(e.target.value)}
+                className={controlClass}
+              >
+                <option value="">{t("none")}</option>
+                {images
+                  .filter((o) => o.id !== primaryImage)
+                  .map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {label(o)}
                     </option>
                   ))}
-                </select>
-                <Badge variant={roleVariant(positions[o.id] ?? "")}>
-                  {roleLabel(positions[o.id] ?? "")}
-                </Badge>
-              </div>
-              <div className="grid gap-1">
-                <Label htmlFor={`rt-img-${o.id}-model`}>{t("model")}</Label>
-                {catalogProviderOf(o.id) ? (
-                  <LiveModelField
-                    provider={catalogProviderOf(o.id)!}
-                    id={`rt-img-${o.id}-model`}
-                    name={`image.${o.id}.model`}
-                    defaultValue={initial.images.find((x) => x.provider === o.id)?.model ?? ""}
-                    placeholder={o.defaultModel}
-                  />
-                ) : (
-                  <Input
-                    id={`rt-img-${o.id}-model`}
-                    name={`image.${o.id}.model`}
-                    defaultValue={initial.images.find((x) => x.provider === o.id)?.model ?? ""}
-                    placeholder={o.defaultModel}
-                    maxLength={200}
-                  />
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="rt-img-secondary-model">{t("model")}</Label>
+              {secondaryImage && catalogProviderOf(secondaryImage) ? (
+                <LiveModelField
+                  provider={catalogProviderOf(secondaryImage)!}
+                  kind="image"
+                  id="rt-img-secondary-model"
+                  name={`image.${secondaryImage}.model`}
+                  defaultValue={initial.images[1]?.model ?? ""}
+                  placeholder={imageDefault(secondaryImage)}
+                />
+              ) : (
+                <Input
+                  id="rt-img-secondary-model"
+                  name={secondaryImage ? `image.${secondaryImage}.model` : undefined}
+                  disabled={!secondaryImage}
+                  defaultValue={initial.images[1]?.model ?? ""}
+                  placeholder={imageDefault(secondaryImage)}
+                  maxLength={200}
+                />
+              )}
+            </div>
+            {secondaryImage ? (
+              <input type="hidden" name={`image.${secondaryImage}.position`} value="2" />
+            ) : null}
+          </div>
+        </div>
       </fieldset>
       {state.error ? (
         <p role="alert" className="text-body-sm text-error">

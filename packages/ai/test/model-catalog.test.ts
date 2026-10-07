@@ -23,7 +23,9 @@ describe("model-catalog", () => {
       "k",
       fakeFetch([{ id: "gpt-6.1-sol", object: "model", created: 100, owned_by: "openai" }]),
     );
-    expect(models).toEqual([{ id: "gpt-6.1-sol", name: "gpt-6.1-sol", created: 100 }]);
+    expect(models).toEqual([
+      { id: "gpt-6.1-sol", name: "gpt-6.1-sol", created: 100, imageCapable: false },
+    ]);
   });
 
   it("normalizes Anthropic's list (created_at as an ISO string, with display_name)", async () => {
@@ -43,13 +45,54 @@ describe("model-catalog", () => {
         id: "claude-sonnet-5-5",
         name: "Claude Sonnet 5.5",
         created: Date.parse("2026-01-01T00:00:00Z") / 1000,
+        imageCapable: false,
       },
     ]);
   });
 
   it("falls back to created: 0 when DeepSeek's list omits a timestamp", async () => {
     const models = await fetchModelCatalog("deepseek", "k", fakeFetch([{ id: "deepseek-flash" }]));
-    expect(models).toEqual([{ id: "deepseek-flash", name: "deepseek-flash", created: 0 }]);
+    expect(models).toEqual([
+      { id: "deepseek-flash", name: "deepseek-flash", created: 0, imageCapable: false },
+    ]);
+  });
+
+  it("marks OpenAI's GPT Image / DALL·E ids as image-capable, other ids as not", async () => {
+    const models = await fetchModelCatalog(
+      "openai",
+      "k",
+      fakeFetch([
+        { id: "gpt-image-1", created: 1 },
+        { id: "dall-e-3", created: 2 },
+        { id: "gpt-5.1", created: 3 },
+      ]),
+    );
+    expect(models.map((m) => [m.id, m.imageCapable])).toEqual([
+      ["gpt-image-1", true],
+      ["dall-e-3", true],
+      ["gpt-5.1", false],
+    ]);
+  });
+
+  it("marks OpenRouter models image-capable from architecture.output_modalities", async () => {
+    const models = await fetchModelCatalog(
+      "openrouter",
+      undefined,
+      fakeFetch([
+        { id: "openai/gpt-image-1", created: 1, architecture: { output_modalities: ["image"] } },
+        {
+          id: "deepseek/deepseek-v4-flash",
+          created: 2,
+          architecture: { output_modalities: ["text"] },
+        },
+        { id: "no-architecture/model", created: 3 },
+      ]),
+    );
+    expect(models.map((m) => [m.id, m.imageCapable])).toEqual([
+      ["openai/gpt-image-1", true],
+      ["deepseek/deepseek-v4-flash", false],
+      ["no-architecture/model", false],
+    ]);
   });
 
   it("sends the right auth header per provider", () => {

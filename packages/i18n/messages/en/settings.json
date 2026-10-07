@@ -190,9 +190,7 @@
       "modelHint": "Leave the model empty for the service’s default. Type to search its current models, or paste any id — the list updates itself as the service adds or retires models.",
       "modelHintNote": "With OpenRouter specifically, an empty model picks the newest DeepSeek Flash for text and the newest GPT image model for images.",
       "imagesTitle": "Images",
-      "imagesHint": "Number the services in the order to try them; the first two ready ones are used (primary and fallback). “Off” never uses that service.",
-      "position": "Order",
-      "off": "Off",
+      "imagesHint": "Pick a primary service and, optionally, a fallback — the only two Forgecy ever tries.",
       "notReady": "{name} (not configured)",
       "saved": "Choices saved.",
       "invalid": "Check the choices: each service can appear only once."
