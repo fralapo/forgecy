@@ -18,7 +18,6 @@ export const providerIds = [
   "local",
   "deepseek",
   "higgsfield",
-  "weave",
 ] as const;
 export type ProviderId = (typeof providerIds)[number];
 

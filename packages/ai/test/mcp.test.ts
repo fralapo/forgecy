@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  contractFields,
   createHiggsfieldImageProvider,
-  createWeaveImageProvider,
   finishMcpAuthorization,
   nearestOption,
   parseToolResult,
@@ -67,22 +65,6 @@ describe("MCP helpers", () => {
     });
   });
 
-  it("normalizes a Weave contract given as lists or maps", () => {
-    expect(
-      contractFields({
-        model: {
-          id: "m1",
-          contract: {
-            inputs: [{ name: "prompt", type: "text", required: true }],
-            params: { aspect_ratio: { type: "select", options: ["1:1", "4:5"] } },
-          },
-        },
-      }),
-    ).toEqual([
-      { name: "prompt", required: true, options: [] },
-      { name: "aspect_ratio", required: false, options: ["1:1", "4:5"] },
-    ]);
-  });
 });
 
 describe("Higgsfield over MCP", () => {
@@ -154,67 +136,6 @@ describe("Higgsfield over MCP", () => {
         timeoutMs: 1000,
       }),
     ).rejects.toMatchObject({ kind: "not_found" });
-  });
-});
-
-describe("Figma Weave over MCP", () => {
-  const found = {
-    model: {
-      id: "nb2",
-      name: "Nano Banana 2",
-      cost: 4,
-      contract: {
-        inputs: [{ name: "prompt", type: "text", required: true }],
-        params: [{ name: "aspect_ratio", type: "select", options: ["1:1", "4:5", "16:9"] }],
-      },
-    },
-  };
-
-  it("quotes, confirms within the cap, then polls the prediction", async () => {
-    let outputs = 0;
-    const caller = fakeCaller([], (name, args) => {
-      if (name === "weave_find_model") return found;
-      if (name === "weave_run_model")
-        return args.acknowledgedCost === undefined
-          ? { status: "cost_confirmation_required", cost: 4 }
-          : { predictionId: "p1" };
-      outputs++;
-      return outputs < 2
-        ? { predictions: [{ id: "p1", status: "RUNNING" }] }
-        : {
-            predictions: [
-              { id: "p1", status: "COMPLETED", outputs: [{ url: "https://cdn.weavy.ai/p1.png" }] },
-            ],
-          };
-    });
-    const status = await runToEnd(
-      createWeaveImageProvider({ caller, maxCreditsPerImage: 10, fetch: imageFetch() }),
-      "nano banana 2",
-    );
-    expect(caller.calls.map((c) => c.name)).toEqual([
-      "weave_find_model",
-      "weave_run_model",
-      "weave_run_model",
-      "weave_get_model_run_output",
-      "weave_get_model_run_output",
-    ]);
-    expect(caller.calls[1]!.args).toEqual({
-      id: "nb2",
-      input: { prompt: "a red chair", aspect_ratio: "4:5" },
-    });
-    expect(caller.calls[2]!.args.acknowledgedCost).toBe(4);
-    expect(caller.calls[3]!.args).toEqual({ predictionIds: ["p1"] });
-    expect(status.state).toBe("succeeded");
-  });
-
-  it("stops without spending when the quote is above the cap", async () => {
-    const caller = fakeCaller([], (name) =>
-      name === "weave_find_model" ? found : { status: "cost_confirmation_required", cost: 50 },
-    );
-    await expect(
-      runToEnd(createWeaveImageProvider({ caller, maxCreditsPerImage: 20 }), "nano banana 2"),
-    ).rejects.toThrow(/50 credits/);
-    expect(caller.calls.filter((c) => c.args.acknowledgedCost !== undefined)).toHaveLength(0);
   });
 });
 

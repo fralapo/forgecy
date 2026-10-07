@@ -56,7 +56,7 @@ export function pipelineDepsFor(db: Database, logger: JobContext["logger"]): Pip
   if (!deps) {
     const env = loadEnv();
     const providers = createProvidersFromEnv(env);
-    // Subscriptions over MCP (Higgsfield, Weave) are routed only while connected.
+    // Subscriptions over MCP (Higgsfield) are routed only while connected.
     const mcp = createMcpImageProviders(db, env);
     providers.image = { ...providers.image, ...mcp };
     // Services and models follow the Admin's choice in Settings > AI providers, read per job.

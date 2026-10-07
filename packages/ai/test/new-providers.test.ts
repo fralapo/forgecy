@@ -180,13 +180,7 @@ describe("registry", () => {
   });
 
   it("orders image providers by IMAGE_PROVIDERS and ignores unknown names", () => {
-    expect(imageProviderOrder({})).toEqual([
-      "openai",
-      "google",
-      "openrouter",
-      "higgsfield",
-      "weave",
-    ]);
+    expect(imageProviderOrder({})).toEqual(["openai", "google", "openrouter", "higgsfield"]);
     expect(imageProviderOrder({ IMAGE_PROVIDERS: " openrouter, nope ,openai,openrouter" })).toEqual(
       ["openrouter", "openai"],
     );

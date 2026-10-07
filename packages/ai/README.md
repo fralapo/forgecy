@@ -43,7 +43,6 @@ const { data } = await ai.generateObject({
 | `google`     | no   | yes    | `GOOGLE_AI_API_KEY`                                                   |
 | `local`      | yes  | no     | `LOCAL_LLM_ENABLED`, `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`          |
 | `higgsfield` | no   | yes    | MCP + OAuth (Connect in Settings), `HIGGSFIELD_IMAGE_MODEL`           |
-| `weave`      | no   | yes    | Figma MCP + OAuth, `WEAVE_IMAGE_MODEL`, `WEAVE_MAX_CREDITS_PER_IMAGE` |
 
 Image providers are tried in the order of `IMAGE_PROVIDERS` (default `openai,google,openrouter`): first configured one primary, next one fallback. Logging in with a ChatGPT account is not supported (see `docs/adr/0006`).
 
@@ -53,7 +52,7 @@ Admins pick the text service and model (plus a fallback) and the image services 
 
 ### Subscriptions over MCP
 
-`src/mcp/` connects to remote MCP servers as an OAuth client (`@modelcontextprotocol/sdk`): `StoredMcpOAuthProvider` keeps the registration and tokens encrypted in `mcp_connections`, `beginMcpConnection` / `completeMcpConnection` drive the Admin's login, and `createMcpImageProviders` builds the Higgsfield and Weave adapters. The adapters read tool schemas at run time and poll async jobs through the gateway's usual `getStatus` loop. The routing (below) uses them only while connected. See `docs/adr/0007`.
+`src/mcp/` connects to remote MCP servers as an OAuth client (`@modelcontextprotocol/sdk`): `StoredMcpOAuthProvider` keeps the registration and tokens encrypted in `mcp_connections`, `beginMcpConnection` / `completeMcpConnection` drive the Admin's login, and `createMcpImageProviders` builds the Higgsfield adapter. The adapter reads tool schemas at run time and polls async jobs through the gateway's usual `getStatus` loop. The routing (below) uses it only while connected. See `docs/adr/0007`.
 
 ## Adding a provider
 

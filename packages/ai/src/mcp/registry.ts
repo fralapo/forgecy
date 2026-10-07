@@ -2,12 +2,12 @@ import type { Env, ProviderId } from "@forgecy/core";
 import { and, eq, mcpConnections, type Database } from "@forgecy/db";
 import type { ImageProvider } from "../types";
 import { createMcpToolCaller } from "./client";
-import { createHiggsfieldImageProvider, createWeaveImageProvider } from "./images";
+import { createHiggsfieldImageProvider } from "./images";
 import { StoredMcpOAuthProvider } from "./oauth";
 import { createDbMcpAuthStore } from "./store";
 
 /** Image providers reached over MCP with OAuth instead of an API key. */
-export const mcpImageProviderIds = ["higgsfield", "weave"] as const satisfies readonly ProviderId[];
+export const mcpImageProviderIds = ["higgsfield"] as const satisfies readonly ProviderId[];
 export type McpImageProviderId = (typeof mcpImageProviderIds)[number];
 
 export function isMcpImageProvider(p: string): p is McpImageProviderId {
@@ -20,15 +20,12 @@ export type McpEnv = Pick<
   | "FORGECY_ENCRYPTION_KEY"
   | "HIGGSFIELD_MCP_URL"
   | "HIGGSFIELD_IMAGE_MODEL"
-  | "FIGMA_MCP_URL"
-  | "WEAVE_IMAGE_MODEL"
-  | "WEAVE_MAX_CREDITS_PER_IMAGE"
   | "OPENROUTER_IMAGE_MODEL"
   | "IMAGE_PROVIDERS"
 >;
 
-export function mcpServerUrl(provider: McpImageProviderId, env: McpEnv): string {
-  return provider === "higgsfield" ? env.HIGGSFIELD_MCP_URL : env.FIGMA_MCP_URL;
+export function mcpServerUrl(_provider: McpImageProviderId, env: McpEnv): string {
+  return env.HIGGSFIELD_MCP_URL;
 }
 
 /** Where the authorization server sends the Admin's browser back. */
@@ -66,10 +63,6 @@ export function createMcpImageProviders(
     });
   return {
     higgsfield: createHiggsfieldImageProvider({ caller: caller("higgsfield") }),
-    weave: createWeaveImageProvider({
-      caller: caller("weave"),
-      maxCreditsPerImage: env.WEAVE_MAX_CREDITS_PER_IMAGE,
-    }),
   };
 }
 
