@@ -103,6 +103,7 @@ export function RoutingForm({
                 <LiveModelField
                   provider={catalogProviderOf(textProvider)!}
                   kind="text"
+                  ready={selectedText?.ready ?? false}
                   id="rt-text-model"
                   name="text.model"
                   defaultValue={initial.text.model}
@@ -152,6 +153,7 @@ export function RoutingForm({
                 <LiveModelField
                   provider={catalogProviderOf(fallbackProvider)!}
                   kind="text"
+                  ready={selectedFallback?.ready ?? false}
                   id="rt-fb-model"
                   name="text.fallback.model"
                   defaultValue={initial.text.fallback?.model ?? ""}
@@ -207,6 +209,7 @@ export function RoutingForm({
                 <LiveModelField
                   provider={catalogProviderOf(primaryImage)!}
                   kind="image"
+                  ready={selectedPrimaryImage?.ready ?? false}
                   id="rt-img-primary-model"
                   name={`image.${primaryImage}.model`}
                   defaultValue={initial.images[0]?.model ?? ""}
@@ -261,6 +264,7 @@ export function RoutingForm({
                 <LiveModelField
                   provider={catalogProviderOf(secondaryImage)!}
                   kind="image"
+                  ready={selectedSecondaryImage?.ready ?? false}
                   id="rt-img-secondary-model"
                   name={`image.${secondaryImage}.model`}
                   defaultValue={initial.images[1]?.model ?? ""}
