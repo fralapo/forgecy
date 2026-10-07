@@ -11,7 +11,7 @@
   "hint": "Cerca per nome del cliente, titolo del carosello, nome, SKU o tag del prodotto, nome del template, testo alternativo o tag delle immagini. La ricerca è per nome, non per significato.",
   "noResults": "Nessun risultato per «{q}».",
   "noResultsHints": "Controlla l’ortografia, togli i filtri o includi gli archiviati.",
-  "showAll": "Mostra tutti i {count, number}",
+  "showAll": "Mostra tutti ({count, number})",
   "filters": {
     "title": "Filtri",
     "type": "Tipo",

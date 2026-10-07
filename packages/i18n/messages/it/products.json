@@ -244,7 +244,7 @@
     "conflictNotFound": "Conflitto non trovato",
     "itemDecided": "Qualcun altro ha già deciso su questo elemento. Ricarica la pagina.",
     "chooseProductForImage": "Scegli il prodotto a cui assegnare l’immagine",
-    "decideMatchesFirst": "Decidi prima su {count} tra duplicati e conflitti.",
+    "decideMatchesFirst": "Decidi prima su {count, plural, one {# duplicato o conflitto} other {# duplicati e conflitti}}.",
     "clientNotFound": "Cliente non trovato",
     "catalogOnlyForClients": "Il catalogo prodotti è disponibile dopo la conversione in cliente.",
     "importNotFound": "Importazione non trovata",
@@ -315,7 +315,7 @@
   "index": {
     "description": "Il catalogo di ogni cliente: descrizioni, schede prodotto e foto da riusare nella strategia e nei caroselli.",
     "noClients": "Nessun cliente attivo. Il catalogo prodotti diventa disponibile quando un prospect viene convertito in cliente.",
-    "counts": "{total, plural, one {# prodotto} other {# prodotti}} · {approved, number} approvati · {proposed, number} da rivedere",
+    "counts": "{total, plural, one {# prodotto} other {# prodotti}} · {approved, plural, one {# approvato} other {# approvati}} · {proposed, number} da rivedere",
     "noProducts": "Nessun prodotto",
     "prospectsHidden": "{count, plural, one {# prospect non è mostrato} other {# prospect non sono mostrati}}: il catalogo si apre quando un prospect viene convertito in cliente."
   },
@@ -324,7 +324,7 @@
     "body": "Il catalogo prodotti diventa disponibile quando il prospect viene convertito in cliente."
   },
   "catalog": {
-    "counts": "{total, plural, one {# prodotto} other {# prodotti}} · {approved, number} approvati · {proposed, number} da rivedere · {draft, plural, one {# bozza} other {# bozze}}",
+    "counts": "{total, plural, one {# prodotto} other {# prodotti}} · {approved, plural, one {# approvato} other {# approvati}} · {proposed, number} da rivedere · {draft, plural, one {# bozza} other {# bozze}}",
     "importProducts": "Importa prodotti",
     "nextReviewImport": "tu · Rivedi {count, plural, one {# prodotto proposto} other {# prodotti proposti}} dall’importazione del {date}",
     "nextApprove": "tu · Approva o rifiuta {count, plural, one {# prodotto proposto} other {# prodotti proposti}}",
@@ -360,7 +360,7 @@
   "list": {
     "selected": "{count, plural, one {# prodotto selezionato} other {# prodotti selezionati}}",
     "approveTitle": "Approvare {count, plural, one {# prodotto} other {# prodotti}}?",
-    "approveOthers": "Approva gli altri {count, number}",
+    "approveOthers": "Approva {count, plural, one {l’altro prodotto} other {gli altri # prodotti}}",
     "approveProducts": "Approva i prodotti",
     "approveSelected": "Approva selezionati",
     "sensitiveSkipped": "{count, plural, one {# prodotto ha campi sensibili da accettare uno per uno. Verrà saltato.} other {# prodotti hanno campi sensibili da accettare uno per uno. Verranno saltati.}}",
@@ -551,13 +551,13 @@
     "closeTitle": "Chiudere la revisione?",
     "close": "Chiudi la revisione",
     "decideFirst": "Decidi prima su duplicati e conflitti",
-    "closeSummary": "{approved, number} approvati · {proposed, number} restano Proposti nel catalogo · {discarded, number} rifiutati · {images, plural, one {# immagine ancora da assegnare} other {# immagini ancora da assegnare}}.",
+    "closeSummary": "{approved, plural, one {# approvato} other {# approvati}} · {proposed, plural, one {# resta Proposto} other {# restano Proposti}} nel catalogo · {discarded, plural, one {# rifiutato} other {# rifiutati}} · {images, plural, one {# immagine ancora da assegnare} other {# immagini ancora da assegnare}}.",
     "closeBody": "Gli elementi non decisi entrano nel catalogo come Proposti, con la loro fonte.",
-    "counts": "{found, plural, one {# prodotto trovato} other {# prodotti trovati}} · {new, number} nuovi · {duplicates, plural, one {# possibile duplicato} other {# possibili duplicati}} · {conflicts, plural, one {# conflitto} other {# conflitti}} · {discarded, number} rifiutati · {images, plural, one {# immagine} other {# immagini}} da assegnare",
+    "counts": "{found, plural, one {# prodotto trovato} other {# prodotti trovati}} · {new, plural, one {# nuovo} other {# nuovi}} · {duplicates, plural, one {# possibile duplicato} other {# possibili duplicati}} · {conflicts, plural, one {# conflitto} other {# conflitti}} · {discarded, plural, one {# rifiutato} other {# rifiutati}} · {images, plural, one {# immagine} other {# immagini}} da assegnare",
     "confidence": "Attendibilità",
     "all": "Tutti",
     "onlySensitive": "Con campi sensibili",
-    "selectedCount": "{count, number} selezionati",
+    "selectedCount": "{count, plural, one {# selezionato} other {# selezionati}}",
     "selectToApprove": "Seleziona i prodotti da approvare",
     "approveTitle": "Approvare {count, plural, one {# prodotto} other {# prodotti}}?",
     "approveSelected": "Approva selezionati",
@@ -617,7 +617,7 @@
     "approvedCount": "{count, plural, one {Approvato # prodotto} other {Approvati # prodotti}}.",
     "approvedPartial": "{count, plural, one {Approvato # prodotto} other {Approvati # prodotti}}. {skipped, plural, one {# saltato} other {# saltati}}: {reasons}.",
     "rejectedCount": "{count, plural, one {Rifiutato # prodotto} other {Rifiutati # prodotti}}.",
-    "closed": "Revisione chiusa: {approved, number} approvati · {proposed, number} restano Proposti nel catalogo · {discarded, number} rifiutati · {images, plural, one {# immagine ancora da assegnare} other {# immagini ancora da assegnare}}."
+    "closed": "Revisione chiusa: {approved, plural, one {# approvato} other {# approvati}} · {proposed, plural, one {# resta Proposto} other {# restano Proposti}} nel catalogo · {discarded, plural, one {# rifiutato} other {# rifiutati}} · {images, plural, one {# immagine ancora da assegnare} other {# immagini ancora da assegnare}}."
   },
   "product": {
     "title": "Prodotto",

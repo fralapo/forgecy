@@ -33,7 +33,7 @@
     "failed": "Non riuscito",
     "cancelled": "Annullato"
   },
-  "outcome": "{completed, plural, one {# bozza} other {# bozze}} · {failed} non riuscite",
+  "outcome": "{completed, plural, one {# bozza} other {# bozze}} · {failed, plural, one {# non riuscita} other {# non riuscite}}",
   "stopAt": {
     "outline": "Fino alla scaletta",
     "slides": "Fino alle slide"
@@ -68,7 +68,7 @@
     },
     "sectionsLabel": "Sezioni dell'automazione",
     "next": {
-      "incomplete": "Prossima azione: tu · Completa {count, plural, one {# elemento segnato} other {# elementi segnati}} come incompleti",
+      "incomplete": "Prossima azione: tu · Completa {count, plural, one {# elemento segnato come incompleto} other {# elementi segnati come incompleti}}",
       "start": "Prossima azione: tu · Avvia l'automazione",
       "running": "In corso: {done} di {total} caroselli",
       "review": "Prossima azione: tu · Rivedi {count, plural, one {# bozza creata} other {# bozze create}}",
@@ -136,7 +136,7 @@
     "unsaved": "Modifiche non salvate",
     "summary": {
       "heading": "Riepilogo di avvio",
-      "items": "{valid, plural, one {# elemento pronto} other {# elementi pronti}} · {incomplete} incompleti",
+      "items": "{valid, plural, one {# elemento pronto} other {# elementi pronti}} · {incomplete, plural, one {# incompleto} other {# incompleti}}",
       "policy": "Policy AI",
       "estimate": "Costo stimato",
       "estimateValue": "{low} – {high}",
@@ -146,7 +146,7 @@
       "noLimit": "Nessun limite mensile",
       "fits": "Rientra nel budget",
       "confirm": "Supera il 90% del budget residuo: serve conferma",
-      "exceeds": "Supera il budget: l'esecuzione si fermerà a circa {count} elementi",
+      "exceeds": "Supera il budget: l'esecuzione si fermerà a circa {count, plural, one {# elemento} other {# elementi}}",
       "exhausted": "Il budget AI mensile è esaurito",
       "confirmCost": "Confermo il costo stimato",
       "start": "Avvia {count, plural, one {# carosello} other {# caroselli}}",

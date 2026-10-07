@@ -244,7 +244,7 @@
     "conflictNotFound": "Conflict not found",
     "itemDecided": "Someone else has already decided this item. Reload the page.",
     "chooseProductForImage": "Choose the product to assign the image to",
-    "decideMatchesFirst": "Decide on {count} duplicates and conflicts first.",
+    "decideMatchesFirst": "Decide on {count, plural, one {# duplicate or conflict} other {# duplicates and conflicts}} first.",
     "clientNotFound": "Client not found",
     "catalogOnlyForClients": "The product catalog is available after conversion to a client.",
     "importNotFound": "Import not found",
@@ -360,7 +360,7 @@
   "list": {
     "selected": "{count, plural, one {# product selected} other {# products selected}}",
     "approveTitle": "Approve {count, plural, one {# product} other {# products}}?",
-    "approveOthers": "Approve the other {count, number}",
+    "approveOthers": "Approve the other {count, plural, one {# product} other {# products}}",
     "approveProducts": "Approve products",
     "approveSelected": "Approve selected",
     "sensitiveSkipped": "{count, plural, one {# product has sensitive fields to accept one by one. It will be skipped.} other {# products have sensitive fields to accept one by one. They will be skipped.}}",
@@ -551,7 +551,7 @@
     "closeTitle": "Close the review?",
     "close": "Close review",
     "decideFirst": "Decide on duplicates and conflicts first",
-    "closeSummary": "{approved, number} approved · {proposed, number} stay Proposed in the catalog · {discarded, number} rejected · {images, plural, one {# image} other {# images}} still to assign.",
+    "closeSummary": "{approved, number} approved · {proposed, plural, one {# stays Proposed} other {# stay Proposed}} in the catalog · {discarded, number} rejected · {images, plural, one {# image} other {# images}} still to assign.",
     "closeBody": "Undecided items enter the catalog as Proposed, with their source.",
     "counts": "{found, plural, one {# product found} other {# products found}} · {new, number} new · {duplicates, plural, one {# possible duplicate} other {# possible duplicates}} · {conflicts, plural, one {# conflict} other {# conflicts}} · {discarded, number} rejected · {images, plural, one {# image} other {# images}} to assign",
     "confidence": "Confidence",
@@ -617,7 +617,7 @@
     "approvedCount": "Approved {count, plural, one {# product} other {# products}}.",
     "approvedPartial": "Approved {count, plural, one {# product} other {# products}}. {skipped, number} skipped: {reasons}.",
     "rejectedCount": "Rejected {count, plural, one {# product} other {# products}}.",
-    "closed": "Review closed: {approved, number} approved · {proposed, number} stay Proposed in the catalog · {discarded, number} rejected · {images, plural, one {# image} other {# images}} still to assign."
+    "closed": "Review closed: {approved, number} approved · {proposed, plural, one {# stays Proposed} other {# stay Proposed}} in the catalog · {discarded, number} rejected · {images, plural, one {# image} other {# images}} still to assign."
   },
   "product": {
     "title": "Product",
