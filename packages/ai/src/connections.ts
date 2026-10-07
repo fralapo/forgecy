@@ -1,6 +1,7 @@
 import { assertCan, ForgecyError, type Actor, type Env } from "@forgecy/core";
 import { aiConnections, and, eq, isNull, recordAuditEvent, type Database } from "@forgecy/db";
 import { decryptSecret, encryptSecret, keyHint as lastFour } from "./crypto";
+import { MODEL_LIST_ENDPOINTS, modelListHeaders } from "./providers/model-catalog";
 
 /**
  * Agency-wide BYOK API keys pasted in Settings > AI providers, as an alternative to
@@ -166,19 +167,11 @@ export async function testApiKey(
   apiKey: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<ApiKeyTestResult> {
-  const endpoints: Record<ByokProviderId, string> = {
-    openai: "https://api.openai.com/v1/models",
-    anthropic: "https://api.anthropic.com/v1/models",
-    openrouter: "https://openrouter.ai/api/v1/models",
-    deepseek: "https://api.deepseek.com/models",
-  };
   const key = apiKey.trim();
-  const headers: Record<string, string> =
-    provider === "anthropic"
-      ? { "x-api-key": key, "anthropic-version": "2023-06-01" }
-      : { Authorization: `Bearer ${key}` };
   try {
-    const res = await fetchFn(endpoints[provider], { headers });
+    const res = await fetchFn(MODEL_LIST_ENDPOINTS[provider], {
+      headers: modelListHeaders(provider, key),
+    });
     if (res.ok) return { ok: true };
     const body = (await res.json().catch(() => null)) as {
       error?: { message?: string } | string;

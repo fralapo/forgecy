@@ -6,7 +6,14 @@ import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import { saveRoutingAction, type RoutingState } from "../actions";
 import { controlClass } from "../../content/_components/action-button";
-import { OpenRouterModelField } from "./openrouter-model-field";
+import { LiveModelField, type CatalogProvider } from "./live-model-field";
+
+/** The BYOK providers whose model list can be searched live; "local" has none. */
+function catalogProviderOf(id: string): CatalogProvider | undefined {
+  return id === "openai" || id === "anthropic" || id === "openrouter" || id === "deepseek"
+    ? id
+    : undefined;
+}
 
 export interface ProviderOption {
   id: string;
@@ -68,8 +75,9 @@ export function RoutingForm({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="rt-text-model">{t("model")}</Label>
-            {textProvider === "openrouter" ? (
-              <OpenRouterModelField
+            {catalogProviderOf(textProvider) ? (
+              <LiveModelField
+                provider={catalogProviderOf(textProvider)!}
                 id="rt-text-model"
                 name="text.model"
                 defaultValue={initial.text.model}
@@ -104,8 +112,9 @@ export function RoutingForm({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="rt-fb-model">{t("model")}</Label>
-            {fallbackProvider === "openrouter" ? (
-              <OpenRouterModelField
+            {catalogProviderOf(fallbackProvider) ? (
+              <LiveModelField
+                provider={catalogProviderOf(fallbackProvider)!}
                 id="rt-fb-model"
                 name="text.fallback.model"
                 defaultValue={initial.text.fallback?.model ?? ""}
@@ -148,8 +157,9 @@ export function RoutingForm({
               </div>
               <div className="grid gap-1">
                 <Label htmlFor={`rt-img-${o.id}-model`}>{t("model")}</Label>
-                {o.id === "openrouter" ? (
-                  <OpenRouterModelField
+                {catalogProviderOf(o.id) ? (
+                  <LiveModelField
+                    provider={catalogProviderOf(o.id)!}
                     id={`rt-img-${o.id}-model`}
                     name={`image.${o.id}.model`}
                     defaultValue={initial.images.find((x) => x.provider === o.id)?.model ?? ""}
