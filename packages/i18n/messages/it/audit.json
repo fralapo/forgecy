@@ -33,7 +33,7 @@
     "seo_accessibility": "SEO e accessibilità",
     "social_visual": "Stile visivo",
     "social_tone": "Tono di voce",
-    "social_cta": "Call to action",
+    "social_cta": "CTA",
     "social_formats": "Formati e frequenza",
     "linkedin_leads": "LinkedIn e lead",
     "competitors": "Competitor",
@@ -317,7 +317,7 @@
   "comparison": {
     "metaTitle": "Audit · Confronto tra canali",
     "title": "Sito, Instagram e Facebook a confronto",
-    "description": "Cinque criteri: colore, tono, call to action, pubblico e stile visivo. Ogni esito è una proposta: se lo cambi, scrivi perché.",
+    "description": "Cinque criteri: colore, tono, CTA, pubblico e stile visivo. Ogni esito è una proposta: se lo cambi, scrivi perché.",
     "withData": "Canali con dati: {channels}",
     "none": "nessuno",
     "withoutData": " · senza dati: {channels}",
@@ -586,8 +586,8 @@
     },
     "structured_data": {
       "label": "Attività descritta nei dati strutturati",
-      "failed": "Nessuna pagina descrive l'attività nei dati strutturati (Organization o LocalBusiness, JSON-LD)",
-      "ok": "{count, plural, one {# pagina descrive} other {# pagine descrivono}} l'attività nei dati strutturati"
+      "failed": "Nessuna pagina descrive l’attività nei dati strutturati (Organization o LocalBusiness, JSON-LD)",
+      "ok": "{count, plural, one {# pagina descrive} other {# pagine descrivono}} l’attività nei dati strutturati"
     },
     "ai_crawlers": {
       "label": "Aperto ai motori di risposta AI",
@@ -736,9 +736,9 @@
       "body": "testo",
       "both": "titoli e testo"
     },
-    "cta": "Call to action",
+    "cta": "CTA",
     "ctaPages": "{count, plural, one {# pagina} other {# pagine}}",
-    "noCta": "Nessuna call to action trovata.",
+    "noCta": "Nessuna CTA trovata.",
     "contactForm": "Modulo di contatto: {present, select, yes {presente} other {non trovato}} · Canali social collegati: {channels}",
     "none": "nessuno",
     "checks": "Controlli tecnici",
@@ -828,7 +828,7 @@
     "observations": "Osservazioni",
     "regenerate": "Rigenera le osservazioni",
     "generate": "Genera le osservazioni",
-    "aiHint": "L’AI guarda fino a 8 screenshot recenti per stile, tono e call to action; prende i numeri solo dai valori inseriti e dai post importati.",
+    "aiHint": "L’AI guarda fino a 8 screenshot recenti per stile, tono e CTA; prende i numeri solo dai valori inseriti e dai post importati.",
     "noObservations": "Nessuna osservazione per questo canale."
   },
   "socialTools": {
@@ -858,7 +858,7 @@
     "uploadFailed": "Caricamento non riuscito",
     "screenshotsUploaded": "{count, plural, one {# screenshot caricato.} other {# screenshot caricati.}}",
     "screenshots": "Screenshot del profilo e dei post",
-    "screenshotsHint": "PNG, JPEG o WebP, fino a 20 MB l’uno e {max} per canale. L’AI li usa per stile, tono e call to action; inserisci qui sotto i numeri che leggi, con la loro fonte.",
+    "screenshotsHint": "PNG, JPEG o WebP, fino a 20 MB l’uno e {max} per canale. L’AI li usa per stile, tono e CTA; inserisci qui sotto i numeri che leggi, con la loro fonte.",
     "uploadScreenshots": "Carica screenshot",
     "table": "Export dei post (CSV o XLSX)",
     "uploadTable": "Carica e associa le colonne",
