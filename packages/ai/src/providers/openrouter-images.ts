@@ -16,7 +16,12 @@ import { OPENROUTER_BASE_URL } from "./openai-compatible";
  * `image_config.aspect_ratio` is honoured by the models that support it (Gemini, FLUX...).
  * Reference: openrouter.ai/docs/features/multimodal/image-generation (checked 2026-10-06).
  */
-export const OPENROUTER_IMAGE_DEFAULT_MODEL = "google/gemini-3.1-flash-image-preview";
+/**
+ * Last-known-good fallback for OpenRouter images, used only when the live catalog
+ * (openrouter-catalog.ts) cannot be reached. OpenAI's GPT Image model, picked live by
+ * id otherwise so it always tracks whichever version is newest.
+ */
+export const OPENROUTER_IMAGE_DEFAULT_MODEL = "openai/gpt-image-1";
 
 const ratios = [
   { ar: "1:1", ratio: 1 },

@@ -51,6 +51,31 @@ describe("Admin routing settings", () => {
     expect(routing.default.fallback?.model).toBeTruthy();
   });
 
+  it("prefers the live OpenRouter default over the hardcoded one when the model is empty", () => {
+    const { routing } = resolveRouting(
+      env,
+      providers,
+      { text: { provider: "openrouter", model: "" } },
+      new Set(),
+      { text: "deepseek/deepseek-v9-flash", image: "openai/gpt-image-9" },
+    );
+    expect(routing.default.primary).toEqual({
+      provider: "openrouter",
+      model: "deepseek/deepseek-v9-flash",
+    });
+  });
+
+  it("an explicit model always wins over the live OpenRouter default", () => {
+    const { routing } = resolveRouting(
+      env,
+      providers,
+      { text: { provider: "openrouter", model: "deepseek/deepseek-chat" } },
+      new Set(),
+      { text: "deepseek/deepseek-v9-flash" },
+    );
+    expect(routing.default.primary.model).toBe("deepseek/deepseek-chat");
+  });
+
   it("falls back to the env default when the chosen service is not configured", () => {
     const { routing } = resolveRouting(env, providers, {
       text: { provider: "deepseek", model: "deepseek-flash" },

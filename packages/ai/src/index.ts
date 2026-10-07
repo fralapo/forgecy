@@ -15,6 +15,7 @@ export * from "./providers/openai-images";
 export * from "./providers/google-images";
 export * from "./providers/fake";
 export * from "./providers/openrouter-images";
+export * from "./providers/openrouter-catalog";
 export * from "./mcp/oauth";
 export * from "./mcp/store";
 export * from "./mcp/client";

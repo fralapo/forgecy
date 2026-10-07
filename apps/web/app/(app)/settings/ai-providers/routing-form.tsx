@@ -3,9 +3,10 @@
 import { Button, Input, Label } from "@forgecy/ui";
 import { Save } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { saveRoutingAction, type RoutingState } from "../actions";
 import { controlClass } from "../../content/_components/action-button";
+import { OpenRouterModelField } from "./openrouter-model-field";
 
 export interface ProviderOption {
   id: string;
@@ -36,6 +37,8 @@ export function RoutingForm({
   const [state, action, pending] = useActionState<RoutingState, FormData>(saveRoutingAction, {});
   const t = useTranslations("settings.aiProviders.routing");
   const tc = useTranslations("common");
+  const [textProvider, setTextProvider] = useState(initial.text.provider);
+  const [fallbackProvider, setFallbackProvider] = useState(initial.text.fallback?.provider ?? "");
   const label = (o: ProviderOption) => (o.ready ? o.name : t("notReady", { name: o.name }));
   const textDefault = (id: string | undefined) => text.find((o) => o.id === id)?.defaultModel ?? "";
   const position = (id: string) => {
@@ -52,7 +55,8 @@ export function RoutingForm({
             <select
               id="rt-text-provider"
               name="text.provider"
-              defaultValue={initial.text.provider}
+              value={textProvider}
+              onChange={(e) => setTextProvider(e.target.value)}
               className={controlClass}
             >
               {text.map((o) => (
@@ -64,20 +68,30 @@ export function RoutingForm({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="rt-text-model">{t("model")}</Label>
-            <Input
-              id="rt-text-model"
-              name="text.model"
-              defaultValue={initial.text.model}
-              placeholder={textDefault(initial.text.provider)}
-              maxLength={200}
-            />
+            {textProvider === "openrouter" ? (
+              <OpenRouterModelField
+                id="rt-text-model"
+                name="text.model"
+                defaultValue={initial.text.model}
+                placeholder={textDefault(textProvider)}
+              />
+            ) : (
+              <Input
+                id="rt-text-model"
+                name="text.model"
+                defaultValue={initial.text.model}
+                placeholder={textDefault(textProvider)}
+                maxLength={200}
+              />
+            )}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="rt-fb-provider">{t("fallbackProvider")}</Label>
             <select
               id="rt-fb-provider"
               name="text.fallback.provider"
-              defaultValue={initial.text.fallback?.provider ?? ""}
+              value={fallbackProvider}
+              onChange={(e) => setFallbackProvider(e.target.value)}
               className={controlClass}
             >
               <option value="">{t("none")}</option>
@@ -90,12 +104,21 @@ export function RoutingForm({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="rt-fb-model">{t("model")}</Label>
-            <Input
-              id="rt-fb-model"
-              name="text.fallback.model"
-              defaultValue={initial.text.fallback?.model ?? ""}
-              maxLength={200}
-            />
+            {fallbackProvider === "openrouter" ? (
+              <OpenRouterModelField
+                id="rt-fb-model"
+                name="text.fallback.model"
+                defaultValue={initial.text.fallback?.model ?? ""}
+                placeholder={textDefault(fallbackProvider)}
+              />
+            ) : (
+              <Input
+                id="rt-fb-model"
+                name="text.fallback.model"
+                defaultValue={initial.text.fallback?.model ?? ""}
+                maxLength={200}
+              />
+            )}
           </div>
         </div>
         <p className="text-body-sm text-fg-muted">{t("modelHint")}</p>
@@ -125,13 +148,22 @@ export function RoutingForm({
               </div>
               <div className="grid gap-1">
                 <Label htmlFor={`rt-img-${o.id}-model`}>{t("model")}</Label>
-                <Input
-                  id={`rt-img-${o.id}-model`}
-                  name={`image.${o.id}.model`}
-                  defaultValue={initial.images.find((x) => x.provider === o.id)?.model ?? ""}
-                  placeholder={o.defaultModel}
-                  maxLength={200}
-                />
+                {o.id === "openrouter" ? (
+                  <OpenRouterModelField
+                    id={`rt-img-${o.id}-model`}
+                    name={`image.${o.id}.model`}
+                    defaultValue={initial.images.find((x) => x.provider === o.id)?.model ?? ""}
+                    placeholder={o.defaultModel}
+                  />
+                ) : (
+                  <Input
+                    id={`rt-img-${o.id}-model`}
+                    name={`image.${o.id}.model`}
+                    defaultValue={initial.images.find((x) => x.provider === o.id)?.model ?? ""}
+                    placeholder={o.defaultModel}
+                    maxLength={200}
+                  />
+                )}
               </div>
             </li>
           ))}

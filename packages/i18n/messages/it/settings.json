@@ -187,7 +187,7 @@
       "model": "Modello",
       "fallbackProvider": "Servizio di riserva",
       "none": "Nessuno",
-      "modelHint": "Lascia vuoto il modello per usare quello predefinito del servizio. Con OpenRouter usa i suoi id, ad esempio deepseek/deepseek-chat o openai/gpt-6.1-sol.",
+      "modelHint": "Lascia vuoto il modello per usare quello predefinito del servizio. Con OpenRouter scrivi per cercare tra i modelli attuali (o incolla un id qualsiasi): se lasci vuoto, usa il più recente DeepSeek Flash per il testo e il più recente modello GPT per le immagini.",
       "imagesTitle": "Immagini",
       "imagesHint": "Numera i servizi nell’ordine in cui provarli; si usano i primi due pronti (principale e riserva). “Spento” non usa mai quel servizio.",
       "position": "Ordine",
