@@ -1,11 +1,12 @@
 "use client";
 
+import { assetRightsBases } from "@forgecy/content/client";
 import { Button, Label } from "@forgecy/ui";
-import { Check, Save, X } from "lucide-react";
+import { Check, Save, ShieldCheck, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { decideAssetAction, updateAltAction } from "../actions";
+import { confirmRightsAction, decideAssetAction, updateAltAction } from "../actions";
 import { controlClass } from "./action-button";
 
 interface AssetRef {
@@ -138,5 +139,60 @@ export function LibraryDecision(ref: AssetRef) {
       )}
       <ErrorText error={error} />
     </div>
+  );
+}
+
+/** “Confirm rights” of an uploaded image: on what basis the agency may use it commercially. */
+export function LibraryRightsForm({
+  initial,
+  ...ref
+}: AssetRef & { initial: { basis: (typeof assetRightsBases)[number]; note: string } | null }) {
+  const t = useTranslations("content.library.rights");
+  const { pending, error, exec } = useRun();
+  const [basis, setBasis] = useState<string>(initial?.basis ?? assetRightsBases[0]);
+  const [note, setNote] = useState(initial?.note ?? "");
+  const id = (f: string) => `rights-${f}-${ref.id}`;
+  return (
+    <form
+      className="space-y-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        exec(() => confirmRightsAction({ ...ref, basis, note }));
+      }}
+    >
+      <div className="space-y-1">
+        <Label htmlFor={id("basis")}>{t("basis")}</Label>
+        <select
+          id={id("basis")}
+          value={basis}
+          onChange={(e) => setBasis(e.target.value)}
+          className={controlClass}
+        >
+          {assetRightsBases.map((b) => (
+            <option key={b} value={b}>
+              {t(`bases.${b}`)}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor={id("note")}>{t("note")}</Label>
+        <textarea
+          id={id("note")}
+          rows={2}
+          maxLength={500}
+          value={note}
+          required={basis === "licensed"}
+          placeholder={t("notePlaceholder")}
+          onChange={(e) => setNote(e.target.value)}
+          className={controlClass}
+        />
+      </div>
+      <Button type="submit" size="sm" variant="secondary" disabled={pending}>
+        <ShieldCheck aria-hidden />
+        {initial ? t("update") : t("confirm")}
+      </Button>
+      <ErrorText error={error} />
+    </form>
   );
 }

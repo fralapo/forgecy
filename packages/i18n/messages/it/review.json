@@ -11,7 +11,7 @@
     "assetMissing": "Slide {slide}: immagine non presente nella libreria del cliente",
     "aiAssetUnapproved": "Slide {slide}: immagine AI da approvare prima di approvare il carosello",
     "assetUnapproved": "Slide {slide}: immagine non approvata",
-    "commercialUse": "Slide {slide}: uso commerciale del fornitore dell’immagine AI non ancora verificato",
+    "commercialUse": "Slide {slide}: uso commerciale dell'immagine non ancora verificato (termini del provider o diritti da confermare)",
     "altMissing": "Slide {slide}: manca il testo alternativo dell’immagine",
     "productChanged": "Il prodotto è cambiato nel catalogo dopo la stesura dei testi",
     "brandChanged": "È stata pubblicata una nuova Brand Identity dopo la creazione del carosello",
