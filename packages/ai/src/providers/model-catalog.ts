@@ -4,11 +4,17 @@ import type { ByokProviderId } from "../connections";
  * Each BYOK provider's model-list endpoint, shared with connections.ts (testApiKey uses
  * the same endpoints to confirm a pasted key works). OpenRouter's is public; the other
  * three need the provider's own auth scheme.
+ *
+ * OpenRouter's `GET /models` defaults to `output_modalities=text` when the param is left
+ * off (openrouter.ai/docs/api/api-reference/models/get-models) — so a bare request here
+ * silently excludes every image-generation model (GPT Image included) from the response.
+ * `text,image` is the only pair Forgecy cares about; it also keeps out the audio/video/
+ * rerank/embeddings models OpenRouter also lists, which are noise for both model pickers.
  */
 export const MODEL_LIST_ENDPOINTS: Record<ByokProviderId, string> = {
   openai: "https://api.openai.com/v1/models",
   anthropic: "https://api.anthropic.com/v1/models",
-  openrouter: "https://openrouter.ai/api/v1/models",
+  openrouter: "https://openrouter.ai/api/v1/models?output_modalities=text,image",
   deepseek: "https://api.deepseek.com/models",
 };
 
