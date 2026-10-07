@@ -70,7 +70,7 @@ export const envSchema = z.object({
 
   AI_DEFAULT_PROVIDER: z
     .enum(["anthropic", "openai", "openrouter", "deepseek", "local"])
-    .default("anthropic"),
+    .default("openrouter"),
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   OPENROUTER_API_KEY: z.string().optional(),

@@ -105,9 +105,9 @@ export function defaultModelFor(provider: ProviderId, env: Pick<AiEnv, "LOCAL_LL
 
 /** Providers that can generate images, in the default order of preference. */
 export const imageProviderIds = [
+  "openrouter",
   "openai",
   "google",
-  "openrouter",
   "higgsfield",
 ] as const satisfies readonly ProviderId[];
 export type ImageProviderId = (typeof imageProviderIds)[number];
