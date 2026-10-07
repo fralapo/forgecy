@@ -250,7 +250,7 @@ export function automationHandlers(): JobHandlers {
   return handle(automationItemJob, async (payload, ctx) => {
     shared ??= createQueues(loadEnv().REDIS_URL);
     return runAutomationItem(
-      { db: ctx.db, queues: await shared, pipeline: pipelineDepsFor(ctx.db, ctx.logger) },
+      { db: ctx.db, queues: await shared, pipeline: await pipelineDepsFor(ctx.db, ctx.logger) },
       payload,
       ctx,
     );

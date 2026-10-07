@@ -2,10 +2,19 @@
 
 import {
   beginMcpConnection,
+  beginSiwcConnection,
+  byokProviderIds,
   disconnectMcp,
+  disconnectSiwc,
   imageProviderIds,
   mcpImageProviderIds,
+  removeAgencyApiKey,
+  resolveApiKey,
   saveAiRoutingSettings,
+  setAgencyApiKey,
+  setSiwcClientId,
+  testApiKey,
+  type ByokProviderId,
 } from "@forgecy/ai";
 import { setCommercialUse } from "@forgecy/content";
 import { assertCan, ForgecyError, localeSchema, PermissionDeniedError } from "@forgecy/core";
@@ -16,6 +25,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
+import { resetProviders } from "@/lib/ai";
 import { env } from "@/lib/env";
 import { errorMessage, firstIssue, vmsg } from "@/lib/i18n";
 import { PASSWORD_MIN } from "@/lib/password";
@@ -184,5 +194,103 @@ export async function saveRoutingAction(
   }
   revalidatePath("/settings/ai-providers");
   revalidatePath("/settings");
+  return { ok: true };
+}
+
+export type ApiKeyState = { error?: string; ok?: boolean };
+
+const byokProviderFromForm = (form: FormData): ByokProviderId => {
+  const parsed = z.enum(byokProviderIds).safeParse(form.get("provider"));
+  if (!parsed.success) throw new ForgecyError("validation", "Unknown provider");
+  return parsed.data;
+};
+
+/** Admin only: pastes the agency's own key for a provider, stored encrypted (never logged or sent back). */
+export async function setApiKeyAction(_prev: ApiKeyState, form: FormData): Promise<ApiKeyState> {
+  const admin = await requireUser();
+  const t = await getTranslations("settings.aiProviders.apiKey");
+  try {
+    const provider = byokProviderFromForm(form);
+    await setAgencyApiKey(getDb(), admin.actor, env, provider, String(form.get("apiKey") ?? ""));
+  } catch (err) {
+    if (err instanceof PermissionDeniedError)
+      return { error: (await getTranslations("errors"))("adminOnly") };
+    if (err instanceof ForgecyError)
+      return { error: t(`errors.${err.code === "validation" ? "empty" : "unavailable"}`) };
+    throw err;
+  }
+  resetProviders();
+  revalidatePath("/settings/ai-providers");
+  return { ok: true };
+}
+
+export async function removeApiKeyAction(form: FormData): Promise<void> {
+  const admin = await requireUser();
+  await removeAgencyApiKey(getDb(), admin.actor, byokProviderFromForm(form));
+  resetProviders();
+  revalidatePath("/settings/ai-providers");
+}
+
+export type ApiKeyTestState = { tested?: true; ok?: boolean; error?: string };
+
+/** Pasted (unsaved) key if given, else the one already configured (saved key, else env var). */
+export async function testApiKeyAction(
+  _prev: ApiKeyTestState,
+  form: FormData,
+): Promise<ApiKeyTestState> {
+  await requireUser();
+  const t = await getTranslations("settings.aiProviders.apiKey");
+  const provider = byokProviderFromForm(form);
+  const pasted = String(form.get("apiKey") ?? "").trim();
+  const key = pasted || (await resolveApiKey(getDb(), env, provider));
+  if (!key) return { tested: true, ok: false, error: t("errors.noneConfigured") };
+  const result = await testApiKey(provider, key);
+  return { tested: true, ok: result.ok, error: result.error };
+}
+
+export type SiwcConnectState = { error?: string };
+
+/** “Continue with ChatGPT”: the person's own account, never a shared or pooled login. */
+export async function connectSiwcAction(
+  _prev: SiwcConnectState,
+  _form: FormData,
+): Promise<SiwcConnectState> {
+  const user = await requireUser();
+  const t = await getTranslations("settings.aiProviders.siwc");
+  let url: string;
+  try {
+    url = await beginSiwcConnection(getDb(), user.actor, env);
+  } catch (err) {
+    if (err instanceof ForgecyError && err.code === "unavailable")
+      return { error: t("errors.notConfigured") };
+    if (err instanceof ForgecyError) return { error: t("errors.startFailed") };
+    throw err;
+  }
+  revalidatePath("/settings/ai-providers");
+  redirect(url as Route);
+}
+
+export async function disconnectSiwcAction(): Promise<void> {
+  const user = await requireUser();
+  await disconnectSiwc(getDb(), user.actor, env);
+  revalidatePath("/settings/ai-providers");
+}
+
+export type SiwcClientIdState = { error?: string; ok?: boolean };
+
+/** Admin only: overrides OPENAI_SIWC_CLIENT_ID from the interface once OpenAI issues one. */
+export async function setSiwcClientIdAction(
+  _prev: SiwcClientIdState,
+  form: FormData,
+): Promise<SiwcClientIdState> {
+  const admin = await requireUser();
+  try {
+    await setSiwcClientId(getDb(), admin.actor, String(form.get("clientId") ?? ""));
+  } catch (err) {
+    if (err instanceof PermissionDeniedError)
+      return { error: (await getTranslations("errors"))("adminOnly") };
+    throw err;
+  }
+  revalidatePath("/settings/ai-providers");
   return { ok: true };
 }

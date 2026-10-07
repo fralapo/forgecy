@@ -9,6 +9,7 @@ import {
   createMcpImageProviders,
   createProvidersFromEnv,
   createRoutingSource,
+  resolveAiEnv,
 } from "@forgecy/ai";
 import { carouselExportPayloadSchema } from "@forgecy/carousel";
 import { carouselWorkerHandlers } from "@forgecy/carousel/export";
@@ -52,9 +53,12 @@ registerContentPorts();
 let deps: Omit<PipelineDeps, "db"> | undefined;
 
 /** Pipeline dependencies built from the environment; also used by batch automations. */
-export function pipelineDepsFor(db: Database, logger: JobContext["logger"]): PipelineDeps {
+export async function pipelineDepsFor(
+  db: Database,
+  logger: JobContext["logger"],
+): Promise<PipelineDeps> {
   if (!deps) {
-    const env = loadEnv();
+    const env = await resolveAiEnv(db, loadEnv());
     const providers = createProvidersFromEnv(env);
     // Subscriptions over MCP (Higgsfield) are routed only while connected.
     const mcp = createMcpImageProviders(db, env);
@@ -170,26 +174,26 @@ async function runExport(
 }
 
 export const contentHandlers: JobHandlers = {
-  ...handle(proposeStrategyJob, (p, ctx) =>
-    runProposeStrategy(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+  ...handle(proposeStrategyJob, async (p, ctx) =>
+    runProposeStrategy(await pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
-  ...handle(proposePlanJob, (p, ctx) =>
-    runProposePlan(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+  ...handle(proposePlanJob, async (p, ctx) =>
+    runProposePlan(await pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
-  ...handle(creativeDirectionJob, (p, ctx) =>
-    runCreativeDirection(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+  ...handle(creativeDirectionJob, async (p, ctx) =>
+    runCreativeDirection(await pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
-  ...handle(generateOutlineJob, (p, ctx) =>
-    runGenerateOutline(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+  ...handle(generateOutlineJob, async (p, ctx) =>
+    runGenerateOutline(await pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
-  ...handle(generateSlidesJob, (p, ctx) =>
-    runGenerateSlides(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+  ...handle(generateSlidesJob, async (p, ctx) =>
+    runGenerateSlides(await pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
-  ...handle(editSlideJob, (p, ctx) =>
-    runEditSlide(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+  ...handle(editSlideJob, async (p, ctx) =>
+    runEditSlide(await pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
-  ...handle(generateImageJob, (p, ctx) =>
-    runGenerateImage(pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+  ...handle(generateImageJob, async (p, ctx) =>
+    runGenerateImage(await pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
   ...handle(exportContentJob, (p, ctx) => runExport(p, ctx)),
 };

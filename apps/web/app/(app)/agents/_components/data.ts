@@ -50,7 +50,7 @@ export async function loadAgentsView(localName: string) {
     agentProposalOutcomes(db),
     currentRouting(),
   ]);
-  const routing = withAgents(resolved.routing, configs, getProviders(), env);
+  const routing = withAgents(resolved.routing, configs, await getProviders(), env);
   const taskModels = (agent: AgentRole): TaskModel[] => {
     const rows: TaskModel[] = AGENT_TASKS[agent].map((task) => {
       const own = routing.agents?.[agent]?.tasks?.[task];

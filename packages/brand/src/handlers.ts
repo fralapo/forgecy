@@ -6,6 +6,7 @@ import {
   createAiGateway,
   createDbLedger,
   createProvidersFromEnv,
+  resolveAiEnv,
   settingsRouting,
   type AiGateway,
 } from "@forgecy/ai";
@@ -23,12 +24,12 @@ interface Deps {
 
 let deps: Deps | undefined;
 
-function depsFor(
+async function depsFor(
   db: Database,
   logger: { warn(obj: Record<string, unknown>, msg?: string): void },
-): Deps {
+): Promise<Deps> {
   if (deps) return deps;
-  const env = loadEnv();
+  const env = await resolveAiEnv(db, loadEnv());
   const providers = createProvidersFromEnv(env);
   const hasText = Object.keys(providers.text).length > 0;
   deps = {
@@ -47,7 +48,7 @@ function depsFor(
 
 export const brandHandlers: JobHandlers = {
   ...handle(brandImportSourceJob, async (payload, ctx) => {
-    const d = depsFor(ctx.db, ctx.logger);
+    const d = await depsFor(ctx.db, ctx.logger);
     const result = await runSourceImport(
       { db: ctx.db, storage: d.storage, ai: d.ai },
       {

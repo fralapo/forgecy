@@ -2,6 +2,7 @@ import { Badge, Card } from "@forgecy/ui";
 import { asc, eq, getDb, users } from "@forgecy/db";
 import { LOCALES, loadMessages, negotiateLocale } from "@forgecy/i18n";
 import { smtpOptionsFromEnv } from "@forgecy/mail";
+import { Bot, Server, SlidersHorizontal, UserPlus, Users } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
@@ -10,6 +11,7 @@ import { currentRouting } from "@/lib/ai";
 import { env } from "@/lib/env";
 import { requireUser } from "@/lib/session";
 import { getTheme } from "@/lib/theme";
+import { providerIcons } from "./_lib/provider-icons";
 import { EmailNotificationsForm } from "./email-notifications-form";
 import { LanguageForm } from "./language-form";
 import { NewUserForm } from "./new-user-form";
@@ -39,20 +41,23 @@ export default async function SettingsPage() {
   const browser = negotiateLocale((await headers()).get("accept-language"));
   // Only whether a key is configured, never the key itself.
   const providers = [
-    { name: "Anthropic", ready: Boolean(env.ANTHROPIC_API_KEY) },
-    { name: "OpenAI", ready: Boolean(env.OPENAI_API_KEY) },
-    { name: "OpenRouter", ready: Boolean(env.OPENROUTER_API_KEY) },
-    { name: "DeepSeek", ready: Boolean(env.DEEPSEEK_API_KEY) },
-    { name: t("providers.googleImages"), ready: Boolean(env.GOOGLE_AI_API_KEY) },
-    { name: t("providers.localModel"), ready: env.LOCAL_LLM_ENABLED },
-  ];
+    { id: "anthropic", name: "Anthropic", ready: Boolean(env.ANTHROPIC_API_KEY) },
+    { id: "openai", name: "OpenAI", ready: Boolean(env.OPENAI_API_KEY) },
+    { id: "openrouter", name: "OpenRouter", ready: Boolean(env.OPENROUTER_API_KEY) },
+    { id: "deepseek", name: "DeepSeek", ready: Boolean(env.DEEPSEEK_API_KEY) },
+    { id: "google", name: t("providers.googleImages"), ready: Boolean(env.GOOGLE_AI_API_KEY) },
+    { id: "local", name: t("providers.localModel"), ready: env.LOCAL_LLM_ENABLED },
+  ] as const;
 
   return (
     <>
       <PageHeader title={t("title")} description={t("description")} />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-6">
-          <h2 className="text-heading-sm text-fg">{t("preferences.title")}</h2>
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal aria-hidden className="size-5 text-fg-muted" strokeWidth={1.5} />
+            <h2 className="text-heading-sm text-fg">{t("preferences.title")}</h2>
+          </div>
           <LanguageForm
             current={user.locale ?? ""}
             languages={languages}
@@ -65,7 +70,10 @@ export default async function SettingsPage() {
           />
         </Card>
         <Card className="p-6">
-          <h2 className="text-heading-sm text-fg">{t("instance.title")}</h2>
+          <div className="flex items-center gap-2">
+            <Server aria-hidden className="size-5 text-fg-muted" strokeWidth={1.5} />
+            <h2 className="text-heading-sm text-fg">{t("instance.title")}</h2>
+          </div>
           <dl className="mt-4 grid grid-cols-[10rem_1fr] gap-y-2 text-body-sm">
             <dt className="text-fg-muted">{t("instance.access")}</dt>
             <dd className="text-fg">{te(`authMode.${env.FORGECY_AUTH_MODE}`)}</dd>
@@ -81,17 +89,29 @@ export default async function SettingsPage() {
           {user.isAdmin ? <WorkerCheck /> : null}
         </Card>
         <Card className="p-6">
-          <h2 className="text-heading-sm text-fg">{t("providers.title")}</h2>
+          <div className="flex items-center gap-2">
+            <Bot aria-hidden className="size-5 text-fg-muted" strokeWidth={1.5} />
+            <h2 className="text-heading-sm text-fg">{t("providers.title")}</h2>
+          </div>
           <p className="mt-2 text-body-sm text-fg-muted">{t("providers.hint")}</p>
-          <ul className="mt-4 space-y-2">
-            {providers.map((p) => (
-              <li key={p.name} className="flex items-center justify-between text-body-sm">
-                <span className="text-fg">{p.name}</span>
-                <Badge variant={p.ready ? "success" : "neutral"}>
-                  {t(p.ready ? "providers.configured" : "providers.notConfigured")}
-                </Badge>
-              </li>
-            ))}
+          <ul className="mt-4 divide-y divide-subtle">
+            {providers.map((p) => {
+              const Icon = providerIcons[p.id];
+              return (
+                <li
+                  key={p.name}
+                  className="flex items-center justify-between gap-2 py-2 text-body-sm"
+                >
+                  <span className="flex items-center gap-2 text-fg">
+                    <Icon aria-hidden className="size-4 text-fg-muted" strokeWidth={1.5} />
+                    {p.name}
+                  </span>
+                  <Badge variant={p.ready ? "success" : "neutral"}>
+                    {t(p.ready ? "providers.configured" : "providers.notConfigured")}
+                  </Badge>
+                </li>
+              );
+            })}
           </ul>
           {user.isAdmin ? (
             <Link
@@ -105,7 +125,10 @@ export default async function SettingsPage() {
         {user.isAdmin ? (
           <>
             <Card className="p-6">
-              <h2 className="text-heading-sm text-fg">{t("people.title")}</h2>
+              <div className="flex items-center gap-2">
+                <Users aria-hidden className="size-5 text-fg-muted" strokeWidth={1.5} />
+                <h2 className="text-heading-sm text-fg">{t("people.title")}</h2>
+              </div>
               <ul className="mt-4 divide-y divide-subtle">
                 {people.map((p) => (
                   <li key={p.id} className="flex items-center justify-between py-2 text-body-sm">
@@ -124,7 +147,10 @@ export default async function SettingsPage() {
               </ul>
             </Card>
             <Card className="p-6">
-              <h2 className="text-heading-sm text-fg">{t("newUser.title")}</h2>
+              <div className="flex items-center gap-2">
+                <UserPlus aria-hidden className="size-5 text-fg-muted" strokeWidth={1.5} />
+                <h2 className="text-heading-sm text-fg">{t("newUser.title")}</h2>
+              </div>
               <NewUserForm />
             </Card>
           </>

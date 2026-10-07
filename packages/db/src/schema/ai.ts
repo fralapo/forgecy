@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -128,5 +129,36 @@ export const mcpConnections = pgTable(
   (t) => [
     uniqueIndex("mcp_connections_provider_uq").on(t.provider),
     index("mcp_connections_oauth_state_idx").on(t.oauthState),
+  ],
+);
+
+/**
+ * “Sign in with ChatGPT” (OpenAI OAuth): one row per person, never shared across users
+ * or pooled into an agency-wide subscription. `encryptedState` holds the OAuth tokens,
+ * the OpenID profile and a pending PKCE verifier, encrypted with FORGECY_ENCRYPTION_KEY.
+ * `planSharing` is set once OpenAI's token response grants ChatGPT plan usage (separate
+ * from the identity scopes); until then the connection only confirms who the person is.
+ */
+export const siwcConnections = pgTable(
+  "siwc_connections",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: text("status", { enum: ["pending", "connected", "error"] })
+      .notNull()
+      .default("pending"),
+    planSharing: boolean("plan_sharing").notNull().default(false),
+    encryptedState: text("encrypted_state"),
+    oauthState: text("oauth_state"),
+    lastError: text("last_error"),
+    connectedAt: timestamp("connected_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("siwc_connections_user_uq").on(t.userId),
+    index("siwc_connections_oauth_state_idx").on(t.oauthState),
   ],
 );

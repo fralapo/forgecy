@@ -102,6 +102,79 @@
         "startFailed": "The provider did not accept the connection. Check the server address in .env and try again."
       }
     },
+    "apiKey": {
+      "cardTitle": "API keys",
+      "title": "{name} API key",
+      "label": "API key",
+      "current": "Current key: •••• {hint}",
+      "save": "Save",
+      "test": "Test",
+      "remove": "Remove",
+      "saved": "Key saved.",
+      "testOk": "The key works.",
+      "testFailed": "The key did not work: {error}",
+      "errors": {
+        "empty": "Paste a key first.",
+        "unavailable": "Set FORGECY_ENCRYPTION_KEY in .env first: it encrypts the key.",
+        "noneConfigured": "No key to test: paste one above, or set it in .env."
+      },
+      "providers": {
+        "openai": {
+          "name": "OpenAI",
+          "hint": "Create a key on your OpenAI project (billing must be enabled there; a ChatGPT Plus or Pro subscription does not cover API usage):",
+          "link": "platform.openai.com/api-keys",
+          "placeholder": "sk-proj-..."
+        },
+        "anthropic": {
+          "name": "Anthropic",
+          "hint": "Create a key on your Anthropic console (billing must be enabled there):",
+          "link": "console.anthropic.com/settings/keys",
+          "placeholder": "sk-ant-..."
+        },
+        "openrouter": {
+          "name": "OpenRouter",
+          "hint": "Create a key and add credits on OpenRouter (one key reaches many providers' models):",
+          "link": "openrouter.ai/keys",
+          "placeholder": "sk-or-v1-..."
+        },
+        "deepseek": {
+          "name": "DeepSeek",
+          "hint": "Create a key on your DeepSeek account (billing must be enabled there):",
+          "link": "platform.deepseek.com/api_keys",
+          "placeholder": "sk-..."
+        }
+      }
+    },
+    "siwc": {
+      "title": "Sign in with ChatGPT",
+      "description": "Connect your own ChatGPT account instead of using the agency's OpenAI API key for your requests.",
+      "connect": "Continue with ChatGPT",
+      "disconnect": "Disconnect",
+      "connectedAs": "Signed in as {name} ({email})",
+      "lastError": "Last error",
+      "planSharing": {
+        "active": "Your ChatGPT plan is used for eligible requests.",
+        "pending": "Plan sharing is not available yet: OpenAI has not published this for third-party apps. Connecting only confirms your identity today; requests still use the agency's OpenAI API key."
+      },
+      "notConfigured": {
+        "title": "Awaiting OpenAI approval",
+        "description": "OpenAI currently issues a client id only to approved partners. Request one at developers.openai.com/siwc/request-client-id; once granted, enter it below (or set OPENAI_SIWC_CLIENT_ID in .env) to turn this on."
+      },
+      "adminClientId": {
+        "label": "OpenAI SIWC client id",
+        "placeholder": "client id from OpenAI",
+        "save": "Save",
+        "saved": "Client id saved."
+      },
+      "result": {
+        "connected": "ChatGPT account connected.",
+        "error": "The connection did not complete: see the last error above."
+      },
+      "errors": {
+        "notConfigured": "OpenAI has not issued a client id yet.",
+        "startFailed": "ChatGPT did not accept the connection. Try again."
+      }
+    },
     "routing": {
       "title": "Services and models",
       "description": "Choose which service and which model Forgecy uses. Changes apply to new jobs within a few seconds.",
