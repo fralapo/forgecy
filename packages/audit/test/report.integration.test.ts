@@ -1,10 +1,20 @@
 import type { Actor } from "@forgecy/core";
-import { auditEvents, audits, clients, createDb, eq, users, type Database } from "@forgecy/db";
+import {
+  auditEvents,
+  audits,
+  clients,
+  contentPillars,
+  createDb,
+  eq,
+  users,
+  type Database,
+} from "@forgecy/db";
 import { createQueues, type JobQueues } from "@forgecy/jobs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addFinding,
   approveReport,
+  buildReportDocument,
   checkReportEvidence,
   composeReport,
   confirmCompetitorList,
@@ -97,6 +107,32 @@ describe.skipIf(!dbUrl || !redisUrl)("audit report and conversion (integration)"
     await expect(composeReport({ db, queues }, human, auditId)).rejects.toMatchObject({
       code: "conflict",
     });
+  });
+
+  it("builds the Strategy Presentation from the diagnosis, brand and strategy", async () => {
+    await db.insert(contentPillars).values({
+      clientId,
+      name: "Behind the counter",
+      goal: "Show the craft",
+      themes: ["Dough", "Ovens"],
+      status: "accepted",
+    });
+    const d = await buildReportDocument(db, report.id, "strategy");
+    expect(d.sections.map((s) => s.key)).toEqual([
+      "cover",
+      "overview",
+      "problems",
+      "brand_identity",
+      "content_strategy",
+      "next_steps",
+      "method",
+    ]);
+    const brand = d.sections.find((s) => s.key === "brand_identity")!;
+    expect(brand.intro).toMatch(/still to be defined/);
+    const strategy = d.sections.find((s) => s.key === "content_strategy")!;
+    expect(strategy.items).toMatchObject([
+      { title: "Behind the counter", description: "Show the craft", causes: ["Dough", "Ovens"] },
+    ]);
   });
 
   it("blocks review when an included problem loses its evidence", async () => {

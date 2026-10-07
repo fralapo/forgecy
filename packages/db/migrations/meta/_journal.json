@@ -169,6 +169,13 @@
       "when": 1791329986283,
       "tag": "0025_creative_director",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791330813433,
+      "tag": "0026_strategy_presentation",
+      "breakpoints": true
     }
   ]
 }

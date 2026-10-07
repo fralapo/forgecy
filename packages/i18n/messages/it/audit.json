@@ -403,17 +403,19 @@
     "withdraw": "Ritira dalla revisione",
     "newVersion": "Crea una nuova versione",
     "pdf": "PDF",
-    "pdfDescription": "Il PDF usa il Template “Audit report”. Le prove riportano la filigrana “Bozza”; il PDF definitivo si esporta dopo l’approvazione e consegna l’audit.",
+    "pdfDescription": "Il PDF usa il Template “Audit report”. La Strategy Presentation aggiunge alla diagnosi la Brand Identity e la Content Strategy proposte. Le prove riportano la filigrana “Bozza”; i PDF definitivi si esportano dopo l’approvazione.",
     "exportFailed": "L’ultimo PDF non è stato creato.",
     "exportFailedWithError": "L’ultimo PDF non è stato creato: {error}",
     "proof": {
       "full": "Prova completa",
-      "compact": "Prova sintetica"
+      "compact": "Prova sintetica",
+      "strategy": "Bozza della Strategy Presentation"
     },
     "finalConfirm": "Il PDF definitivo consegna l’audit: dopo non sarà più modificabile. Continuare?",
     "final": {
       "full": "PDF definitivo completo",
-      "compact": "PDF definitivo sintetico"
+      "compact": "PDF definitivo sintetico",
+      "strategy": "Strategy Presentation finale"
     },
     "exportKind": {
       "final": "Definitivo",

@@ -403,17 +403,19 @@
     "withdraw": "Withdraw from review",
     "newVersion": "Create a new version",
     "pdf": "PDF",
-    "pdfDescription": "The PDF uses the “Audit report” template. Proofs carry the “Draft” watermark; the final PDF is exported after approval and delivers the audit.",
+    "pdfDescription": "The PDF uses the “Audit report” template. The Strategy Presentation adds the proposed Brand Identity and Content Strategy to the diagnosis. Proofs carry the “Draft” watermark; final PDFs are exported after approval.",
     "exportFailed": "The last PDF was not created.",
     "exportFailedWithError": "The last PDF was not created: {error}",
     "proof": {
       "full": "Full proof",
-      "compact": "Compact proof"
+      "compact": "Compact proof",
+      "strategy": "Strategy Presentation proof"
     },
     "finalConfirm": "The final PDF delivers the audit: after that it can no longer be edited. Continue?",
     "final": {
       "full": "Final full PDF",
-      "compact": "Final compact PDF"
+      "compact": "Final compact PDF",
+      "strategy": "Final Strategy Presentation"
     },
     "exportKind": {
       "final": "Final",
