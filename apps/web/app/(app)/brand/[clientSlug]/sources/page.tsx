@@ -64,91 +64,93 @@ export default async function SourcesPage({
         {sources.length === 0 ? (
           <p className="p-6 text-body-md text-fg-muted">{t("sources.empty")}</p>
         ) : (
-          <table className="w-full text-left text-body-sm">
-            <caption className="sr-only">{t("sources.caption")}</caption>
-            <thead className="border-b border-subtle text-label text-fg-muted">
-              <tr>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  {t("sources.source")}
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  {t("sources.status")}
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  {t("sources.added")}
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  <span className="sr-only">{t("sources.actions")}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sources.map((s) => (
-                <tr key={s.id} className="border-b border-subtle align-top last:border-0">
-                  <td className="px-4 py-3 text-fg">
-                    {links.get(s.id) ? (
-                      <a href={links.get(s.id)}>{s.title}</a>
-                    ) : s.url ? (
-                      <a href={s.url} rel="noreferrer noopener" target="_blank">
-                        {s.title}
-                      </a>
-                    ) : (
-                      s.title
-                    )}
-                    <span className="block text-fg-muted">
-                      {t(`sourceKind.${s.kind}`)}
-                      {s.size ? ` · ${size(s.size)}` : ""}
-                      {s.pageCount ? ` · ${t("sources.partsRead", { count: s.pageCount })}` : ""}
-                    </span>
-                    {s.statusDetail ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-body-sm">
+              <caption className="sr-only">{t("sources.caption")}</caption>
+              <thead className="border-b border-subtle text-label text-fg-muted">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("sources.source")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("sources.status")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("sources.added")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    <span className="sr-only">{t("sources.actions")}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {sources.map((s) => (
+                  <tr key={s.id} className="border-b border-subtle align-top last:border-0">
+                    <td className="px-4 py-3 text-fg">
+                      {links.get(s.id) ? (
+                        <a href={links.get(s.id)}>{s.title}</a>
+                      ) : s.url ? (
+                        <a href={s.url} rel="noreferrer noopener" target="_blank">
+                          {s.title}
+                        </a>
+                      ) : (
+                        s.title
+                      )}
                       <span className="block text-fg-muted">
-                        {s.statusDetailRef?.length
-                          ? s.statusDetailRef.map((r) => rt(r, "")).join(" · ")
-                          : s.statusDetail}
+                        {t(`sourceKind.${s.kind}`)}
+                        {s.size ? ` · ${size(s.size)}` : ""}
+                        {s.pageCount ? ` · ${t("sources.partsRead", { count: s.pageCount })}` : ""}
                       </span>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={sourceStatusVariant[s.status]}>
-                      {t(`sourceStatus.${s.status}`)}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-fg-muted">
-                    {s.capturedAt ? format.date(s.capturedAt, "dateTime") : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap justify-end gap-2">
-                      {s.storageKey && s.status !== "pending" && s.status !== "extracting" ? (
+                      {s.statusDetail ? (
+                        <span className="block text-fg-muted">
+                          {s.statusDetailRef?.length
+                            ? s.statusDetailRef.map((r) => rt(r, "")).join(" · ")
+                            : s.statusDetail}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant={sourceStatusVariant[s.status]}>
+                        {t(`sourceStatus.${s.status}`)}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-fg-muted">
+                      {s.capturedAt ? format.date(s.capturedAt, "dateTime") : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {s.storageKey && s.status !== "pending" && s.status !== "extracting" ? (
+                          <ActionButton
+                            variant="secondary"
+                            size="sm"
+                            action={importSourceAction.bind(null, {
+                              slug: client.slug,
+                              clientId: client.id,
+                              sourceId: s.id,
+                            })}
+                          >
+                            {t("sources.readAgain")}
+                          </ActionButton>
+                        ) : null}
                         <ActionButton
-                          variant="secondary"
+                          variant="ghost"
                           size="sm"
-                          action={importSourceAction.bind(null, {
+                          confirm={t("sources.removeConfirm")}
+                          action={removeSourceAction.bind(null, {
                             slug: client.slug,
                             clientId: client.id,
                             sourceId: s.id,
                           })}
                         >
-                          {t("sources.readAgain")}
+                          {t("sources.remove")}
                         </ActionButton>
-                      ) : null}
-                      <ActionButton
-                        variant="ghost"
-                        size="sm"
-                        confirm={t("sources.removeConfirm")}
-                        action={removeSourceAction.bind(null, {
-                          slug: client.slug,
-                          clientId: client.id,
-                          sourceId: s.id,
-                        })}
-                      >
-                        {t("sources.remove")}
-                      </ActionButton>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </Card>
       <div className="space-y-6">

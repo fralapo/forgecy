@@ -1,5 +1,7 @@
 {
   "mainNavigation": "Navigazione principale",
+  "openMenu": "Apri il menu",
+  "closeMenu": "Chiudi il menu",
   "nav": {
     "overview": "Panoramica",
     "clients": "Clienti",

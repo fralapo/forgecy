@@ -277,52 +277,54 @@ export function TokensEditor({
       <div>
         <h3 className="text-heading-sm text-fg">{t("contrasts")}</h3>
         <p className="text-body-sm text-fg-muted">{t("contrastsHint")}</p>
-        <table className="mt-3 w-full text-left text-body-sm">
-          <caption className="sr-only">{t("contrastCaption")}</caption>
-          <thead className="text-label text-fg-muted">
-            <tr>
-              <th scope="col" className="py-2 font-medium">
-                {t("pair")}
-              </th>
-              <th scope="col" className="py-2 font-medium">
-                {t("preview")}
-              </th>
-              <th scope="col" className="py-2 font-medium">
-                {t("ratio")}
-              </th>
-              <th scope="col" className="py-2 font-medium">
-                {t("result")}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {matrix.map((cell) => (
-              <tr key={cell.id} className="border-t border-subtle">
-                <td className="py-2 text-fg">
-                  {isPairId(cell.id) ? t(`pairs.${cell.id}`) : cell.label}
-                </td>
-                <td className="py-2">
-                  {cell.fgHex && cell.bgHex ? (
-                    <span
-                      className="inline-block rounded-sm px-2 py-1"
-                      style={{ color: cell.fgHex, backgroundColor: cell.bgHex }}
-                    >
-                      {t("sample")}
-                    </span>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="py-2 font-mono text-mono-md text-fg">
-                  {cell.ratio ? `${cell.ratio.toFixed(2)}:1` : "—"}
-                </td>
-                <td className="py-2">
-                  <Badge variant={gradeVariant[cell.grade]}>{t(`grade.${cell.grade}`)}</Badge>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="mt-3 w-full text-left text-body-sm">
+            <caption className="sr-only">{t("contrastCaption")}</caption>
+            <thead className="text-label text-fg-muted">
+              <tr>
+                <th scope="col" className="py-2 font-medium">
+                  {t("pair")}
+                </th>
+                <th scope="col" className="py-2 font-medium">
+                  {t("preview")}
+                </th>
+                <th scope="col" className="py-2 font-medium">
+                  {t("ratio")}
+                </th>
+                <th scope="col" className="py-2 font-medium">
+                  {t("result")}
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {matrix.map((cell) => (
+                <tr key={cell.id} className="border-t border-subtle">
+                  <td className="py-2 text-fg">
+                    {isPairId(cell.id) ? t(`pairs.${cell.id}`) : cell.label}
+                  </td>
+                  <td className="py-2">
+                    {cell.fgHex && cell.bgHex ? (
+                      <span
+                        className="inline-block rounded-sm px-2 py-1"
+                        style={{ color: cell.fgHex, backgroundColor: cell.bgHex }}
+                      >
+                        {t("sample")}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="py-2 font-mono text-mono-md text-fg">
+                    {cell.ratio ? `${cell.ratio.toFixed(2)}:1` : "—"}
+                  </td>
+                  <td className="py-2">
+                    <Badge variant={gradeVariant[cell.grade]}>{t(`grade.${cell.grade}`)}</Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {issues.length ? (

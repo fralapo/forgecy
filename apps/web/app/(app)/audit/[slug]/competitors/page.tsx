@@ -128,42 +128,44 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
             <CardTitle>{t("sideBySide")}</CardTitle>
             <CardDescription>{t("sideBySideDescription")}</CardDescription>
           </CardHeader>
-          <table className="w-full text-left text-body-sm">
-            <caption className="sr-only">{t("sideBySideCaption")}</caption>
-            <thead className="border-b border-subtle text-label text-fg-muted">
-              <tr>
-                <th scope="col" className="px-3 py-2 font-medium">
-                  {t("columns.company")}
-                </th>
-                <th scope="col" className="px-3 py-2 font-medium">
-                  {t("columns.offer")}
-                </th>
-                <th scope="col" className="px-3 py-2 font-medium">
-                  {t("columns.tone")}
-                </th>
-                <th scope="col" className="px-3 py-2 font-medium">
-                  {t("columns.cta")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {companies.map((c) => (
-                <tr key={c.name} className="border-b border-subtle last:border-0 align-top">
-                  <th scope="row" className="px-3 py-2 font-medium text-fg">
-                    {c.name}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-body-sm">
+              <caption className="sr-only">{t("sideBySideCaption")}</caption>
+              <thead className="border-b border-subtle text-label text-fg-muted">
+                <tr>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    {t("columns.company")}
                   </th>
-                  <td className="px-3 py-2">{c.ex?.offer}</td>
-                  <td className="px-3 py-2">
-                    {c.ex?.tone}
-                    {c.ex?.toneQuote ? (
-                      <q className="block text-fg-muted">{c.ex.toneQuote}</q>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-2">{c.ex?.ctas?.[0]?.text ?? "—"}</td>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    {t("columns.offer")}
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    {t("columns.tone")}
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    {t("columns.cta")}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {companies.map((c) => (
+                  <tr key={c.name} className="border-b border-subtle last:border-0 align-top">
+                    <th scope="row" className="px-3 py-2 font-medium text-fg">
+                      {c.name}
+                    </th>
+                    <td className="px-3 py-2">{c.ex?.offer}</td>
+                    <td className="px-3 py-2">
+                      {c.ex?.tone}
+                      {c.ex?.toneQuote ? (
+                        <q className="block text-fg-muted">{c.ex.toneQuote}</q>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-2">{c.ex?.ctas?.[0]?.text ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Card>
       ) : null}
 

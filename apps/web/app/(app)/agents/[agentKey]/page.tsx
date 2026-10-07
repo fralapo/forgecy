@@ -352,95 +352,101 @@ export default async function AgentPage({
         </Card>
         <Card className="grid gap-3 p-6">
           <h2 className="text-heading-sm text-fg">{t("stats.weeksTitle")}</h2>
-          <table className="w-full text-left text-body-sm">
-            <thead className="text-label text-fg-muted">
-              <tr>
-                <th scope="col" className={th}>
-                  {t("stats.week")}
-                </th>
-                <th scope="col" className={th}>
-                  {t("stats.runs")}
-                </th>
-                <th scope="col" className={th}>
-                  {t("stats.failed")}
-                </th>
-                <th scope="col" className={cn(th, "w-1/2")}>
-                  <span className="sr-only">{t("stats.runs")}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {st.weeks.map((w) => (
-                <tr key={w.week.toISOString()} className="border-t border-subtle">
-                  <td className={cn(td, "whitespace-nowrap text-fg")}>
-                    {format.date(w.week, "date")}
-                  </td>
-                  <td className={cn(td, "text-fg")}>{format.number(w.runs)}</td>
-                  <td className={cn(td, w.failed ? "text-error" : "text-fg-muted")}>
-                    {format.number(w.failed)}
-                  </td>
-                  <td className={td}>{bar(w.runs, maxRuns)}</td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-body-sm">
+              <thead className="text-label text-fg-muted">
+                <tr>
+                  <th scope="col" className={th}>
+                    {t("stats.week")}
+                  </th>
+                  <th scope="col" className={th}>
+                    {t("stats.runs")}
+                  </th>
+                  <th scope="col" className={th}>
+                    {t("stats.failed")}
+                  </th>
+                  <th scope="col" className={cn(th, "w-1/2")}>
+                    <span className="sr-only">{t("stats.runs")}</span>
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {st.weeks.map((w) => (
+                  <tr key={w.week.toISOString()} className="border-t border-subtle">
+                    <td className={cn(td, "whitespace-nowrap text-fg")}>
+                      {format.date(w.week, "date")}
+                    </td>
+                    <td className={cn(td, "text-fg")}>{format.number(w.runs)}</td>
+                    <td className={cn(td, w.failed ? "text-error" : "text-fg-muted")}>
+                      {format.number(w.failed)}
+                    </td>
+                    <td className={td}>{bar(w.runs, maxRuns)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Card>
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="grid content-start gap-3 p-6">
             <h2 className="text-heading-sm text-fg">{t("stats.failuresTitle")}</h2>
             {st.failures.length ? (
-              <table className="w-full text-left text-body-sm">
-                <thead className="text-label text-fg-muted">
-                  <tr>
-                    <th scope="col" className={th}>
-                      {t("stats.reason")}
-                    </th>
-                    <th scope="col" className={th}>
-                      {t("stats.count")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {st.failures.map((f) => (
-                    <tr key={f.reason} className="border-t border-subtle">
-                      <td className={cn(td, "text-fg")}>{reasonLabel(f.reason)}</td>
-                      <td className={cn(td, "text-fg")}>{format.number(f.count)}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-body-sm">
+                  <thead className="text-label text-fg-muted">
+                    <tr>
+                      <th scope="col" className={th}>
+                        {t("stats.reason")}
+                      </th>
+                      <th scope="col" className={th}>
+                        {t("stats.count")}
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {st.failures.map((f) => (
+                      <tr key={f.reason} className="border-t border-subtle">
+                        <td className={cn(td, "text-fg")}>{reasonLabel(f.reason)}</td>
+                        <td className={cn(td, "text-fg")}>{format.number(f.count)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <p className="text-body-sm text-fg-muted">{t("stats.failuresNone")}</p>
             )}
           </Card>
           <Card className="grid content-start gap-3 p-6">
             <h2 className="text-heading-sm text-fg">{t("stats.costTitle")}</h2>
-            <table className="w-full text-left text-body-sm">
-              <thead className="text-label text-fg-muted">
-                <tr>
-                  <th scope="col" className={th}>
-                    {t("stats.month")}
-                  </th>
-                  <th scope="col" className={th}>
-                    {t("stats.cost")}
-                  </th>
-                  <th scope="col" className={cn(th, "w-1/3")}>
-                    <span className="sr-only">{t("stats.cost")}</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {st.months.map((m) => (
-                  <tr key={m.month.toISOString()} className="border-t border-subtle">
-                    <td className={cn(td, "whitespace-nowrap text-fg")}>
-                      {format.date(m.month, "month")}
-                    </td>
-                    <td className={cn(td, "text-fg")}>{money(m.costMicroUsd)}</td>
-                    <td className={td}>{bar(m.costMicroUsd, maxCost)}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-body-sm">
+                <thead className="text-label text-fg-muted">
+                  <tr>
+                    <th scope="col" className={th}>
+                      {t("stats.month")}
+                    </th>
+                    <th scope="col" className={th}>
+                      {t("stats.cost")}
+                    </th>
+                    <th scope="col" className={cn(th, "w-1/3")}>
+                      <span className="sr-only">{t("stats.cost")}</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {st.months.map((m) => (
+                    <tr key={m.month.toISOString()} className="border-t border-subtle">
+                      <td className={cn(td, "whitespace-nowrap text-fg")}>
+                        {format.date(m.month, "month")}
+                      </td>
+                      <td className={cn(td, "text-fg")}>{money(m.costMicroUsd)}</td>
+                      <td className={td}>{bar(m.costMicroUsd, maxCost)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Card>
         </div>
         {st.slideEdits ? (

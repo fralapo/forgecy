@@ -34,10 +34,13 @@ function allowedAt(m: TemplateManifest, layout: LayoutDef, index: number, total:
   return true;
 }
 
-/** “Name · role” label of a layout, with the role translated. */
+/** “Name · role” label of a layout, with the role translated; just the name when they match. */
 function useLayoutLabel() {
   const tl = useTranslations("content.labels.slideRole");
-  return (l: LayoutDef) => `${l.name} · ${tl(l.role)}`;
+  return (l: LayoutDef) => {
+    const role = tl(l.role);
+    return l.name.toLocaleLowerCase() === role.toLocaleLowerCase() ? l.name : `${l.name} · ${role}`;
+  };
 }
 
 /** Keeps the values that still fit the new layout (same slot name and type). */
@@ -291,7 +294,7 @@ export function SlidePanel({
       <h2 id="slide-title" className="text-heading-sm text-fg">
         {t("title", { number: index + 1 })}
       </h2>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
         <div className="space-y-1">
           <Label htmlFor="slide-layout">{t("layout")}</Label>
           <select

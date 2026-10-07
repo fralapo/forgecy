@@ -105,30 +105,32 @@ export default async function StoragePage() {
               {usage.byArea.length === 0 ? (
                 <p className="mt-2 text-body-sm text-fg-muted">{t("usage.empty")}</p>
               ) : (
-                <table className="mt-2 w-full text-left text-body-sm">
-                  <thead className="text-fg-muted">
-                    <tr className="border-b border-subtle">
-                      <th scope="col" className="py-2 font-normal">
-                        {t("usage.area")}
-                      </th>
-                      <th scope="col" className="py-2 text-right font-normal">
-                        {t("usage.files")}
-                      </th>
-                      <th scope="col" className="py-2 text-right font-normal">
-                        {t("usage.size")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-subtle">
-                    {usage.byArea.map((a) => (
-                      <tr key={a.area}>
-                        <td className="py-2 font-mono text-fg">{a.area}</td>
-                        <td className="py-2 text-right text-fg">{format.number(a.files)}</td>
-                        <td className="py-2 text-right text-fg">{bytes(a.bytes)}</td>
+                <div className="overflow-x-auto">
+                  <table className="mt-2 w-full text-left text-body-sm">
+                    <thead className="text-fg-muted">
+                      <tr className="border-b border-subtle">
+                        <th scope="col" className="py-2 font-normal">
+                          {t("usage.area")}
+                        </th>
+                        <th scope="col" className="py-2 text-right font-normal">
+                          {t("usage.files")}
+                        </th>
+                        <th scope="col" className="py-2 text-right font-normal">
+                          {t("usage.size")}
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-subtle">
+                      {usage.byArea.map((a) => (
+                        <tr key={a.area}>
+                          <td className="py-2 font-mono text-fg">{a.area}</td>
+                          <td className="py-2 text-right text-fg">{format.number(a.files)}</td>
+                          <td className="py-2 text-right text-fg">{bytes(a.bytes)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
               <p className="mt-3 text-body-sm text-fg">
                 {t("usage.backups", { size: bytes(usage.backupsBytes) })}

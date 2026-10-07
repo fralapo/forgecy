@@ -85,63 +85,65 @@ export default async function AuditListPage({
             </p>
           </div>
         ) : (
-          <table className="w-full text-left text-body-sm">
-            <caption className="sr-only">{t("list.caption")}</caption>
-            <thead className="border-b border-subtle text-label text-fg-muted">
-              <tr>
-                <th scope="col" className="px-6 py-3 font-medium">
-                  {t("list.columns.prospect")}
-                </th>
-                <th scope="col" className="px-6 py-3 font-medium">
-                  {t("list.columns.sectorArea")}
-                </th>
-                <th scope="col" className="px-6 py-3 font-medium">
-                  {t("list.columns.audit")}
-                </th>
-                <th scope="col" className="px-6 py-3 font-medium">
-                  {t("list.columns.toReview")}
-                </th>
-                <th scope="col" className="px-6 py-3 font-medium">
-                  {t("list.columns.owner")}
-                </th>
-                <th scope="col" className="px-6 py-3 font-medium">
-                  {t("list.columns.updated")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b border-subtle last:border-0">
-                  <td className="px-6 py-3">
-                    <Link
-                      href={`/audit/${r.slug}`}
-                      className="font-medium text-link underline-offset-2 hover:underline"
-                    >
-                      {r.name}
-                    </Link>
-                    {r.websiteUrl ? (
-                      <span className="block text-fg-muted">{r.websiteUrl}</span>
-                    ) : null}
-                  </td>
-                  <td className="px-6 py-3 text-fg-muted">
-                    {[r.sector, r.area].filter(Boolean).join(" · ") || "—"}
-                  </td>
-                  <td className="px-6 py-3">
-                    {r.auditStatus ? (
-                      <Badge variant={auditStatusVariant[r.auditStatus]}>
-                        {t(`status.${r.auditStatus}`)}
-                      </Badge>
-                    ) : (
-                      <span className="text-fg-muted">{t("list.notStarted")}</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-3 text-fg">{r.toReview || "—"}</td>
-                  <td className="px-6 py-3 text-fg-muted">{r.ownerName ?? "—"}</td>
-                  <td className="px-6 py-3 text-fg-muted">{format.date(r.updatedAt)}</td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-body-sm">
+              <caption className="sr-only">{t("list.caption")}</caption>
+              <thead className="border-b border-subtle text-label text-fg-muted">
+                <tr>
+                  <th scope="col" className="px-6 py-3 font-medium">
+                    {t("list.columns.prospect")}
+                  </th>
+                  <th scope="col" className="px-6 py-3 font-medium">
+                    {t("list.columns.sectorArea")}
+                  </th>
+                  <th scope="col" className="px-6 py-3 font-medium">
+                    {t("list.columns.audit")}
+                  </th>
+                  <th scope="col" className="px-6 py-3 font-medium">
+                    {t("list.columns.toReview")}
+                  </th>
+                  <th scope="col" className="px-6 py-3 font-medium">
+                    {t("list.columns.owner")}
+                  </th>
+                  <th scope="col" className="px-6 py-3 font-medium">
+                    {t("list.columns.updated")}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className="border-b border-subtle last:border-0">
+                    <td className="px-6 py-3">
+                      <Link
+                        href={`/audit/${r.slug}`}
+                        className="font-medium text-link underline-offset-2 hover:underline"
+                      >
+                        {r.name}
+                      </Link>
+                      {r.websiteUrl ? (
+                        <span className="block text-fg-muted">{r.websiteUrl}</span>
+                      ) : null}
+                    </td>
+                    <td className="px-6 py-3 text-fg-muted">
+                      {[r.sector, r.area].filter(Boolean).join(" · ") || "—"}
+                    </td>
+                    <td className="px-6 py-3">
+                      {r.auditStatus ? (
+                        <Badge variant={auditStatusVariant[r.auditStatus]}>
+                          {t(`status.${r.auditStatus}`)}
+                        </Badge>
+                      ) : (
+                        <span className="text-fg-muted">{t("list.notStarted")}</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-3 text-fg">{r.toReview || "—"}</td>
+                    <td className="px-6 py-3 text-fg-muted">{r.ownerName ?? "—"}</td>
+                    <td className="px-6 py-3 text-fg-muted">{format.date(r.updatedAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </Card>
     </>
