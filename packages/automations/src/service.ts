@@ -570,8 +570,27 @@ async function activeRun(db: Database, automationId: string) {
   return run ?? null;
 }
 
-/** Queues the next queued item of a run, if the automation is still active. */
+/**
+ * Queues the next queued item of a run, if the automation is still active. One caller at a
+ * time per run: "pick the next item, enqueue, claim" is not atomic on its own, and two
+ * callers (the handler of the previous item and a resume, say) would otherwise enqueue the
+ * same item twice and the second job would fail the live one.
+ * ponytail: a crash between enqueueJob and the claim can still leave one extra job for the
+ * item; the handler's compare-and-set makes it a no-op, so only a leaked row remains.
+ */
 export async function queueNextItem(
+  deps: Pick<RunDeps, "db" | "queues">,
+  runId: string,
+): Promise<AutomationRunItemRow | null> {
+  return deps.db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`automation_run:${runId}`}))`);
+    // The lock lives as long as this transaction; the work below commits on its own
+    // connections, which the next caller can only observe after the lock is released.
+    return pickAndQueueItem(deps, runId);
+  });
+}
+
+async function pickAndQueueItem(
   deps: Pick<RunDeps, "db" | "queues">,
   runId: string,
 ): Promise<AutomationRunItemRow | null> {

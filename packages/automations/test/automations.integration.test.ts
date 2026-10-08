@@ -6,6 +6,7 @@ import { defaultTokens, parseDocument as parseBrandDocument } from "@forgecy/bra
 import type { PipelineDeps } from "@forgecy/content";
 import { ForgecyError, PermissionDeniedError, type Actor } from "@forgecy/core";
 import {
+  automationRunItems,
   automationRuns,
   automations,
   brandIdentities,
@@ -15,6 +16,7 @@ import {
   createDb,
   claimNotificationEmails,
   eq,
+  jobs,
   listNotifications,
   releaseNotificationEmails,
   sql,
@@ -36,6 +38,7 @@ import {
   pauseAutomation,
   resumeAutomation,
   retryFailedItems,
+  queueNextItem,
   startAutomation,
   updateAutomation,
 } from "../src/service";
@@ -298,5 +301,34 @@ describe.skipIf(!dbUrl)("batch automations (integration)", () => {
     const copy = await duplicateAutomation(db, anna, { id: automationId, name: "Copy" });
     expect(copy).toMatchObject({ status: "draft", name: "Copy" });
     await deleteAutomation(db, anna, copy.id);
+  });
+
+  it("queues one job per item even when two callers race", async () => {
+    const created = await createAutomation(db, anna, {
+      clientId,
+      name: "Race",
+      source: "briefs",
+      params: { templateKey, slideCount: 7 },
+    });
+    await updateAutomation(db, anna, { id: created.id, rev: 0, items: [item("r1"), item("r2")] });
+    const run = await startAutomation(deps(), anna, { id: created.id });
+    const [first] = await db
+      .select()
+      .from(automationRunItems)
+      .where(eq(automationRunItems.runId, run.id))
+      .orderBy(automationRunItems.position);
+    // What resume does: the first item goes back to unclaimed, then two callers race for it.
+    await db
+      .update(automationRunItems)
+      .set({ jobId: null })
+      .where(eq(automationRunItems.id, first!.id));
+    await Promise.all([queueNextItem(deps(), run.id), queueNextItem(deps(), run.id)]);
+    const queued = await db
+      .select({ id: jobs.id })
+      .from(jobs)
+      .where(sql`${jobs.entity} = 'automation_run_item' and ${jobs.entityId} = ${first!.id}`);
+    // 1 from start + exactly 1 from the two racing callers (it was 3 before the lock).
+    expect(queued).toHaveLength(2);
+    await cancelRun(db, anna, { id: created.id });
   });
 });

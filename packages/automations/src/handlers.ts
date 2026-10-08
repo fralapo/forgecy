@@ -19,11 +19,14 @@ import {
 import { pipelineDepsFor } from "@forgecy/content/handlers";
 import { ForgecyError, loadEnv, messageRefOf, type Actor } from "@forgecy/core";
 import {
+  and,
   automationRunItems,
   automationRuns,
   automations,
   eq,
+  isNull,
   jobsLog,
+  or,
   sql,
   users,
   type Database,
@@ -128,6 +131,8 @@ export async function runAutomationItem(
   if (!run || !automation) return { status: "missing" as const };
 
   if (item.status === "running") {
+    // Another job owns the item (a leftover from a pause/resume): leave the live one alone.
+    if (item.jobId && item.jobId !== ctx.jobId) return { status: "duplicate" as const };
     // A previous attempt died halfway (worker restart): never create a second carousel.
     await setItem(db, item.id, {
       status: "failed",
@@ -149,7 +154,19 @@ export async function runAutomationItem(
     return { status: "waiting" as const };
   }
 
-  await setItem(db, item.id, { status: "running", startedAt: new Date(), jobId: ctx.jobId });
+  // Compare-and-set: only a still-queued item that is unclaimed or already ours may start.
+  const [claimed] = await db
+    .update(automationRunItems)
+    .set({ status: "running", startedAt: new Date(), jobId: ctx.jobId, updatedAt: new Date() })
+    .where(
+      and(
+        eq(automationRunItems.id, item.id),
+        eq(automationRunItems.status, "queued"),
+        or(isNull(automationRunItems.jobId), eq(automationRunItems.jobId, ctx.jobId)),
+      ),
+    )
+    .returning({ id: automationRunItems.id });
+  if (!claimed) return { status: "duplicate" as const };
   const input: AutomationItem | undefined = readItems([item.input])[0];
   const params = readParams((item.input as { params?: unknown }).params);
   let contentId = item.contentId;
