@@ -72,6 +72,15 @@ describe("env", () => {
       /BETTER_AUTH_SECRET/,
     );
   });
+  it("accepts an unset or empty setup token and rejects a short one", () => {
+    const base = { DATABASE_URL: "x", BETTER_AUTH_SECRET: "x".repeat(32) };
+    expect(loadEnv({ ...base }).FORGECY_SETUP_TOKEN).toBeUndefined();
+    expect(loadEnv({ ...base, FORGECY_SETUP_TOKEN: "" }).FORGECY_SETUP_TOKEN).toBeUndefined();
+    expect(loadEnv({ ...base, FORGECY_SETUP_TOKEN: "x".repeat(16) }).FORGECY_SETUP_TOKEN).toBe(
+      "x".repeat(16),
+    );
+    expect(() => loadEnv({ ...base, FORGECY_SETUP_TOKEN: "short" })).toThrow(/FORGECY_SETUP_TOKEN/);
+  });
 });
 
 describe("job visibility", () => {

@@ -23,6 +23,15 @@ export const envSchema = z.object({
   REDIS_URL: z.string().default("redis://localhost:6379"),
 
   BETTER_AUTH_SECRET: z.string().min(32, "BETTER_AUTH_SECRET must be at least 32 characters"),
+  /**
+   * Optional guard for the first-run /setup page: when set, creating the first Admin needs this
+   * value, so nobody who reaches a fresh instance first can claim it. Empty or unset = open (single machine).
+   */
+  FORGECY_SETUP_TOKEN: z
+    .string()
+    .optional()
+    .transform((v) => v?.trim() || undefined)
+    .refine((v) => v === undefined || v.length >= 16, "FORGECY_SETUP_TOKEN must be at least 16 characters"),
   FORGECY_AUTH_MODE: z.enum(authModes).default("local"),
   FORGECY_ALLOWED_EMAIL_DOMAINS: z
     .string()

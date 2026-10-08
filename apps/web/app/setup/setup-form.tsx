@@ -6,11 +6,18 @@ import { useActionState } from "react";
 import { PASSWORD_MAX, PASSWORD_MIN } from "@/lib/password";
 import { createFirstAdmin, type SetupState } from "./actions";
 
-export function SetupForm() {
+export function SetupForm({ tokenRequired }: { tokenRequired: boolean }) {
   const [state, action, pending] = useActionState<SetupState, FormData>(createFirstAdmin, {});
   const t = useTranslations("auth.setup");
   return (
     <form action={action} className="space-y-4">
+      {tokenRequired ? (
+        <div className="space-y-2">
+          <Label htmlFor="setupToken">{t("setupToken")}</Label>
+          <Input id="setupToken" name="setupToken" type="password" autoComplete="off" required />
+          <p className="text-body-sm text-fg-muted">{t("setupTokenHint")}</p>
+        </div>
+      ) : null}
       <div className="space-y-2">
         <Label htmlFor="username">{t("username")}</Label>
         <Input id="username" name="username" autoComplete="username" required />
