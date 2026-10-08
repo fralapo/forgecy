@@ -29,6 +29,7 @@ import {
   UnsafePackageError,
   verifiedChunks,
 } from "./safety";
+import { applyImportTrust, type ExistingConsent } from "./trust";
 
 type Row = Record<string, unknown>;
 
@@ -174,29 +175,48 @@ export async function importClientPackage(
         if (typeof r.id === "string" && UUID.test(r.id)) idMap.set(r.id, randomUUID());
     let slug: string;
     let clientId: string;
+    // What the replaced client allows its AI to do stays as it is: a package cannot widen it.
+    let existing: ExistingConsent | null = null;
     if (plan.replaceClientId) {
-      const res = await db.execute<{ slug: string }>(
-        sql`select slug from clients where id = ${plan.replaceClientId}`,
+      const res = await db.execute<{
+        slug: string;
+        ai_policy: string;
+        approved_providers: string[];
+        sendable_assets: string[];
+      }>(
+        sql`select slug, ai_policy, to_json(approved_providers) as approved_providers,
+                   to_json(sendable_assets) as sendable_assets
+            from clients where id = ${plan.replaceClientId}`,
       );
-      if (!res.rows[0]) throw new Error("The client to replace no longer exists");
+      const row = res.rows[0];
+      if (!row) throw new Error("The client to replace no longer exists");
       clientId = plan.replaceClientId;
-      slug = res.rows[0].slug;
+      slug = row.slug;
+      existing = {
+        aiPolicy: row.ai_policy,
+        approvedProviders: row.approved_providers,
+        sendableAssets: row.sendable_assets,
+      };
     } else {
       if (plan.choices.client.mode !== "new") throw new Error("Replacement without a client");
       clientId = randomUUID();
       slug = plan.choices.client.slug;
     }
     idMap.set(manifest.client.id, clientId);
+    const trust = { clientId, existing };
 
-    // Templates already here are reused; a conflict follows the person's choice.
+    // Templates already here are reused; a conflict follows the person's choice. Only agency
+    // templates and the replaced client's own count: another client's private template is
+    // never mapped in.
     const skipTemplates = new Set<string>();
-    const draftTemplates = new Set<string>();
     const versionRewrite = new Map<string, string>();
     for (const t of JSON.parse(raw.get("templates") ?? "[]") as Row[]) {
       const key = String(t.key);
       const version = String(t.version);
       const res = await db.execute<{ id: string; version: string }>(
-        sql`select id, version from templates where key = ${key} order by created_at desc`,
+        sql`select id, version from templates
+            where key = ${key} and (client_id is null or client_id = ${plan.replaceClientId ?? null}::uuid)
+            order by created_at desc`,
       );
       const exact = res.rows.find((r) => r.version === version);
       const choice = plan.choices.templates[templateConflictId(key, version)];
@@ -207,7 +227,7 @@ export async function importClientPackage(
         idMap.set(String(t.id), res.rows[0]!.id);
         skipTemplates.add(res.rows[0]!.id);
         versionRewrite.set(templateConflictId(key, version), res.rows[0]!.version);
-      } else if (res.rows.length) draftTemplates.add(idMap.get(String(t.id))!);
+      }
     }
     // Ids that exist here after the remap, per table: the package's rows and the templates it reuses.
     const hereIds = new Map<string, Set<string>>();
@@ -239,7 +259,11 @@ export async function importClientPackage(
       // so an id that the remap could not rewrite can never reach the database.
       const mapped = remapRows(raw.get(table.name)!, idMap);
       assertPackageScoped([table], new Map([[table.name, mapped]]), final);
-      for (const r of mapped) {
+      for (const parsed of mapped) {
+        if (table.name === "templates" && skipTemplates.has(String(parsed.id))) continue;
+        // After the checks, before anything is written: nothing arrives approved (trust.ts).
+        const r = applyImportTrust(table.name, parsed, trust);
+        if (!r) continue;
         // People: matched by email, else emptied; a row that needs a person who is not here is left out.
         let keep = true;
         for (const u of table.userColumns) {
@@ -254,19 +278,6 @@ export async function importClientPackage(
         // A job or an agency template of the other installation means nothing here.
         emptyOutsideRefs(table, r, hereIds);
         if (table.name === "clients") r.slug = slug;
-        if (table.name === "templates") {
-          if (skipTemplates.has(String(r.id))) continue;
-          if (draftTemplates.has(String(r.id)))
-            Object.assign(r, {
-              status: "draft",
-              submitted_at: null,
-              published_at: null,
-              published_by: null,
-              archived_at: null,
-            });
-        }
-        // Reviewers of the other installation do not exist here (spec: back to Draft).
-        if (table.name === "contents" && r.status === "in_review") r.status = "draft";
         if (typeof r.template_key === "string" && typeof r.template_version === "string") {
           const to = versionRewrite.get(templateConflictId(r.template_key, r.template_version));
           if (to) r.template_version = to;

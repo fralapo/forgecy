@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,7 +20,7 @@ import {
   users,
   type Database,
 } from "@forgecy/db";
-import { LocalDiskDriver } from "@forgecy/files";
+import { LocalDiskDriver, sha256 } from "@forgecy/files";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { writeClientPackage } from "../src/export";
 import { importClientPackage } from "../src/import";
@@ -39,7 +40,13 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
   const suffix = Math.random().toString(36).slice(2, 8);
   const sha = (c: string) => c.repeat(64);
   const tplKey = `tpl-${suffix}`;
-  const ids: { client?: string; here?: string; gone?: string; imported?: string } = {};
+  const ids: {
+    client?: string;
+    here?: string;
+    gone?: string;
+    imported?: string;
+    imported2?: string;
+  } = {};
   const importIds: string[] = [];
 
   beforeAll(async () => {
@@ -146,7 +153,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
   afterAll(async () => {
     if (importIds.length)
       await db.delete(clientImports).where(inArray(clientImports.id, importIds));
-    const own = [ids.client, ids.imported].filter((x): x is string => !!x);
+    const own = [ids.client, ids.imported, ids.imported2].filter((x): x is string => !!x);
     await db.delete(templates).where(eq(templates.key, tplKey));
     if (own.length) await db.delete(clients).where(inArray(clients.id, own));
     await db.delete(users).where(inArray(users.id, [ids.here!, ids.gone!]));
@@ -206,12 +213,13 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
     const newKey = `clients/${out.clientId}/assets/${sha("a")}.png`;
     expect(version!.document).toEqual({ slides: [], image: newKey });
     expect(await storage.exists(newKey)).toBe(true);
-    // Only the approval of a person who exists here travels.
+    // Approvals are claims of the other installation: none are imported.
     const approvals = await db
       .select()
       .from(contentApprovals)
       .where(eq(contentApprovals.contentId, content!.id));
-    expect(approvals.map((a) => a.decidedBy)).toEqual([ids.here]);
+    expect(approvals).toEqual([]);
+    expect(content!.approvedVersionId).toBeNull();
     const [asset] = await db.select().from(assets).where(eq(assets.clientId, out.clientId));
     expect(asset!.createdBy).toBeNull();
     const [tpl] = await db
@@ -219,6 +227,69 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       .from(templates)
       .where(and(eq(templates.key, tplKey), eq(templates.version, "1.0.0")));
     expect(tpl).toMatchObject({ status: "draft", clientId: out.clientId, publishedAt: null });
+  });
+
+  /** The package with some table rows edited; table hashes stay honest (hostile, not damaged). */
+  const rewrite = async (
+    label: string,
+    edits: Record<string, (row: Record<string, unknown>) => void>,
+  ) => {
+    const src = await openClientPackage(pkgFile);
+    const files = new Map<string, Buffer>();
+    for (const name of src.names()) {
+      const chunks: Buffer[] = [];
+      for await (const c of await src.stream(name)) chunks.push(c as Buffer);
+      files.set(name, Buffer.concat(chunks));
+    }
+    src.close();
+    const manifest = JSON.parse(files.get("manifest.json")!.toString("utf8"));
+    for (const [table, edit] of Object.entries(edits)) {
+      const rows = JSON.parse(files.get(`data/${table}.json`)!.toString("utf8")) as Record<
+        string,
+        unknown
+      >[];
+      rows.forEach(edit);
+      const data = Buffer.from(JSON.stringify(rows));
+      files.set(`data/${table}.json`, data);
+      manifest.tables[table].sha256 = sha256(data);
+    }
+    files.set("manifest.json", Buffer.from(JSON.stringify(manifest)));
+    const out = join(dir, `${label}.zip`);
+    await writeFile(out, zipArchive([...files].map(([name, data]) => ({ name, data }))));
+    return out;
+  };
+
+  it("brings an approved carousel, a published template and AI consent in as drafts and nothing", async () => {
+    const version = "9.0.0";
+    const approved = await rewrite("approved", {
+      clients: (r) =>
+        Object.assign(r, { ai_policy: "external_allowed", approved_providers: ["openai"] }),
+      contents: (r) =>
+        Object.assign(r, {
+          status: "approved",
+          approved_version_id: r.current_version_id,
+          template_version: version,
+        }),
+      templates: (r) => Object.assign(r, { status: "published", origin: "system", version }),
+    });
+    const out = await importClientPackage({ db, storage }, approved, {
+      choices: { client: { mode: "new", slug: `rossi-${suffix}-3` }, templates: {} },
+    });
+    ids.imported2 = out.clientId;
+    const [content] = await db.select().from(contents).where(eq(contents.clientId, out.clientId));
+    expect(content).toMatchObject({ status: "draft", approvedVersionId: null });
+    const [tpl] = await db
+      .select()
+      .from(templates)
+      .where(and(eq(templates.key, tplKey), eq(templates.clientId, out.clientId)));
+    expect(tpl).toMatchObject({ status: "draft", origin: "agency", publishedAt: null });
+    const [client] = await db.select().from(clients).where(eq(clients.id, out.clientId));
+    expect(client!.approvedProviders).toEqual([]);
+  });
+
+  it("blocks a package that points rows at a client that is not in it", async () => {
+    const hostile = await rewrite("hostile", { contents: (r) => (r.client_id = randomUUID()) });
+    expect((await verifyClientPackage(db, hostile, 1)).problems).toEqual(["unsafe"]);
   });
 
   it("replaces an existing client in place, keeping its id, slug and own templates", async () => {
