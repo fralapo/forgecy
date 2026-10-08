@@ -6,12 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 import { authClient } from "@/lib/auth-client";
+import { safeNext } from "@/lib/safe-next";
 import { usernameToEmail } from "@/lib/username";
-
-/** Only same-site relative paths are accepted as post-login destinations. */
-function safeNext(next: string | null): string {
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
-}
 
 export function LoginForm({ magicLink, google }: { magicLink: boolean; google: boolean }) {
   const router = useRouter();
