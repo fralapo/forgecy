@@ -2,7 +2,7 @@
 // The functions passed to page.evaluate run in the browser: they need DOM types in any consumer.
 import { existsSync } from "node:fs";
 import type { Browser, BrowserContext, Page } from "playwright-core";
-import { CrawlError, crawlError } from "../errors";
+import { CrawlError, crawlError, describeFetchError } from "../errors";
 import { resolvePinnedAddress, type HostCheck } from "../url";
 import { extractFromHtml, type FetchedPage, type PageFetcher } from "./fetcher";
 
@@ -172,7 +172,7 @@ export async function createBrowserFetcher(options: {
         throw crawlError("AUD-CRAWL-TIMEOUT", "audit.stored.crawl.timeout", {
           seconds: timeoutMs / 1000,
         });
-      throw new CrawlError("SOURCE-UNAVAILABLE", message.split("\n")[0] ?? message);
+      throw new CrawlError("SOURCE-UNAVAILABLE", describeFetchError(err));
     }
   }
 
