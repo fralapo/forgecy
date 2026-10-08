@@ -99,7 +99,7 @@
     "layoutNotInTemplate": "Il layout della slide non è nel template",
     "versionNotFound": "Versione del carosello non trovata",
     "notApprovedVersion": "Questa non è la versione approvata",
-    "notApproved": "Il carosello non è più approvato: è stato modificato dopo la richiesta di esportazione",
+    "notApproved": "Il carosello non è più approvato",
     "brandVersionUnavailable": "Versione della Brand Identity non disponibile"
   },
   "title": "Contenuti",
