@@ -5,7 +5,8 @@
  */
 import type { MessageRef } from "@forgecy/core";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
-import { unzipSync, strFromU8 } from "fflate";
+import { readZipParts, ZipLimitError } from "@forgecy/files";
+import { strFromU8 } from "fflate";
 import { normalizeHex } from "../tokens";
 import type { ImportFileType } from "./detect";
 import { familyFromFileName, readFontNames, weightFromName } from "./fonts";
@@ -137,27 +138,26 @@ export function colorsInText(pages: readonly ExtractedPage[]): ExtractedColor[] 
 
 // ---- Office Open XML ----
 
-function unzip(bytes: Uint8Array): Record<string, Uint8Array> {
-  let entries = 0;
-  let total = 0;
+/**
+ * The text parts of a DOCX/PPTX. Limits apply to the bytes really inflated (declared sizes
+ * are only a claim), the parts read share one budget and a stream is stopped as soon as it
+ * exceeds it, so neither memory nor CPU grows with what the archive says about itself.
+ */
+async function unzip(bytes: Uint8Array): Promise<Record<string, Uint8Array>> {
   try {
-    return unzipSync(bytes, {
-      // Runs on the central directory before anything is inflated. fflate inflates into a buffer
-      // of the declared size and truncates there (a lying zip just yields fewer bytes), so the
-      // declared figures are a real upper bound on memory.
-      filter: (file) => {
-        if (++entries > MAX_ZIP_ENTRIES)
-          throw new ExtractionError("brand.import.errors.archiveTooLarge");
-        if (!OOXML_PARTS.test(file.name)) return false;
-        total += file.originalSize;
-        if (file.originalSize > MAX_ZIP_ENTRY_BYTES || total > MAX_ZIP_TOTAL_BYTES)
-          throw new ExtractionError("brand.import.errors.archiveTooLarge");
-        return true;
-      },
+    const parts = await readZipParts(bytes, {
+      select: (name) => OOXML_PARTS.test(name),
+      maxEntries: MAX_ZIP_ENTRIES,
+      maxEntryBytes: MAX_ZIP_ENTRY_BYTES,
+      maxTotalBytes: MAX_ZIP_TOTAL_BYTES,
     });
+    return Object.fromEntries(parts);
   } catch (err) {
-    if (err instanceof ExtractionError) throw err;
-    throw new ExtractionError("brand.import.errors.damaged");
+    throw new ExtractionError(
+      err instanceof ZipLimitError
+        ? "brand.import.errors.archiveTooLarge"
+        : "brand.import.errors.damaged",
+    );
   }
 }
 
@@ -218,8 +218,8 @@ function paragraphs(
   return out;
 }
 
-function extractDocx(bytes: Uint8Array): Extraction {
-  const files = unzip(bytes);
+async function extractDocx(bytes: Uint8Array): Promise<Extraction> {
+  const files = await unzip(bytes);
   const doc = files["word/document.xml"];
   if (!doc) throw new ExtractionError("brand.import.errors.wordEmpty");
   const pages: ExtractedPage[] = [];
@@ -247,8 +247,8 @@ function extractDocx(bytes: Uint8Array): Extraction {
   };
 }
 
-function extractPptx(bytes: Uint8Array): Extraction {
-  const files = unzip(bytes);
+async function extractPptx(bytes: Uint8Array): Promise<Extraction> {
+  const files = await unzip(bytes);
   const slides = Object.keys(files)
     .map((n) => /^ppt\/slides\/slide(\d+)\.xml$/.exec(n))
     .filter((m): m is RegExpExecArray => !!m)
@@ -320,7 +320,9 @@ async function extractPdf(bytes: Uint8Array): Promise<Extraction> {
       warnings.push(warning("brand.import.warnings.pdfNoText"));
     return { pages, colors: colorsInText(pages), fonts: [], warnings };
   } finally {
-    await pdf.cleanup?.();
+    // loadingTask.destroy() also stops the worker and frees the document; cleanup() only
+    // drops page caches.
+    await pdf.loadingTask.destroy();
   }
 }
 

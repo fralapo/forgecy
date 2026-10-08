@@ -80,6 +80,71 @@ export function zipArchive(entries: readonly ZipEntrySpec[]): Buffer {
   return Buffer.concat([...locals, cd, end]);
 }
 
+export interface OverlappingZipSpec {
+  /** The one body every entry points at. */
+  data: Buffer;
+  /** How many central-directory entries share it. */
+  entries: number;
+  /** Store without compression (method 0). */
+  store?: boolean;
+  /** Written as the uncompressed size of every entry (a lie when it differs from data.length). */
+  declaredSize: number;
+  /** Entry name for the i-th entry, from 1; the body's local header carries the first. */
+  name: (i: number) => string;
+}
+
+/**
+ * A ZIP whose central directory lists `entries` names that all start at the same local
+ * header and body (overlapping entries), so a reader that inflates each of them does the
+ * work `entries` times for the price of one body.
+ */
+export function overlappingZip(spec: OverlappingZipSpec): Buffer {
+  const body = spec.store ? spec.data : deflateRawSync(spec.data, { level: 9 });
+  const common = (name: Buffer) => [
+    u16(20),
+    u16(0x0800),
+    u16(spec.store ? 0 : 8),
+    u16(0),
+    u16(0x21),
+    u32(crc32(spec.data)),
+    u32(body.length),
+    u32(spec.declaredSize),
+    u16(name.length),
+  ];
+  const first = Buffer.from(spec.name(1));
+  const local = Buffer.concat([u32(0x04034b50), ...common(first), u16(0), first, body]);
+  const centrals: Buffer[] = [];
+  for (let i = 1; i <= spec.entries; i++) {
+    const name = Buffer.from(spec.name(i));
+    centrals.push(
+      Buffer.concat([
+        u32(0x02014b50),
+        u16(0x031e),
+        ...common(name),
+        u16(0),
+        u16(0),
+        u16(0),
+        u16(0),
+        u32(0),
+        u32(0),
+        name,
+      ]),
+    );
+  }
+  const cd = Buffer.concat(centrals);
+  const end = Buffer.concat([
+    u32(0x06054b50),
+    u16(0),
+    u16(0),
+    u16(spec.entries),
+    u16(spec.entries),
+    u32(cd.length),
+    u32(local.length),
+    u16(0),
+  ]);
+  return Buffer.concat([local, cd, end]);
+}
+
 export interface TarEntrySpec {
   name: string;
   type?: "file" | "dir" | "symlink" | "hardlink" | "char";
