@@ -98,7 +98,8 @@ confirm by hand against a real target, not just the unit tests in
       `X-Content-Type-Options`, `Referrer-Policy` and `Permissions-Policy`;
       `/render/*` and `/api/files/*` do not get a second policy.
 - [ ] Behind https, `Strict-Transport-Security` is present (emitted by Caddy,
-      not by the Next.js image).
+      not by the Next.js image). Browsers remember it for the hostname for a year,
+      including other ports of the same host (such as `:3000` over http).
 - [ ] Open the signed URL of an SVG that contains a `<script>` as a top-level
       page; the script must not run.
 - [ ] After changing a password, a second signed-in browser is signed out.

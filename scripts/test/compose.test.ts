@@ -31,14 +31,14 @@ describe("docker-compose.yml hardening", () => {
     expect(main[name]?.cap_add).toBeUndefined();
   });
 
-  it("data-init keeps only what mkdir/chown as root need", () => {
+  it("data-init keeps CHOWN and DAC_OVERRIDE for mkdir/chown as root (FOWNER is harmless)", () => {
     expect(main["data-init"]?.cap_drop).toEqual(["ALL"]);
     expect(main["data-init"]?.cap_add?.slice().sort()).toEqual(["CHOWN", "DAC_OVERRIDE", "FOWNER"]);
   });
 
-  it("Caddy keeps only the capability to bind ports 80 and 443", () => {
+  it("Caddy keeps only what it needs: bind ports 80 and 443, write its CA under ./data", () => {
     expect(main.caddy?.cap_drop).toEqual(["ALL"]);
-    expect(main.caddy?.cap_add).toEqual(["NET_BIND_SERVICE"]);
+    expect(main.caddy?.cap_add?.slice().sort()).toEqual(["DAC_OVERRIDE", "NET_BIND_SERVICE"]);
   });
 
   it("passes FORGECY_HOSTNAME to Caddy with the same default as the Caddyfile", () => {

@@ -56,8 +56,8 @@ You need Node.js 22 (>= 22.18), pnpm 10 and Docker for the services.
 
 ```bash
 pnpm install
-docker compose -f docker-compose.dev.yml up -d   # Postgres with pgvector, Redis, Mailpit
-cp .env.example .env                             # DATABASE_URL=postgres://forgecy:forgecy@localhost:5432/forgecy
+cp .env.example .env                             # the dev database uses POSTGRES_PASSWORD from .env (forgecy if unset)
+docker compose -f docker-compose.dev.yml up -d   # Postgres with pgvector, Redis, Mailpit (on 127.0.0.1 only)
 pnpm db:migrate && pnpm db:seed
 pnpm dev                                         # web on :3000, worker with health on :3001
 ```
