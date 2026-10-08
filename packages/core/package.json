@@ -13,6 +13,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "undici": "^8.11.2",
     "zod": "^4.6.5"
   },
   "devDependencies": {
