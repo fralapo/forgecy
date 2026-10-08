@@ -99,6 +99,7 @@
     "layoutNotInTemplate": "The slide's layout is not in the template",
     "versionNotFound": "Carousel version not found",
     "notApprovedVersion": "This is not the approved version",
+    "notApproved": "The carousel is not approved any more: it was edited after the export was requested",
     "brandVersionUnavailable": "Brand Identity version not available"
   },
   "title": "Content",
