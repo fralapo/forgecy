@@ -2,6 +2,7 @@ import { Readable } from "node:stream";
 import {
   contentTypeForKey,
   createStorageFromEnv,
+  fileResponseHeaders,
   fileSigningSecretFromEnv,
   isValidKey,
   verifySignedFileUrl,
@@ -36,10 +37,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ key:
   const info = await storage.head(key);
   if (!info) return new Response("Not found", { status: 404 });
   const body = Readable.toWeb(await storage.get(key)) as ReadableStream<Uint8Array>;
+  const contentType = info.contentType ?? contentTypeForKey(key);
   const headers = new Headers({
-    "content-type": info.contentType ?? contentTypeForKey(key),
+    "content-type": contentType,
     "cache-control": "private, max-age=300",
-    "x-content-type-options": "nosniff",
+    ...fileResponseHeaders(contentType),
   });
   if (info.size !== undefined) headers.set("content-length", String(info.size));
   if (disposition === "attachment")
