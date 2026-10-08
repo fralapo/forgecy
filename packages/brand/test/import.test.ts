@@ -1,3 +1,4 @@
+import { pdfWithPages, zipArchive } from "@forgecy/core/testing/archives";
 import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { chunkPages } from "../src/import/analyst";
@@ -179,4 +180,52 @@ describe("colorName", () => {
     expect(colorName("#123456", "#123456", "color-1")).toBe("color-1");
     // The first import loads the db and service modules, slow on a busy CI runner.
   }, 30_000);
+});
+
+describe("hostile imports", () => {
+  const key = (err: unknown) => (err as { ref: { key: string } }).ref.key;
+
+  it("refuses an Office file that inflates far beyond its limits", async () => {
+    const bomb = zipArchive([{ name: "word/document.xml", data: Buffer.alloc(60 * 1024 * 1024) }]);
+    const err = await extractFile("docx", bomb, "bomb.docx").catch((e) => e);
+    expect(key(err)).toBe("brand.import.errors.archiveTooLarge");
+  });
+  it("refuses an Office file whose parts add up past the total limit", async () => {
+    const part = (n: number) => ({ name: `ppt/slides/slide${n}.xml`, data: Buffer.alloc(40 * 1024 * 1024) });
+    const err = await extractFile("pptx", zipArchive([part(1), part(2), part(3)]), "sum.pptx").catch((e) => e);
+    expect(key(err)).toBe("brand.import.errors.archiveTooLarge");
+  });
+  it("refuses an Office file with thousands of entries", async () => {
+    const entries = Array.from({ length: 10_001 }, (_, i) => ({ name: `junk/${i}.txt`, data: "x" }));
+    const zip = zipArchive([{ name: "word/document.xml", data: "<w:document/>" }, ...entries]);
+    const err = await extractFile("docx", zip, "many.docx").catch((e) => e);
+    expect(key(err)).toBe("brand.import.errors.archiveTooLarge");
+  });
+  it("does not inflate more than a lying size says (pins fflate's behaviour)", async () => {
+    const lying = zipArchive([
+      { name: "word/document.xml", data: Buffer.alloc(40 * 1024 * 1024), declaredSize: 1000 },
+    ]);
+    const out = await extractFile("docx", lying, "lie.docx");
+    expect(out.pages).toEqual([]);
+  });
+  it("never inflates parts it does not read, however big (a media-heavy deck stays legit)", async () => {
+    const deck = zipArchive([
+      { name: "ppt/slides/slide1.xml", data: "<p:sld><a:p><a:r><a:t>Brand book</a:t></a:r></a:p></p:sld>" },
+      { name: "ppt/media/huge.bin", data: Buffer.alloc(120 * 1024 * 1024) },
+    ]);
+    const out = await extractFile("pptx", deck, "media.pptx");
+    expect(out.pages.map((p) => p.text)).toEqual(["Brand book"]);
+  });
+  it("still reads a normal document", async () => {
+    const out = await extractFile("docx", docx(), "ok.docx");
+    expect(out.pages.length).toBeGreaterThan(0);
+  });
+  it("refuses a PDF with an absurd page count before reading any page", async () => {
+    const err = await extractFile("pdf", pdfWithPages(2_500), "pages.pdf").catch((e) => e);
+    expect(key(err)).toBe("brand.import.errors.pdfTooManyPages");
+  });
+  it("reads only the first pages of a long PDF and says so", async () => {
+    const out = await extractFile("pdf", pdfWithPages(450), "long.pdf");
+    expect(out.warnings.map((w) => w.key)).toContain("brand.import.warnings.firstPages");
+  });
 });

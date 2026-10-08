@@ -782,7 +782,9 @@
       "damaged": "Not readable: the file is damaged or password-protected.",
       "wordEmpty": "Word document without readable content.",
       "pdfProtected": "Not readable: protected PDF. Upload a version without a password.",
-      "pdfDamaged": "Not readable: the PDF is damaged."
+      "pdfDamaged": "Not readable: the PDF is damaged.",
+      "archiveTooLarge": "Not readable: the file holds far more data than a normal document.",
+      "pdfTooManyPages": "Not readable: the PDF has too many pages."
     },
     "rationale": {
       "color": "Color found in the file ({count, plural, one {# occurrence} other {# occurrences}}).",
