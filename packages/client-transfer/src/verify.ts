@@ -141,16 +141,16 @@ export async function verifyClientPackage(
   let pkg: ClientPackage;
   try {
     pkg = await openClientPackage(file);
-  } catch {
-    return fail("unreadable");
+  } catch (err) {
+    return fail(err instanceof UnsafePackageError ? err.problem : "unreadable");
   }
   try {
     if (!pkg.has("manifest.json")) return fail("format");
     let manifest: Manifest;
     try {
       manifest = packageManifestSchema.parse(JSON.parse(await pkg.text("manifest.json")));
-    } catch {
-      return fail("format");
+    } catch (err) {
+      return fail(err instanceof UnsafePackageError ? err.problem : "format");
     }
     const counts: Record<string, number> = {};
     for (const [table, info] of Object.entries(manifest.tables)) {
@@ -172,7 +172,13 @@ export async function verifyClientPackage(
     const known = new Set(clientTables().map((t) => t.name));
     if (Object.entries(manifest.tables).some(([t, info]) => info.rows > 0 && !known.has(t)))
       return fail("unknownTable", report);
-    if (!(await checksums(pkg, manifest))) return fail("checksum", report);
+    try {
+      if (!(await checksums(pkg, manifest))) return fail("checksum", report);
+    } catch (err) {
+      // Over a cap or unsafe: that problem. An entry that cannot be inflated (a size that lies,
+      // a damaged stream) cannot be read.
+      return fail(err instanceof UnsafePackageError ? err.problem : "unreadable", report);
+    }
     try {
       await assertPackageData(pkg, manifest);
     } catch (err) {

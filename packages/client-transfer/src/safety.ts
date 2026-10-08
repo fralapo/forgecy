@@ -242,7 +242,9 @@ const readRows = async (pkg: ClientPackage, table: string): Promise<Row[]> => {
   let text: string;
   try {
     text = await pkg.text(`data/${table}.json`);
-  } catch {
+  } catch (err) {
+    // A refusal for size or safety is that, not an unreadable file.
+    if (err instanceof UnsafePackageError) throw err;
     throw new UnsafePackageError("table data cannot be read", table, "unreadable");
   }
   try {

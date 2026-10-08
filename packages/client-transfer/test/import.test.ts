@@ -2,6 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { clientTransferAreas, type Actor } from "@forgecy/core";
+import { zipArchive, type ZipEntrySpec } from "@forgecy/core/testing/archives";
 import {
   and,
   assets,
@@ -22,6 +23,8 @@ import { LocalDiskDriver } from "@forgecy/files";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { writeClientPackage } from "../src/export";
 import { importClientPackage } from "../src/import";
+import { openClientPackage } from "../src/package";
+import { UnsafePackageError } from "../src/safety";
 import { confirmClientImport } from "../src/service";
 import { verifyClientPackage } from "../src/verify";
 
@@ -231,6 +234,65 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       .from(templates)
       .where(and(eq(templates.key, tplKey), eq(templates.version, "0.9.0")));
     expect(old!.clientId).toBe(ids.client);
+  });
+
+  /** The package rewritten entry by entry (the zip builder lets an entry lie about its size). */
+  const repack = async (
+    mutate: (name: string, data: Buffer) => Partial<ZipEntrySpec>,
+    label: string,
+  ) => {
+    const src = await openClientPackage(pkgFile);
+    const entries: ZipEntrySpec[] = [];
+    for (const name of src.names()) {
+      const chunks: Buffer[] = [];
+      for await (const c of await src.stream(name)) chunks.push(c as Buffer);
+      const data = Buffer.concat(chunks);
+      entries.push({ name, data, ...mutate(name, data) });
+    }
+    src.close();
+    const out = join(dir, `${label}.zip`);
+    await writeFile(out, zipArchive(entries));
+    return out;
+  };
+
+  it("fails the import when a file does not match its checksum and leaves no stored key", async () => {
+    const stored: string[] = [];
+    const recording = new Proxy(storage, {
+      get(target, prop) {
+        if (prop === "put")
+          return (key: string, ...rest: unknown[]) => {
+            stored.push(key);
+            return (target.put as (...a: unknown[]) => Promise<void>)(key, ...rest);
+          };
+        const v = Reflect.get(target, prop) as unknown;
+        return typeof v === "function" ? v.bind(target) : v;
+      },
+    });
+    const bad = await repack(
+      (name, data) => (name.startsWith("files/") ? { data: Buffer.alloc(data.length, 0x41) } : {}),
+      "tampered",
+    );
+    const slug = `rossi-${suffix}-bad`;
+    await expect(
+      importClientPackage({ db, storage: recording }, bad, {
+        choices: {
+          client: { mode: "new", slug },
+          templates: { [`${tplKey}@1.0.0`]: "importDraft" },
+        },
+      }),
+    ).rejects.toBeInstanceOf(UnsafePackageError);
+    expect(stored.length).toBeGreaterThan(0);
+    for (const key of stored) expect(await storage.exists(key)).toBe(false);
+    expect(await db.select().from(clients).where(eq(clients.slug, slug))).toEqual([]);
+  });
+
+  it("verify reports an entry with a lying size as a problem instead of throwing", async () => {
+    const lying = await repack(
+      (name, data) =>
+        name.startsWith("files/") ? { declaredSize: Math.max(1, data.length - 1) } : {},
+      "lying",
+    );
+    expect((await verifyClientPackage(db, lying, 1)).problems).toEqual(["unreadable"]);
   });
 
   it("asks for a choice on every conflict and the exact name to replace", async () => {

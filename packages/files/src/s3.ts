@@ -88,6 +88,12 @@ export class S3Driver implements StorageDriver {
     // (uploads are size-capped by validateUpload, so this stays bounded).
     const payload =
       body instanceof Readable && options.contentLength === undefined ? await toBuffer(body) : body;
+    // The SDK pipes a stream body into the request and listens to nothing on it, so an error of
+    // the stream (a checksum failure, a read error) would be an uncaught exception and the request
+    // would be left waiting for bytes. Aborting turns it into a failed upload.
+    const abort = new AbortController();
+    const onError = (err: Error) => abort.abort(err);
+    if (payload instanceof Readable) payload.once("error", onError);
     await this.client.send(
       new PutObjectCommand({
         Bucket: this.bucket,
@@ -96,6 +102,7 @@ export class S3Driver implements StorageDriver {
         ContentType: options.contentType,
         ...(options.contentLength !== undefined ? { ContentLength: options.contentLength } : {}),
       }),
+      { abortSignal: abort.signal },
     );
   }
 

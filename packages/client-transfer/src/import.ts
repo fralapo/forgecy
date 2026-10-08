@@ -14,13 +14,19 @@ import {
 import { sql, type Database } from "@forgecy/db";
 import { contentTypeForKey, isValidKey, type StorageDriver } from "@forgecy/files";
 import { clientTables, type ClientTable } from "./graph";
-import { openClientPackage, packageManifestSchema, packagePeopleSchema } from "./package";
+import {
+  openClientPackage,
+  packageManifestSchema,
+  packagePeopleSchema,
+  type ClientPackage,
+} from "./package";
 import {
   assertPackageData,
   assertPackageScoped,
   emptyOutsideRefs,
   remapIds,
   remapRows,
+  UnsafePackageError,
   verifiedChunks,
 } from "./safety";
 
@@ -50,6 +56,61 @@ interface Deferred {
   table: string;
   column: string;
   values: { id: string; v: unknown }[];
+}
+
+/**
+ * Copies the package's files into storage under their new keys, each one checked against the
+ * manifest's size and sha-256 as it streams. A driver may take the stream with a bare `pipe()`
+ * (S3 does) and so cannot be relied on to stop at the first wrong byte: the verdict is read
+ * here, after `put`, and a file that did not verify completely fails the import. Whatever was
+ * written (also the bad file) is removed again before the error leaves.
+ */
+export async function copyPackageFiles(
+  deps: { pkg: ClientPackage; storage: StorageDriver },
+  files: readonly { key: string; bytes: number; sha256: string }[],
+  keyOf: (packageKey: string) => string,
+  written: string[],
+): Promise<void> {
+  const { pkg, storage } = deps;
+  try {
+    for (const f of files) {
+      const key = keyOf(f.key);
+      if (!isValidKey(key)) throw new Error(`Invalid storage key in package: ${f.key}`);
+      // Keys are content-addressed or carry ids: one that exists already holds the same file.
+      if (await storage.exists(key)) continue;
+      // Recorded before the write so a half-written file is removed again on failure.
+      written.push(key);
+      let verified = false;
+      let failure: unknown;
+      const source = await pkg.stream(`files/${f.key}`);
+      const body = Readable.from(
+        (async function* () {
+          try {
+            for await (const chunk of verifiedChunks(source, f)) yield chunk;
+            verified = true;
+          } catch (err) {
+            failure = err;
+            throw err;
+          }
+        })(),
+      );
+      // The driver decides how to react to an error of the body; an uncaught 'error' event would
+      // take the worker down, and the verdict is read below either way.
+      body.on("error", () => {});
+      try {
+        await storage.put(key, body, {
+          contentType: contentTypeForKey(key),
+          contentLength: f.bytes,
+        });
+      } catch (err) {
+        throw failure ?? err;
+      }
+      if (!verified) throw failure ?? new UnsafePackageError("a file does not match its checksum");
+    }
+  } catch (err) {
+    for (const key of written) await storage.delete(key).catch(() => {});
+    throw err;
+  }
 }
 
 async function emailsToUsers(db: Database, emails: string[]): Promise<Map<string, string>> {
@@ -226,23 +287,7 @@ export async function importClientPackage(
     // Files first: written under their new keys, removed again if the rows cannot be written.
     const written: string[] = [];
     try {
-      for (const f of manifest.files) {
-        const key = remapIds(f.key, idMap);
-        if (!isValidKey(key)) throw new Error(`Invalid storage key in package: ${f.key}`);
-        // Keys are content-addressed or carry ids: one that exists already holds the same file.
-        if (await storage.exists(key)) continue;
-        // Recorded before the write so a half-written file is removed again on failure; the bytes
-        // are checked against the manifest's size and sha-256 as they go through.
-        written.push(key);
-        await storage.put(
-          key,
-          Readable.from(verifiedChunks(await pkg.stream(`files/${f.key}`), f)),
-          {
-            contentType: contentTypeForKey(key),
-            contentLength: f.bytes,
-          },
-        );
-      }
+      await copyPackageFiles({ pkg, storage }, manifest.files, (k) => remapIds(k, idMap), written);
 
       await db.transaction(async (tx) => {
         let keepTemplates: string[] = [];
