@@ -1,40 +1,51 @@
 import "server-only";
 import type { MessageRef } from "@forgecy/core";
+import { accounts, and, eq, getDb } from "@forgecy/db";
 import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
 import { auth } from "./auth";
-import { loginGuard } from "./login-guard";
 import { checkPasswordChange, passwordIssueRef } from "./password";
 
 export type ChangePasswordResult = { ok: true } | { error: MessageRef };
 
+/** Whether the person signs in with a password (Google and magic-link people have no credential account). */
+export async function hasPassword(userId: string): Promise<boolean> {
+  const [row] = await getDb()
+    .select({ password: accounts.password })
+    .from(accounts)
+    .where(and(eq(accounts.userId, userId), eq(accounts.providerId, "credential")))
+    .limit(1);
+  return Boolean(row?.password);
+}
+
 /**
  * Changes the signed-in person's own password. Better Auth checks the current one and signs the other
- * devices out. Its per-IP limiter only sees HTTP requests, not this server-side call, so wrong guesses are
- * throttled here per person (own key, so it cannot lock the person out of sign-in), before the check.
+ * devices out.
+ *
+ * ponytail: wrong guesses are NOT throttled here. This server-side call bypasses Better Auth's rate limiter,
+ * and the HTTP route (`POST /api/auth/change-password`) is protected only by its per-IP limit, so a stolen
+ * session cookie could still guess the current password slowly. Add a per-person throttle on both paths
+ * if that matters.
  */
 export async function changeOwnPassword(
-  username: string,
   currentPassword: string,
   newPassword: string,
 ): Promise<ChangePasswordResult> {
   const issue = checkPasswordChange(currentPassword, newPassword);
   if (issue === "unchanged") return { error: { key: "settings.password.unchanged" } };
   if (issue) return { error: passwordIssueRef(issue) };
-  const key = `change-password:${username}`;
-  if ((await loginGuard.attempt(key)) > 0) return { error: { key: "settings.password.tooMany" } };
   try {
     await auth.api.changePassword({
       headers: await headers(),
       body: { currentPassword, newPassword, revokeOtherSessions: true },
     });
   } catch (err) {
-    // A wrong password keeps its ticket; anything else never reached the check, so it is given back.
-    if (err instanceof APIError && err.body?.code === "INVALID_PASSWORD")
-      return { error: { key: "settings.password.wrongCurrent" } };
-    await loginGuard.refund(key);
+    if (err instanceof APIError) {
+      const code = err.body?.code;
+      if (code === "INVALID_PASSWORD") return { error: { key: "settings.password.wrongCurrent" } };
+      if (code === "CREDENTIAL_ACCOUNT_NOT_FOUND") return { error: { key: "settings.password.noPassword" } };
+    }
     throw err;
   }
-  await loginGuard.succeeded(key);
   return { ok: true };
 }

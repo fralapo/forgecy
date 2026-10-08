@@ -142,14 +142,10 @@ export async function changePasswordAction(
   _prev: ChangePasswordState,
   form: FormData,
 ): Promise<ChangePasswordState> {
-  const user = await requireUser();
+  await requireUser();
   const parsed = changePasswordSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: await firstIssue(parsed.error) };
-  const result = await changeOwnPassword(
-    emailToUsername(user.email),
-    parsed.data.currentPassword,
-    parsed.data.newPassword,
-  );
+  const result = await changeOwnPassword(parsed.data.currentPassword, parsed.data.newPassword);
   return "error" in result ? { error: await refText(result.error, "Invalid password.") } : { ok: true };
 }
 

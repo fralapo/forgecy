@@ -8,6 +8,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { currentRouting } from "@/lib/ai";
+import { hasPassword } from "@/lib/change-password";
 import { env } from "@/lib/env";
 import { requireUser } from "@/lib/session";
 import { getTheme } from "@/lib/theme";
@@ -39,6 +40,7 @@ export default async function SettingsPage() {
   const languages = await Promise.all(
     LOCALES.map(async (code) => ({ code, name: (await loadMessages(code)).meta.languageName })),
   );
+  const canChangePassword = await hasPassword(user.id);
   const { routing } = await currentRouting();
   const browser = negotiateLocale((await headers()).get("accept-language"));
   // Only whether a key is configured, never the key itself.
@@ -70,7 +72,7 @@ export default async function SettingsPage() {
             current={me?.emailNotifications ?? false}
             smtpReady={smtpOptionsFromEnv(env) !== null}
           />
-          <ChangePasswordForm />
+          {canChangePassword ? <ChangePasswordForm /> : null}
         </Card>
         <Card className="p-6">
           <div className="flex items-center gap-2">

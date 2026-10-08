@@ -26,7 +26,7 @@
     "saved": "Password cambiata. Gli altri dispositivi sono stati disconnessi.",
     "wrongCurrent": "La password attuale non è corretta.",
     "unchanged": "La nuova password deve essere diversa da quella attuale.",
-    "tooMany": "Troppi tentativi. Riprova più tardi."
+    "noPassword": "Questo account accede senza password, quindi non c'è nulla da cambiare."
   },
   "instance": {
     "title": "Istanza",
