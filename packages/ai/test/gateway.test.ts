@@ -8,6 +8,7 @@ import {
   createFakeTextProvider,
   createMemoryLedger,
   monthKey,
+  type AiLedger,
   type Routing,
 } from "../src/index";
 
@@ -158,6 +159,70 @@ describe("files that may be sent (external_restricted)", () => {
       sends: ["documents"],
     });
     expect(res.provider).toBe("anthropic");
+  });
+});
+
+describe("external_restricted fails closed", () => {
+  const clientId = baseReq.clientId;
+  function gatewayWith(ledger: AiLedger) {
+    const anthropic = createFakeTextProvider("anthropic");
+    const local = createFakeTextProvider("local");
+    const gateway = createAiGateway({
+      ledger,
+      providers: { text: { anthropic, local }, image: {} },
+      routing: {
+        default: { primary: { provider: "anthropic", model: "claude-opus-5-5" } },
+        local: { provider: "local", model: "llama3.1:8b" },
+        image: { primary: { provider: "openai", model: "gpt-image-2" } },
+      },
+      now: () => NOW,
+    });
+    return { gateway, anthropic, local };
+  }
+  const legacy = (extra: Partial<AiLedger> = {}): AiLedger => {
+    const { monthSpendMicroUsd, budgetFor, record } = createMemoryLedger();
+    return { monthSpendMicroUsd, budgetFor, record, ...extra };
+  };
+
+  it("a ledger that cannot say what the Admin approved approves nothing, whatever the request claims", async () => {
+    const { gateway, anthropic } = gatewayWith(legacy());
+    await expect(
+      gateway.generateObject({
+        ...baseReq,
+        clientPolicy: "external_restricted",
+        approvedProviders: ["anthropic"],
+      }),
+    ).rejects.toMatchObject({ code: "policy_blocked" });
+    expect(anthropic.calls).toHaveLength(0);
+  });
+
+  it("a ledger that cannot list sendable kinds keeps files on the local model", async () => {
+    const { gateway, anthropic, local } = gatewayWith(
+      legacy({ approvedProviders: async () => ["anthropic"] }),
+    );
+    local.push({ json: { title: "On site", slides: 3 } });
+    const res = await gateway.generateObject({
+      ...baseReq,
+      clientPolicy: "external_restricted",
+      sends: ["documents"],
+    });
+    expect(res.provider).toBe("local");
+    expect(anthropic.calls).toHaveLength(0);
+  });
+
+  it("no client id means nothing is approved and nothing may be sent", async () => {
+    const ledger = createMemoryLedger();
+    ledger.setApprovedProviders(clientId, ["anthropic"]);
+    const { gateway, anthropic } = gatewayWith(ledger);
+    await expect(
+      gateway.generateObject({
+        ...baseReq,
+        clientId: undefined,
+        clientPolicy: "external_restricted",
+        sends: ["brand_texts"],
+      }),
+    ).rejects.toMatchObject({ code: "policy_blocked" });
+    expect(anthropic.calls).toHaveLength(0);
   });
 });
 

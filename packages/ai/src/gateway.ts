@@ -258,8 +258,10 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
    */
   async function approvedFor(req: CommonRequest): Promise<readonly ProviderId[]> {
     if (req.clientPolicy !== "external_restricted") return [];
-    if (!ledger.approvedProviders) return req.approvedProviders ?? [];
-    const stored = req.clientId ? await ledger.approvedProviders(req.clientId) : [];
+    // Fail closed: no client, or a ledger that cannot say what the Admin approved, approves
+    // nothing. The request can only narrow the stored list, never supply one.
+    const stored =
+      req.clientId && ledger.approvedProviders ? await ledger.approvedProviders(req.clientId) : [];
     const narrow = req.approvedProviders;
     return narrow ? stored.filter((p) => narrow.includes(p)) : stored;
   }
@@ -318,10 +320,12 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
       if (decision.allowed) allowed.push(c);
       else firstDenial ??= decision.reason;
     }
-    if (req.clientPolicy === "external_restricted" && req.sends?.length && allowed.length) {
+    const sends = req.sends;
+    if (req.clientPolicy === "external_restricted" && sends?.length && allowed.length) {
+      // Fail closed: no client or no ledger answer means no file kind may leave.
       const sendable =
-        req.clientId && ledger.sendableAssets ? await ledger.sendableAssets(req.clientId) : null;
-      const refused = sendable ? req.sends.filter((k) => !sendable.includes(k)) : [];
+        req.clientId && ledger.sendableAssets ? await ledger.sendableAssets(req.clientId) : [];
+      const refused = sends.filter((k) => !sendable.includes(k));
       if (refused.length) {
         // Those files never leave Forgecy: only a local model may read them.
         const onSite = allowed.filter((c) => isLocalProvider(c.provider));

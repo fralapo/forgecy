@@ -33,6 +33,15 @@ describe("permissions", () => {
       expect(can(agent, p)).toBe(false);
     }
   });
+
+  it("a clientId never widens what an actor may do", () => {
+    const client = "11111111-1111-1111-1111-111111111111";
+    expect(can(user, "users.manage", client)).toBe(false);
+    expect(can({ ...admin, active: false }, "view", client)).toBe(false);
+    const agent = { type: "agent" as const, role: "reviewer" as const };
+    expect(can(agent, "approve", client)).toBe(false);
+    expect(can(agent, "propose", client)).toBe(true);
+  });
 });
 
 describe("AI policy", () => {
