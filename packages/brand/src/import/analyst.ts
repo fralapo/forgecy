@@ -4,10 +4,11 @@
  * only ever turned into proposals; a person decides.
  */
 import { z } from "zod";
+import { escapeDelimiters, inlineValue } from "@forgecy/ai/untrusted";
 import { messageKinds, toneAxes, typographyRoles } from "../document";
 import type { ExtractedPage } from "./extract";
 
-export const BRAND_ANALYST_PROMPT_VERSION = "brand-analyst/import@4";
+export const BRAND_ANALYST_PROMPT_VERSION = "brand-analyst/import@5";
 
 const common = {
   /** Must be one of the locators given in the input ("p. 12", "Slide 4"). */
@@ -149,7 +150,9 @@ export function chunkPages(pages: readonly ExtractedPage[], maxChars = 60_000): 
 
 export function analystUserPrompt(input: AnalystInput): string {
   const body = input.pages
-    .map((p) => `<page locator="${p.locator.replace(/"/g, "'")}">\n${p.text}\n</page>`)
+    .map(
+      (p) => `<page locator="${inlineValue(p.locator, 80)}">\n${escapeDelimiters(p.text)}\n</page>`,
+    )
     .join("\n");
-  return `Client: ${input.clientName}\nDocument: ${input.sourceTitle}\nLanguage of the rationale: ${input.language ?? "en"}\n\nExtract the Brand Identity elements from the following pages.\n\n<document>\n${body}\n</document>`;
+  return `Client: ${inlineValue(input.clientName)}\nDocument: ${inlineValue(input.sourceTitle)}\nLanguage of the rationale: ${input.language ?? "en"}\n\nExtract the Brand Identity elements from the following pages.\n\n<document>\n${body}\n</document>`;
 }

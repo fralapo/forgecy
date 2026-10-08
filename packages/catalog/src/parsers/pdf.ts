@@ -1,4 +1,5 @@
 import { extractText, getDocumentProxy } from "unpdf";
+import { escapeDelimiters } from "@forgecy/ai/untrusted";
 import { ImportError, importError } from "../import/errors";
 import { IMPORT_LIMITS } from "../import/limits";
 
@@ -69,7 +70,7 @@ export function chunkPages(
     const page = i + 1;
     const text = raw.length > maxChars ? raw.slice(0, maxChars) : raw;
     if (!text.trim()) return;
-    const block = `<page number="${page}">\n${text}\n</page>`;
+    const block = `<page number="${page}">\n${escapeDelimiters(text)}\n</page>`;
     if (cur && cur.size + block.length > maxChars) {
       chunks.push({ from: cur.from, to: cur.to, text: cur.parts.join("\n") });
       cur = null;
