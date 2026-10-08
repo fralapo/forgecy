@@ -131,6 +131,7 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
           })
         : null,
       localModelConfigured: false,
+      catalogAiEnabled: true,
     };
   }
 
@@ -139,7 +140,7 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
     cid: string,
     name: string,
     data: Buffer,
-    aiAvailable = true,
+    catalogAiAvailable = true,
   ) {
     const temp = await spoolToTemp(Readable.from([data]), 300 * 1024 * 1024);
     try {
@@ -148,7 +149,7 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
         importId,
         relativePath: name,
         temp,
-        aiAvailable,
+        catalogAiAvailable,
       });
     } finally {
       await temp.cleanup();
@@ -250,7 +251,12 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
     const rar = await upload(imp.id, clientId, "catalog.rar", Buffer.from("Rar!\u001a\u0007"));
     expect(rar).toMatchObject({ valid: false, errorCode: "IMPORT-INVALID" });
 
-    await startImport(db, enqueue, user, { clientId, importId: imp.id, aiAvailable: true });
+    await startImport(db, enqueue, user, {
+      clientId,
+      importId: imp.id,
+      aiAvailable: true,
+      catalogAiAvailable: true,
+    });
     const scan = await runImportPhase(deps(), imp.id, "scan");
     expect(scan).toEqual({ status: "needs_mapping" });
     const children = await db
@@ -463,6 +469,7 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
       clientId: noAiClientId,
       importId: imp.id,
       aiAvailable: false,
+      catalogAiAvailable: false,
     });
     await runImportPhase(deps(), imp.id, "scan");
     const items = await db

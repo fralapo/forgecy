@@ -1,7 +1,7 @@
 import type { PageData } from "@forgecy/db";
 import { parse, type HTMLElement } from "node-html-parser";
 import { crawlError } from "../errors";
-import type { HostCheck } from "../url";
+import { createPinnedFetch, type HostCheck } from "../url";
 
 /** What a fetcher returns for one page. Colors and fonts need a browser; HTML-only leaves them empty. */
 export interface FetchedPage {
@@ -158,9 +158,11 @@ export function extractFromHtml(
 export function createHtmlFetcher(options: {
   userAgent: string;
   hostCheck: HostCheck;
+  /** Only to lift the pinned fetch's own validation together with the host check's. */
+  allowPrivate?: boolean;
   fetchImpl?: typeof fetch;
 }): PageFetcher {
-  const doFetch = options.fetchImpl ?? fetch;
+  const doFetch = options.fetchImpl ?? createPinnedFetch({ allowPrivate: options.allowPrivate });
   return {
     mode: "html",
     async fetchPage(url, { timeoutMs }) {

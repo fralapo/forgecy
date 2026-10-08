@@ -1,5 +1,6 @@
 "use server";
 
+import { getCatalogAiEnabled } from "@forgecy/ai";
 import {
   cancelImport,
   columnMappingSchema,
@@ -38,6 +39,11 @@ async function aiAvailable(clientId: string) {
   return importAiSetup(env, client.aiPolicy).available;
 }
 
+/** PDF extraction and AI image matching also need the Admin's catalog-AI release gate. */
+async function catalogAiAvailable(clientId: string) {
+  return (await aiAvailable(clientId)) && (await getCatalogAiEnabled(getDb()));
+}
+
 export async function setRouteAction(input: {
   clientId: string;
   importId: string;
@@ -49,7 +55,7 @@ export async function setRouteAction(input: {
   return attempt(async () => {
     await setFileRoute(getDb(), actingUser(user), {
       ...data,
-      aiAvailable: await aiAvailable(data.clientId),
+      catalogAiAvailable: await catalogAiAvailable(data.clientId),
     });
   });
 }
@@ -109,6 +115,7 @@ export async function startAction(input: {
     await startImport(getDb(), enqueueImportStep, actingUser(user), {
       ...data,
       aiAvailable: await aiAvailable(data.clientId),
+      catalogAiAvailable: await catalogAiAvailable(data.clientId),
     });
     return (await getTranslations("products"))("import.started");
   });

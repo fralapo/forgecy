@@ -40,6 +40,15 @@
       "save": "Save default policy",
       "saved": "Default policy saved."
     },
+    "catalogAi": {
+      "title": "Catalog AI (PDF extraction and image matching)",
+      "description": "A v1 feature: off for every client until you turn it on here, whatever a client's AI policy allows. Manual entry, CSV/XLSX and ZIP/folder name-and-SKU matching always stay available.",
+      "toggle": "Enable AI extraction from PDF catalogs and AI image-to-product matching",
+      "hint": "Once on, each import still follows that client's AI policy (budget, approved providers, confirmation before sending files).",
+      "save": "Save",
+      "enabled": "Catalog AI enabled.",
+      "disabled": "Catalog AI disabled."
+    },
     "clients": {
       "title": "Clients",
       "empty": "No clients. The default policy will apply to the first client you create.",

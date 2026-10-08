@@ -17,6 +17,7 @@ import type { AdminActionResult } from "../_lib/admin-action";
 import {
   setApprovedProvidersAction,
   setBudgetAction,
+  setCatalogAiEnabledAction,
   setClientPolicyAction,
   setDefaultPolicyAction,
   setSendableAssetsAction,
@@ -240,6 +241,32 @@ export function SendableAssetsForm({
       <p className="text-body-sm text-fg-muted">{t("assetsHelp")}</p>
       <Button type="submit" variant="secondary" className="self-start" disabled={pending}>
         {t("assetsSave")}
+      </Button>
+      <ActionFeedback result={result} />
+    </form>
+  );
+}
+
+export function CatalogAiGateForm({ enabled }: { enabled: boolean }) {
+  const t = useTranslations("admin.aiPolicies.catalogAi");
+  const { pending, result, run } = useAction();
+  const id = useId();
+  return (
+    <form
+      className="mt-4 flex flex-col gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const checked = new FormData(e.currentTarget).get("enabled") === "on";
+        run(() => setCatalogAiEnabledAction(checked));
+      }}
+    >
+      <Label htmlFor={id} className="flex items-center gap-2 font-normal">
+        <input id={id} type="checkbox" name="enabled" defaultChecked={enabled} />
+        {t("toggle")}
+      </Label>
+      <p className="text-body-sm text-fg-muted">{t("hint")}</p>
+      <Button type="submit" variant="secondary" className="self-start" disabled={pending}>
+        {t("save")}
       </Button>
       <ActionFeedback result={result} />
     </form>

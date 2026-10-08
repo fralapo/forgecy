@@ -89,6 +89,47 @@ export async function setDefaultAiPolicy(
   });
 }
 
+export const CATALOG_AI_KEY = "catalog.ai_enabled";
+
+/**
+ * PDF AI-extraction and AI image-to-product matching in the catalog import (v1 features,
+ * UX_SPECIFICATION §D-24): off for every client until an Admin turns this on here, regardless
+ * of any client's AI policy. Manual entry, CSV/XLSX and deterministic ZIP/folder matching
+ * are never affected.
+ */
+export async function getCatalogAiEnabled(db: Pick<Database, "select">): Promise<boolean> {
+  const [row] = await db
+    .select({ value: appSettings.value })
+    .from(appSettings)
+    .where(eq(appSettings.key, CATALOG_AI_KEY));
+  return row?.value === true;
+}
+
+/** Admin only. Applies instance-wide, immediately, to every client. */
+export async function setCatalogAiEnabled(
+  db: Database,
+  actor: Actor,
+  enabled: boolean,
+): Promise<void> {
+  assertCan(actor, "ai.policies.manage");
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(appSettings)
+      .values({ key: CATALOG_AI_KEY, value: enabled, updatedBy: userId(actor) })
+      .onConflictDoUpdate({
+        target: appSettings.key,
+        set: { value: enabled, updatedBy: userId(actor), updatedAt: new Date() },
+      });
+    await recordAuditEvent(tx, {
+      actor,
+      action: "catalog_ai_enabled_changed",
+      entity: "app_settings",
+      entityId: CATALOG_AI_KEY,
+      meta: { enabled },
+    });
+  });
+}
+
 /** Providers an Admin can approve for an external_restricted client; local models always are. */
 export const restrictableProviders: readonly ProviderId[] = providerIds.filter(
   (p) => !isLocalProvider(p),

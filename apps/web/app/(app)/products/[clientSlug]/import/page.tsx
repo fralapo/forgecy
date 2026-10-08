@@ -61,7 +61,7 @@ export default async function ImportPage({
 }) {
   const { clientSlug } = await params;
   const { importId } = await searchParams;
-  const { client, acting, ai } = await catalogPage(clientSlug);
+  const { client, acting, ai, catalogAiAvailable } = await catalogPage(clientSlug);
   if (client.status !== "active") return <NotAClient name={client.name} />;
   const t = await getTranslations("products");
   const format = await getFormat();
@@ -73,7 +73,7 @@ export default async function ImportPage({
   const imp = await loadImport(db, client.id, importId).catch(() => notFound());
   const files = await importFiles(db, imp.id);
   const options = importOptions(imp);
-  const planned = plannedAiSteps(files, options, ai.available);
+  const planned = plannedAiSteps(files, options, ai.available, catalogAiAvailable);
   const [budget, job] = await Promise.all([
     clientBudget(db, client.id),
     imp.jobId ? db.query.jobs.findFirst({ where: eq(jobs.id, imp.jobId) }) : undefined,
@@ -104,7 +104,7 @@ export default async function ImportPage({
       errorCode: f.errorCode,
       route: f.route,
       routes: f.valid
-        ? routesFor(f.kind, ai.available && !(f.meta as FileMeta).textless).map((r) => ({
+        ? routesFor(f.kind, catalogAiAvailable && !(f.meta as FileMeta).textless).map((r) => ({
             value: r,
             label: t(`routes.${r}`),
           }))

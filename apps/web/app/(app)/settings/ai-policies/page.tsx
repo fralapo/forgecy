@@ -2,6 +2,7 @@ import {
   connectedMcpProviders,
   budgetPercent,
   getBudgetOverview,
+  getCatalogAiEnabled,
   getDefaultAiPolicy,
   restrictableProviders,
   type BudgetLine,
@@ -23,6 +24,7 @@ import {
   ApprovedProvidersForm,
   SendableAssetsForm,
   BudgetForm,
+  CatalogAiGateForm,
   ClientPolicySelect,
   DefaultPolicyForm,
   type ProviderChoice,
@@ -72,9 +74,10 @@ export default async function AiPoliciesPage() {
   const te = await getTranslations("enums");
   const format = await getFormat();
   const db = getDb();
-  const [overview, defaultPolicy] = await Promise.all([
+  const [overview, defaultPolicy, catalogAiEnabled] = await Promise.all([
     getBudgetOverview(db),
     getDefaultAiPolicy(db),
+    getCatalogAiEnabled(db),
   ]);
   const setBy = defaultPolicy.updatedBy
     ? await db.query.users.findFirst({
@@ -171,6 +174,14 @@ export default async function AiPoliciesPage() {
               : t("default.neverSet")}
           </p>
           <DefaultPolicyForm current={defaultPolicy.policy} />
+        </Card>
+      </section>
+
+      <section id="catalog-ai" className="mb-10">
+        <Card className="p-6">
+          <h2 className="text-heading-sm text-fg">{t("catalogAi.title")}</h2>
+          <p className="mt-2 text-body-sm text-fg-muted">{t("catalogAi.description")}</p>
+          <CatalogAiGateForm enabled={catalogAiEnabled} />
         </Card>
       </section>
 

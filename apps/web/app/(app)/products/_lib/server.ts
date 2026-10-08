@@ -1,4 +1,5 @@
 import "server-only";
+import { getCatalogAiEnabled } from "@forgecy/ai";
 import {
   catalogImportJob,
   importAiSetup,
@@ -34,11 +35,14 @@ export async function catalogPage(clientSlug: string) {
   const client = await getDb().query.clients.findFirst({ where: eq(clients.slug, clientSlug) });
   if (!client) notFound();
   const { routing } = await currentRouting();
+  const ai = importAiSetup(env, client.aiPolicy, routing);
   return {
     user,
     acting: actingUser(user),
     client,
-    ai: importAiSetup(env, client.aiPolicy, routing),
+    ai,
+    // PDF extraction and AI image matching also need the Admin's catalog-AI release gate.
+    catalogAiAvailable: ai.available && (await getCatalogAiEnabled(getDb())),
   };
 }
 

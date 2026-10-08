@@ -5,6 +5,7 @@ import {
   getBudgetOverview,
   restrictableProviders,
   setApprovedProviders,
+  setCatalogAiEnabled,
   setDefaultAiPolicy,
   setMonthlyBudget,
   setSendableAssets,
@@ -42,6 +43,19 @@ export async function setDefaultPolicyAction(policy: AiPolicy): Promise<AdminAct
   }
   revalidatePath(PATH);
   return { ok: true, message: t("default.saved") };
+}
+
+export async function setCatalogAiEnabledAction(enabled: boolean): Promise<AdminActionResult> {
+  const user = await requireUser();
+  const t = await getTranslations("admin.aiPolicies.catalogAi");
+  try {
+    await setCatalogAiEnabled(getDb(), user.actor, enabled);
+  } catch (err) {
+    if (err instanceof PermissionDeniedError) return deniedResult();
+    throw err;
+  }
+  revalidatePath(PATH);
+  return { ok: true, message: enabled ? t("enabled") : t("disabled") };
 }
 
 export async function setClientPolicyAction(

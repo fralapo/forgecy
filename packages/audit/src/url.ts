@@ -1,6 +1,8 @@
+import { lookup as dnsLookup, type LookupAddress, type LookupOptions } from "node:dns";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import type { SocialChannel } from "@forgecy/core";
+import { Agent } from "undici";
 
 /**
  * Normalize what a person types into a site URL: adds https://, drops the hash,
@@ -142,4 +144,74 @@ export function createHostCheck(options: { allowPrivate?: boolean } = {}): HostC
     cache.set(host, ok);
     return ok;
   };
+}
+
+/**
+ * One resolved, validated address for `hostname`, to pin a single connection to it
+ * (Chromium's --host-resolver-rules): the browser then never re-resolves this host
+ * itself, closing the DNS-rebinding window between the check and the real connect.
+ * Null when the host is disallowed, unresolvable, or allowPrivate is set (no pinning).
+ */
+export async function resolvePinnedAddress(
+  hostname: string,
+  options: { allowPrivate?: boolean } = {},
+): Promise<string | null> {
+  if (options.allowPrivate) return null;
+  const host = hostname.replace(/^\[|\]$/g, "");
+  if (isIP(host)) return isPrivateAddress(host) ? null : host;
+  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return null;
+  try {
+    const addresses = await lookup(host, { all: true });
+    if (addresses.length === 0 || addresses.some((a) => isPrivateAddress(a.address))) return null;
+    return addresses[0]!.address;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * fetch() whose DNS resolution is validated at the moment undici actually connects,
+ * instead of by a separate earlier call: createHostCheck's own lookup and the real
+ * connection's lookup would otherwise be two separate DNS queries, and a rebinding
+ * name server can answer safely for the first and privately for the second a moment
+ * later. Here there is only one lookup, and it is the one that gates the connection.
+ * allowPrivate returns the plain fetch, matching createHostCheck.
+ */
+export function createPinnedFetch(options: { allowPrivate?: boolean } = {}): typeof fetch {
+  if (options.allowPrivate) return fetch;
+  const agent = new Agent({
+    connect: {
+      lookup(
+        hostname: string,
+        lookupOptions: LookupOptions,
+        callback: (
+          err: NodeJS.ErrnoException | null,
+          address: string | LookupAddress[],
+          family?: number,
+        ) => void,
+      ) {
+        dnsLookup(hostname, { ...lookupOptions, all: true }, (err, addresses) => {
+          if (err) {
+            callback(err, []);
+            return;
+          }
+          const list = addresses as LookupAddress[];
+          if (list.length === 0 || list.some((a) => isPrivateAddress(a.address))) {
+            callback(new Error(`DNS for "${hostname}" resolves to a disallowed address`), []);
+            return;
+          }
+          if (lookupOptions.all) {
+            callback(null, list);
+            return;
+          }
+          const chosen = list[0]!;
+          callback(null, chosen.address, chosen.family);
+        });
+      },
+    },
+  });
+  return ((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) =>
+    fetch(input, { ...init, dispatcher: agent } as unknown as Parameters<
+      typeof fetch
+    >[1])) as typeof fetch;
 }

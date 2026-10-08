@@ -19,6 +19,7 @@ import { aggregateExtraction, technicalChecks } from "../crawl/extract";
 import { createHtmlFetcher, type FetchedPage, type PageFetcher } from "../crawl/fetcher";
 import { auditErrorCode, CrawlError } from "../errors";
 import { stored } from "../stored";
+import { createPinnedFetch } from "../url";
 import {
   auditAnalyzeSiteJob,
   auditCompareCompetitorsJob,
@@ -35,13 +36,21 @@ type StepUpdate = {
   detailRef?: ScanStep["detailRef"];
 };
 
-async function openFetcher(deps: AuditHandlerDeps, ctx: JobContext): Promise<PageFetcher> {
+async function openFetcher(
+  deps: AuditHandlerDeps,
+  ctx: JobContext,
+  rootUrl: string,
+): Promise<PageFetcher> {
   try {
-    return await deps.createFetcher();
+    return await deps.createFetcher(rootUrl);
   } catch (err) {
     if (err instanceof CrawlError && err.code === "AUD-BROWSER-UNAVAILABLE") {
       ctx.logger.warn({ jobId: ctx.jobId, err: err.message }, "chromium unavailable, html only");
-      return createHtmlFetcher({ userAgent: deps.userAgent, hostCheck: deps.hostCheck });
+      return createHtmlFetcher({
+        userAgent: deps.userAgent,
+        hostCheck: deps.hostCheck,
+        allowPrivate: deps.allowPrivate,
+      });
     }
     throw err;
   }
@@ -107,7 +116,7 @@ export async function runCrawl(
     })
     .where(eq(siteScans.id, scan.id));
 
-  const fetcher = await openFetcher(deps, ctx);
+  const fetcher = await openFetcher(deps, ctx, scan.rootUrl);
   let result: CrawlResult;
   let pagesStored = 0;
   try {
@@ -117,6 +126,7 @@ export async function runCrawl(
       focus: scan.competitorId ? "competitor" : "site",
       fetcher,
       hostCheck: deps.hostCheck,
+      fetchImpl: createPinnedFetch({ allowPrivate: deps.allowPrivate }),
       userAgent: deps.userAgent,
       pageTimeoutMs: deps.pageTimeoutMs ?? AUDIT_LIMITS.pageTimeoutMs,
       totalTimeoutMs: deps.crawlTimeoutMs ?? AUDIT_LIMITS.crawlTimeoutMs,

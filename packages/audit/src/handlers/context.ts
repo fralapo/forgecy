@@ -21,9 +21,11 @@ export interface AuditHandlerDeps {
   storage: StorageDriver;
   queues: JobQueues;
   gateway: AiGateway;
-  /** Browser fetcher (Playwright) with fallback to plain HTML when Chromium is missing. */
-  createFetcher: () => Promise<PageFetcher>;
+  /** Browser fetcher (Playwright) with fallback to plain HTML when Chromium is missing;
+   * `rootUrl` lets it pin Chromium's DNS resolution for that crawl's host. */
+  createFetcher: (rootUrl: string) => Promise<PageFetcher>;
   hostCheck: HostCheck;
+  allowPrivate: boolean;
   userAgent: string;
   pageTimeoutMs?: number;
   crawlTimeoutMs?: number;

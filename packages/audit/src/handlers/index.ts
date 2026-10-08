@@ -47,9 +47,8 @@ export async function auditDepsFromEnv(): Promise<AuditHandlerDeps> {
   const env = await resolveAiEnv(db, loadEnv());
   const providers = createProvidersFromEnv(env);
   const userAgent = auditUserAgent();
-  const hostCheck = createHostCheck({
-    allowPrivate: process.env.FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS === "true",
-  });
+  const allowPrivate = process.env.FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS === "true";
+  const hostCheck = createHostCheck({ allowPrivate });
   const executablePath = resolveChromiumPath();
   return {
     db,
@@ -61,11 +60,14 @@ export async function auditDepsFromEnv(): Promise<AuditHandlerDeps> {
       routing: settingsRouting(db, env, providers),
     }),
     hostCheck,
+    allowPrivate,
     userAgent,
-    createFetcher: () =>
+    createFetcher: (rootUrl) =>
       createBrowserFetcher({
         userAgent,
         hostCheck,
+        rootUrl,
+        allowPrivate,
         ...(executablePath ? { executablePath } : {}),
       }),
   };
