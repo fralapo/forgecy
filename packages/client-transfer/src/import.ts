@@ -14,13 +14,18 @@ import { sql, type Database } from "@forgecy/db";
 import { contentTypeForKey, isValidKey, type StorageDriver } from "@forgecy/files";
 import { clientTables, type ClientTable } from "./graph";
 import { openClientPackage, packageManifestSchema, packagePeopleSchema } from "./package";
-import { assertPackageData, emptyOutsideRefs } from "./safety";
+import {
+  assertPackageData,
+  assertPackageScoped,
+  emptyOutsideRefs,
+  remapIds,
+  remapRows,
+} from "./safety";
 
 type Row = Record<string, unknown>;
 
 // Ids are lower-case canonical (assertPackageData refuses anything else), so lookups are exact.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const UUID_ANYWHERE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 const BATCH = 500;
 
 export interface ImportPlan {
@@ -153,8 +158,12 @@ export async function importClientPackage(
           }),
         ),
       );
-    const remap = (s: string) => s.replace(UUID_ANYWHERE, (m) => idMap.get(m) ?? m);
 
+    const final = {
+      clientId,
+      idsByTable: hereIds,
+      areas: new Set(["client", ...tables.map((t) => t.area)]),
+    };
     const prepared: { table: ClientTable; rows: Row[] }[] = [];
     const deferred: Deferred[] = [];
     for (const table of tables) {
@@ -163,7 +172,11 @@ export async function importClientPackage(
       );
       const stash = new Map(forward.map((f) => [f.column, [] as Deferred["values"]]));
       const rows: Row[] = [];
-      for (const r of JSON.parse(remap(raw.get(table.name)!)) as Row[]) {
+      // The same parsed form the checks read; then the checks run again on what will be written,
+      // so an id that the remap could not rewrite can never reach the database.
+      const mapped = remapRows(raw.get(table.name)!, idMap);
+      assertPackageScoped([table], new Map([[table.name, mapped]]), final);
+      for (const r of mapped) {
         // People: matched by email, else emptied; a row that needs a person who is not here is left out.
         let keep = true;
         for (const u of table.userColumns) {
@@ -212,7 +225,7 @@ export async function importClientPackage(
     const written: string[] = [];
     try {
       for (const f of manifest.files) {
-        const key = remap(f.key);
+        const key = remapIds(f.key, idMap);
         if (!isValidKey(key)) throw new Error(`Invalid storage key in package: ${f.key}`);
         // Keys are content-addressed or carry ids: one that exists already holds the same file.
         if (await storage.exists(key)) continue;

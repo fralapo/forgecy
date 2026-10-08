@@ -7,6 +7,7 @@ import {
   assertPackageData,
   assertPackageScoped,
   emptyOutsideRefs,
+  remapRows,
   UnsafePackageError,
   type Row,
 } from "../src/safety";
@@ -14,6 +15,7 @@ import {
 const ME = "11111111-1111-4111-8111-11111111111a";
 const VICTIM = "99999999-9999-4999-8999-99999999999b";
 const ROW = "22222222-2222-4222-8222-22222222222c";
+const MALLORY = "44444444-4444-4444-8444-44444444444e";
 const PILLAR = "33333333-3333-4333-8333-33333333333d";
 const SHA = "a".repeat(64);
 const table = (name: string) => clientTables().find((t) => t.name === name)!;
@@ -234,6 +236,126 @@ describe("assertPackageScoped", () => {
   it("knows the area of every table it can point to", () => {
     for (const t of clientTables())
       for (const p of t.parents) expect(TABLE_AREAS[p.target]).toBeTruthy();
+  });
+});
+
+/** Every character as a JSON \uXXXX escape: what a hostile package can write for any id or key. */
+const BS = "\\";
+const escaped = (s: string) =>
+  [...s].map((ch) => BS + "u" + ch.charCodeAt(0).toString(16).padStart(4, "0")).join("");
+
+describe("the checks and the remap see the same text (JSON escapes)", () => {
+  // The package says it is the victim's client: the parsed ids pass the scope checks, so the
+  // remap has to rewrite them all, whatever way they are spelled in the file.
+  const NEW = "55555555-5555-4555-8555-55555555555e";
+  const NEWP = "66666666-6666-4666-8666-66666666666f";
+  const idMap = new Map([
+    [VICTIM, NEW],
+    [PILLAR, NEWP],
+  ]);
+  const area = new Set(["client", "content"]);
+  const finalScope = {
+    clientId: NEW,
+    idsByTable: idsOf({ clients: [NEW], content_pillars: [NEWP], contents: [ROW] }),
+    areas: area,
+  };
+  const rawRows = (fields: string) => `[{"id":"${ROW}",${fields}}]`;
+  const transformed = (fields: string) => remapRows(rawRows(fields), idMap);
+  const noVictim = (rows: Row[]) => expect(JSON.stringify(rows)).not.toContain(VICTIM);
+
+  it("remaps a client_id written with escapes", () => {
+    const rows = transformed(`"client_id":"${escaped(VICTIM)}"`);
+    expect(rows[0]!.client_id).toBe(NEW);
+    noVictim(rows);
+    expect(() => run("contents", rows, finalScope)).not.toThrow();
+  });
+  it("remaps a client_id with only the dashes or only a letter escaped", () => {
+    for (const form of [VICTIM.replaceAll("-", BS + "u002d"), VICTIM.replace("b", BS + "u0062")]) {
+      const rows = transformed(`"client_id":"${form}"`);
+      expect(rows[0]!.client_id).toBe(NEW);
+    }
+  });
+  it("remaps an escaped clients/<id>/ key, with or without the slash escaped", () => {
+    for (const key of [
+      `clients/${escaped(VICTIM)}/x/y.pdf`,
+      `clients${BS}/${escaped(VICTIM)}${BS}/x/y.pdf`,
+      `${BS}u0063lients/${VICTIM}/x/y.pdf`,
+    ]) {
+      const rows = transformed(`"client_id":"${VICTIM}","storage_key":"${key}"`);
+      expect(rows[0]!.storage_key).toBe("clients/" + NEW + "/x/y.pdf");
+      noVictim(rows);
+    }
+  });
+  it("remaps an escaped foreign key to the new row", () => {
+    const rows = transformed(`"client_id":"${VICTIM}","pillar_id":"${escaped(PILLAR)}"`);
+    expect(rows[0]!.pillar_id).toBe(NEWP);
+    expect(() => run("contents", rows, finalScope)).not.toThrow();
+  });
+  it("remaps ids inside nested values and object keys, and keeps __proto__ a plain key", () => {
+    const rows = transformed(
+      `"client_id":"${VICTIM}","draft":{"${escaped(PILLAR)}":["${escaped(PILLAR)}"],"__proto__":{"x":1}}`,
+    );
+    expect(rows[0]!.draft).toEqual(JSON.parse(`{"${NEWP}":["${NEWP}"],"__proto__":{"x":1}}`));
+    expect(({} as Record<string, unknown>).x).toBeUndefined();
+  });
+  it("leaves an escaped id that the package does not own for the final check to refuse", () => {
+    const rows = transformed(`"client_id":"${VICTIM}","pillar_id":"${escaped(ROW)}"`);
+    // ROW is a content of the package, not a pillar: the final check on the transformed rows says no.
+    expect(() => run("contents", rows, finalScope)).toThrow(/pillar_id/);
+    const stranger = transformed(`"client_id":"${VICTIM}","pillar_id":"${escaped(MALLORY)}"`);
+    expect(() => run("contents", stranger, finalScope)).toThrow(/pillar_id/);
+  });
+  it("finds a victim key that sits in JSON stored in a text column, however it is escaped", () => {
+    const own = scope();
+    const inner = (key: string) => JSON.stringify({ src: key });
+    const hostile = [
+      inner(`clients/${VICTIM}/x`),
+      inner(`clients/${VICTIM}/x`).replaceAll("/", BS + "/"),
+      `{"src":"clients/${escaped(VICTIM)}/x"}`,
+      `  [ {"a":"clients${BS}/${escaped(VICTIM)}${BS}/x"} ]`,
+    ];
+    for (const text of hostile)
+      expect(problemOf(() => run("contents", [{ id: ROW, client_id: ME, title: text }], own))).toBe(
+        "unsafe",
+      );
+    // Its own prefix is fine, and plain text that merely starts with a brace is not an error.
+    const fine = JSON.stringify({ src: `clients/${ME}/x` });
+    expect(() => run("contents", [{ id: ROW, client_id: ME, title: fine }], own)).not.toThrow();
+    expect(() =>
+      run("contents", [{ id: ROW, client_id: ME, title: "{ not json" }], own),
+    ).not.toThrow();
+  });
+  it("sees the escaped nested key in the final rows when the remap could not rewrite it", () => {
+    const text = `{"src":"clients/${escaped(VICTIM)}/x"}`;
+    const rows = transformed(`"client_id":"${VICTIM}","title":${JSON.stringify(text)}`);
+    expect(problemOf(() => run("contents", rows, finalScope))).toBe("unsafe");
+  });
+  it("assertPackageData still passes a package whose own id is escaped, since it reads the parsed form", async () => {
+    const pkg = {
+      names: () => [],
+      has: (n: string) => n === "data/clients.json",
+      text: async () => `[{"id":"${escaped(ME)}","name":"a","slug":"a"}]`,
+      stream: () => Promise.reject(new Error("x")),
+      sha256: () => Promise.reject(new Error("x")),
+      close: () => {},
+    } as ClientPackage;
+    const manifest = { client: { id: ME, name: "a", slug: "a" }, areas: [], files: [] };
+    await expect(
+      assertPackageData(pkg, manifest as unknown as PackageManifest),
+    ).resolves.toBeUndefined();
+  });
+});
+
+describe("object keys are scanned like values", () => {
+  const withKey = (key: string) => () =>
+    run("contents", [{ id: ROW, client_id: ME, draft: { nested: { [key]: 1 } } }]);
+  it("refuses another client's prefix as a key, in any spelling", () => {
+    for (const key of [`clients/${VICTIM}/x`, `CLIENTS/${ME}/x`, `clients/${ME.toUpperCase()}/x`])
+      expect(problemOf(withKey(key))).toBe("unsafe");
+  });
+  it("accepts this client's prefix and ordinary keys", () => {
+    expect(withKey(`clients/${ME}/x`)).not.toThrow();
+    expect(withKey("slides")).not.toThrow();
   });
 });
 

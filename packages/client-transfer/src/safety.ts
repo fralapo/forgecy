@@ -47,12 +47,52 @@ const SYSTEM_KEY =
   /^system\/[a-z0-9][a-z0-9_-]{0,63}(?:\/[a-z0-9][a-z0-9_-]{0,63})*\/([a-f0-9]{64})\.[a-z0-9]{1,10}$/;
 const STEM = /\/([a-f0-9]{64})\.[a-z0-9]{1,10}$/;
 
+/**
+ * Every string of a parsed value: values, object keys, and the strings of JSON that is itself
+ * stored in a string (a text column holding JSON, however its characters are escaped).
+ */
 function* strings(value: unknown): Generator<string> {
-  if (typeof value === "string") yield value;
-  else if (Array.isArray(value)) for (const v of value) yield* strings(v);
+  if (typeof value === "string") {
+    yield value;
+    if (/^\s*[{[]/.test(value)) {
+      let inner: unknown;
+      try {
+        inner = JSON.parse(value);
+      } catch {
+        return;
+      }
+      yield* strings(inner);
+    }
+  } else if (Array.isArray(value)) for (const v of value) yield* strings(v);
   else if (value && typeof value === "object")
-    for (const v of Object.values(value)) yield* strings(v);
+    for (const [k, v] of Object.entries(value)) {
+      yield* strings(k);
+      yield* strings(v);
+    }
 }
+
+/** A copy of a parsed value with `fn` applied to every string, object keys included. */
+export function mapStrings(value: unknown, fn: (s: string) => string): unknown {
+  if (typeof value === "string") return fn(value);
+  if (Array.isArray(value)) return value.map((v) => mapStrings(v, fn));
+  // fromEntries defines own properties, so a "__proto__" key stays a plain key.
+  if (value && typeof value === "object")
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [fn(k), mapStrings(v, fn)]));
+  return value;
+}
+
+const UUID_ANYWHERE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+
+/** Package ids in `text` replaced by their new ones (exact match; others are left as they are). */
+export const remapIds = (text: string, idMap: ReadonlyMap<string, string>): string =>
+  text.replace(UUID_ANYWHERE, (m) => idMap.get(m) ?? m);
+
+/**
+ * The rows of a table with every id remapped. It works on the parsed values, the same form the
+ * checks read, so the spelling of an id in the file (JSON unicode escapes) cannot matter.
+ */
+export const remapRows = (jsonText: string, idMap: ReadonlyMap<string, string>): Row[] =>
+  mapStrings(JSON.parse(jsonText), (s) => remapIds(s, idMap)) as Row[];
 
 export interface PackageScope {
   clientId: string;
