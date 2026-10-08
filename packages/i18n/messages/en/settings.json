@@ -18,6 +18,16 @@
     "emailNotificationsNoSmtp": "Email is not set up on this instance yet: an Admin can configure it in Settings › Email (SMTP).",
     "emailNotificationsSaved": "Email preference saved."
   },
+  "password": {
+    "title": "Change password",
+    "current": "Current password",
+    "new": "New password",
+    "submit": "Change password",
+    "saved": "Password changed. Your other devices were signed out.",
+    "wrongCurrent": "The current password is not correct.",
+    "unchanged": "The new password must be different from the current one.",
+    "tooMany": "Too many attempts. Try again later."
+  },
   "instance": {
     "title": "Instance",
     "access": "Access",

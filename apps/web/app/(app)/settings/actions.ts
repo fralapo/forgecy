@@ -27,7 +27,8 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { resetProviders } from "@/lib/ai";
 import { env } from "@/lib/env";
-import { errorMessage, firstIssue, vmsg } from "@/lib/i18n";
+import { errorMessage, firstIssue, refText, vmsg } from "@/lib/i18n";
+import { changeOwnPassword } from "@/lib/change-password";
 import { refinePassword } from "@/lib/password-schema";
 import { requireUser } from "@/lib/session";
 import { isTheme, THEME_COOKIE } from "@/lib/theme";
@@ -127,6 +128,29 @@ export async function setLocaleAction(_prev: LocaleState, form: FormData): Promi
   await getDb().update(users).set({ locale: parsed.data }).where(eq(users.id, user.id));
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+export type ChangePasswordState = { error?: string; ok?: boolean };
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, vmsg("validation.invalid")),
+  newPassword: z.string(),
+});
+
+/** Changes the signed-in person's own password; their other devices are signed out. */
+export async function changePasswordAction(
+  _prev: ChangePasswordState,
+  form: FormData,
+): Promise<ChangePasswordState> {
+  const user = await requireUser();
+  const parsed = changePasswordSchema.safeParse(Object.fromEntries(form));
+  if (!parsed.success) return { error: await firstIssue(parsed.error) };
+  const result = await changeOwnPassword(
+    emailToUsername(user.email),
+    parsed.data.currentPassword,
+    parsed.data.newPassword,
+  );
+  return "error" in result ? { error: await refText(result.error, "Invalid password.") } : { ok: true };
 }
 
 export type McpConnectState = { error?: string };

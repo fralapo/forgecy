@@ -13,6 +13,7 @@ import { requireUser } from "@/lib/session";
 import { getTheme } from "@/lib/theme";
 import { providerIcons } from "./_lib/provider-icons";
 import { emailToUsername } from "@/lib/username";
+import { ChangePasswordForm } from "./change-password-form";
 import { EmailNotificationsForm } from "./email-notifications-form";
 import { LanguageForm } from "./language-form";
 import { NewUserForm } from "./new-user-form";
@@ -69,6 +70,7 @@ export default async function SettingsPage() {
             current={me?.emailNotifications ?? false}
             smtpReady={smtpOptionsFromEnv(env) !== null}
           />
+          <ChangePasswordForm />
         </Card>
         <Card className="p-6">
           <div className="flex items-center gap-2">

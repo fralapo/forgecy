@@ -27,3 +27,8 @@ export function passwordIssueRef(issue: PasswordIssue): MessageRef {
     ? { key: "validation.passwordTooShort", values: { min: PASSWORD_MIN } }
     : { key: "validation.passwordTooLong", values: { max: PASSWORD_MAX } };
 }
+
+/** The change-password form's check: the shared policy for the new password, plus "not the same as before". */
+export function checkPasswordChange(current: string, next: string): PasswordIssue | "unchanged" | null {
+  return checkPassword(next) ?? (next === current ? "unchanged" : null);
+}

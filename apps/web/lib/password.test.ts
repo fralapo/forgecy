@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkPassword, PASSWORD_MAX, PASSWORD_MIN, passwordIssueRef } from "./password";
+import { checkPassword, checkPasswordChange, PASSWORD_MAX, PASSWORD_MIN, passwordIssueRef } from "./password";
 
 describe("checkPassword", () => {
   it("keeps the maintainer's minimum of 1 and caps at 128", () => {
@@ -31,5 +31,18 @@ describe("passwordIssueRef", () => {
   it("maps every issue to a message key", () => {
     expect(passwordIssueRef("tooShort")).toEqual({ key: "validation.passwordTooShort", values: { min: 1 } });
     expect(passwordIssueRef("tooLong")).toEqual({ key: "validation.passwordTooLong", values: { max: 128 } });
+  });
+});
+
+describe("checkPasswordChange", () => {
+  it("applies the shared policy to the new password", () => {
+    expect(checkPasswordChange("old", "")).toBe("tooShort");
+    expect(checkPasswordChange("old", "x".repeat(129))).toBe("tooLong");
+  });
+  it("refuses to reuse the current password", () => {
+    expect(checkPasswordChange("same", "same")).toBe("unchanged");
+  });
+  it("accepts a different password of any allowed length", () => {
+    expect(checkPasswordChange("old", "a")).toBeNull();
   });
 });
