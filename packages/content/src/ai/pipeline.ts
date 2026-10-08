@@ -1089,8 +1089,11 @@ export async function runGenerateImage(
   const route = deps.resolveImageRoute ? await deps.resolveImageRoute(deps.db) : deps.imageRoute;
   const routed = await imageRouteFor(deps.db, input.clientId, route);
   if (!routed) throw attention("content.jobErrors.noImageProvider");
-  if (routed.status.get(routed.route.primary.provider) === "rejected")
+  const primaryCommercialUse = routed.status.get(routed.route.primary.provider);
+  if (primaryCommercialUse === "rejected")
     throw attention("content.jobErrors.commercialUseRejected");
+  if (primaryCommercialUse !== "verified")
+    throw attention("content.jobErrors.commercialUsePendingVerification");
   const identity = await publishedIdentity(deps.db, actor, input.clientId);
   const common: CommonAi = {
     clientId: input.clientId,

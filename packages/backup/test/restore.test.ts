@@ -51,6 +51,15 @@ describe("restore", () => {
     expect(res.manifest?.media).toBe(true);
   });
 
+  it("refuses a backup whose bytes no longer match its recorded checksum", async () => {
+    const { name } = await make("0001_b");
+    const sidecar = join(backupsDir(dataDir), `${name}.json`);
+    const meta = JSON.parse(readFileSync(sidecar, "utf8")) as { sha256: string };
+    expect(meta.sha256).toMatch(/^[0-9a-f]{64}$/);
+    writeFileSync(sidecar, JSON.stringify({ ...meta, sha256: "0".repeat(64) }));
+    expect((await inspectBackup(dataDir, name, shipped)).problems).toEqual(["checksum_mismatch"]);
+  });
+
   it("refuses a backup from a newer version and an unreadable file", async () => {
     const { name } = await make("0009_future");
     expect((await inspectBackup(dataDir, name, shipped)).problems).toEqual(["newer_version"]);

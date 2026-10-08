@@ -6,10 +6,12 @@
  * dump cannot be read.
  */
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { createReadStream, existsSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
+import { pipeline } from "node:stream/promises";
 
 export const BACKUP_FORMAT = 1;
 export const backupKinds = [
@@ -87,6 +89,13 @@ export function pgDumpTo(databaseUrl: string): (file: string) => Promise<void> {
     runTool("pg_dump", ["--clean", "--if-exists", "--no-owner", "--file", file, databaseUrl]);
 }
 
+/** SHA-256 of a file, streamed so a multi-gigabyte archive never loads into memory. */
+export async function fileSha256(path: string): Promise<string> {
+  const hash = createHash("sha256");
+  await pipeline(createReadStream(path), hash);
+  return hash.digest("hex");
+}
+
 function expiry(kind: BackupKind, createdAt: Date): Date | null {
   return kind === "nightly"
     ? new Date(createdAt.getTime() + NIGHTLY_RETENTION_DAYS * 86_400_000)
@@ -144,7 +153,8 @@ export async function createBackupArchive(opts: CreateBackupOptions): Promise<Ba
     await rm(work, { recursive: true, force: true });
   }
   const sizeBytes = (await stat(file)).size;
-  await writeFile(`${file}.json`, JSON.stringify({ ...manifest, sizeBytes }, null, 2));
+  const sha256 = await fileSha256(file);
+  await writeFile(`${file}.json`, JSON.stringify({ ...manifest, sizeBytes, sha256 }, null, 2));
   return {
     name,
     sizeBytes,

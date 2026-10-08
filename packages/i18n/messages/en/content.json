@@ -94,6 +94,7 @@
     "imageSlotNotFound": "Image slot not found in the slide",
     "noImageProvider": "No image provider configured",
     "commercialUseRejected": "Commercial use of the image provider was rejected: choose another provider in settings",
+    "commercialUsePendingVerification": "Image generation isn't available yet: the Product Owner is still verifying this provider's commercial terms",
     "slideGone": "The slide no longer exists",
     "layoutNotInTemplate": "The slide's layout is not in the template",
     "versionNotFound": "Carousel version not found",
