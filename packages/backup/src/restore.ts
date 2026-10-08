@@ -4,7 +4,7 @@
  * the jobs table is replaced too, progress is kept in `data/backups/restore-status.json`.
  */
 import { createWriteStream, existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
@@ -18,8 +18,32 @@ import {
   type BackupFile,
   type BackupManifest,
 } from "./archive";
+import { assertPlainTar, extractBackupArchive, UnsafeArchiveError } from "./safe-tar";
 
-export type RestoreProblem = "unreadable" | "format" | "newer_version" | "checksum_mismatch";
+export type RestoreProblem =
+  | "unreadable"
+  | "format"
+  | "newer_version"
+  | "checksum_mismatch"
+  | "unsafe";
+
+/** True when the checksum recorded at creation/upload matches the file (or none was recorded). */
+export async function checksumMatches(file: string): Promise<boolean> {
+  let expected: string | undefined;
+  try {
+    expected = (JSON.parse(await readFile(`${file}.json`, "utf8")) as { sha256?: string }).sha256;
+  } catch {
+    return true;
+  }
+  return !expected || (await fileSha256(file)) === expected;
+}
+
+export class BackupChecksumError extends Error {
+  constructor() {
+    super("The backup does not match its checksum: it may be damaged or tampered with");
+    this.name = "BackupChecksumError";
+  }
+}
 
 export interface BackupInspection {
   name: string;
@@ -43,23 +67,16 @@ export async function inspectBackup(
   try {
     let manifest: BackupManifest;
     try {
-      await runTool("tar", ["-xzf", file, "-C", work, "manifest.json"]);
+      await extractBackupArchive(file, work, ["manifest.json"]);
       manifest = JSON.parse(await readFile(join(work, "manifest.json"), "utf8")) as BackupManifest;
-    } catch {
-      return { name, manifest: null, problems: ["unreadable"], migrationsToApply: 0 };
+    } catch (err) {
+      const problem = err instanceof UnsafeArchiveError ? "unsafe" : "unreadable";
+      return { name, manifest: null, problems: [problem], migrationsToApply: 0 };
     }
     const problems: RestoreProblem[] = [];
     if (manifest.format !== BACKUP_FORMAT) problems.push("format");
     // Sidecar written at creation/upload time; archives from before this check have none.
-    let expectedSha256: string | undefined;
-    try {
-      const sidecar = JSON.parse(await readFile(`${file}.json`, "utf8")) as { sha256?: string };
-      expectedSha256 = sidecar.sha256;
-    } catch {
-      expectedSha256 = undefined;
-    }
-    if (expectedSha256 && (await fileSha256(file)) !== expectedSha256)
-      problems.push("checksum_mismatch");
+    if (!(await checksumMatches(file))) problems.push("checksum_mismatch");
     const index = manifest.lastMigration
       ? shipped.findIndex((m) => m.tag === manifest.lastMigration)
       : -1;
@@ -84,9 +101,11 @@ export async function restoreArchive(opts: {
   load: (sqlFile: string) => Promise<void>;
 }): Promise<{ media: boolean }> {
   const file = backupPath(opts.dataDir, opts.name);
+  // Before anything is read: the bytes must be the ones recorded when the backup was made.
+  if (!(await checksumMatches(file))) throw new BackupChecksumError();
   const work = await mkdtemp(join(tmpdir(), "forgecy-restore-"));
   try {
-    await runTool("tar", ["-xzf", file, "-C", work]);
+    await extractBackupArchive(file, work);
     const manifest = JSON.parse(
       await readFile(join(work, "manifest.json"), "utf8"),
     ) as BackupManifest;
@@ -98,7 +117,8 @@ export async function restoreArchive(opts: {
     const media = manifest.media && existsSync(extracted);
     if (media) {
       await mkdir(mediaDir, { recursive: true });
-      await runTool("cp", ["-a", `${extracted}/.`, mediaDir]);
+      // Plain files and folders only (checked above): nothing to dereference or preserve.
+      await cp(extracted, mediaDir, { recursive: true, force: true });
     }
     return { media };
   } finally {
@@ -191,7 +211,9 @@ export async function saveUploadedBackup(
     await pipeline(body, createWriteStream(partial));
     let manifest: BackupManifest;
     try {
-      await runTool("tar", ["-xzf", partial, "-C", work, "manifest.json"]);
+      // Uploads are the hostile vector: refuse links and special files up front.
+      await assertPlainTar(partial);
+      await extractBackupArchive(partial, work, ["manifest.json"]);
       manifest = JSON.parse(await readFile(join(work, "manifest.json"), "utf8")) as BackupManifest;
     } catch {
       throw new BackupInvalidError();

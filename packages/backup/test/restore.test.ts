@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  BackupChecksumError,
   BackupInvalidError,
   backupsDir,
   createBackupArchive,
@@ -106,6 +107,25 @@ describe("restore", () => {
     });
     expect(res.media).toBe(true);
     expect(loaded).toEqual(["select 1;\n"]);
+    expect(readFileSync(join(mediaDir, "system", "a.txt"), "utf8")).toBe("before");
+  });
+
+  it("refuses to restore when the archive no longer matches its checksum", async () => {
+    const { name } = await make("0002_c");
+    const sidecar = join(backupsDir(dataDir), `${name}.json`);
+    const meta = JSON.parse(readFileSync(sidecar, "utf8")) as Record<string, unknown>;
+    writeFileSync(sidecar, JSON.stringify({ ...meta, sha256: "0".repeat(64) }));
+    const loaded: string[] = [];
+    await expect(
+      restoreArchive({ dataDir, mediaDir, name, load: async (f) => void loaded.push(f) }),
+    ).rejects.toBeInstanceOf(BackupChecksumError);
+    expect(loaded).toEqual([]);
+  });
+
+  it("copies media without following or keeping links", async () => {
+    const { name } = await make("0002_c");
+    writeFileSync(join(mediaDir, "system", "a.txt"), "after");
+    await restoreArchive({ dataDir, mediaDir, name, load: async () => undefined });
     expect(readFileSync(join(mediaDir, "system", "a.txt"), "utf8")).toBe("before");
   });
 

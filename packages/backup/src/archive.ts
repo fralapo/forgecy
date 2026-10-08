@@ -65,9 +65,12 @@ export function backupPath(dataDir: string, name: string): string {
 }
 
 /** Runs a command; stderr is kept for the error, with credentials in URLs masked. */
-export function runTool(cmd: string, args: string[]): Promise<void> {
+export function runTool(cmd: string, args: string[], env?: Record<string, string>): Promise<void> {
   return new Promise((resolvePromise, reject) => {
-    const child = spawn(cmd, args, { stdio: ["ignore", "ignore", "pipe"] });
+    const child = spawn(cmd, args, {
+      stdio: ["ignore", "ignore", "pipe"],
+      ...(env ? { env: { ...process.env, ...env } } : {}),
+    });
     let stderr = "";
     child.stderr.on("data", (d: Buffer) => {
       stderr = (stderr + d.toString()).slice(-2000);
