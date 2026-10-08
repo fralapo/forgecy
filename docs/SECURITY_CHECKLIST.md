@@ -8,7 +8,8 @@ backup over the running install).
 
 ## 1. Malicious URL and redirect tests (crawler: Prospect audits, Brand Identity website source)
 
-The crawler (`packages/audit/src/url.ts`, used by both `packages/audit` and
+The crawler guard (`packages/core/src/net-guard.ts`, re-exported by
+`packages/audit/src/url.ts` and used by both `packages/audit` and
 `packages/brand`) refuses to fetch a private or loopback address, and pins
 DNS resolution to the address it validated so a rebinding name server
 cannot swap in a private address between the check and the real
@@ -25,6 +26,13 @@ confirm by hand against a real target, not just the unit tests in
       then repoint the record to `127.0.0.1` before the scan's second
       request. The scan must still fail safely (this is what the pinned
       fetch and Chromium `--host-resolver-rules` pinning exist for).
+- [ ] Submit `http://[::ffff:a9fe:a9fe]/`, `http://[64:ff9b::a9fe:a9fe]/` and
+      `http://[2002:a9fe:a9fe::1]/` (hex-mapped, NAT64 and 6to4 forms of the
+      metadata address). Each must be refused like the dotted forms above.
+- [ ] Serve a page whose script runs `fetch("http://192.168.1.1/")` and an
+      `<img src="http://169.254.169.254/">`. Neither request may leave the
+      machine (the browser logs `blockedbyclient`); a `Sitemap:` line pointing
+      at another host or a private address must not be fetched.
 - [ ] With `FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS=true` set (intranet use),
       confirm the same requests now succeed — the escape hatch is explicit
       and off by default.
