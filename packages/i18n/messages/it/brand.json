@@ -576,6 +576,9 @@
     "size": "{unit, select, mb {{value} MB} other {{value} KB}}",
     "partsRead": "{count, plural, one {# parte letta} other {# parti lette}}",
     "readAgain": "Rileggi",
+    "runScan": "Esegui scan",
+    "scanAgain": "Esegui di nuovo lo scan",
+    "notScannedYet": "Il sito di questo cliente non è ancora stato scansionato. Esegui uno scan per estrarre automaticamente informazioni su brand, prodotti e contatti.",
     "remove": "Rimuovi",
     "removeConfirm": "Rimuovere la fonte? Le proposte in attesa che la citano diventano sostituite. Il file e lo storico vengono conservati.",
     "importTitle": "Importa il brand book",
@@ -598,7 +601,7 @@
       "title": "Titolo",
       "url": "Indirizzo",
       "note": "Nota",
-      "noteHint": "La lettura automatica dei siti arriva con l’Audit: per ora l’indirizzo resta come riferimento e la nota come testo citabile.",
+      "noteHint": "Un link a un sito viene scansionato automaticamente. Per ogni altro link, l’indirizzo resta come riferimento e la nota come testo citabile.",
       "added": "Fonte aggiunta.",
       "submit": "Aggiungi la fonte",
       "urlPlaceholder": "https://"
@@ -765,7 +768,9 @@
       "aiOff": "Funzioni AI disattivate per questo cliente",
       "noText": "Nessun testo da interpretare",
       "aiNotRun": "Interpretazione AI non eseguita: {message}",
-      "aiFailed": "Interpretazione AI non riuscita"
+      "aiFailed": "Interpretazione AI non riuscita",
+      "crawlPages": "{count, plural, one {# pagina letta} other {# pagine lette}} dal sito",
+      "crawlSkipped": "{count, plural, one {# pagina saltata} other {# pagine saltate}}"
     },
     "warnings": {
       "firstPages": "Sono state lette solo le prime {max} pagine",

@@ -576,6 +576,9 @@
     "size": "{unit, select, mb {{value} MB} other {{value} KB}}",
     "partsRead": "{count, plural, one {# part read} other {# parts read}}",
     "readAgain": "Read again",
+    "runScan": "Run scan",
+    "scanAgain": "Scan again",
+    "notScannedYet": "This client's website hasn't been scanned yet. Run a scan to pull brand, product and contact details from it automatically.",
     "remove": "Remove",
     "removeConfirm": "Remove the source? Pending proposals that cite it become superseded. The file and the history are kept.",
     "importTitle": "Import brand book",
@@ -598,7 +601,7 @@
       "title": "Title",
       "url": "Address",
       "note": "Note",
-      "noteHint": "Automatic reading of websites comes with the Audit: for now the address is kept as a reference and the note as citable text.",
+      "noteHint": "A website link is scanned automatically. For any other link, the address is kept as a reference and the note as citable text.",
       "added": "Source added.",
       "submit": "Add source",
       "urlPlaceholder": "https://"
@@ -765,7 +768,9 @@
       "aiOff": "AI features turned off for this client",
       "noText": "No text to interpret",
       "aiNotRun": "AI interpretation not run: {message}",
-      "aiFailed": "AI interpretation failed"
+      "aiFailed": "AI interpretation failed",
+      "crawlPages": "{count, plural, one {# page read} other {# pages read}} from the site",
+      "crawlSkipped": "{count, plural, one {# page skipped} other {# pages skipped}}"
     },
     "warnings": {
       "firstPages": "Only the first {max} pages were read",

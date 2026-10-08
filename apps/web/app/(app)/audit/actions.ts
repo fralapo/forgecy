@@ -56,6 +56,7 @@ import {
   type ProspectInput,
   type TablePreview,
 } from "@forgecy/audit";
+import { brandCrawlWebsiteJob, findOrCreateWebsiteSource } from "@forgecy/brand";
 import type {
   AiPolicy,
   ComparisonOutcome,
@@ -64,8 +65,12 @@ import type {
   ReportVariant,
   SocialChannel,
 } from "@forgecy/core";
+import { clients, eq, getDb } from "@forgecy/db";
+import { enqueueJob } from "@forgecy/jobs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
+import { getQueues } from "@/lib/queues";
 import { requireUser, type CurrentUser } from "@/lib/session";
 import { auditDeps, readDeps, toActionError, type ActionResult } from "./_lib/server";
 import type { AuditDeps } from "@forgecy/audit";
@@ -87,8 +92,31 @@ async function act<T>(
 
 // ---------------------------------------------------------------- Prospects
 
+async function crawlWebsite(
+  actor: CurrentUser["actor"],
+  userId: string,
+  clientId: string,
+  websiteUrl: string,
+) {
+  const db = getDb();
+  const source = await findOrCreateWebsiteSource(db, actor, { clientId, websiteUrl });
+  await enqueueJob(db, await getQueues(), {
+    kind: brandCrawlWebsiteJob,
+    payload: { clientId, sourceId: source.id, requestedBy: userId, language: await getLocale() },
+    clientId,
+    entity: "brand_source",
+    entityId: source.id,
+    createdBy: userId,
+  });
+}
+
 export async function createProspectAction(input: ProspectInput) {
-  return act((u, d) => createProspect(d, u.actor, input), { queues: false });
+  const result = await act((u, d) => createProspect(d, u.actor, input), { queues: false });
+  if (result.ok && result.data && input.websiteUrl) {
+    const user = await requireUser();
+    await crawlWebsite(user.actor, user.id, result.data.id, input.websiteUrl);
+  }
+  return result;
 }
 
 export async function checkDuplicatesAction(input: {
@@ -105,7 +133,18 @@ export async function updateProspectAction(
   input: Omit<ProspectInput, "aiPolicy">,
   rev: number,
 ) {
-  return act((u, d) => updateProspect(d, u.actor, clientId, input, rev), { queues: false });
+  const before = await readDeps().db.query.clients.findFirst({
+    where: eq(clients.id, clientId),
+    columns: { websiteUrl: true },
+  });
+  const result = await act((u, d) => updateProspect(d, u.actor, clientId, input, rev), {
+    queues: false,
+  });
+  if (result.ok && input.websiteUrl && input.websiteUrl !== before?.websiteUrl) {
+    const user = await requireUser();
+    await crawlWebsite(user.actor, user.id, clientId, input.websiteUrl);
+  }
+  return result;
 }
 
 export async function setPolicyAction(clientId: string, policy: AiPolicy) {

@@ -5,7 +5,12 @@ import { env } from "@/lib/env";
 import { getFormat, getRefText } from "@/lib/i18n";
 import { ActionButton } from "../../_components/action-button";
 import { LinkSourceForm, UploadSourceForm } from "../../_components/source-forms";
-import { importSourceAction, removeSourceAction } from "../../actions";
+import {
+  crawlSourceAction,
+  importSourceAction,
+  removeSourceAction,
+  scanWebsiteAction,
+} from "../../actions";
 import { sourceStatusVariant } from "../../_lib/labels";
 import { loadBrand, sourcesFor } from "../../_lib/server";
 
@@ -57,9 +62,27 @@ export default async function SourcesPage({
     ),
   );
   const noAi = client.aiPolicy === "no_ai";
+  const hasWebsiteSource = sources.some((s) => s.kind === "website");
+  const showScanBanner = Boolean(client.websiteUrl) && !hasWebsiteSource;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_24rem]">
+      {showScanBanner ? (
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-6 xl:col-span-2">
+          <p className="text-body-sm text-fg">{t("sources.notScannedYet")}</p>
+          <ActionButton
+            variant="primary"
+            size="sm"
+            action={scanWebsiteAction.bind(null, {
+              slug: client.slug,
+              clientId: client.id,
+              websiteUrl: client.websiteUrl!,
+            })}
+          >
+            {t("sources.runScan")}
+          </ActionButton>
+        </Card>
+      ) : null}
       <Card className="overflow-hidden p-0">
         {sources.length === 0 ? (
           <p className="p-6 text-body-md text-fg-muted">{t("sources.empty")}</p>
@@ -130,6 +153,19 @@ export default async function SourcesPage({
                             })}
                           >
                             {t("sources.readAgain")}
+                          </ActionButton>
+                        ) : null}
+                        {s.kind === "website" && s.status !== "extracting" ? (
+                          <ActionButton
+                            variant="secondary"
+                            size="sm"
+                            action={crawlSourceAction.bind(null, {
+                              slug: client.slug,
+                              clientId: client.id,
+                              sourceId: s.id,
+                            })}
+                          >
+                            {s.status === "pending" ? t("sources.runScan") : t("sources.scanAgain")}
                           </ActionButton>
                         ) : null}
                         <ActionButton

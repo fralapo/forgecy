@@ -14,8 +14,9 @@ import { loadEnv } from "@forgecy/core";
 import { createStorageFromEnv, type StorageDriver } from "@forgecy/files";
 import { handle, type JobHandlers } from "@forgecy/jobs";
 import type { Database } from "@forgecy/db";
-import { brandImportSourceJob } from "./jobs";
+import { brandCrawlWebsiteJob, brandImportSourceJob } from "./jobs";
 import { runSourceImport } from "./import/run";
+import { runWebsiteCrawl } from "./crawl";
 
 interface Deps {
   storage: StorageDriver;
@@ -50,6 +51,21 @@ export const brandHandlers: JobHandlers = {
   ...handle(brandImportSourceJob, async (payload, ctx) => {
     const d = await depsFor(ctx.db, ctx.logger);
     const result = await runSourceImport(
+      { db: ctx.db, storage: d.storage, ai: d.ai },
+      {
+        jobId: ctx.jobId,
+        attempt: ctx.attempt,
+        maxAttempts: ctx.maxAttempts,
+        requestedBy: payload.requestedBy ?? null,
+        progress: ctx.progress,
+      },
+      { clientId: payload.clientId, sourceId: payload.sourceId, language: payload.language },
+    );
+    return { ...result };
+  }),
+  ...handle(brandCrawlWebsiteJob, async (payload, ctx) => {
+    const d = await depsFor(ctx.db, ctx.logger);
+    const result = await runWebsiteCrawl(
       { db: ctx.db, storage: d.storage, ai: d.ai },
       {
         jobId: ctx.jobId,
