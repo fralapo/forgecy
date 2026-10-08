@@ -1,5 +1,7 @@
+import { parseEnv } from "node:util";
 import { describe, expect, it } from "vitest";
 import { checkSecrets, emptyKeys, fillEnv, generateSecrets } from "../lib/secrets";
+import type { GeneratedSecrets } from "../lib/secrets";
 import { read } from "./helpers";
 
 const good = { POSTGRES_PASSWORD: "Zr3-9_kLmQ.x7Tt", BETTER_AUTH_SECRET: "s".repeat(32) };
@@ -9,10 +11,11 @@ describe("checkSecrets", () => {
     expect(checkSecrets(good, { existingDatabase: false })).toEqual({ errors: [], warnings: [] });
   });
 
-  it("refuses an empty or missing password", () => {
+  it("refuses an empty or missing password and points at init --fill, not at a refusal", () => {
     for (const POSTGRES_PASSWORD of ["", undefined]) {
       const { errors } = checkSecrets({ ...good, POSTGRES_PASSWORD }, { existingDatabase: false });
       expect(errors.join()).toMatch(/POSTGRES_PASSWORD is empty/);
+      expect(errors.join()).toContain("pnpm forgecy init --fill");
     }
   });
 
@@ -28,6 +31,10 @@ describe("checkSecrets", () => {
     (password) => {
       const r = checkSecrets({ ...good, POSTGRES_PASSWORD: password }, { existingDatabase: false });
       expect(r.errors.join()).toMatch(/guessable/);
+      // init --fill never replaces a set value: the message must say to edit by hand.
+      expect(r.errors.join()).toMatch(/by hand.*openssl rand -hex 24.*DATABASE_URL/s);
+      expect(r.errors.join()).toContain("POSTGRES_PASSWORD=forgecy");
+      expect(r.errors.join()).not.toContain("init --fill");
     },
   );
 
@@ -37,24 +44,48 @@ describe("checkSecrets", () => {
     expect(r.warnings.join()).toMatch(/guessable/);
   });
 
-  it.each(["p@ss", "a:b", "a/b", "a b", "100%", "a$b", "a#b", "a'b", 'a"b'])(
-    "refuses %j, which would break the DATABASE_URL or the .env parsing",
-    (password) => {
-      const r = checkSecrets({ ...good, POSTGRES_PASSWORD: password }, { existingDatabase: false });
-      expect(r.errors.join()).toMatch(/letters, digits/);
-    },
-  );
+  it.each([
+    "p@ss",
+    "a:b",
+    "a/b",
+    "a b",
+    "a\tb",
+    "100%",
+    "a$b",
+    "a#b",
+    "a'b",
+    'a"b',
+    "a\\b",
+    "a`b",
+    "a?b",
+    "a[b]",
+    "pässword",
+  ])("refuses %j, which would break the DATABASE_URL or the .env parsing", (password) => {
+    for (const existingDatabase of [false, true]) {
+      const r = checkSecrets({ ...good, POSTGRES_PASSWORD: password }, { existingDatabase });
+      expect(r.errors.join()).toMatch(/must not contain/);
+    }
+  });
+
+  it.each([
+    "Zm9vYmFy+MTIzNDU2Nzg5MDEyMzQ1Njc4OTA=", // the tail of `openssl rand -base64 32`
+    "a+b",
+    "a=b==",
+    "0123456789abcdef0123456789abcdef0123456789abcdef", // openssl rand -hex 24
+    "a-b_c.d~e!f*g,h;i&j(k)",
+  ])("accepts %j, which works in DATABASE_URL and .env today", (password) => {
+    const r = checkSecrets({ ...good, POSTGRES_PASSWORD: password }, { existingDatabase: true });
+    expect(r).toEqual({ errors: [], warnings: [] });
+  });
 
   it("requires a 32-character auth secret", () => {
     const r = checkSecrets({ ...good, BETTER_AUTH_SECRET: "short" }, { existingDatabase: false });
-    expect(r.errors.join()).toMatch(/BETTER_AUTH_SECRET/);
+    expect(r.errors.join()).toMatch(/BETTER_AUTH_SECRET.*by hand/);
     const missing = checkSecrets(
       { POSTGRES_PASSWORD: good.POSTGRES_PASSWORD },
-      {
-        existingDatabase: false,
-      },
+      { existingDatabase: false },
     );
-    expect(missing.errors.join()).toMatch(/BETTER_AUTH_SECRET/);
+    expect(missing.errors.join()).toMatch(/BETTER_AUTH_SECRET.*pnpm forgecy init --fill/);
   });
 
   it("never prints a secret value in a message", () => {
@@ -158,5 +189,104 @@ describe("fillEnv", () => {
     expect(filled("postgres://app:custom@db.lan:5432/x")).toBe(
       "postgres://app:custom@db.lan:5432/x",
     );
+  });
+});
+
+// The same parser the CLI and Compose use, so these tests fail if fillEnv and the loaders disagree.
+describe("fillEnv agrees with the .env parsers", () => {
+  const loaded = (text: string) => parseEnv(text);
+  const fill = (text: string, only: Partial<GeneratedSecrets> = generateSecrets()) =>
+    fillEnv(text, only);
+
+  it.each([
+    ["export KEY=real", "export FORGECY_ENCRYPTION_KEY=real"],
+    ["indented", "  FORGECY_ENCRYPTION_KEY=real"],
+    ["tab indented export", "\texport  FORGECY_ENCRYPTION_KEY=real"],
+    ["space before =", "FORGECY_ENCRYPTION_KEY =real"],
+    ["double quoted", 'FORGECY_ENCRYPTION_KEY="real"'],
+    ["single quoted", "FORGECY_ENCRYPTION_KEY='real'"],
+    ["with a trailing comment", "FORGECY_ENCRYPTION_KEY=real # note"],
+  ])("never changes a set value: %s", (_name, line) => {
+    for (const eol of ["\n", "\r\n"]) {
+      const text = `A=1${eol}${line}${eol}POSTGRES_PASSWORD=${eol}`;
+      expect(emptyKeys(text)).not.toContain("FORGECY_ENCRYPTION_KEY");
+      const out = fill(text);
+      expect(loaded(out).FORGECY_ENCRYPTION_KEY).toBe("real");
+      expect(out).toContain(line); // not rewritten, and no second line appended
+      expect(out.match(/FORGECY_ENCRYPTION_KEY/g)).toHaveLength(1);
+      expect(loaded(out).POSTGRES_PASSWORD).toHaveLength(32);
+    }
+  });
+
+  it("fills a key written as `export KEY=` or indented in place, keeping the prefix", () => {
+    const out = fill("A=1\nexport BETTER_AUTH_SECRET=\n  POSTGRES_PASSWORD=\nB=2\n");
+    expect(out).toMatch(
+      /^A=1\nexport BETTER_AUTH_SECRET=\S{43}\n {2}POSTGRES_PASSWORD=\S{32}\nB=2\n/,
+    );
+    expect(out.match(/BETTER_AUTH_SECRET/g)).toHaveLength(1);
+    expect(loaded(out).BETTER_AUTH_SECRET).toHaveLength(43);
+  });
+
+  it("treats `KEY= # note` as empty, fills it and keeps the comment", () => {
+    const text = "BETTER_AUTH_SECRET= # from openssl\nPOSTGRES_PASSWORD=\n";
+    expect(emptyKeys(text)).toContain("BETTER_AUTH_SECRET");
+    const out = fill(text);
+    expect(out).toMatch(/^BETTER_AUTH_SECRET=\S{43} # from openssl\n/);
+    expect(loaded(out).BETTER_AUTH_SECRET).toHaveLength(43);
+  });
+
+  it("treats empty quotes as empty and replaces them", () => {
+    for (const empty of ['""', "''"]) {
+      const out = fill(`BETTER_AUTH_SECRET=${empty}\n`);
+      expect(out).not.toContain(empty);
+      expect(loaded(out).BETTER_AUTH_SECRET).toHaveLength(43);
+    }
+  });
+
+  it("duplicate keys: the last one wins, as in the parsers, and only that one is filled", () => {
+    // Last empty: fill it, leave the earlier line alone.
+    let out = fill("BETTER_AUTH_SECRET=first\nX=1\nBETTER_AUTH_SECRET=\n");
+    expect(out).toMatch(/^BETTER_AUTH_SECRET=first\nX=1\nBETTER_AUTH_SECRET=\S{43}\n/);
+    expect(loaded(out).BETTER_AUTH_SECRET).toHaveLength(43);
+    // Last set: nothing to do, whatever came before.
+    const text = "BETTER_AUTH_SECRET=\nX=1\nBETTER_AUTH_SECRET=last\n";
+    expect(emptyKeys(text)).not.toContain("BETTER_AUTH_SECRET");
+    out = fill(text);
+    expect(out).toBe(
+      text.replace(/\n$/, "\n") +
+        "POSTGRES_PASSWORD=" +
+        loaded(out).POSTGRES_PASSWORD +
+        "\nFORGECY_ENCRYPTION_KEY=" +
+        loaded(out).FORGECY_ENCRYPTION_KEY +
+        "\n",
+    );
+    expect(loaded(out).BETTER_AUTH_SECRET).toBe("last");
+  });
+
+  it("ignores a commented-out key and a similarly named one", () => {
+    const out = fill(
+      "# BETTER_AUTH_SECRET=old\nXBETTER_AUTH_SECRET=other\nBETTER_AUTH_SECRET_2=z\n",
+    );
+    expect(loaded(out).BETTER_AUTH_SECRET).toHaveLength(43);
+    expect(loaded(out).XBETTER_AUTH_SECRET).toBe("other");
+    expect(out).toContain("# BETTER_AUTH_SECRET=old\n");
+  });
+
+  it("keeps CRLF, comments and order when editing in place", () => {
+    const text =
+      "# head\r\nexport POSTGRES_PASSWORD=\r\n\r\n# mid\r\nBETTER_AUTH_SECRET=\r\nZ=9\r\n";
+    const out = fill(text, {
+      POSTGRES_PASSWORD: "p",
+      BETTER_AUTH_SECRET: "b",
+    });
+    expect(out).toBe(
+      "# head\r\nexport POSTGRES_PASSWORD=p\r\n\r\n# mid\r\nBETTER_AUTH_SECRET=b\r\nZ=9\r\n",
+    );
+  });
+
+  it("is a no-op when every secret is set", () => {
+    const text = "export POSTGRES_PASSWORD=a\n BETTER_AUTH_SECRET=b\nFORGECY_ENCRYPTION_KEY='c'\n";
+    expect(emptyKeys(text)).toEqual([]);
+    expect(fill(text)).toBe(text);
   });
 });

@@ -51,14 +51,14 @@ Optional profiles: `--profile dev` (Mailpit on `:8025` for emails), `--profile s
 | `pnpm forgecy upgrade`                 | Backup, new build, migrations, restart                      |
 | `pnpm forgecy health`                  | Checks web and worker                                       |
 
-`start`, `migrate` and `upgrade` stop with a clear message if `POSTGRES_PASSWORD` or `BETTER_AUTH_SECRET` is empty or guessable. `pnpm forgecy init --fill` fills only the secrets that are empty in an existing `.env` and never changes a value that is set.
+`start`, `migrate` and `upgrade` stop with a clear message if `POSTGRES_PASSWORD` or `BETTER_AUTH_SECRET` is empty or guessable. `pnpm forgecy init --fill` fills only the secrets that are empty in an existing `.env`, never changes a value that is set, and never generates a database password when `data/db` or `data/dev-db` already exists (that password lives inside the database). A guessable value such as `change-me` is not "empty": replace it by hand, for example with `openssl rand -hex 24`, and use the same value in `DATABASE_URL`.
 
 ### Upgrading from an install without POSTGRES_PASSWORD
 
 Earlier versions fell back to the password `forgecy` when `.env` had no `POSTGRES_PASSWORD`. Compose no longer does, so the stack will not start until it is set. The password inside an existing database (`data/db`) does not change when you edit `.env`, so:
 
-1. To keep the current database, add `POSTGRES_PASSWORD=forgecy` to `.env` (or the value you had set). `start` and `upgrade` then work, with a warning.
-2. To rotate it (recommended): with the stack running, run `docker compose exec postgres psql -U forgecy -c "ALTER USER forgecy PASSWORD 'NEW'"` with a long random `NEW` (letters, digits and `. _ ~ -` only), put the same value in `.env`, then run `docker compose up -d`.
+1. First, to keep the current database, add `POSTGRES_PASSWORD=forgecy` to `.env` (or the value you had set). Do this before anything else: every `docker compose` command, `exec` included, stops while the variable is missing. `pnpm forgecy start` and `upgrade` then work, with a warning.
+2. Then rotate it (recommended). With the stack running, run `docker compose exec postgres psql -U forgecy`, type `\password forgecy` and enter the new password at the prompt, then `\q`. Typing it at the prompt keeps it out of the shell history. Use a long random one such as the output of `openssl rand -hex 24` (no spaces and none of `/ @ : % ? # [ ] $ ' " \`). Put the same value in `POSTGRES_PASSWORD` in `.env` and run `docker compose up -d` so web and worker restart with it.
 
 ## Development
 
