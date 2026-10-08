@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { can, checkAiPolicy, loadEnv, transitionPermission } from "../src";
+import { can, canViewJob, checkAiPolicy, loadEnv, transitionPermission } from "../src";
 
 describe("permissions", () => {
   const user = { type: "user" as const, id: "u1", isAdmin: false, active: true };
@@ -71,5 +71,35 @@ describe("env", () => {
     expect(() => loadEnv({ DATABASE_URL: "x", BETTER_AUTH_SECRET: "short" })).toThrow(
       /BETTER_AUTH_SECRET/,
     );
+  });
+});
+
+describe("job visibility", () => {
+  const user = { type: "user" as const, id: "u1", isAdmin: false, active: true };
+  const admin = { ...user, isAdmin: true };
+
+  it("lets any active person watch an ordinary job", () => {
+    expect(canViewJob(user, { kind: "content.generate_outline", clientId: "c1" })).toBe(true);
+    expect(canViewJob(user, { kind: "system.ping", clientId: null })).toBe(true);
+  });
+
+  it("keeps backup, restore and client transfer jobs for the Admin", () => {
+    for (const kind of [
+      "system.backup",
+      "system.restore",
+      "client.export",
+      "client.import.verify",
+      "client.import",
+    ]) {
+      expect(canViewJob(user, { kind, clientId: null })).toBe(false);
+      expect(canViewJob(admin, { kind, clientId: null })).toBe(true);
+    }
+  });
+
+  it("denies inactive people and does not trust prototype keys", () => {
+    expect(canViewJob({ ...admin, active: false }, { kind: "system.ping", clientId: null })).toBe(
+      false,
+    );
+    expect(canViewJob(user, { kind: "constructor", clientId: null })).toBe(true);
   });
 });

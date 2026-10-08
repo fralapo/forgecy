@@ -1,4 +1,10 @@
-import { TERMINAL_JOB_STATUSES, type JobStatus, type MessageRef } from "@forgecy/core";
+import {
+  canViewJob,
+  TERMINAL_JOB_STATUSES,
+  type Actor,
+  type JobStatus,
+  type MessageRef,
+} from "@forgecy/core";
 import { eq, jobs, type Database } from "@forgecy/db";
 
 export interface JobEvent {
@@ -19,6 +25,18 @@ export interface SubscribeOptions {
   intervalMs?: number;
   /** Abort when the HTTP client disconnects. */
   signal?: AbortSignal;
+}
+
+/**
+ * Whether `actor` may watch this job. A missing job answers false too, so the route can
+ * return the same 404 for "no such job" and "not yours": an id alone confirms nothing.
+ */
+export async function jobVisibleTo(db: Database, actor: Actor, jobId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ kind: jobs.kind, clientId: jobs.clientId })
+    .from(jobs)
+    .where(eq(jobs.id, jobId));
+  return !!row && canViewJob(actor, row);
 }
 
 /**
