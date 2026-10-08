@@ -10,9 +10,12 @@ export const PASSWORD_MAX = 128;
 
 export type PasswordIssue = "tooShort" | "tooLong";
 
-/** Length is counted in characters (code points), not bytes. */
+/**
+ * Length is counted in UTF-16 units (`string.length`), not bytes or code points: this is exactly what
+ * Better Auth checks on sign-in and what the HTML `maxLength` counts, so a password accepted here can always sign in.
+ */
 export function checkPassword(password: string): PasswordIssue | null {
-  const length = [...password].length;
+  const length = password.length;
   if (length < PASSWORD_MIN) return "tooShort";
   if (length > PASSWORD_MAX) return "tooLong";
   return null;

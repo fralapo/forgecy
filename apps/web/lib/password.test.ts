@@ -19,10 +19,11 @@ describe("checkPassword", () => {
     expect(checkPassword("Zq7!".repeat(32))).toBeNull(); // 128
   });
 
-  it("counts characters, not bytes", () => {
-    expect(checkPassword("ä".repeat(128))).toBeNull(); // 128 characters, 256 bytes
+  it("counts UTF-16 units like Better Auth sign-in and the HTML maxLength, not bytes", () => {
+    expect(checkPassword("ä".repeat(128))).toBeNull(); // 128 units, 256 bytes
     expect(checkPassword("ä".repeat(129))).toBe("tooLong");
-    expect(checkPassword("😀".repeat(128))).toBeNull(); // 128 code points, 256 UTF-16 units
+    expect(checkPassword("😀".repeat(64))).toBeNull(); // 64 code points, 128 units
+    expect(checkPassword("😀".repeat(65))).toBe("tooLong"); // 130 units: sign-in would reject it
   });
 });
 
