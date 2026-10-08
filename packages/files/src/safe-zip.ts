@@ -82,6 +82,7 @@ function readPart(
   entry: yauzl.Entry,
   maxEntryBytes: number,
   budget: { left: number },
+  keep: boolean,
 ): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
     zip.openReadStream(entry, (err, stream) => {
@@ -97,22 +98,18 @@ function readPart(
           reject(new ZipLimitError(size > maxEntryBytes ? "entry_bytes" : "total_bytes"));
           return;
         }
-        chunks.push(chunk);
+        if (keep) chunks.push(chunk);
       });
-      stream.on("end", () => resolve(Buffer.concat(chunks, size)));
+      stream.on("end", () => resolve(keep ? Buffer.concat(chunks, size) : new Uint8Array(0)));
       stream.on("error", reject);
     });
   });
 }
 
-/**
- * The inflated bytes of the parts `select` accepts, by exact entry name. Throws
- * ZipLimitError past a limit, any other error when the ZIP is unreadable or an entry lies
- * about its size.
- */
-export async function readZipParts(
+async function walkParts(
   source: ZipSource,
   opts: ZipPartsLimits & { select: (name: string) => boolean },
+  keep: boolean,
 ): Promise<Map<string, Uint8Array>> {
   const parts = new Map<string, Uint8Array>();
   const budget = { left: opts.maxTotalBytes };
@@ -122,7 +119,32 @@ export async function readZipParts(
     declared += entry.uncompressedSize;
     if (entry.uncompressedSize > opts.maxEntryBytes) throw new ZipLimitError("entry_bytes");
     if (declared > opts.maxTotalBytes) throw new ZipLimitError("total_bytes");
-    parts.set(entry.fileName, await readPart(zip, entry, opts.maxEntryBytes, budget));
+    const data = await readPart(zip, entry, opts.maxEntryBytes, budget, keep);
+    if (keep) parts.set(entry.fileName, data);
   });
   return parts;
+}
+
+/**
+ * The inflated bytes of the parts `select` accepts, by exact entry name. Throws
+ * ZipLimitError past a limit, any other error when the ZIP is unreadable or an entry lies
+ * about its size.
+ */
+export function readZipParts(
+  source: ZipSource,
+  opts: ZipPartsLimits & { select: (name: string) => boolean },
+): Promise<Map<string, Uint8Array>> {
+  return walkParts(source, opts, true);
+}
+
+/**
+ * Same checks and limits as readZipParts (real bytes, shared budget, stream destroyed on
+ * excess) but the inflated bytes are counted and dropped as they stream, so memory stays flat.
+ * For guarding a ZIP that a parser will read again.
+ */
+export async function validateZipParts(
+  source: ZipSource,
+  opts: ZipPartsLimits & { select: (name: string) => boolean },
+): Promise<void> {
+  await walkParts(source, opts, false);
 }

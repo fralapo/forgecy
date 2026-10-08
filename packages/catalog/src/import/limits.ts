@@ -16,8 +16,8 @@ export const IMPORT_LIMITS = {
   pdfBytes: 50 * MB,
   sheetBytes: 50 * MB,
   textBytes: 5 * MB,
-  /** XLSX and DOCX are ZIPs too: uncompressed cap for their parts. */
-  officeUncompressedBytes: 100 * MB,
+  /** XLSX and DOCX are ZIPs too: uncompressed cap for their XML parts (a 10,000-row sheet is a few MB). */
+  officeUncompressedBytes: 50 * MB,
   pdfPages: 500,
   filesPerImport: 2_000,
   /** Characters of PDF text sent to the AI per request. */

@@ -267,6 +267,17 @@ describe("Office file guard", () => {
       code: "IMPORT-TOO-LARGE",
     });
   });
+  it("does not count or inflate non-XML parts such as media", async () => {
+    const withMedia = zipArchive([
+      { name: "word/document.xml", data: "<w:document/>" },
+      { name: "word/media/image1.png", data: Buffer.alloc(60 * MB), declaredSize: 10 },
+    ]);
+    await expect(assertSafeOfficeFile(withMedia, "media.docx")).resolves.toBeUndefined();
+  });
+  it("accepts parts just under the cap", async () => {
+    const big = zipArchive([{ name: "xl/worksheets/sheet1.xml", data: Buffer.alloc(49 * MB) }]);
+    await expect(assertSafeOfficeFile(big, "big.xlsx")).resolves.toBeUndefined();
+  });
   it("refuses a file that is not a ZIP", async () => {
     await expect(assertSafeOfficeFile(Buffer.from("nope"), "x.xlsx")).rejects.toMatchObject({
       code: "IMPORT-INVALID",

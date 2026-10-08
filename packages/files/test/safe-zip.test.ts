@@ -1,6 +1,6 @@
 import { overlappingZip, zipArchive } from "@forgecy/core/testing/archives";
 import { describe, expect, it } from "vitest";
-import { listZipNames, readZipParts, ZipLimitError } from "../src/safe-zip";
+import { listZipNames, readZipParts, validateZipParts, ZipLimitError } from "../src/safe-zip";
 
 const limits = { maxEntries: 100, maxEntryBytes: 1024, maxTotalBytes: 2048 };
 const reason = (p: Promise<unknown>) =>
@@ -100,5 +100,54 @@ describe("listZipNames", () => {
     ]);
     expect(await listZipNames(zip, { maxEntries: 10 })).toEqual(["x.xml", "y.xml"]);
     expect(await reason(listZipNames(zip, { maxEntries: 1 }))).toBe("entries");
+  });
+});
+
+describe("validateZipParts", () => {
+  const all = { ...limits, select: () => true };
+
+  it("accepts a legit archive and keeps nothing", async () => {
+    const zip = zipArchive([
+      { name: "a.xml", data: Buffer.alloc(500, 65) },
+      { name: "b.xml", data: Buffer.alloc(500, 66) },
+    ]);
+    expect(await validateZipParts(zip, all)).toBeUndefined();
+  });
+
+  it("enforces the same limits as readZipParts", async () => {
+    const big = zipArchive([{ name: "a.xml", data: Buffer.alloc(2000) }]);
+    expect(await reason(validateZipParts(big, all))).toBe("entry_bytes");
+    const three = zipArchive(
+      ["a", "b", "c"].map((n) => ({ name: `${n}.xml`, data: Buffer.alloc(1000) })),
+    );
+    expect(await reason(validateZipParts(three, all))).toBe("total_bytes");
+    const many = zipArchive(Array.from({ length: 101 }, (_, i) => ({ name: `f${i}`, data: "x" })));
+    expect(await reason(validateZipParts(many, { ...all, select: () => false }))).toBe("entries");
+  });
+
+  it("still counts real bytes: lying sizes, overlaps and bombs are refused", async () => {
+    const lie = zipArchive([{ name: "a.xml", data: Buffer.alloc(500), declaredSize: 10 }]);
+    expect(await reason(validateZipParts(lie, all))).toBe("error");
+    const overlap = overlappingZip({
+      data: Buffer.alloc(1000, 0x41),
+      entries: 50,
+      store: true,
+      declaredSize: 1000,
+      name: (i) => `p${i}.xml`,
+    });
+    expect(await reason(validateZipParts(overlap, all))).toBe("total_bytes");
+    const bomb = overlappingZip({
+      data: Buffer.alloc(256 * 1024 * 1024),
+      entries: 10,
+      declaredSize: 256 * 1024 * 1024,
+      name: (i) => `p${i}.xml`,
+    });
+    const t = Date.now();
+    expect(
+      await reason(
+        validateZipParts(bomb, { ...all, maxEntryBytes: 1 << 30, maxTotalBytes: 1 << 20 }),
+      ),
+    ).toBe("total_bytes");
+    expect(Date.now() - t).toBeLessThan(2000);
   });
 });

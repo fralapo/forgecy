@@ -1,5 +1,5 @@
 import yauzl from "yauzl";
-import { readZipParts, ZipLimitError } from "@forgecy/files";
+import { validateZipParts, ZipLimitError } from "@forgecy/files";
 import { ImportError, importError } from "../import/errors";
 import type { MessageKey, MessageValues } from "@forgecy/i18n";
 import { IMPORT_LIMITS } from "../import/limits";
@@ -186,14 +186,15 @@ function readEntry(zip: yauzl.ZipFile, entry: yauzl.Entry, cap: number): Promise
 /**
  * Office files (XLSX, DOCX) are ZIPs: before a parser decompresses anything, every part it
  * can ask for (the XML and relationship parts) is inflated once through the shared guarded
- * reader, counting the bytes really produced (never the declared sizes). A ZIP that lies
+ * reader (counted and dropped, never kept), counting the bytes really produced (never the
+ * declared sizes). A ZIP that lies
  * about its sizes, overlaps its entries or is a decompression bomb stops at the budget.
  * Media and other parts are never read by these parsers, so they are not inflated.
  */
 export async function assertSafeOfficeFile(data: Buffer, name: string): Promise<void> {
   const label = { named: "yes", name };
   try {
-    await readZipParts(data, {
+    await validateZipParts(data, {
       select: (part) => /\.(xml|rels)$/i.test(part),
       maxEntries: OFFICE_MAX_ENTRIES,
       maxEntryBytes: IMPORT_LIMITS.officeUncompressedBytes,
