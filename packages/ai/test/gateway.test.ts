@@ -282,6 +282,20 @@ describe("budget", () => {
     expect(warnings.some((w) => w.msg?.includes("budget"))).toBe(true);
   });
 
+  it("an unpriced model still consumes the budget and gets blocked", async () => {
+    const { gateway, anthropic, ledger } = setup({
+      routing: { default: { primary: { provider: "anthropic", model: "claude-future-9" } } },
+    });
+    ledger.setBudget({ scope: "agency" }, month, { limitMicroUsd: 5_000, warnAtPercent: 70 });
+    anthropic.push({ json: { title: "Hello", slides: 3 } });
+    await gateway.generateObject({ ...baseReq, clientPolicy: "external_allowed" });
+    const err = await gateway
+      .generateObject({ ...baseReq, clientPolicy: "external_allowed" })
+      .catch((e) => e);
+    expect(err.code).toBe("budget_exceeded");
+    expect(anthropic.calls).toHaveLength(1);
+  });
+
   it("blocks at 100% with budget_exceeded", async () => {
     const { gateway, anthropic, ledger } = setup();
     ledger.setBudget({ scope: "agency" }, month, { limitMicroUsd: 500_000, warnAtPercent: 70 });
@@ -359,16 +373,18 @@ describe("ledger rows", () => {
     expect(row.costMicroUsd).toBe(14_000);
   });
 
-  it("flags unknown models as unpriced with cost 0", async () => {
-    const { gateway, anthropic, ledger } = setup({
+  it("charges unknown models at the conservative default and flags them", async () => {
+    const { gateway, anthropic, ledger, warnings } = setup({
       routing: { default: { primary: { provider: "anthropic", model: "claude-future-9" } } },
     });
     anthropic.push({ json: { title: "Hello", slides: 3 } });
     await gateway.generateObject({ ...baseReq, clientPolicy: "external_allowed" });
+    // fake provider usage: 100 in / 50 out -> 100*15 + 50*75 = 5_250 micro-USD
     expect(ledger.entries[0]).toMatchObject({
-      costMicroUsd: 0,
+      costMicroUsd: 5_250,
       inputSummary: expect.objectContaining({ unpriced: true }),
     });
+    expect(warnings.some((w) => w.msg?.includes("price table"))).toBe(true);
   });
 });
 

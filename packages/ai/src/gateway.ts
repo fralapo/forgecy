@@ -575,7 +575,7 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
             if (!c.priced)
               logger?.warn(
                 { provider: cand.provider, model: cand.model },
-                "model missing from price table; cost logged as 0",
+                "model missing from price table; charged at the conservative default price",
               );
           };
 

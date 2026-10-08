@@ -42,9 +42,16 @@ export const priceTable: Record<string, ModelPrice> = {
   "google:gemini-3.1-flash-image": { input: 0, output: 0, perImage: 0.04 },
 };
 
+/**
+ * Charged for a model missing from the table. Deliberately above any current list
+ * price: a budget must never fail open because a model id is new or mistyped. Add the
+ * real row to `priceTable` and the cost becomes exact.
+ */
+export const UNPRICED_FALLBACK: ModelPrice = { input: 15, output: 75, perImage: 0.25 };
+
 export interface CostResult {
   costMicroUsd: number;
-  /** False when the model is not in the table (cost recorded as 0, flagged in the log). */
+  /** False when the model is not in the table: cost is estimated with UNPRICED_FALLBACK and flagged in the log. */
   priced: boolean;
 }
 
@@ -56,8 +63,8 @@ export function computeCost(provider: ProviderId, model: string, usage: Usage): 
   if (usage.providerCostUsd !== undefined)
     return { costMicroUsd: Math.round(usage.providerCostUsd * 1_000_000), priced: true };
   if (provider === "local") return { costMicroUsd: 0, priced: true };
-  const price = priceTable[`${provider}:${model}`];
-  if (!price) return { costMicroUsd: 0, priced: false };
+  const listed = priceTable[`${provider}:${model}`];
+  const price = listed ?? UNPRICED_FALLBACK;
   const cacheRead = price.cacheRead ?? price.input * 0.1;
   const cacheWrite = price.cacheWrite ?? price.input * 1.25;
   const micro =
@@ -66,5 +73,5 @@ export function computeCost(provider: ProviderId, model: string, usage: Usage): 
     usage.cacheReadTokens * cacheRead +
     usage.cacheWriteTokens * cacheWrite +
     (usage.images ?? 0) * (price.perImage ?? 0) * 1_000_000;
-  return { costMicroUsd: Math.round(micro), priced: true };
+  return { costMicroUsd: Math.round(micro), priced: listed !== undefined };
 }

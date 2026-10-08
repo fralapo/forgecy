@@ -91,8 +91,10 @@ describe("errors and pricing", () => {
       priced: true,
     });
     expect(computeCost("local", "anything", usage).costMicroUsd).toBe(0);
+    // Not in the table: charged at the conservative default so budgets still bite.
+    // 1M input * $15/M + 1M cache read * ($15 * 10%)/M = $16.5
     expect(computeCost("openai", "unknown-model", usage)).toEqual({
-      costMicroUsd: 0,
+      costMicroUsd: 16_500_000,
       priced: false,
     });
   });
