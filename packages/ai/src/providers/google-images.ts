@@ -1,4 +1,5 @@
 import { AiProviderError, classifyError, kindForStatus } from "../errors";
+import { readJson, readText } from "../http";
 import type { GeneratedImage, ImageGenerationInput, ImageProvider, Usage } from "../types";
 import { createJobStore, nearestAspect } from "./images-common";
 
@@ -69,7 +70,7 @@ export function createGoogleImageProvider(opts: GoogleImageProviderOptions): Ima
       throw classifyError(err, "google");
     }
     if (!res.ok) {
-      const body = await res.text().catch(() => "");
+      const body = await readText(res);
       throw new AiProviderError(
         kindForStatus(res.status),
         `Gemini HTTP ${res.status}: ${body.slice(0, 300)}`,
@@ -79,7 +80,7 @@ export function createGoogleImageProvider(opts: GoogleImageProviderOptions): Ima
         },
       );
     }
-    const json = (await res.json()) as GeminiResponse;
+    const json = (await readJson(res, "google")) as GeminiResponse;
     if (json.promptFeedback?.blockReason) {
       throw new AiProviderError(
         "content_filter",

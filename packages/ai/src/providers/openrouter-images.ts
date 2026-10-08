@@ -1,4 +1,5 @@
 import { AiProviderError, classifyError, kindForStatus } from "../errors";
+import { readJson, readText } from "../http";
 import {
   addUsage,
   type GeneratedImage,
@@ -93,14 +94,14 @@ export function createOpenRouterImageProvider(opts: OpenRouterImageProviderOptio
       throw classifyError(err, "openrouter");
     }
     if (!res.ok) {
-      const body = await res.text().catch(() => "");
+      const body = await readText(res);
       throw new AiProviderError(
         kindForStatus(res.status),
         `OpenRouter HTTP ${res.status}: ${body.slice(0, 300)}`,
         { status: res.status, provider: "openrouter" },
       );
     }
-    const json = (await res.json()) as OpenRouterImageResponse;
+    const json = (await readJson(res, "openrouter")) as OpenRouterImageResponse;
     const choice = json.choices?.[0];
     if (choice?.message?.refusal)
       throw new AiProviderError("refusal", `OpenRouter refused: ${choice.message.refusal}`, {

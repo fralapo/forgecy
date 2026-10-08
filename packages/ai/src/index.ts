@@ -1,5 +1,6 @@
 export * from "./types";
 export * from "./errors";
+export * from "./http";
 export * from "./schema";
 export * from "./summary";
 export * from "./untrusted";
