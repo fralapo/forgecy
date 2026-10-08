@@ -22,7 +22,7 @@ async function open<T>(fallback: T, run: (t: ReturnType<typeof createLoginThrott
 }
 
 export const loginGuard = {
-  retryAfter: (id: string) => open(0, (t) => t.retryAfter(id)),
-  failed: (id: string) => open(0, (t) => t.failed(id)),
+  attempt: (id: string) => open(0, (t) => t.attempt(id)),
+  refund: (id: string) => open(undefined, (t) => t.refund(id)),
   succeeded: (id: string) => open(undefined, (t) => t.succeeded(id)),
 };

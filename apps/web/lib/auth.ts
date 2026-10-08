@@ -21,6 +21,12 @@ function isAllowedDomain(email: string | undefined): boolean {
   return teamMode && env.FORGECY_ALLOWED_EMAIL_DOMAINS.includes(domain);
 }
 
+/** The raw (not yet validated) email/username of a sign-in body; anything that is not a string counts as empty. */
+function typedIdentifier(body: unknown): string {
+  const email = (body as { email?: unknown } | undefined)?.email;
+  return typeof email === "string" ? email : "";
+}
+
 export const auth = betterAuth({
   appName: "Forgecy",
   baseURL: env.FORGECY_BASE_URL,
@@ -101,16 +107,23 @@ export const auth = betterAuth({
     // Same answer for known and unknown usernames: the throttle only sees the typed identifier.
     before: createAuthMiddleware(async (ctx) => {
       if (ctx.path !== "/sign-in/email") return;
-      const email = (ctx.body as { email?: unknown } | undefined)?.email;
-      if ((await loginGuard.retryAfter(String(email ?? ""))) > 0)
-        throw new APIError("TOO_MANY_REQUESTS", { message: "Too many attempts. Try again later." });
+      // Take the ticket before any password is checked: a burst of concurrent requests cannot all pass.
+      const wait = await loginGuard.attempt(typedIdentifier(ctx.body));
+      if (wait > 0)
+        throw new APIError(
+          "TOO_MANY_REQUESTS",
+          { message: "Too many attempts. Try again later." },
+          { "Retry-After": String(wait) },
+        );
     }),
     after: createAuthMiddleware(async (ctx) => {
       if (ctx.path !== "/sign-in/email") return;
-      const id = String((ctx.body as { email?: unknown } | undefined)?.email ?? "");
+      const id = typedIdentifier(ctx.body);
       const returned: unknown = ctx.context.returned;
       if (!isAPIError(returned)) await loginGuard.succeeded(id);
-      else if (returned.statusCode === 401) await loginGuard.failed(id);
+      // A wrong password (401) keeps its ticket; any other error never reached the password check
+      // (e.g. a malformed body), so it must not count against the person.
+      else if (returned.statusCode !== 401) await loginGuard.refund(id);
     }),
   },
   plugins: [
