@@ -33,6 +33,8 @@ confirm by hand against a real target, not just the unit tests in
       `<img src="http://169.254.169.254/">`. Neither request may leave the
       machine (the browser logs `blockedbyclient`); a `Sitemap:` line pointing
       at another host or a private address must not be fetched.
+- [ ] In the same page open `new WebSocket("ws://127.0.0.1:3001/")`. The socket
+      must be closed by the crawler's WebSocket gate, never reach the service.
 - [ ] With `FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS=true` set (intranet use),
       confirm the same requests now succeed — the escape hatch is explicit
       and off by default.

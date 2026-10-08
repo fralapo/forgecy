@@ -115,8 +115,9 @@ export async function createBrowserFetcher(options: {
   hostCheck: HostCheck;
   /** The crawl's starting URL: its host's DNS is pinned for this browser instance,
    * closing the rebinding window between crawlSite's own check and Chromium's real
-   * connection. Omit, or allowPrivate, to launch without pinning (same as before). */
-  rootUrl?: string;
+   * connection. Required so a caller cannot launch unpinned by omission; the only
+   * unpinned launch is an explicit allowPrivate. */
+  rootUrl: string;
   allowPrivate?: boolean;
   executablePath?: string;
 }): Promise<PageFetcher> {
@@ -160,6 +161,13 @@ export async function createBrowserFetcher(options: {
       if (!(await allowBrowserRequest(req.url(), options.hostCheck)))
         return route.abort("blockedbyclient");
       return route.continue();
+    });
+    // ctx.route does not see WebSockets: without this, page script could open
+    // ws://127.0.0.1:... and talk to a local service. Same host check, on the http(s) twin.
+    await ctx.routeWebSocket(/.*/, async (ws) => {
+      if (await allowBrowserRequest(ws.url().replace(/^ws/i, "http"), options.hostCheck))
+        ws.connectToServer();
+      else await ws.close();
     });
     return ctx;
   }
