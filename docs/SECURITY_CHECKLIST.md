@@ -57,7 +57,8 @@ confirm by hand against a real target, not just the unit tests in
       the sizes the archive declares. Limits: catalog import 50 MB per XML
       part and in total, 5 000 entries; brand import 50 MiB per part, 100 MiB
       in total, 10 000 entries; social xlsx upload 20 MB and 5 000 entries.
-      A PDF has its first 400 pages processed and is refused above 2 000.
+      PDFs: the brand importer reads the first 400 pages and refuses a PDF
+      above 2 000; the catalog importer refuses a PDF above 500 pages.
 - [ ] Upload a PDF or image with a corrupted header and confirm the
       pipeline records a warning for that file and continues, instead of
       crashing the import job.
@@ -110,17 +111,24 @@ superuser in the official postgres image, so the dump scanner is a barrier,
 not a sandbox. Running the restore under a least-privilege role is a
 recommended follow-up, not built yet.
 
-### Backup restore (Settings > Backup, `pnpm forgecy restore`)
+### Backup restore (Backup and restore in Settings, `pnpm forgecy restore`)
 
 - [ ] Upload a `.tar.gz` that holds a symlink, a hard link or a device entry:
       the upload is refused and nothing is kept (no `.partial` file, no
       extracted folder).
 - [ ] Put `\! touch /tmp/forgecy-pwned` on its own line in `db.sql` inside an
-      otherwise valid backup and restore it: the restore fails before psql
-      starts, the file is not created, the database is unchanged. Repeat with
-      a `\copy` line and with a bare `BEGIN;`: both are refused too (the
-      scanner in `packages/backup/src/safe-dump.ts` is an allowlist: only
-      pg_dump's own `SET` lines, no `E'...'` strings, no bare `BEGIN`).
+      otherwise valid backup, repack it, and restore it: the restore fails
+      before psql starts with an unsafe-dump message, the file is not
+      created, the database is unchanged. Repeat with a `\copy` line and
+      with a bare `BEGIN;`: both are refused too (the scanner in
+      `packages/backup/src/safe-dump.ts` is an allowlist: only pg_dump's own
+      `SET` lines, no `E'...'` strings, no bare `BEGIN`). How to run it: the
+      checksum is verified before the scanner, so a repacked archive restored
+      from a local path fails with a checksum error and the drill has not
+      run. Either upload the repacked file in Backup and restore (the upload
+      writes a fresh sidecar) and restore it from there, or delete the
+      sidecar `<archive>.json` next to it. A checksum error means the drill
+      was run incorrectly, not that it passed.
 - [ ] False refusals fail closed, and the scanner was not validated against a
       real pg_dump on the Windows dev host. On a populated install take a
       backup (`pnpm forgecy backup`), restore it onto an empty database and
@@ -132,16 +140,19 @@ recommended follow-up, not built yet.
       sidecar that is unreadable or has no `sha256` is refused as well; only
       a missing sidecar passes.
 - [ ] Legacy sidecars written between PRs #38 and #82 have no `sha256` and
-      now block restore from the UI. Workaround: delete that sidecar (only
-      for a file you trust, since this drops the checksum check) or restore
-      with `pnpm forgecy restore`.
-- [ ] Append a statement that fails (for example `ALTER TABLE no_such_table ADD COLUMN x int;`) to the end of
-      the `db.sql` of an otherwise valid backup and restore it: psql runs
-      with `-X --single-transaction -v ON_ERROR_STOP=1`, so the restore stops
-      at the error and the database is exactly as it was before, not half
+      now block restore, from the UI and from `pnpm forgecy restore` alike
+      (both call the same checksum check against `<archive>.json`). The only
+      workaround is to delete that sidecar, and only for a file you trust,
+      since it drops the checksum check.
+- [ ] Append a statement that fails (for example
+      `ALTER TABLE no_such_table ADD COLUMN x int;`) to the end of the
+      `db.sql` of an otherwise valid backup and restore it (same route as the
+      `\!` drill above: upload it, or delete the sidecar): psql runs with
+      `-X --single-transaction -v ON_ERROR_STOP=1`, so the restore stops at
+      the error and the database is exactly as it was before, not half
       loaded.
 
-### Client import (Settings > Import / export)
+### Client import (Import/export in Settings)
 
 - [ ] Import a package whose `contents.client_id` is another client's id and
       one whose `assets.storage_key` names `clients/<other id>/...` (also
@@ -151,9 +162,9 @@ recommended follow-up, not built yet.
       its checksum: the import fails, no client row and no stored file are
       left behind.
 - [ ] Import a zip bomb (a small package that inflates far beyond the
-      package bound), a package with more than 5 000 entries or a JSON file
+      package bound), a package with more than 200 000 entries or a JSON file
       over 64 MiB: each is refused at Verify with a clear message. Limits:
-      64 MiB of JSON per entry, 256 MiB of JSON per package, and a total
+      200 000 entries, 64 MiB of JSON per entry, 256 MiB of JSON per package, and a total
       bound of min(20 GiB, max(1 GiB, 200 x the archive's size)).
 - [ ] Import a package that holds only some areas (for example brand data
       whose examples point at carousel versions): refused as
