@@ -17,6 +17,7 @@ import {
   type ClientPackage,
 } from "./package";
 import { assertPackageData, UnsafePackageError } from "./safety";
+import { reusableTemplates } from "./templates";
 
 export interface PackageVerification {
   problems: ClientImportProblem[];
@@ -80,10 +81,12 @@ async function conflictsOf(
       name: string;
     }[];
     for (const t of rows) {
-      const res = await db.execute<{ version: string }>(
-        sql`select version from templates where key = ${t.key} order by created_at desc`,
+      // The same templates the import will reuse: agency ones and the replaced client's own. A
+      // version held by another client's private template is not listed; the import renames it.
+      const res = await db.execute<{ version: string; client_id: string | null }>(
+        sql`select version, client_id from templates where key = ${t.key} order by created_at desc`,
       );
-      const versions = res.rows.map((r) => r.version);
+      const versions = reusableTemplates(res.rows, existing?.id ?? null).map((r) => r.version);
       if (versions.includes(t.version))
         resolved.push({ kind: "templateReused", key: t.key, version: t.version });
       else if (versions.length)

@@ -7,11 +7,12 @@
 import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
 import {
+  DEFAULT_AI_POLICY_KEY,
   templateConflictId,
   type ClientImportChoices,
   type ClientTransferArea,
 } from "@forgecy/core";
-import { sql, type Database } from "@forgecy/db";
+import { appSettings, eq, sql, type Database } from "@forgecy/db";
 import { contentTypeForKey, isValidKey, type StorageDriver } from "@forgecy/files";
 import { clientTables, type ClientTable } from "./graph";
 import {
@@ -29,7 +30,13 @@ import {
   UnsafePackageError,
   verifiedChunks,
 } from "./safety";
-import { applyImportTrust, type ExistingConsent } from "./trust";
+import { freeImportVersion, reusableTemplates } from "./templates";
+import {
+  applyImportTrust,
+  assertTrustRules,
+  unreferencedExportFiles,
+  type ExistingConsent,
+} from "./trust";
 
 type Row = Record<string, unknown>;
 
@@ -150,6 +157,7 @@ export async function importClientPackage(
   plan: ImportPlan,
 ): Promise<ImportOutcome> {
   const { db, storage } = deps;
+  assertTrustRules(); // a schema change without a decision about it stops the import, not the app
   const pkg = await openClientPackage(file);
   try {
     const manifest = packageManifestSchema.parse(JSON.parse(await pkg.text("manifest.json")));
@@ -203,21 +211,33 @@ export async function importClientPackage(
       slug = plan.choices.client.slug;
     }
     idMap.set(manifest.client.id, clientId);
-    const trust = { clientId, existing };
+    // What an Admin gave new clients; a package can only make this stricter.
+    const [setting] = await db
+      .select({ value: appSettings.value })
+      .from(appSettings)
+      .where(eq(appSettings.key, DEFAULT_AI_POLICY_KEY));
+    const trust = {
+      clientId,
+      existing,
+      defaultAiPolicy: typeof setting?.value === "string" ? setting.value : "external_allowed",
+    };
 
     // Templates already here are reused; a conflict follows the person's choice. Only agency
     // templates and the replaced client's own count: another client's private template is
     // never mapped in.
     const skipTemplates = new Set<string>();
     const versionRewrite = new Map<string, string>();
-    for (const t of JSON.parse(raw.get("templates") ?? "[]") as Row[]) {
+    // Templates are unique by key and version across the installation: one that collides with
+    // another client's private template gets a free version instead of a database error.
+    const renamedTemplates = new Map<string, string>();
+    const packageTemplates = JSON.parse(raw.get("templates") ?? "[]") as Row[];
+    for (const t of packageTemplates) {
       const key = String(t.key);
       const version = String(t.version);
-      const res = await db.execute<{ id: string; version: string }>(
-        sql`select id, version from templates
-            where key = ${key} and (client_id is null or client_id = ${plan.replaceClientId ?? null}::uuid)
-            order by created_at desc`,
+      const all = await db.execute<{ id: string; version: string; client_id: string | null }>(
+        sql`select id, version, client_id from templates where key = ${key} order by created_at desc`,
       );
+      const res = { rows: reusableTemplates(all.rows, plan.replaceClientId ?? null) };
       const exact = res.rows.find((r) => r.version === version);
       const choice = plan.choices.templates[templateConflictId(key, version)];
       if (exact) {
@@ -227,6 +247,13 @@ export async function importClientPackage(
         idMap.set(String(t.id), res.rows[0]!.id);
         skipTemplates.add(res.rows[0]!.id);
         versionRewrite.set(templateConflictId(key, version), res.rows[0]!.version);
+      } else if (all.rows.some((r) => r.version === version)) {
+        const free = freeImportVersion(version, [
+          ...all.rows.map((r) => r.version),
+          ...packageTemplates.filter((o) => o.key === t.key).map((o) => String(o.version)),
+        ]);
+        renamedTemplates.set(idMap.get(String(t.id))!, free);
+        versionRewrite.set(templateConflictId(key, version), free);
       }
     }
     // Ids that exist here after the remap, per table: the package's rows and the templates it reuses.
@@ -249,6 +276,7 @@ export async function importClientPackage(
     };
     const prepared: { table: ClientTable; rows: Row[] }[] = [];
     const deferred: Deferred[] = [];
+    const droppedTexts: string[] = [];
     for (const table of tables) {
       const forward = table.parents.filter(
         (p) => !p.notNull && (position.get(p.target) ?? 0) >= (position.get(table.name) ?? 0),
@@ -263,7 +291,10 @@ export async function importClientPackage(
         if (table.name === "templates" && skipTemplates.has(String(parsed.id))) continue;
         // After the checks, before anything is written: nothing arrives approved (trust.ts).
         const r = applyImportTrust(table.name, parsed, trust);
-        if (!r) continue;
+        if (!r) {
+          droppedTexts.push(JSON.stringify(parsed));
+          continue;
+        }
         // People: matched by email, else emptied; a row that needs a person who is not here is left out.
         let keep = true;
         for (const u of table.userColumns) {
@@ -278,6 +309,8 @@ export async function importClientPackage(
         // A job or an agency template of the other installation means nothing here.
         emptyOutsideRefs(table, r, hereIds);
         if (table.name === "clients") r.slug = slug;
+        if (table.name === "templates" && renamedTemplates.has(String(r.id)))
+          r.version = renamedTemplates.get(String(r.id));
         if (typeof r.template_key === "string" && typeof r.template_version === "string") {
           const to = versionRewrite.get(templateConflictId(r.template_key, r.template_version));
           if (to) r.template_version = to;
@@ -296,9 +329,16 @@ export async function importClientPackage(
     }
 
     // Files first: written under their new keys, removed again if the rows cannot be written.
+    // A file that only a dropped export record pointed at has nothing to belong to.
+    const orphaned = unreferencedExportFiles(
+      manifest.files.map((f) => remapIds(f.key, idMap)),
+      droppedTexts,
+      prepared.map((p) => JSON.stringify(p.rows)),
+    );
+    const files = manifest.files.filter((f) => !orphaned.has(remapIds(f.key, idMap)));
     const written: string[] = [];
     try {
-      await copyPackageFiles({ pkg, storage }, manifest.files, (k) => remapIds(k, idMap), written);
+      await copyPackageFiles({ pkg, storage }, files, (k) => remapIds(k, idMap), written);
 
       await db.transaction(async (tx) => {
         let keepTemplates: string[] = [];
@@ -331,7 +371,7 @@ export async function importClientPackage(
       throw err;
     }
 
-    const counts: ImportOutcome["counts"] = { files: manifest.files.length };
+    const counts: ImportOutcome["counts"] = { files: files.length };
     const rowsOf = (name: string) => prepared.find((p) => p.table.name === name)?.rows.length ?? 0;
     for (const { table, rows } of prepared)
       if (table.area !== "client" && rows.length)

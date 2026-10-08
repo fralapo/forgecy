@@ -6,6 +6,7 @@ import { clientTransferAreas, type Actor } from "@forgecy/core";
 import { zipArchive, type ZipEntrySpec } from "@forgecy/core/testing/archives";
 import {
   and,
+  appSettings,
   assets,
   brandIdentities,
   clientImports,
@@ -27,6 +28,7 @@ import { importClientPackage } from "../src/import";
 import { openClientPackage } from "../src/package";
 import { UnsafePackageError } from "../src/safety";
 import { confirmClientImport } from "../src/service";
+import { stricterAiPolicy } from "../src/trust";
 import { verifyClientPackage } from "../src/verify";
 
 const dbUrl = process.env.FORGECY_TEST_DATABASE_URL;
@@ -46,6 +48,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
     gone?: string;
     imported?: string;
     imported2?: string;
+    imported3?: string;
   } = {};
   const importIds: string[] = [];
 
@@ -153,7 +156,9 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
   afterAll(async () => {
     if (importIds.length)
       await db.delete(clientImports).where(inArray(clientImports.id, importIds));
-    const own = [ids.client, ids.imported, ids.imported2].filter((x): x is string => !!x);
+    const own = [ids.client, ids.imported, ids.imported2, ids.imported3].filter(
+      (x): x is string => !!x,
+    );
     await db.delete(templates).where(eq(templates.key, tplKey));
     if (own.length) await db.delete(clients).where(inArray(clients.id, own));
     await db.delete(users).where(inArray(users.id, [ids.here!, ids.gone!]));
@@ -285,6 +290,39 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
     expect(tpl).toMatchObject({ status: "draft", origin: "agency", publishedAt: null });
     const [client] = await db.select().from(clients).where(eq(clients.id, out.clientId));
     expect(client!.approvedProviders).toEqual([]);
+    // The package asked for external_allowed: a new client never gets more than the installation gives.
+    const [setting] = await db
+      .select({ value: appSettings.value })
+      .from(appSettings)
+      .where(eq(appSettings.key, "ai.default_policy"));
+    expect(client!.aiPolicy).toBe(
+      stricterAiPolicy(
+        "external_allowed",
+        typeof setting?.value === "string" ? setting.value : "external_allowed",
+      ),
+    );
+    expect(client!.sendableAssets).toEqual([
+      "brand_assets",
+      "client_photos",
+      "audit_screenshots",
+      "documents",
+      "brand_texts",
+    ]);
+  });
+
+  it("gives a private template a free version when another client's holds it", async () => {
+    // The first import left a private 1.0.0 of this key with another client.
+    const out = await importClientPackage({ db, storage }, pkgFile, {
+      choices: { client: { mode: "new", slug: `rossi-${suffix}-4` }, templates: {} },
+    });
+    ids.imported3 = out.clientId;
+    const [tpl] = await db
+      .select()
+      .from(templates)
+      .where(and(eq(templates.key, tplKey), eq(templates.clientId, out.clientId)));
+    expect(tpl).toMatchObject({ version: "1.0.0-import-1", status: "draft" });
+    const [content] = await db.select().from(contents).where(eq(contents.clientId, out.clientId));
+    expect(content!.templateVersion).toBe("1.0.0-import-1");
   });
 
   it("blocks a package that points rows at a client that is not in it", async () => {
@@ -292,7 +330,11 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
     expect((await verifyClientPackage(db, hostile, 1)).problems).toEqual(["unsafe"]);
   });
 
-  it("replaces an existing client in place, keeping its id, slug and own templates", async () => {
+  it("replaces an existing client in place, keeping its id, slug, own templates and AI consent", async () => {
+    await db
+      .update(clients)
+      .set({ aiPolicy: "local_only", approvedProviders: [], sendableAssets: ["brand_texts"] })
+      .where(eq(clients.id, ids.client!));
     const out = await importClientPackage({ db, storage }, pkgFile, {
       choices: { client: { mode: "replace" }, templates: {} },
       replaceClientId: ids.client!,
@@ -305,6 +347,12 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       .from(templates)
       .where(and(eq(templates.key, tplKey), eq(templates.version, "0.9.0")));
     expect(old!.clientId).toBe(ids.client);
+    const [kept] = await db.select().from(clients).where(eq(clients.id, ids.client!));
+    expect(kept).toMatchObject({
+      aiPolicy: "local_only",
+      approvedProviders: [],
+      sendableAssets: ["brand_texts"],
+    });
   });
 
   /** The package rewritten entry by entry (the zip builder lets an entry lie about its size). */

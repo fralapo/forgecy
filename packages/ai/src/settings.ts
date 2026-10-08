@@ -1,6 +1,7 @@
 import {
   aiPolicies,
   assertCan,
+  DEFAULT_AI_POLICY_KEY,
   isLocalProvider,
   providerIds,
   sendableAssetTypes,
@@ -34,7 +35,7 @@ import { monthKey } from "./ledger";
  * following months until an Admin changes or removes it (see `createDbLedger`).
  */
 
-export const DEFAULT_POLICY_KEY = "ai.default_policy";
+export const DEFAULT_POLICY_KEY = DEFAULT_AI_POLICY_KEY;
 
 function userId(actor: Actor): string | null {
   return actor.type === "user" ? actor.id : null;

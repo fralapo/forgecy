@@ -10,6 +10,9 @@ export const aiPolicies = [
 ] as const;
 export type AiPolicy = (typeof aiPolicies)[number];
 
+/** app_settings key of the policy new clients start with (set by an Admin; see @forgecy/ai). */
+export const DEFAULT_AI_POLICY_KEY = "ai.default_policy";
+
 export const providerIds = [
   "anthropic",
   "openai",

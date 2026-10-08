@@ -11,6 +11,7 @@
  * status value or a new approval column stops the importer until somebody decides what it
  * means (same idea as SOFT_REFS in graph.ts). Pure: returns a copy; null drops the row.
  */
+import { sendableAssetTypes } from "@forgecy/core";
 import { schema } from "@forgecy/db";
 import { getTableConfig, PgTable } from "drizzle-orm/pg-core";
 import { clientTables } from "./graph";
@@ -25,6 +26,8 @@ export interface TrustContext {
   clientId: string;
   /** The replaced client's current AI consent (replacement only). */
   existing: ExistingConsent | null;
+  /** The installation's AI policy for new clients (what an Admin chose in the AI settings). */
+  defaultAiPolicy: string;
 }
 
 export interface TrustRule {
@@ -46,9 +49,39 @@ export interface TrustRule {
   why?: string;
 }
 
-/** Columns that carry an approval, a decision, a publication or an export, or a state a gate reads. */
+/**
+ * Columns that carry an approval, a decision, an attestation, a publication or an export, or a
+ * state a gate reads, found by name. A new column of this kind without a rule is reported.
+ */
 const GATE =
-  /^(status|decision|verdict|self_approval|ai_policy|approved_providers|sendable_assets|delivered_at)$|approv|publish|export|^decided_|^reviewed_|^reviewer_id$|^submit|^review_/;
+  /^(status|decision|verdict|self_approval|ai_policy|approved_providers|sendable_assets|delivered_at|rights|editor_ids|changes_requested)$|approv|publish|export|accept|confirm|acknowledg|decision|resolved|waiv|share|enabled|(^|_)token(_|$)|(^|_)public(_|$)|(^|_)lock|^decided_|^reviewed_|^reviewer_id$|^submit|^review_/;
+
+/** Whatever its name, an enum with one of these values says that somebody agreed to something. */
+const GATE_VALUES = [
+  "approved",
+  "published",
+  "accepted",
+  "exported",
+  "active",
+  "confirmed",
+  "verified",
+];
+
+const isGate = (c: { name: string; enumValues?: readonly string[] }): boolean =>
+  GATE.test(c.name) || !!c.enumValues?.some((v) => GATE_VALUES.includes(v));
+
+const AI_POLICY_ORDER = ["no_ai", "local_only", "external_restricted", "external_allowed"];
+
+/**
+ * The stricter of two AI policies. A value that is not a policy (a package written by something
+ * else) loses against the installation's own choice.
+ */
+export function stricterAiPolicy(fromPackage: unknown, installationDefault: string): string {
+  const a = AI_POLICY_ORDER.indexOf(String(fromPackage));
+  const b = AI_POLICY_ORDER.indexOf(installationDefault);
+  if (b < 0) return "no_ai"; // not even the installation's value is known: nothing may be sent
+  return a >= 0 && a < b ? AI_POLICY_ORDER[a]! : installationDefault;
+}
 
 const same = (...values: string[]): Record<string, string> =>
   Object.fromEntries(values.map((v) => [v, v]));
@@ -59,6 +92,7 @@ const demote = (all: string[], target: string, ...from: string[]): Record<string
 });
 
 const DECIDED = ["decided_by", "decided_at"];
+const DECISION = [...DECIDED, "decision_note"];
 const PIPELINE = "progress of a collection or import pipeline; nothing is released from it";
 const WORKING =
   "working analysis of the agency; the report or carousel that releases it is a draft";
@@ -86,7 +120,13 @@ export const TRUST_RULES: Record<string, TrustRule> = {
             approved_providers: c.existing.approvedProviders,
             sendable_assets: c.existing.sendableAssets,
           }
-        : { ...r, approved_providers: [] },
+        : {
+            ...r,
+            // A package cannot widen what this installation gives a new client.
+            ai_policy: stricterAiPolicy(r.ai_policy, c.defaultAiPolicy),
+            approved_providers: [],
+            sendable_assets: [...sendableAssetTypes],
+          },
   },
   contents: {
     status: demote(
@@ -106,19 +146,24 @@ export const TRUST_RULES: Record<string, TrustRule> = {
       "submitted_by",
       "lock_expires_at",
     ],
+    // The job that held the lock is not in the package: the importer empties the column.
+    other: ["locked_by_job_id"],
   },
   content_approvals: { drop: true },
   content_exports: { drop: true },
   content_creative_directions: {
     status: { proposed: "proposed", accepted: "proposed", rejected: "stale", stale: "stale" },
-    clear: DECIDED,
+    clear: DECISION,
   },
-  content_pillars: { status: same(...STRATEGY_STATUS), clear: DECIDED },
-  content_rubrics: { status: same(...STRATEGY_STATUS), clear: DECIDED },
-  content_plan_items: { status: same(...STRATEGY_STATUS), clear: DECIDED },
+  content_comments: {
+    clear: ["resolved_by", "resolved_at"],
+  },
+  content_pillars: { status: same(...STRATEGY_STATUS), clear: DECISION },
+  content_rubrics: { status: same(...STRATEGY_STATUS), clear: DECISION },
+  content_plan_items: { status: same(...STRATEGY_STATUS), clear: DECISION },
   content_plans: {
     status: same("proposed", "active", "superseded"),
-    why: "the plan is the agency's own working data; it releases nothing",
+    clear: ["accepted_by", "accepted_at"],
   },
   content_slide_edits: {
     status: same("queued", "applied", "kept", "reverted", "failed"),
@@ -128,7 +173,15 @@ export const TRUST_RULES: Record<string, TrustRule> = {
     status: demote(["draft", "approved", "rejected"], "draft", "approved"),
     // An AI image is a draft until a person here approves it; an upload is the client's own file.
     when: (r) => r.source === "ai",
-    clear: DECIDED,
+    // Nobody here confirmed the right to use an upload commercially; the package says somebody did.
+    clear: [...DECIDED, "rights"],
+    // Nor did anybody here review the provider's terms for an AI image.
+    custom: (r) => {
+      const g = r.generation as { commercialUse?: unknown } | null | undefined;
+      return g && typeof g === "object" && g.commercialUse === "verified"
+        ? { ...r, generation: { ...g, commercialUse: "pending_verification" } }
+        : r;
+    },
   },
   automations: {
     status: demote(["draft", "active", "paused", "failed"], "paused", "active"),
@@ -149,23 +202,37 @@ export const TRUST_RULES: Record<string, TrustRule> = {
     ),
   },
   audits: {
-    status: demote(
-      [
-        "draft",
-        "collecting",
-        "awaiting_competitors",
-        "analyzing",
+    status: {
+      ...demote(
+        [
+          "draft",
+          "collecting",
+          "awaiting_competitors",
+          "analyzing",
+          "in_review",
+          "reviewed",
+          "delivered",
+          "failed",
+          "archived",
+        ],
         "in_review",
         "reviewed",
-        "delivered",
-        "failed",
-        "archived",
-      ],
-      "in_review",
-      "reviewed",
-      "delivered",
-    ),
-    clear: ["reviewed_by", "reviewed_at", "delivered_at"],
+      ),
+      delivered: "archived",
+    },
+    clear: [
+      "reviewed_by",
+      "reviewed_at",
+      "delivered_at",
+      "competitors_confirmed_by",
+      "competitors_confirmed_at",
+    ],
+    // Delivered means it went out to a prospect from the other installation. It cannot become
+    // active again: only one audit per client may be (audits_one_active_uq).
+    custom: (r) =>
+      r.status === "archived" && !r.archived_at
+        ? { ...r, archived_at: new Date().toISOString() }
+        : r,
   },
   audit_reports: {
     status: demote(REPORT_STATUS, "draft", "in_review", "approved", "exported"),
@@ -178,6 +245,7 @@ export const TRUST_RULES: Record<string, TrustRule> = {
       "approved_at",
       "approval_note",
       "exported_at",
+      "changes_requested",
     ],
   },
   audit_report_exports: { drop: true },
@@ -217,7 +285,10 @@ export const TRUST_RULES: Record<string, TrustRule> = {
     ),
     why: PIPELINE,
   },
-  audit_competitors: { status: same("proposed", "confirmed", "removed"), why: WORKING },
+  audit_competitors: {
+    status: same("proposed", "confirmed", "removed"),
+    clear: ["confirmed_by", "confirmed_at"],
+  },
   audit_findings: { status: same("observed", "accepted", "edited", "rejected"), why: WORKING },
   audit_plans: { status: same("observed", "accepted", "edited", "rejected"), why: WORKING },
   templates: {
@@ -252,6 +323,8 @@ export const TRUST_RULES: Record<string, TrustRule> = {
       "published_by",
       "published_at",
     ],
+    // Ids of people of the other installation, and checks somebody there confirmed.
+    set: { editor_ids: [], acknowledged_checks: [] },
     // Archived, so that a person can restore it as a new draft.
     custom: (r) =>
       r.status === "archived" && !r.archived_at
@@ -286,7 +359,7 @@ export const TRUST_RULES: Record<string, TrustRule> = {
       "candidate",
       "approved",
     ),
-    clear: DECIDED,
+    clear: DECISION,
   },
   products: {
     status: same("draft", "proposed", "approved", "rejected", "archived"),
@@ -300,6 +373,11 @@ export const TRUST_RULES: Record<string, TrustRule> = {
   product_import_items: {
     status: same("pending", "accepted", "approved", "merged", "discarded"),
     clear: DECIDED,
+    // Per-field choices a person made on conflicts elsewhere.
+    set: { conflict_decisions: {} },
+  },
+  product_import_files: {
+    clear: ["mapping_confirmed_by", "mapping_confirmed_at"],
   },
   product_imports: {
     status: same(
@@ -348,7 +426,7 @@ export function checkTrustCoverage(
   for (const name of Object.keys(rules))
     if (!known.has(name)) problems.push(`${name}: rule for a table that is not a client table`);
   for (const t of tables) {
-    const gates = t.columns.filter((c) => GATE.test(c.name)).map((c) => c.name);
+    const gates = t.columns.filter(isGate).map((c) => c.name);
     const rule = rules[t.name];
     if (!rule) {
       // A table of exports or approvals is a record of a release even when no column says so.
@@ -398,11 +476,69 @@ export function checkTrustCoverage(
     throw new Error(`client-transfer trust rules are incomplete:\n${problems.join("\n")}`);
 }
 
-checkTrustCoverage(TRUST_RULES, trustTables());
+let checked = false;
+/**
+ * Checks the rules against the real schema, once. The importer calls it before it reads a
+ * package, so a schema change stops imports without taking export or verify down; a unit test
+ * calls `checkTrustCoverage` itself.
+ */
+export function assertTrustRules(): void {
+  if (checked) return;
+  checkTrustCoverage(TRUST_RULES, trustTables());
+  checked = true;
+}
+
+/**
+ * Unique indexes whose predicate reads a status, per client table. A status mapping may move a
+ * row out of such an index but never into it: two rows that were allowed side by side in the
+ * package (one delivered, one reviewed) could otherwise collide once both are mapped to the
+ * same status, and the import would fail on a constraint. A test lists the partial unique
+ * indexes of the schema and fails for one that is in neither this list nor NOT_STATUS_DEPENDENT.
+ */
+export const STATUS_UNIQUE_INDEXES: Record<
+  string,
+  { table: string; inside: (status: string) => boolean }
+> = {
+  audits_one_active_uq: {
+    table: "audits",
+    inside: (s) => s !== "delivered" && s !== "archived",
+  },
+  brand_versions_one_published_uq: {
+    table: "brand_identity_versions",
+    inside: (s) => s === "published",
+  },
+  brand_versions_one_open_uq: {
+    table: "brand_identity_versions",
+    inside: (s) => s === "draft" || s === "in_review",
+  },
+  content_plans_active_uq: { table: "content_plans", inside: (s) => s === "active" },
+};
+
+/** Partial unique indexes and constraints that the status mappings cannot affect. */
+export const NOT_STATUS_DEPENDENT = new Set([
+  "brand_sources_file_uq", // a file hash of a source that is not removed
+  "brand_check_states_uq", // brand_check_issue_states: its rows are not imported
+]);
+
+/**
+ * Package files that only a dropped row (an export record) uses: they would be copied into
+ * storage with nothing pointing at them. `fileKeys` are the keys as they will be stored, the
+ * texts are the rows (as JSON) after the remap.
+ */
+export function unreferencedExportFiles(
+  fileKeys: readonly string[],
+  droppedTexts: readonly string[],
+  keptTexts: readonly string[],
+): Set<string> {
+  const kept = keptTexts.join("\n");
+  return new Set(
+    fileKeys.filter((k) => droppedTexts.some((t) => t.includes(k)) && !kept.includes(k)),
+  );
+}
 
 export function applyImportTrust(table: string, row: Row, ctx: TrustContext): Row | null {
   const rule = TRUST_RULES[table];
-  if (!rule) return row; // no gate column (checked at load)
+  if (!rule) return row; // no gate column (assertTrustRules)
   if (rule.drop) return null;
   let out: Row = { ...row };
   if (rule.status && row.status !== undefined && (!rule.when || rule.when(row))) {

@@ -145,7 +145,7 @@
       "create": "A new client “{name}” is created at /clients/{slug}.",
       "replace": "The current data of {name} ({versions, plural, one {# Brand Identity version} other {# Brand Identity versions}}, {carousels, plural, one {# carousel} other {# carousels}}, {audits, plural, one {# audit} other {# audits}}) will be replaced by the package’s. Before the import Forgecy creates a backup of the database.",
       "templatesDraft": "{count, plural, one {# template is imported as a new version in Draft.} other {# templates are imported as new versions in Draft.}}",
-      "states": "Versions keep their status and history; the published version stays published. Carousels in review go back to Draft.",
+      "states": "Nothing comes back approved. Carousels, reports, audits and Brand Book exports arrive as Drafts that people here review and approve again; approvals and export records are not imported. Brand Identity versions that were approved or published are archived (restore one as a new draft). Templates arrive as Drafts of this client. Automations are paused. AI provider approvals are not imported: a new client gets at most the AI policy of this installation, and a replaced client keeps its own.",
       "typeName": "Type “{name}” to confirm",
       "submit": "Import client",
       "back": "Back",
