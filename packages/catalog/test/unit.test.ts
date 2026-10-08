@@ -14,6 +14,7 @@ import {
   parseProductText,
   parseXlsx,
   productsToCsv,
+  assertSafeOfficeFile,
   readPdfText,
   readZip,
   safeEntryPath,
@@ -27,6 +28,7 @@ import {
 import { csvCell, englishCsvLabels } from "../src/products/csv-export";
 import { fieldDefs } from "../src/products/fields";
 import { LOCALES } from "@forgecy/core";
+import { overlappingZip, zipArchive } from "@forgecy/core/testing/archives";
 import { messagesFor } from "@forgecy/i18n";
 import { makePdf, makeXlsx, makeZip, PNG } from "./fixtures";
 
@@ -224,6 +226,51 @@ describe("ZIP guard", () => {
     expect(res.summary).toBe(
       "ZIP: 1 sheets, 1 images, 1 texts · 1 files ignored: formats not allowed",
     );
+  });
+});
+
+describe("Office file guard", () => {
+  const MB = 1024 * 1024;
+  it("accepts a normal spreadsheet", async () => {
+    const xlsx = await makeXlsx([["Name"], ["Cream"]]);
+    await expect(assertSafeOfficeFile(xlsx, "ok.xlsx")).resolves.toBeUndefined();
+  });
+  it("stops a file whose central directory lies about a part size", async () => {
+    const lying = zipArchive([
+      { name: "xl/sharedStrings.xml", data: Buffer.alloc(64 * MB), declaredSize: 4096 },
+    ]);
+    await expect(assertSafeOfficeFile(lying, "lie.xlsx")).rejects.toMatchObject({
+      code: "IMPORT-INVALID",
+    });
+  });
+  it("stops overlapping stored parts that add up past the cap", async () => {
+    const overlap = overlappingZip({
+      data: Buffer.alloc(MB, 65),
+      entries: 150,
+      store: true,
+      declaredSize: MB,
+      name: (i) => `xl/worksheets/sheet${i}.xml`,
+    });
+    await expect(assertSafeOfficeFile(overlap, "overlap.xlsx")).rejects.toMatchObject({
+      code: "IMPORT-TOO-LARGE",
+    });
+  });
+  it("stops a deflate bomb", async () => {
+    const bomb = zipArchive([{ name: "word/document.xml", data: Buffer.alloc(101 * MB) }]);
+    await expect(assertSafeOfficeFile(bomb, "bomb.docx")).rejects.toMatchObject({
+      code: "IMPORT-TOO-LARGE",
+    });
+  });
+  it("stops a file with too many entries", async () => {
+    const many = zipArchive(Array.from({ length: 5_001 }, (_, i) => ({ name: `f${i}.xml` })));
+    await expect(assertSafeOfficeFile(many, "many.xlsx")).rejects.toMatchObject({
+      code: "IMPORT-TOO-LARGE",
+    });
+  });
+  it("refuses a file that is not a ZIP", async () => {
+    await expect(assertSafeOfficeFile(Buffer.from("nope"), "x.xlsx")).rejects.toMatchObject({
+      code: "IMPORT-INVALID",
+    });
   });
 });
 
