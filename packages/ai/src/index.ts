@@ -2,6 +2,7 @@ export * from "./types";
 export * from "./errors";
 export * from "./schema";
 export * from "./summary";
+export * from "./untrusted";
 export * from "./pricing";
 export * from "./ledger";
 export * from "./settings";
