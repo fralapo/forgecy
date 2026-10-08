@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   templateId: z.string().min(1).max(64),
-  templateVersion: z.string().max(20).optional(),
+  templateVersion: z.string().max(32).optional(),
   slide: slideSchema,
   index: z.number().int().min(0).max(19).default(0),
   total: z.number().int().min(1).max(20).default(1),

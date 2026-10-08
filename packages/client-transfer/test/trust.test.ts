@@ -574,13 +574,11 @@ describe("claims a package makes about itself", () => {
     )!;
     expect(out.options).toEqual({ language: "it" });
   });
-  it("relabels a product image that no product of the package backs as an upload", () => {
-    expect(
-      applyImportTrust("assets", { source: "product", status: "draft", product_id: null }, ctx),
-    ).toMatchObject({ source: "upload", rights: null });
-    expect(
-      applyImportTrust("assets", { source: "product", status: "draft", product_id: "p" }, ctx),
-    ).toMatchObject({ source: "product" });
+  it("makes every product image an upload again, backed by a product row or not", () => {
+    for (const product_id of [null, "p"])
+      expect(
+        applyImportTrust("assets", { source: "product", status: "draft", product_id }, ctx),
+      ).toMatchObject({ source: "upload", rights: null });
     expect(applyImportTrust("assets", { source: "ai", status: "draft" }, ctx)).toMatchObject({
       source: "ai",
     });

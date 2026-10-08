@@ -29,6 +29,30 @@ describe("freeImportVersion", () => {
   it("keeps a version nobody holds", () => {
     expect(freeImportVersion("2.0.0", ["1.0.0"])).toBe("2.0.0");
   });
+  it("does not grow when a renamed version is renamed again", () => {
+    // Imported once (1.2.0 -> 1.2.0-import.1), exported, imported where both names are taken.
+    const first = freeImportVersion("1.2.0", ["1.2.0"]);
+    expect(first).toBe("1.2.0-import.1");
+    const second = freeImportVersion(first, ["1.2.0", first]);
+    expect(second).toBe("1.2.0-import.2");
+    expect(freeImportVersion(second, ["1.2.0", first, second])).toBe("1.2.0-import.3");
+    // The base is kept: a gap below is reused.
+    expect(freeImportVersion("1.2.0-import.5", ["1.2.0-import.5", "1.2.0-import.1"])).toBe(
+      "1.2.0-import.2",
+    );
+  });
+  it("stays within 32 characters (the export and render caps) for realistic numbers", () => {
+    const taken = [
+      "10.10.10",
+      ...Array.from({ length: 998 }, (_, i) => `10.10.10-import.${i + 1}`),
+    ];
+    const out = freeImportVersion("10.10.10", taken);
+    expect(out).toBe("10.10.10-import.999");
+    expect(out.length).toBeLessThanOrEqual(20);
+    expect(
+      freeImportVersion("100.100.100-import.999", ["100.100.100-import.999"]).length,
+    ).toBeLessThanOrEqual(32);
+  });
   it("renames a taken version to a valid semver prerelease", () => {
     expect(freeImportVersion("1.2.0", ["1.2.0"])).toBe("1.2.0-import.1");
     expect(freeImportVersion("1.2.0", ["1.2.0", "1.2.0-import.1"])).toBe("1.2.0-import.2");
@@ -195,6 +219,18 @@ describe("planTemplateImport reserves the names it hands out", () => {
     const finals = finalVersions(plan);
     expect(new Set(finals).size).toBe(finals.length);
     for (const v of finals) expect(["1.0.0", "1.0.0-import.1"]).not.toContain(v);
+  });
+  it("imports a package twice: the second copy takes the next number, not a longer name", () => {
+    const first = planTemplateImport(pkg("1.0.0"), held("1.0.0"), null, {});
+    expect(finalVersions(first)).toEqual(["1.0.0-import.1"]);
+    // Exported again from the client that got it, imported where both names are taken.
+    const second = planTemplateImport(
+      pkg("1.0.0-import.1"),
+      held("1.0.0", "1.0.0-import.1"),
+      null,
+      {},
+    );
+    expect(finalVersions(second)).toEqual(["1.0.0-import.2"]);
   });
   it("reuses what the person chose and what is exactly there", () => {
     const all = new Map([

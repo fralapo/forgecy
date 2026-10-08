@@ -183,10 +183,10 @@ export const TRUST_RULES: Record<string, TrustRule> = {
         g && typeof g === "object" && g.commercialUse === "verified"
           ? { ...r, generation: { ...g, commercialUse: "pending_verification" } }
           : r;
-      // A product photo comes from the client's own catalog and needs no rights check; a
-      // package could label any upload that way. Without a product of the package behind it,
-      // it is an upload (its rights are already cleared).
-      return out.source === "product" && !out.product_id ? { ...out, source: "upload" } : out;
+      // A product photo comes from the client's own catalog and needs no rights check, and a
+      // package can label any upload that way (and bring a dummy product to back the label).
+      // Every one is an upload here, its rights pending; a person can link it to a product.
+      return out.source === "product" ? { ...out, source: "upload" } : out;
     },
   },
   automations: {

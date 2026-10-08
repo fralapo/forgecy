@@ -5,7 +5,7 @@
  * rendered. A new exported book supersedes the client's previous ones. Agents never
  * take part: every step needs a person.
  */
-import { compareVersions } from "@forgecy/carousel/catalog";
+import { compareVersions, templatesVisibleTo } from "@forgecy/carousel/catalog";
 import { loadBrand } from "@forgecy/content";
 import { assertCan, PermissionDeniedError, type Actor, type Locale } from "@forgecy/core";
 import {
@@ -49,18 +49,33 @@ async function requireBook(db: Database, clientId: string, exportId: string) {
   return row;
 }
 
-/** Latest published version of the "Brand Book" template, or null when none is published. */
-export async function publishedBookTemplate(db: Database): Promise<string | null> {
-  const rows = await db
-    .select({ version: templates.version })
-    .from(templates)
-    .where(and(eq(templates.key, BRAND_BOOK_TEMPLATE_KEY), eq(templates.status, "published")));
+/**
+ * The newest of these template versions that `clientId` may use: agency templates and its own.
+ * The render job serves only those (dbTemplateSource), so pinning another client's private
+ * version would make every Brand Book of this client fail with "template missing".
+ */
+export function newestVisibleVersion(
+  rows: readonly { version: string; clientId: string | null }[],
+  clientId: string,
+): string | null {
   return (
-    rows
+    templatesVisibleTo(rows, clientId)
       .map((r) => r.version)
       .sort(compareVersions)
       .at(-1) ?? null
   );
+}
+
+/** Latest published version of the "Brand Book" template the client may use, or null. */
+export async function publishedBookTemplate(
+  db: Database,
+  clientId: string,
+): Promise<string | null> {
+  const rows = await db
+    .select({ version: templates.version, clientId: templates.clientId })
+    .from(templates)
+    .where(and(eq(templates.key, BRAND_BOOK_TEMPLATE_KEY), eq(templates.status, "published")));
+  return newestVisibleVersion(rows, clientId);
 }
 
 /** Sections with nothing to show, per approved version: the form leaves them out. */
@@ -135,7 +150,7 @@ export async function createClientBook(
       ),
     );
   if (!version) throw localizedError("validation", "brand.book.errors.noPublished");
-  const templateVersion = await publishedBookTemplate(db);
+  const templateVersion = await publishedBookTemplate(db, input.clientId);
   if (!templateVersion) throw localizedError("validation", "brand.book.errors.templateMissing");
 
   const row = await db.transaction(async (tx) => {

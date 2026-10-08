@@ -25,13 +25,16 @@ export function reusableTemplates<T extends { client_id: string | null }>(
 /**
  * The version an imported template gets when its own is held by a template that cannot be
  * reused (templates are unique by key and version across the installation): the package's
- * version when it is free, else `<version>-import.<n>`, a valid semver prerelease that sorts
- * just below the release it copies.
+ * version when it is free, else `<base>-import.<n>` with the smallest free n, a valid semver
+ * prerelease that sorts just below the release it copies. A version that is itself an import
+ * name (exported from the client that got it, imported again) keeps its base, so the name
+ * never grows: `1.0.0-import.1` collides into `1.0.0-import.2`, not `1.0.0-import.1-import.1`.
  */
 export function freeImportVersion(version: string, taken: Iterable<string>): string {
   const used = new Set(taken);
   if (!used.has(version)) return version;
-  for (let n = 1; ; n++) if (!used.has(`${version}-import.${n}`)) return `${version}-import.${n}`;
+  const base = version.replace(/-import\.\d+$/, "");
+  for (let n = 1; ; n++) if (!used.has(`${base}-import.${n}`)) return `${base}-import.${n}`;
 }
 
 export type TemplateReuse<T extends TemplateRow = TemplateRow> =
