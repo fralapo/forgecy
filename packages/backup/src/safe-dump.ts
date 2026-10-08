@@ -2,16 +2,19 @@
  * Scans a plain-SQL dump before psql reads it. psql runs any line it lexes as `\command`
  * (`\!` runs a shell command on the worker, `\copy`/`\i` read local files), so a backup
  * that came from elsewhere must not carry one. This follows psql's own lexer: strings,
- * E'' strings, quoted identifiers, $tag$ bodies, nested block comments, line comments and
- * parenthesis depth, so a backslash inside a literal is fine and a backslash anywhere else
- * is refused. It is deliberately stricter than psql where being exact would be fragile
- * (COPY forms, BEGIN ATOMIC, string continuation, settings that change lexing).
- * Server-side `COPY ... PROGRAM` and `COPY ... TO/FROM 'file'` are refused too: the only COPY
- * pg_dump writes is `COPY ... FROM stdin;` at a statement start.
- * Residual: SQL that builds a command at run time (a DO block running EXECUTE, a function
- * body calling COPY or lo_import) or that changes the session encoding through obfuscated
- * dynamic SQL cannot be proven safe by a static scan; see docs/adr/0014. Running the load as
- * a non-superuser database role is the defence for that.
+ * quoted identifiers, $tag$ bodies, nested block comments, line comments and parenthesis
+ * depth, so a backslash inside a literal is fine and a backslash anywhere else is refused.
+ *
+ * The dump is produced by our own pg_dump, so this is an allowlist, deliberately stricter
+ * than psql wherever being exact would be fragile: no E'' / U&'' / N'' strings, no BEGIN
+ * outside quotes (psql stops ending statements at `;` inside CREATE FUNCTION ... BEGIN),
+ * one statement per line, only the exact SET lines pg_dump writes, no ALTER ROLE/DATABASE/
+ * SYSTEM, and only the exact `COPY <identifiers> FROM stdin;` header (any other COPY is a
+ * server-side file or program COPY).
+ * Residual: SQL that builds commands at run time (a DO block running EXECUTE, a function body
+ * calling COPY or lo_import) or changes the session encoding through obfuscated dynamic SQL
+ * cannot be proven safe by a static scan; see docs/adr/0014. The database role the restore
+ * runs as is the defence for that. ON_ERROR_STOP=1 (see psqlArgs) is load-bearing too.
  */
 import { createReadStream } from "node:fs";
 
@@ -28,23 +31,45 @@ export class UnsafeDumpError extends Error {
 type Lex =
   | { k: "n" }
   | { k: "'" }
-  | { k: "e" }
   | { k: '"' }
   | { k: "$"; tag: string }
   | { k: "c"; depth: number }
   | { k: "s" }; // just after a closing quote at the end of a line
 
 const IDENT = /[A-Za-z0-9_$\u0080-\uffff]/;
-const DOLLAR_TAG = /^\$(?:[A-Za-z_\u0080-\uffff][A-Za-z0-9_\u0080-\uffff]*)?\$/;
+const WS = /\s/;
+const isSpace = (ch: string): boolean => {
+  const c = ch.charCodeAt(0);
+  return c === 32 || (c >= 9 && c <= 13) || (c > 127 && WS.test(ch));
+};
+const DOLLAR_TAG = /\$(?:[A-Za-z_\u0080-\uffff][A-Za-z0-9_\u0080-\uffff]*)?\$/y;
 const PG_DUMP_META = /^\\(?:un)?restrict [A-Za-z0-9]+\r?$/;
-const COPY_FROM_STDIN = /^COPY [^;]+ FROM stdin;$/;
-const COPY_AT_START = /^\s*copy\b/i;
-const COPY_AFTER_SEMICOLON = /;\s*copy\b/i;
+/** The only COPY header allowed: identifiers (plain or "quoted"), commas, parentheses, spaces. */
+const COPY_FROM_STDIN = /^COPY [A-Za-z0-9_."(), \u0080-\uffff]+ FROM stdin;\r?$/;
+const COPY_START = /^\s*copy\b/i;
+const SET_START = /^\s*(?:set|reset)\b/i;
+const ALTER_SENSITIVE_START = /^\s*alter(?:\s*$|\s+(?:role|user|group|database|system)\b)/i;
+const BEGIN_WORD = /\bbegin\b/i;
 const SETTING_WORDS = /client_encoding|standard_conforming_strings|set_config/i;
-/** The only lines allowed to mention a setting that changes how psql reads the file. */
-const SETTING_LINES = new Set([
+/** Every SET pg_dump 14-17 writes in its preamble and per table, verbatim. */
+const SET_LINES = new Set([
+  "SET statement_timeout = 0;",
+  "SET lock_timeout = 0;",
+  "SET idle_in_transaction_session_timeout = 0;",
+  "SET transaction_timeout = 0;",
   "SET client_encoding = 'UTF8';",
   "SET standard_conforming_strings = on;",
+  "SET check_function_bodies = false;",
+  "SET xmloption = content;",
+  "SET client_min_messages = warning;",
+  "SET row_security = off;",
+  "SET default_tablespace = '';",
+  "SET default_table_access_method = heap;",
+  "SET default_with_oids = false;",
+]);
+/** The only lines allowed to mention a setting that changes how psql reads the file. */
+const SETTING_LINES = new Set([
+  ...SET_LINES,
   "SELECT pg_catalog.set_config('search_path', '', false);",
 ]);
 
@@ -53,7 +78,6 @@ export class DumpScanner {
   private copy = false;
   private depth = 0;
   private pending = false;
-  private tail = "";
   private n = 0;
 
   private fail(reason: string): never {
@@ -77,8 +101,11 @@ export class DumpScanner {
       this.lex = { k: "n" };
     }
     const pendingAtStart = this.pending;
-    const normalAtStart = this.lex.k === "n";
+    // Index just past the last non-space character: a quote closing there ends the line.
+    let end = line.length;
+    while (end > 0 && isSpace(line[end - 1]!)) end--;
     let normal = "";
+    let ended = false; // a statement already ended with `;` on this line
     for (let i = 0; i < line.length; i++) {
       const ch = line[i]!;
       const nx = line[i + 1];
@@ -89,41 +116,59 @@ export class DumpScanner {
             if (i === 0 && !pendingAtStart && PG_DUMP_META.test(line)) return;
             this.fail("psql meta-command");
           }
-          const dollar =
-            ch === "$" && !(i > 0 && IDENT.test(line[i - 1]!))
-              ? DOLLAR_TAG.exec(line.slice(i))
-              : null;
-          if (ch === "-" && nx === "-") i = line.length;
-          else if (ch === "/" && nx === "*") {
+          if (ch === "-" && nx === "-") {
+            i = line.length;
+            break;
+          }
+          if (ch === "/" && nx === "*") {
             this.lex = { k: "c", depth: 1 };
             i++;
-          } else if (ch === "'") {
+            break;
+          }
+          if (isSpace(ch)) {
+            normal += ch;
+            break;
+          }
+          if (ended) this.fail("more than one statement on a line");
+          if (ch === "'") {
             const p = line[i - 1];
-            const isE = (p === "e" || p === "E") && !(i > 1 && IDENT.test(line[i - 2]!));
-            this.lex = { k: isE ? "e" : "'" };
+            if (p !== undefined && IDENT.test(p)) {
+              // Only a standalone B'' or X'' (bit and hex strings) may touch the quote.
+              const bitOrHex = /[bBxX]/.test(p) && !(i > 1 && IDENT.test(line[i - 2]!));
+              if (!bitOrHex) this.fail("string prefix (E, N, ...) or quote after an identifier");
+            } else if (p === "&" && /[uU]/.test(line[i - 2] ?? "")) this.fail("U&'' string");
+            this.lex = { k: "'" };
             this.pending = true;
           } else if (ch === '"') {
+            if (line[i - 1] === "&" && /[uU]/.test(line[i - 2] ?? "")) this.fail('U&"" identifier');
             this.lex = { k: '"' };
             this.pending = true;
-          } else if (dollar) {
-            this.lex = { k: "$", tag: dollar[0] };
+          } else if (ch === "$") {
+            if (i > 0 && IDENT.test(line[i - 1]!)) this.fail("$ right after an identifier");
+            DOLLAR_TAG.lastIndex = i;
+            const tag = DOLLAR_TAG.exec(line);
+            if (tag) {
+              this.lex = { k: "$", tag: tag[0] };
+              i += tag[0].length - 1;
+            } else if (nx !== undefined && nx >= "0" && nx <= "9")
+              normal += ch; // $1
+            else this.fail("unexpected $");
             this.pending = true;
-            i += dollar[0].length - 1;
           } else {
             if (ch === "(") this.depth++;
             else if (ch === ")") this.depth = Math.max(0, this.depth - 1);
             normal += ch;
-            if (ch === ";" && this.depth === 0) this.pending = false;
-            else if (!/\s/.test(ch)) this.pending = true;
+            if (ch === ";" && this.depth === 0) {
+              this.pending = false;
+              ended = true;
+            } else this.pending = true;
           }
           break;
         }
         case "'":
-        case "e":
-          if (lex.k === "e" && ch === "\\") i++;
-          else if (ch === "'") {
+          if (ch === "'") {
             if (nx === "'") i++;
-            else this.lex = line.slice(i + 1).trim() === "" ? { k: "s" } : { k: "n" };
+            else this.lex = i + 1 >= end ? { k: "s" } : { k: "n" };
           }
           break;
         case '"':
@@ -151,16 +196,20 @@ export class DumpScanner {
           break;
       }
     }
-    this.tail = `${this.tail} ${normal}`.slice(-64);
-    if (/\bbegin\s+atomic\b/i.test(this.tail)) this.fail("BEGIN ATOMIC bodies are not accepted");
-    const atStatementStart = normalAtStart && !pendingAtStart && this.depth === 0;
-    if (atStatementStart && this.lex.k === "n" && COPY_FROM_STDIN.test(normal.trim())) {
-      this.copy = true;
-      return;
+    // psql stops ending statements at `;` after CREATE FUNCTION ... BEGIN, whether or not
+    // ATOMIC follows. pg_dump writes function bodies in $$ quotes, so a bare BEGIN is hostile.
+    if (BEGIN_WORD.test(normal)) this.fail("BEGIN outside quotes");
+    if (!pendingAtStart) {
+      // Statement start (the previous one ended with `;` at paren depth 0).
+      if (COPY_FROM_STDIN.test(line) && !this.pending && this.lex.k === "n") {
+        this.copy = true;
+        return;
+      }
+      if (COPY_START.test(normal)) this.fail("COPY other than FROM stdin");
+      if (SET_START.test(normal) && !SET_LINES.has(line.trim()))
+        this.fail("SET/RESET that pg_dump does not write");
+      if (ALTER_SENSITIVE_START.test(normal)) this.fail("ALTER ROLE/DATABASE/SYSTEM");
     }
-    // Any other COPY statement is server-side (PROGRAM or a file path): pg_dump never writes one.
-    if ((atStatementStart && COPY_AT_START.test(normal)) || COPY_AFTER_SEMICOLON.test(normal))
-      this.fail("COPY other than FROM stdin");
     if (/\bstdin\b/i.test(normal)) this.fail("COPY from stdin in an unexpected place");
   }
 
@@ -171,20 +220,23 @@ export class DumpScanner {
   }
 }
 
-/** Splits on "\n" only (psql does not treat a lone "\r" as a line end). */
+/** Splits on "\n" only (psql does not treat a lone "\r" as a line end). Linear in the input. */
 export async function scanDump(chunks: AsyncIterable<string> | Iterable<string>): Promise<void> {
   const scanner = new DumpScanner();
-  let rest = "";
+  let partial: string[] = []; // pieces of a line that continues in the next chunk
   for await (const chunk of chunks) {
-    rest += chunk;
     let from = 0;
-    for (let at = rest.indexOf("\n"); at !== -1; at = rest.indexOf("\n", from)) {
-      scanner.push(rest.slice(from, at));
+    for (let at = chunk.indexOf("\n"); at !== -1; at = chunk.indexOf("\n", from)) {
+      scanner.push(
+        partial.length ? partial.join("") + chunk.slice(from, at) : chunk.slice(from, at),
+      );
+      partial = [];
       from = at + 1;
     }
-    rest = rest.slice(from);
+    if (from < chunk.length) partial.push(from ? chunk.slice(from) : chunk);
   }
-  if (rest) scanner.push(rest);
+  const last = partial.join("");
+  if (last) scanner.push(last);
   scanner.finish();
 }
 

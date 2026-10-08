@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 export function run(
   cmd: string,
   args: string[],
-  options: { input?: string; capture?: boolean } = {},
+  options: { input?: string; capture?: boolean; env?: Record<string, string> } = {},
 ): string {
   const result = spawnSync(cmd, args, {
     stdio: options.capture
@@ -12,6 +12,7 @@ export function run(
         ? ["pipe", "inherit", "inherit"]
         : "inherit",
     input: options.input,
+    ...(options.env ? { env: { ...process.env, ...options.env } } : {}),
     encoding: "utf8",
     maxBuffer: 1024 * 1024 * 1024,
   });

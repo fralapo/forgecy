@@ -79,7 +79,12 @@ export async function inspectBackup(
   }
 }
 
-/** psql reads the file as ONE transaction (a failed restore leaves the old data), ignores ~/.psqlrc. */
+/**
+ * psql reads the file as ONE transaction (a failed restore leaves the old data) and ignores
+ * ~/.psqlrc. ON_ERROR_STOP=1 is load-bearing for the dump scanner: if the server rejected a
+ * `COPY ... FROM stdin;` header, psql would otherwise run the data lines as SQL (and
+ * backslash lines as meta-commands) while the scanner had skipped them as COPY data.
+ */
 export function psqlArgs(file: string, databaseUrl: string): string[] {
   return ["-X", "--single-transaction", "-v", "ON_ERROR_STOP=1", "-q", "-f", file, databaseUrl];
 }

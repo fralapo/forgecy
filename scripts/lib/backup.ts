@@ -19,7 +19,7 @@ import {
   checksumMatches,
   createBackupArchive,
 } from "../../packages/backup/src/archive";
-import { assertSafeDumpFile } from "../../packages/backup/src/safe-dump";
+import { assertSafeDumpText } from "../../packages/backup/src/safe-dump";
 import { extractBackupArchive } from "../../packages/backup/src/safe-tar";
 import { composePostgresRunning, run } from "./shell";
 
@@ -94,10 +94,10 @@ function loadDatabase(sql: string): void {
   const url = process.env.DATABASE_URL;
   if (!url)
     throw new Error("DATABASE_URL is not set and the Compose postgres service is not running");
-  // The scanner reads the dump as UTF-8, so psql must too (a host psql inherits this variable).
-  process.env.PGCLIENTENCODING = "UTF8";
+  // The scanner reads the dump as UTF-8, so psql must too.
   pgClientTool("psql", ["-X", "--single-transaction", "-v", "ON_ERROR_STOP=1", "-f", "-", url], {
     input: sql,
+    env: { PGCLIENTENCODING: "UTF8" },
   });
 }
 
@@ -108,15 +108,17 @@ function loadDatabase(sql: string): void {
 function pgClientTool(
   tool: "pg_dump" | "psql",
   args: string[],
-  options: { capture?: boolean; input?: string },
+  options: { capture?: boolean; input?: string; env?: Record<string, string> },
 ): string {
   const local = spawnSync(tool, ["--version"], { encoding: "utf8" });
   const localMajor = Number(/(\d+)\./.exec(local.stdout ?? "")?.[1] ?? 0);
   if (local.status === 0 && localMajor >= PG_MAJOR) return run(tool, args, options);
+  // The container does not inherit our environment: pass the variables with -e.
+  const envArgs = Object.entries(options.env ?? {}).flatMap(([k, v]) => ["-e", `${k}=${v}`]);
   return run(
     "docker",
-    ["run", "--rm", "-i", "--network", "host", PG_IMAGE, tool, ...args],
-    options,
+    ["run", "--rm", "-i", "--network", "host", ...envArgs, PG_IMAGE, tool, ...args],
+    { capture: options.capture, input: options.input },
   );
 }
 
@@ -143,9 +145,11 @@ export async function restore(archive: string): Promise<void> {
       media: boolean;
     };
     if (manifest.format !== 1) throw new Error(`Unsupported backup format ${manifest.format}`);
-    // No psql meta-commands (!, copy, i...) in a backup that may come from elsewhere.
-    await assertSafeDumpFile(join(work, "db.sql"));
-    loadDatabase(readFileSync(join(work, "db.sql"), "utf8"));
+    // No psql meta-commands (\!, \copy, \i...) in a backup that may come from elsewhere.
+    // The string scanned is the very string sent to psql.
+    const sql = readFileSync(join(work, "db.sql"), "utf8");
+    await assertSafeDumpText(sql);
+    loadDatabase(sql);
     const mediaName = basename(mediaDir);
     if (manifest.media && existsSync(join(work, mediaName))) {
       mkdirSync(mediaDir, { recursive: true });

@@ -47,8 +47,11 @@ describe("DumpScanner: accepts what pg_dump writes", () => {
   });
   it("backslashes inside strings, dollar quotes and comments", async () => {
     await ok("-- \\! id\nselect 1; /* \\! id */\n");
-    await ok("select E'it\\'s';\n");
-    await ok("select E'\\'; \\! id --';\n"); // all inside one E'' string, as psql reads it
+    await ok("select 'it''s \\ ok';\n");
+    await ok("select B'0101', X'1F', b'01';\nselect '0'::\"bit\";\n");
+    await ok(
+      "CREATE FUNCTION f() RETURNS text AS $$ select E'it\\'s \\! x' $$ LANGUAGE sql;\n", // E'' inside a dollar body
+    );
     await ok('create table "std\\in" (a int);\n');
     await ok("select 1 /* a /* \\! */ \\! */;\n");
     await ok("select 'a'\n, 'b';\n");
@@ -114,6 +117,141 @@ describe("DumpScanner: refuses psql meta-commands", () => {
   });
   it("a standard string closed by a backslash does not hide the next command", async () => {
     await bad("select '\\'; \\! id --';\n");
+  });
+});
+
+const COPY_TRAP = "COPY public.t (a) FROM stdin;\n\\! id\n\\.\n";
+
+describe("DumpScanner: statement boundaries as psql sees them", () => {
+  it("a plain BEGIN in CREATE FUNCTION/PROCEDURE keeps psql inside the statement", async () => {
+    await bad(
+      `CREATE FUNCTION f() RETURNS int LANGUAGE sql\nBEGIN\n SELECT 1;\n${COPY_TRAP}END;\n`,
+    );
+    await bad(`CREATE OR REPLACE PROCEDURE p() LANGUAGE sql BEGIN SELECT 1;\n${COPY_TRAP}END;\n`);
+    await bad(`create function f() returns int language sql begin\nselect 1;\n${COPY_TRAP}end;\n`);
+  });
+  it("padding before BEGIN ATOMIC does not hide it", async () => {
+    await bad(
+      `CREATE FUNCTION f() RETURNS int LANGUAGE sql BEGIN${" ".repeat(200)}ATOMIC SELECT 1;\n${COPY_TRAP}END;\n`,
+    );
+    await bad(
+      `CREATE FUNCTION f() RETURNS int LANGUAGE sql ${"-- pad\n".repeat(20)}BEGIN ATOMIC\nSELECT 1;\n${COPY_TRAP}END;\n`,
+    );
+  });
+  it("accepts BEGIN where psql does not track it (dollar bodies, comments, strings)", async () => {
+    await ok("CREATE FUNCTION f() RETURNS void LANGUAGE plpgsql AS $$\nBEGIN\n  NULL;\nEND\n$$;\n");
+    await ok("-- begin\nselect 1; /* begin */\nselect 'begin';\n");
+  });
+  it("several statements on one line are refused", async () => {
+    await bad("select 1; select 2;\n");
+    await bad("select 1; 'x';\n");
+    await bad("select 1;;\n");
+    await ok("select 1; -- trailing comment\nselect 2; /* c */\n");
+  });
+  it("a `$` that psql may read differently from the scanner", async () => {
+    await bad("select 1$$;\nCOPY public.t (a) FROM stdin;\n\\! id\n\\.\n$$ ;\n");
+    await bad("select abc$tag$;\n");
+    await ok("select $1, $2;\n");
+  });
+});
+
+describe("DumpScanner: settings that change how psql reads the file", () => {
+  it("SET NAMES, RESET and every SET that pg_dump does not write", async () => {
+    await bad("SET NAMES 'SJIS';\n");
+    await bad("set names 'sjis';\n");
+    await bad("SET\nNAMES 'SJIS';\n");
+    await bad("set client_encoding to 'sjis';\n");
+    await bad("/*\n*/ SET NAMES 'SJIS';\n");
+    await bad("select 1;\nSET NAMES 'SJIS';\n");
+    await bad("RESET client_encoding;\n");
+    await bad("RESET ALL;\n");
+    await bad("SET search_path = evil;\n");
+    await bad("SET LOCAL x = 1;\n");
+    await bad("SET SESSION AUTHORIZATION postgres;\n");
+    await bad("SET statement_timeout = 0; SET NAMES 'SJIS';\n");
+    await bad("ALTER DATABASE d SET client_encoding = 'SJIS';\n");
+    await bad("ALTER ROLE r SET search_path = x;\n");
+    await bad("ALTER\nROLE r SET x = 1;\n");
+    await bad("ALTER SYSTEM SET x = 1;\n");
+    await bad("select set_config('client_encoding', 'SJIS', false);\n");
+    await bad("select set_config\n('client_encoding', 'SJIS', false);\n");
+  });
+  it("every SET line pg_dump writes, and ALTER ... SET forms it writes", async () => {
+    await ok(
+      [
+        "SET statement_timeout = 0;",
+        "SET lock_timeout = 0;",
+        "SET idle_in_transaction_session_timeout = 0;",
+        "SET transaction_timeout = 0;",
+        "SET client_encoding = 'UTF8';",
+        "SET standard_conforming_strings = on;",
+        "SELECT pg_catalog.set_config('search_path', '', false);",
+        "SET check_function_bodies = false;",
+        "SET xmloption = content;",
+        "SET client_min_messages = warning;",
+        "SET row_security = off;",
+        "SET default_tablespace = '';",
+        "SET default_table_access_method = heap;",
+        "",
+      ].join("\r\n"),
+    );
+    await ok("ALTER TABLE ONLY public.t ALTER COLUMN a SET DEFAULT 1;\n");
+    await ok("ALTER TABLE public.t SET (fillfactor=70);\nALTER TABLE public.t SET SCHEMA other;\n");
+    await ok("ALTER TABLE ONLY public.t\n    ALTER COLUMN a SET NOT NULL;\n");
+    await ok("ALTER SEQUENCE public.s SET LOGGED;\nALTER TABLE public.t SET WITHOUT CLUSTER;\n");
+    await ok(
+      "CREATE FUNCTION f() RETURNS int\n    LANGUAGE sql\n    SET search_path TO 'public'\n    AS $$ select 1 $$;\n",
+    );
+    await ok("UPDATE t\nSET a = 1;\n");
+    await ok('CREATE TABLE t (\n    names text,\n    "client" int\n);\n');
+  });
+});
+
+describe("DumpScanner: string prefixes", () => {
+  it("refuses E'', U&'', U&\"\" and any quote glued to an identifier", async () => {
+    await bad("select E'it\\'s';\n");
+    await bad("select e'x';\n");
+    await bad("select E'\\'; \\! id --';\n");
+    await bad("select (E'x');\n");
+    await bad("select U&'x';\n");
+    await bad('select U&"x";\n');
+    await bad("select N'x';\n");
+    await bad("select abc'x';\n");
+    await bad("select aB'x';\n");
+  });
+});
+
+describe("DumpScanner: COPY header is matched on the raw line", () => {
+  it("accepts quoted mixed-case table and column names", async () => {
+    await ok('COPY public."MixedCase" ("Id", "Na me") FROM stdin;\n1\tx\n\\.\nselect 1;\n');
+  });
+  it("refuses anything but plain identifiers, commas, parentheses and spaces", async () => {
+    await bad("COPY public.t (a) FROM stdin WITH (DELIMITER '|');\n1\n\\.\n");
+    await bad("COPY public.t (a) FROM stdin; \n\\! id\n\\.\n");
+    await bad("COPY public.t ('x') FROM stdin;\n\\! id\n\\.\n");
+    await bad('COPY public.t ("a) FROM stdin;\n\\! id\n\\.\n');
+    await bad("COPY public.t (a FROM stdin;\n\\! id\n\\.\n");
+    await bad("COPY public.t /* c */ (a) FROM stdin;\n\\! id\n\\.\n");
+    await bad("COPY public.t (a) FROM stdin; -- c\n\\! id\n\\.\n");
+    await bad("COPY public.$x (a) FROM stdin;\n\\! id\n\\.\n");
+  });
+});
+
+describe("DumpScanner: cost", () => {
+  it("scans a 5 MB single line, read in 1 KB chunks, in well under 2 seconds", async () => {
+    const line = `select ${"'a', $1, ".repeat(600_000)}1;\n`;
+    const t0 = performance.now();
+    await ok(line);
+    const dir = mkdtempSync(join(tmpdir(), "forgecy-dump-"));
+    try {
+      const file = join(dir, "db.sql");
+      writeFileSync(file, line);
+      await assertSafeDumpFile(file, { chunkSize: 1024 });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    expect(line.length).toBeGreaterThan(5_000_000);
+    expect(performance.now() - t0).toBeLessThan(2000);
   });
 });
 

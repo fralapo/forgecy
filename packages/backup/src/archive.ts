@@ -64,7 +64,6 @@ export function backupPath(dataDir: string, name: string): string {
   return join(backupsDir(dataDir), name);
 }
 
-/** Runs a command; stderr is kept for the error, with credentials in URLs masked. */
 /**
  * A TAR_OPTIONS in the environment could add flags (for example --absolute-names or
  * --dereference) to every tar call; blank it so only our arguments apply.
@@ -83,6 +82,7 @@ function hardDereferenceFlag(): string[] {
   return hardDereference;
 }
 
+/** Runs a command; stderr is kept for the error, with credentials in URLs masked. */
 export function runTool(cmd: string, args: string[], env?: Record<string, string>): Promise<void> {
   return new Promise((resolvePromise, reject) => {
     const child = spawn(cmd, args, {
