@@ -355,7 +355,7 @@
         "unreadable": "L’archivio non si legge: il file è danneggiato o non è un backup di Forgecy.",
         "format": "Questo backup usa un formato che questa versione non conosce.",
         "newer_version": "Questo backup viene da una versione più recente di Forgecy. Aggiorna Forgecy prima di ripristinarlo.",
-        "checksum_mismatch": "L’archivio non corrisponde al suo checksum: potrebbe essere danneggiato o alterato. Il ripristino è bloccato.",
+        "checksum_mismatch": "L’archivio non corrisponde più al checksum registrato: potrebbe essere danneggiato o modificato. Il ripristino è bloccato.",
         "unsafe": "L’archivio contiene collegamenti o file speciali, che un backup di Forgecy non ha mai: potrebbe essere stato alterato. Il ripristino è bloccato."
       },
       "confirmLabel": "Per confermare, digita il nome dell’agenzia: {name}",

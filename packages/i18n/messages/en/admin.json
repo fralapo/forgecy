@@ -355,7 +355,7 @@
         "unreadable": "The archive can't be read: the file is damaged or isn't a Forgecy backup.",
         "format": "This backup uses a format this version doesn't know.",
         "newer_version": "This backup comes from a newer Forgecy version. Update Forgecy before restoring it.",
-        "checksum_mismatch": "The archive doesn't match its checksum: it may be damaged or tampered with. Restoring it is blocked.",
+        "checksum_mismatch": "The archive no longer matches its recorded checksum: it may be corrupted or changed. Restoring it is blocked.",
         "unsafe": "The archive holds links or special files, which a Forgecy backup never contains. It may have been tampered with. Restoring it is blocked."
       },
       "confirmLabel": "To confirm, type the agency name: {name}",

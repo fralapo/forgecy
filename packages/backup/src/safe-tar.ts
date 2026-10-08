@@ -11,6 +11,14 @@ import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { runTool } from "./archive";
 
+/**
+ * A TAR_OPTIONS in the environment could add flags (for example --absolute-names or
+ * --dereference) to every tar call below; blank it so only our arguments apply.
+ * ponytail: no --quoting-style=escape. It is GNU-only (bsdtar rejects it) and a newline in a
+ * member name can only add extra listing lines, which at worst refuse a good archive.
+ */
+const TAR_ENV = { TAR_OPTIONS: "" };
+
 export class UnsafeArchiveError extends Error {
   constructor(detail: string) {
     super(`Unsafe backup archive: ${detail}`);
@@ -24,7 +32,10 @@ export const isPlainTarEntry = (line: string): boolean =>
 
 /** Streams the listing and stops at the first link or special file. */
 export async function assertPlainTar(file: string): Promise<void> {
-  const child = spawn("tar", ["-tvzf", file], { stdio: ["ignore", "pipe", "pipe"] });
+  const child = spawn("tar", ["-tvzf", file], {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: { ...process.env, ...TAR_ENV },
+  });
   let stderr = "";
   child.stderr.on("data", (d: Buffer) => {
     stderr = (stderr + d.toString()).slice(-2000);
@@ -48,13 +59,17 @@ export async function assertPlainTar(file: string): Promise<void> {
   if (code !== 0) throw new Error(`tar exited with ${code}: ${stderr}`);
 }
 
-/** The extracted tree must hold only regular files and folders (no symlinks, devices, pipes). */
+/**
+ * The extracted tree must hold only regular files and folders (no symlinks, devices, pipes),
+ * and no file with several names: bsdtar can list a hard link as a regular file.
+ */
 export async function assertPlainTree(root: string): Promise<void> {
   for (const name of await readdir(root)) {
     const path = join(root, name);
     const info = await lstat(path);
     if (info.isDirectory()) await assertPlainTree(path);
-    else if (!info.isFile()) throw new UnsafeArchiveError(`not a regular file: ${name}`);
+    else if (!info.isFile() || info.nlink > 1)
+      throw new UnsafeArchiveError(`not a plain regular file: ${name}`);
   }
 }
 
@@ -68,14 +83,10 @@ export async function extractBackupArchive(
   members?: string[],
 ): Promise<void> {
   if (!members) await assertPlainTar(file);
-  await runTool("tar", [
-    "-xzf",
-    file,
-    "-C",
-    work,
-    "--no-same-owner",
-    "--no-same-permissions",
-    ...(members ?? []),
-  ]);
+  await runTool(
+    "tar",
+    ["-xzf", file, "-C", work, "--no-same-owner", "--no-same-permissions", ...(members ?? [])],
+    TAR_ENV,
+  );
   await assertPlainTree(work);
 }

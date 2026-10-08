@@ -21,26 +21,32 @@ import {
 import { assertPlainTar, extractBackupArchive, UnsafeArchiveError } from "./safe-tar";
 
 export type RestoreProblem =
-  | "unreadable"
-  | "format"
-  | "newer_version"
-  | "checksum_mismatch"
-  | "unsafe";
+  "unreadable" | "format" | "newer_version" | "checksum_mismatch" | "unsafe";
 
-/** True when the checksum recorded at creation/upload matches the file (or none was recorded). */
+/**
+ * True when the checksum recorded at creation/upload matches the file. Only a missing sidecar
+ * (a backup copied in by hand) passes without one; an unreadable or malformed sidecar, or one
+ * without a hash, fails closed so corruption detection is never silently switched off.
+ */
 export async function checksumMatches(file: string): Promise<boolean> {
-  let expected: string | undefined;
+  let raw: string;
   try {
-    expected = (JSON.parse(await readFile(`${file}.json`, "utf8")) as { sha256?: string }).sha256;
-  } catch {
-    return true;
+    raw = await readFile(`${file}.json`, "utf8");
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === "ENOENT";
   }
-  return !expected || (await fileSha256(file)) === expected;
+  let expected: unknown;
+  try {
+    expected = (JSON.parse(raw) as { sha256?: unknown }).sha256;
+  } catch {
+    return false;
+  }
+  return typeof expected === "string" && (await fileSha256(file)) === expected;
 }
 
 export class BackupChecksumError extends Error {
   constructor() {
-    super("The backup does not match its checksum: it may be damaged or tampered with");
+    super("The backup does not match its recorded checksum: it may be corrupted or changed");
     this.name = "BackupChecksumError";
   }
 }
@@ -67,6 +73,8 @@ export async function inspectBackup(
   try {
     let manifest: BackupManifest;
     try {
+      // One extra decompression pass so a link anywhere is reported now, not after the confirm.
+      await assertPlainTar(file);
       await extractBackupArchive(file, work, ["manifest.json"]);
       manifest = JSON.parse(await readFile(join(work, "manifest.json"), "utf8")) as BackupManifest;
     } catch (err) {
@@ -75,7 +83,8 @@ export async function inspectBackup(
     }
     const problems: RestoreProblem[] = [];
     if (manifest.format !== BACKUP_FORMAT) problems.push("format");
-    // Sidecar written at creation/upload time; archives from before this check have none.
+    // Sidecar written at creation/upload time. It detects corruption and accidental changes,
+    // not deliberate tampering by someone who can rewrite the sidecar too.
     if (!(await checksumMatches(file))) problems.push("checksum_mismatch");
     const index = manifest.lastMigration
       ? shipped.findIndex((m) => m.tag === manifest.lastMigration)

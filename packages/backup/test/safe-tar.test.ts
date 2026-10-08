@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  linkSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { tarGz } from "@forgecy/core/testing/archives";
@@ -40,6 +48,22 @@ describe("assertPlainTree", () => {
       symlinkSync(join(dir, "elsewhere"), join(dir, "media", "evil"), "dir");
     } catch {
       return; // Windows without symlink privilege: covered by the tar end-to-end test on Linux.
+    }
+    await expect(assertPlainTree(dir)).rejects.toBeInstanceOf(UnsafeArchiveError);
+  });
+});
+
+describe("assertPlainTree hard links", () => {
+  let dir: string;
+  beforeEach(() => (dir = mkdtempSync(join(tmpdir(), "forgecy-nlink-"))));
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  it("refuses a file that has a second name (bsdtar can list a hard link as a regular file)", async () => {
+    writeFileSync(join(dir, "a.txt"), "a");
+    try {
+      linkSync(join(dir, "a.txt"), join(dir, "b.txt"));
+    } catch {
+      return; // hard links unsupported on this filesystem
     }
     await expect(assertPlainTree(dir)).rejects.toBeInstanceOf(UnsafeArchiveError);
   });
