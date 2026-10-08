@@ -166,6 +166,7 @@ export function createPinnedFetch(options: { allowPrivate?: boolean } = {}): typ
     const literal = target.hostname.replace(/^\[|\]$/g, "");
     if (isIP(literal) && isPrivateAddress(literal))
       throw new TypeError(`"${literal}" is a disallowed address`);
+    // `never` casts: undici's fetch types differ from lib.dom's; string/URL inputs only.
     return undiciFetch(input as never, { ...init, dispatcher: agent } as never);
   }) as typeof fetch;
 }
@@ -196,4 +197,97 @@ function pinnedLookup(
     const chosen = list[0]!;
     callback(null, chosen.address, chosen.family);
   });
+}
+
+export class GuardedFetchError extends Error {
+  constructor(
+    readonly reason: "blocked" | "too_many_redirects",
+    readonly url: string,
+  ) {
+    super(
+      reason === "blocked"
+        ? `Request to "${url}" refused: disallowed address or scheme`
+        : `Too many redirects at "${url}"`,
+    );
+    this.name = "GuardedFetchError";
+  }
+}
+
+export interface GuardedFetchOptions {
+  hostCheck: HostCheck;
+  fetchImpl?: typeof fetch;
+  headers?: Record<string, string>;
+  /** Redirects followed before giving up. */
+  maxHops?: number;
+  /** One deadline for every hop and the body read. */
+  timeoutMs?: number;
+}
+
+/**
+ * fetch() that validates EVERY hop. Redirects are followed by hand (redirect:"manual"):
+ * the host check runs on the first URL and on each Location, so a public page cannot
+ * bounce the request to the local network, and a non-http(s) Location is refused.
+ * Pair `fetchImpl` with createPinnedFetch so the connect itself is validated too.
+ */
+export async function guardedFetch(
+  url: string,
+  options: GuardedFetchOptions,
+): Promise<{ res: Response; url: string }> {
+  const doFetch = options.fetchImpl ?? fetch;
+  const maxHops = options.maxHops ?? 5;
+  const signal = AbortSignal.timeout(options.timeoutMs ?? 10_000);
+  let current = url;
+  for (let hop = 0; hop <= maxHops; hop++) {
+    if (!(await options.hostCheck(current))) throw new GuardedFetchError("blocked", current);
+    const res = await doFetch(current, {
+      redirect: "manual",
+      signal,
+      ...(options.headers ? { headers: options.headers } : {}),
+    });
+    const location = res.headers.get("location");
+    if (res.status < 300 || res.status >= 400 || !location) return { res, url: current };
+    await res.body?.cancel().catch(() => undefined);
+    try {
+      current = new URL(location, current).toString();
+    } catch {
+      throw new GuardedFetchError("blocked", location);
+    }
+  }
+  throw new GuardedFetchError("too_many_redirects", current);
+}
+
+/** Read at most `maxBytes` of a body; the rest is never downloaded (the stream is cancelled). */
+export async function readCapped(
+  res: Response,
+  maxBytes: number,
+): Promise<{ bytes: Uint8Array; truncated: boolean }> {
+  if (!res.body) return { bytes: new Uint8Array(), truncated: false };
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  let truncated = false;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (total + value.byteLength > maxBytes) {
+      chunks.push(value.subarray(0, maxBytes - total));
+      total = maxBytes;
+      truncated = true;
+      await reader.cancel().catch(() => undefined);
+      break;
+    }
+    chunks.push(value);
+    total += value.byteLength;
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { bytes, truncated };
+}
+
+export async function readTextCapped(res: Response, maxBytes: number): Promise<string> {
+  return new TextDecoder().decode((await readCapped(res, maxBytes)).bytes);
 }
