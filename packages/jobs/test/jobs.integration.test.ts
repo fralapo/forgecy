@@ -157,6 +157,34 @@ describe.skipIf(!dbUrl || !redisUrl)("jobs (integration)", () => {
     expect(bRow?.status).toBe("failed");
   }, 15_000);
 
+  it("re-enqueues a queued row whose BullMQ job never reached Redis", async () => {
+    // What a crash between the INSERT and queue.add in enqueueJob leaves behind.
+    const [row] = await db
+      .insert(jobs)
+      .values({ kind: "system.ping", status: "queued", payload: { message: "orphan" } })
+      .returning();
+    created.push(row!.id);
+    await db.execute(
+      sql`update jobs set updated_at = now() - interval '10 minutes' where id = ${row!.id}`,
+    );
+    const res = await recoverStaleJobs(db, 10 * 60 * 1000, { queues });
+    expect(res.requeued).toContain(row!.id);
+    const last = (await waitTerminal(db, row!.id)).at(-1)!;
+    expect(last.status).toBe("completed");
+    expect(last.result).toEqual({ echo: "orphan" });
+  }, 15_000);
+
+  it("leaves a fresh queued row alone (the enqueue may still be in flight)", async () => {
+    const [row] = await db
+      .insert(jobs)
+      .values({ kind: "system.ping", status: "queued", payload: { message: "fresh" } })
+      .returning();
+    created.push(row!.id);
+    const res = await recoverStaleJobs(db, 10 * 60 * 1000, { queues });
+    expect(res.requeued).not.toContain(row!.id);
+    await db.update(jobs).set({ status: "cancelled" }).where(eq(jobs.id, row!.id));
+  });
+
   describe("content locks", () => {
     // Throwaway table with the same lock columns `contents` will have.
     const table = `forgecy_test_locks_${process.pid}`;

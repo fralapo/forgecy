@@ -24,7 +24,7 @@ Queues: `default`, `ai`, `export`, `media`. The `system.ping` job (payload `{ me
 
 `createJobWorker({ db, redisUrl, handlers, concurrency, logger })`, with `handlers` built by `handle(def, async (payload, ctx) => result)`. The context offers `ctx.progress(n)`, `ctx.heartbeat()`, `ctx.isCancelled()`. States: `running` → `completed` (with a result) or `retrying` → `failed`. A `NeedsAttentionError` leads straight to `needs_attention` with no further attempts; an `UnrecoverableError` leads straight to `failed`. `close()` shuts down cleanly (call it on SIGTERM).
 
-`recoverStaleJobs(db, olderThanMs, { queues })` puts `running` jobs stuck for longer than the lock TTL (10 min) back into `retrying` (or `failed`, if attempts are exhausted). Run it when the worker starts and then periodically.
+`recoverStaleJobs(db, olderThanMs, { queues })` (`queues` is required) does two passes. First, `running` jobs stuck for longer than the lock TTL (10 min) go back to `retrying` (or `failed`, if attempts are exhausted) and are re-added to BullMQ. Second, `queued`/`retrying` rows older than 2 minutes whose BullMQ job no longer exists (a crash between the INSERT and `queue.add`, a wiped Redis, a job BullMQ gave up on as stalled) are added again; `jobId` = row id keeps this idempotent. Run it when the worker starts and then every minute.
 
 ## Content lock
 

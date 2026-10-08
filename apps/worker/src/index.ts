@@ -15,11 +15,18 @@ const db = getDb();
 const worker = await createJobWorker({ db, redisUrl: env.REDIS_URL, handlers, logger });
 let running = true;
 
-// Jobs left "running" by a crashed worker go back to the queue (or fail after the last attempt).
+// Producer connection: used by crash recovery to put lost jobs back in Redis, and by the nightly backup.
+const producer = await createQueues(env.REDIS_URL);
+
+// Jobs left "running" by a crashed worker, and rows whose BullMQ job is gone, go back to the queue
+// (or fail after the last attempt).
 async function recover() {
   try {
-    const { retried, failed } = await recoverStaleJobs(db, JOB_LOCK_TTL_MS);
-    if (retried.length || failed.length) logger.warn({ retried, failed }, "recovered stale jobs");
+    const { retried, failed, requeued } = await recoverStaleJobs(db, JOB_LOCK_TTL_MS, {
+      queues: producer,
+    });
+    if (retried.length || failed.length || requeued.length)
+      logger.warn({ retried, failed, requeued }, "recovered stale jobs");
   } catch (err) {
     logger.error({ err }, "stale job recovery failed");
   }
@@ -28,7 +35,6 @@ await recover();
 const recoveryTimer = setInterval(recover, 60_000);
 
 // Tonight's backup (Settings › Backup): checked every 10 minutes, enqueued once after 02:00.
-const producer = await createQueues(env.REDIS_URL);
 async function nightly() {
   try {
     const jobId = await maybeEnqueueNightlyBackup(db, producer);
