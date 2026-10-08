@@ -101,8 +101,15 @@ export async function recoverStaleJobs(
               endedAt: new Date(),
             },
       )
-      // Re-check status + age so a job that just resumed isn't touched.
-      .where(and(eq(jobs.id, row.id), eq(jobs.status, "running"), lt(jobs.updatedAt, cutoff)))
+      // Re-check status + attempt + age so a job that just resumed isn't touched.
+      .where(
+        and(
+          eq(jobs.id, row.id),
+          eq(jobs.status, "running"),
+          eq(jobs.attempts, row.attempts),
+          lt(jobs.updatedAt, cutoff),
+        ),
+      )
       .returning({ id: jobs.id });
     if (!updated) continue;
     (retry ? result.retried : result.failed).push(row.id);

@@ -1,4 +1,4 @@
-import { JOB_BACKOFF_MS } from "@forgecy/core";
+import { JOB_BACKOFF_MS, JOB_HEARTBEAT_MS, JOB_LOCK_TTL_MS } from "@forgecy/core";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -63,5 +63,11 @@ describe("errors", () => {
     expect(isUnrecoverableError(new UnrecoverableError("x"))).toBe(true);
     expect(errorMessage(new Error("a".repeat(5000))).length).toBe(2000);
     expect(errorMessage("plain")).toBe("plain");
+  });
+});
+
+describe("heartbeat interval", () => {
+  it("is well inside the recovery cutoff, so a live job is never stale", () => {
+    expect(JOB_HEARTBEAT_MS * 5).toBeLessThanOrEqual(JOB_LOCK_TTL_MS);
   });
 });

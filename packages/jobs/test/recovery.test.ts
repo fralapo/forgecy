@@ -94,6 +94,16 @@ describe("recoverStaleJobs", () => {
     expect(q.add).not.toHaveBeenCalled();
   });
 
+  it("only flips the row it read: the update is a compare-and-set on the attempt number", async () => {
+    const q = fakeQueue();
+    const fake = createFakeDb({ selects: [[ping(1)], []], updates: [[{ id: ID }]] });
+    await recoverStaleJobs(fake.db, 600_000, { queues: q.queues });
+    const where = fake.wheres.find((w) => w.startsWith("update"))!;
+    expect(where).toContain('"jobs"."status" = $');
+    expect(where).toContain('"jobs"."attempts" = $');
+    expect(where).toContain('"jobs"."updated_at" < $');
+  });
+
   it("skips a row that resumed between the select and the update", async () => {
     const q = fakeQueue();
     const fake = createFakeDb({ selects: [[ping(1)], []], updates: [[]] });

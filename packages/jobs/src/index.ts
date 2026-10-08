@@ -1,6 +1,7 @@
 export * from "./errors";
 export * from "./registry";
 export * from "./backoff";
+export * from "./heartbeat";
 export * from "./redis";
 export * from "./queues";
 export * from "./worker";
