@@ -323,7 +323,8 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       .from(templates)
       .where(and(eq(templates.key, tplKey), eq(templates.clientId, out.clientId)));
     expect(tpl).toMatchObject({ version: "1.0.0-import.1", status: "draft" });
-    expect((tpl!.manifest as { version?: string }).version).toBe("1.0.0-import.1");
+    // The stored manifest is left as it came: the catalog parses it with the strict x.y.z rule.
+    expect(tpl!.manifest).toEqual({});
     const [content] = await db.select().from(contents).where(eq(contents.clientId, out.clientId));
     expect(content!.templateVersion).toBe("1.0.0-import.1");
     // The version a carousel was made with is also in its versions' meta; export prefers it.

@@ -720,6 +720,9 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
+      '@forgecy/client-transfer':
+        specifier: workspace:*
+        version: link:../client-transfer
       '@types/node':
         specifier: ^22.18.0
         version: 22.20.5

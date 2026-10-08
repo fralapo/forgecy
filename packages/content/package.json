@@ -27,6 +27,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@forgecy/client-transfer": "workspace:*",
     "@types/node": "^22.18.0",
     "typescript": "6.0.3",
     "vitest": "^4.1.11"

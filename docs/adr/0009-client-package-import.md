@@ -16,7 +16,7 @@ Page 68 of the UX specification asks for a full client import with a conflict pr
 - Templates: same key and version already here → reused. Same key, other version → the person chooses "use the version already here" (the client's carousels point to the newest version here) or "import as a new version in Draft". _(Amended by 0015: only agency templates and the replaced client's own are reused, another client's private template is never mapped in, and a version it holds is renamed.)_
 - "Replace the existing client" keeps the client's id and address: the worker makes a backup (`pre_import`), deletes the client (cascade) and writes the package under the same id; the client's own templates stay assigned to it. The typed name is checked in the service.
 - A package from a newer schema (more migrations than installed) is blocked; one from an older schema is accepted and missing columns get their defaults.
-- Carousels in review go back to Draft. The activity CSV is not imported back. _(Amended by 0015: nothing arrives approved, exported or published.)_
+- Carousels in review go back to Draft. The activity CSV is not imported back. _(Amended by 0015: carousels, images, products, templates, audits, reports and Brand Book exports arrive as drafts or proposals, Brand Identity versions are archived, and no approval, export or publication state is imported.)_
 
 ## Consequences
 

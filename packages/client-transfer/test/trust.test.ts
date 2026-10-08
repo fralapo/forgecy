@@ -55,6 +55,8 @@ describe("applyImportTrust", () => {
   it("drops approval records, export records and waivers", () => {
     expect(applyImportTrust("content_approvals", { id: "a", decided_by: "u" }, ctx)).toBeNull();
     expect(applyImportTrust("content_exports", { id: "e", draft: false }, ctx)).toBeNull();
+    // A "latest" check run decides whether Brand Guard is re-run: a package cannot supply one.
+    expect(applyImportTrust("brand_check_runs", { id: "r", report: {} }, ctx)).toBeNull();
     expect(applyImportTrust("audit_report_exports", { id: "e", final: true }, ctx)).toBeNull();
     expect(
       applyImportTrust("brand_check_issue_states", { id: "w", status: "ignored" }, ctx),
@@ -416,18 +418,22 @@ describe("attestations embedded in JSON", () => {
     expect(meta.description).not.toHaveProperty("acceptedBy");
     expect(meta.description).not.toHaveProperty("acceptedAt");
     expect(meta.description).not.toHaveProperty("acceptNote");
-    expect(meta.description).toMatchObject({ truth: "approved", sensitive: ["health"] });
-    expect(meta.name).toEqual(fieldMeta.name);
+    expect(meta.description).toMatchObject({ truth: "proposed", sensitive: ["health"] });
+    expect(meta.name).toEqual({ ...fieldMeta.name, truth: "proposed" });
     expect(out.status).toBe("proposed");
     expect(out.approved_by).toBeNull();
   });
-  it("keeps an approved product without sensitive claims approved", () => {
+  it("sends every approved product back to proposed, with or without a claim", () => {
     const out = applyImportTrust(
       "products",
       { id: "p", status: "approved", field_meta: { name: fieldMeta.name } },
       ctx,
     )!;
-    expect(out.status).toBe("approved");
+    expect(out.status).toBe("proposed");
+    expect(applyImportTrust("products", { id: "p", status: "draft" }, ctx)!.status).toBe("draft");
+    expect(applyImportTrust("products", { id: "p", status: "rejected" }, ctx)!.status).toBe(
+      "rejected",
+    );
   });
   it("does not mutate the input field_meta", () => {
     applyImportTrust("products", { status: "approved", field_meta: fieldMeta }, ctx);
@@ -440,6 +446,8 @@ describe("attestations embedded in JSON", () => {
       ctx,
     )!;
     expect(out.sensitive).toBe(true);
+    // Re-accepted one by one here.
+    expect(out.status).toBe("pending");
     expect(
       (out.field_meta as Record<string, Record<string, unknown>>).description,
     ).not.toHaveProperty("acceptedBy");
@@ -540,5 +548,41 @@ describe("JSON columns are reviewed", () => {
     );
     expect(jsonColumns.length).toBeGreaterThan(50);
     expect(jsonColumns.filter((c) => !REVIEWED_JSON_COLUMNS.has(c))).toEqual([]);
+  });
+});
+
+describe("claims a package makes about itself", () => {
+  it("makes proposals sensitive and unconfident, and forgets what the model said of itself", () => {
+    expect(
+      applyImportTrust(
+        "brand_identity_proposals",
+        { status: "proposed", sensitive: false, confidence: "high", model_confidence: 0.99 },
+        ctx,
+      ),
+    ).toMatchObject({ sensitive: true, confidence: "low", model_confidence: null });
+  });
+  it("forgets that a person edited a finding", () => {
+    expect(
+      applyImportTrust("audit_findings", { status: "accepted", edited_by_human: true }, ctx),
+    ).toMatchObject({ edited_by_human: false });
+  });
+  it("removes the official flag and the AI confirmation of a product import", () => {
+    const out = applyImportTrust(
+      "product_imports",
+      { status: "analyzing", options: { official: true, language: "it", aiConfirmed: true } },
+      ctx,
+    )!;
+    expect(out.options).toEqual({ language: "it" });
+  });
+  it("relabels a product image that no product of the package backs as an upload", () => {
+    expect(
+      applyImportTrust("assets", { source: "product", status: "draft", product_id: null }, ctx),
+    ).toMatchObject({ source: "upload", rights: null });
+    expect(
+      applyImportTrust("assets", { source: "product", status: "draft", product_id: "p" }, ctx),
+    ).toMatchObject({ source: "product" });
+    expect(applyImportTrust("assets", { source: "ai", status: "draft" }, ctx)).toMatchObject({
+      source: "ai",
+    });
   });
 });

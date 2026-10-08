@@ -31,7 +31,8 @@ export interface CarouselHandlerDeps {
 }
 
 async function runExport(deps: CarouselHandlerDeps, p: CarouselExportPayload, ctx: JobContext) {
-  const source = deps.templates ?? dbTemplateSource({ db: ctx.db, storage: deps.storage });
+  const source =
+    deps.templates ?? dbTemplateSource({ db: ctx.db, storage: deps.storage, clientId: p.clientId });
   const pkg = await source.get(p.templateId, p.templateVersion);
   if (!pkg)
     throw new NeedsAttentionError(

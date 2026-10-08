@@ -1,8 +1,9 @@
+import { randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Actor } from "@forgecy/core";
-import { createDb, eq, inArray, jobs, templates, users, type Database } from "@forgecy/db";
+import { clients, createDb, eq, inArray, jobs, templates, users, type Database } from "@forgecy/db";
 import { LocalDiskDriver } from "@forgecy/files";
 import {
   createJobWorker,
@@ -112,10 +113,33 @@ describe.skipIf(!dbUrl)("template catalog (integration)", () => {
 
     await expect(importTemplate({ db, storage, actor, files })).rejects.toThrow(/bump "version"/);
 
-    const pkg = await dbTemplateSource({ db, storage }).get(key);
+    const pkg = await dbTemplateSource({ db, storage, clientId: null }).get(key);
     expect(pkg?.manifest.id).toBe(key);
     expect(pkg?.manifest.layouts).toHaveLength(8);
-    expect(await dbTemplateSource({ db, storage }).get(key, "9.9.9")).toBeUndefined();
+    expect(
+      await dbTemplateSource({ db, storage, clientId: null }).get(key, "9.9.9"),
+    ).toBeUndefined();
+
+    // A client's private template is served to that client only, by key alone or by version.
+    const [owner] = await db.insert(clients).values({ name: key, slug: key }).returning();
+    try {
+      await db.update(templates).set({ clientId: owner!.id }).where(eq(templates.id, first.row.id));
+      for (const version of [undefined, "1.0.0"]) {
+        expect(
+          await dbTemplateSource({ db, storage, clientId: null }).get(key, version),
+        ).toBeUndefined();
+        expect(
+          await dbTemplateSource({ db, storage, clientId: randomUUID() }).get(key, version),
+        ).toBeUndefined();
+        expect(
+          (await dbTemplateSource({ db, storage, clientId: owner!.id }).get(key, version))?.manifest
+            .id,
+        ).toBe(key);
+      }
+    } finally {
+      await db.update(templates).set({ clientId: null }).where(eq(templates.id, first.row.id));
+      await db.delete(clients).where(eq(clients.id, owner!.id));
+    }
   });
 
   describe.skipIf(!redisUrl || !renders)("worker jobs", () => {
@@ -163,7 +187,7 @@ describe.skipIf(!dbUrl)("template catalog (integration)", () => {
       const row = await db.query.templates.findFirst({ where: eq(templates.id, v2.row.id) });
       expect(isPublishable(row!)).toBe(true);
 
-      const pkg = await dbTemplateSource({ db, storage }).get(key);
+      const pkg = await dbTemplateSource({ db, storage, clientId: null }).get(key);
       const layouts = pkg!.manifest.layouts;
       const slides = ["cover", "text", "list", "data", "cta"].map((id) =>
         sampleSlide(layouts.find((l) => l.id === id)!),

@@ -65,6 +65,49 @@ export function templateReuse<T extends TemplateRow>(
   };
 }
 
+/**
+ * Decides every template of the package at once, reserving the names it hands out: a template
+ * renamed to `1.0.0-import.1` must not meet a template of the package that is literally called
+ * that, nor one renamed earlier in the same import. `installed` are the installation's templates
+ * by key, newest first; the result is keyed by the package template's id.
+ */
+export function planTemplateImport<T extends TemplateRow>(
+  packageTemplates: readonly { id: string; key: string; version: string }[],
+  installed: ReadonlyMap<string, readonly T[]>,
+  ownerId: string | null,
+  choices: Readonly<Record<string, "useExisting" | "importDraft" | undefined>>,
+): Map<string, TemplateReuse<T>> {
+  const reserved = new Map<string, Set<string>>();
+  for (const t of packageTemplates) {
+    const set = reserved.get(t.key) ?? new Set<string>();
+    set.add(t.version);
+    reserved.set(t.key, set);
+  }
+  const plan = new Map<string, TemplateReuse<T>>();
+  for (const t of packageTemplates) {
+    const names = reserved.get(t.key)!;
+    // Every other name in play for this key: the package's own and those handed out already.
+    const others = [...names].filter((v) => v !== t.version);
+    const decision = templateReuse(
+      installed.get(t.key) ?? [],
+      t.version,
+      ownerId,
+      choices[templateConflictId(t.key, t.version)],
+      others,
+    );
+    if (decision.kind === "import") names.add(decision.version);
+    plan.set(t.id, decision);
+  }
+  return plan;
+}
+
+/** The template row as it is stored here under another version; the manifest is left alone. */
+export function renameTemplateRow<T extends Record<string, unknown>>(row: T, version: string): T {
+  // The stored manifest keeps the version of the package's template.json: the catalog parses it
+  // with the strict x.y.z rule and reads the row's own `version` for everything else.
+  return { ...row, version };
+}
+
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
 

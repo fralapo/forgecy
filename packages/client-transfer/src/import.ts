@@ -31,7 +31,7 @@ import {
   UnsafePackageError,
   verifiedChunks,
 } from "./safety";
-import { rewriteTemplateRefs, templateReuse } from "./templates";
+import { planTemplateImport, renameTemplateRow, rewriteTemplateRefs } from "./templates";
 import {
   applyImportTrust,
   assertTrustRules,
@@ -251,20 +251,35 @@ export async function importClientPackage(
     // another client's private template gets a free version instead of a database error.
     const renamedTemplates = new Map<string, string>();
     const packageTemplates = JSON.parse(raw.get("templates") ?? "[]") as Row[];
+    const installed = new Map<
+      string,
+      { id: string; version: string; client_id: string | null }[]
+    >();
+    for (const key of new Set(packageTemplates.map((t) => String(t.key))))
+      installed.set(
+        key,
+        (
+          await db.execute<{ id: string; version: string; client_id: string | null }>(
+            sql`select id, version, client_id from templates where key = ${key} order by created_at desc`,
+          )
+        ).rows,
+      );
+    // The same decisions Verify showed (templates.ts), with the person's choices; the names
+    // handed out are reserved so that two templates of the package never end up with one.
+    const decisions = planTemplateImport(
+      packageTemplates.map((t) => ({
+        id: String(t.id),
+        key: String(t.key),
+        version: String(t.version),
+      })),
+      installed,
+      plan.replaceClientId ?? null,
+      plan.choices.templates,
+    );
     for (const t of packageTemplates) {
       const key = String(t.key);
       const version = String(t.version);
-      const all = await db.execute<{ id: string; version: string; client_id: string | null }>(
-        sql`select id, version, client_id from templates where key = ${key} order by created_at desc`,
-      );
-      // The same decision Verify showed (templates.ts), with the person's choice.
-      const decision = templateReuse(
-        all.rows,
-        version,
-        plan.replaceClientId ?? null,
-        plan.choices.templates[templateConflictId(key, version)],
-        packageTemplates.filter((o) => o !== t && o.key === t.key).map((o) => String(o.version)),
-      );
+      const decision = decisions.get(String(t.id))!;
       if (decision.kind === "exact") {
         idMap.set(String(t.id), decision.row.id);
         skipTemplates.add(decision.row.id);
@@ -331,12 +346,7 @@ export async function importClientPackage(
         emptyOutsideRefs(table, r, hereIds);
         if (table.name === "clients") r.slug = slug;
         const renamed = table.name === "templates" ? renamedTemplates.get(String(r.id)) : undefined;
-        if (renamed) {
-          r.version = renamed;
-          // The stored copy of template.json says the same as the row.
-          if (r.manifest && typeof r.manifest === "object")
-            r.manifest = { ...(r.manifest as Row), version: renamed };
-        }
+        if (renamed) Object.assign(r, renameTemplateRow(r, renamed));
         // Every row that names a template by key and version (columns and JSON) follows a
         // rename or a reuse, or it would render with another client's private template.
         if (versionRewrite.size) Object.assign(r, rewriteTemplateRefs(r, versionRewrite));

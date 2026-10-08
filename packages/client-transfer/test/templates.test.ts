@@ -2,7 +2,9 @@ import { templateConflictId } from "@forgecy/core";
 import { describe, expect, it } from "vitest";
 import {
   freeImportVersion,
+  planTemplateImport,
   referencesTemplate,
+  renameTemplateRow,
   reusableTemplates,
   rewriteTemplateRefs,
   templateReuse,
@@ -152,5 +154,61 @@ describe("rewriteTemplateRefs", () => {
     const reuse = new Map([[templateConflictId("promo", "1.0.0"), "1.5.0"]]);
     const out = rewriteTemplateRefs(fixtures[2]![1], reuse);
     expect((out.meta as Record<string, unknown>).templateVersion).toBe("1.5.0");
+  });
+});
+
+describe("renameTemplateRow", () => {
+  it("changes the version of the row and nothing else, manifest included", () => {
+    const row = {
+      id: "t",
+      key: "promo",
+      version: "1.0.0",
+      manifest: { id: "promo", version: "1.0.0" },
+    };
+    const out = renameTemplateRow(row, "1.0.0-import.1");
+    expect(out).toEqual({ ...row, version: "1.0.0-import.1" });
+    expect(row.version).toBe("1.0.0");
+  });
+});
+
+describe("planTemplateImport reserves the names it hands out", () => {
+  const pkg = (...versions: string[]) =>
+    versions.map((version, i) => ({ id: `p${i}`, key: "promo", version }));
+  const held = (...versions: string[]) =>
+    new Map([
+      ["promo", versions.map((version, i) => ({ id: `h${i}`, version, client_id: "c-other" }))],
+    ]);
+  const finalVersions = (plan: ReturnType<typeof planTemplateImport>) =>
+    [...plan.values()].map((d) => (d.kind === "import" ? d.version : "(reused)"));
+
+  it("does not give a renamed template the name of another template of the package", () => {
+    const plan = planTemplateImport(pkg("1.0.0", "1.0.0-import.1"), held("1.0.0"), null, {});
+    expect(finalVersions(plan)).toEqual(["1.0.0-import.2", "1.0.0-import.1"]);
+  });
+  it("keeps every final version distinct and free when several collide", () => {
+    const plan = planTemplateImport(
+      pkg("1.0.0", "1.0.0-import.1", "1.0.0-import.1-import.1"),
+      held("1.0.0", "1.0.0-import.1"),
+      null,
+      {},
+    );
+    const finals = finalVersions(plan);
+    expect(new Set(finals).size).toBe(finals.length);
+    for (const v of finals) expect(["1.0.0", "1.0.0-import.1"]).not.toContain(v);
+  });
+  it("reuses what the person chose and what is exactly there", () => {
+    const all = new Map([
+      [
+        "promo",
+        [
+          { id: "a", version: "1.0.0", client_id: null },
+          { id: "b", version: "0.5.0", client_id: null },
+        ],
+      ],
+    ]);
+    const plan = planTemplateImport(pkg("1.0.0", "2.0.0"), all, null, {
+      [templateConflictId("promo", "2.0.0")]: "useExisting",
+    });
+    expect([...plan.values()].map((d) => d.kind)).toEqual(["exact", "useExisting"]);
   });
 });

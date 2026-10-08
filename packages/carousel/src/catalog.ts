@@ -1,5 +1,15 @@
 import { type Actor, assertCan } from "@forgecy/core";
-import { type Database, and, desc, eq, inArray, recordAuditEvent, templates } from "@forgecy/db";
+import {
+  type Database,
+  and,
+  desc,
+  eq,
+  inArray,
+  isNull,
+  or,
+  recordAuditEvent,
+  templates,
+} from "@forgecy/db";
 import { type StorageDriver, contentKey, sha256 } from "@forgecy/files";
 import { localizedError } from "@forgecy/i18n";
 import { type Zippable, zipSync } from "fflate";
@@ -272,15 +282,29 @@ export async function loadTemplatePackage(
   return pkg;
 }
 
+/** Agency templates (no client) and the client's own; another client's private template never. */
+export function templatesVisibleTo<T extends { clientId: string | null }>(
+  rows: readonly T[],
+  clientId: string | null,
+): T[] {
+  return rows.filter((r) => r.clientId === null || r.clientId === clientId);
+}
+
 /**
  * Templates for exports and editors: without a version, the newest published one;
  * with a version (pinned by a carousel), that version as long as it was published
- * (archived versions keep exporting the carousels that use them).
+ * (archived versions keep exporting the carousels that use them). Only agency templates and
+ * those of `clientId` are served (null: agency templates only): a key and version written in
+ * a row never reaches another client's private template.
  */
-export function dbTemplateSource(deps: { db: Database; storage: StorageDriver }): TemplateSource {
+export function dbTemplateSource(deps: {
+  db: Database;
+  storage: StorageDriver;
+  clientId: string | null;
+}): TemplateSource {
   return {
     async get(key, version) {
-      const rows = await deps.db
+      const found = await deps.db
         .select()
         .from(templates)
         .where(
@@ -288,8 +312,13 @@ export function dbTemplateSource(deps: { db: Database; storage: StorageDriver })
             eq(templates.key, key),
             version ? eq(templates.version, version) : undefined,
             inArray(templates.status, version ? ["published", "archived"] : ["published"]),
+            or(
+              isNull(templates.clientId),
+              deps.clientId ? eq(templates.clientId, deps.clientId) : undefined,
+            ),
           ),
         );
+      const rows = templatesVisibleTo(found, deps.clientId);
       const row = rows.sort((a, b) => compareVersions(b.version, a.version))[0];
       return row ? loadTemplatePackage(deps.storage, row) : undefined;
     },

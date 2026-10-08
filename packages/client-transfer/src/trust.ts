@@ -179,9 +179,14 @@ export const TRUST_RULES: Record<string, TrustRule> = {
     // Nor did anybody here review the provider's terms for an AI image.
     custom: (r) => {
       const g = r.generation as { commercialUse?: unknown } | null | undefined;
-      return g && typeof g === "object" && g.commercialUse === "verified"
-        ? { ...r, generation: { ...g, commercialUse: "pending_verification" } }
-        : r;
+      const out =
+        g && typeof g === "object" && g.commercialUse === "verified"
+          ? { ...r, generation: { ...g, commercialUse: "pending_verification" } }
+          : r;
+      // A product photo comes from the client's own catalog and needs no rights check; a
+      // package could label any upload that way. Without a product of the package behind it,
+      // it is an upload (its rights are already cleared).
+      return out.source === "product" && !out.product_id ? { ...out, source: "upload" } : out;
     },
   },
   automations: {
@@ -292,7 +297,11 @@ export const TRUST_RULES: Record<string, TrustRule> = {
     status: same("proposed", "confirmed", "removed"),
     clear: ["confirmed_by", "confirmed_at"],
   },
-  audit_findings: { status: same("observed", "accepted", "edited", "rejected"), why: WORKING },
+  audit_findings: {
+    status: same("observed", "accepted", "edited", "rejected"),
+    // "Edited by a person" is a claim about who wrote it.
+    set: { edited_by_human: false },
+  },
   audit_plans: { status: same("observed", "accepted", "edited", "rejected"), why: WORKING },
   templates: {
     status: demote(
@@ -338,7 +347,11 @@ export const TRUST_RULES: Record<string, TrustRule> = {
   },
   brand_identity_proposals: {
     status: { proposed: "proposed", accepted: "stale", rejected: "stale", stale: "stale" },
-    clear: ["reviewed_by", "reviewed_at", "review_note"],
+    // model_confidence is what the model said of itself: informative only, dropped.
+    clear: ["reviewed_by", "reviewed_at", "review_note", "model_confidence"],
+    // What the proposal says about itself decides whether it needs a note and a closer look:
+    // a package gets the cautious values.
+    set: { sensitive: true, confidence: "low" },
   },
   brand_sources: {
     status: same("pending", "extracting", "extracted", "partial", "failed"),
@@ -349,6 +362,9 @@ export const TRUST_RULES: Record<string, TrustRule> = {
     why: "a curated example only guides wording; it releases nothing",
   },
   brand_check_issue_states: { drop: true },
+  // The newest run is what decides whether Brand Guard is re-run before an approval; its
+  // created_at comes from the package, so a clean "latest" run could be supplied.
+  brand_check_runs: { drop: true },
   brand_book_exports: {
     status: demote(
       ["draft", "approved", "exported", "superseded"],
@@ -372,18 +388,17 @@ export const TRUST_RULES: Record<string, TrustRule> = {
         : r,
   },
   products: {
-    status: same("draft", "proposed", "approved", "rejected", "archived"),
+    // Which fields carry a sensitive claim is written by the package and cannot be recomputed
+    // here (that is the catalog's job), so no product arrives approved: a person approves it
+    // again and the catalog's own blockers apply.
+    status: demote(
+      ["draft", "proposed", "approved", "rejected", "archived"],
+      "proposed",
+      "approved",
+    ),
     clear: ["approved_by", "approved_at", "approval_note"],
-    // A person's acceptance of a sensitive claim is what lets a product be approved. It is
-    // forgotten, and a product that carries such a claim has to be approved again here.
-    custom: (r) => {
-      const { meta, sensitive } = stripAcceptance(r.field_meta);
-      return {
-        ...r,
-        field_meta: meta,
-        status: r.status === "approved" && sensitive ? "proposed" : r.status,
-      };
-    },
+    // A person's acceptance of a sensitive claim is what lets a product be approved: forgotten.
+    custom: (r) => ({ ...r, field_meta: stripAcceptance(r.field_meta).meta }),
   },
   product_images: { status: same("draft", "approved"), clear: ["approved_by"] },
   product_field_proposals: {
@@ -391,7 +406,12 @@ export const TRUST_RULES: Record<string, TrustRule> = {
     clear: DECIDED,
   },
   product_import_items: {
-    status: same("pending", "accepted", "approved", "merged", "discarded"),
+    // Accepted, not yet merged: accepted again here (the claims are not recomputed, see products).
+    status: demote(
+      ["pending", "accepted", "approved", "merged", "discarded"],
+      "pending",
+      "accepted",
+    ),
     clear: DECIDED,
     // Per-field choices a person made on conflicts elsewhere.
     set: { conflict_decisions: {} },
@@ -416,11 +436,12 @@ export const TRUST_RULES: Record<string, TrustRule> = {
       "failed",
       "cancelled",
     ),
-    // A person's confirmation to send the files to an AI provider belongs to that run only.
+    // A person's confirmation to send the files to an AI provider belongs to that run only,
+    // and "official" (the files are the client's own documents) is a claim of the package.
     custom: (r) => {
       const o = r.options;
       if (!o || typeof o !== "object") return r;
-      const { aiConfirmed: _a, aiConfirmedBy: _b, ...rest } = o as Row;
+      const { aiConfirmed: _a, aiConfirmedBy: _b, official: _o, ...rest } = o as Row;
       return { ...r, options: rest };
     },
   },
@@ -428,7 +449,10 @@ export const TRUST_RULES: Record<string, TrustRule> = {
 
 type Meta = Record<string, unknown>;
 
-/** Field metadata without who accepted a sensitive claim, and whether any field carries a claim. */
+/**
+ * Field metadata without who accepted a sensitive claim and with no field "approved" (the
+ * approval of a product or an import item is not imported), and whether any field carries a claim.
+ */
 function stripAcceptance(fieldMeta: unknown): { meta: Meta; sensitive: boolean } {
   const meta: Meta = {};
   let sensitive = false;
@@ -440,7 +464,7 @@ function stripAcceptance(fieldMeta: unknown): { meta: Meta; sensitive: boolean }
       }
       const { acceptedBy: _by, acceptedAt: _at, acceptNote: _note, ...rest } = entry as Meta;
       if (Array.isArray(rest.sensitive) && rest.sensitive.length) sensitive = true;
-      meta[field] = rest;
+      meta[field] = rest.truth === "approved" ? { ...rest, truth: "proposed" } : rest;
     }
   return { meta, sensitive };
 }
@@ -507,7 +531,7 @@ export function checkTrustCoverage(
     const rule = rules[t.name];
     if (!rule) {
       // A table of exports or approvals is a record of a release even when no column says so.
-      if (gates.length || /export|approval/.test(t.name))
+      if (gates.length || /export|approval|check_/.test(t.name))
         problems.push(`${t.name}: no trust rule (${gates.join(", ") || "table name"})`);
       continue;
     }

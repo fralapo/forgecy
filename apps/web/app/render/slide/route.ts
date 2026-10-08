@@ -39,7 +39,7 @@ export const POST = withUser(async (user, request: Request) => {
     return NextResponse.json({ error: "validation", issues: parsed.error.issues }, { status: 422 });
   const body = parsed.data;
   assertCan(user.actor, "view", body.clientId);
-  const pkg = await catalogSource().get(body.templateId, body.templateVersion);
+  const pkg = await catalogSource(body.clientId ?? null).get(body.templateId, body.templateVersion);
   if (!pkg) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const keys = collectAssetKeys([body.slide], body.brand ?? brandThemeSchema.parse({}));
