@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import { loadToolEnv } from "@forgecy/core";
 import { localizedError } from "@forgecy/i18n";
 import { unzipSync } from "fflate";
 import {
@@ -82,7 +83,7 @@ export function unzipTemplatePackage(zip: Uint8Array): Map<string, Uint8Array> {
 
 /** `templates` of the repository, or FORGECY_TEMPLATES_DIR when set. */
 export function defaultTemplatesDir(): string {
-  const fromEnv = process.env.FORGECY_TEMPLATES_DIR;
+  const fromEnv = loadToolEnv().FORGECY_TEMPLATES_DIR;
   if (fromEnv) return path.resolve(fromEnv);
   let dir = process.cwd();
   for (let i = 0; i < 6; i++) {

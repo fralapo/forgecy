@@ -58,7 +58,7 @@ async function notificationEmails() {
 }
 const emailTimer = mailer.configured ? setInterval(notificationEmails, 60_000) : null;
 
-const health = startHealthServer(Number(process.env.WORKER_HEALTH_PORT ?? 3001), db, () => running);
+const health = startHealthServer(env.WORKER_HEALTH_PORT, db, () => running);
 logger.info({ queues: worker.queues }, "worker ready");
 
 async function shutdown(signal: string) {

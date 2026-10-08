@@ -47,7 +47,7 @@ export async function auditDepsFromEnv(): Promise<AuditHandlerDeps> {
   const env = await resolveAiEnv(db, loadEnv());
   const providers = createProvidersFromEnv(env);
   const userAgent = auditUserAgent();
-  const allowPrivate = process.env.FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS === "true";
+  const allowPrivate = env.FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS;
   const hostCheck = createHostCheck({ allowPrivate });
   const executablePath = resolveChromiumPath();
   return {

@@ -18,6 +18,14 @@ export const envSchema = z.object({
   FORGECY_BASE_URL: z.url().default("http://localhost:3000"),
   FORGECY_DATA_DIR: z.string().default("./data"),
   FORGECY_LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]).default("info"),
+  /** Port of the worker's GET /health (Docker healthcheck, `pnpm forgecy health`). */
+  WORKER_HEALTH_PORT: z.coerce.number().int().min(1).max(65535).default(3001),
+  /** Chromium for site screenshots and slide export; unset uses the browser Playwright installed. */
+  FORGECY_CHROMIUM_PATH: z.string().optional(),
+  /** Folder of template packages to import instead of the repository's `templates`. */
+  FORGECY_TEMPLATES_DIR: z.string().optional(),
+  /** `true` lets the crawlers read hosts on the local network (intranet audits). Off by default. */
+  FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS: bool,
 
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().default("redis://localhost:6379"),
@@ -57,8 +65,6 @@ export const envSchema = z.object({
 
   /** 32-byte key (base64) used to encrypt BYOK provider keys stored in ai_connections. */
   FORGECY_ENCRYPTION_KEY: z.string().optional(),
-  /** Shared secret the export worker presents to the internal /render route. */
-  FORGECY_RENDER_TOKEN: z.string().optional(),
 
   STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
   MEDIA_ROOT: z.string().default("./data/media"),
@@ -89,7 +95,7 @@ export const envSchema = z.object({
   OPENROUTER_IMAGE_MODEL: z.string().optional(),
   /**
    * Image providers in order of preference, comma separated (the first configured one is
-   * primary, the next the fallback). Default: openai,google,openrouter,higgsfield.
+   * primary, the next the fallback). Default: openrouter,openai,google,higgsfield (imageProviderIds in @forgecy/ai).
    */
   IMAGE_PROVIDERS: z.string().optional(),
   /**
@@ -118,16 +124,36 @@ export const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
+function invalid(error: z.ZodError): Error {
+  const issues = error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`);
+  return new Error(`Invalid Forgecy configuration:\n${issues.join("\n")}`);
+}
+
 let cached: Env | undefined;
 
 /** Parse and cache the environment. Pass `source` in tests to avoid touching process.env. */
 export function loadEnv(source: Record<string, string | undefined> = process.env): Env {
   if (cached && source === process.env) return cached;
   const parsed = envSchema.safeParse(source);
-  if (!parsed.success) {
-    const issues = parsed.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`);
-    throw new Error(`Invalid Forgecy configuration:\n${issues.join("\n")}`);
-  }
+  if (!parsed.success) throw invalid(parsed.error);
   if (source === process.env) cached = parsed.data;
+  return parsed.data;
+}
+
+/**
+ * The few settings crawl and render code needs. Unlike `loadEnv` it requires no database
+ * or secret, so it also works in unit tests and tools, and it is not cached (it reads the
+ * live environment on every call).
+ */
+export const toolEnvSchema = envSchema.pick({
+  FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS: true,
+  FORGECY_CHROMIUM_PATH: true,
+  FORGECY_TEMPLATES_DIR: true,
+});
+export type ToolEnv = z.infer<typeof toolEnvSchema>;
+
+export function loadToolEnv(source: Record<string, string | undefined> = process.env): ToolEnv {
+  const parsed = toolEnvSchema.safeParse(source);
+  if (!parsed.success) throw invalid(parsed.error);
   return parsed.data;
 }

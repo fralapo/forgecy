@@ -7,7 +7,7 @@
 import { createPinnedFetch, CrawlError, createHostCheck } from "@forgecy/audit";
 import { crawlSite } from "@forgecy/audit/crawl/crawler";
 import { auditUserAgent, createHtmlFetcher } from "@forgecy/audit/crawl/fetcher";
-import { AUDIT_LIMITS, type MessageRef } from "@forgecy/core";
+import { AUDIT_LIMITS, loadToolEnv, type MessageRef } from "@forgecy/core";
 import { and, brandSources, eq } from "@forgecy/db";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import type { ImportContext, ImportDeps, ImportResult } from "./import/run";
@@ -51,7 +51,7 @@ export async function runWebsiteCrawl(
   });
 
   const userAgent = auditUserAgent();
-  const allowPrivate = process.env.FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS === "true";
+  const allowPrivate = loadToolEnv().FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS;
   const hostCheck = createHostCheck({ allowPrivate });
   const fetcher = createHtmlFetcher({ userAgent, hostCheck, allowPrivate });
 
