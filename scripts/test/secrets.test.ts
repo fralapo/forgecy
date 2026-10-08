@@ -1,4 +1,4 @@
-import { parseEnv } from "node:util";
+import { parseDotenv } from "../lib/dotenv";
 import { describe, expect, it } from "vitest";
 import { checkSecrets, emptyKeys, fillEnv, generateSecrets } from "../lib/secrets";
 import type { GeneratedSecrets } from "../lib/secrets";
@@ -194,7 +194,7 @@ describe("fillEnv", () => {
 
 // The same parser the CLI and Compose use, so these tests fail if fillEnv and the loaders disagree.
 describe("fillEnv agrees with the .env parsers", () => {
-  const loaded = (text: string) => parseEnv(text);
+  const loaded = (text: string) => parseDotenv(text);
   const fill = (text: string, only: Partial<GeneratedSecrets> = generateSecrets()) =>
     fillEnv(text, only);
 

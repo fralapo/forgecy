@@ -4,8 +4,8 @@
  */
 import "./lib/load-env";
 import { existsSync, readFileSync } from "node:fs";
-import { parseEnv } from "node:util";
 import { backup, restore } from "./lib/backup";
+import { parseDotenv } from "./lib/dotenv";
 import { checkHealth, healthTargets } from "./lib/health";
 import { initEnv, MAIN_DB_MARKER } from "./lib/init";
 import { checkSecrets } from "./lib/secrets";
@@ -26,7 +26,7 @@ async function health(): Promise<void> {
  */
 function preflight(): void {
   if (!existsSync(".env")) throw new Error("No .env file. Run `pnpm forgecy init` to create one.");
-  const file = parseEnv(readFileSync(".env", "utf8").replace(/^\uFEFF/, ""));
+  const file = parseDotenv(readFileSync(".env", "utf8"));
   const env = {
     ...file,
     POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD ?? file.POSTGRES_PASSWORD,

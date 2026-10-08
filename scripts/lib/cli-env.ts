@@ -1,4 +1,4 @@
-import { parseEnv } from "node:util";
+import { parseDotenv } from "./dotenv";
 
 /**
  * The only `.env` keys the CLI reads itself (health.ts, backup.ts). Nothing else is copied into
@@ -35,7 +35,7 @@ export function parseCliEnv(
   text: string,
   base: Record<string, string | undefined>,
 ): Record<string, string> {
-  const parsed = parseEnv(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
+  const parsed = parseDotenv(text);
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(parsed)) {
     if (value === undefined || !CLI_KEYS.has(key) || base[key] !== undefined) continue;

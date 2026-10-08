@@ -11,8 +11,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { parseEnv } from "node:util";
 import { afterAll, describe, expect, it } from "vitest";
+import { parseDotenv } from "../lib/dotenv";
 import { initEnv, writeFileAtomic } from "../lib/init";
 import { checkSecrets } from "../lib/secrets";
 import { read } from "./helpers";
@@ -27,7 +27,7 @@ const sandbox = (env?: string): string => {
   if (env !== undefined) writeFileSync(join(dir, ".env"), env);
   return dir;
 };
-const envOf = (dir: string) => parseEnv(readFileSync(join(dir, ".env"), "utf8"));
+const envOf = (dir: string) => parseDotenv(readFileSync(join(dir, ".env"), "utf8"));
 const posix = process.platform !== "win32";
 
 afterAll(() => {
@@ -115,6 +115,43 @@ describe("initEnv --fill", () => {
     chmodSync(join(dir, ".env"), 0o644);
     initEnv(dir, { fill: true });
     expect(statSync(join(dir, ".env")).mode & 0o777).toBe(0o600);
+    expect(readdirSync(dir).filter((f) => f.endsWith(".tmp"))).toEqual([]);
+  });
+});
+
+describe("initEnv --fill with blank-valued keys (Node's parser would swallow the next line)", () => {
+  it("keeps a real key that follows `KEY= `, and reports only what changed", () => {
+    for (const eol of ["\n", "\r\n"]) {
+      const dir = sandbox(
+        `BETTER_AUTH_SECRET= ${eol}${eol}FORGECY_ENCRYPTION_KEY=realkey${eol}POSTGRES_PASSWORD=hand${eol}`,
+      );
+      const result = initEnv(dir, { fill: true });
+      expect(result.filled).toEqual(["BETTER_AUTH_SECRET"]);
+      const env = envOf(dir);
+      expect(env.FORGECY_ENCRYPTION_KEY).toBe("realkey");
+      expect(env.POSTGRES_PASSWORD).toBe("hand");
+      expect(env.BETTER_AUTH_SECRET).toHaveLength(43);
+    }
+  });
+
+  it("fills the stock template whose POSTGRES_PASSWORD has a trailing space", () => {
+    const dir = sandbox(
+      read(".env.example").replace(/^POSTGRES_PASSWORD=$/m, "POSTGRES_PASSWORD= "),
+    );
+    const result = initEnv(dir, { fill: true });
+    expect(result.filled).toContain("POSTGRES_PASSWORD");
+    expect(checkSecrets(envOf(dir), { existingDatabase: false })).toEqual({
+      errors: [],
+      warnings: [],
+    });
+    expect(envOf(dir).POSTGRES_DB).toBe("forgecy");
+  });
+
+  it("writes nothing when the edit cannot be confirmed", () => {
+    const text = 'NOTE="a\nBETTER_AUTH_SECRET=\nb"\n';
+    const dir = sandbox(text);
+    expect(() => initEnv(dir, { fill: true })).toThrow(/Cannot edit \.env safely/);
+    expect(readFileSync(join(dir, ".env"), "utf8")).toBe(text);
     expect(readdirSync(dir).filter((f) => f.endsWith(".tmp"))).toEqual([]);
   });
 });

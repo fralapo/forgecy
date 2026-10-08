@@ -7,7 +7,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { emptyKeys, fillEnv, generateSecrets } from "./secrets";
+import { confirmedKeys, emptyKeys, fillEnv, generateSecrets } from "./secrets";
 import type { GeneratedSecrets, SecretKey } from "./secrets";
 
 /** Present once Postgres has initialised the main stack's data directory (see preflight). */
@@ -23,8 +23,8 @@ const DB_MARKERS = [MAIN_DB_MARKER, "data/dev-db/PG_VERSION"];
  */
 export function writeFileAtomic(path: string, content: string): void {
   const tmp = `${path}.${process.pid}.tmp`;
-  writeFileSync(tmp, content, { flag: "wx", mode: 0o600 });
   try {
+    writeFileSync(tmp, content, { flag: "wx", mode: 0o600 });
     try {
       renameSync(tmp, path);
       return;
@@ -62,9 +62,11 @@ export function initEnv(dir: string, options: { fill: boolean }): InitResult {
   const databaseExists = DB_MARKERS.some((marker) => existsSync(join(dir, marker)));
   const generated = generateSecrets();
   const secrets: Partial<GeneratedSecrets> = {};
-  const filled = emptyKeys(text).filter((key) => !(databaseExists && key === "POSTGRES_PASSWORD"));
-  for (const key of filled) secrets[key] = generated[key];
+  for (const key of emptyKeys(text))
+    if (!(databaseExists && key === "POSTGRES_PASSWORD")) secrets[key] = generated[key];
+  // fillEnv throws if the result would not read back as intended; "filled" is what the parse confirms.
   const out = fillEnv(text, secrets);
+  const filled = confirmedKeys(text, out);
   // "wx": never replaces a file that appeared meanwhile.
   if (created) writeFileSync(file, out, { flag: "wx", mode: 0o600 });
   else if (out !== text) writeFileAtomic(file, out);
