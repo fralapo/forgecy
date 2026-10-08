@@ -62,6 +62,38 @@ describe("checkHealth", () => {
     expect(r?.line).toContain("not a health reply");
   });
 
+  describe("terminal safety", () => {
+    // C0, DEL and C1 controls: ESC/CSI/OSC introducers, BEL, newlines.
+    // eslint-disable-next-line no-control-regex -- matching control characters is the point
+    const CONTROLS = /[\u0000-\u001f\u007f-\u009f]/;
+    const lineFor = async (status: number, body: string) =>
+      (await checkHealth(target, reply(status, body)))[0]?.line ?? "";
+
+    it.each([
+      ["a clear-screen sequence", "\x1b[2Jboom"],
+      ["an OSC title sequence", "\x1b]0;pwned\x07"],
+      ["C1 controls", "\u009b2J\u009d0;pwned\u009c"],
+    ])("strips %s from a non-JSON reply", async (_name, body) => {
+      for (const status of [200, 502]) expect(await lineFor(status, body)).not.toMatch(CONTROLS);
+    });
+
+    it.each([
+      ["an escaped ESC", JSON.stringify({ t: "\x1b[2Jboom" })],
+      ["an escaped OSC", JSON.stringify({ t: "\x1b]0;pwned\x07" })],
+      ["C1 controls", '{"t":"\u009b2J\u009d0;pwned\u009c"}'],
+    ])("strips %s from a JSON reply", async (_name, body) => {
+      for (const status of [200, 503]) expect(await lineFor(status, body)).not.toMatch(CONTROLS);
+    });
+
+    it("strips controls from a network error message", async () => {
+      const failing = vi.fn(async () => {
+        throw new Error("bad\x1b[2Jhost");
+      }) as unknown as typeof fetch;
+      const [r] = await checkHealth(target, failing);
+      expect(r?.line).not.toMatch(CONTROLS);
+    });
+  });
+
   it("reports a network failure with the URL it tried", async () => {
     const failing = vi.fn(async () => {
       throw new Error("connect ECONNREFUSED");

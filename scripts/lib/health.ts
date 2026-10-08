@@ -10,6 +10,12 @@ export interface HealthResult {
 
 type Env = Record<string, string | undefined>;
 
+// Text from the other end goes to the user's terminal: C0, DEL and C1 controls (ESC, CSI, OSC,
+// BEL, newlines) become a space so a reply cannot clear the screen or set the window title.
+const printable = (text: string, max = 200) =>
+  // eslint-disable-next-line no-control-regex -- matching control characters is the point
+  text.replace(/[\u0000-\u001f\u007f-\u009f]+/g, " ").slice(0, max);
+
 /**
  * Where `pnpm forgecy health` looks. Compose publishes the web port and, on loopback only,
  * the worker's health port; `pnpm dev` runs both on the host.
@@ -44,15 +50,15 @@ export async function checkHealth(
         return {
           name,
           ok: false,
-          line: `${label} unreachable (${(error as Error).message}) at ${url}`,
+          line: `${label} unreachable (${printable((error as Error).message)}) at ${url}`,
         };
       }
       // A reply that is not JSON (a proxy's 502 page) is still a reply, not "unreachable".
       const text = (await res.text().catch(() => "")).trim();
-      let detail = text.replace(/\s+/g, " ").slice(0, 200);
+      let detail = printable(text);
       let isJson = false;
       try {
-        detail = JSON.stringify(JSON.parse(text));
+        detail = printable(JSON.stringify(JSON.parse(text)));
         isJson = true;
       } catch {
         /* keep the raw text */
