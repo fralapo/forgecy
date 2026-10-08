@@ -765,7 +765,9 @@
       "aiOff": "Funzioni AI disattivate per questo cliente",
       "noText": "Nessun testo da interpretare",
       "aiNotRun": "Interpretazione AI non eseguita: {message}",
-      "aiFailed": "Interpretazione AI non riuscita"
+      "aiFailed": "Interpretazione AI non riuscita",
+      "crawlPages": "{count, plural, one {# pagina letta} other {# pagine lette}} dal sito",
+      "crawlSkipped": "{count, plural, one {# pagina saltata} other {# pagine saltate}}"
     },
     "warnings": {
       "firstPages": "Sono state lette solo le prime {max} pagine",

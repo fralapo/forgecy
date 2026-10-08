@@ -1,11 +1,15 @@
 "use server";
 
 import { getDefaultAiPolicy } from "@forgecy/ai";
+import { addSource, brandCrawlWebsiteJob } from "@forgecy/brand";
 import { aiPolicies, assertCan, clientStatuses } from "@forgecy/core";
 import { clients, eq, getDb, recordAuditEvent } from "@forgecy/db";
+import { enqueueJob } from "@forgecy/jobs";
 import { revalidatePath } from "next/cache";
+import { getLocale } from "next-intl/server";
 import { z } from "zod";
 import { firstIssue, vmsg } from "@/lib/i18n";
+import { getQueues } from "@/lib/queues";
 import { requireUser } from "@/lib/session";
 import { slugify } from "@/lib/slug";
 
@@ -49,7 +53,7 @@ export async function createClientAction(
     slug = `${base}-${i}`;
   }
 
-  await db.transaction(async (tx) => {
+  const { id: clientId } = await db.transaction(async (tx) => {
     const [row] = await tx
       .insert(clients)
       .values({
@@ -68,7 +72,31 @@ export async function createClientAction(
       clientId: row!.id,
       meta: { status: parsed.data.status, aiPolicy },
     });
+    return row!;
   });
+
+  if (parsed.data.websiteUrl) {
+    const source = await addSource(db, user.actor, {
+      clientId,
+      kind: "website",
+      title: new URL(parsed.data.websiteUrl).hostname,
+      url: parsed.data.websiteUrl,
+      status: "pending",
+    });
+    await enqueueJob(db, await getQueues(), {
+      kind: brandCrawlWebsiteJob,
+      payload: {
+        clientId,
+        sourceId: source.id,
+        requestedBy: user.id,
+        language: await getLocale(),
+      },
+      clientId,
+      entity: "brand_source",
+      entityId: source.id,
+      createdBy: user.id,
+    });
+  }
   revalidatePath("/clients");
   return { ok: true };
 }

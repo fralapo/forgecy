@@ -395,6 +395,9 @@ importers:
       '@forgecy/ai':
         specifier: workspace:*
         version: link:../ai
+      '@forgecy/audit':
+        specifier: workspace:*
+        version: link:../audit
       '@forgecy/core':
         specifier: workspace:*
         version: link:../core

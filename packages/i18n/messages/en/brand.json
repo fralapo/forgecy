@@ -765,7 +765,9 @@
       "aiOff": "AI features turned off for this client",
       "noText": "No text to interpret",
       "aiNotRun": "AI interpretation not run: {message}",
-      "aiFailed": "AI interpretation failed"
+      "aiFailed": "AI interpretation failed",
+      "crawlPages": "{count, plural, one {# page read} other {# pages read}} from the site",
+      "crawlSkipped": "{count, plural, one {# page skipped} other {# pages skipped}}"
     },
     "warnings": {
       "firstPages": "Only the first {max} pages were read",

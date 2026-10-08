@@ -14,3 +14,20 @@ export const brandImportSourceJob = defineJob({
     language: z.string().min(2).max(8).default("en"),
   }),
 });
+
+/**
+ * Reads the client's website (home page and the most relevant pages found from
+ * there), stores it as a `website` source, then runs the same Brand Analyst step
+ * as `brand.import_source`. Enqueued automatically whenever a prospect or client
+ * gets a website address.
+ */
+export const brandCrawlWebsiteJob = defineJob({
+  kind: "brand.crawl_website",
+  queue: "media",
+  payload: z.object({
+    clientId: z.uuid(),
+    sourceId: z.uuid(),
+    requestedBy: z.uuid().nullish(),
+    language: z.string().min(2).max(8).default("en"),
+  }),
+});
