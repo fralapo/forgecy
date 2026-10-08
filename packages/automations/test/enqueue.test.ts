@@ -19,6 +19,25 @@ describe("queueNextItem", () => {
     expect(fake.executed[0]!.sql).toContain("pg_advisory_xact_lock");
     expect(fake.executed[0]!.params).toContain(`automation_run:${RUN}`);
   });
+
+  it("treats a queued item that already has a job as busy, so it never queues a second item", async () => {
+    const run = {
+      id: RUN,
+      automationId: AUT,
+      clientId: CLIENT,
+      status: "running",
+      startedBy: null,
+    };
+    // The busy probe finds the first item (queued, job attached): nothing else may be queued.
+    const fake = createFakeDb({ selects: [[run], [{ status: "active" }], [{ id: ITEM }]] });
+    const next = await queueNextItem({ db: fake.db, queues: {} as never }, RUN);
+    expect(next).toBeNull();
+    expect(fake.calls.filter((c) => c === "select")).toHaveLength(3); // run, automation, busy; no "next" pick
+    const busy = fake.wheres[2]!;
+    expect(busy).toContain('"automation_run_items"."status" = $');
+    expect(busy).toContain('"automation_run_items"."job_id" is not null');
+    expect(busy).toContain(" or ");
+  });
 });
 
 describe("runAutomationItem ownership", () => {

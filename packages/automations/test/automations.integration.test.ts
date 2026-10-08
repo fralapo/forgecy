@@ -329,6 +329,18 @@ describe.skipIf(!dbUrl)("batch automations (integration)", () => {
       .where(sql`${jobs.entity} = 'automation_run_item' and ${jobs.entityId} = ${first!.id}`);
     // 1 from start + exactly 1 from the two racing callers (it was 3 before the lock).
     expect(queued).toHaveLength(2);
+    // The second caller must not have moved on to the next item: only one item in flight.
+    const [, second] = await db
+      .select()
+      .from(automationRunItems)
+      .where(eq(automationRunItems.runId, run.id))
+      .orderBy(automationRunItems.position);
+    expect(second!.jobId).toBeNull();
+    const secondJobs = await db
+      .select({ id: jobs.id })
+      .from(jobs)
+      .where(sql`${jobs.entity} = 'automation_run_item' and ${jobs.entityId} = ${second!.id}`);
+    expect(secondJobs).toHaveLength(0);
     await cancelRun(db, anna, { id: created.id });
   });
 });

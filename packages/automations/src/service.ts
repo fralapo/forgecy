@@ -30,6 +30,7 @@ import {
   jobsLog,
   ne,
   notify,
+  or,
   sql,
   type Database,
 } from "@forgecy/db";
@@ -582,6 +583,8 @@ export async function queueNextItem(
   deps: Pick<RunDeps, "db" | "queues">,
   runId: string,
 ): Promise<AutomationRunItemRow | null> {
+  // ponytail: the lock holds one pooled connection while the body uses others, so this needs
+  // pool >= 2 plus concurrent callers; a pool of 1 would deadlock on itself.
   return deps.db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`automation_run:${runId}`}))`);
     // The lock lives as long as this transaction; the work below commits on its own
@@ -606,10 +609,24 @@ async function pickAndQueueItem(
     await finishRun(db, runId);
     return null;
   }
+  // Busy: an item is running, or already queued with a job attached (claimed by an earlier
+  // caller). Pause/resume clear job_id and a crash before the claim leaves it null, so a stale
+  // job_id cannot block the run for good.
   const busy = await db
     .select({ id: automationRunItems.id })
     .from(automationRunItems)
-    .where(and(eq(automationRunItems.runId, runId), eq(automationRunItems.status, "running")))
+    .where(
+      and(
+        eq(automationRunItems.runId, runId),
+        or(
+          eq(automationRunItems.status, "running"),
+          and(
+            eq(automationRunItems.status, "queued"),
+            sql`${automationRunItems.jobId} is not null`,
+          ),
+        ),
+      ),
+    )
     .limit(1);
   if (busy.length) return null;
   const [next] = await db
