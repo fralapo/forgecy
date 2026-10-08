@@ -4,6 +4,7 @@
   "yourNameRequired": "Inserisci il tuo nome",
   "emailInvalid": "Email non valida",
   "passwordTooShort": "La password deve avere almeno {min} caratteri",
+  "passwordTooLong": "La password può avere al massimo {max} caratteri",
   "websiteInvalid": "Indirizzo del sito non valido",
   "usernameInvalid": "Usa solo lettere, numeri, punto, trattino o underscore"
 }

@@ -3,7 +3,7 @@
 import { Button, Input, Label } from "@forgecy/ui";
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
-import { PASSWORD_MIN } from "@/lib/password";
+import { PASSWORD_MAX, PASSWORD_MIN } from "@/lib/password";
 import { createFirstAdmin, type SetupState } from "./actions";
 
 export function SetupForm() {
@@ -23,6 +23,7 @@ export function SetupForm() {
           type="password"
           autoComplete="new-password"
           minLength={PASSWORD_MIN}
+          maxLength={PASSWORD_MAX}
           required
         />
       </div>

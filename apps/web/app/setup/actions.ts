@@ -4,20 +4,20 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { firstIssue, vmsg } from "@/lib/i18n";
-import { PASSWORD_MIN } from "@/lib/password";
+import { refinePassword } from "@/lib/password-schema";
 import { emailToUsername, usernameToEmail } from "@/lib/username";
 import { countUsers, createPasswordUser, withSetupLock } from "@/lib/users";
 
-const setupSchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .regex(/^[A-Za-z0-9._-]+(@[A-Za-z0-9.-]+)?$/, vmsg("validation.usernameInvalid"))
-    .transform(usernameToEmail),
-  password: z
-    .string()
-    .min(PASSWORD_MIN, vmsg("validation.passwordTooShort", { min: PASSWORD_MIN })),
-});
+const setupSchema = z
+  .object({
+    username: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9._-]+(@[A-Za-z0-9.-]+)?$/, vmsg("validation.usernameInvalid"))
+      .transform(usernameToEmail),
+    password: z.string(),
+  })
+  .superRefine(refinePassword);
 
 export type SetupState = { error?: string };
 

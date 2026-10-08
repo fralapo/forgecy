@@ -8,7 +8,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink } from "better-auth/plugins";
 import { env } from "./env";
-import { PASSWORD_MIN } from "./password";
+import { PASSWORD_MAX, PASSWORD_MIN } from "./password";
 
 const db = getDb();
 const teamMode = env.FORGECY_AUTH_MODE === "team";
@@ -62,6 +62,7 @@ export const auth = betterAuth({
     // Accounts are created by the first-run setup or by an Admin, never by self sign-up.
     disableSignUp: true,
     minPasswordLength: PASSWORD_MIN,
+    maxPasswordLength: PASSWORD_MAX,
   },
   socialProviders: googleEnabled
     ? {

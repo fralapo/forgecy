@@ -4,7 +4,7 @@ import { Button, Input, Label } from "@forgecy/ui";
 import { UserPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
-import { PASSWORD_MIN } from "@/lib/password";
+import { PASSWORD_MAX, PASSWORD_MIN } from "@/lib/password";
 import { createUserAction, type NewUserState } from "./actions";
 
 export function NewUserForm() {
@@ -23,6 +23,7 @@ export function NewUserForm() {
           name="password"
           type="password"
           minLength={PASSWORD_MIN}
+          maxLength={PASSWORD_MAX}
           autoComplete="new-password"
           required
         />

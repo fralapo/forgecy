@@ -28,26 +28,26 @@ import { z } from "zod";
 import { resetProviders } from "@/lib/ai";
 import { env } from "@/lib/env";
 import { errorMessage, firstIssue, vmsg } from "@/lib/i18n";
-import { PASSWORD_MIN } from "@/lib/password";
+import { refinePassword } from "@/lib/password-schema";
 import { requireUser } from "@/lib/session";
 import { isTheme, THEME_COOKIE } from "@/lib/theme";
 import { emailToUsername, usernameToEmail } from "@/lib/username";
 import { createPasswordUser } from "@/lib/users";
 
-const newUserSchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .regex(/^[A-Za-z0-9._-]+(@[A-Za-z0-9.-]+)?$/, vmsg("validation.usernameInvalid"))
-    .transform(usernameToEmail),
-  password: z
-    .string()
-    .min(PASSWORD_MIN, vmsg("validation.passwordTooShort", { min: PASSWORD_MIN })),
-  isAdmin: z
-    .literal("on")
-    .optional()
-    .transform((v) => v === "on"),
-});
+const newUserSchema = z
+  .object({
+    username: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9._-]+(@[A-Za-z0-9.-]+)?$/, vmsg("validation.usernameInvalid"))
+      .transform(usernameToEmail),
+    password: z.string(),
+    isAdmin: z
+      .literal("on")
+      .optional()
+      .transform((v) => v === "on"),
+  })
+  .superRefine(refinePassword);
 
 export type NewUserState = { error?: string; ok?: boolean };
 
