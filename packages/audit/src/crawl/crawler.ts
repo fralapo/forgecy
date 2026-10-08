@@ -1,5 +1,6 @@
 import type { MessageRef } from "@forgecy/core";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
+import { guardedFetch, readTextCapped } from "@forgecy/core/net-guard";
 import robotsParser from "robots-parser";
 import { CrawlError, crawlError, type AuditErrorCode } from "../errors";
 import { sameSite, type HostCheck } from "../url";
@@ -131,19 +132,28 @@ export function pickPages(input: {
   return [input.home, ...picked].slice(0, input.maxPages);
 }
 
+const MAX_ROBOTS_SITEMAP_BYTES = 500_000;
+
+/**
+ * robots.txt / sitemap fetch: every redirect hop goes through the host check, the body is
+ * read up to a byte cap. Null for anything that goes wrong (blocked hop, loop, network).
+ */
 async function fetchText(
   url: string,
   options: Pick<CrawlOptions, "userAgent" | "fetchImpl" | "hostCheck">,
 ): Promise<{ status: number; text: string } | null> {
-  if (!(await options.hostCheck(url))) return null;
   try {
-    const res = await (options.fetchImpl ?? fetch)(url, {
+    const { res } = await guardedFetch(url, {
+      hostCheck: options.hostCheck,
+      ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
       headers: { "user-agent": options.userAgent },
-      redirect: "follow",
-      signal: AbortSignal.timeout(10_000),
+      timeoutMs: 10_000,
     });
-    const text = res.ok ? (await res.text()).slice(0, 500_000) : "";
-    return { status: res.status, text };
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => undefined);
+      return { status: res.status, text: "" };
+    }
+    return { status: res.status, text: await readTextCapped(res, MAX_ROBOTS_SITEMAP_BYTES) };
   } catch {
     return null;
   }
@@ -228,14 +238,17 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
     });
   }
   const sitemapUrls: string[] = [];
-  for (const sm of robots.getSitemaps().length
+  const sitemapCandidates = robots.getSitemaps().length
     ? robots.getSitemaps().slice(0, 2)
-    : [`${root.origin}/sitemap.xml`]) {
+    : [`${root.origin}/sitemap.xml`];
+  for (const sm of sitemapCandidates) {
+    if (!sameSite(sm, home)) continue;
     const res = await fetchText(sm, options);
     if (!res || res.status !== 200) continue;
     const parsed = parseSitemap(res.text);
     sitemapUrls.push(...parsed.urls.slice(0, 200));
     for (const child of parsed.sitemaps.slice(0, 2)) {
+      if (!sameSite(child, home)) continue;
       const c = await fetchText(child, options);
       if (c?.status === 200) sitemapUrls.push(...parseSitemap(c.text).urls.slice(0, 200));
     }

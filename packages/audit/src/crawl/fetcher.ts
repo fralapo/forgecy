@@ -1,6 +1,7 @@
 import type { PageData } from "@forgecy/db";
 import { parse, type HTMLElement } from "node-html-parser";
 import { crawlError } from "../errors";
+import { GuardedFetchError, guardedFetch, readTextCapped } from "@forgecy/core/net-guard";
 import { createPinnedFetch, type HostCheck } from "../url";
 
 /** What a fetcher returns for one page. Colors and fonts need a browser; HTML-only leaves them empty. */
@@ -44,6 +45,9 @@ const CTA_WORDS =
   /\b(contatt|preventiv|richied|prenot|scopri|acquist|compra|iscriv|scaric|chiama|scrivi|inizia|prova|registr|ordina|contact|quote|book|buy|shop|sign ?up|subscribe|download|call|get started|try|request|demo)/i;
 
 const MAX_TEXT = 4000;
+
+/** A page's HTML is read up to this many bytes; the rest is never downloaded. */
+export const MAX_HTML_BYTES = 4 * 1024 * 1024;
 
 function clean(text: string | undefined | null): string {
   return (text ?? "").replace(/\s+/g, " ").trim();
@@ -167,26 +171,28 @@ export function createHtmlFetcher(options: {
     mode: "html",
     async fetchPage(url, { timeoutMs }) {
       const started = Date.now();
-      let current = url;
-      let res: Response | undefined;
-      for (let hop = 0; hop < 5; hop++) {
-        if (!(await options.hostCheck(current)))
-          throw crawlError("AUD-HOST-BLOCKED", "audit.stored.crawl.addressLocal", { url: current });
-        res = await doFetch(current, {
-          redirect: "manual",
+      let res: Response;
+      let current: string;
+      try {
+        ({ res, url: current } = await guardedFetch(url, {
+          hostCheck: options.hostCheck,
+          fetchImpl: doFetch,
+          maxHops: 5,
+          timeoutMs,
           headers: { "user-agent": options.userAgent, accept: "text/html,*/*;q=0.8" },
-          signal: AbortSignal.timeout(timeoutMs),
-        });
-        const location = res.headers.get("location");
-        if (res.status >= 300 && res.status < 400 && location) {
-          current = new URL(location, current).toString();
-          continue;
+        }));
+      } catch (err) {
+        if (err instanceof GuardedFetchError) {
+          if (err.reason === "blocked")
+            throw crawlError("AUD-HOST-BLOCKED", "audit.stored.crawl.addressLocal", { url: err.url });
+          throw crawlError("SOURCE-UNAVAILABLE", "audit.stored.crawl.noResponse", { url });
         }
-        break;
+        throw err;
       }
-      if (!res) throw crawlError("SOURCE-UNAVAILABLE", "audit.stored.crawl.noResponse", { url });
       const type = res.headers.get("content-type") ?? "";
-      const html = type.includes("html") ? await res.text() : "";
+      let html = "";
+      if (type.includes("html")) html = await readTextCapped(res, MAX_HTML_BYTES);
+      else await res.body?.cancel().catch(() => undefined);
       const extracted = extractFromHtml(html, current);
       return {
         ...extracted,
