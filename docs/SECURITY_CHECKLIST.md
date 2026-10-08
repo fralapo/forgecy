@@ -74,9 +74,27 @@ confirm by hand against a real target, not just the unit tests in
       `apps/web/app/api/system/backups/upload/route.ts` rather than taken
       locally, to confirm the upload path enforces the same checks.
 
+## 4. Sign-in and first run (see `docs/adr/0014-auth-hardening.md`)
+
+- [ ] Send six wrong passwords for one username to `/api/auth/sign-in/email`;
+      the sixth must return 429 with a `Retry-After` header, and a username
+      that does not exist must behave the same way.
+- [ ] With `FORGECY_SETUP_TOKEN` set on a fresh database, `/setup` asks for the
+      token and refuses a wrong one.
+- [ ] Open `/login?next=/\evil.com` and `/login?next=//evil.com`; after signing
+      in, both must land on `/`.
+- [ ] `curl -sI` on `/login` shows `Content-Security-Policy`, `X-Frame-Options`,
+      `X-Content-Type-Options`, `Referrer-Policy` and `Permissions-Policy`;
+      `/render/*` and `/api/files/*` do not get a second policy.
+- [ ] Behind https, `Strict-Transport-Security` is present (emitted by Caddy,
+      not by the Next.js image).
+- [ ] Open the signed URL of an SVG that contains a `<script>` as a top-level
+      page; the script must not run.
+- [ ] After changing a password, a second signed-in browser is signed out.
+
 ## Sign-off
 
-Record the date, the person who ran it, and which of the three sections
+Record the date, the person who ran it, and which of the four sections
 passed in the PR or ticket that references this checklist. A failing item
 blocks go-live until fixed or explicitly accepted as a known limitation
 (e.g. the documented residual gap: a crawl redirect to a _different_
