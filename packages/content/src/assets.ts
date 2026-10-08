@@ -4,7 +4,7 @@
  * file is stored once. Uploads by a person and product photos are usable at once;
  * AI images stay drafts until a person approves them (spec "AI images").
  */
-import type { ProviderId } from "@forgecy/core";
+import { commercialUseStatuses, type ProviderId } from "@forgecy/core";
 import type { Actor } from "@forgecy/core";
 import {
   aiConnections,
@@ -285,7 +285,7 @@ export async function listAssets(
     .limit(Math.min(filter.limit ?? 200, 500));
 }
 
-export type CommercialUse = "verified" | "pending_verification" | "rejected";
+export type CommercialUse = (typeof commercialUseStatuses)[number];
 
 /** Image providers whose terms an Admin checks before use with real clients. */
 export const imageProviders = [
@@ -309,7 +309,7 @@ export interface CommercialUseReview {
 const reviewKey = (provider: ProviderId) => `ai.commercial_use.${provider}`;
 
 const reviewValueSchema = z.object({
-  status: z.enum(["verified", "pending_verification", "rejected"]),
+  status: z.enum(commercialUseStatuses),
   termsUrl: z.url().max(500).nullable().default(null),
   consultedOn: z.iso.date().nullable().default(null),
   note: z.string().max(500).nullable().default(null),

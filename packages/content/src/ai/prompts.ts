@@ -12,6 +12,7 @@ import {
   type LayoutDef,
   type TemplateManifest,
 } from "@forgecy/carousel";
+import { frequencyUnits } from "@forgecy/core";
 import { withPlaybooks } from "@forgecy/ai/playbooks";
 import { z } from "zod";
 import { funnelLabels, objectiveLabels } from "../labels";
@@ -30,7 +31,7 @@ const SHARED_RULES = `- Write in the indicated language (English when no languag
 
 const frequencyOut = z.object({
   count: z.number().int().min(1).max(30),
-  unit: z.enum(["week", "month"]),
+  unit: z.enum(frequencyUnits),
 });
 
 export const strategyOutputSchema = z.object({

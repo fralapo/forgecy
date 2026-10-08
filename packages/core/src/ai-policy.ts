@@ -71,3 +71,15 @@ export function checkAiPolicy(
       return { allowed: true };
   }
 }
+
+/** Spending limits apply to the whole agency or to one client. */
+export const budgetScopes = ["agency", "client"] as const;
+/** Who a saved connection belongs to. */
+export const connectionScopes = ["agency", "client", "user"] as const;
+/** Outcome of one AI call in `jobs_log`. */
+export const aiCallStatuses = ["ok", "error", "blocked"] as const;
+export const apiKeyStatuses = ["active", "disabled"] as const;
+/** Admin's check of a provider's commercial-use terms. */
+export const commercialUseStatuses = ["pending_verification", "verified", "rejected"] as const;
+/** State of an OAuth connection (MCP providers, Sign in with ChatGPT). */
+export const oauthConnectionStatuses = ["pending", "connected", "error"] as const;

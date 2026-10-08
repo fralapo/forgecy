@@ -1,3 +1,9 @@
+import {
+  aiCallStatuses,
+  apiKeyStatuses,
+  commercialUseStatuses,
+  oauthConnectionStatuses,
+} from "@forgecy/core";
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -29,7 +35,7 @@ export const jobsLog = pgTable(
     kind: text("kind").notNull(),
     clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
     contentId: uuid("content_id"),
-    status: text("status", { enum: ["ok", "error", "blocked"] }).notNull(),
+    status: text("status", { enum: aiCallStatuses }).notNull(),
     provider: providerEnum("provider"),
     model: text("model"),
     policy: aiPolicyEnum("policy"),
@@ -86,12 +92,10 @@ export const aiConnections = pgTable(
     encryptedKey: text("encrypted_key").notNull(),
     keyHint: text("key_hint").notNull(),
     baseUrl: text("base_url"),
-    status: text("status", { enum: ["active", "disabled"] })
-      .notNull()
-      .default("active"),
+    status: text("status", { enum: apiKeyStatuses }).notNull().default("active"),
     /** Product Owner check of the provider's terms before use with real clients. */
     commercialUseStatus: text("commercial_use_status", {
-      enum: ["pending_verification", "verified", "rejected"],
+      enum: commercialUseStatuses,
     })
       .notNull()
       .default("pending_verification"),
@@ -115,9 +119,7 @@ export const mcpConnections = pgTable(
     id: id(),
     provider: providerEnum("provider").notNull(),
     serverUrl: text("server_url").notNull(),
-    status: text("status", { enum: ["pending", "connected", "error"] })
-      .notNull()
-      .default("pending"),
+    status: text("status", { enum: oauthConnectionStatuses }).notNull().default("pending"),
     encryptedState: text("encrypted_state"),
     oauthState: text("oauth_state"),
     lastError: text("last_error"),
@@ -146,9 +148,7 @@ export const siwcConnections = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    status: text("status", { enum: ["pending", "connected", "error"] })
-      .notNull()
-      .default("pending"),
+    status: text("status", { enum: oauthConnectionStatuses }).notNull().default("pending"),
     planSharing: boolean("plan_sharing").notNull().default(false),
     encryptedState: text("encrypted_state"),
     oauthState: text("oauth_state"),
