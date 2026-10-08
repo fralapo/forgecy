@@ -10,6 +10,8 @@ x-app-env: &app-env
     MEDIA_ROOT: /data/media
     FORGECY_DATA_DIR: /data
     FORGECY_BASE_URL: ${FORGECY_BASE_URL:-http://localhost:3000}
+    # The worker listens on 3001 inside the container whatever .env says (that value is for `pnpm dev`).
+    WORKER_HEALTH_PORT: "3001"
     # Dates in the interface and in exports are shown in the agency's time zone.
     TZ: ${FORGECY_TIMEZONE:-Europe/Rome}
 
@@ -104,6 +106,9 @@ services:
     image: forgecy-worker:local
     restart: unless-stopped
     <<: [*app-env, *hardened]
+    # Loopback only: lets `pnpm forgecy health` on this machine reach the worker's /health.
+    ports:
+      - "127.0.0.1:${FORGECY_WORKER_HEALTH_PORT:-3001}:3001"
     volumes:
       - ./data:/data
     depends_on:

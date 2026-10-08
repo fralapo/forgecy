@@ -63,6 +63,15 @@ describe("docker-compose.yml hardening", () => {
   });
 });
 
+describe("worker health reachability", () => {
+  it("publishes /health on loopback only, so `pnpm forgecy health` can reach it", () => {
+    expect(main.worker?.ports).toEqual(["127.0.0.1:${FORGECY_WORKER_HEALTH_PORT:-3001}:3001"]);
+  });
+  it("pins the in-container port, whatever .env says", () => {
+    expect(main.worker?.environment?.WORKER_HEALTH_PORT).toBe("3001");
+  });
+});
+
 describe("docker-compose.dev.yml", () => {
   it.each(["postgres", "redis", "mailpit"])("publishes %s on loopback only", (name) => {
     expect(dev[name]?.ports?.length).toBeGreaterThan(0);
