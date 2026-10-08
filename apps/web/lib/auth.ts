@@ -3,11 +3,12 @@ import { getDb, schema } from "@forgecy/db";
 import { isLocale, negotiateLocale } from "@forgecy/i18n";
 import { createMailer, renderMagicLinkEmail } from "@forgecy/mail";
 import { betterAuth } from "better-auth";
-import { APIError } from "better-auth/api";
+import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink } from "better-auth/plugins";
 import { env } from "./env";
+import { loginGuard } from "./login-guard";
 import { PASSWORD_MAX, PASSWORD_MIN } from "./password";
 
 const db = getDb();
@@ -73,6 +74,7 @@ export const auth = betterAuth({
         },
       }
     : {},
+  // ponytail: in-memory per-IP buckets (reset on restart); per-username lockout is in hooks below. Move to storage: "database" if running several web replicas.
   rateLimit: {
     enabled: true,
     window: 60,
@@ -94,6 +96,22 @@ export const auth = betterAuth({
         },
       },
     },
+  },
+  hooks: {
+    // Same answer for known and unknown usernames: the throttle only sees the typed identifier.
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/sign-in/email") return;
+      const email = (ctx.body as { email?: unknown } | undefined)?.email;
+      if ((await loginGuard.retryAfter(String(email ?? ""))) > 0)
+        throw new APIError("TOO_MANY_REQUESTS", { message: "Too many attempts. Try again later." });
+    }),
+    after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/sign-in/email") return;
+      const id = String((ctx.body as { email?: unknown } | undefined)?.email ?? "");
+      const returned: unknown = ctx.context.returned;
+      if (!isAPIError(returned)) await loginGuard.succeeded(id);
+      else if (returned.statusCode === 401) await loginGuard.failed(id);
+    }),
   },
   plugins: [
     ...(teamMode
