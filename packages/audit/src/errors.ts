@@ -43,6 +43,29 @@ export function crawlError(
   return new CrawlError(code, englishMessage(key, values), messageRef(key, values));
 }
 
+/**
+ * Node's fetch() wraps every network/TLS failure in a generic `TypeError: fetch
+ * failed`, with the real cause (ENOTFOUND, a timeout, a certificate error, our own
+ * pinned-fetch DNS check, …) nested under `.cause` — possibly several levels deep.
+ * Walks that chain so the UI shows the actual reason instead of the bare "fetch failed".
+ */
+export function describeFetchError(err: unknown): string {
+  const seen = new Set<unknown>();
+  let current: unknown = err;
+  let detail: string | undefined;
+  while (current && typeof current === "object" && !seen.has(current)) {
+    seen.add(current);
+    const e = current as { message?: unknown; code?: unknown; cause?: unknown };
+    const message = typeof e.message === "string" ? e.message : undefined;
+    const code = typeof e.code === "string" ? e.code : undefined;
+    if (message && message !== "fetch failed")
+      detail = code && !message.includes(code) ? `${code}: ${message}` : message;
+    current = e.cause;
+  }
+  const fallback = err instanceof Error ? err.message : String(err);
+  return (detail ?? fallback).split("\n")[0]!.slice(0, 160);
+}
+
 /** UI code for any thrown value (ForgecyError codes, permission errors, crawl errors). */
 export function auditErrorCode(err: unknown): AuditErrorCode | null {
   if (err instanceof CrawlError) return err.code;

@@ -135,7 +135,12 @@ export function createHostCheck(options: { allowPrivate?: boolean } = {}): HostC
     else {
       try {
         const addresses = await lookup(host, { all: true });
-        ok = addresses.length > 0 && addresses.every((a) => !isPrivateAddress(a.address));
+        // A host can have a broken or unused AAAA record (a placeholder "::", a
+        // misconfigured ULA) alongside a perfectly public A record; a browser's
+        // happy-eyeballs connect just skips the bad one. Blocking the whole host
+        // because of an address nothing ever connects to is not SSRF protection,
+        // it is a false positive — so only an *all-private* answer is disallowed.
+        ok = addresses.length > 0 && addresses.some((a) => !isPrivateAddress(a.address));
       } catch {
         // Unresolvable: let the fetch fail with a clear "unreachable" instead.
         ok = true;
@@ -162,8 +167,9 @@ export async function resolvePinnedAddress(
   if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return null;
   try {
     const addresses = await lookup(host, { all: true });
-    if (addresses.length === 0 || addresses.some((a) => isPrivateAddress(a.address))) return null;
-    return addresses[0]!.address;
+    // Same "ignore the broken/private record, use the public one" rule as createHostCheck.
+    const pinned = addresses.find((a) => !isPrivateAddress(a.address));
+    return pinned?.address ?? null;
   } catch {
     return null;
   }
@@ -196,15 +202,20 @@ export function createPinnedFetch(options: { allowPrivate?: boolean } = {}): typ
             return;
           }
           const list = addresses as LookupAddress[];
-          if (list.length === 0 || list.some((a) => isPrivateAddress(a.address))) {
+          // Same "ignore the broken/private record, connect with the public one"
+          // rule as createHostCheck/resolvePinnedAddress: a stray or unused private
+          // address (a placeholder AAAA, say) must never block a host that also
+          // resolves publicly — that is not a connection anything ever makes.
+          const safe = list.filter((a) => !isPrivateAddress(a.address));
+          if (safe.length === 0) {
             callback(new Error(`DNS for "${hostname}" resolves to a disallowed address`), []);
             return;
           }
           if (lookupOptions.all) {
-            callback(null, list);
+            callback(null, safe);
             return;
           }
-          const chosen = list[0]!;
+          const chosen = safe[0]!;
           callback(null, chosen.address, chosen.family);
         });
       },

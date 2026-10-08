@@ -1,7 +1,7 @@
 import type { MessageRef } from "@forgecy/core";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import robotsParser from "robots-parser";
-import { CrawlError, crawlError, type AuditErrorCode } from "../errors";
+import { CrawlError, crawlError, describeFetchError, type AuditErrorCode } from "../errors";
 import { sameSite, type HostCheck } from "../url";
 import { AUDIT_USER_AGENT_TOKEN, type FetchedPage, type PageFetcher } from "./fetcher";
 
@@ -217,7 +217,7 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
     if (err instanceof CrawlError) throw err;
     throw crawlError("SOURCE-UNAVAILABLE", "audit.stored.crawl.unreachable", {
       host: root.hostname,
-      detail: (err instanceof Error ? err.message : String(err)).split("\n")[0]!.slice(0, 160),
+      detail: describeFetchError(err),
     });
   }
   if (homePage.status >= 400 || homePage.status === 0) {

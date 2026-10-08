@@ -123,3 +123,57 @@ describe("crawlSite", () => {
     expect(result.pages).toHaveLength(1);
   });
 });
+
+describe("crawlSite unreachable host", () => {
+  // Node's fetch() always rejects network/TLS failures with a generic
+  // `TypeError: fetch failed`, nesting the real cause under `.cause` (this is what
+  // undici does for DNS errors, certificate errors, our own pinned-fetch host-check
+  // rejection, etc). A scan that only read `err.message` showed the user a useless
+  // "We cannot reach <host>: fetch failed" (reported for www.staging-g.deodue.it).
+  function optionsWithFetchFailure(cause: unknown) {
+    const hostCheck = createHostCheck({ allowPrivate: true });
+    const fetchImpl = (async () => {
+      throw new TypeError("fetch failed", { cause });
+    }) as unknown as typeof fetch;
+    return {
+      rootUrl: "https://unreachable.example.test/",
+      maxPages: 10,
+      fetcher: createHtmlFetcher({
+        userAgent: "ForgecyAudit/test",
+        hostCheck,
+        allowPrivate: true,
+        fetchImpl,
+      }),
+      hostCheck,
+      userAgent: "ForgecyAudit/test",
+      pageTimeoutMs: 5000,
+      totalTimeoutMs: 20_000,
+    };
+  }
+
+  it("surfaces a DNS failure's real cause instead of the bare 'fetch failed'", async () => {
+    const dnsError = Object.assign(new Error("getaddrinfo ENOTFOUND unreachable.example.test"), {
+      code: "ENOTFOUND",
+    });
+    const err = await crawlSite(optionsWithFetchFailure(dnsError)).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(CrawlError);
+    expect((err as CrawlError).code).toBe("SOURCE-UNAVAILABLE");
+    expect((err as CrawlError).message).toContain("ENOTFOUND unreachable.example.test");
+    expect((err as CrawlError).message).not.toContain("fetch failed");
+  });
+
+  it("surfaces a certificate failure's real cause", async () => {
+    const certError = new Error("certificate has expired");
+    const err = await crawlSite(optionsWithFetchFailure(certError)).catch((e: unknown) => e);
+    expect((err as CrawlError).message).toContain("certificate has expired");
+    expect((err as CrawlError).message).not.toContain("fetch failed");
+  });
+
+  it("surfaces the pinned fetch's own DNS-rebinding rejection", async () => {
+    const pinnedRejection = new Error(
+      'DNS for "unreachable.example.test" resolves to a disallowed address',
+    );
+    const err = await crawlSite(optionsWithFetchFailure(pinnedRejection)).catch((e: unknown) => e);
+    expect((err as CrawlError).message).toContain("resolves to a disallowed address");
+  });
+});
