@@ -56,7 +56,7 @@ import {
   type ProspectInput,
   type TablePreview,
 } from "@forgecy/audit";
-import { addSource, brandCrawlWebsiteJob } from "@forgecy/brand";
+import { brandCrawlWebsiteJob, findOrCreateWebsiteSource } from "@forgecy/brand";
 import type {
   AiPolicy,
   ComparisonOutcome,
@@ -99,13 +99,7 @@ async function crawlWebsite(
   websiteUrl: string,
 ) {
   const db = getDb();
-  const source = await addSource(db, actor, {
-    clientId,
-    kind: "website",
-    title: new URL(websiteUrl).hostname,
-    url: websiteUrl,
-    status: "pending",
-  });
+  const source = await findOrCreateWebsiteSource(db, actor, { clientId, websiteUrl });
   await enqueueJob(db, await getQueues(), {
     kind: brandCrawlWebsiteJob,
     payload: { clientId, sourceId: source.id, requestedBy: userId, language: await getLocale() },

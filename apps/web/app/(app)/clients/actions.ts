@@ -1,7 +1,7 @@
 "use server";
 
 import { getDefaultAiPolicy } from "@forgecy/ai";
-import { addSource, brandCrawlWebsiteJob } from "@forgecy/brand";
+import { brandCrawlWebsiteJob, findOrCreateWebsiteSource } from "@forgecy/brand";
 import { aiPolicies, assertCan, clientStatuses } from "@forgecy/core";
 import { clients, eq, getDb, recordAuditEvent } from "@forgecy/db";
 import { enqueueJob } from "@forgecy/jobs";
@@ -76,12 +76,9 @@ export async function createClientAction(
   });
 
   if (parsed.data.websiteUrl) {
-    const source = await addSource(db, user.actor, {
+    const source = await findOrCreateWebsiteSource(db, user.actor, {
       clientId,
-      kind: "website",
-      title: new URL(parsed.data.websiteUrl).hostname,
-      url: parsed.data.websiteUrl,
-      status: "pending",
+      websiteUrl: parsed.data.websiteUrl,
     });
     await enqueueJob(db, await getQueues(), {
       kind: brandCrawlWebsiteJob,

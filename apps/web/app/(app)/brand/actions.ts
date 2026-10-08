@@ -5,8 +5,10 @@ import {
   acceptProposals,
   addSource,
   approveAndPublish,
+  brandCrawlWebsiteJob,
   brandImportSourceJob,
   ensureDraft,
+  findOrCreateWebsiteSource,
   rejectProposals,
   removeSource,
   restoreAsDraft,
@@ -323,6 +325,66 @@ export async function importSourceAction(input: {
       createdBy: userId,
     });
     return { jobId: job.id };
+  });
+}
+
+/** Crawls an existing `website` source again (first scan, or a re-scan). */
+export async function crawlSourceAction(input: {
+  slug: string;
+  clientId: string;
+  sourceId: string;
+}) {
+  slugSchema.parse(input.slug);
+  return run(input.slug, async ({ actor, userId }) => {
+    assertCan(actor, "edit_draft", input.clientId);
+    const job = await enqueueJob(getDb(), await getQueues(), {
+      kind: brandCrawlWebsiteJob,
+      payload: {
+        clientId: uuid.parse(input.clientId),
+        sourceId: uuid.parse(input.sourceId),
+        requestedBy: userId,
+        language: await getLocale(),
+      },
+      clientId: input.clientId,
+      entity: "brand_source",
+      entityId: input.sourceId,
+      createdBy: userId,
+    });
+    return { jobId: job.id };
+  });
+}
+
+/** Starts the first scan of the client's website for a client that has no `website` source yet. */
+export async function scanWebsiteAction(input: {
+  slug: string;
+  clientId: string;
+  websiteUrl: string;
+}) {
+  slugSchema.parse(input.slug);
+  const websiteUrl = z
+    .url({ protocol: /^https?$/, message: vmsg("brand.validation.addressInvalid") })
+    .parse(input.websiteUrl);
+  return run(input.slug, async ({ actor, userId }) => {
+    assertCan(actor, "edit_draft", input.clientId);
+    const db = getDb();
+    const source = await findOrCreateWebsiteSource(db, actor, {
+      clientId: uuid.parse(input.clientId),
+      websiteUrl,
+    });
+    const job = await enqueueJob(db, await getQueues(), {
+      kind: brandCrawlWebsiteJob,
+      payload: {
+        clientId: uuid.parse(input.clientId),
+        sourceId: source.id,
+        requestedBy: userId,
+        language: await getLocale(),
+      },
+      clientId: input.clientId,
+      entity: "brand_source",
+      entityId: source.id,
+      createdBy: userId,
+    });
+    return { jobId: job.id, sourceId: source.id };
   });
 }
 

@@ -1095,6 +1095,37 @@ export interface AddSourceInput {
   status?: SourceRow["status"];
 }
 
+/**
+ * Reuses the client's existing, not-removed `website` source for this exact address,
+ * or registers one (`pending`, ready for `brand.crawl_website`). Safe to call more
+ * than once for the same address: it never creates a second row for it.
+ */
+export async function findOrCreateWebsiteSource(
+  db: Database,
+  actor: Actor,
+  input: { clientId: string; websiteUrl: string },
+): Promise<SourceRow> {
+  const [existing] = await db
+    .select()
+    .from(brandSources)
+    .where(
+      and(
+        eq(brandSources.clientId, input.clientId),
+        eq(brandSources.kind, "website"),
+        eq(brandSources.url, input.websiteUrl),
+        isNull(brandSources.removedAt),
+      ),
+    );
+  if (existing) return existing;
+  return addSource(db, actor, {
+    clientId: input.clientId,
+    kind: "website",
+    title: new URL(input.websiteUrl).hostname,
+    url: input.websiteUrl,
+    status: "pending",
+  });
+}
+
 /** Registers a source. Agents may add their own observations as sources. */
 export async function addSource(
   db: Database,
