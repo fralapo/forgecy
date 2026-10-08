@@ -12,3 +12,7 @@ playwright-report/
 test-results/
 .DS_Store
 next-env.d.ts
+
+# Local artifacts that must never be committed
+*.rdb
+*.whl

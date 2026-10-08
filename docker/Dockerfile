@@ -29,6 +29,7 @@ COPY packages/i18n/package.json packages/i18n/
 COPY packages/jobs/package.json packages/jobs/
 COPY packages/mail/package.json packages/mail/
 COPY packages/ui/package.json packages/ui/
+COPY scripts/package.json scripts/
 # Optional extra CA bundle for networks behind a TLS-inspecting proxy:
 #   docker build --secret id=extra-ca,src=/path/to/ca.pem ...
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
