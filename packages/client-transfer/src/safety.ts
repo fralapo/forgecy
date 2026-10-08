@@ -1,6 +1,7 @@
 /**
  * A client package is untrusted input: whoever built it chose every id and key in it. These
- * checks keep a package inside the client it creates. Ids are compared in lower case.
+ * checks keep a package inside the client it creates. Ids are lower-case canonical uuids and
+ * compared exactly, the same way the importer maps them.
  */
 import type { ClientImportProblem } from "@forgecy/core";
 import { isValidKey } from "@forgecy/files";
@@ -40,6 +41,7 @@ export class UnsafePackageError extends Error {
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const isId = (v: unknown): v is string => typeof v === "string" && ID.test(v);
 
+// Found in any case (`CLIENTS/`, upper-case ids), then required to be exactly this client's prefix.
 const TENANT_KEY = /clients\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\//gi;
 const SYSTEM_KEY =
   /^system\/[a-z0-9][a-z0-9_-]{0,63}(?:\/[a-z0-9][a-z0-9_-]{0,63})*\/([a-f0-9]{64})\.[a-z0-9]{1,10}$/;
@@ -120,19 +122,23 @@ export function assertPackageScoped(
           throw new UnsafePackageError(`${d.column} needs data that does not travel`, table.name);
       for (const s of strings(r))
         for (const m of s.matchAll(TENANT_KEY))
-          if (m[1]!.toLowerCase() !== scope.clientId)
+          if (m[0] !== `clients/${scope.clientId}/`)
             throw new UnsafePackageError("a file of another client is referenced", table.name);
     }
   }
 }
 
 /** Import side of `nullIfOutside` references: only a row that exists here (after the remap) survives. */
-export function emptyOutsideRefs(table: ClientTable, row: Row, hereIds: ReadonlySet<string>): void {
+export function emptyOutsideRefs(
+  table: ClientTable,
+  row: Row,
+  hereIds: ReadonlyMap<string, ReadonlySet<string>>,
+): void {
   for (const ref of table.softRefs)
     if (
       ref.mode === "nullIfOutside" &&
       row[ref.column] != null &&
-      !hereIds.has(String(row[ref.column]))
+      !hereIds.get(ref.target)?.has(String(row[ref.column]))
     )
       row[ref.column] = null;
 }

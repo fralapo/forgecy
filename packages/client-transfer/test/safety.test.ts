@@ -82,6 +82,31 @@ describe("assertPackageScoped", () => {
     ).not.toThrow();
   });
 
+  describe("storage keys in row text must name exactly this client", () => {
+    const text = (s: string) => () =>
+      run("contents", [content({ draft: { slides: [{ src: s }] } })]);
+    it("accepts the client's own key", () => {
+      expect(text(`clients/${ME}/x/y.pdf`)).not.toThrow();
+    });
+    const bad: Record<string, string> = {
+      "an upper-case copy of this client id": `clients/${ME.toUpperCase()}/x/y.pdf`,
+      "an upper-case prefix": `CLIENTS/${ME}/x`,
+      "a mixed-case prefix": `Clients/${ME}/x`,
+      "a mixed-case prefix and id": `cLiEnTs/${ME.slice(0, 20)}${ME.slice(20).toUpperCase()}/x`,
+      "another client, lower case": `clients/${VICTIM}/x/y.pdf`,
+      "another client, upper case": `CLIENTS/${VICTIM.toUpperCase()}/x`,
+      "a key after other text": `see also: clients/${VICTIM}/a.png`,
+    };
+    for (const [name, s] of Object.entries(bad))
+      it(`refuses ${name}`, () => {
+        expect(problemOf(text(s))).toBe("unsafe");
+      });
+    it("looks in every column, not only storage-key columns", () => {
+      const row = { id: ROW, client_id: ME, title: `clients/${ME.toUpperCase()}/x` };
+      expect(problemOf(() => run("contents", [row]))).toBe("unsafe");
+    });
+  });
+
   describe("ids are canonical lower-case uuids, exactly as the importer maps them", () => {
     const forms = {
       upper: ROW.toUpperCase(),
@@ -157,7 +182,7 @@ describe("assertPackageScoped", () => {
   describe("the import empties references to things that do not travel", () => {
     it("keeps a report template of the package and drops a stranger's", () => {
       const reports = table("audit_reports");
-      const here = new Set([ROW]);
+      const here = new Map([["templates", new Set([ROW])]]);
       const kept: Row = { template_id: ROW };
       const dropped: Row = { template_id: VICTIM };
       emptyOutsideRefs(reports, kept, here);
@@ -165,12 +190,17 @@ describe("assertPackageScoped", () => {
       expect(kept.template_id).toBe(ROW);
       expect(dropped.template_id).toBeNull();
     });
+    it("keeps only ids of the target table: a package row of another table does not count", () => {
+      const row: Row = { template_id: ROW };
+      emptyOutsideRefs(table("audit_reports"), row, new Map([["contents", new Set([ROW])]]));
+      expect(row.template_id).toBeNull();
+    });
     it("drops a job id and leaves package references alone", () => {
       const row: Row = { run_id: VICTIM };
-      emptyOutsideRefs(table("brand_identity_proposals"), row, new Set());
+      emptyOutsideRefs(table("brand_identity_proposals"), row, new Map());
       expect(row.run_id).toBeNull();
       const product: Row = { product_id: VICTIM };
-      emptyOutsideRefs(table("contents"), product, new Set());
+      emptyOutsideRefs(table("contents"), product, new Map());
       expect(product.product_id).toBe(VICTIM);
     });
   });

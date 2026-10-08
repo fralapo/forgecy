@@ -141,8 +141,18 @@ export async function importClientPackage(
         versionRewrite.set(templateConflictId(key, version), res.rows[0]!.version);
       } else if (res.rows.length) draftTemplates.add(idMap.get(String(t.id))!);
     }
-    // Ids that exist here after the remap: the rows of the package and the templates it reuses.
-    const hereIds = new Set(idMap.values());
+    // Ids that exist here after the remap, per table: the package's rows and the templates it reuses.
+    const hereIds = new Map<string, Set<string>>();
+    for (const t of tables)
+      hereIds.set(
+        t.name,
+        new Set(
+          (JSON.parse(raw.get(t.name)!) as Row[]).flatMap((r) => {
+            const id = typeof r.id === "string" ? idMap.get(r.id) : undefined;
+            return id ? [id] : [];
+          }),
+        ),
+      );
     const remap = (s: string) => s.replace(UUID_ANYWHERE, (m) => idMap.get(m) ?? m);
 
     const prepared: { table: ClientTable; rows: Row[] }[] = [];

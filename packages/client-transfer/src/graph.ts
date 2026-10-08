@@ -118,6 +118,7 @@ export const TABLE_AREAS: Record<string, ClientTransferArea | "client"> = {
  * it points to. A new one without an entry makes `clientTables()` fail, so nobody adds a
  * reference that an import would silently leave pointing at another client's data.
  * `brand_check_*.subject_id` is generic (`subject_type`); the only subject today is a carousel.
+ * A new subject type needs a per-type target here (and in the checks), not another contents entry.
  */
 export const SOFT_REFS: Record<string, { target: string; mode: SoftRef["mode"] }> = {
   "contents.product_id": { target: "products", mode: "package" },
