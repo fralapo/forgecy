@@ -4,8 +4,7 @@ import type * as FsPromises from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fileSha256 } from "../src/archive";
-import { checksumMatches } from "../src/restore";
+import { checksumMatches, fileSha256 } from "../src/archive";
 
 // Lets one test make the sidecar read fail with a permission error; otherwise the real readFile.
 vi.mock("node:fs/promises", async (importOriginal) => {

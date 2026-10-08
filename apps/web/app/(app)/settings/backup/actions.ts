@@ -119,7 +119,7 @@ export type RestoreCheck =
     }
   | ActionError;
 
-/** Validation step of the restore: reads only the archive's manifest. */
+/** Validation step of the restore: lists the whole archive for links, then reads its manifest. */
 export async function checkRestoreAction(name: string): Promise<RestoreCheck> {
   const { denied } = await requireAdminAction("system.backup");
   if (denied) return denied;

@@ -27,6 +27,7 @@ import {
   restoreInProgress,
   saveUploadedBackup,
   UnsafeArchiveError,
+  UnsafeDumpError,
   writeRestoreStatus,
 } from "../src";
 
@@ -124,6 +125,21 @@ describe("restore", () => {
     await expect(
       restoreArchive({ dataDir, mediaDir, name, load: async (f) => void loaded.push(f) }),
     ).rejects.toBeInstanceOf(BackupChecksumError);
+    expect(loaded).toEqual([]);
+  });
+
+  it("does not load a dump that carries a psql meta-command", async () => {
+    const { name } = await createBackupArchive({
+      dataDir,
+      mediaDir,
+      dump: async (file) => writeFileSync(file, "select 1;\n\\! touch /tmp/forgecy-pwned\n"),
+      kind: "manual",
+      lastMigration: "0002_c",
+    });
+    const loaded: string[] = [];
+    await expect(
+      restoreArchive({ dataDir, mediaDir, name, load: async (f) => void loaded.push(f) }),
+    ).rejects.toBeInstanceOf(UnsafeDumpError);
     expect(loaded).toEqual([]);
   });
 

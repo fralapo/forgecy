@@ -3,10 +3,24 @@
  * files and a manifest. Works against the Compose stack or a local DATABASE_URL.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { backupsDir, createBackupArchive } from "../../packages/backup/src/archive";
+import { basename, join, resolve } from "node:path";
+import {
+  backupsDir,
+  checksumMatches,
+  createBackupArchive,
+} from "../../packages/backup/src/archive";
+import { assertSafeDumpFile } from "../../packages/backup/src/safe-dump";
+import { extractBackupArchive } from "../../packages/backup/src/safe-tar";
 import { composePostgresRunning, run } from "./shell";
 
 const PG_IMAGE = "pgvector/pgvector:pg17";
@@ -58,14 +72,20 @@ function loadDatabase(sql: string): void {
         "compose",
         "exec",
         "-T",
+        "-e",
+        "PGCLIENTENCODING=UTF8",
         "postgres",
         "psql",
+        "-X",
+        "--single-transaction",
         "-v",
         "ON_ERROR_STOP=1",
         "-U",
         pgUser(),
         "-d",
         pgDb(),
+        "-f",
+        "-",
       ],
       { input: sql },
     );
@@ -74,7 +94,11 @@ function loadDatabase(sql: string): void {
   const url = process.env.DATABASE_URL;
   if (!url)
     throw new Error("DATABASE_URL is not set and the Compose postgres service is not running");
-  pgClientTool("psql", ["-v", "ON_ERROR_STOP=1", url], { input: sql });
+  // The scanner reads the dump as UTF-8, so psql must too (a host psql inherits this variable).
+  process.env.PGCLIENTENCODING = "UTF8";
+  pgClientTool("psql", ["-X", "--single-transaction", "-v", "ON_ERROR_STOP=1", "-f", "-", url], {
+    input: sql,
+  });
 }
 
 /**
@@ -109,20 +133,24 @@ export async function backup(): Promise<string> {
 export async function restore(archive: string): Promise<void> {
   const work = mkdtempSync(join(tmpdir(), "forgecy-restore-"));
   try {
-    run("tar", ["-xzf", resolve(archive), "-C", work]);
+    const file = resolve(archive);
+    // Same checks as the web restore: checksum, no links in the archive, no owners restored.
+    if (!(await checksumMatches(file)))
+      throw new Error("The backup does not match its recorded checksum: it may be corrupted");
+    await extractBackupArchive(file, work);
     const manifest = JSON.parse(readFileSync(join(work, "manifest.json"), "utf8")) as {
       format: number;
       media: boolean;
     };
     if (manifest.format !== 1) throw new Error(`Unsupported backup format ${manifest.format}`);
+    // No psql meta-commands (!, copy, i...) in a backup that may come from elsewhere.
+    await assertSafeDumpFile(join(work, "db.sql"));
     loadDatabase(readFileSync(join(work, "db.sql"), "utf8"));
-    const mediaName = mediaDir.split("/").pop()!;
+    const mediaName = basename(mediaDir);
     if (manifest.media && existsSync(join(work, mediaName))) {
       mkdirSync(mediaDir, { recursive: true });
-      const res = spawnSync("cp", ["-a", `${join(work, mediaName)}/.`, mediaDir], {
-        stdio: "inherit",
-      });
-      if (res.status !== 0) throw new Error("Copying media files failed");
+      // Plain files and folders only (checked above): nothing to dereference or preserve.
+      cpSync(join(work, mediaName), mediaDir, { recursive: true, force: true });
     }
   } finally {
     rmSync(work, { recursive: true, force: true });

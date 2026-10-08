@@ -13,36 +13,17 @@ import {
   BACKUP_FORMAT,
   backupPath,
   backupsDir,
+  checksumMatches,
   fileSha256,
   runTool,
   type BackupFile,
   type BackupManifest,
 } from "./archive";
+import { assertSafeDumpFile } from "./safe-dump";
 import { assertPlainTar, extractBackupArchive, UnsafeArchiveError } from "./safe-tar";
 
 export type RestoreProblem =
   "unreadable" | "format" | "newer_version" | "checksum_mismatch" | "unsafe";
-
-/**
- * True when the checksum recorded at creation/upload matches the file. Only a missing sidecar
- * (a backup copied in by hand) passes without one; an unreadable or malformed sidecar, or one
- * without a hash, fails closed so corruption detection is never silently switched off.
- */
-export async function checksumMatches(file: string): Promise<boolean> {
-  let raw: string;
-  try {
-    raw = await readFile(`${file}.json`, "utf8");
-  } catch (err) {
-    return (err as NodeJS.ErrnoException).code === "ENOENT";
-  }
-  let expected: unknown;
-  try {
-    expected = (JSON.parse(raw) as { sha256?: unknown }).sha256;
-  } catch {
-    return false;
-  }
-  return typeof expected === "string" && (await fileSha256(file)) === expected;
-}
 
 export class BackupChecksumError extends Error {
   constructor() {
@@ -98,9 +79,14 @@ export async function inspectBackup(
   }
 }
 
+/** psql reads the file as ONE transaction (a failed restore leaves the old data), ignores ~/.psqlrc. */
+export function psqlArgs(file: string, databaseUrl: string): string[] {
+  return ["-X", "--single-transaction", "-v", "ON_ERROR_STOP=1", "-q", "-f", file, databaseUrl];
+}
+
 /** Loads a SQL file into the database at `databaseUrl` with the local `psql`. */
 export function psqlLoadInto(databaseUrl: string): (file: string) => Promise<void> {
-  return (file) => runTool("psql", ["-v", "ON_ERROR_STOP=1", "-q", "-f", file, databaseUrl]);
+  return (file) => runTool("psql", psqlArgs(file, databaseUrl), { PGCLIENTENCODING: "UTF8" });
 }
 
 export async function restoreArchive(opts: {
@@ -120,6 +106,8 @@ export async function restoreArchive(opts: {
     ) as BackupManifest;
     if (manifest.format !== BACKUP_FORMAT)
       throw new Error(`Unsupported backup format ${manifest.format}`);
+    // A backup may come from elsewhere: no psql meta-commands (\!, \copy, \i...) get through.
+    await assertSafeDumpFile(join(work, "db.sql"));
     await opts.load(join(work, "db.sql"));
     const mediaDir = resolve(opts.mediaDir);
     const extracted = join(work, basename(mediaDir));

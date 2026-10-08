@@ -5,7 +5,7 @@
  * The .env file is never included: without FORGECY_ENCRYPTION_KEY the BYOK keys in the
  * dump cannot be read.
  */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createReadStream, existsSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
@@ -65,6 +65,24 @@ export function backupPath(dataDir: string, name: string): string {
 }
 
 /** Runs a command; stderr is kept for the error, with credentials in URLs masked. */
+/**
+ * A TAR_OPTIONS in the environment could add flags (for example --absolute-names or
+ * --dereference) to every tar call; blank it so only our arguments apply.
+ */
+export const TAR_ENV = { TAR_OPTIONS: "" };
+
+let hardDereference: string[] | undefined;
+/** GNU tar only: bsdtar (macOS, Windows) rejects the flag, and its archives are still checked at restore. */
+function hardDereferenceFlag(): string[] {
+  hardDereference ??= /GNU tar/.test(
+    spawnSync("tar", ["--version"], { encoding: "utf8", env: { ...process.env, ...TAR_ENV } })
+      .stdout ?? "",
+  )
+    ? ["--hard-dereference"]
+    : [];
+  return hardDereference;
+}
+
 export function runTool(cmd: string, args: string[], env?: Record<string, string>): Promise<void> {
   return new Promise((resolvePromise, reject) => {
     const child = spawn(cmd, args, {
@@ -97,6 +115,27 @@ export async function fileSha256(path: string): Promise<string> {
   const hash = createHash("sha256");
   await pipeline(createReadStream(path), hash);
   return hash.digest("hex");
+}
+
+/**
+ * True when the checksum recorded at creation/upload matches the file. Only a missing sidecar
+ * (a backup copied in by hand) passes without one; an unreadable or malformed sidecar, or one
+ * without a hash, fails closed so corruption detection is never silently switched off.
+ */
+export async function checksumMatches(file: string): Promise<boolean> {
+  let raw: string;
+  try {
+    raw = await readFile(`${file}.json`, "utf8");
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === "ENOENT";
+  }
+  let expected: unknown;
+  try {
+    expected = (JSON.parse(raw) as { sha256?: unknown }).sha256;
+  } catch {
+    return false;
+  }
+  return typeof expected === "string" && (await fileSha256(file)) === expected;
 }
 
 function expiry(kind: BackupKind, createdAt: Date): Date | null {
@@ -145,9 +184,10 @@ export async function createBackupArchive(opts: CreateBackupOptions): Promise<Ba
   try {
     await opts.dump(join(work, "db.sql"));
     await writeFile(join(work, "manifest.json"), JSON.stringify(manifest, null, 2));
-    const args = ["-czf", partial, "-C", work, "db.sql", "manifest.json"];
+    // Hard-linked media files are stored as plain files, or restore would refuse the archive.
+    const args = ["-czf", partial, ...hardDereferenceFlag(), "-C", work, "db.sql", "manifest.json"];
     if (media) args.push("-C", dirname(mediaDir), basename(mediaDir));
-    await runTool("tar", args);
+    await runTool("tar", args, TAR_ENV);
     await rename(partial, file);
   } catch (err) {
     await rm(partial, { force: true });

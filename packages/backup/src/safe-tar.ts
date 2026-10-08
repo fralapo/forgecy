@@ -9,15 +9,10 @@ import { spawn } from "node:child_process";
 import { lstat, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
-import { runTool } from "./archive";
+import { runTool, TAR_ENV } from "./archive";
 
-/**
- * A TAR_OPTIONS in the environment could add flags (for example --absolute-names or
- * --dereference) to every tar call below; blank it so only our arguments apply.
- * ponytail: no --quoting-style=escape. It is GNU-only (bsdtar rejects it) and a newline in a
- * member name can only add extra listing lines, which at worst refuse a good archive.
- */
-const TAR_ENV = { TAR_OPTIONS: "" };
+// ponytail: no --quoting-style=escape. It is GNU-only (bsdtar rejects it) and a newline in a
+// member name can only add extra listing lines, which at worst refuse a good archive.
 
 export class UnsafeArchiveError extends Error {
   constructor(detail: string) {
