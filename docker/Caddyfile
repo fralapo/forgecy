@@ -2,6 +2,9 @@
 # `tls internal` uses Caddy's local CA; install its root certificate on the agency machines.
 {$FORGECY_HOSTNAME:forgecy.local} {
 	tls internal
+	# The Next.js image cannot send this (it needs an https FORGECY_BASE_URL at build time).
+	# No includeSubDomains or preload: the name may be an internal host that shares a domain.
+	header Strict-Transport-Security "max-age=31536000"
 	encode zstd gzip
 	reverse_proxy web:3000
 }

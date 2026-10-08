@@ -13,10 +13,24 @@ x-app-env: &app-env
     # Dates in the interface and in exports are shown in the agency's time zone.
     TZ: ${FORGECY_TIMEZONE:-Europe/Rome}
 
+# Hardening, decided per service (no Docker on the authoring host: none of this was started).
+# - no-new-privileges on every service: no setuid binary or file capability can add privileges.
+#   Entrypoints that start as root and drop with setuid()/su-exec/gosu are not affected.
+# - cap_drop ALL on migrate, web and worker: they run as an unprivileged uid (node / 1000),
+#   listen above 1024 and need no capability. Chromium in the worker runs with Playwright's
+#   default --no-sandbox (chromiumSandbox is never enabled), so it needs neither SYS_ADMIN nor
+#   user namespaces.
+x-hardened: &hardened
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+
 services:
   postgres:
     image: pgvector/pgvector:pg17
     restart: unless-stopped
+    # Default capabilities kept: the entrypoint starts as root, chowns the data directory and
+    # drops to postgres with gosu on first init (CHOWN, SETUID, SETGID, DAC_OVERRIDE, FOWNER).
+    security_opt: ["no-new-privileges:true"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-forgecy}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forgecy}
@@ -32,6 +46,9 @@ services:
   redis:
     image: redis:8-alpine
     restart: unless-stopped
+    # Default capabilities kept: the entrypoint starts as root, chowns /data and drops to redis
+    # with su-exec (CHOWN, SETUID, SETGID, DAC_OVERRIDE).
+    security_opt: ["no-new-privileges:true"]
     command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
     volumes:
       - ./data/redis:/data
@@ -45,6 +62,10 @@ services:
   data-init:
     image: forgecy-migrate:local
     user: "0:0"
+    # Root only to mkdir and chown ./data (created by Docker as root, or by another uid).
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER]
     command:
       [
         "sh",
@@ -60,7 +81,7 @@ services:
   migrate:
     build: { context: ., dockerfile: docker/Dockerfile, target: migrate }
     image: forgecy-migrate:local
-    <<: *app-env
+    <<: [*app-env, *hardened]
     depends_on:
       postgres: { condition: service_healthy }
     restart: "no"
@@ -69,7 +90,7 @@ services:
     build: { context: ., dockerfile: docker/Dockerfile, target: web }
     image: forgecy-web:local
     restart: unless-stopped
-    <<: *app-env
+    <<: [*app-env, *hardened]
     ports:
       - "${FORGECY_PORT:-3000}:3000"
     volumes:
@@ -82,7 +103,7 @@ services:
     build: { context: ., dockerfile: docker/Dockerfile, target: worker }
     image: forgecy-worker:local
     restart: unless-stopped
-    <<: *app-env
+    <<: [*app-env, *hardened]
     volumes:
       - ./data:/data
     depends_on:
@@ -93,9 +114,10 @@ services:
     image: axllent/mailpit:latest
     profiles: ["dev"]
     restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
     ports:
-      - "8025:8025"
-      - "1025:1025"
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
 
   s3:
     image: chrislusf/seaweedfs:latest
@@ -103,6 +125,7 @@ services:
     restart: unless-stopped
     env_file: .env
     entrypoint: ["/bin/sh", "/entrypoint-forgecy.sh"]
+    security_opt: ["no-new-privileges:true"]
     volumes:
       - ./docker/seaweedfs-entrypoint.sh:/entrypoint-forgecy.sh:ro
       - ./data/s3:/data
@@ -113,6 +136,14 @@ services:
     image: caddy:2-alpine
     profiles: ["https"]
     restart: unless-stopped
+    # The Caddyfile reads {$FORGECY_HOSTNAME}; without this the container never sees it.
+    environment:
+      FORGECY_HOSTNAME: ${FORGECY_HOSTNAME:-forgecy.local}
+    # Runs as root: capabilities are dropped to the one that binds ports 80 and 443. The image
+    # sets it as a file capability on /usr/bin/caddy, so it must stay in the bounding set.
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
     ports:
       - "80:80"
       - "443:443"
