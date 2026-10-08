@@ -13,12 +13,13 @@ import {
   BACKUP_FORMAT,
   backupPath,
   backupsDir,
+  fileSha256,
   runTool,
   type BackupFile,
   type BackupManifest,
 } from "./archive";
 
-export type RestoreProblem = "unreadable" | "format" | "newer_version";
+export type RestoreProblem = "unreadable" | "format" | "newer_version" | "checksum_mismatch";
 
 export interface BackupInspection {
   name: string;
@@ -49,6 +50,16 @@ export async function inspectBackup(
     }
     const problems: RestoreProblem[] = [];
     if (manifest.format !== BACKUP_FORMAT) problems.push("format");
+    // Sidecar written at creation/upload time; archives from before this check have none.
+    let expectedSha256: string | undefined;
+    try {
+      const sidecar = JSON.parse(await readFile(`${file}.json`, "utf8")) as { sha256?: string };
+      expectedSha256 = sidecar.sha256;
+    } catch {
+      expectedSha256 = undefined;
+    }
+    if (expectedSha256 && (await fileSha256(file)) !== expectedSha256)
+      problems.push("checksum_mismatch");
     const index = manifest.lastMigration
       ? shipped.findIndex((m) => m.tag === manifest.lastMigration)
       : -1;
@@ -189,12 +200,14 @@ export async function saveUploadedBackup(
       throw new BackupInvalidError();
     await rename(partial, file);
     const sizeBytes = (await stat(file)).size;
+    const sha256 = await fileSha256(file);
     const createdAt = new Date(manifest.createdAt);
-    const sidecar: BackupManifest & { sizeBytes: number; uploadedAt: string } = {
+    const sidecar: BackupManifest & { sizeBytes: number; sha256: string; uploadedAt: string } = {
       ...manifest,
       kind: "upload",
       createdBy: opts.uploadedBy ?? manifest.createdBy ?? null,
       sizeBytes,
+      sha256,
       uploadedAt: now.toISOString(),
     };
     await writeFile(`${file}.json`, JSON.stringify(sidecar, null, 2));
