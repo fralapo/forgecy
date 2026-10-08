@@ -48,6 +48,16 @@ confirm by hand against a real target, not just the unit tests in
 - [ ] Upload a zip bomb (a small archive that decompresses to many GB) and
       confirm the import's size/file-count limits stop it rather than
       exhausting disk or memory.
+- [ ] Upload a DOCX/XLSX whose central directory understates an entry's size,
+      a DOCX/PPTX/XLSX with more entries than the cap or one part over the
+      part cap, and a PDF with thousands of pages: each is refused with a
+      clear message (damaged, too large), not a timeout or an out-of-memory
+      crash. All Office readers go through the guarded reader in
+      `packages/files/src/safe-zip.ts` and count real inflated bytes, not
+      the sizes the archive declares. Limits: catalog import 50 MB per XML
+      part and in total, 5 000 entries; brand import 50 MiB per part, 100 MiB
+      in total, 10 000 entries; social xlsx upload 20 MB and 5 000 entries.
+      A PDF has its first 400 pages processed and is refused above 2 000.
 - [ ] Upload a PDF or image with a corrupted header and confirm the
       pipeline records a warning for that file and continues, instead of
       crashing the import job.
@@ -92,9 +102,78 @@ confirm by hand against a real target, not just the unit tests in
       page; the script must not run.
 - [ ] After changing a password, a second signed-in browser is signed out.
 
+## 5. Hostile restore and client import (see `docs/adr/0015-client-import-trust-reset.md`)
+
+A backup and a client package are both files someone else may have written.
+Restore only backups you made or trust: the role in `DATABASE_URL` is a
+superuser in the official postgres image, so the dump scanner is a barrier,
+not a sandbox. Running the restore under a least-privilege role is a
+recommended follow-up, not built yet.
+
+### Backup restore (Settings > Backup, `pnpm forgecy restore`)
+
+- [ ] Upload a `.tar.gz` that holds a symlink, a hard link or a device entry:
+      the upload is refused and nothing is kept (no `.partial` file, no
+      extracted folder).
+- [ ] Put `\! touch /tmp/forgecy-pwned` on its own line in `db.sql` inside an
+      otherwise valid backup and restore it: the restore fails before psql
+      starts, the file is not created, the database is unchanged. Repeat with
+      a `\copy` line and with a bare `BEGIN;`: both are refused too (the
+      scanner in `packages/backup/src/safe-dump.ts` is an allowlist: only
+      pg_dump's own `SET` lines, no `E'...'` strings, no bare `BEGIN`).
+- [ ] False refusals fail closed, and the scanner was not validated against a
+      real pg_dump on the Windows dev host. On a populated install take a
+      backup (`pnpm forgecy backup`), restore it onto an empty database and
+      confirm it restores. If a genuine backup is refused as an unsafe dump,
+      treat it as a bug in the scanner and report the offending line; do not
+      edit the dump to get past it.
+- [ ] Restore a backup whose sidecar `.json` checksum was edited: refused
+      (`restoreArchive` verifies it itself, not only `inspectBackup`). A
+      sidecar that is unreadable or has no `sha256` is refused as well; only
+      a missing sidecar passes.
+- [ ] Legacy sidecars written between PRs #38 and #82 have no `sha256` and
+      now block restore from the UI. Workaround: delete that sidecar (only
+      for a file you trust, since this drops the checksum check) or restore
+      with `pnpm forgecy restore`.
+- [ ] Append a statement that fails (for example `ALTER TABLE no_such_table ADD COLUMN x int;`) to the end of
+      the `db.sql` of an otherwise valid backup and restore it: psql runs
+      with `-X --single-transaction -v ON_ERROR_STOP=1`, so the restore stops
+      at the error and the database is exactly as it was before, not half
+      loaded.
+
+### Client import (Settings > Import / export)
+
+- [ ] Import a package whose `contents.client_id` is another client's id and
+      one whose `assets.storage_key` names `clients/<other id>/...` (also
+      with the id written with JSON `\u` escapes): both are refused at Verify
+      ("unsafe") and nothing is written.
+- [ ] Edit one stored file in a valid package so its bytes no longer match
+      its checksum: the import fails, no client row and no stored file are
+      left behind.
+- [ ] Import a zip bomb (a small package that inflates far beyond the
+      package bound), a package with more than 5 000 entries or a JSON file
+      over 64 MiB: each is refused at Verify with a clear message. Limits:
+      64 MiB of JSON per entry, 256 MiB of JSON per package, and a total
+      bound of min(20 GiB, max(1 GiB, 200 x the archive's size)).
+- [ ] Import a package that holds only some areas (for example brand data
+      whose examples point at carousel versions): refused as
+      `incompleteArea`; export again with the missing area to import it.
+- [ ] Import a package where a carousel has `status: "approved"`, then check
+      the new client. Content arrives as Draft with no approvals, exports
+      or Brand Guard runs. Templates arrive as Drafts owned by the client.
+      Brand Identity versions arrive archived (restore one as a new draft).
+      Automations arrive paused. The AI policy is never looser than the
+      installation default for a new client and the approved AI providers
+      list is empty. Products that were approved arrive as proposed. Images
+      that were labelled `product` arrive as `upload` with rights pending.
+- [ ] Import the same package twice (or a package whose template version
+      already exists here): both imports succeed, the second one's template
+      is renamed `X.Y.Z-import.N`, and no carousel, preview or export picks
+      up another client's template.
+
 ## Sign-off
 
-Record the date, the person who ran it, and which of the four sections
+Record the date, the person who ran it, and which of the five sections
 passed in the PR or ticket that references this checklist. A failing item
 blocks go-live until fixed or explicitly accepted as a known limitation
 (e.g. the documented residual gap: a crawl redirect to a _different_
