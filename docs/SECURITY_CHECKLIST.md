@@ -183,9 +183,22 @@ recommended follow-up, not built yet.
       is renamed `X.Y.Z-import.N`, and no carousel, preview or export picks
       up another client's template.
 
+## 6. Secrets and database password
+
+- [ ] On a fresh clone, `docker compose config` without a `POSTGRES_PASSWORD` in `.env` fails
+      with "Set POSTGRES_PASSWORD in .env" (no default password).
+- [ ] `pnpm forgecy init` writes `.env` with random `POSTGRES_PASSWORD`,
+      `BETTER_AUTH_SECRET` and `FORGECY_ENCRYPTION_KEY`, prints no secret, and a
+      second run refuses to overwrite it.
+- [ ] `pnpm forgecy start` with `POSTGRES_PASSWORD=forgecy` (or `change-me`) on a
+      fresh install stops with the "guessable" message.
+- [ ] An install made before this check (database in `data/db`, no
+      `POSTGRES_PASSWORD` in `.env`) is told to add `POSTGRES_PASSWORD=forgecy` to
+      keep its database; rotate it with `ALTER USER` (README, Upgrading).
+
 ## Sign-off
 
-Record the date, the person who ran it, and which of the five sections
+Record the date, the person who ran it, and which of the six sections
 passed in the PR or ticket that references this checklist. A failing item
 blocks go-live until fixed or explicitly accepted as a known limitation
 (e.g. the documented residual gap: a crawl redirect to a _different_

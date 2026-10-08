@@ -78,3 +78,16 @@ describe("docker-compose.dev.yml", () => {
     for (const port of dev[name]?.ports ?? []) expect(port).toMatch(/^127\.0\.0\.1:/);
   });
 });
+
+describe("database password", () => {
+  const text = read("docker-compose.yml");
+  it("has no default: Compose stops when POSTGRES_PASSWORD is unset or empty", () => {
+    expect(text).not.toMatch(/POSTGRES_PASSWORD:-/);
+    expect(text.match(/\$\{POSTGRES_PASSWORD:\?/g)).toHaveLength(2); // postgres + DATABASE_URL
+    expect(main.postgres?.environment?.POSTGRES_PASSWORD).toMatch(/^\$\{POSTGRES_PASSWORD:\?.+\}$/);
+  });
+
+  it("keeps the development database default, on loopback only", () => {
+    expect(dev.postgres?.environment?.POSTGRES_PASSWORD).toBe("${POSTGRES_PASSWORD:-forgecy}");
+  });
+});

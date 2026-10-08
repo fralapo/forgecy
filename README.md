@@ -34,8 +34,8 @@ AI agents analyze and propose; a person always approves and publishes. No video,
 You need Docker with Compose.
 
 ```bash
-cp .env.example .env          # set at least POSTGRES_PASSWORD and BETTER_AUTH_SECRET (openssl rand -base64 32)
-docker compose up -d --build  # postgres, redis, migrate, web, worker
+pnpm install && pnpm forgecy init   # writes .env with generated secrets (or: cp .env.example .env and fill POSTGRES_PASSWORD and BETTER_AUTH_SECRET)
+docker compose up -d --build           # postgres, redis, migrate, web, worker
 ```
 
 Open `http://localhost:3000`: on first start you create the Admin account. Data lives in `./data` (database, files, backups).
@@ -44,11 +44,21 @@ Optional profiles: `--profile dev` (Mailpit on `:8025` for emails), `--profile s
 
 | Command                                | What it does                                                |
 | -------------------------------------- | ----------------------------------------------------------- |
+| `pnpm forgecy init`                    | Creates `.env` with generated secrets; never overwrites     |
 | `pnpm forgecy start` / `stop`          | Starts or stops the stack                                   |
 | `pnpm forgecy backup`                  | `.tar.gz` archive with database and files in `data/backups` |
 | `pnpm forgecy restore <archive> --yes` | Restores database and files                                 |
 | `pnpm forgecy upgrade`                 | Backup, new build, migrations, restart                      |
 | `pnpm forgecy health`                  | Checks web and worker                                       |
+
+`start`, `migrate` and `upgrade` stop with a clear message if `POSTGRES_PASSWORD` or `BETTER_AUTH_SECRET` is empty or guessable. `pnpm forgecy init --fill` fills only the secrets that are empty in an existing `.env` and never changes a value that is set.
+
+### Upgrading from an install without POSTGRES_PASSWORD
+
+Earlier versions fell back to the password `forgecy` when `.env` had no `POSTGRES_PASSWORD`. Compose no longer does, so the stack will not start until it is set. The password inside an existing database (`data/db`) does not change when you edit `.env`, so:
+
+1. To keep the current database, add `POSTGRES_PASSWORD=forgecy` to `.env` (or the value you had set). `start` and `upgrade` then work, with a warning.
+2. To rotate it (recommended): with the stack running, run `docker compose exec postgres psql -U forgecy -c "ALTER USER forgecy PASSWORD 'NEW'"` with a long random `NEW` (letters, digits and `. _ ~ -` only), put the same value in `.env`, then run `docker compose up -d`.
 
 ## Development
 
@@ -56,7 +66,7 @@ You need Node.js 22 (>= 22.18), pnpm 10 and Docker for the services.
 
 ```bash
 pnpm install
-cp .env.example .env                             # the dev database uses POSTGRES_PASSWORD from .env (forgecy if unset)
+pnpm forgecy init                                 # .env with generated secrets; the dev database reads POSTGRES_PASSWORD from it
 docker compose -f docker-compose.dev.yml up -d   # Postgres with pgvector, Redis, Mailpit (on 127.0.0.1 only)
 pnpm db:migrate && pnpm db:seed
 pnpm dev                                         # web on :3000, worker with health on :3001

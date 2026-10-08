@@ -5,7 +5,7 @@ name: forgecy
 x-app-env: &app-env
   env_file: .env
   environment:
-    DATABASE_URL: postgres://${POSTGRES_USER:-forgecy}:${POSTGRES_PASSWORD:-forgecy}@postgres:5432/${POSTGRES_DB:-forgecy}
+    DATABASE_URL: "postgres://${POSTGRES_USER:-forgecy}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env, or run pnpm forgecy init}@postgres:5432/${POSTGRES_DB:-forgecy}"
     REDIS_URL: redis://redis:6379
     MEDIA_ROOT: /data/media
     FORGECY_DATA_DIR: /data
@@ -35,7 +35,8 @@ services:
     security_opt: ["no-new-privileges:true"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-forgecy}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forgecy}
+      # No default: an unset or empty value stops Compose instead of falling back to a known password.
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env, or run pnpm forgecy init}"
       POSTGRES_DB: ${POSTGRES_DB:-forgecy}
     volumes:
       - ./data/db:/var/lib/postgresql/data
