@@ -32,10 +32,10 @@ The model receives references (`P1`, `CHECK:h1`, `POST:3`, `O2`…) and must cit
 
 It always respects `robots.txt` (user agent `ForgecyAudit`), skips pages behind a login, and has a timeout per page and one for the whole read. It refuses local network addresses.
 
-| Variable                            | Effect                                                          |
-| ----------------------------------- | --------------------------------------------------------------- |
-| `FORGECY_CHROMIUM_PATH`             | Chromium to use; without it, HTML-only reading (no screenshots) |
-| `FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS` | `true` allows websites on the local network (intranet)          |
+| Variable                            | Effect                                                                                                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FORGECY_CHROMIUM_PATH`             | Chromium to use; without it, HTML-only reading (no screenshots)                                                                                                  |
+| `FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS` | `true` allows websites on the local network (intranet). Write exactly `true` or `false`: any other value (`1`, `TRUE`, `yes`) stops startup, naming the variable |
 
 ## Social
 

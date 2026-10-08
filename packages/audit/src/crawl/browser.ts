@@ -3,6 +3,7 @@
 import { existsSync } from "node:fs";
 import type { Browser, BrowserContext, Page } from "playwright-core";
 import { CrawlError, crawlError } from "../errors";
+import { loadToolEnv } from "@forgecy/core";
 import { resolvePublicAddress } from "@forgecy/core/net-guard";
 import type { HostCheck } from "../url";
 import { extractFromHtml, type FetchedPage, type PageFetcher } from "./fetcher";
@@ -17,7 +18,7 @@ const MAX_SCREENSHOT_HEIGHT = 6000;
  * (PLAYWRIGHT_BROWSERS_PATH, as in the Playwright worker image).
  */
 export function resolveChromiumPath(env: NodeJS.ProcessEnv = process.env): string | undefined {
-  const explicit = env.FORGECY_CHROMIUM_PATH;
+  const explicit = loadToolEnv(env).FORGECY_CHROMIUM_PATH;
   if (explicit) return existsSync(explicit) ? explicit : undefined;
   const base = env.PLAYWRIGHT_BROWSERS_PATH;
   if (base && existsSync(`${base}/chromium`)) return `${base}/chromium`;

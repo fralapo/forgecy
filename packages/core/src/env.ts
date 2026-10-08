@@ -24,8 +24,18 @@ export const envSchema = z.object({
   FORGECY_CHROMIUM_PATH: z.string().optional(),
   /** Folder of template packages to import instead of the repository's `templates`. */
   FORGECY_TEMPLATES_DIR: z.string().optional(),
-  /** `true` lets the crawlers read hosts on the local network (intranet audits). Off by default. */
-  FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS: bool,
+  /**
+   * `true` lets the crawlers read hosts on the local network (intranet audits). Off by default.
+   * Stricter than `bool` on purpose: only exactly `true`, `false` or empty are accepted (case
+   * sensitive, as before), so `1`, `TRUE` or `yes` fail at boot instead of silently opening or
+   * closing the SSRF guard.
+   */
+  FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS: z
+    .enum(["true", "false", ""], {
+      error: 'FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS must be exactly "true" or "false" (or empty)',
+    })
+    .optional()
+    .transform((v) => v === "true"),
 
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().default("redis://localhost:6379"),

@@ -8,9 +8,7 @@ describe("loadToolEnv", () => {
 
   it.each([
     ["true", true],
-    ["1", true],
     ["false", false],
-    ["0", false],
     ["", false],
   ])("reads FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS=%j as %s", (value, expected) => {
     expect(loadToolEnv({ FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS: value })).toMatchObject({
@@ -18,11 +16,16 @@ describe("loadToolEnv", () => {
     });
   });
 
-  it("fails loudly on a typo instead of silently changing the SSRF guard", () => {
-    expect(() => loadToolEnv({ FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS: "yes" })).toThrow(
-      /Invalid Forgecy configuration[\s\S]*FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS/,
-    );
-  });
+  // The old check was `=== "true"`: anything else meant off. Only that exact spelling may turn
+  // the SSRF bypass on, and any other spelling fails closed instead of guessing.
+  it.each(["1", "0", "TRUE", "True", "yes", "no", " true"])(
+    "fails closed on FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS=%j and names the variable and the allowed values",
+    (value) => {
+      expect(() => loadToolEnv({ FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS: value })).toThrow(
+        /Invalid Forgecy configuration[\s\S]*FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS must be exactly "true" or "false"/,
+      );
+    },
+  );
 
   it("reads the two paths", () => {
     expect(
