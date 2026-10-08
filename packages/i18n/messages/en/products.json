@@ -304,6 +304,7 @@
     "budgetExceeded": "{client}’s AI budget is used up: the rest of the import continues without AI analysis.",
     "providerUnavailable": "The AI provider is not responding. Sheet rows already read are saved; retry the analysis of PDFs and images.",
     "pdfNoAi": "AI analysis not available: the PDF stays as a source.",
+    "catalogAiGateOff": "Catalog AI (PDF extraction and image matching) is not enabled on this installation yet. An Admin can turn it on in Settings > AI policies.",
     "pdfScan": "\"{name}\" is a scan without readable text: it stays as a source for manual entry.",
     "policy": {
       "external_allowed": "external providers",

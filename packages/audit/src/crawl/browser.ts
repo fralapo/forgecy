@@ -3,7 +3,7 @@
 import { existsSync } from "node:fs";
 import type { Browser, BrowserContext, Page } from "playwright-core";
 import { CrawlError, crawlError } from "../errors";
-import type { HostCheck } from "../url";
+import { resolvePinnedAddress, type HostCheck } from "../url";
 import { extractFromHtml, type FetchedPage, type PageFetcher } from "./fetcher";
 
 const DESKTOP = { width: 1366, height: 900 };
@@ -77,15 +77,36 @@ function measureStyles() {
 export async function createBrowserFetcher(options: {
   userAgent: string;
   hostCheck: HostCheck;
+  /** The crawl's starting URL: its host's DNS is pinned for this browser instance,
+   * closing the rebinding window between crawlSite's own check and Chromium's real
+   * connection. Omit, or allowPrivate, to launch without pinning (same as before). */
+  rootUrl?: string;
+  allowPrivate?: boolean;
   executablePath?: string;
 }): Promise<PageFetcher> {
   const { chromium } = await import("playwright-core");
+  const resolverRules: string[] = [];
+  if (options.rootUrl) {
+    let host: string | undefined;
+    try {
+      host = new URL(options.rootUrl).hostname;
+    } catch {
+      // Let crawlSite's own validation reject the malformed URL.
+    }
+    if (host) {
+      const pinned = await resolvePinnedAddress(host, { allowPrivate: options.allowPrivate });
+      if (pinned) resolverRules.push(`MAP ${host} ${pinned}`);
+    }
+  }
   let browser: Browser;
   try {
     browser = await chromium.launch({
       headless: true,
       ...(options.executablePath ? { executablePath: options.executablePath } : {}),
-      args: ["--disable-dev-shm-usage"],
+      args: [
+        "--disable-dev-shm-usage",
+        ...(resolverRules.length ? [`--host-resolver-rules=${resolverRules.join(",")}`] : []),
+      ],
     });
   } catch (err) {
     throw crawlError("AUD-BROWSER-UNAVAILABLE", "audit.stored.crawl.browserUnavailable", {

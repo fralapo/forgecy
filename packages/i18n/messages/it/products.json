@@ -304,6 +304,7 @@
     "budgetExceeded": "Il budget AI di {client} è esaurito: il resto dell’importazione prosegue senza analisi AI.",
     "providerUnavailable": "Il provider AI non risponde. Le righe dei fogli già lette sono salvate; riprova l’analisi di PDF e immagini.",
     "pdfNoAi": "Analisi AI non disponibile: il PDF resta come fonte.",
+    "catalogAiGateOff": "L’AI sul catalogo (estrazione da PDF e abbinamento immagini) non è ancora attiva su questa installazione. Un Admin può attivarla in Impostazioni > Policy AI.",
     "pdfScan": "“{name}” è una scansione senza testo leggibile: resta come fonte per l’inserimento manuale.",
     "policy": {
       "external_allowed": "provider esterni",

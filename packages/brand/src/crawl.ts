@@ -4,7 +4,7 @@
  * what it finds as a `website` source, then runs the usual Brand Analyst step
  * (see import/run.ts) exactly as if those pages had been typed in by hand.
  */
-import { CrawlError, createHostCheck } from "@forgecy/audit";
+import { createPinnedFetch, CrawlError, createHostCheck } from "@forgecy/audit";
 import { crawlSite } from "@forgecy/audit/crawl/crawler";
 import { auditUserAgent, createHtmlFetcher } from "@forgecy/audit/crawl/fetcher";
 import { AUDIT_LIMITS, type MessageRef } from "@forgecy/core";
@@ -51,10 +51,9 @@ export async function runWebsiteCrawl(
   });
 
   const userAgent = auditUserAgent();
-  const hostCheck = createHostCheck({
-    allowPrivate: process.env.FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS === "true",
-  });
-  const fetcher = createHtmlFetcher({ userAgent, hostCheck });
+  const allowPrivate = process.env.FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS === "true";
+  const hostCheck = createHostCheck({ allowPrivate });
+  const fetcher = createHtmlFetcher({ userAgent, hostCheck, allowPrivate });
 
   try {
     const result = await crawlSite({
@@ -63,6 +62,7 @@ export async function runWebsiteCrawl(
       focus: "site",
       fetcher,
       hostCheck,
+      fetchImpl: createPinnedFetch({ allowPrivate }),
       userAgent,
       pageTimeoutMs: AUDIT_LIMITS.pageTimeoutMs,
       totalTimeoutMs: TOTAL_TIMEOUT_MS,

@@ -216,7 +216,8 @@ export async function addUploadedFile(
     importId: string;
     relativePath: string;
     temp: TempFile;
-    aiAvailable: boolean;
+    /** AI policy allowed AND the Admin's catalog-AI release gate is on (PDF route only). */
+    catalogAiAvailable: boolean;
   },
 ): Promise<ImportFileRow> {
   assertCan(user.actor, "products.manage", input.clientId);
@@ -274,7 +275,7 @@ export async function addUploadedFile(
       message: inspection.valid ? inspection.summary : (inspection.message ?? null),
       meta: inspection.meta as Record<string, unknown>,
       route: inspection.valid
-        ? proposeRoute(sniff.kind, input.aiAvailable && !inspection.meta.textless)
+        ? proposeRoute(sniff.kind, input.catalogAiAvailable && !inspection.meta.textless)
         : "ignore",
       ...(sniff.kind === "image" ? { imageState: "unassigned" as const } : {}),
     };
@@ -321,7 +322,8 @@ export async function setFileRoute(
     importId: string;
     fileId: string;
     route: ImportFileRoute;
-    aiAvailable: boolean;
+    /** AI policy allowed AND the Admin's catalog-AI release gate is on (PDF route only). */
+    catalogAiAvailable: boolean;
   },
 ): Promise<void> {
   assertCan(user.actor, "products.manage", input.clientId);
@@ -334,9 +336,10 @@ export async function setFileRoute(
   if (!file) throw localizedError("not_found", "products.errors.fileNotFound");
   if (
     !file.valid ||
-    !routesFor(file.kind, input.aiAvailable && !(file.meta as FileMeta).textless).includes(
-      input.route,
-    )
+    !routesFor(
+      file.kind,
+      input.catalogAiAvailable && !(file.meta as FileMeta).textless,
+    ).includes(input.route)
   )
     throw localizedError("validation", "products.errors.routeNotAvailable");
   await db
@@ -424,6 +427,8 @@ export function plannedAiSteps(
   files: ImportFileRow[],
   options: ImportOptions,
   aiAvailable: boolean,
+  /** PDF extraction and AI image matching specifically: see the Admin catalog-AI release gate. */
+  catalogAiAvailable: boolean,
 ) {
   if (!aiAvailable) return { pdfChars: 0, pdfPages: 0, images: 0, sheets: 0, usesAi: false };
   let pdfChars = 0;
@@ -433,16 +438,16 @@ export function plannedAiSteps(
   for (const f of files) {
     if (!f.valid || f.route === "ignore") continue;
     const meta = f.meta as FileMeta;
-    if (f.kind === "pdf" && f.route === "extract") {
+    if (catalogAiAvailable && f.kind === "pdf" && f.route === "extract") {
       pdfChars += meta.chars ?? 0;
       pdfPages += meta.pages ?? 0;
     }
-    if (f.kind === "archive") {
+    if (f.kind === "archive" && catalogAiAvailable) {
       // PDFs inside a ZIP are read after expansion: estimate from their size.
       pdfChars += Math.round((meta.archive?.pdfBytes ?? 0) / 20);
       if (options.matchImages) images += meta.archive?.images ?? 0;
     }
-    if (f.kind === "image" && options.matchImages) images++;
+    if (f.kind === "image" && options.matchImages && catalogAiAvailable) images++;
     if (
       f.kind === "sheet" &&
       f.route === "map" &&
@@ -461,7 +466,13 @@ export async function startImport(
   db: Database,
   enqueue: EnqueueImportStep,
   user: ActingUser,
-  input: { clientId: string; importId: string; aiConfirmed?: boolean; aiAvailable: boolean },
+  input: {
+    clientId: string;
+    importId: string;
+    aiConfirmed?: boolean;
+    aiAvailable: boolean;
+    catalogAiAvailable: boolean;
+  },
 ): Promise<void> {
   assertCan(user.actor, "products.manage", input.clientId);
   const client = await loadCatalogClient(db, input.clientId);
@@ -478,7 +489,7 @@ export async function startImport(
     );
   if (running.length) throw localizedError("conflict", "products.errors.alreadyAnalyzing");
   const options = importOptions(imp);
-  const plan = plannedAiSteps(files, options, input.aiAvailable);
+  const plan = plannedAiSteps(files, options, input.aiAvailable, input.catalogAiAvailable);
   if (plan.usesAi && client.aiPolicy === "external_restricted" && !input.aiConfirmed)
     throw localizedError("validation", "products.errors.confirmExternalAi");
   await db.transaction(async (tx) => {

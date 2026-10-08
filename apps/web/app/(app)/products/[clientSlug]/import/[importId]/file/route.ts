@@ -1,3 +1,4 @@
+import { getCatalogAiEnabled } from "@forgecy/ai";
 import {
   addUploadedFile,
   importAiSetup,
@@ -54,7 +55,9 @@ export const POST = withUser(
           importId,
           relativePath,
           temp,
-          aiAvailable: importAiSetup(env, catalogClient.aiPolicy).available,
+          catalogAiAvailable:
+            importAiSetup(env, catalogClient.aiPolicy).available &&
+            (await getCatalogAiEnabled(db)),
         });
         return NextResponse.json({
           id: row.id,

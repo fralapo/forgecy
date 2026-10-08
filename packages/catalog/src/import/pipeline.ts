@@ -89,6 +89,9 @@ export interface PipelineDeps {
   /** Null when no provider is configured: the import falls back to the non-AI paths. */
   ai: AiGateway | null;
   localModelConfigured: boolean;
+  /** Admin release gate (Settings > AI policies): PDF extraction and AI image matching stay
+   * off for every client until this is true, whatever the client's AI policy allows. */
+  catalogAiEnabled: boolean;
   logger?: {
     info(o: Record<string, unknown>, m?: string): void;
     warn(o: Record<string, unknown>, m?: string): void;
@@ -159,6 +162,14 @@ interface Run {
   createdBy: string | null;
   warnings: Warning[];
   costMicroUsd: number;
+}
+
+/**
+ * PDF extraction and AI image matching specifically (v1 features, UX_SPECIFICATION §D-24):
+ * also need the Admin release gate, on top of whatever the client's AI policy already allows.
+ */
+function catalogAiAllowed(run: Run): boolean {
+  return run.aiAllowed && run.deps.catalogAiEnabled;
 }
 
 async function files(run: Run): Promise<ImportFileRow[]> {
@@ -313,7 +324,7 @@ async function expandArchive(run: Run, archive: ImportFileRow) {
           ext: sniff.ext!,
           mime: sniff.mime!,
         });
-        const aiOk = run.aiAllowed && !inspection.meta.textless;
+        const aiOk = catalogAiAllowed(run) && !inspection.meta.textless;
         await db.insert(productImportFiles).values({
           importId: run.importId,
           clientId: run.client.id,
@@ -431,13 +442,22 @@ async function extract(run: Run) {
   // 2. PDFs: AI extraction when allowed, otherwise they stay as consultable sources.
   const pdfCandidates: Candidate[] = [];
   for (const f of all.filter((x) => x.kind === "pdf" && x.route === "extract" && x.storageKey)) {
-    if (!run.aiAllowed) {
-      run.warnings.push({
-        code: "POLICY-BLOCKED",
-        message: run.aiReason ?? englishMessage("products.ai.pdfNoAi"),
-        ref: run.aiReasonRef ?? messageRef("products.ai.pdfNoAi"),
-        fileId: f.id,
-      });
+    if (!catalogAiAllowed(run)) {
+      run.warnings.push(
+        !run.aiAllowed
+          ? {
+              code: "POLICY-BLOCKED",
+              message: run.aiReason ?? englishMessage("products.ai.pdfNoAi"),
+              ref: run.aiReasonRef ?? messageRef("products.ai.pdfNoAi"),
+              fileId: f.id,
+            }
+          : {
+              code: "POLICY-BLOCKED",
+              message: englishMessage("products.ai.catalogAiGateOff"),
+              ref: messageRef("products.ai.catalogAiGateOff"),
+              fileId: f.id,
+            },
+      );
       continue;
     }
     const data = await readStored(storage, f.storageKey!, IMPORT_LIMITS.pdfBytes);
@@ -640,7 +660,7 @@ async function extract(run: Run) {
         .where(inArray(productImportFiles.id, assigned));
   }
   const unassigned = imageFiles.filter((f) => !assignedImages.has(f.id) && f.route === "match");
-  if (unassigned.length && run.options.matchImages && candidates.length) {
+  if (unassigned.length && run.options.matchImages && candidates.length && catalogAiAllowed(run)) {
     const named = candidates.filter((c) => c.draft.name);
     const list = named.slice(0, 300);
     for (let i = 0; i < unassigned.length; i += 200) {

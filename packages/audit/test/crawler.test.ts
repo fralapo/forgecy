@@ -64,7 +64,7 @@ function options(allowPrivate: boolean) {
   return {
     rootUrl: `${base}/`,
     maxPages: 10,
-    fetcher: createHtmlFetcher({ userAgent: "ForgecyAudit/test", hostCheck }),
+    fetcher: createHtmlFetcher({ userAgent: "ForgecyAudit/test", hostCheck, allowPrivate }),
     hostCheck,
     userAgent: "ForgecyAudit/test",
     pageTimeoutMs: 5000,

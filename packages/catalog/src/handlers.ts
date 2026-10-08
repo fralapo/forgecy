@@ -2,6 +2,7 @@ import {
   createAiGateway,
   createDbLedger,
   createProvidersFromEnv,
+  getCatalogAiEnabled,
   resolveAiEnv,
   settingsRouting,
 } from "@forgecy/ai";
@@ -42,6 +43,7 @@ export async function catalogDepsFromEnv(
         })
       : null,
     localModelConfigured: env.LOCAL_LLM_ENABLED,
+    catalogAiEnabled: await getCatalogAiEnabled(ctx.db),
     logger: ctx.logger,
   };
 }

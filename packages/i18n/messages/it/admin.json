@@ -40,6 +40,15 @@
       "save": "Salva policy predefinita",
       "saved": "Policy predefinita salvata."
     },
+    "catalogAi": {
+      "title": "AI sul catalogo (estrazione da PDF e abbinamento immagini)",
+      "description": "Una funzione v1: disattivata per ogni cliente finché non la attivi qui, indipendentemente dalla policy AI del cliente. Inserimento manuale, CSV/XLSX e abbinamento per nome/SKU da ZIP o cartelle restano sempre disponibili.",
+      "toggle": "Attiva l’estrazione AI dai catalogo PDF e l’abbinamento AI immagine-prodotto",
+      "hint": "Una volta attiva, ogni import segue comunque la policy AI di quel cliente (budget, provider approvati, conferma prima di inviare i file).",
+      "save": "Salva",
+      "enabled": "AI sul catalogo attivata.",
+      "disabled": "AI sul catalogo disattivata."
+    },
     "clients": {
       "title": "Clienti",
       "empty": "Nessun cliente. La policy predefinita si applicherà al primo cliente che crei.",
