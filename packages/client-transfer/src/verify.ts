@@ -16,6 +16,7 @@ import {
   packagePeopleSchema,
   type ClientPackage,
 } from "./package";
+import { assertPackageData, UnsafePackageError } from "./safety";
 
 export interface PackageVerification {
   problems: ClientImportProblem[];
@@ -172,6 +173,12 @@ export async function verifyClientPackage(
     if (Object.entries(manifest.tables).some(([t, info]) => info.rows > 0 && !known.has(t)))
       return fail("unknownTable", report);
     if (!(await checksums(pkg, manifest))) return fail("checksum", report);
+    try {
+      await assertPackageData(pkg, manifest);
+    } catch (err) {
+      if (err instanceof UnsafePackageError) return fail("unsafe", report);
+      throw err;
+    }
     return { problems: [], report, ...(await conflictsOf(db, pkg, manifest)) };
   } finally {
     pkg.close();

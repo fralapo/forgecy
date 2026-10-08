@@ -14,6 +14,7 @@ import { sql, type Database } from "@forgecy/db";
 import { contentTypeForKey, isValidKey, type StorageDriver } from "@forgecy/files";
 import { clientTables, type ClientTable } from "./graph";
 import { openClientPackage, packageManifestSchema, packagePeopleSchema } from "./package";
+import { assertPackageData } from "./safety";
 
 type Row = Record<string, unknown>;
 
@@ -82,6 +83,7 @@ export async function importClientPackage(
   const pkg = await openClientPackage(file);
   try {
     const manifest = packageManifestSchema.parse(JSON.parse(await pkg.text("manifest.json")));
+    await assertPackageData(pkg, manifest); // the Verify step may be long past: check again
     const people = pkg.has("people.json")
       ? packagePeopleSchema.parse(JSON.parse(await pkg.text("people.json")))
       : [];
