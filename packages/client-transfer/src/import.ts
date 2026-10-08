@@ -14,11 +14,12 @@ import { sql, type Database } from "@forgecy/db";
 import { contentTypeForKey, isValidKey, type StorageDriver } from "@forgecy/files";
 import { clientTables, type ClientTable } from "./graph";
 import { openClientPackage, packageManifestSchema, packagePeopleSchema } from "./package";
-import { assertPackageData } from "./safety";
+import { assertPackageData, emptyOutsideRefs } from "./safety";
 
 type Row = Record<string, unknown>;
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Ids are lower-case canonical (assertPackageData refuses anything else), so lookups are exact.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const UUID_ANYWHERE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 const BATCH = 500;
 
@@ -140,7 +141,9 @@ export async function importClientPackage(
         versionRewrite.set(templateConflictId(key, version), res.rows[0]!.version);
       } else if (res.rows.length) draftTemplates.add(idMap.get(String(t.id))!);
     }
-    const remap = (s: string) => s.replace(UUID_ANYWHERE, (m) => idMap.get(m.toLowerCase()) ?? m);
+    // Ids that exist here after the remap: the rows of the package and the templates it reuses.
+    const hereIds = new Set(idMap.values());
+    const remap = (s: string) => s.replace(UUID_ANYWHERE, (m) => idMap.get(m) ?? m);
 
     const prepared: { table: ClientTable; rows: Row[] }[] = [];
     const deferred: Deferred[] = [];
@@ -162,6 +165,8 @@ export async function importClientPackage(
         }
         if (!keep) continue;
         for (const d of table.droppedColumns) if (!d.notNull) r[d.column] = null;
+        // A job or an agency template of the other installation means nothing here.
+        emptyOutsideRefs(table, r, hereIds);
         if (table.name === "clients") r.slug = slug;
         if (table.name === "templates") {
           if (skipTemplates.has(String(r.id))) continue;

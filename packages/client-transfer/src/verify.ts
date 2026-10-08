@@ -176,7 +176,7 @@ export async function verifyClientPackage(
     try {
       await assertPackageData(pkg, manifest);
     } catch (err) {
-      if (err instanceof UnsafePackageError) return fail("unsafe", report);
+      if (err instanceof UnsafePackageError) return fail(err.problem, report);
       throw err;
     }
     return { problems: [], report, ...(await conflictsOf(db, pkg, manifest)) };

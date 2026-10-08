@@ -14,6 +14,19 @@ export interface ForeignKey {
   notNull: boolean;
 }
 
+/**
+ * A uuid column that holds the id of another row without a declared foreign key.
+ * `package`: the row must travel in the package (checked, and remapped on import).
+ * `nullIfOutside`: may point at something that does not travel (a job, an agency
+ * template); the import empties it unless it points at a row of the package.
+ */
+export interface SoftRef {
+  column: string;
+  target: string;
+  notNull: boolean;
+  mode: "package" | "nullIfOutside";
+}
+
 export interface ClientTable {
   name: string;
   area: ClientTransferArea | "client";
@@ -26,6 +39,8 @@ export interface ClientTable {
   userColumns: ForeignKey[];
   /** Foreign keys to tables that never travel (jobs): emptied on import. */
   droppedColumns: ForeignKey[];
+  /** uuid columns that point at rows without a foreign key (see SOFT_REFS). */
+  softRefs: SoftRef[];
 }
 
 /** Never in a package: people, sessions, settings, the job queue, budgets, history of this install. */
@@ -98,6 +113,22 @@ export const TABLE_AREAS: Record<string, ClientTransferArea | "client"> = {
   client_memory_settings: "client",
 };
 
+/**
+ * Every uuid column of a client table that is neither `id` nor a foreign key, with the table
+ * it points to. A new one without an entry makes `clientTables()` fail, so nobody adds a
+ * reference that an import would silently leave pointing at another client's data.
+ * `brand_check_*.subject_id` is generic (`subject_type`); the only subject today is a carousel.
+ */
+export const SOFT_REFS: Record<string, { target: string; mode: SoftRef["mode"] }> = {
+  "contents.product_id": { target: "products", mode: "package" },
+  "assets.product_id": { target: "products", mode: "package" },
+  "brand_examples.content_version_id": { target: "content_versions", mode: "package" },
+  "brand_check_runs.subject_id": { target: "contents", mode: "package" },
+  "brand_check_issue_states.subject_id": { target: "contents", mode: "package" },
+  "audit_reports.template_id": { target: "templates", mode: "nullIfOutside" },
+  "brand_identity_proposals.run_id": { target: "jobs", mode: "nullIfOutside" },
+};
+
 function allTables(): PgTable[] {
   return (Object.values(schema) as unknown[]).filter((v): v is PgTable => v instanceof PgTable);
 }
@@ -149,6 +180,19 @@ export function clientTables(): ClientTable[] {
         parents: fks.filter((f) => included.has(f.target)),
         userColumns: fks.filter((f) => f.target === "users"),
         droppedColumns: fks.filter((f) => !included.has(f.target) && f.target !== "users"),
+        softRefs: c.columns
+          .filter(
+            (col) =>
+              col.columnType === "PgUUID" &&
+              col.name !== "id" &&
+              !fks.some((f) => f.column === col.name),
+          )
+          .map((col): SoftRef => {
+            const soft = SOFT_REFS[`${c.name}.${col.name}`];
+            if (!soft)
+              throw new Error(`Column ${c.name}.${col.name} has no entry in client-transfer SOFT_REFS`);
+            return { column: col.name, notNull: col.notNull, ...soft };
+          }),
       };
     });
 

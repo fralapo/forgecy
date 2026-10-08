@@ -113,7 +113,8 @@
       "newerVersion": "The package comes from a newer Forgecy. Update Forgecy before importing this package.",
       "checksum": "Some files in the package do not match their checksum: the package is damaged. Export it again.",
       "unknownTable": "The package contains data this version of Forgecy does not know. Update Forgecy before importing it.",
-      "unsafe": "The package refers to data or files that do not belong to the client it describes, so it cannot be imported."
+      "unsafe": "The package refers to data or files that do not belong to the client it describes, so it cannot be imported.",
+      "incompleteArea": "The package refers to data that is not included, because some areas were left out of the export. Export it again including all areas."
     },
     "report": {
       "title": "Package",

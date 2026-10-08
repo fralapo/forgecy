@@ -54,6 +54,7 @@ export const clientImportProblems = [
   "checksum",
   "unknownTable",
   "unsafe",
+  "incompleteArea",
 ] as const;
 export type ClientImportProblem = (typeof clientImportProblems)[number];
 
