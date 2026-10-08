@@ -125,6 +125,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
         number: 1,
         document: { slides: [], image: assetKey },
         createdFrom: "manual",
+        meta: { templateKey: tplKey, templateVersion: "1.0.0" },
       })
       .returning();
     await db.update(contents).set({ currentVersionId: v1!.id }).where(eq(contents.id, content!.id));
@@ -179,7 +180,8 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
         existingId: ids.client,
         proposedSlug: `rossi-${suffix}-2`,
       }),
-      expect.objectContaining({ kind: "template", key: tplKey, existingVersions: ["0.9.0"] }),
+      // The matching client's own 0.9.0 is private to it: a new client cannot reuse it, so there
+      // is no template conflict to choose about (the import decides the same way).
     ]);
     expect(v.resolved).toEqual(
       expect.arrayContaining([
@@ -320,9 +322,16 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       .select()
       .from(templates)
       .where(and(eq(templates.key, tplKey), eq(templates.clientId, out.clientId)));
-    expect(tpl).toMatchObject({ version: "1.0.0-import-1", status: "draft" });
+    expect(tpl).toMatchObject({ version: "1.0.0-import.1", status: "draft" });
+    expect((tpl!.manifest as { version?: string }).version).toBe("1.0.0-import.1");
     const [content] = await db.select().from(contents).where(eq(contents.clientId, out.clientId));
-    expect(content!.templateVersion).toBe("1.0.0-import-1");
+    expect(content!.templateVersion).toBe("1.0.0-import.1");
+    // The version a carousel was made with is also in its versions' meta; export prefers it.
+    const [version] = await db
+      .select()
+      .from(contentVersions)
+      .where(eq(contentVersions.contentId, content!.id));
+    expect(version!.meta).toMatchObject({ templateKey: tplKey, templateVersion: "1.0.0-import.1" });
   });
 
   it("blocks a package that points rows at a client that is not in it", async () => {

@@ -13,6 +13,11 @@ export type AiPolicy = (typeof aiPolicies)[number];
 /** app_settings key of the policy new clients start with (set by an Admin; see @forgecy/ai). */
 export const DEFAULT_AI_POLICY_KEY = "ai.default_policy";
 
+/** The policy a stored setting stands for: `external_allowed` until an Admin sets a valid one. */
+export function resolveDefaultAiPolicy(value: unknown): AiPolicy {
+  return aiPolicies.find((p) => p === value) ?? "external_allowed";
+}
+
 export const providerIds = [
   "anthropic",
   "openai",

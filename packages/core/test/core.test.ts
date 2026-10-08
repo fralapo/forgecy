@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { can, canViewJob, checkAiPolicy, loadEnv, transitionPermission } from "../src";
+import {
+  can,
+  canViewJob,
+  checkAiPolicy,
+  loadEnv,
+  resolveDefaultAiPolicy,
+  transitionPermission,
+} from "../src";
 
 describe("permissions", () => {
   const user = { type: "user" as const, id: "u1", isAdmin: false, active: true };
@@ -55,6 +62,11 @@ describe("AI policy", () => {
   it("restricts to approved providers", () => {
     expect(checkAiPolicy("external_restricted", "openai", ["anthropic"]).allowed).toBe(false);
     expect(checkAiPolicy("external_restricted", "anthropic", ["anthropic"]).allowed).toBe(true);
+  });
+  it("reads the stored default policy, external_allowed when there is none or it is not a policy", () => {
+    expect(resolveDefaultAiPolicy("local_only")).toBe("local_only");
+    expect(resolveDefaultAiPolicy(undefined)).toBe("external_allowed");
+    expect(resolveDefaultAiPolicy("anything")).toBe("external_allowed");
   });
 });
 

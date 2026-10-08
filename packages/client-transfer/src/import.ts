@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
 import {
   DEFAULT_AI_POLICY_KEY,
+  resolveDefaultAiPolicy,
   templateConflictId,
   type ClientImportChoices,
   type ClientTransferArea,
@@ -30,7 +31,7 @@ import {
   UnsafePackageError,
   verifiedChunks,
 } from "./safety";
-import { freeImportVersion, reusableTemplates } from "./templates";
+import { rewriteTemplateRefs, templateReuse } from "./templates";
 import {
   applyImportTrust,
   assertTrustRules,
@@ -151,6 +152,46 @@ async function insertRows(
   }
 }
 
+/**
+ * What the trust rules need from this installation: what an Admin gave new clients, and, when a
+ * client is replaced, its slug and its current AI consent. Read once to prepare the rows and
+ * again inside the import transaction (locking the client that is about to be replaced), so a
+ * policy or provider change made in between is not overwritten.
+ */
+async function readTrustInputs(
+  q: Pick<Database, "execute" | "select">,
+  replaceClientId: string | undefined,
+  lock: boolean,
+): Promise<{ defaultAiPolicy: string; slug: string | null; existing: ExistingConsent | null }> {
+  const [setting] = await q
+    .select({ value: appSettings.value })
+    .from(appSettings)
+    .where(eq(appSettings.key, DEFAULT_AI_POLICY_KEY));
+  const defaultAiPolicy = resolveDefaultAiPolicy(setting?.value);
+  if (!replaceClientId) return { defaultAiPolicy, slug: null, existing: null };
+  const res = await q.execute<{
+    slug: string;
+    ai_policy: string;
+    approved_providers: string[];
+    sendable_assets: string[];
+  }>(
+    sql`select slug, ai_policy, to_json(approved_providers) as approved_providers,
+               to_json(sendable_assets) as sendable_assets
+        from clients where id = ${replaceClientId} ${lock ? sql`for update` : sql``}`,
+  );
+  const row = res.rows[0];
+  if (!row) throw new Error("The client to replace no longer exists");
+  return {
+    defaultAiPolicy,
+    slug: row.slug,
+    existing: {
+      aiPolicy: row.ai_policy,
+      approvedProviders: row.approved_providers,
+      sendableAssets: row.sendable_assets,
+    },
+  };
+}
+
 export async function importClientPackage(
   deps: { db: Database; storage: StorageDriver },
   file: string,
@@ -183,43 +224,22 @@ export async function importClientPackage(
         if (typeof r.id === "string" && UUID.test(r.id)) idMap.set(r.id, randomUUID());
     let slug: string;
     let clientId: string;
-    // What the replaced client allows its AI to do stays as it is: a package cannot widen it.
-    let existing: ExistingConsent | null = null;
+    // What the replaced client allows its AI to do stays as it is, and a new client never gets
+    // more than the installation's default: a package cannot widen either.
+    const inputs = await readTrustInputs(db, plan.replaceClientId, false);
     if (plan.replaceClientId) {
-      const res = await db.execute<{
-        slug: string;
-        ai_policy: string;
-        approved_providers: string[];
-        sendable_assets: string[];
-      }>(
-        sql`select slug, ai_policy, to_json(approved_providers) as approved_providers,
-                   to_json(sendable_assets) as sendable_assets
-            from clients where id = ${plan.replaceClientId}`,
-      );
-      const row = res.rows[0];
-      if (!row) throw new Error("The client to replace no longer exists");
       clientId = plan.replaceClientId;
-      slug = row.slug;
-      existing = {
-        aiPolicy: row.ai_policy,
-        approvedProviders: row.approved_providers,
-        sendableAssets: row.sendable_assets,
-      };
+      slug = inputs.slug!;
     } else {
       if (plan.choices.client.mode !== "new") throw new Error("Replacement without a client");
       clientId = randomUUID();
       slug = plan.choices.client.slug;
     }
     idMap.set(manifest.client.id, clientId);
-    // What an Admin gave new clients; a package can only make this stricter.
-    const [setting] = await db
-      .select({ value: appSettings.value })
-      .from(appSettings)
-      .where(eq(appSettings.key, DEFAULT_AI_POLICY_KEY));
     const trust = {
       clientId,
-      existing,
-      defaultAiPolicy: typeof setting?.value === "string" ? setting.value : "external_allowed",
+      existing: inputs.existing,
+      defaultAiPolicy: inputs.defaultAiPolicy,
     };
 
     // Templates already here are reused; a conflict follows the person's choice. Only agency
@@ -237,23 +257,24 @@ export async function importClientPackage(
       const all = await db.execute<{ id: string; version: string; client_id: string | null }>(
         sql`select id, version, client_id from templates where key = ${key} order by created_at desc`,
       );
-      const res = { rows: reusableTemplates(all.rows, plan.replaceClientId ?? null) };
-      const exact = res.rows.find((r) => r.version === version);
-      const choice = plan.choices.templates[templateConflictId(key, version)];
-      if (exact) {
-        idMap.set(String(t.id), exact.id);
-        skipTemplates.add(exact.id);
-      } else if (res.rows.length && choice === "useExisting") {
-        idMap.set(String(t.id), res.rows[0]!.id);
-        skipTemplates.add(res.rows[0]!.id);
-        versionRewrite.set(templateConflictId(key, version), res.rows[0]!.version);
-      } else if (all.rows.some((r) => r.version === version)) {
-        const free = freeImportVersion(version, [
-          ...all.rows.map((r) => r.version),
-          ...packageTemplates.filter((o) => o.key === t.key).map((o) => String(o.version)),
-        ]);
-        renamedTemplates.set(idMap.get(String(t.id))!, free);
-        versionRewrite.set(templateConflictId(key, version), free);
+      // The same decision Verify showed (templates.ts), with the person's choice.
+      const decision = templateReuse(
+        all.rows,
+        version,
+        plan.replaceClientId ?? null,
+        plan.choices.templates[templateConflictId(key, version)],
+        packageTemplates.filter((o) => o !== t && o.key === t.key).map((o) => String(o.version)),
+      );
+      if (decision.kind === "exact") {
+        idMap.set(String(t.id), decision.row.id);
+        skipTemplates.add(decision.row.id);
+      } else if (decision.kind === "useExisting") {
+        idMap.set(String(t.id), decision.row.id);
+        skipTemplates.add(decision.row.id);
+        versionRewrite.set(templateConflictId(key, version), decision.row.version);
+      } else if (decision.version !== version) {
+        renamedTemplates.set(idMap.get(String(t.id))!, decision.version);
+        versionRewrite.set(templateConflictId(key, version), decision.version);
       }
     }
     // Ids that exist here after the remap, per table: the package's rows and the templates it reuses.
@@ -309,12 +330,16 @@ export async function importClientPackage(
         // A job or an agency template of the other installation means nothing here.
         emptyOutsideRefs(table, r, hereIds);
         if (table.name === "clients") r.slug = slug;
-        if (table.name === "templates" && renamedTemplates.has(String(r.id)))
-          r.version = renamedTemplates.get(String(r.id));
-        if (typeof r.template_key === "string" && typeof r.template_version === "string") {
-          const to = versionRewrite.get(templateConflictId(r.template_key, r.template_version));
-          if (to) r.template_version = to;
+        const renamed = table.name === "templates" ? renamedTemplates.get(String(r.id)) : undefined;
+        if (renamed) {
+          r.version = renamed;
+          // The stored copy of template.json says the same as the row.
+          if (r.manifest && typeof r.manifest === "object")
+            r.manifest = { ...(r.manifest as Row), version: renamed };
         }
+        // Every row that names a template by key and version (columns and JSON) follows a
+        // rename or a reuse, or it would render with another client's private template.
+        if (versionRewrite.size) Object.assign(r, rewriteTemplateRefs(r, versionRewrite));
         if (typeof r.id === "string")
           for (const f of forward)
             if (r[f.column] != null) {
@@ -341,6 +366,12 @@ export async function importClientPackage(
       await copyPackageFiles({ pkg, storage }, files, (k) => remapIds(k, idMap), written);
 
       await db.transaction(async (tx) => {
+        // The consent rules read again, with the replaced client locked: an Admin may have
+        // changed the policy or the approved providers while the rows were being prepared.
+        const fresh = await readTrustInputs(tx, plan.replaceClientId, true);
+        for (const p of prepared)
+          if (p.table.name === "clients")
+            p.rows = p.rows.map((r) => applyImportTrust("clients", r, { ...trust, ...fresh }) ?? r);
         let keepTemplates: string[] = [];
         if (plan.replaceClientId) {
           const own = await tx.execute<{ id: string }>(

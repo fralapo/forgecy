@@ -6,6 +6,7 @@ import {
   applyImportTrust,
   checkTrustCoverage,
   NOT_STATUS_DEPENDENT,
+  REVIEWED_JSON_COLUMNS,
   STATUS_UNIQUE_INDEXES,
   stricterAiPolicy,
   TRUST_RULES,
@@ -137,9 +138,6 @@ describe("applyImportTrust", () => {
     expect(
       applyImportTrust("assets", { source: "ai", status: "approved", decided_by: "u" }, ctx),
     ).toMatchObject({ status: "draft", decided_by: null });
-    expect(applyImportTrust("assets", { source: "upload", status: "approved" }, ctx)!.status).toBe(
-      "approved",
-    );
     expect(applyImportTrust("automations", { status: "active" }, ctx)!.status).toBe("paused");
     expect(
       applyImportTrust("memory_items", { status: "approved", decided_by: "u" }, ctx),
@@ -392,5 +390,155 @@ describe("files that only a dropped export used", () => {
       ['{"image":"clients/c/b.png"}'],
     );
     expect([...skip]).toEqual(["clients/c/a.pdf"]);
+  });
+});
+
+describe("attestations embedded in JSON", () => {
+  const fieldMeta = {
+    name: { truth: "approved", source: { kind: "csv" }, confidence: "high" },
+    description: {
+      truth: "approved",
+      source: { kind: "ai" },
+      confidence: "low",
+      sensitive: ["health"],
+      acceptedBy: "someone",
+      acceptedAt: "2026-01-01",
+      acceptNote: "ok",
+    },
+  };
+  it("strips who accepted a product's sensitive claim and sends the product back to review", () => {
+    const out = applyImportTrust(
+      "products",
+      { id: "p", status: "approved", field_meta: fieldMeta, approved_by: "u" },
+      ctx,
+    )!;
+    const meta = out.field_meta as Record<string, Record<string, unknown>>;
+    expect(meta.description).not.toHaveProperty("acceptedBy");
+    expect(meta.description).not.toHaveProperty("acceptedAt");
+    expect(meta.description).not.toHaveProperty("acceptNote");
+    expect(meta.description).toMatchObject({ truth: "approved", sensitive: ["health"] });
+    expect(meta.name).toEqual(fieldMeta.name);
+    expect(out.status).toBe("proposed");
+    expect(out.approved_by).toBeNull();
+  });
+  it("keeps an approved product without sensitive claims approved", () => {
+    const out = applyImportTrust(
+      "products",
+      { id: "p", status: "approved", field_meta: { name: fieldMeta.name } },
+      ctx,
+    )!;
+    expect(out.status).toBe("approved");
+  });
+  it("does not mutate the input field_meta", () => {
+    applyImportTrust("products", { status: "approved", field_meta: fieldMeta }, ctx);
+    expect(fieldMeta.description.acceptedBy).toBe("someone");
+  });
+  it("makes an import item's sensitive flag follow its stripped metadata", () => {
+    const out = applyImportTrust(
+      "product_import_items",
+      { id: "i", status: "accepted", field_meta: fieldMeta, sensitive: false, decided_by: "u" },
+      ctx,
+    )!;
+    expect(out.sensitive).toBe(true);
+    expect(
+      (out.field_meta as Record<string, Record<string, unknown>>).description,
+    ).not.toHaveProperty("acceptedBy");
+    const clean = applyImportTrust(
+      "product_import_items",
+      { id: "i", status: "pending", field_meta: { name: fieldMeta.name }, sensitive: true },
+      ctx,
+    )!;
+    expect(clean.sensitive).toBe(false);
+  });
+  it("forgets that competitors were skipped along with who confirmed them", () => {
+    expect(
+      applyImportTrust("audits", { status: "draft", competitors_skipped: true }, ctx),
+    ).toMatchObject({
+      competitors_skipped: false,
+    });
+  });
+  it("recomputes a memory's sensitivity from its category", () => {
+    expect(
+      applyImportTrust(
+        "memory_items",
+        { status: "candidate", category: "claims", sensitive: false },
+        ctx,
+      ),
+    ).toMatchObject({ sensitive: true });
+    expect(
+      applyImportTrust(
+        "memory_items",
+        { status: "candidate", category: "preference", sensitive: true },
+        ctx,
+      ),
+    ).toMatchObject({ sensitive: false });
+  });
+  it("forgets a person's confirmation to send a product import to AI", () => {
+    const out = applyImportTrust(
+      "product_imports",
+      { status: "analyzing", options: { language: "it", aiConfirmed: true, aiConfirmedBy: "u" } },
+      ctx,
+    )!;
+    expect(out.options).toEqual({ language: "it" });
+  });
+  it("sets a font license back to to-verify in every brand version", () => {
+    const out = applyImportTrust(
+      "brand_identity_versions",
+      {
+        status: "draft",
+        document: {
+          visual: {
+            typography: [
+              { value: { role: "body", family: "A", licenseStatus: "verified" } },
+              { value: { role: "display", family: "B", licenseStatus: "to_verify" } },
+            ],
+          },
+          voice: { tone: "warm" },
+        },
+      },
+      ctx,
+    )!;
+    const doc = out.document as {
+      visual: { typography: { value: { licenseStatus: string } }[] };
+      voice: unknown;
+    };
+    expect(doc.visual.typography.map((t) => t.value.licenseStatus)).toEqual([
+      "to_verify",
+      "to_verify",
+    ]);
+    expect(doc.voice).toEqual({ tone: "warm" });
+  });
+  it("sends every approved image back to draft, uploads included", () => {
+    for (const source of ["upload", "ai", "product"])
+      expect(applyImportTrust("assets", { source, status: "approved" }, ctx)!.status).toBe("draft");
+    expect(applyImportTrust("assets", { source: "upload", status: "rejected" }, ctx)!.status).toBe(
+      "rejected",
+    );
+  });
+});
+
+describe("JSON columns are reviewed", () => {
+  const widgets = (extra: TrustTable["columns"]): TrustTable[] => [
+    { name: "widgets", columns: [{ name: "label", notNull: false }, ...extra] },
+  ];
+  const ok = { widgets: { why: "nothing here" } };
+  it("reports a new JSON column nobody looked at for embedded approvals", () => {
+    expect(() =>
+      checkTrustCoverage(ok, widgets([{ name: "consent", notNull: false, json: true }])),
+    ).toThrow(/widgets\.consent/);
+    expect(() =>
+      checkTrustCoverage(
+        ok,
+        widgets([{ name: "consent", notNull: false, json: true }]),
+        new Set(["widgets.consent"]),
+      ),
+    ).not.toThrow();
+  });
+  it("has looked at every JSON column of the real schema", () => {
+    const jsonColumns = trustTables().flatMap((t) =>
+      t.columns.filter((c) => c.json).map((c) => `${t.name}.${c.name}`),
+    );
+    expect(jsonColumns.length).toBeGreaterThan(50);
+    expect(jsonColumns.filter((c) => !REVIEWED_JSON_COLUMNS.has(c))).toEqual([]);
   });
 });

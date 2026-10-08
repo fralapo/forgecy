@@ -17,7 +17,7 @@ import {
   type ClientPackage,
 } from "./package";
 import { assertPackageData, UnsafePackageError } from "./safety";
-import { reusableTemplates } from "./templates";
+import { templateReuse } from "./templates";
 
 export interface PackageVerification {
   problems: ClientImportProblem[];
@@ -81,21 +81,21 @@ async function conflictsOf(
       name: string;
     }[];
     for (const t of rows) {
-      // The same templates the import will reuse: agency ones and the replaced client's own. A
-      // version held by another client's private template is not listed; the import renames it.
-      const res = await db.execute<{ version: string; client_id: string | null }>(
-        sql`select version, client_id from templates where key = ${t.key} order by created_at desc`,
+      // The decision the import takes (templates.ts), for a new client: agency templates only.
+      // A version held by another client's private template is not listed; the import renames it.
+      const res = await db.execute<{ id: string; version: string; client_id: string | null }>(
+        sql`select id, version, client_id from templates where key = ${t.key} order by created_at desc`,
       );
-      const versions = reusableTemplates(res.rows, existing?.id ?? null).map((r) => r.version);
-      if (versions.includes(t.version))
+      const decision = templateReuse(res.rows, t.version, null, undefined);
+      if (decision.kind === "exact")
         resolved.push({ kind: "templateReused", key: t.key, version: t.version });
-      else if (versions.length)
+      else if (decision.conflictVersions.length)
         conflicts.push({
           kind: "template",
           key: t.key,
           version: t.version,
           name: t.name,
-          existingVersions: versions,
+          existingVersions: decision.conflictVersions,
         });
     }
   }

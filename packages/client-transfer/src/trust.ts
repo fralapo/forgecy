@@ -7,11 +7,14 @@
  *
  * Fail closed: every client table with a status, approval, publication or export column needs
  * a rule below, every value of a status enum needs a target, and every such column must be
- * named by the rule. `checkTrustCoverage` runs when this module loads, so a new table, a new
- * status value or a new approval column stops the importer until somebody decides what it
- * means (same idea as SOFT_REFS in graph.ts). Pure: returns a copy; null drops the row.
+ * named by the rule, and every JSON column has to have been looked at for approvals embedded in
+ * it. `checkTrustCoverage` runs in a unit test and before every import (`assertTrustRules`), so
+ * a new table, a new status value, a new approval column or a new JSON column stops the importer
+ * until somebody decides what it means (same idea as SOFT_REFS in graph.ts; it does not run when
+ * the module loads, so a schema change cannot take export or verify down).
+ * Pure: returns a copy; null drops the row.
  */
-import { sendableAssetTypes } from "@forgecy/core";
+import { isSensitiveMemoryCategory, sendableAssetTypes, type MemoryCategory } from "@forgecy/core";
 import { schema } from "@forgecy/db";
 import { getTableConfig, PgTable } from "drizzle-orm/pg-core";
 import { clientTables } from "./graph";
@@ -35,8 +38,6 @@ export interface TrustRule {
   drop?: true;
   /** The `status` column: every value of its enum mapped to what it becomes (itself = kept). */
   status?: Record<string, string>;
-  /** Limits the status mapping to the rows where this holds. */
-  when?: (row: Row) => boolean;
   /** Always set to null. Nullable columns only. */
   clear?: string[];
   /** Always overwritten. */
@@ -171,8 +172,8 @@ export const TRUST_RULES: Record<string, TrustRule> = {
   },
   assets: {
     status: demote(["draft", "approved", "rejected"], "draft", "approved"),
-    // An AI image is a draft until a person here approves it; an upload is the client's own file.
-    when: (r) => r.source === "ai",
+    // Every image is a draft until a person here approves it: a carousel is held back by an
+    // unapproved image, so an approval that came with the package would skip that check.
     // Nobody here confirmed the right to use an upload commercially; the package says somebody did.
     clear: [...DECIDED, "rights"],
     // Nor did anybody here review the provider's terms for an AI image.
@@ -227,6 +228,8 @@ export const TRUST_RULES: Record<string, TrustRule> = {
       "competitors_confirmed_by",
       "competitors_confirmed_at",
     ],
+    // "Continue without competitors" alone satisfies the readiness check for the list.
+    set: { competitors_skipped: false },
     // Delivered means it went out to a prospect from the other installation. It cannot become
     // active again: only one audit per client may be (audits_one_active_uq).
     custom: (r) =>
@@ -326,10 +329,12 @@ export const TRUST_RULES: Record<string, TrustRule> = {
     // Ids of people of the other installation, and checks somebody there confirmed.
     set: { editor_ids: [], acknowledged_checks: [] },
     // Archived, so that a person can restore it as a new draft.
-    custom: (r) =>
-      r.status === "archived" && !r.archived_at
-        ? { ...r, archived_at: new Date().toISOString() }
-        : r,
+    custom: (r) => {
+      const out: Row = { ...r, document: resetFontLicenses(r.document) };
+      return out.status === "archived" && !out.archived_at
+        ? { ...out, archived_at: new Date().toISOString() }
+        : out;
+    },
   },
   brand_identity_proposals: {
     status: { proposed: "proposed", accepted: "stale", rejected: "stale", stale: "stale" },
@@ -360,10 +365,25 @@ export const TRUST_RULES: Record<string, TrustRule> = {
       "approved",
     ),
     clear: DECISION,
+    // Bulk approval skips sensitive memories; the package does not get to say which are.
+    custom: (r) =>
+      typeof r.category === "string"
+        ? { ...r, sensitive: isSensitiveMemoryCategory(r.category as MemoryCategory) }
+        : r,
   },
   products: {
     status: same("draft", "proposed", "approved", "rejected", "archived"),
     clear: ["approved_by", "approved_at", "approval_note"],
+    // A person's acceptance of a sensitive claim is what lets a product be approved. It is
+    // forgotten, and a product that carries such a claim has to be approved again here.
+    custom: (r) => {
+      const { meta, sensitive } = stripAcceptance(r.field_meta);
+      return {
+        ...r,
+        field_meta: meta,
+        status: r.status === "approved" && sensitive ? "proposed" : r.status,
+      };
+    },
   },
   product_images: { status: same("draft", "approved"), clear: ["approved_by"] },
   product_field_proposals: {
@@ -375,6 +395,12 @@ export const TRUST_RULES: Record<string, TrustRule> = {
     clear: DECIDED,
     // Per-field choices a person made on conflicts elsewhere.
     set: { conflict_decisions: {} },
+    // "Sensitive" means a claim waits for acceptance; with the acceptances gone it is derived
+    // the way the review does (review.ts): any field that carries a claim.
+    custom: (r) => {
+      const { meta, sensitive } = stripAcceptance(r.field_meta);
+      return { ...r, field_meta: meta, sensitive };
+    },
   },
   product_import_files: {
     clear: ["mapping_confirmed_by", "mapping_confirmed_at"],
@@ -390,13 +416,56 @@ export const TRUST_RULES: Record<string, TrustRule> = {
       "failed",
       "cancelled",
     ),
-    why: PIPELINE,
+    // A person's confirmation to send the files to an AI provider belongs to that run only.
+    custom: (r) => {
+      const o = r.options;
+      if (!o || typeof o !== "object") return r;
+      const { aiConfirmed: _a, aiConfirmedBy: _b, ...rest } = o as Row;
+      return { ...r, options: rest };
+    },
   },
 };
 
+type Meta = Record<string, unknown>;
+
+/** Field metadata without who accepted a sensitive claim, and whether any field carries a claim. */
+function stripAcceptance(fieldMeta: unknown): { meta: Meta; sensitive: boolean } {
+  const meta: Meta = {};
+  let sensitive = false;
+  if (fieldMeta && typeof fieldMeta === "object")
+    for (const [field, entry] of Object.entries(fieldMeta as Meta)) {
+      if (!entry || typeof entry !== "object") {
+        meta[field] = entry;
+        continue;
+      }
+      const { acceptedBy: _by, acceptedAt: _at, acceptNote: _note, ...rest } = entry as Meta;
+      if (Array.isArray(rest.sensitive) && rest.sensitive.length) sensitive = true;
+      meta[field] = rest;
+    }
+  return { meta, sensitive };
+}
+
+/** A brand document with every font license back to "to verify" (a person here checks it). */
+function resetFontLicenses(document: unknown): unknown {
+  const doc = document as { visual?: { typography?: unknown } } | null;
+  const typography = doc?.visual?.typography;
+  if (!doc || !Array.isArray(typography)) return document;
+  return {
+    ...doc,
+    visual: {
+      ...doc.visual,
+      typography: typography.map((t: { value?: Meta }) =>
+        t?.value && typeof t.value === "object"
+          ? { ...t, value: { ...t.value, licenseStatus: "to_verify" } }
+          : t,
+      ),
+    },
+  };
+}
+
 export interface TrustTable {
   name: string;
-  columns: { name: string; notNull: boolean; enumValues?: readonly string[] }[];
+  columns: { name: string; notNull: boolean; enumValues?: readonly string[]; json?: boolean }[];
 }
 
 /** The client tables of the real schema, as the coverage check needs them. */
@@ -412,6 +481,7 @@ export function trustTables(): TrustTable[] {
         name: col.name,
         notNull: col.notNull,
         enumValues: (col as { enumValues?: readonly string[] }).enumValues,
+        json: col.columnType === "PgJsonb",
       })),
     }));
 }
@@ -420,11 +490,18 @@ export function trustTables(): TrustTable[] {
 export function checkTrustCoverage(
   rules: Record<string, TrustRule>,
   tables: readonly TrustTable[],
+  reviewedJson: ReadonlySet<string> = REVIEWED_JSON_COLUMNS,
 ): void {
   const problems: string[] = [];
   const known = new Set(tables.map((t) => t.name));
   for (const name of Object.keys(rules))
     if (!known.has(name)) problems.push(`${name}: rule for a table that is not a client table`);
+  for (const t of tables)
+    for (const c of t.columns)
+      if (c.json && !reviewedJson.has(`${t.name}.${c.name}`))
+        problems.push(
+          `${t.name}.${c.name}: JSON column not reviewed for embedded approvals (REVIEWED_JSON_COLUMNS)`,
+        );
   for (const t of tables) {
     const gates = t.columns.filter(isGate).map((c) => c.name);
     const rule = rules[t.name];
@@ -514,6 +591,106 @@ export const STATUS_UNIQUE_INDEXES: Record<
   content_plans_active_uq: { table: "content_plans", inside: (s) => s === "active" },
 };
 
+/**
+ * Every JSON column of the client tables, looked at for approvals or attestations embedded in it
+ * (a person's name, "accepted", "confirmed", "verified"). A new JSON column fails the coverage
+ * check until it is added here, with a rule above if it holds one. Those that did:
+ * products.field_meta and product_import_items.field_meta (acceptance of sensitive claims),
+ * product_imports.options (confirmation to use AI), assets.rights and assets.generation (rights
+ * and commercial-use review), brand_identity_versions.document (font license status),
+ * editor_ids, acknowledged_checks and conflict_decisions (reset to empty), and the template
+ * references of content_versions.meta (templates.ts). The rest was read and holds data only.
+ */
+export const REVIEWED_JSON_COLUMNS: ReadonlySet<string> = new Set([
+  "prospect_profiles.objectives",
+  "prospect_profiles.social_urls",
+  "audits.inputs",
+  "site_scans.steps",
+  "site_scans.robots",
+  "site_scans.extracted",
+  "site_scans.error_ref",
+  "audit_sources.data",
+  "audit_sources.skip_ref",
+  "audit_channels.unavailable_ref",
+  "audit_social_posts.metrics",
+  "audit_competitors.removed_ref",
+  "audit_competitors.source_error_ref",
+  "audit_findings.confidence_ref",
+  "audit_findings.evidence",
+  "audit_findings.comparison",
+  "audit_findings.ai_meta",
+  "audit_plans.pillars",
+  "audit_plans.items",
+  "audit_plans.ai_meta",
+  "audit_reports.sections",
+  "audit_reports.ai_meta",
+  "templates.manifest",
+  "templates.validation",
+  "brand_identity_versions.document",
+  "brand_identity_versions.tokens",
+  "brand_identity_versions.editor_ids",
+  "brand_identity_versions.acknowledged_checks",
+  "brand_sources.status_detail_ref",
+  "brand_sources.pages",
+  "brand_identity_proposals.title_ref",
+  "brand_identity_proposals.changes",
+  "brand_identity_proposals.rationale_ref",
+  "brand_identity_proposals.evidence",
+  "brand_identity_proposals.checks",
+  "brand_identity_proposals.edited_value",
+  "brand_identity_proposals.stale_ref",
+  "content_pillars.examples",
+  "content_pillars.provenance",
+  "content_rubrics.structure",
+  "content_rubrics.provenance",
+  "content_plans.provenance",
+  "content_plan_items.provenance",
+  "contents.brief",
+  "contents.outline",
+  "contents.draft",
+  "content_versions.document",
+  "content_versions.meta",
+  "content_outlines.outline",
+  "content_creative_directions.direction",
+  "content_creative_directions.provenance",
+  "content_slide_edits.before",
+  "content_slide_edits.after",
+  "content_slide_edits.note_ref",
+  "content_approvals.acknowledged",
+  "content_exports.files",
+  "assets.generation",
+  "assets.rights",
+  "product_imports.options",
+  "product_imports.summary",
+  "product_import_files.meta",
+  "product_import_files.mapping",
+  "product_import_files.mapping_proposal",
+  "product_import_files.suggestion",
+  "product_column_mappings.mapping",
+  "products.details",
+  "products.field_meta",
+  "products.origin",
+  "product_field_proposals.current_value",
+  "product_field_proposals.proposed_value",
+  "product_field_proposals.meta",
+  "product_import_items.draft",
+  "product_import_items.field_meta",
+  "product_import_items.origin",
+  "product_import_items.images",
+  "product_import_items.match_ref",
+  "product_import_items.conflicts",
+  "product_import_items.conflict_decisions",
+  "product_import_items.discard_ref",
+  "brand_check_runs.report",
+  "brand_book_exports.parts",
+  "automations.status_reason",
+  "automations.params",
+  "automations.items",
+  "automation_run_items.input",
+  "automation_run_items.error_ref",
+  "client_memory_settings.value",
+]);
+
 /** Partial unique indexes and constraints that the status mappings cannot affect. */
 export const NOT_STATUS_DEPENDENT = new Set([
   "brand_sources_file_uq", // a file hash of a source that is not removed
@@ -541,7 +718,7 @@ export function applyImportTrust(table: string, row: Row, ctx: TrustContext): Ro
   if (!rule) return row; // no gate column (assertTrustRules)
   if (rule.drop) return null;
   let out: Row = { ...row };
-  if (rule.status && row.status !== undefined && (!rule.when || rule.when(row))) {
+  if (rule.status && row.status !== undefined) {
     const target = rule.status[String(row.status)];
     // A status this version does not know cannot be proven harmless.
     if (target === undefined)

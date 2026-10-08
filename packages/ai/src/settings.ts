@@ -2,6 +2,7 @@ import {
   aiPolicies,
   assertCan,
   DEFAULT_AI_POLICY_KEY,
+  resolveDefaultAiPolicy,
   isLocalProvider,
   providerIds,
   sendableAssetTypes,
@@ -57,7 +58,7 @@ export async function getDefaultAiPolicy(db: Pick<Database, "select">): Promise<
     })
     .from(appSettings)
     .where(eq(appSettings.key, DEFAULT_POLICY_KEY));
-  const policy = aiPolicies.find((p) => p === row?.value) ?? "external_allowed";
+  const policy = resolveDefaultAiPolicy(row?.value);
   return row
     ? { policy, updatedAt: row.updatedAt, updatedBy: row.updatedBy }
     : { policy, updatedAt: null, updatedBy: null };
