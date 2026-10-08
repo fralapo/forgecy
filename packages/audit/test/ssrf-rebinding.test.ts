@@ -26,7 +26,10 @@ type DnsLookupAll = (
   options: LookupAllOptions,
   callback: (err: NodeJS.ErrnoException | null, addresses: LookupAddress[]) => void,
 ) => void;
-type DnsPromiseLookupAll = (hostname: string, options: LookupAllOptions) => Promise<LookupAddress[]>;
+type DnsPromiseLookupAll = (
+  hostname: string,
+  options: LookupAllOptions,
+) => Promise<LookupAddress[]>;
 
 const dnsLookupMock = vi.mocked(dnsLookup) as unknown as Mock<DnsLookupAll>;
 const dnsPromiseLookupMock = vi.mocked(dnsPromiseLookup) as unknown as Mock<DnsPromiseLookupAll>;

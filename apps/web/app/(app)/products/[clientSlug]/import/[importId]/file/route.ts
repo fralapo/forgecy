@@ -56,8 +56,7 @@ export const POST = withUser(
           relativePath,
           temp,
           catalogAiAvailable:
-            importAiSetup(env, catalogClient.aiPolicy).available &&
-            (await getCatalogAiEnabled(db)),
+            importAiSetup(env, catalogClient.aiPolicy).available && (await getCatalogAiEnabled(db)),
         });
         return NextResponse.json({
           id: row.id,

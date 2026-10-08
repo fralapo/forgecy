@@ -211,5 +211,7 @@ export function createPinnedFetch(options: { allowPrivate?: boolean } = {}): typ
     },
   });
   return ((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) =>
-    fetch(input, { ...init, dispatcher: agent } as unknown as Parameters<typeof fetch>[1])) as typeof fetch;
+    fetch(input, { ...init, dispatcher: agent } as unknown as Parameters<
+      typeof fetch
+    >[1])) as typeof fetch;
 }

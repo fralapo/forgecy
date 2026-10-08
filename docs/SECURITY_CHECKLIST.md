@@ -69,7 +69,7 @@ confirm by hand against a real target, not just the unit tests in
 Record the date, the person who ran it, and which of the three sections
 passed in the PR or ticket that references this checklist. A failing item
 blocks go-live until fixed or explicitly accepted as a known limitation
-(e.g. the documented residual gap: a crawl redirect to a *different*
+(e.g. the documented residual gap: a crawl redirect to a _different_
 domain mid-crawl still relies on `crawlSite`'s own per-navigation check
 rather than a second DNS pin, since Chromium is only pinned for the
 crawl's starting host).

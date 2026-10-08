@@ -336,10 +336,9 @@ export async function setFileRoute(
   if (!file) throw localizedError("not_found", "products.errors.fileNotFound");
   if (
     !file.valid ||
-    !routesFor(
-      file.kind,
-      input.catalogAiAvailable && !(file.meta as FileMeta).textless,
-    ).includes(input.route)
+    !routesFor(file.kind, input.catalogAiAvailable && !(file.meta as FileMeta).textless).includes(
+      input.route,
+    )
   )
     throw localizedError("validation", "products.errors.routeNotAvailable");
   await db
