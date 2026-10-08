@@ -3,6 +3,7 @@
  * checks keep a package inside the client it creates. Ids are lower-case canonical uuids and
  * compared exactly, the same way the importer maps them.
  */
+import { createHash } from "node:crypto";
 import type { ClientImportProblem } from "@forgecy/core";
 import { isValidKey } from "@forgecy/files";
 import type { PackageManifest } from "./export";
@@ -48,12 +49,23 @@ const SYSTEM_KEY =
 const STEM = /\/([a-f0-9]{64})\.[a-z0-9]{1,10}$/;
 
 /**
- * Every string of a parsed value: values, object keys, and the strings of JSON that is itself
- * stored in a string (a text column holding JSON, however its characters are escaped).
+ * Deepest nesting of arrays and objects a row may have (JSON that is itself stored in a string
+ * counts on top of the value around it). Forgecy's own rows stay far below this; a package
+ * that goes deeper is hostile, and recursion without a bound would overflow the stack.
  */
-function* strings(value: unknown): Generator<string> {
+export const MAX_JSON_DEPTH = 64;
+
+const tooDeep = () => new UnsafePackageError(`data is nested deeper than ${MAX_JSON_DEPTH} levels`);
+
+/**
+ * Calls `visit` with every string of a parsed value: values, object keys, and the strings of
+ * JSON that is itself stored in a string (a text column holding JSON, however its characters
+ * are escaped). Plain recursion bounded by MAX_JSON_DEPTH; no generator delegation, which would
+ * cost the whole depth for every string.
+ */
+function walkStrings(value: unknown, visit: (s: string) => void, depth = 0): void {
   if (typeof value === "string") {
-    yield value;
+    visit(value);
     if (/^\s*[{[]/.test(value)) {
       let inner: unknown;
       try {
@@ -61,23 +73,35 @@ function* strings(value: unknown): Generator<string> {
       } catch {
         return;
       }
-      yield* strings(inner);
+      walkStrings(inner, visit, depth);
     }
-  } else if (Array.isArray(value)) for (const v of value) yield* strings(v);
-  else if (value && typeof value === "object")
-    for (const [k, v] of Object.entries(value)) {
-      yield* strings(k);
-      yield* strings(v);
+  } else if (Array.isArray(value)) {
+    if (depth >= MAX_JSON_DEPTH) throw tooDeep();
+    for (const v of value) walkStrings(v, visit, depth + 1);
+  } else if (value && typeof value === "object") {
+    if (depth >= MAX_JSON_DEPTH) throw tooDeep();
+    for (const k in value) {
+      if (!Object.hasOwn(value, k)) continue;
+      walkStrings(k, visit, depth + 1);
+      walkStrings((value as Record<string, unknown>)[k], visit, depth + 1);
     }
+  }
 }
 
 /** A copy of a parsed value with `fn` applied to every string, object keys included. */
-export function mapStrings(value: unknown, fn: (s: string) => string): unknown {
+export function mapStrings(value: unknown, fn: (s: string) => string, depth = 0): unknown {
   if (typeof value === "string") return fn(value);
-  if (Array.isArray(value)) return value.map((v) => mapStrings(v, fn));
-  // fromEntries defines own properties, so a "__proto__" key stays a plain key.
-  if (value && typeof value === "object")
-    return Object.fromEntries(Object.entries(value).map(([k, v]) => [fn(k), mapStrings(v, fn)]));
+  if (Array.isArray(value)) {
+    if (depth >= MAX_JSON_DEPTH) throw tooDeep();
+    return value.map((v) => mapStrings(v, fn, depth + 1));
+  }
+  if (value && typeof value === "object") {
+    if (depth >= MAX_JSON_DEPTH) throw tooDeep();
+    // fromEntries defines own properties, so a "__proto__" key stays a plain key.
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [fn(k), mapStrings(v, fn, depth + 1)]),
+    );
+  }
   return value;
 }
 
@@ -160,10 +184,11 @@ export function assertPackageScoped(
       for (const d of table.droppedColumns)
         if (d.notNull && r[d.column] != null)
           throw new UnsafePackageError(`${d.column} needs data that does not travel`, table.name);
-      for (const s of strings(r))
+      walkStrings(r, (s) => {
         for (const m of s.matchAll(TENANT_KEY))
           if (m[0] !== `clients/${scope.clientId}/`)
             throw new UnsafePackageError("a file of another client is referenced", table.name);
+      });
     }
   }
 }
@@ -192,6 +217,25 @@ export function assertImportKey(key: string, clientId: string, fileSha256?: stri
   const stem = STEM.exec(key)?.[1];
   if (fileSha256 && stem && stem !== fileSha256)
     throw new UnsafePackageError(`checksum does not match the file name: ${show(key)}`);
+}
+
+/** Passes the chunks through and fails if the total size or the sha-256 is not what the manifest says. */
+export async function* verifiedChunks(
+  source: AsyncIterable<unknown>,
+  expect: { sha256: string; bytes: number },
+): AsyncGenerator<Buffer> {
+  const hash = createHash("sha256");
+  let bytes = 0;
+  for await (const chunk of source) {
+    const b = chunk as Buffer;
+    bytes += b.length;
+    if (bytes > expect.bytes)
+      throw new UnsafePackageError("a file is larger than the manifest says");
+    hash.update(b);
+    yield b;
+  }
+  if (bytes !== expect.bytes || hash.digest("hex") !== expect.sha256)
+    throw new UnsafePackageError("a file does not match its checksum");
 }
 
 const readRows = async (pkg: ClientPackage, table: string): Promise<Row[]> => {

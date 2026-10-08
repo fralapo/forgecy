@@ -45,6 +45,13 @@ export type ClientImportStatus = (typeof clientImportStatuses)[number];
 
 /** Largest package accepted by the upload. */
 export const CLIENT_PACKAGE_MAX_BYTES = 2 * 1024 * 1024 * 1024;
+/** Limits applied while reading a package (the upload cap above is its compressed size). */
+export const CLIENT_PACKAGE_MAX_ENTRIES = 200_000;
+export const CLIENT_PACKAGE_MAX_UNCOMPRESSED_BYTES = 20 * 1024 * 1024 * 1024;
+/** Largest `manifest.json`, `data/*.json` or `people.json` that is parsed in memory. */
+export const CLIENT_PACKAGE_MAX_JSON_BYTES = 512 * 1024 * 1024;
+/** An entry above 1 MiB that inflates to more than this many times its stored size is a bomb. */
+export const CLIENT_PACKAGE_MAX_RATIO = 200;
 
 /** Why a package cannot be imported (each one blocks). */
 export const clientImportProblems = [

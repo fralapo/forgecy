@@ -5,6 +5,7 @@
  * first and removed again if the transaction fails.
  */
 import { randomUUID } from "node:crypto";
+import { Readable } from "node:stream";
 import {
   templateConflictId,
   type ClientImportChoices,
@@ -20,6 +21,7 @@ import {
   emptyOutsideRefs,
   remapIds,
   remapRows,
+  verifiedChunks,
 } from "./safety";
 
 type Row = Record<string, unknown>;
@@ -229,11 +231,17 @@ export async function importClientPackage(
         if (!isValidKey(key)) throw new Error(`Invalid storage key in package: ${f.key}`);
         // Keys are content-addressed or carry ids: one that exists already holds the same file.
         if (await storage.exists(key)) continue;
-        await storage.put(key, await pkg.stream(`files/${f.key}`), {
-          contentType: contentTypeForKey(key),
-          contentLength: f.bytes,
-        });
+        // Recorded before the write so a half-written file is removed again on failure; the bytes
+        // are checked against the manifest's size and sha-256 as they go through.
         written.push(key);
+        await storage.put(
+          key,
+          Readable.from(verifiedChunks(await pkg.stream(`files/${f.key}`), f)),
+          {
+            contentType: contentTypeForKey(key),
+            contentLength: f.bytes,
+          },
+        );
       }
 
       await db.transaction(async (tx) => {
