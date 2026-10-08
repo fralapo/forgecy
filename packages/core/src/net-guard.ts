@@ -1,7 +1,7 @@
 import { lookup as dnsLookup, type LookupAddress, type LookupOptions } from "node:dns";
 import { lookup } from "node:dns/promises";
 import { BlockList, isIP } from "node:net";
-import { Agent } from "undici";
+import { Agent, fetch as undiciFetch } from "undici";
 
 /**
  * Addresses a server-side fetch must never reach. Classified on parsed bytes by
@@ -144,44 +144,56 @@ export async function resolvePinnedAddress(
 }
 
 /**
- * fetch() whose DNS resolution is validated at the moment undici actually connects.
- * (Moved unchanged from audit/url.ts; fixed in the next task.)
+ * fetch() whose DNS resolution is validated at the moment undici actually connects:
+ * a separate earlier lookup (createHostCheck) and the real connection's lookup would be
+ * two DNS queries, and a rebinding name server answers safely for the first and
+ * privately for the second. Here the one lookup that gates the connection is the
+ * lookup that makes it.
+ *
+ * Two traps this guards against:
+ * - the Agent must be paired with undici's OWN fetch. The Node built-in fetch bundles an
+ *   older undici whose handler interface differs; handing it this Agent throws
+ *   "invalid onRequestStart method" on every request.
+ * - net.connect never calls `lookup` for an IP-literal host, so a private literal
+ *   (http://169.254.169.254/, http://[::ffff:a9fe:a9fe]/) is rejected here instead.
+ * allowPrivate returns the plain fetch, matching createHostCheck.
  */
 export function createPinnedFetch(options: { allowPrivate?: boolean } = {}): typeof fetch {
   if (options.allowPrivate) return fetch;
-  const agent = new Agent({
-    connect: {
-      lookup(
-        hostname: string,
-        lookupOptions: LookupOptions,
-        callback: (
-          err: NodeJS.ErrnoException | null,
-          address: string | LookupAddress[],
-          family?: number,
-        ) => void,
-      ) {
-        dnsLookup(hostname, { ...lookupOptions, all: true }, (err, addresses) => {
-          if (err) {
-            callback(err, []);
-            return;
-          }
-          const list = addresses as LookupAddress[];
-          if (list.length === 0 || list.some((a) => isPrivateAddress(a.address))) {
-            callback(new Error(`DNS for "${hostname}" resolves to a disallowed address`), []);
-            return;
-          }
-          if (lookupOptions.all) {
-            callback(null, list);
-            return;
-          }
-          const chosen = list[0]!;
-          callback(null, chosen.address, chosen.family);
-        });
-      },
-    },
+  const agent = new Agent({ connect: { lookup: pinnedLookup } });
+  return (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+    const target = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+    const literal = target.hostname.replace(/^\[|\]$/g, "");
+    if (isIP(literal) && isPrivateAddress(literal))
+      throw new TypeError(`"${literal}" is a disallowed address`);
+    return undiciFetch(input as never, { ...init, dispatcher: agent } as never);
+  }) as typeof fetch;
+}
+
+function pinnedLookup(
+  hostname: string,
+  lookupOptions: LookupOptions,
+  callback: (
+    err: NodeJS.ErrnoException | null,
+    address: string | LookupAddress[],
+    family?: number,
+  ) => void,
+) {
+  dnsLookup(hostname, { ...lookupOptions, all: true }, (err, addresses) => {
+    if (err) {
+      callback(err, []);
+      return;
+    }
+    const list = addresses as LookupAddress[];
+    if (list.length === 0 || list.some((a) => isPrivateAddress(a.address))) {
+      callback(new Error(`DNS for "${hostname}" resolves to a disallowed address`), []);
+      return;
+    }
+    if (lookupOptions.all) {
+      callback(null, list);
+      return;
+    }
+    const chosen = list[0]!;
+    callback(null, chosen.address, chosen.family);
   });
-  return ((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) =>
-    fetch(input, { ...init, dispatcher: agent } as unknown as Parameters<
-      typeof fetch
-    >[1])) as typeof fetch;
 }

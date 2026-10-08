@@ -70,7 +70,10 @@ describe("DNS rebinding", () => {
       callback(null, [{ address: "127.0.0.1", family: 4 }]);
     });
     const doFetch = createPinnedFetch();
-    await expect(doFetch(`http://rebind.example.com:${port}/`)).rejects.toThrow();
+    const err = await doFetch(`http://rebind.example.com:${port}/`).catch((e: unknown) => e);
+    expect(
+      `${(err as Error).message} ${((err as Error).cause as Error | undefined)?.message}`,
+    ).toMatch(/disallowed address/);
   });
 
   it("allowPrivate lifts the pin, matching createHostCheck's own escape hatch", async () => {

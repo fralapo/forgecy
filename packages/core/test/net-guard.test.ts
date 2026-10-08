@@ -1,6 +1,14 @@
+import { createServer, type Server } from "node:http";
+import type * as Dns from "node:dns";
 import type * as DnsPromises from "node:dns/promises";
 import type { LookupAddress, LookupAllOptions } from "node:dns";
-import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import type { AddressInfo } from "node:net";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+
+vi.mock("node:dns", async (importOriginal) => {
+  const actual = await importOriginal<typeof Dns>();
+  return { ...actual, lookup: vi.fn(actual.lookup) };
+});
 
 vi.mock("node:dns/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof DnsPromises>();
@@ -8,10 +16,18 @@ vi.mock("node:dns/promises", async (importOriginal) => {
 });
 
 import { lookup as dnsPromiseLookup } from "node:dns/promises";
-import { createHostCheck, isPrivateAddress } from "../src/net-guard";
+import { lookup as dnsLookup } from "node:dns";
+import { createHostCheck, createPinnedFetch, isPrivateAddress } from "../src/net-guard";
 
 type LookupAll = (hostname: string, options: LookupAllOptions) => Promise<LookupAddress[]>;
 const lookupMock = vi.mocked(dnsPromiseLookup) as unknown as Mock<LookupAll>;
+
+type CbLookup = (
+  hostname: string,
+  options: unknown,
+  callback: (err: NodeJS.ErrnoException | null, addresses: LookupAddress[]) => void,
+) => void;
+const cbLookupMock = vi.mocked(dnsLookup) as unknown as Mock<CbLookup>;
 
 beforeEach(() => lookupMock.mockReset());
 
@@ -125,5 +141,79 @@ describe("createHostCheck cache", () => {
   it("allowPrivate bypasses everything", async () => {
     expect(await createHostCheck({ allowPrivate: true })("http://127.0.0.1/")).toBe(true);
     expect(lookupMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("createPinnedFetch", () => {
+  let server: Server;
+  let port: number;
+  let hits = 0;
+
+  beforeAll(async () => {
+    server = createServer((_req, res) => {
+      hits++;
+      res.end("hit");
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    port = (server.address() as AddressInfo).port;
+  });
+  afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
+  beforeEach(() => {
+    hits = 0;
+    cbLookupMock.mockReset();
+  });
+
+  const messageOf = (e: unknown) => {
+    const err = e as Error & { cause?: Error };
+    return `${err.message} | ${err.cause?.message ?? ""}`;
+  };
+
+  it("enforces the connect-time lookup: a name that resolves to loopback never connects", async () => {
+    cbLookupMock.mockImplementationOnce((_h, _o, cb) =>
+      cb(null, [{ address: "127.0.0.1", family: 4 }]),
+    );
+    const err = await createPinnedFetch()(`http://rebind.example.com:${port}/`).catch(
+      (e: unknown) => e,
+    );
+    // Before the fix this was "invalid onRequestStart method": the dispatcher was never honored.
+    expect(messageOf(err)).toMatch(/disallowed address/);
+    expect(hits).toBe(0);
+  });
+
+  it("refuses a name when ANY of its answers is private (mixed public/private)", async () => {
+    cbLookupMock.mockImplementationOnce((_h, _o, cb) =>
+      cb(null, [
+        { address: "93.184.216.34", family: 4 },
+        { address: "127.0.0.1", family: 4 },
+      ]),
+    );
+    const err = await createPinnedFetch()(`http://mixed.example.com:${port}/`).catch(
+      (e: unknown) => e,
+    );
+    expect(messageOf(err)).toMatch(/disallowed address/);
+    expect(hits).toBe(0);
+  });
+
+  it.each([
+    `http://127.0.0.1:PORT/`,
+    `http://[::ffff:7f00:1]:PORT/`,
+    `http://[::ffff:127.0.0.1]:PORT/`,
+    `http://[64:ff9b::7f00:1]:PORT/`,
+    `http://169.254.169.254/latest/meta-data/`,
+  ])(
+    "refuses the private IP literal %s before any connection (connect.lookup is skipped for literals)",
+    async (tpl) => {
+      const err = await createPinnedFetch()(tpl.replace("PORT", String(port))).catch(
+        (e: unknown) => e,
+      );
+      expect(messageOf(err)).toMatch(/disallowed address/);
+      expect(hits).toBe(0);
+      expect(cbLookupMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("allowPrivate returns the plain fetch", async () => {
+    const res = await createPinnedFetch({ allowPrivate: true })(`http://127.0.0.1:${port}/`);
+    expect(await res.text()).toBe("hit");
   });
 });
