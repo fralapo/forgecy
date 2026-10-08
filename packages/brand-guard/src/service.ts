@@ -163,7 +163,10 @@ export async function runBrandCheck(
         : "review.errors.brandNotPublished",
       { code: "BRAND-NOT-PUBLISHED" },
     );
-  const report = checkContent(content, brand, render, input.options);
+  const report = checkContent(content, brand, render, {
+    flagUnverifiedRender: true,
+    ...input.options,
+  });
   const subjectVersion = input.subject.version ?? null;
 
   return db.transaction(async (tx) => {

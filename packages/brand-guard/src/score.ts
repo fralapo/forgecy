@@ -26,6 +26,9 @@ export const CATEGORY_LABELS: Record<CheckCategory, string> = {
 
 export const PENALTY: Record<BrandCheckSeverity, number> = { error: 15, warning: 5, note: 1 };
 
+/** Check code of the warning raised when no render was measured; it never lowers the score. */
+export const RENDER_UNVERIFIED = "render_unverified";
+
 export const BAND_LABELS: Record<ScoreBand, string> = {
   critico: "Critical",
   debole: "Weak",
@@ -46,8 +49,9 @@ const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 
 /** 100 minus the penalties of the findings that count (pass only open ones). */
 export function coherenceScore(
-  findings: readonly Pick<BrandCheckFinding, "key" | "category" | "severity">[],
+  all: readonly (Pick<BrandCheckFinding, "key" | "category" | "severity"> & { check?: string })[],
 ): CoherenceScore {
+  const findings = all.filter((f) => f.check !== RENDER_UNVERIFIED);
   const total = clamp(100 - findings.reduce((n, f) => n + PENALTY[f.severity], 0));
   return {
     score: total,

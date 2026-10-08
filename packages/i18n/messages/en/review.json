@@ -73,7 +73,8 @@
       "imageMissing": "Slide {slide} · {slot}: the image did not load.",
       "logoOutsideSafe": "Slide {slide} · {slot}: the logo is outside the format safe zone.",
       "overlap": "Slide {slide} · {slot}: overlaps “{other}”.",
-      "contrastOnRender": "Slide {slide} · {slot}: contrast {ratio}{onImage, select, yes { over an image} other {}}; minimum {min}."
+      "contrastOnRender": "Slide {slide} · {slot}: contrast {ratio}{onImage, select, yes { over an image} other {}}; minimum {min}.",
+      "renderUnverified": "Layout, safe zone and contrast were not checked on the rendered slides. Check the preview before approving."
     },
     "suggestion": {
       "moveText": "Move part of the text to another slide or to the caption.",
