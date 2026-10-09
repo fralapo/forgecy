@@ -1241,7 +1241,9 @@ export async function removeSource(
 export async function updateSourceStatus(
   db: Executor,
   sourceId: string,
-  values: Partial<Pick<SourceRow, "status" | "statusDetail" | "statusDetailRef" | "pages">>,
+  values: Partial<
+    Pick<SourceRow, "status" | "statusDetail" | "statusDetailRef" | "pages" | "visual">
+  >,
 ): Promise<void> {
   await db.update(brandSources).set(values).where(eq(brandSources.id, sourceId));
 }

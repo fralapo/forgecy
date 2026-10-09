@@ -1,6 +1,7 @@
 import { ForgecyError, PermissionDeniedError, type Actor } from "@forgecy/core";
 import {
   brandIdentityVersions,
+  brandSources,
   clients,
   createDb,
   eq,
@@ -21,6 +22,7 @@ import {
   restoreAsDraft,
   saveDraftSection,
   submitForReview,
+  updateSourceStatus,
 } from "../src/service";
 
 const dbUrl = process.env.FORGECY_TEST_DATABASE_URL;
@@ -95,6 +97,26 @@ describe.skipIf(!dbUrl)("brand identity workflow (integration)", () => {
       await db.execute(sql`delete from users where email like ${"%-" + suffix + "@example.test"}`);
     }
     await db?.$client.end();
+  });
+
+  it("stores the visual probe on a source and clears it again", async () => {
+    const site = await addSource(db, anna, { clientId, kind: "website", title: "Visual site" });
+    const read = async () =>
+      (await db.select().from(brandSources).where(eq(brandSources.id, site.id)))[0]!.visual;
+    expect(await read()).toBeNull();
+
+    const visual = {
+      cssVars: [{ name: "--brand", hex: "#112233" }],
+      buttonColors: [],
+      fonts: [{ family: "Inter", roles: ["body"], loaded: true }],
+      logos: [],
+      images: [],
+    };
+    await updateSourceStatus(db, site.id, { status: "extracted", visual });
+    expect(await read()).toEqual(visual);
+
+    await updateSourceStatus(db, site.id, { visual: null });
+    expect(await read()).toBeNull();
   });
 
   it("refuses agents everywhere except proposals", async () => {

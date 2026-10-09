@@ -5,14 +5,18 @@
  * (see import/run.ts) exactly as if those pages had been typed in by hand.
  */
 import { createPinnedFetch, CrawlError, createHostCheck } from "@forgecy/audit";
+import { createBrowserFetcher, resolveChromiumPath } from "@forgecy/audit/crawl/browser";
 import { crawlSite } from "@forgecy/audit/crawl/crawler";
-import { auditUserAgent, createHtmlFetcher } from "@forgecy/audit/crawl/fetcher";
+import { auditUserAgent, createHtmlFetcher, type PageFetcher } from "@forgecy/audit/crawl/fetcher";
 import { AUDIT_LIMITS, loadToolEnv, type MessageRef } from "@forgecy/core";
 import { and, brandSources, eq } from "@forgecy/db";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import type { ImportContext, ImportDeps, ImportResult } from "./import/run";
 import { runSourceImport } from "./import/run";
+import { mergeProbes } from "./probe-merge";
 import { updateSourceStatus } from "./service";
+
+export { mergeProbes } from "./probe-merge";
 
 const msg = (key: MessageKey & `brand.import.${string}`, values?: MessageValues) =>
   messageRef(key, values);
@@ -27,8 +31,8 @@ function detail(refs: MessageRef[]) {
   };
 }
 
-/** A client site rarely needs more than this to tell brand, offer and contacts apart. */
-const MAX_PAGES = 10;
+/** A client site rarely needs more than this to tell brand, offer, products and contacts apart. */
+const MAX_PAGES = 15;
 const TOTAL_TIMEOUT_MS = 3 * 60_000;
 
 /** Runs the website crawl for one source, then the Brand Analyst import over its pages. */
@@ -56,13 +60,34 @@ export async function runWebsiteCrawl(
 
   const userAgent = auditUserAgent();
   const hostCheck = createHostCheck({ allowPrivate });
-  const fetcher = createHtmlFetcher({ userAgent, hostCheck, allowPrivate });
+  let fetcher: PageFetcher | undefined;
 
   try {
+    // The browser reads the real colors, fonts and logos; without Chromium (or when it cannot
+    // be pinned to a public address) the markup-only fetcher reads the text and crawlSite
+    // reports a blocked host properly, with no visual data.
+    try {
+      const executablePath = resolveChromiumPath();
+      fetcher = await createBrowserFetcher({
+        userAgent,
+        rootUrl: source.url,
+        allowPrivate,
+        ...(executablePath ? { executablePath } : {}),
+      });
+    } catch (err) {
+      if (!(
+        err instanceof CrawlError &&
+        (err.code === "AUD-BROWSER-UNAVAILABLE" || err.code === "AUD-HOST-BLOCKED")
+      ))
+        throw err;
+      fetcher = createHtmlFetcher({ userAgent, hostCheck, allowPrivate });
+    }
     const result = await crawlSite({
       rootUrl: source.url,
       maxPages: MAX_PAGES,
       focus: "site",
+      brandProbe: true,
+      screenshots: false,
       fetcher,
       hostCheck,
       fetchImpl: createPinnedFetch({ allowPrivate }),
@@ -93,6 +118,7 @@ export async function runWebsiteCrawl(
         ? msg("brand.import.status.crawlSkipped", { count: result.skipped.length })
         : null,
     ].filter((r): r is MessageRef => r !== null);
+    const probes = result.pages.flatMap((p) => (p.brand ? [p.brand] : []));
     await updateSourceStatus(db, source.id, {
       status: pages.length
         ? result.stoppedEarly || result.skipped.length
@@ -100,6 +126,7 @@ export async function runWebsiteCrawl(
           : "extracted"
         : "failed",
       pages,
+      visual: probes.length ? (mergeProbes(probes) as unknown as Record<string, unknown>) : null,
       ...detail(parts),
     });
     if (!pages.length)
@@ -131,7 +158,7 @@ export async function runWebsiteCrawl(
       detail: message,
     };
   } finally {
-    await fetcher.close().catch(() => undefined);
+    await fetcher?.close().catch(() => undefined);
   }
   await ctx.progress?.(30);
 
