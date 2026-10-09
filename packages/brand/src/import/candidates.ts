@@ -4,7 +4,7 @@ import type { SiteProbe } from "@forgecy/audit";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import type { Database } from "@forgecy/db";
 import { BRAND_ANALYST_PROMPT_VERSION } from "./analyst";
-import { cleanFamily, knownColors, knownFonts } from "./site-colors";
+import { cleanFamily, knownColors, knownFonts, SITE_LOCATORS } from "./site-colors";
 import { proposeChange, type ProposeInput } from "../service";
 import { hexToDtcg, normalizeHex, referenceColors, tokenNameFrom } from "../tokens";
 import { getDraftTokens } from "./draft-tokens";
@@ -66,7 +66,7 @@ export function visualCandidates(visual: SiteProbe, _sourceId?: string): Candida
         licenseStatus: "to_verify",
       },
       ...rationale("brand.import.rationale.siteFont"),
-      evidence: { locator: "Site fonts" },
+      evidence: { locator: SITE_LOCATORS.fonts },
     }));
   return [...colors, ...fonts];
 }
@@ -108,6 +108,7 @@ export function colorName(context: string, hex: string, fallback: string): strin
 export function mergeSiteItems(candidates: readonly CandidateProposal[]): CandidateProposal[] {
   const colors = new Map<string, CandidateProposal>();
   const families = new Set<string>();
+  const axes = new Set<string>();
   const out: CandidateProposal[] = [];
   for (const c of candidates) {
     if (c.kind === "color") {
@@ -126,6 +127,12 @@ export function mergeSiteItems(candidates: readonly CandidateProposal[]): Candid
       const family = cleanFamily((c.value as { family: string }).family);
       if (families.has(family)) continue;
       families.add(family);
+      out.push(c);
+    } else if (c.path === "/document/verbal/toneAxes") {
+      // The prompt asks for one axis per concept; this is the guarantee.
+      const axis = (c.value as { axis: string }).axis;
+      if (axes.has(axis)) continue;
+      axes.add(axis);
       out.push(c);
     } else out.push(c);
   }

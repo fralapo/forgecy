@@ -1,9 +1,9 @@
 import type { SiteProbe } from "@forgecy/audit";
 import { describe, expect, it } from "vitest";
-import type { CandidateProposal } from "../src/import/candidates";
+import { mergeSiteItems, type CandidateProposal } from "../src/import/candidates";
 import { gateCandidates } from "../src/import/gate";
 import { parseSiteProbe } from "../src/import/probe-schema";
-import { knownColors, knownFonts } from "../src/import/site-colors";
+import { knownColors, knownFonts, SITE_LOCATORS } from "../src/import/site-colors";
 import { quoteInPage } from "../src/import/verify";
 
 const probe = (over: Partial<SiteProbe> = {}): SiteProbe => ({
@@ -146,6 +146,60 @@ describe("gateCandidates", () => {
   });
 });
 
+describe("gateCandidates hardening", () => {
+  const visual = probe({ cssVars: [{ name: "--brand", hex: "#1d3a8a" }] });
+
+  it("fails closed: an item with no quote, or an empty one, is discarded", () => {
+    const noQuote = { ...text("x"), evidence: { locator: "/" } };
+    const empty = { ...text("x"), evidence: { locator: "/", quote: "" } };
+    const r = gateCandidates({ candidates: [noQuote, empty], pages: PAGES });
+    expect(r.keep).toEqual([]);
+    expect(r.discarded.map((d) => d.reason)).toEqual(["quote_not_in_page", "quote_not_in_page"]);
+  });
+
+  it("discards text that names a hex the site does not declare", () => {
+    const quote = "una fase ammorbidisce, l'altra è solo profumo";
+    const withHex = (value: unknown, path = "/document/visual/do"): CandidateProposal => ({
+      path,
+      op: "append",
+      value,
+      evidence: { locator: "/", quote },
+    });
+    const r = gateCandidates({
+      candidates: [
+        withHex("Usare il blu #0000FF per i titoli"),
+        withHex("Usare il blu #1D3A8A per i titoli"),
+        withHex("Usare #00f ovunque"),
+        withHex({ name: "Cliente", goals: "sfondo #ff00ff" }, "/document/strategy/audience"),
+        withHex("Nessun colore qui, solo #hashtag"),
+      ],
+      pages: PAGES,
+      visual,
+    });
+    expect(r.keep).toHaveLength(2);
+    expect(r.discarded.map((d) => d.reason)).toEqual(Array(3).fill("hex_not_extracted"));
+    // Same rule for the usage text of a color the site does declare.
+    const c = color("#1D3A8A", "Blu");
+    c.value = { name: "Blu", hex: "#1D3A8A", usage: "come #FF0000" };
+    expect(gateCandidates({ candidates: [c], pages: PAGES, visual }).discarded).toHaveLength(1);
+  });
+
+  it("keeps only the first tone axis per axis", () => {
+    const a = tone("una fase ammorbidisce");
+    const b = {
+      ...tone("una fase ammorbidisce"),
+      value: { ...(tone("x").value as object), value: 5 },
+    };
+    const other = {
+      ...tone("una fase ammorbidisce"),
+      value: { ...(tone("x").value as object), axis: "serious" },
+    };
+    const kept = mergeSiteItems([a, b, other]);
+    expect(kept.map((c) => (c.value as { axis: string }).axis)).toEqual(["formal", "serious"]);
+    expect((kept[0]!.value as { value: number }).value).toBe(2);
+  });
+});
+
 describe("quoteInPage minSegment", () => {
   it("is off by default, so existing callers keep their behavior", () => {
     expect(quoteInPage("bifase … It", PAGES[0]!.text)).toBe(true);
@@ -154,6 +208,15 @@ describe("quoteInPage minSegment", () => {
 });
 
 describe("known colors and fonts", () => {
+  it("builds the locators from messages, not from literals", () => {
+    expect(SITE_LOCATORS).toEqual({
+      styles: "Site styles",
+      fonts: "Site fonts",
+      buttons: "Buttons and links",
+      themeColor: "Site theme color",
+    });
+  });
+
   const visual = probe({
     cssVars: [
       { name: "--wp--preset--color--grey", hex: "#abb8c3" },
@@ -179,9 +242,9 @@ describe("known colors and fonts", () => {
     expect(known.map((c) => [c.hex, c.name])).toEqual([
       ["#1d3a8a", "primary"],
       ["#222222", "text"],
-      ["#f5ebdc", "theme color"],
-      ["#ffffff", "button text"],
-      ["#c0392b", "button background"],
+      ["#f5ebdc", "theme"],
+      ["#ffffff", "button-text"],
+      ["#c0392b", "button"],
     ]);
   });
 

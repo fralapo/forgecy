@@ -154,7 +154,7 @@ describe.skipIf(!dbUrl)("runSourceImport on a website (integration)", () => {
     const colorTitles = mine.filter((p) => p.fieldPath.startsWith("/tokens/color/reference/"));
     expect(colorTitles.map((p) => p.fieldPath).sort()).toEqual([
       "/tokens/color/reference/blu-deodue",
-      "/tokens/color/reference/theme-color",
+      "/tokens/color/reference/theme",
     ]);
     const blu = mine.find((p) => p.fieldPath === "/tokens/color/reference/blu-deodue")!;
     expect(JSON.stringify(blu.changes)).toContain("primary");

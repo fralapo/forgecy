@@ -29,6 +29,15 @@ const TYPOGRAPHY_PATH = "/document/visual/typography";
 
 type Page = { locator: string; text: string };
 
+/** A hex written in running text (#rrggbb or #rgb). */
+const HEX_IN_TEXT = /#(?:[0-9a-f]{6}|[0-9a-f]{3})\b/gi;
+
+function textValues(value: unknown, depth = 0): string[] {
+  if (typeof value === "string") return [value];
+  if (depth > 3 || !value || typeof value !== "object") return [];
+  return Object.values(value).flatMap((v) => textValues(v, depth + 1));
+}
+
 const quoteVerified = (text: string, pages: readonly Page[]) =>
   normalizeText(text).length >= MIN_QUOTE_CHARS &&
   pages.some((p) => quoteInPage(text, p.text, { minSegment: MIN_QUOTE_SEGMENT }));
@@ -44,13 +53,19 @@ export function gateCandidates(input: {
   const result: GateResult = { keep: [], discarded: [] };
   const discard = (path: string, reason: DiscardReason) => result.discarded.push({ path, reason });
 
+  /** True when the item's free text names a hex the site does not declare (a color made up in prose). */
+  const inventsHex = (c: CandidateProposal) =>
+    textValues(c.value).some((t) =>
+      (t.match(HEX_IN_TEXT) ?? []).some((h) => !hexes.has(normalizeHex(h)!.toLowerCase())),
+    );
+
   for (const c of input.candidates) {
     if (c.kind === "color") {
       // Colors and fonts are checked against what the browser read; their quote, if any, is not evidence.
       const value = c.value as { hex: string };
       const hex = normalizeHex(value.hex)?.toLowerCase();
       const label = `color:${value.hex}`;
-      if (!hex || !hexes.has(hex)) discard(label, "hex_not_extracted");
+      if (!hex || !hexes.has(hex) || inventsHex(c)) discard(label, "hex_not_extracted");
       else if (isFrameworkColor(hex, visual)) discard(label, "framework_default");
       else result.keep.push(c);
       continue;
@@ -70,11 +85,14 @@ export function gateCandidates(input: {
       c.path === "/document/verbal/toneAxes"
         ? (c.value as { goodExample: string }).goodExample
         : null;
+    // Fail closed: an item with no quote has nothing to verify and is not kept.
     if (
-      quote !== undefined &&
-      (!quoteVerified(quote, cited) || (example !== null && !quoteVerified(example, pages)))
+      !quote ||
+      !quoteVerified(quote, cited) ||
+      (example !== null && !quoteVerified(example, pages))
     )
       discard(c.path, "quote_not_in_page");
+    else if (inventsHex(c)) discard(c.path, "hex_not_extracted");
     else result.keep.push(c);
   }
   return result;

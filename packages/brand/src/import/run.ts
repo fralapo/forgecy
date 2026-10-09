@@ -29,7 +29,7 @@ import {
 } from "./analyst";
 import { gateCandidates } from "./gate";
 import { parseSiteProbe } from "./probe-schema";
-import { knownColors, knownFonts } from "./site-colors";
+import { knownColors, knownFonts, SITE_LOCATORS } from "./site-colors";
 import { updateSourceStatus } from "../service";
 
 const msg = (key: MessageKey & `brand.import.${string}`, values?: MessageValues) =>
@@ -46,8 +46,6 @@ function detail(refs: MessageRef[]) {
   };
 }
 
-/** Evidence locator of colors and fonts: they come from the site's styles, not from a page of text. */
-const SITE_LOCATOR = "Site styles";
 const MAX_KNOWN_COLORS = 24;
 
 export interface ImportDeps {
@@ -393,7 +391,7 @@ export async function runSourceImport(
           candidates.push({
             ...c,
             ...(fromSite
-              ? { evidence: { locator: SITE_LOCATOR }, ...(c.kind ? { named: true } : {}) }
+              ? { evidence: { locator: SITE_LOCATORS.styles }, ...(c.kind ? { named: true } : {}) }
               : {}),
             agentModel: `${res.provider}/${res.model}`,
           });

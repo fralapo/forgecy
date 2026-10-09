@@ -804,7 +804,11 @@
       "page": "p. {number}",
       "svg": "SVG file",
       "start": "Start",
-      "note": "Note"
+      "note": "Note",
+      "siteStyles": "Site styles",
+      "siteFonts": "Site fonts",
+      "siteButtons": "Buttons and links",
+      "siteThemeColor": "Site theme color"
     },
     "quotes": {
       "themeColor": "Theme color {slot}",
