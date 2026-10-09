@@ -5,14 +5,13 @@ import { parseDotenv } from "./dotenv";
 export function run(
   cmd: string,
   args: string[],
-  options: { input?: string; capture?: boolean; env?: NodeJS.ProcessEnv } = {},
+  /** `stdout`: a file descriptor the output is written to, unbuffered (binary dumps). */
+  options: { input?: string; capture?: boolean; env?: NodeJS.ProcessEnv; stdout?: number } = {},
 ): string {
   const result = spawnSync(cmd, args, {
     stdio: options.capture
       ? ["pipe", "pipe", "inherit"]
-      : options.input
-        ? ["pipe", "inherit", "inherit"]
-        : "inherit",
+      : [options.input ? "pipe" : "inherit", options.stdout ?? "inherit", "inherit"],
     input: options.input,
     ...(options.env ? { env: { ...process.env, ...options.env } } : {}),
     encoding: "utf8",

@@ -23,7 +23,13 @@ import {
 } from "@forgecy/jobs";
 import { z } from "zod";
 import { createBackupArchive, isBackupName, pgDumpTo, pruneExpiredBackups } from "./archive";
-import { psqlLoadInto, readRestoreStatus, restoreArchive, writeRestoreStatus } from "./restore";
+import {
+  pgRestoreInto,
+  psqlLoadInto,
+  readRestoreStatus,
+  restoreArchive,
+  writeRestoreStatus,
+} from "./restore";
 import { restoreDatabaseUrl, restoreOwnershipSql, restoreRoleName } from "./restore-role";
 
 /** Backup started from Settings › Backup (manual) or by the worker every night. */
@@ -121,6 +127,7 @@ export function backupHandlers(env: BackupEnv): JobHandlers {
           mediaDir: env.mediaDir,
           name: payload.backup,
           load: psqlLoadInto(restoreUrl ?? env.databaseUrl),
+          loadArchive: pgRestoreInto(restoreUrl ?? env.databaseUrl),
           restricted: Boolean(restoreUrl),
         });
         await applyMigrations(env.databaseUrl);

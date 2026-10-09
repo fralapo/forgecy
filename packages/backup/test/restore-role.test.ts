@@ -7,6 +7,7 @@ import {
   restoreOwnershipSql,
   restoreRoleName,
   stripExtensionStatements,
+  withoutExtensionEntries,
   withoutExtensionStatements,
 } from "../src/restore-role";
 
@@ -99,5 +100,32 @@ describe("withoutExtensionStatements", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("withoutExtensionEntries", () => {
+  // As `pg_restore -l` (17) prints a dump of the migrated schema.
+  const list = [
+    ";",
+    "; Archive created at 2026-10-09 12:24:30",
+    ";     Format: CUSTOM",
+    ";",
+    "7; 2615 16385 SCHEMA - drizzle postgres",
+    "2; 3079 16395 EXTENSION - vector ",
+    "4926; 0 0 COMMENT - EXTENSION vector ",
+    "1103; 1247 17060 TYPE public actor_type postgres",
+    "412; 1255 17302 FUNCTION public brand_versions_guard() postgres",
+    "4927; 0 0 COMMENT public TABLE extension_notes postgres",
+    "5000; 0 17400 TABLE DATA public app_settings postgres",
+    "",
+  ].join("\n");
+
+  it("leaves out the extension and its comment, and nothing else", () => {
+    const out = withoutExtensionEntries(list).split("\n");
+    expect(out).not.toContain("2; 3079 16395 EXTENSION - vector ");
+    expect(out).not.toContain("4926; 0 0 COMMENT - EXTENSION vector ");
+    expect(out).toHaveLength(list.split("\n").length - 2);
+    expect(out).toContain("4927; 0 0 COMMENT public TABLE extension_notes postgres");
+    expect(withoutExtensionEntries(list.replaceAll("\n", "\r\n"))).not.toMatch(/EXTENSION - /);
   });
 });

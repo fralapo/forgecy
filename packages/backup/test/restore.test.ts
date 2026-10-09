@@ -29,6 +29,7 @@ import {
   UnsafeArchiveError,
   UnsafeDumpError,
   writeRestoreStatus,
+  type DbDump,
 } from "../src";
 
 const hasTar = spawnSync("tar", ["--version"]).status === 0;
@@ -37,7 +38,10 @@ const shipped = [{ tag: "0000_a" }, { tag: "0001_b" }, { tag: "0002_c" }];
 describe("restore", () => {
   let dataDir: string;
   let mediaDir: string;
-  const dump = async (file: string) => writeFileSync(file, "select 1;\n");
+  const dump: DbDump = {
+    format: "plain",
+    write: async (file) => writeFileSync(file, "select 1;\n"),
+  };
 
   beforeEach(() => {
     dataDir = mkdtempSync(join(tmpdir(), "forgecy-restore-test-"));
@@ -132,7 +136,10 @@ describe("restore", () => {
     const { name } = await createBackupArchive({
       dataDir,
       mediaDir,
-      dump: async (file) => writeFileSync(file, "select 1;\n\\! touch /tmp/forgecy-pwned\n"),
+      dump: {
+        format: "plain",
+        write: async (file) => writeFileSync(file, "select 1;\n\\! touch /tmp/forgecy-pwned\n"),
+      },
       kind: "manual",
       lastMigration: "0002_c",
     });
@@ -146,7 +153,7 @@ describe("restore", () => {
   // Hostile archives built in memory; they need a system tar (GNU or bsdtar), like the rest.
   describe.skipIf(!hasTar)("archives holding links", () => {
     const manifest = JSON.stringify({
-      format: BACKUP_FORMAT,
+      format: 1,
       createdAt: "2026-01-01T00:00:00Z",
       media: true,
     });
@@ -194,6 +201,92 @@ describe("restore", () => {
       expect(readdirSync(backupsDir(dataDir)).filter((f) => f.includes("upload"))).toEqual([]);
       // Control: the same archive without the link is accepted, so the refusal is the link.
       expect((await upload(base)).kind).toBe("upload");
+    });
+
+    describe("which dump the manifest names", () => {
+      const custom = (extra: Record<string, unknown> = {}) =>
+        JSON.stringify({
+          format: BACKUP_FORMAT,
+          db: "custom",
+          createdAt: "2026-01-01T00:00:00Z",
+          media: false,
+          ...extra,
+        });
+      const restore = (name: string) => {
+        const calls: string[] = [];
+        const run = restoreArchive({
+          dataDir,
+          mediaDir,
+          name,
+          load: async (f) => void calls.push(`psql ${f}`),
+          loadArchive: async (f) => void calls.push(`pg_restore ${f}`),
+        });
+        return { run, calls };
+      };
+
+      it("BACKUP_FORMAT is 2: an older Forgecy reports a custom backup as an unknown format", () => {
+        expect(BACKUP_FORMAT).toBe(2);
+      });
+
+      it("refuses a custom manifest without db.dump, or with db.sql next to it, before loading", async () => {
+        for (const entries of [
+          [
+            { name: "manifest.json", data: custom() },
+            { name: "db.sql", data: "select 1;\n" },
+          ],
+          [
+            { name: "manifest.json", data: custom() },
+            { name: "db.dump", data: "PGDMP" },
+            { name: "db.sql", data: "select 1;\n" },
+          ],
+          [{ name: "manifest.json", data: custom() }],
+        ]) {
+          const { run, calls } = restore(place(entries));
+          await expect(run).rejects.toThrow(/database dump its manifest names/);
+          expect(calls).toEqual([]);
+        }
+      });
+
+      it("refuses a plain manifest that carries db.dump, and a manifest it does not know", async () => {
+        const plain = JSON.stringify({
+          format: 1,
+          createdAt: "2026-01-01T00:00:00Z",
+          media: false,
+        });
+        for (const [manifestJson, file] of [
+          [plain, "db.dump"],
+          [custom({ db: "../db.sql" }), "db.sql"],
+          [custom({ format: 1 }), "db.dump"],
+          [custom({ db: undefined }), "db.dump"],
+        ] as const) {
+          const name = place([
+            { name: "manifest.json", data: manifestJson },
+            { name: file, data: "x" },
+          ]);
+          const { run, calls } = restore(name);
+          await expect(run).rejects.toThrow(/Unsupported backup|database dump its manifest names/);
+          expect(calls).toEqual([]);
+          // Inspection reads only the manifest: the missing file is caught by the restore.
+          if (manifestJson !== plain)
+            expect((await inspectBackup(dataDir, name, shipped)).problems).toEqual(["format"]);
+        }
+      });
+
+      it("inspectBackup and saveUploadedBackup accept a custom-format backup", async () => {
+        const entries = [
+          { name: "manifest.json", data: custom({ lastMigration: "0002_c" }) },
+          { name: "db.dump", data: "PGDMP" },
+        ];
+        expect((await inspectBackup(dataDir, place(entries), shipped)).problems).toEqual([]);
+        const saved = await saveUploadedBackup(dataDir, Readable.from([tarGz(entries)]));
+        expect(saved.kind).toBe("upload");
+        await expect(
+          saveUploadedBackup(
+            dataDir,
+            Readable.from([tarGz([{ name: "manifest.json", data: custom({ db: "plain" }) }])]),
+          ),
+        ).rejects.toBeInstanceOf(BackupInvalidError);
+      });
     });
 
     it("inspectBackup reports a symlink manifest.json as unsafe", async () => {

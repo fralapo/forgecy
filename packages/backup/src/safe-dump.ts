@@ -1,5 +1,7 @@
 /**
- * Scans a plain-SQL dump before psql reads it. psql runs any line it lexes as `\command`
+ * Scans a plain-SQL dump before psql reads it, and the SQL rendering of a custom-format dump
+ * before pg_restore sends it (ADR 0019: no psql there, but every statement is still read
+ * here). psql runs any line it lexes as `\command`
  * (`\!` runs a shell command on the worker, `\copy`/`\i` read local files), so a backup
  * that came from elsewhere must not carry one. This follows psql's own lexer: strings,
  * quoted identifiers, $tag$ bodies, nested block comments, line comments and parenthesis

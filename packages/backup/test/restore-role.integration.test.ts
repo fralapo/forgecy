@@ -1,9 +1,9 @@
 /**
  * ADR 0018 round trip: a real pg_dump of the migrated schema, restored through restoreArchive
  * by a NOSUPERUSER role, into a scratch database this test creates and drops (with its role)
- * on the FORGECY_TEST_DATABASE_URL server. Needs psql and pg_dump 17+ on PATH as well.
+ * on the FORGECY_TEST_DATABASE_URL server. Needs psql, pg_dump and pg_restore 17+ on PATH as well.
+ * The first test restores a plain-SQL backup (format 1), the second a custom-format one (ADR 0019).
  */
-import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -14,38 +14,16 @@ import {
   assertSafeDumpText,
   createBackupArchive,
   pgDumpTo,
+  pgRestoreInto,
   psqlLoadInto,
   restoreArchive,
   restoreOwnershipSql,
   UnsafeDumpError,
 } from "../src";
-
-const dbUrl = process.env.FORGECY_TEST_DATABASE_URL;
-const major = (tool: string) =>
-  Number(/(\d+)\./.exec(spawnSync(tool, ["--version"], { encoding: "utf8" }).stdout ?? "")?.[1]);
-const hasTools = major("psql") >= 17 && major("pg_dump") >= 17;
+import { hasPgTools as hasTools, psql, testDatabaseUrl as dbUrl, withDb } from "./pg-tools";
 
 const ROLE = "forgecy_restore_role_test";
 const DB = "forgecy_restore_role_test";
-
-/** psql -c as `url`; returns stdout, throws with psql's stderr (never the URL). */
-function psql(url: string, sql: string): string {
-  const res = spawnSync("psql", ["-X", "-v", "ON_ERROR_STOP=1", "-q", "-At", "-c", sql, url], {
-    encoding: "utf8",
-  });
-  if (res.status !== 0) throw new Error(res.stderr);
-  return res.stdout.trim();
-}
-
-function withDb(url: string, db: string, user?: { name: string; password: string }): string {
-  const u = new URL(url);
-  u.pathname = `/${db}`;
-  if (user) {
-    u.username = user.name;
-    u.password = user.password;
-  }
-  return u.toString();
-}
 
 describe.skipIf(!dbUrl || !hasTools)("restore as a least-privilege role (integration)", () => {
   // describe.skipIf still runs this body: a placeholder keeps URL parsing from throwing when skipped.
@@ -89,7 +67,7 @@ describe.skipIf(!dbUrl || !hasTools)("restore as a least-privilege role (integra
       dataDir,
       mediaDir,
       kind: "manual",
-      dump: pgDumpTo(scratchAdmin),
+      dump: pgDumpTo(scratchAdmin, "plain"),
     });
     psql(scratchAdmin, `UPDATE app_settings SET value = '{"name":"After"}' WHERE key = 'agency'`);
     // Without the ownership step the role cannot drop the superuser's tables.
@@ -139,6 +117,47 @@ describe.skipIf(!dbUrl || !hasTools)("restore as a least-privilege role (integra
       load: psqlLoadInto(scratchRestore),
       restricted: true,
     });
+  }, 120_000);
+
+  it("restores a custom-format dump as the restricted role (ADR 0019)", async () => {
+    const agency = () =>
+      psql(scratchAdmin, `SELECT value->>'name' FROM app_settings WHERE key = 'agency'`);
+    const { name } = await createBackupArchive({
+      dataDir,
+      mediaDir,
+      kind: "manual",
+      dump: pgDumpTo(scratchAdmin),
+    });
+    psql(scratchAdmin, `UPDATE app_settings SET value = '{"name":"After"}' WHERE key = 'agency'`);
+    const custom = {
+      dataDir,
+      mediaDir,
+      name,
+      load: async () => {
+        throw new Error("a custom-format backup never goes through psql");
+      },
+      loadArchive: pgRestoreInto(scratchRestore),
+    };
+    // A table back with the superuser, as a migration leaves it: the role cannot drop it, and
+    // the single transaction leaves everything as it was.
+    psql(scratchAdmin, `ALTER TABLE app_settings OWNER TO ${new URL(admin).username}`);
+    await expect(restoreArchive({ ...custom, restricted: true })).rejects.toThrow(/must be owner/);
+    expect(agency()).toBe("After");
+    psql(scratchAdmin, restoreOwnershipSql(ROLE));
+    // Without leaving out the extension entries of the list: only a superuser may drop pgvector.
+    await expect(restoreArchive(custom)).rejects.toThrow(/must be owner of extension vector/);
+    expect(agency()).toBe("After");
+    await restoreArchive({ ...custom, restricted: true });
+    expect(agency()).toBe("Before");
+    expect(
+      psql(
+        scratchAdmin,
+        `SELECT string_agg(DISTINCT tableowner, ',') FROM pg_tables WHERE schemaname IN ('public', 'drizzle')`,
+      ),
+    ).toBe(ROLE);
+    expect(psql(scratchAdmin, `SELECT extname FROM pg_extension WHERE extname = 'vector'`)).toBe(
+      "vector",
+    );
   }, 120_000);
 
   it("refuses a superuser as the restore role", () => {

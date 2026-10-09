@@ -1,7 +1,7 @@
 /**
  * Optional restore under a role with fewer privileges (ADR 0018). When
- * FORGECY_RESTORE_DATABASE_URL is set, psql loads the dump as that role instead of the
- * DATABASE_URL one. No workspace imports: the ops CLI (scripts/lib/backup.ts) uses this file too.
+ * FORGECY_RESTORE_DATABASE_URL is set, psql or pg_restore loads the dump as that role instead
+ * of the DATABASE_URL one. No workspace imports: the ops CLI (scripts/lib/backup.ts) uses this file too.
  */
 import { createReadStream, createWriteStream } from "node:fs";
 import { rename } from "node:fs/promises";
@@ -113,6 +113,21 @@ function extensionLineFilter(): (line: string) => boolean {
 /** The dump without its extension statements (line endings kept as they are). */
 export function withoutExtensionStatements(sql: string): string {
   return sql.split("\n").filter(extensionLineFilter()).join("\n");
+}
+
+/**
+ * A custom-format dump's table of contents (`pg_restore --list`) without the entries of
+ * withoutExtensionStatements: `EXTENSION - <name>` (it carries both the DROP and the CREATE
+ * under --clean) and `COMMENT - EXTENSION <name>`. Restored with --use-list, so the same
+ * list goes to the SQL rendering the scanner reads. Leaving entries out never adds one.
+ */
+const EXTENSION_ENTRY = /^\d+; \d+ \d+ (?:EXTENSION - |COMMENT - EXTENSION )/;
+
+export function withoutExtensionEntries(list: string): string {
+  return list
+    .split("\n")
+    .filter((line) => !EXTENSION_ENTRY.test(line))
+    .join("\n");
 }
 
 /** Same as withoutExtensionStatements, rewriting a dump file in place without loading it whole. */
