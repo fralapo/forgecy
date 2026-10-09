@@ -24,13 +24,33 @@ const SECRET_KEYS: SecretKey[] = [
  */
 const BREAKS_PASSWORD = /[^\x21-\x7e]|[/@:%?#[\]$'"\\`]/;
 
-/** Problems that must stop `start`/`migrate`/`upgrade`, and ones worth a warning. Never echoes a value. */
+/**
+ * True when the winning raw line of `key` has an unquoted value with a `#` that is not preceded by
+ * a space (a tab does not count either). Node cuts the value there (`abc#xyz` reads as `abc`); Compose only treats ` #` as a
+ * comment and keeps all of it, so the two disagree on what the secret is.
+ */
+export function hashInValue(text: string, key: string): boolean {
+  const line = new RegExp(`^[ \\t]*(?:export[ \\t]+)?${key}[ \\t]*[=:](.*)$`, "gm");
+  const value = [...text.matchAll(line)].at(-1)?.[1]?.trimStart() ?? "";
+  return !/^["']/.test(value) && /[^ ]#/.test(value);
+}
+
+/**
+ * Problems that must stop `start`/`migrate`/`upgrade`, and ones worth a warning. Never echoes a
+ * value. `env` is the parsed .env (parseDotenv); `rawText`, when given, is the .env text, for the
+ * checks that need the raw line.
+ */
 export function checkSecrets(
   env: Record<string, string | undefined>,
-  options: { existingDatabase: boolean },
+  options: { existingDatabase: boolean; rawText?: string },
 ): { errors: string[]; warnings: string[] } {
   const errors: string[] = [];
   const warnings: string[] = [];
+  for (const key of ["POSTGRES_PASSWORD", "BETTER_AUTH_SECRET"])
+    if (options.rawText !== undefined && hashInValue(options.rawText, key))
+      errors.push(
+        `${key} contains a # that is not preceded by a space: Compose reads the whole value while other tools stop at the #, and the # breaks DATABASE_URL. Use only letters, digits and - _ + = (for example \`openssl rand -hex 24\`).`,
+      );
   const password = env.POSTGRES_PASSWORD ?? "";
   if (!password) {
     errors.push(
@@ -117,6 +137,11 @@ export function fillEnv(text: string, secrets: Partial<GeneratedSecrets>): strin
   for (const key of SECRET_KEYS) {
     const value = secrets[key];
     if (!value || !empty.has(key)) continue;
+    // Compose also takes `KEY: value`; appending `KEY=new` would win over it (last wins).
+    if (new RegExp(`^[ \\t]*(?:export[ \\t]+)?${key}[ \\t]*:`, "m").test(out))
+      throw new Error(
+        `Cannot edit .env safely: ${key} is written with ':' syntax. Change that line to ${key}=value.`,
+      );
     filled.push(key);
     // `[ \t]` rather than `\s`, which would run across lines; `.` stops before \r.
     const line = new RegExp(`^([ \\t]*(?:export[ \\t]+)?${key}[ \\t]*=)(.*)$`, "gm");

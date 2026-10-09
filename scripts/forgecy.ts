@@ -26,12 +26,16 @@ async function health(): Promise<void> {
  */
 function preflight(): void {
   if (!existsSync(".env")) throw new Error("No .env file. Run `pnpm forgecy init` to create one.");
-  const file = parseDotenv(readFileSync(".env", "utf8"));
+  const rawText = readFileSync(".env", "utf8");
+  const file = parseDotenv(rawText);
   const env = {
     ...file,
     POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD ?? file.POSTGRES_PASSWORD,
   };
-  const { errors, warnings } = checkSecrets(env, { existingDatabase: existsSync(MAIN_DB_MARKER) });
+  const { errors, warnings } = checkSecrets(env, {
+    existingDatabase: existsSync(MAIN_DB_MARKER),
+    rawText,
+  });
   for (const warning of warnings) console.warn(`warning: ${warning}`);
   if (errors.length) throw new Error(`Fix .env before starting:\n- ${errors.join("\n- ")}`);
 }

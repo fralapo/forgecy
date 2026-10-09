@@ -38,7 +38,8 @@ export function readOnlyComposeEnv(base: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 
 /** POSTGRES_PASSWORD as Compose sees it: a shell variable wins over .env. Empty when neither sets it. */
 export function configuredPostgresPassword(env: NodeJS.ProcessEnv, envFile = ".env"): string {
-  if (env.POSTGRES_PASSWORD) return env.POSTGRES_PASSWORD;
+  // `??`, not `||`: a shell variable that is set but empty wins in Compose and fails its :? check.
+  if (env.POSTGRES_PASSWORD !== undefined) return env.POSTGRES_PASSWORD;
   try {
     return parseDotenv(readFileSync(envFile, "utf8")).POSTGRES_PASSWORD ?? "";
   } catch {
