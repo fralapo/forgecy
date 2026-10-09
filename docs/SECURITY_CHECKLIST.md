@@ -475,8 +475,9 @@ pages, and a second one for the attacker's page.
 6. On the attacker's page, link to a social profile on another host, to
    `http://127.0.0.1/` and to a LinkedIn `/in/` person profile: the crawl
    never requests the off-platform or internal address (check the access log
-   of the second site and of an internal listener) and the person profile
-   adds no text and no picture.
+   of the second site and of an internal listener) and never follows the
+   `/in/` link. Then add a LinkedIn `/in/` profile by hand: its text is
+   imported, its picture never is.
 7. Add a social profile whose `robots.txt` disallows it, and one behind a
    login wall: nothing is imported and the source says why.
 8. Images: the ones found on the site appear on the brand page and in the

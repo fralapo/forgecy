@@ -252,6 +252,7 @@ const brandUrlSchema = z.object({
   url: z
     .string()
     .trim()
+    .max(2048, vmsg("validation.websiteInvalid"))
     .pipe(z.url({ protocol: /^https?$/, message: vmsg("validation.websiteInvalid") })),
 });
 const brandNameSchema = z.object({
