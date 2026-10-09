@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { zipArchive } from "@forgecy/core/testing/archives";
-import { clients, createDb, type Database } from "@forgecy/db";
+import { clients, contentPillars, createDb, eq, products, type Database } from "@forgecy/db";
 import { LocalDiskDriver } from "@forgecy/files";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { importClientPackage } from "../src/import";
@@ -22,10 +22,16 @@ describe.skipIf(!dbUrl)("hostile client package (integration)", () => {
   const VICTIM = randomUUID();
 
   /** A package that claims client ME but carries `contents` rows and `files` of its own choosing. */
-  const hostile = async (name: string, contentsRows: unknown[], files: string[] = []) => {
+  const hostile = async (
+    name: string,
+    contentsRows: unknown[],
+    files: string[] = [],
+    extra: Record<string, unknown[]> = {},
+  ) => {
     const data: Record<string, string> = {
       clients: JSON.stringify([{ id: ME, name: `Evil ${suffix}`, slug: `evil-${suffix}` }]),
       contents: JSON.stringify(contentsRows),
+      ...Object.fromEntries(Object.entries(extra).map(([t, rows]) => [t, JSON.stringify(rows)])),
     };
     const manifest = {
       format: 1,
@@ -33,7 +39,7 @@ describe.skipIf(!dbUrl)("hostile client package (integration)", () => {
       exportedAt: new Date().toISOString(),
       schema: { migrations: 0, last: null },
       client: { id: ME, name: `Evil ${suffix}`, slug: `evil-${suffix}` },
-      areas: [],
+      areas: Object.keys(extra).length ? ["content", "products"] : [],
       options: { excludeUnapprovedAi: false, includeAgencyTemplates: false },
       tables: Object.fromEntries(
         Object.entries(data).map(([t, text]) => [
@@ -67,6 +73,8 @@ describe.skipIf(!dbUrl)("hostile client package (integration)", () => {
     });
   });
   afterAll(async () => {
+    await db.delete(clients).where(eq(clients.slug, `evil-${suffix}-uuid`));
+    await db.delete(clients).where(eq(clients.slug, `victim-${suffix}`));
     await rm(dir, { recursive: true, force: true });
     await db.$client.end();
   });
@@ -100,5 +108,40 @@ describe.skipIf(!dbUrl)("hostile client package (integration)", () => {
     ).rejects.toThrow(UnsafePackageError);
     expect(await clientCount()).toBe(before);
     expect(await storage.exists(`clients/${VICTIM}/assets/${"a".repeat(64)}.png`)).toBe(false);
+  });
+
+  it("writes no id of another client into a uuid[] column, and keeps the package's own", async () => {
+    const [victim] = await db
+      .insert(clients)
+      .values({ name: `Victim ${suffix}`, slug: `victim-${suffix}` })
+      .returning();
+    const [stranger] = await db
+      .insert(products)
+      .values({ clientId: victim!.id, name: "Not yours" })
+      .returning();
+    const own = randomUUID();
+    const file = await hostile("uuid-array", [], [], {
+      products: [{ id: own, client_id: ME, name: "Mine" }],
+      content_pillars: [
+        {
+          id: randomUUID(),
+          client_id: ME,
+          name: "P",
+          // its own product, a real product of another client, and an id that exists nowhere
+          product_ids: [own, stranger!.id, randomUUID()],
+        },
+      ],
+    });
+    expect((await verifyClientPackage(db, file, 1)).problems).toEqual([]);
+    const out = await importClientPackage({ db, storage }, file, {
+      choices: { client: { mode: "new", slug: `evil-${suffix}-uuid` }, templates: {} },
+    });
+    const [mine] = await db.select().from(products).where(eq(products.clientId, out.clientId));
+    const [pillar] = await db
+      .select()
+      .from(contentPillars)
+      .where(eq(contentPillars.clientId, out.clientId));
+    expect(mine!.id).not.toBe(own);
+    expect(pillar!.productIds).toEqual([mine!.id]);
   });
 });

@@ -221,6 +221,57 @@ describe("assertPackageScoped", () => {
     });
   });
 
+  describe("the import filters the uuid[] columns like a soft reference", () => {
+    // Every uuid[] column of a client table, and the table whose rows its ids must be.
+    const arrays: [string, string, string][] = [
+      ["audit_findings", "parent_ids", "audit_findings"],
+      ["audit_reports", "excluded_finding_ids", "audit_findings"],
+      ["content_pillars", "product_ids", "products"],
+      ["content_rubrics", "product_ids", "products"],
+      ["content_plan_items", "product_ids", "products"],
+    ];
+    it("lists every uuid[] column, none left to chance", () => {
+      const found = clientTables().flatMap((t) =>
+        t.arrayRefs.map((a) => [t.name, a.column, a.target]),
+      );
+      expect(found.sort()).toEqual([...arrays].sort());
+    });
+    it.each(arrays)(
+      "%s.%s keeps the package's own ids and drops the rest",
+      (name, column, target) => {
+        const here = new Map([[target, new Set([PILLAR, ROW])]]);
+        const row: Row = { [column]: [PILLAR, VICTIM, ROW, MALLORY] };
+        emptyOutsideRefs(table(name), row, here);
+        expect(row[column]).toEqual([PILLAR, ROW]);
+      },
+    );
+    it("drops everything when the target rows are not in the package, or are of another table", () => {
+      const row: Row = { product_ids: [PILLAR, ROW] };
+      emptyOutsideRefs(table("content_pillars"), row, new Map());
+      expect(row.product_ids).toEqual([]);
+      const other: Row = { excluded_finding_ids: [PILLAR] };
+      emptyOutsideRefs(table("audit_reports"), other, new Map([["products", new Set([PILLAR])]]));
+      expect(other.excluded_finding_ids).toEqual([]);
+    });
+    it("drops what is not an id of the package, whatever its type, and leaves a missing column alone", () => {
+      const here = new Map([["audit_findings", new Set([PILLAR])]]);
+      const row: Row = { parent_ids: [PILLAR, 7, null, { x: 1 }, PILLAR.toUpperCase()] };
+      emptyOutsideRefs(table("audit_findings"), row, here);
+      expect(row.parent_ids).toEqual([PILLAR]);
+      const none: Row = { title: "t" };
+      emptyOutsideRefs(table("audit_findings"), none, here);
+      expect(none).toEqual({ title: "t" });
+    });
+    it("an honest export with a deleted product or finding stays safe (the import drops its id)", () => {
+      const s = scope({
+        areas: new Set(["client", "content", "products"]),
+        idsByTable: idsOf({ clients: [ME], products: [] }),
+      });
+      const pillar: Row = { id: PILLAR, client_id: ME, product_ids: [VICTIM] };
+      expect(() => run("content_pillars", [pillar], s)).not.toThrow();
+    });
+  });
+
   describe("a reference to an area the export left out is told apart from an attack", () => {
     const withoutBrand = scope({ areas: new Set(["client", "content"]) });
     it("is incompleteArea when the target belongs to an optional area that is not in the package", () => {

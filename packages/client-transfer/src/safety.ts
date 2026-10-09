@@ -193,7 +193,10 @@ export function assertPackageScoped(
   }
 }
 
-/** Import side of `nullIfOutside` references: only a row that exists here (after the remap) survives. */
+/**
+ * Import side of `nullIfOutside` references: only a row that exists here (after the remap)
+ * survives. The same for the ids in `uuid[]` columns, which keep just those that do.
+ */
 export function emptyOutsideRefs(
   table: ClientTable,
   row: Row,
@@ -206,6 +209,13 @@ export function emptyOutsideRefs(
       !hereIds.get(ref.target)?.has(String(row[ref.column]))
     )
       row[ref.column] = null;
+  for (const ref of table.arrayRefs)
+    if (ref.column in row) {
+      const ids = row[ref.column];
+      row[ref.column] = Array.isArray(ids)
+        ? ids.filter((v) => typeof v === "string" && hereIds.get(ref.target)?.has(v))
+        : [];
+    }
 }
 
 /** Keys the import may write: this client's own, or content-addressed agency files. */

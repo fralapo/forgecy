@@ -27,6 +27,16 @@ export interface SoftRef {
   mode: "package" | "nullIfOutside";
 }
 
+/**
+ * A `uuid[]` column whose ids are rows of `target`, without a foreign key. It follows the
+ * rule of `nullIfOutside`: the import keeps the ids of rows it writes for this client, and
+ * drops every other (a deleted row leaves its id behind, so an honest export has them too).
+ */
+export interface ArrayRef {
+  column: string;
+  target: string;
+}
+
 export interface ClientTable {
   name: string;
   area: ClientTransferArea | "client";
@@ -41,6 +51,8 @@ export interface ClientTable {
   droppedColumns: ForeignKey[];
   /** uuid columns that point at rows without a foreign key (see SOFT_REFS). */
   softRefs: SoftRef[];
+  /** uuid[] columns that point at rows without a foreign key (see ARRAY_REFS). */
+  arrayRefs: ArrayRef[];
 }
 
 /** Never in a package: people, sessions, settings, the job queue, budgets, history of this install. */
@@ -132,9 +144,26 @@ export const SOFT_REFS: Record<string, { target: string; mode: SoftRef["mode"] }
   "brand_identity_proposals.run_id": { target: "jobs", mode: "nullIfOutside" },
 };
 
+/**
+ * Every `uuid[]` column of a client table and the table its ids point to. A new one without
+ * an entry makes `clientTables()` fail, for the same reason as SOFT_REFS. Deleting a product,
+ * or an observation a problem rests on, does not clear these, so none can be required to
+ * resolve: the import drops what does not (a stranger's id included).
+ */
+export const ARRAY_REFS: Record<string, string> = {
+  "audit_findings.parent_ids": "audit_findings",
+  "audit_reports.excluded_finding_ids": "audit_findings",
+  "content_pillars.product_ids": "products",
+  "content_rubrics.product_ids": "products",
+  "content_plan_items.product_ids": "products",
+};
+
 function allTables(): PgTable[] {
   return (Object.values(schema) as unknown[]).filter((v): v is PgTable => v instanceof PgTable);
 }
+
+const isUuidArray = (col: unknown): boolean =>
+  (col as { baseColumn?: { columnType?: string } }).baseColumn?.columnType === "PgUUID";
 
 let cached: ClientTable[] | null = null;
 
@@ -197,6 +226,16 @@ export function clientTables(): ClientTable[] {
                 `Column ${c.name}.${col.name} has no entry in client-transfer SOFT_REFS`,
               );
             return { column: col.name, notNull: col.notNull, ...soft };
+          }),
+        arrayRefs: c.columns
+          .filter((col) => col.columnType === "PgArray" && isUuidArray(col))
+          .map((col): ArrayRef => {
+            const target = ARRAY_REFS[`${c.name}.${col.name}`];
+            if (!target)
+              throw new Error(
+                `Column ${c.name}.${col.name} has no entry in client-transfer ARRAY_REFS`,
+              );
+            return { column: col.name, target };
           }),
       };
     });
