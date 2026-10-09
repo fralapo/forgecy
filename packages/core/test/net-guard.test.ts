@@ -17,7 +17,12 @@ vi.mock("node:dns/promises", async (importOriginal) => {
 
 import { lookup as dnsPromiseLookup } from "node:dns/promises";
 import { lookup as dnsLookup } from "node:dns";
-import { createHostCheck, createPinnedFetch, isPrivateAddress } from "../src/net-guard";
+import {
+  createHostCheck,
+  createPinnedFetch,
+  isPrivateAddress,
+  resolvePublicAddress,
+} from "../src/net-guard";
 
 type LookupAll = (hostname: string, options: LookupAllOptions) => Promise<LookupAddress[]>;
 const lookupMock = vi.mocked(dnsPromiseLookup) as unknown as Mock<LookupAll>;
@@ -160,6 +165,38 @@ describe("createHostCheck failClosed (Chromium resolves names itself)", () => {
     expect(await createHostCheck({ failClosed: true })(url)).toBe(false);
   });
 
+  it("a mixed public/private answer passes by default (the pinned fetch only connects to the public one) but not with failClosed (the client may fall back to the private one)", async () => {
+    const mixed = [
+      { address: "127.0.0.1", family: 4 },
+      { address: "93.184.216.34", family: 4 },
+    ];
+    lookupMock.mockResolvedValueOnce(mixed);
+    expect(await createHostCheck()(url)).toBe(true);
+    lookupMock.mockResolvedValueOnce(mixed);
+    expect(await createHostCheck({ failClosed: true })(url)).toBe(false);
+    lookupMock.mockResolvedValueOnce([{ address: "127.0.0.1", family: 4 }]);
+    expect(await createHostCheck()(url)).toBe(false);
+  });
+
+  it("resolvePublicAddress pins the public answer of a mixed name and refuses an all-private one", async () => {
+    lookupMock.mockResolvedValueOnce([
+      { address: "::", family: 6 },
+      { address: "93.184.216.34", family: 4 },
+    ]);
+    expect(await resolvePublicAddress("mixed.example.com")).toEqual({
+      ok: true,
+      address: "93.184.216.34",
+    });
+    lookupMock.mockResolvedValueOnce([
+      { address: "::", family: 6 },
+      { address: "10.0.0.5", family: 4 },
+    ]);
+    expect(await resolvePublicAddress("private.example.com")).toEqual({
+      ok: false,
+      reason: "private",
+    });
+  });
+
   it("still allows a public host, and allowPrivate still bypasses", async () => {
     lookupMock.mockResolvedValueOnce([{ address: "93.184.216.34", family: 4 }]);
     expect(await createHostCheck({ failClosed: true })(url)).toBe(true);
@@ -204,14 +241,14 @@ describe("createPinnedFetch", () => {
     expect(hits).toBe(0);
   });
 
-  it("refuses a name when ANY of its answers is private (mixed public/private)", async () => {
+  it("refuses a name whose answers are all private, and connects to nothing", async () => {
     cbLookupMock.mockImplementationOnce((_h, _o, cb) =>
       cb(null, [
-        { address: "93.184.216.34", family: 4 },
+        { address: "10.0.0.5", family: 4 },
         { address: "127.0.0.1", family: 4 },
       ]),
     );
-    const err = await createPinnedFetch()(`http://mixed.example.com:${port}/`).catch(
+    const err = await createPinnedFetch()(`http://private.example.com:${port}/`).catch(
       (e: unknown) => e,
     );
     expect(messageOf(err)).toMatch(/disallowed address/);

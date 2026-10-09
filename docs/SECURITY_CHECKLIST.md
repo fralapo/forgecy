@@ -45,6 +45,11 @@ confirm by hand against a real target, not just the unit tests in
       `http://[2002:a9fe:a9fe::1]/` (hex-mapped, NAT64 and 6to4 forms of the
       metadata address) and `http://[fec0::1]/` (site-local). Each must be
       refused like the dotted forms above.
+- [ ] Point a name at one public and one private address (a public A record and an AAAA
+      of `::`, say). Pages read without Chromium, robots and sitemaps connect only to
+      the public address and succeed; a name whose answers are all private is refused.
+      Chromium pins the starting host the same way; for any other host Chromium resolves
+      itself, so every answer must be public (`failClosed`), or the host is refused.
 - [ ] Serve `/robots.txt` and `/sitemap.xml` that answer 302 to
       `http://169.254.169.254/`. The target is never requested: the crawl treats
       the file as missing ("No robots.txt: reading allowed", no sitemap pages)

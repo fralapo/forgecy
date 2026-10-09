@@ -83,6 +83,44 @@ describe("DNS rebinding", () => {
   });
 });
 
+// A host can resolve to more than one address where only some are reachable: a
+// stray/placeholder AAAA record ("::") alongside a working public A record is a
+// real-world DNS misconfiguration, not an attack. A browser's happy-eyeballs
+// connect just skips the bad address — the pinning here must not block the whole
+// host because of an address nothing ever tries to connect to.
+describe("DNS answer with a mix of public and private/broken addresses", () => {
+  it("resolvePinnedAddress picks the public address instead of refusing the host", async () => {
+    dnsPromiseLookupMock.mockResolvedValueOnce([
+      { address: "::", family: 6 },
+      { address: "93.184.216.34", family: 4 },
+    ]);
+    expect(await resolvePinnedAddress("mixed.example.com")).toBe("93.184.216.34");
+  });
+
+  it("createHostCheck allows the host when at least one resolved address is public", async () => {
+    dnsPromiseLookupMock.mockResolvedValueOnce([
+      { address: "::", family: 6 },
+      { address: "93.184.216.34", family: 4 },
+    ]);
+    const hostCheck = createHostCheck();
+    expect(await hostCheck("http://mixed.example.com/")).toBe(true);
+  });
+
+  it("still refuses a host whose every resolved address is private", async () => {
+    dnsPromiseLookupMock.mockResolvedValueOnce([
+      { address: "::", family: 6 },
+      { address: "127.0.0.1", family: 4 },
+    ]);
+    const hostCheck = createHostCheck();
+    expect(await hostCheck("http://allprivate.example.com/")).toBe(false);
+    dnsPromiseLookupMock.mockResolvedValueOnce([
+      { address: "::", family: 6 },
+      { address: "127.0.0.1", family: 4 },
+    ]);
+    expect(await resolvePinnedAddress("allprivate.example.com")).toBeNull();
+  });
+});
+
 describe("redirect to a rebound/private address", () => {
   it("createHtmlFetcher's per-hop host check blocks a redirect to a private address", async () => {
     const hostCheck = createHostCheck();
