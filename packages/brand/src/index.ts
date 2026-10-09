@@ -10,6 +10,7 @@ export * from "./checks";
 export * from "./diff";
 export * from "./context";
 export * from "./read";
+export * from "./completeness";
 // Explicit list: service.ts also holds transaction-level internals (openDraft, lockOpenDraft,
 // acceptOne, publishDraft, restoreDraft, updateSourceStatus...) that stay inside this package.
 export {

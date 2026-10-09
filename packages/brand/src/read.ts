@@ -6,12 +6,14 @@
 import { assertCan, type Actor, type BrandExampleKind } from "@forgecy/core";
 import {
   and,
+  assets,
   brandExamples,
   brandIdentityProposals,
   brandIdentityVersions,
   brandSources,
   desc,
   eq,
+  inArray,
   isNull,
   sql,
   type Database,
@@ -207,4 +209,68 @@ export async function listSources(db: Database, actor: Actor, clientId: string) 
     .from(brandSources)
     .where(and(eq(brandSources.clientId, clientId), isNull(brandSources.removedAt)))
     .orderBy(desc(brandSources.capturedAt));
+}
+
+// ---- Brand images (taken from the client's website and social profiles) ----
+
+export const brandImageClasses = ["product", "scene", "graphic", "logo"] as const;
+export type BrandImageClass = (typeof brandImageClasses)[number];
+
+/** The class tag of an image (`[class, "site"]`); null for pictures without one (social). */
+export function brandImageClass(tags: readonly string[]): BrandImageClass | null {
+  return brandImageClasses.find((c) => tags.includes(c)) ?? null;
+}
+
+export interface BrandImage {
+  id: string;
+  /** Storage key: the page signs it the way the content library does. */
+  storageKey: string;
+  alt: string;
+  tags: string[];
+  class: BrandImageClass | null;
+  source: "site" | "social";
+  status: "draft" | "approved";
+  /** Rights still to confirm in the content library. */
+  rightsPending: boolean;
+  width: number | null;
+  height: number | null;
+}
+
+export const BRAND_IMAGES_LIMIT = 24;
+
+/**
+ * Pictures the automatic import took from the client's website and social profiles, newest
+ * first. Read-only: rights are confirmed in the content library. Social pictures are the ones
+ * tagged `social`; nothing else of the library (uploads, AI images, products) is listed.
+ */
+export async function listBrandImages(
+  db: Database,
+  actor: Actor,
+  clientId: string,
+): Promise<BrandImage[]> {
+  assertCan(actor, "view", clientId);
+  const rows = await db
+    .select()
+    .from(assets)
+    .where(
+      and(
+        eq(assets.clientId, clientId),
+        eq(assets.source, "site"),
+        inArray(assets.status, ["draft", "approved"]),
+      ),
+    )
+    .orderBy(desc(assets.createdAt))
+    .limit(BRAND_IMAGES_LIMIT);
+  return rows.map((r) => ({
+    id: r.id,
+    storageKey: r.storageKey,
+    alt: r.alt,
+    tags: r.tags,
+    class: brandImageClass(r.tags),
+    source: r.tags.includes("social") ? "social" : "site",
+    status: r.status === "approved" ? "approved" : "draft",
+    rightsPending: r.rights == null,
+    width: r.width,
+    height: r.height,
+  }));
 }

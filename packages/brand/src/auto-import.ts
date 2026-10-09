@@ -509,6 +509,8 @@ export interface LatestAutoImport {
   accepted: number;
   skippedHandEdited: number;
   discarded: number;
+  /** Proposals the run left pending for a person (the review queue). */
+  needsReview: number;
   /** Still the published version: "Undo import" applies to it. */
   current: boolean;
 }
@@ -552,6 +554,7 @@ export async function latestAutoImport(
     accepted: n("accepted"),
     skippedHandEdited: n("skippedHandEdited"),
     discarded: n("discarded"),
+    needsReview: n("needsReview"),
     current: version?.status === "published",
   };
 }
