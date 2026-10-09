@@ -7,7 +7,7 @@
  *   setBrandGuard({ run: runBrandCheck, get: getBrandCheck, confirmForApproval: confirmBrandCheckForApproval });
  */
 import { FORMATS, findLayout, type TemplateManifest } from "@forgecy/carousel";
-import type { Actor, MessageRef } from "@forgecy/core";
+import type { Actor, AssetSource, MessageRef } from "@forgecy/core";
 import type { Database } from "@forgecy/db";
 import type { Executor } from "../access";
 import type { CarouselDocument, ContentChannel } from "../document";
@@ -154,7 +154,7 @@ export const carouselSubject = (contentId: string, version?: number | null): Gua
 
 export interface GuardAssetInfo {
   id: string;
-  source: "upload" | "ai" | "product";
+  source: AssetSource;
   status: "draft" | "approved" | "rejected";
   width: number | null;
   height: number | null;
@@ -235,7 +235,7 @@ export function toGuardContent(input: {
             ? {
                 asset: {
                   id: info.id,
-                  origin: info.source,
+                  origin: info.source === "site" ? "photo" : info.source,
                   ...(info.source === "ai" ? { approval: info.status } : {}),
                   width: info.width ?? 0,
                   height: info.height ?? 0,

@@ -4,7 +4,7 @@
  * file is stored once. Uploads by a person and product photos are usable at once;
  * AI images stay drafts until a person approves them (spec "AI images").
  */
-import { commercialUseStatuses, type ProviderId } from "@forgecy/core";
+import { commercialUseStatuses, type AssetSource, type ProviderId } from "@forgecy/core";
 import type { Actor } from "@forgecy/core";
 import {
   aiConnections,
@@ -68,7 +68,7 @@ interface StoreInput {
   clientId: string;
   bytes: Uint8Array;
   declaredMime: string;
-  source: "upload" | "ai" | "product";
+  source: AssetSource;
   status: "draft" | "approved";
   alt?: string;
   tags?: string[];
@@ -461,8 +461,8 @@ export function readAssetRights(value: unknown): AssetRights | null {
 
 /**
  * Commercial-use status of an image: AI images follow the provider review recorded at
- * generation, uploads need a person to confirm the rights, product photos come from the
- * client's own catalog (null: nothing to verify).
+ * generation, uploads and images taken from a website need a person to confirm the rights,
+ * product photos come from the client's own catalog (null: nothing to verify).
  */
 export function assetCommercialUse(a: {
   source: AssetRow["source"];
@@ -475,7 +475,8 @@ export function assetCommercialUse(a: {
       ? g.commercialUse
       : "pending_verification";
   }
-  if (a.source === "upload") return readAssetRights(a.rights) ? "verified" : "pending_verification";
+  if (a.source === "upload" || a.source === "site")
+    return readAssetRights(a.rights) ? "verified" : "pending_verification";
   return null;
 }
 

@@ -13,7 +13,7 @@ import {
 } from "@forgecy/content/client";
 import { GUARDED_CHECK_PREFIXES, trimCaptionToLimit } from "@forgecy/content/client";
 import { visibleLength, type TemplateManifest } from "@forgecy/carousel";
-import type { ContentStatus } from "@forgecy/core";
+import type { AssetSource, ContentStatus } from "@forgecy/core";
 import { Badge, Button, Input, Label } from "@forgecy/ui";
 import { AlertTriangle, History, Lock, RefreshCw, Save, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -48,7 +48,7 @@ export interface EditorAsset {
   id: string;
   key: string;
   status: "draft" | "approved" | "rejected";
-  source: "upload" | "ai" | "product";
+  source: AssetSource;
   alt: string;
   width: number | null;
   height: number | null;
