@@ -136,6 +136,7 @@ export async function runWebsiteCrawl(
         candidates: 0,
         proposals: 0,
         skipped: 0,
+        discarded: 0,
         ai: "skipped",
         detail: detail(parts).statusDetail,
       };
@@ -145,6 +146,7 @@ export async function runWebsiteCrawl(
     await updateSourceStatus(db, source.id, {
       status: "failed",
       pages: [],
+      visual: null,
       statusDetail: message.slice(0, 500),
       statusDetailRef: ref ? [ref] : null,
     });
@@ -154,6 +156,7 @@ export async function runWebsiteCrawl(
       candidates: 0,
       proposals: 0,
       skipped: 0,
+      discarded: 0,
       ai: "skipped",
       detail: message,
     };
