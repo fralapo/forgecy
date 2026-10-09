@@ -29,6 +29,8 @@ export interface SiteProbe {
   /** Content images, deduped by url. */
   images: ProbeImage[];
   organization?: { name?: string; logo?: string; sameAs: string[]; description?: string };
+  /** From <meta property="og:site_name">. */
+  siteName?: string;
 }
 
 /** What the page reports: raw CSS color strings, normalized and capped by buildSiteProbe. */
@@ -176,6 +178,30 @@ export function parseJsonLdOrganization(html: string, baseUrl: string): SiteProb
   };
 }
 
+const ENTITIES: Record<string, string> = {
+  amp: "&",
+  quot: '"',
+  apos: "'",
+  "#39": "'",
+  "#039": "'",
+  lt: "<",
+  gt: ">",
+};
+
+/** The site's name as its pages declare it to link previews (`og:site_name`). */
+export function parseOgSiteName(html: string): string | undefined {
+  for (const tag of (html.match(/<meta\b[^>]*>/gi) ?? []).slice(0, 300)) {
+    if (!/\bproperty\s*=\s*["']og:site_name["']/i.test(tag)) continue;
+    const m = /\bcontent\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(tag);
+    const value = (m?.[1] ?? m?.[2] ?? "").replace(
+      /&(#?\w+);/g,
+      (e, k: string) => ENTITIES[k] ?? e,
+    );
+    return str(value, MAX_NAME);
+  }
+  return undefined;
+}
+
 function logoScore(i: ProbeImage): number {
   let score = 0;
   if (i.inHeader) score += 5;
@@ -291,6 +317,7 @@ export function buildSiteProbe(raw: RawProbe, html: string, baseUrl: string): Si
   }
 
   const organization = parseJsonLdOrganization(html, baseUrl);
+  const siteName = parseOgSiteName(html);
   const candidates = httpImages(raw.logos);
   if (organization?.logo) {
     const known = candidates.find((c) => c.url === organization.logo);
@@ -330,6 +357,7 @@ export function buildSiteProbe(raw: RawProbe, html: string, baseUrl: string): Si
     logos: rankLogoCandidates(candidates).slice(0, MAX_LOGOS),
     images: httpImages(raw.images).slice(0, MAX_IMAGES),
     ...(organization ? { organization } : {}),
+    ...(siteName ? { siteName } : {}),
   };
 }
 

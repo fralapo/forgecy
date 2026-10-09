@@ -5,6 +5,7 @@ import { resolveChromiumPath } from "../src/crawl/browser";
 import {
   buildSiteProbe,
   parseJsonLdOrganization,
+  parseOgSiteName,
   rankLogoCandidates,
   toHex,
   type ProbeImage,
@@ -128,6 +129,20 @@ describe("parseJsonLdOrganization", () => {
       "https://x.test/",
     );
     expect(org?.logo).toBeUndefined();
+  });
+});
+
+describe("parseOgSiteName", () => {
+  it("reads og:site_name in either attribute order, with entities decoded", () => {
+    expect(
+      parseOgSiteName('<head><meta property="og:site_name" content="DeoDue &amp; Co" /></head>'),
+    ).toBe("DeoDue & Co");
+    expect(parseOgSiteName(`<meta content='Acme' property='og:site_name'>`)).toBe("Acme");
+  });
+
+  it("is undefined when the page does not declare it or declares it empty", () => {
+    expect(parseOgSiteName('<meta property="og:title" content="Home">')).toBeUndefined();
+    expect(parseOgSiteName('<meta property="og:site_name" content="  ">')).toBeUndefined();
   });
 });
 

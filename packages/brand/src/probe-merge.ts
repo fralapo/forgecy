@@ -55,6 +55,7 @@ export function mergeProbes(probes: SiteProbe[]): SiteProbe {
   }
   const themeColor = probes.find((p) => p.themeColor)?.themeColor;
   const organization = probes.find((p) => p.organization)?.organization;
+  const siteName = probes.find((p) => p.siteName)?.siteName;
   return {
     cssVars: [...cssVars.values()].slice(0, MAX.cssVars),
     ...(themeColor ? { themeColor } : {}),
@@ -69,5 +70,6 @@ export function mergeProbes(probes: SiteProbe[]): SiteProbe {
       .sort((a, b) => b.w * b.h - a.w * a.h)
       .slice(0, MAX.images),
     ...(organization ? { organization } : {}),
+    ...(siteName ? { siteName } : {}),
   };
 }

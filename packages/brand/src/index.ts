@@ -49,6 +49,7 @@ export {
 } from "./service";
 export {
   applyImport,
+  AUTO_IMPORT_KINDS,
   isHandEdited,
   latestAutoImport,
   undoImport,
@@ -62,3 +63,4 @@ export { detectImportFile, type DetectResult, type ImportFileType } from "./impo
 export type { ImportResult } from "./import/run";
 export { newItemId } from "./ids";
 export { linkSourceReader } from "./social-url";
+export { nameFromUrl, renameFromSite, siteBrandName } from "./brand-name";

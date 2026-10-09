@@ -43,6 +43,7 @@ export const siteProbeSchema = z.object({
       description: z.string().max(1000).optional(),
     })
     .optional(),
+  siteName: z.string().max(200).optional(),
 });
 
 /** The stored probe, or undefined when the column is empty or no longer has the expected shape. */
