@@ -219,3 +219,120 @@ describe("where the browser landed is checked, not only where it started", () =>
     expect(result.pages.map((p) => p.finalUrl)).toEqual([`${MOVED}/`, `${MOVED}/servizi`]);
   });
 });
+
+describe("after a redirect to another origin, that origin's robots.txt applies", () => {
+  const MOVED = "https://93.184.216.35";
+  const THIRD = "https://93.184.216.36";
+  function crawlMoved(input: {
+    robots: Record<string, Response | undefined>;
+    navLinks: string[];
+    moved?: boolean;
+    sitemaps?: Record<string, string>;
+  }) {
+    const seen: string[] = [];
+    const checked: string[] = [];
+    const fetchImpl = (async (u: string) => {
+      seen.push(u);
+      if (u.endsWith("/robots.txt"))
+        return input.robots[new URL(u).origin] ?? new Response("", { status: 404 });
+      const sm = input.sitemaps?.[u];
+      return sm ? text(sm, "application/xml") : new Response("", { status: 404 });
+    }) as unknown as typeof fetch;
+    const hostCheck = createHostCheck();
+    const fetched: string[] = [];
+    const movedFetcher: PageFetcher = {
+      mode: "html",
+      fetchPage: async (u) => {
+        fetched.push(u);
+        const finalUrl = input.moved !== false && u.startsWith(ROOT) ? `${MOVED}/` : u;
+        return { ...page(u), finalUrl, navLinks: input.navLinks };
+      },
+      close: async () => undefined,
+    };
+    const run = () =>
+      crawlSite({
+        rootUrl: `${ROOT}/`,
+        maxPages: 5,
+        fetcher: movedFetcher,
+        hostCheck: async (u) => {
+          checked.push(u);
+          return hostCheck(u);
+        },
+        fetchImpl,
+        userAgent: "ForgecyAudit/test",
+        pageTimeoutMs: 5000,
+        totalTimeoutMs: 20_000,
+      });
+    return { seen, checked, fetched, run };
+  }
+  const paths = (urls: string[]) => urls.map((u) => new URL(u).pathname);
+
+  it("skips a page the landed origin disallows and reads the others", async () => {
+    const { seen, checked, fetched, run } = crawlMoved({
+      robots: { [MOVED]: text("User-agent: *\nDisallow: /servizi\n") },
+      navLinks: [`${MOVED}/servizi`, `${MOVED}/contatti`],
+    });
+    const result = await run();
+    expect(paths(result.pages.map((p) => p.finalUrl))).toEqual(["/", "/contatti"]);
+    expect(result.skipped).toMatchObject([
+      { url: `${MOVED}/servizi`, code: "AUD-ROBOTS-BLOCKED", reason: "Excluded by robots.txt" },
+    ]);
+    expect(fetched).not.toContain(`${MOVED}/servizi`);
+    // Read through the guarded path: host-checked, then the pinned fetch.
+    expect(checked).toContain(`${MOVED}/robots.txt`);
+    expect(seen.filter((u) => u === `${MOVED}/robots.txt`)).toHaveLength(1);
+  });
+
+  it("reads the landed site when its robots.txt is missing", async () => {
+    const { seen, run } = crawlMoved({
+      robots: { [ROOT]: text("User-agent: *\nDisallow: /servizi\n") },
+      navLinks: [`${MOVED}/servizi`],
+    });
+    const result = await run();
+    expect(seen).toContain(`${MOVED}/robots.txt`);
+    expect(paths(result.pages.map((p) => p.finalUrl))).toEqual(["/", "/servizi"]);
+  });
+
+  it("refuses a landed site whose robots.txt blocks everything", async () => {
+    const { run } = crawlMoved({
+      robots: { [MOVED]: text("User-agent: *\nDisallow: /\n") },
+      navLinks: [],
+    });
+    await expect(run()).rejects.toMatchObject({ code: "AUD-ROBOTS-BLOCKED" });
+  });
+
+  it("still applies the root robots.txt when the origin did not change", async () => {
+    const { seen, run } = crawlMoved({
+      robots: { [ROOT]: text("User-agent: *\nDisallow: /servizi\n") },
+      navLinks: [`${ROOT}/servizi`, `${ROOT}/contatti`],
+      moved: false,
+    });
+    const result = await run();
+    expect(paths(result.pages.map((p) => p.finalUrl))).toEqual(["/", "/contatti"]);
+    expect(result.skipped).toMatchObject([{ url: `${ROOT}/servizi`, code: "AUD-ROBOTS-BLOCKED" }]);
+    expect(seen.filter((u) => u.endsWith("/robots.txt"))).toEqual([`${ROOT}/robots.txt`]);
+  });
+
+  it("never reads a page, or a robots.txt, on a third host", async () => {
+    const { seen, fetched, run } = crawlMoved({
+      robots: {},
+      navLinks: [`${THIRD}/servizi`, `${MOVED}/contatti`],
+    });
+    const result = await run();
+    expect(paths(result.pages.map((p) => p.finalUrl))).toEqual(["/", "/contatti"]);
+    expect([...seen, ...fetched].some((u) => u.startsWith(THIRD))).toBe(false);
+  });
+
+  it("uses the landed origin's sitemap.xml by default", async () => {
+    const { seen, run } = crawlMoved({
+      robots: {},
+      navLinks: [],
+      sitemaps: {
+        [`${MOVED}/sitemap.xml`]: `<urlset><url><loc>${MOVED}/chi-siamo</loc></url></urlset>`,
+      },
+    });
+    const result = await run();
+    expect(seen).toContain(`${MOVED}/sitemap.xml`);
+    expect(paths(result.pages.map((p) => p.finalUrl))).toEqual(["/", "/chi-siamo"]);
+  });
+});

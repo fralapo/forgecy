@@ -198,12 +198,23 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
 
   // 1. robots.txt
   await progress({ step: "robots", status: "running" });
-  const robotsUrl = `${root.origin}/robots.txt`;
-  const robotsRes = await fetchText(robotsUrl, options);
-  const robotsFound = robotsRes !== null && robotsRes.status === 200;
-  const robots = robotsParser(robotsUrl, robotsFound ? robotsRes!.text : "");
-  const isAllowed = (url: string) => robots.isAllowed(url, AUDIT_USER_AGENT_TOKEN) !== false;
-  const blockedAll = !isAllowed(home);
+  // robots-parser answers only for its own origin (undefined for any other), so every
+  // origin read gets its own robots.txt, fetched once through the guarded path.
+  const readRobots = async (origin: string) => {
+    const url = `${origin}/robots.txt`;
+    const res = await fetchText(url, options);
+    const found = res !== null && res.status === 200;
+    return { found, parser: robotsParser(url, found ? res!.text : "") };
+  };
+  const robotsByOrigin = new Map<string, ReturnType<typeof readRobots>>();
+  const robotsOf = (origin: string) => {
+    if (!robotsByOrigin.has(origin)) robotsByOrigin.set(origin, readRobots(origin));
+    return robotsByOrigin.get(origin)!;
+  };
+  const isAllowed = async (url: string) =>
+    (await robotsOf(new URL(url).origin)).parser.isAllowed(url, AUDIT_USER_AGENT_TOKEN) !== false;
+  const { found: robotsFound, parser: robots } = await robotsOf(root.origin);
+  const blockedAll = !(await isAllowed(home));
   const aiCrawlersBlocked = AI_CRAWLERS.filter((bot) => robots.isAllowed(home, bot) === false);
   await progress({
     step: "robots",
@@ -247,10 +258,17 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
   }
   // The site is where the home page landed (oldbrand.it may 301 to newbrand.com).
   const site = canonicalUrl(homePage.finalUrl);
+  const siteOrigin = new URL(site).origin;
+  const siteRobots = (await robotsOf(siteOrigin)).parser;
+  if (!(await isAllowed(site))) {
+    await progress({ step: "discovery", status: "failed" });
+    throw crawlError("AUD-ROBOTS-BLOCKED", "audit.stored.crawl.robotsBlocked");
+  }
   const sitemapUrls: string[] = [];
-  const sitemapCandidates = robots.getSitemaps().length
-    ? robots.getSitemaps().slice(0, 2)
-    : [`${root.origin}/sitemap.xml`];
+  const listed = [...new Set([...siteRobots.getSitemaps(), ...robots.getSitemaps()])];
+  const sitemapCandidates = listed.length
+    ? listed.slice(0, 2)
+    : [...new Set([`${siteOrigin}/sitemap.xml`, `${root.origin}/sitemap.xml`])];
   for (const sm of sitemapCandidates) {
     if (!sameSite(sm, site)) continue;
     const res = await fetchText(sm, options);
@@ -293,7 +311,12 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
       stoppedEarly = "cancelled";
       break;
     }
-    if (!isAllowed(url)) {
+    // Fail closed: a URL off the site has no robots.txt of ours to answer for it.
+    if (!sameSite(url, site)) {
+      skipped.push({ url, ...skip("redirect"), code: "HTTP" });
+      continue;
+    }
+    if (!(await isAllowed(url))) {
       skipped.push({ url, ...skip("robots"), code: "AUD-ROBOTS-BLOCKED" });
       continue;
     }
