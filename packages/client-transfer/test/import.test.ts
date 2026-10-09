@@ -1,11 +1,15 @@
+import { randomUUID } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { clientTransferAreas, type Actor } from "@forgecy/core";
+import { zipArchive, type ZipEntrySpec } from "@forgecy/core/testing/archives";
 import {
   and,
+  appSettings,
   assets,
   brandIdentities,
+  brandIdentityProposals,
   clientImports,
   clients,
   contentApprovals,
@@ -18,11 +22,14 @@ import {
   users,
   type Database,
 } from "@forgecy/db";
-import { LocalDiskDriver } from "@forgecy/files";
+import { LocalDiskDriver, sha256 } from "@forgecy/files";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { writeClientPackage } from "../src/export";
 import { importClientPackage } from "../src/import";
+import { openClientPackage } from "../src/package";
+import { UnsafePackageError } from "../src/safety";
 import { confirmClientImport } from "../src/service";
+import { stricterAiPolicy } from "../src/trust";
 import { verifyClientPackage } from "../src/verify";
 
 const dbUrl = process.env.FORGECY_TEST_DATABASE_URL;
@@ -34,9 +41,18 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
   let admin: Extract<Actor, { type: "user" }>;
   let pkgFile: string;
   const suffix = Math.random().toString(36).slice(2, 8);
-  const sha = (c: string) => c.repeat(64);
+  // The real checksum of a fixture's content: the import refuses a key whose name is another one.
+  const sha = (content: string) => sha256(Buffer.from(content));
   const tplKey = `tpl-${suffix}`;
-  const ids: { client?: string; here?: string; gone?: string; imported?: string } = {};
+  const ids: {
+    client?: string;
+    here?: string;
+    gone?: string;
+    imported?: string;
+    imported2?: string;
+    imported3?: string;
+    imported4?: string;
+  } = {};
   const importIds: string[] = [];
 
   beforeAll(async () => {
@@ -63,20 +79,40 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       .values({ name: `Rossi ${suffix}`, slug: `rossi-${suffix}`, status: "active" })
       .returning();
     ids.client = c!.id;
-    await db.insert(brandIdentities).values({ clientId: c!.id });
-    const assetKey = `clients/${c!.id}/assets/${sha("a")}.png`;
+    const [identity] = await db.insert(brandIdentities).values({ clientId: c!.id }).returning();
+    // One proposal by Ada (still a user there), one by Bruno (not a user there) and one by an agent.
+    const proposal = (author: { authorUserId?: string; agentRole?: string }, title: string) => ({
+      clientId: c!.id,
+      brandIdentityId: identity!.id,
+      authorType: author.authorUserId ? ("user" as const) : ("agent" as const),
+      ...author,
+      fieldPath: "/document/strategy/oneLiner",
+      category: "strategy",
+      title,
+      changes: [],
+      confidence: "low" as const,
+      sensitive: true,
+    });
+    await db
+      .insert(brandIdentityProposals)
+      .values([
+        proposal({ authorUserId: here!.id }, "by Ada"),
+        proposal({ authorUserId: gone!.id }, "by Bruno"),
+        proposal({ agentRole: "strategist" }, "by an agent"),
+      ]);
+    const assetKey = `clients/${c!.id}/assets/${sha("approved")}.png`;
     await storage.put(assetKey, Buffer.from("approved"), { contentType: "image/png" });
     await db.insert(assets).values({
       clientId: c!.id,
       source: "upload",
       status: "approved",
       storageKey: assetKey,
-      sha256: sha("a"),
+      sha256: sha("approved"),
       mime: "image/png",
       size: 8,
       createdBy: gone!.id,
     });
-    const tplStorage = `system/templates/${sha("t")}.zip`;
+    const tplStorage = `system/templates/${sha("zip")}.zip`;
     await storage.put(tplStorage, Buffer.from("zip"), { contentType: "application/zip" });
     await db.insert(templates).values({
       key: tplKey,
@@ -88,7 +124,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       status: "published",
       manifest: {},
       packageKey: tplStorage,
-      packageSha256: sha("t"),
+      packageSha256: sha("zip"),
       packageSize: 3,
     });
     const [content] = await db
@@ -112,6 +148,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
         number: 1,
         document: { slides: [], image: assetKey },
         createdFrom: "manual",
+        meta: { templateKey: tplKey, templateVersion: "1.0.0" },
       })
       .returning();
     await db.update(contents).set({ currentVersionId: v1!.id }).where(eq(contents.id, content!.id));
@@ -143,7 +180,9 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
   afterAll(async () => {
     if (importIds.length)
       await db.delete(clientImports).where(inArray(clientImports.id, importIds));
-    const own = [ids.client, ids.imported].filter((x): x is string => !!x);
+    const own = [ids.client, ids.imported, ids.imported2, ids.imported3, ids.imported4].filter(
+      (x): x is string => !!x,
+    );
     await db.delete(templates).where(eq(templates.key, tplKey));
     if (own.length) await db.delete(clients).where(inArray(clients.id, own));
     await db.delete(users).where(inArray(users.id, [ids.here!, ids.gone!]));
@@ -164,7 +203,8 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
         existingId: ids.client,
         proposedSlug: `rossi-${suffix}-2`,
       }),
-      expect.objectContaining({ kind: "template", key: tplKey, existingVersions: ["0.9.0"] }),
+      // The matching client's own 0.9.0 is private to it: a new client cannot reuse it, so there
+      // is no template conflict to choose about (the import decides the same way).
     ]);
     expect(v.resolved).toEqual(
       expect.arrayContaining([
@@ -200,15 +240,16 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       .from(contentVersions)
       .where(eq(contentVersions.contentId, content!.id));
     expect(content!.currentVersionId).toBe(version!.id);
-    const newKey = `clients/${out.clientId}/assets/${sha("a")}.png`;
+    const newKey = `clients/${out.clientId}/assets/${sha("approved")}.png`;
     expect(version!.document).toEqual({ slides: [], image: newKey });
     expect(await storage.exists(newKey)).toBe(true);
-    // Only the approval of a person who exists here travels.
+    // Approvals are claims of the other installation: none are imported.
     const approvals = await db
       .select()
       .from(contentApprovals)
       .where(eq(contentApprovals.contentId, content!.id));
-    expect(approvals.map((a) => a.decidedBy)).toEqual([ids.here]);
+    expect(approvals).toEqual([]);
+    expect(content!.approvedVersionId).toBeNull();
     const [asset] = await db.select().from(assets).where(eq(assets.clientId, out.clientId));
     expect(asset!.createdBy).toBeNull();
     const [tpl] = await db
@@ -218,7 +259,129 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
     expect(tpl).toMatchObject({ status: "draft", clientId: out.clientId, publishedAt: null });
   });
 
-  it("replaces an existing client in place, keeping its id, slug and own templates", async () => {
+  /** The package with some table rows edited; table hashes stay honest (hostile, not damaged). */
+  const rewrite = async (
+    label: string,
+    edits: Record<string, (row: Record<string, unknown>) => void>,
+  ) => {
+    const src = await openClientPackage(pkgFile);
+    const files = new Map<string, Buffer>();
+    for (const name of src.names()) {
+      const chunks: Buffer[] = [];
+      for await (const c of await src.stream(name)) chunks.push(c as Buffer);
+      files.set(name, Buffer.concat(chunks));
+    }
+    src.close();
+    const manifest = JSON.parse(files.get("manifest.json")!.toString("utf8"));
+    for (const [table, edit] of Object.entries(edits)) {
+      const rows = JSON.parse(files.get(`data/${table}.json`)!.toString("utf8")) as Record<
+        string,
+        unknown
+      >[];
+      rows.forEach(edit);
+      const data = Buffer.from(JSON.stringify(rows));
+      files.set(`data/${table}.json`, data);
+      manifest.tables[table].sha256 = sha256(data);
+    }
+    files.set("manifest.json", Buffer.from(JSON.stringify(manifest)));
+    const out = join(dir, `${label}.zip`);
+    await writeFile(out, zipArchive([...files].map(([name, data]) => ({ name, data }))));
+    return out;
+  };
+
+  it("brings an approved carousel, a published template and AI consent in as drafts and nothing", async () => {
+    const version = "9.0.0";
+    const approved = await rewrite("approved", {
+      clients: (r) =>
+        Object.assign(r, { ai_policy: "external_allowed", approved_providers: ["openai"] }),
+      contents: (r) =>
+        Object.assign(r, {
+          status: "approved",
+          approved_version_id: r.current_version_id,
+          template_version: version,
+        }),
+      templates: (r) => Object.assign(r, { status: "published", origin: "system", version }),
+    });
+    const out = await importClientPackage({ db, storage }, approved, {
+      choices: { client: { mode: "new", slug: `rossi-${suffix}-3` }, templates: {} },
+    });
+    ids.imported2 = out.clientId;
+    const [content] = await db.select().from(contents).where(eq(contents.clientId, out.clientId));
+    expect(content).toMatchObject({ status: "draft", approvedVersionId: null });
+    const [tpl] = await db
+      .select()
+      .from(templates)
+      .where(and(eq(templates.key, tplKey), eq(templates.clientId, out.clientId)));
+    expect(tpl).toMatchObject({ status: "draft", origin: "agency", publishedAt: null });
+    const [client] = await db.select().from(clients).where(eq(clients.id, out.clientId));
+    expect(client!.approvedProviders).toEqual([]);
+    // The package asked for external_allowed: a new client never gets more than the installation gives.
+    const [setting] = await db
+      .select({ value: appSettings.value })
+      .from(appSettings)
+      .where(eq(appSettings.key, "ai.default_policy"));
+    expect(client!.aiPolicy).toBe(
+      stricterAiPolicy(
+        "external_allowed",
+        typeof setting?.value === "string" ? setting.value : "external_allowed",
+      ),
+    );
+    expect(client!.sendableAssets).toEqual([
+      "brand_assets",
+      "client_photos",
+      "audit_screenshots",
+      "documents",
+      "brand_texts",
+    ]);
+  });
+
+  it("gives a private template a free version when another client's holds it", async () => {
+    // The first import left a private 1.0.0 of this key with another client.
+    const out = await importClientPackage({ db, storage }, pkgFile, {
+      choices: { client: { mode: "new", slug: `rossi-${suffix}-4` }, templates: {} },
+    });
+    ids.imported3 = out.clientId;
+    const [tpl] = await db
+      .select()
+      .from(templates)
+      .where(and(eq(templates.key, tplKey), eq(templates.clientId, out.clientId)));
+    expect(tpl).toMatchObject({ version: "1.0.0-import.1", status: "draft" });
+    // The stored manifest is left as it came: the catalog parses it with the strict x.y.z rule.
+    expect(tpl!.manifest).toEqual({});
+    const [content] = await db.select().from(contents).where(eq(contents.clientId, out.clientId));
+    expect(content!.templateVersion).toBe("1.0.0-import.1");
+    // The version a carousel was made with is also in its versions' meta; export prefers it.
+    const [version] = await db
+      .select()
+      .from(contentVersions)
+      .where(eq(contentVersions.contentId, content!.id));
+    expect(version!.meta).toMatchObject({ templateKey: tplKey, templateVersion: "1.0.0-import.1" });
+  });
+
+  it("keeps the proposals whose author is here and leaves out the one whose author is not", async () => {
+    const out = await importClientPackage({ db, storage }, pkgFile, {
+      choices: { client: { mode: "new", slug: `rossi-${suffix}-5` }, templates: {} },
+    });
+    ids.imported4 = out.clientId;
+    const rows = await db
+      .select()
+      .from(brandIdentityProposals)
+      .where(eq(brandIdentityProposals.clientId, out.clientId));
+    expect(rows.map((r) => r.title).sort()).toEqual(["by Ada", "by an agent"]);
+    expect(rows.find((r) => r.title === "by Ada")!.authorUserId).toBe(ids.here);
+    expect(out.skipped).toEqual({ brand_identity_proposals: 1 });
+  });
+
+  it("blocks a package that points rows at a client that is not in it", async () => {
+    const hostile = await rewrite("hostile", { contents: (r) => (r.client_id = randomUUID()) });
+    expect((await verifyClientPackage(db, hostile, 1)).problems).toEqual(["unsafe"]);
+  });
+
+  it("replaces an existing client in place, keeping its id, slug, own templates and AI consent", async () => {
+    await db
+      .update(clients)
+      .set({ aiPolicy: "local_only", approvedProviders: [], sendableAssets: ["brand_texts"] })
+      .where(eq(clients.id, ids.client!));
     const out = await importClientPackage({ db, storage }, pkgFile, {
       choices: { client: { mode: "replace" }, templates: {} },
       replaceClientId: ids.client!,
@@ -231,6 +394,71 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       .from(templates)
       .where(and(eq(templates.key, tplKey), eq(templates.version, "0.9.0")));
     expect(old!.clientId).toBe(ids.client);
+    const [kept] = await db.select().from(clients).where(eq(clients.id, ids.client!));
+    expect(kept).toMatchObject({
+      aiPolicy: "local_only",
+      approvedProviders: [],
+      sendableAssets: ["brand_texts"],
+    });
+  });
+
+  /** The package rewritten entry by entry (the zip builder lets an entry lie about its size). */
+  const repack = async (
+    mutate: (name: string, data: Buffer) => Partial<ZipEntrySpec>,
+    label: string,
+  ) => {
+    const src = await openClientPackage(pkgFile);
+    const entries: ZipEntrySpec[] = [];
+    for (const name of src.names()) {
+      const chunks: Buffer[] = [];
+      for await (const c of await src.stream(name)) chunks.push(c as Buffer);
+      const data = Buffer.concat(chunks);
+      entries.push({ name, data, ...mutate(name, data) });
+    }
+    src.close();
+    const out = join(dir, `${label}.zip`);
+    await writeFile(out, zipArchive(entries));
+    return out;
+  };
+
+  it("fails the import when a file does not match its checksum and leaves no stored key", async () => {
+    const stored: string[] = [];
+    const recording = new Proxy(storage, {
+      get(target, prop) {
+        if (prop === "put")
+          return (key: string, ...rest: unknown[]) => {
+            stored.push(key);
+            return (target.put as (...a: unknown[]) => Promise<void>)(key, ...rest);
+          };
+        const v = Reflect.get(target, prop) as unknown;
+        return typeof v === "function" ? v.bind(target) : v;
+      },
+    });
+    const bad = await repack(
+      (name, data) => (name.startsWith("files/") ? { data: Buffer.alloc(data.length, 0x41) } : {}),
+      "tampered",
+    );
+    const slug = `rossi-${suffix}-bad`;
+    await expect(
+      importClientPackage({ db, storage: recording }, bad, {
+        choices: {
+          client: { mode: "new", slug },
+          templates: { [`${tplKey}@1.0.0`]: "importDraft" },
+        },
+      }),
+    ).rejects.toBeInstanceOf(UnsafePackageError);
+    expect(stored.length).toBeGreaterThan(0);
+    for (const key of stored) expect(await storage.exists(key)).toBe(false);
+    expect(await db.select().from(clients).where(eq(clients.slug, slug))).toEqual([]);
+  });
+
+  it("verify reports an entry with a lying size as a problem instead of throwing", async () => {
+    const lying = await repack(
+      (name, data) =>
+        name.startsWith("files/") ? { declaredSize: Math.max(1, data.length - 1) } : {},
+      "lying",
+    );
+    expect((await verifyClientPackage(db, lying, 1)).problems).toEqual(["unreadable"]);
   });
 
   it("asks for a choice on every conflict and the exact name to replace", async () => {
@@ -248,7 +476,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
             slug: `rossi-${suffix}`,
             existingId: ids.client!,
             existingName: `Rossi ${suffix}`,
-            proposedSlug: `rossi-${suffix}-3`,
+            proposedSlug: `rossi-${suffix}-free`,
           },
           { kind: "template", key: tplKey, version: "2.0.0", name: "x", existingVersions: [] },
         ],
@@ -266,7 +494,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       confirm(admin, { client: { mode: "new", slug: `rossi-${suffix}` }, templates: {} }),
     ).rejects.toMatchObject({ ref: { key: "clientTransfer.errors.slugTaken" } });
     await expect(
-      confirm(admin, { client: { mode: "new", slug: `rossi-${suffix}-3` }, templates: {} }),
+      confirm(admin, { client: { mode: "new", slug: `rossi-${suffix}-free` }, templates: {} }),
     ).rejects.toMatchObject({ ref: { key: "clientTransfer.errors.unresolvedConflicts" } });
     await expect(
       confirm({ type: "agent", role: "reviewer" }, { client: { mode: "replace" } }),

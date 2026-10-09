@@ -8,10 +8,16 @@ import {
   createFakeTextProvider,
   createMemoryLedger,
   monthKey,
+  type AiLedger,
+  type ImageProvider,
   type Routing,
 } from "../src/index";
 
 const NOW = new Date("2026-10-05T10:00:00Z");
+const setupRouting: Routing = {
+  default: { primary: { provider: "anthropic", model: "claude-opus-5-5" } },
+  image: { primary: { provider: "openai", model: "gpt-image-2" } },
+};
 const schema = z.object({ title: z.string().min(3), slides: z.number().int().min(1) });
 const SECRET = "Rossi client: secret launch of product X";
 
@@ -161,6 +167,70 @@ describe("files that may be sent (external_restricted)", () => {
   });
 });
 
+describe("external_restricted fails closed", () => {
+  const clientId = baseReq.clientId;
+  function gatewayWith(ledger: AiLedger) {
+    const anthropic = createFakeTextProvider("anthropic");
+    const local = createFakeTextProvider("local");
+    const gateway = createAiGateway({
+      ledger,
+      providers: { text: { anthropic, local }, image: {} },
+      routing: {
+        default: { primary: { provider: "anthropic", model: "claude-opus-5-5" } },
+        local: { provider: "local", model: "llama3.1:8b" },
+        image: { primary: { provider: "openai", model: "gpt-image-2" } },
+      },
+      now: () => NOW,
+    });
+    return { gateway, anthropic, local };
+  }
+  const legacy = (extra: Partial<AiLedger> = {}): AiLedger => {
+    const { monthSpendMicroUsd, budgetFor, record } = createMemoryLedger();
+    return { monthSpendMicroUsd, budgetFor, record, ...extra };
+  };
+
+  it("a ledger that cannot say what the Admin approved approves nothing, whatever the request claims", async () => {
+    const { gateway, anthropic } = gatewayWith(legacy());
+    await expect(
+      gateway.generateObject({
+        ...baseReq,
+        clientPolicy: "external_restricted",
+        approvedProviders: ["anthropic"],
+      }),
+    ).rejects.toMatchObject({ code: "policy_blocked" });
+    expect(anthropic.calls).toHaveLength(0);
+  });
+
+  it("a ledger that cannot list sendable kinds keeps files on the local model", async () => {
+    const { gateway, anthropic, local } = gatewayWith(
+      legacy({ approvedProviders: async () => ["anthropic"] }),
+    );
+    local.push({ json: { title: "On site", slides: 3 } });
+    const res = await gateway.generateObject({
+      ...baseReq,
+      clientPolicy: "external_restricted",
+      sends: ["documents"],
+    });
+    expect(res.provider).toBe("local");
+    expect(anthropic.calls).toHaveLength(0);
+  });
+
+  it("no client id means nothing is approved and nothing may be sent", async () => {
+    const ledger = createMemoryLedger();
+    ledger.setApprovedProviders(clientId, ["anthropic"]);
+    const { gateway, anthropic } = gatewayWith(ledger);
+    await expect(
+      gateway.generateObject({
+        ...baseReq,
+        clientId: undefined,
+        clientPolicy: "external_restricted",
+        sends: ["brand_texts"],
+      }),
+    ).rejects.toMatchObject({ code: "policy_blocked" });
+    expect(anthropic.calls).toHaveLength(0);
+  });
+});
+
 describe("structured output", () => {
   it("retries once with the validation error, then succeeds", async () => {
     const { gateway, anthropic, ledger } = setup();
@@ -282,6 +352,20 @@ describe("budget", () => {
     expect(warnings.some((w) => w.msg?.includes("budget"))).toBe(true);
   });
 
+  it("an unpriced model still consumes the budget and gets blocked", async () => {
+    const { gateway, anthropic, ledger } = setup({
+      routing: { default: { primary: { provider: "anthropic", model: "claude-future-9" } } },
+    });
+    ledger.setBudget({ scope: "agency" }, month, { limitMicroUsd: 5_000, warnAtPercent: 70 });
+    anthropic.push({ json: { title: "Hello", slides: 3 } });
+    await gateway.generateObject({ ...baseReq, clientPolicy: "external_allowed" });
+    const err = await gateway
+      .generateObject({ ...baseReq, clientPolicy: "external_allowed" })
+      .catch((e) => e);
+    expect(err.code).toBe("budget_exceeded");
+    expect(anthropic.calls).toHaveLength(1);
+  });
+
   it("blocks at 100% with budget_exceeded", async () => {
     const { gateway, anthropic, ledger } = setup();
     ledger.setBudget({ scope: "agency" }, month, { limitMicroUsd: 500_000, warnAtPercent: 70 });
@@ -359,16 +443,18 @@ describe("ledger rows", () => {
     expect(row.costMicroUsd).toBe(14_000);
   });
 
-  it("flags unknown models as unpriced with cost 0", async () => {
-    const { gateway, anthropic, ledger } = setup({
+  it("charges unknown models at the conservative default and flags them", async () => {
+    const { gateway, anthropic, ledger, warnings } = setup({
       routing: { default: { primary: { provider: "anthropic", model: "claude-future-9" } } },
     });
     anthropic.push({ json: { title: "Hello", slides: 3 } });
     await gateway.generateObject({ ...baseReq, clientPolicy: "external_allowed" });
+    // fake provider usage: 100 in / 50 out -> 100*15 + 50*75 = 5_250 micro-USD
     expect(ledger.entries[0]).toMatchObject({
-      costMicroUsd: 0,
+      costMicroUsd: 5_250,
       inputSummary: expect.objectContaining({ unpriced: true }),
     });
+    expect(warnings.some((w) => w.msg?.includes("price table"))).toBe(true);
   });
 });
 
@@ -393,6 +479,81 @@ describe("images", () => {
         clientPolicy: "local_only",
       }),
     ).rejects.toMatchObject({ code: "policy_blocked" });
+  });
+
+  describe("a run that fails after the provider already charged", () => {
+    const charged = {
+      inputTokens: 100,
+      outputTokens: 1000,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      images: 1,
+    };
+    const req = {
+      prompt: "x",
+      size: { w: 1080, h: 1350 },
+      variants: 1 as const,
+      clientId: baseReq.clientId,
+      clientPolicy: "external_allowed" as const,
+    };
+    const providerWith = (generate: ImageProvider["generate"]): ImageProvider => ({
+      id: "openai",
+      generate,
+      getStatus: async (jobId) => ({ jobId, state: "failed" }),
+    });
+    const run = (generate: ImageProvider["generate"]) => {
+      const ledger = createMemoryLedger();
+      const gateway = createAiGateway({
+        ledger,
+        providers: { text: {}, image: { openai: providerWith(generate) } },
+        routing: { default: setupRouting.default, image: setupRouting.image },
+        now: () => NOW,
+      });
+      return { ledger, gateway };
+    };
+    const spend = (ledger: ReturnType<typeof createMemoryLedger>) =>
+      ledger.monthSpendMicroUsd({ scope: "agency" }, monthKey(NOW));
+    // gpt-image-2: 100 input tokens at 2.5 plus 1000 output tokens at 15 USD per million.
+    const COST = 100 * 2.5 + 1000 * 15;
+
+    it("logs the cost of an error that carries the usage", async () => {
+      const { ledger, gateway } = run(async () => {
+        throw new AiProviderError("invalid_output", "no image data", {
+          provider: "openai",
+          usage: charged,
+        });
+      });
+      await expect(gateway.generateImage(req)).rejects.toMatchObject({ kind: "invalid_output" });
+      expect(ledger.entries[0]).toMatchObject({
+        kind: "image",
+        status: "error",
+        costMicroUsd: COST,
+        tokensIn: 100,
+        tokensOut: 1000,
+        error: expect.stringContaining("invalid_output"),
+      });
+      expect(await spend(ledger)).toBe(COST);
+    });
+
+    it("logs the cost of a job that ends failed with usage", async () => {
+      const { ledger, gateway } = run(async () => ({
+        jobId: "j1",
+        state: "failed" as const,
+        error: "refused after generation",
+        usage: charged,
+      }));
+      await expect(gateway.generateImage(req)).rejects.toBeInstanceOf(AiProviderError);
+      expect(ledger.entries[0]).toMatchObject({ status: "error", costMicroUsd: COST });
+      expect(await spend(ledger)).toBe(COST);
+    });
+
+    it("still logs zero when the provider reported nothing", async () => {
+      const { ledger, gateway } = run(async () => {
+        throw new AiProviderError("server", "boom", { provider: "openai" });
+      });
+      await expect(gateway.generateImage(req)).rejects.toMatchObject({ kind: "server" });
+      expect(ledger.entries[0]).toMatchObject({ status: "error", costMicroUsd: 0 });
+    });
   });
 });
 

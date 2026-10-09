@@ -5,6 +5,14 @@ import {
 } from "@modelcontextprotocol/sdk/client/auth.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { ProviderId } from "@forgecy/core";
+import {
+  createHostCheck,
+  createPinnedFetch,
+  GuardedFetchError,
+  guardedFetch,
+  readCapped,
+  type HostCheck,
+} from "@forgecy/core/net-guard";
 import { AiProviderError, classifyError } from "../errors";
 import type { GeneratedImage, ImageSize } from "../types";
 
@@ -192,26 +200,46 @@ export function nearestOption(options: readonly string[], size: ImageSize): stri
 
 const MAX_IMAGE_BYTES = 30 * 1024 * 1024;
 
-/** Download the generated images from the URLs a tool returned (images only, size capped). */
+// Image URLs come out of a remote MCP server's tool result: public hosts only, never
+// FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS (that switch is about prospect intranets).
+let publicOnly: { hostCheck: HostCheck; fetch: typeof fetch } | undefined;
+const publicDefaults = () =>
+  (publicOnly ??= { hostCheck: createHostCheck(), fetch: createPinnedFetch() });
+
+/**
+ * Download the generated images from the URLs a tool returned. Every redirect hop is
+ * host-checked and the connection is DNS-pinned (see @forgecy/core/net-guard); only
+ * images up to 30 MiB are kept. A URL that is refused or too big is skipped.
+ */
 export async function downloadImages(
   urls: readonly string[],
   provider: ProviderId,
   timeoutMs: number,
-  doFetch: typeof fetch = fetch,
+  doFetch?: typeof fetch,
+  hostCheck?: HostCheck,
 ): Promise<GeneratedImage[]> {
   const images: GeneratedImage[] = [];
   for (const url of urls) {
     let res: Response;
     try {
-      res = await doFetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+      ({ res } = await guardedFetch(url, {
+        hostCheck: hostCheck ?? publicDefaults().hostCheck,
+        fetchImpl: doFetch ?? publicDefaults().fetch,
+        timeoutMs,
+        maxHops: 3,
+      }));
     } catch (err) {
+      if (err instanceof GuardedFetchError) continue; // a tool result must not steer us at the local network
       throw classifyError(err, provider);
     }
     const type = res.headers.get("content-type")?.split(";")[0]?.trim() ?? "";
-    if (!res.ok || !type.startsWith("image/")) continue;
-    const buf = new Uint8Array(await res.arrayBuffer());
-    if (buf.byteLength > 0 && buf.byteLength <= MAX_IMAGE_BYTES)
-      images.push({ data: buf, mimeType: type });
+    const declared = Number(res.headers.get("content-length") ?? 0);
+    if (!res.ok || !type.startsWith("image/") || declared > MAX_IMAGE_BYTES) {
+      await res.body?.cancel().catch(() => undefined);
+      continue;
+    }
+    const { bytes, truncated } = await readCapped(res, MAX_IMAGE_BYTES);
+    if (!truncated && bytes.byteLength > 0) images.push({ data: bytes, mimeType: type });
   }
   return images;
 }

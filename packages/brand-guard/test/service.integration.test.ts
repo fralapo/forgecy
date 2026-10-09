@@ -123,6 +123,7 @@ describe.skipIf(!dbUrl)("brand guard service (integration)", () => {
     });
     expect(result.report.findings.map((f) => f.check).sort()).toEqual([
       "forbidden_word",
+      "render_unverified",
       "spelling",
     ]);
     expect(result.report.brandIdentityVersionNumber).toBe(1);
@@ -161,7 +162,7 @@ describe.skipIf(!dbUrl)("brand guard service (integration)", () => {
       status: "ignored",
       ignored: { by: anna.id, reason: "false_positive" },
     });
-    expect(after.report.open).toEqual({ error: 1, warning: 0, note: 0 });
+    expect(after.report.open).toEqual({ error: 1, warning: 1, note: 0 });
 
     await reopenFinding(db, anna, { clientId, subject, findingKey: warning.key });
     const reopened = (await getBrandCheck(db, anna, { clientId, subject }))!;

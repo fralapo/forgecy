@@ -7,7 +7,7 @@
 import { createPinnedFetch, CrawlError, createHostCheck } from "@forgecy/audit";
 import { crawlSite } from "@forgecy/audit/crawl/crawler";
 import { auditUserAgent, createHtmlFetcher } from "@forgecy/audit/crawl/fetcher";
-import { AUDIT_LIMITS, type MessageRef } from "@forgecy/core";
+import { AUDIT_LIMITS, loadToolEnv, type MessageRef } from "@forgecy/core";
 import { and, brandSources, eq } from "@forgecy/db";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import type { ImportContext, ImportDeps, ImportResult } from "./import/run";
@@ -45,13 +45,16 @@ export async function runWebsiteCrawl(
   if (!source || source.removedAt || !source.url)
     throw new Error("Website source not found, removed, or has no address");
 
+  // Read the configuration first: a bad value must fail the job before the source is marked
+  // "extracting", or the source would stay stuck in that state.
+  const allowPrivate = loadToolEnv().FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS;
+
   await updateSourceStatus(db, source.id, {
     status: "extracting",
     ...detail([msg("brand.import.status.reading")]),
   });
 
   const userAgent = auditUserAgent();
-  const allowPrivate = process.env.FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS === "true";
   const hostCheck = createHostCheck({ allowPrivate });
   const fetcher = createHtmlFetcher({ userAgent, hostCheck, allowPrivate });
 

@@ -57,12 +57,13 @@ export interface AiLedger {
   record(entry: LedgerEntry): Promise<void>;
   /**
    * external_restricted: the providers an Admin approved for this client (page 61).
-   * Optional so older test ledgers keep working; the gateway then uses the request's list.
+   * Optional only for partial test doubles; the gateway treats a missing method as "none approved".
    */
   approvedProviders?(clientId: string): Promise<readonly ProviderId[]>;
   /**
    * external_restricted: the kinds of files and texts this client may send to its
-   * approved providers (page 61). Optional: without it every kind is allowed.
+   * approved providers (page 61). Optional only for partial test doubles; the gateway treats a
+   * missing method as "no kind may be sent".
    */
   sendableAssets?(clientId: string): Promise<readonly SendableAssetType[]>;
   /** Approved memories of a client for an agent, added to its prompt (spec page 56). */

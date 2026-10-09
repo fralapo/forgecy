@@ -7,17 +7,18 @@ services:
     image: pgvector/pgvector:pg17
     environment:
       POSTGRES_USER: forgecy
-      POSTGRES_PASSWORD: forgecy
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forgecy}
       POSTGRES_DB: forgecy
-    ports: ["5432:5432"]
+    ports: ["127.0.0.1:5432:5432"]
     volumes: ["./data/dev-db:/var/lib/postgresql/data"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U forgecy -d forgecy"]
+      # Over TCP: a socket check passes while first init runs a temporary socket-only server.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U forgecy -d forgecy"]
       interval: 5s
       retries: 20
   redis:
     image: redis:8-alpine
-    ports: ["6379:6379"]
+    ports: ["127.0.0.1:6379:6379"]
   mailpit:
     image: axllent/mailpit:latest
-    ports: ["8025:8025", "1025:1025"]
+    ports: ["127.0.0.1:8025:8025", "127.0.0.1:1025:1025"]

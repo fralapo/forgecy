@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { loadToolEnv } from "@forgecy/core";
 import { type Browser, chromium } from "playwright-core";
 
 /**
@@ -20,7 +21,7 @@ const ARGS = [
 
 /** Explicit binary (FORGECY_CHROMIUM_PATH), else the browser Playwright installed (Docker image). */
 export function chromiumExecutable(): string | undefined {
-  const p = process.env.FORGECY_CHROMIUM_PATH;
+  const p = loadToolEnv().FORGECY_CHROMIUM_PATH;
   return p && existsSync(p) ? p : undefined;
 }
 

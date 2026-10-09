@@ -1,7 +1,8 @@
 # 0008 · Choice of AI service and model in Settings
 
-- Status: accepted
+- Status: accepted; "Keys stay in `.env`" is superseded by 0016 (keys saved in Settings)
 - Date: 2026-10-06
+- Update 2026-10-08: Figma Weave was removed (see 0007-image-subscriptions-over-mcp); the form no longer offers it.
 
 ## Context
 

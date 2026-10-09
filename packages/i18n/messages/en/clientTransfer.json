@@ -112,7 +112,9 @@
       "format": "This package uses a format this version does not know.",
       "newerVersion": "The package comes from a newer Forgecy. Update Forgecy before importing this package.",
       "checksum": "Some files in the package do not match their checksum: the package is damaged. Export it again.",
-      "unknownTable": "The package contains data this version of Forgecy does not know. Update Forgecy before importing it."
+      "unknownTable": "The package contains data this version of Forgecy does not know. Update Forgecy before importing it.",
+      "unsafe": "The package refers to data or files that do not belong to the client it describes, so it cannot be imported.",
+      "incompleteArea": "The package refers to data that is not included, because some areas were left out of the export. Export it again including all areas."
     },
     "report": {
       "title": "Package",
@@ -143,7 +145,7 @@
       "create": "A new client “{name}” is created at /clients/{slug}.",
       "replace": "The current data of {name} ({versions, plural, one {# Brand Identity version} other {# Brand Identity versions}}, {carousels, plural, one {# carousel} other {# carousels}}, {audits, plural, one {# audit} other {# audits}}) will be replaced by the package’s. Before the import Forgecy creates a backup of the database.",
       "templatesDraft": "{count, plural, one {# template is imported as a new version in Draft.} other {# templates are imported as new versions in Draft.}}",
-      "states": "Versions keep their status and history; the published version stays published. Carousels in review go back to Draft.",
+      "states": "Content never arrives approved. Carousels, audit reports and Brand Book exports come back as Drafts, images as unapproved drafts and approved products as proposed (the other product statuses are kept), to be reviewed and approved again here; approvals, export records and who decided what are not imported. Audits go back to review (delivered ones are archived), AI memories go back to candidates, automations are paused, and Brand Identity versions that were approved or published are archived (restore one as a new draft). Templates arrive as Drafts of this client. AI provider approvals are not imported: a new client gets the stricter of the package's AI policy and this installation's default, and a replaced client keeps its own AI settings. Strategy, plans, competitor lists and product images keep their status but not who decided or accepted them.",
       "typeName": "Type “{name}” to confirm",
       "submit": "Import client",
       "back": "Back",

@@ -35,7 +35,7 @@ export async function runReportExport(
   if (!ctx.row.createdBy) throw new UnrecoverableError("Export without a person who requested it");
   const { audit, client } = await loadAudit(db, report.auditId);
 
-  const pkg = await dbTemplateSource({ db, storage }).get(REPORT_TEMPLATE_KEY);
+  const pkg = await dbTemplateSource({ db, storage, clientId: client.id }).get(REPORT_TEMPLATE_KEY);
   if (!pkg) throw needsAttention("audit.jobErrors.templateMissing");
   await ctx.progress(5);
 

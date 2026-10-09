@@ -63,8 +63,11 @@ export const AGENT_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
 const ADMIN_SET: ReadonlySet<Permission> = new Set<Permission>(adminPermissions);
 
 /**
- * `clientId` is accepted now so call sites are already scoped; per-client grants
- * (permission_grants) arrive in v1 without changing the signature.
+ * Single-tenant by design: every active human may use every client, so `clientId` is
+ * accepted but does not change the answer. Do not rely on it for isolation. Per-client grants
+ * (a `permission_grants` table and an assignment UI) are a product decision; when they land they
+ * extend this function without changing its signature, and the tests in core.test.ts
+ * ("a clientId never widens...") must keep passing.
  */
 export function can(actor: Actor, permission: Permission, _clientId?: string): boolean {
   if (actor.type === "agent") return AGENT_PERMISSIONS.has(permission);

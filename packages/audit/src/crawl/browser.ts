@@ -1,9 +1,11 @@
 /// <reference lib="dom" />
 // The functions passed to page.evaluate run in the browser: they need DOM types in any consumer.
 import { existsSync } from "node:fs";
-import type { Browser, BrowserContext, Page } from "playwright-core";
+import type { Browser, BrowserContext, Page, Request } from "playwright-core";
 import { CrawlError, crawlError, describeFetchError } from "../errors";
-import { resolvePinnedAddress, type HostCheck } from "../url";
+import { loadToolEnv } from "@forgecy/core";
+import { createHostCheck, resolvePublicAddress } from "@forgecy/core/net-guard";
+import type { HostCheck } from "../url";
 import { extractFromHtml, type FetchedPage, type PageFetcher } from "./fetcher";
 
 const DESKTOP = { width: 1366, height: 900 };
@@ -16,7 +18,7 @@ const MAX_SCREENSHOT_HEIGHT = 6000;
  * (PLAYWRIGHT_BROWSERS_PATH, as in the Playwright worker image).
  */
 export function resolveChromiumPath(env: NodeJS.ProcessEnv = process.env): string | undefined {
-  const explicit = env.FORGECY_CHROMIUM_PATH;
+  const explicit = loadToolEnv(env).FORGECY_CHROMIUM_PATH;
   if (explicit) return existsSync(explicit) ? explicit : undefined;
   const base = env.PLAYWRIGHT_BROWSERS_PATH;
   if (base && existsSync(`${base}/chromium`)) return `${base}/chromium`;
@@ -73,31 +75,69 @@ function measureStyles() {
   };
 }
 
-/** Playwright fetcher: desktop and mobile screenshots plus computed colors and fonts. */
+/**
+ * Chromium `--host-resolver-rules` that pin the crawl's root host to the address we
+ * validated, closing the rebinding window between our check and Chromium's own
+ * lookup. FAILS CLOSED: if the root host is, or resolves to, a private address the
+ * browser is not launched at all (it used to launch unpinned, i.e. unprotected).
+ */
+export async function pinRootHost(
+  rootUrl: string | undefined,
+  allowPrivate: boolean | undefined,
+): Promise<string[]> {
+  if (!rootUrl || allowPrivate) return [];
+  let host: string;
+  try {
+    host = new URL(rootUrl).hostname;
+  } catch {
+    return []; // crawlSite's own validation rejects the malformed URL
+  }
+  const pinned = await resolvePublicAddress(host);
+  if (pinned.ok) {
+    const target = pinned.address.includes(":") ? `[${pinned.address}]` : pinned.address;
+    return [`MAP ${host} ${target}`];
+  }
+  if (pinned.reason === "private")
+    throw crawlError("AUD-HOST-BLOCKED", "audit.stored.crawl.hostLocal", { host });
+  throw crawlError("AUD-BROWSER-UNAVAILABLE", "audit.stored.crawl.browserUnavailable", {
+    detail: "host does not resolve",
+  });
+}
+
+/** Every request the page makes (images, scripts, XHR, frames) must pass the host check; inline schemes cannot reach the network. */
+export async function allowBrowserRequest(url: string, hostCheck: HostCheck): Promise<boolean> {
+  if (/^(data|blob|about):/i.test(url)) return true;
+  return hostCheck(url);
+}
+
+/** Every URL a request went through, oldest first: its redirect hops, then itself. */
+export function redirectChain(request: Request): string[] {
+  const urls: string[] = [];
+  for (let r: Request | null = request; r; r = r.redirectedFrom()) urls.unshift(r.url());
+  return urls;
+}
+
+/**
+ * Playwright fetcher: desktop and mobile screenshots plus computed colors and fonts.
+ * Its host check is built here and fails closed (Chromium resolves names itself, so a
+ * host Node cannot resolve is refused): no caller can hand it a weaker one.
+ */
 export async function createBrowserFetcher(options: {
   userAgent: string;
-  hostCheck: HostCheck;
   /** The crawl's starting URL: its host's DNS is pinned for this browser instance,
    * closing the rebinding window between crawlSite's own check and Chromium's real
-   * connection. Omit, or allowPrivate, to launch without pinning (same as before). */
-  rootUrl?: string;
+   * connection. Required so a caller cannot launch unpinned by omission; the only
+   * unpinned launch is an explicit allowPrivate. */
+  rootUrl: string;
   allowPrivate?: boolean;
   executablePath?: string;
 }): Promise<PageFetcher> {
   const { chromium } = await import("playwright-core");
-  const resolverRules: string[] = [];
-  if (options.rootUrl) {
-    let host: string | undefined;
-    try {
-      host = new URL(options.rootUrl).hostname;
-    } catch {
-      // Let crawlSite's own validation reject the malformed URL.
-    }
-    if (host) {
-      const pinned = await resolvePinnedAddress(host, { allowPrivate: options.allowPrivate });
-      if (pinned) resolverRules.push(`MAP ${host} ${pinned}`);
-    }
-  }
+  const hostCheck = createHostCheck({
+    ...(options.allowPrivate ? { allowPrivate: true } : {}),
+    failClosed: true,
+  });
+  const resolverRules = await pinRootHost(options.rootUrl, options.allowPrivate);
   let browser: Browser;
   try {
     browser = await chromium.launch({
@@ -127,13 +167,21 @@ export async function createBrowserFetcher(options: {
     // tsx/esbuild wrap named functions in a `__name` helper that does not exist in the
     // page: functions passed to page.evaluate would throw "__name is not defined".
     await ctx.addInitScript("globalThis.__name = globalThis.__name || ((fn) => fn);");
-    // Every navigation (redirects and frames included) goes through the host check.
+    // Every request goes through the host check, not only navigations: page scripts
+    // could otherwise read the local network (fetch/XHR/img) and put it in the DOM.
+    // Residual risk: hosts other than the root are looked up here and again by Chromium.
     await ctx.route("**/*", async (route) => {
       const req = route.request();
       if (req.resourceType() === "media") return route.abort();
-      if (req.isNavigationRequest() && !(await options.hostCheck(req.url())))
-        return route.abort("blockedbyclient");
+      if (!(await allowBrowserRequest(req.url(), hostCheck))) return route.abort("blockedbyclient");
       return route.continue();
+    });
+    // ctx.route does not see WebSockets: without this, page script could open
+    // ws://127.0.0.1:... and talk to a local service. Same host check, on the http(s) twin.
+    await ctx.routeWebSocket(/.*/, async (ws) => {
+      if (await allowBrowserRequest(ws.url().replace(/^ws/i, "http"), hostCheck))
+        ws.connectToServer();
+      else await ws.close();
     });
     return ctx;
   }
@@ -155,14 +203,33 @@ export async function createBrowserFetcher(options: {
     });
   }
 
+  const blocked = (url: string) =>
+    crawlError("AUD-HOST-BLOCKED", "audit.stored.crawl.addressLocal", { url });
+
+  /**
+   * ctx.route() is only called for the FIRST URL of a redirect chain: Chromium follows
+   * the hops (navigations and subresources alike) without asking. So every hop is checked
+   * after the fact, and a page that touched a disallowed host is discarded whole (no
+   * text, title, links or screenshot). By then the request to that host HAS been sent:
+   * this keeps its answer out of the audit, it does not stop the request.
+   */
+  function watchRedirectHops(page: Page): () => Promise<boolean> {
+    const verdicts: Array<Promise<boolean>> = [];
+    page.on("request", (req) => {
+      if (req.redirectedFrom()) verdicts.push(allowBrowserRequest(req.url(), hostCheck));
+    });
+    return async () => (await Promise.all(verdicts)).every(Boolean);
+  }
+
   async function open(ctx: BrowserContext, url: string, timeoutMs: number) {
     const page = await ctx.newPage();
     page.setDefaultTimeout(timeoutMs);
+    const hopsClean = watchRedirectHops(page);
+    let response: Awaited<ReturnType<Page["goto"]>>;
     try {
-      const response = await page.goto(url, { waitUntil: "load", timeout: timeoutMs });
+      response = await page.goto(url, { waitUntil: "load", timeout: timeoutMs });
       // Give late layout and web fonts a moment, without waiting for endless trackers.
       await page.waitForLoadState("networkidle", { timeout: 3000 }).catch(() => undefined);
-      return { page, response };
     } catch (err) {
       await page.close().catch(() => undefined);
       const message = err instanceof Error ? err.message : String(err);
@@ -174,12 +241,21 @@ export async function createBrowserFetcher(options: {
         });
       throw new CrawlError("SOURCE-UNAVAILABLE", describeFetchError(err));
     }
+    // The navigation's own chain, then where the page ended up (a script may have moved it).
+    const landed = [...(response ? redirectChain(response.request()) : []), page.url()];
+    for (const hop of landed) {
+      if (!(await allowBrowserRequest(hop, hostCheck))) {
+        await page.close().catch(() => undefined);
+        throw blocked(hop);
+      }
+    }
+    return { page, response, hopsClean };
   }
 
   return {
     mode: "browser",
     async fetchPage(url, { timeoutMs, screenshots }): Promise<FetchedPage> {
-      const { page, response } = await open(desktop, url, timeoutMs);
+      const { page, response, hopsClean } = await open(desktop, url, timeoutMs);
       try {
         const finalUrl = page.url();
         const html = await page.content();
@@ -191,9 +267,12 @@ export async function createBrowserFetcher(options: {
           const m = await open(mobile, finalUrl, timeoutMs).catch(() => null);
           if (m) {
             mobileShot = await screenshot(m.page).catch(() => undefined);
+            if (!(await m.hopsClean())) mobileShot = undefined;
             await m.page.close().catch(() => undefined);
           }
         }
+        // A subresource (img, iframe, XHR) redirected inward may be in the DOM or the shot.
+        if (!(await hopsClean())) throw blocked(finalUrl);
         return {
           ...extracted,
           url,

@@ -85,7 +85,7 @@ describe("Higgsfield over MCP", () => {
       images: [{ url: "https://cdn.higgsfield.ai/out/1.png" }],
     }));
     const status = await runToEnd(
-      createHiggsfieldImageProvider({ caller, fetch: imageFetch() }),
+      createHiggsfieldImageProvider({ caller, fetch: imageFetch(), hostCheck: async () => true }),
       "flux_2",
     );
     expect(caller.calls[0]).toEqual({
@@ -116,7 +116,7 @@ describe("Higgsfield over MCP", () => {
       },
     );
     const status = await runToEnd(
-      createHiggsfieldImageProvider({ caller, fetch: imageFetch() }),
+      createHiggsfieldImageProvider({ caller, fetch: imageFetch(), hostCheck: async () => true }),
       "",
     );
     expect(caller.calls[0]!.args).not.toHaveProperty("model");

@@ -1,4 +1,5 @@
 import yauzl from "yauzl";
+import { validateZipParts, ZipLimitError } from "@forgecy/files";
 import { ImportError, importError } from "../import/errors";
 import type { MessageKey, MessageValues } from "@forgecy/i18n";
 import { IMPORT_LIMITS } from "../import/limits";
@@ -63,6 +64,9 @@ function open(source: string | Buffer): Promise<yauzl.ZipFile> {
     else yauzl.fromBuffer(source, opts, cb);
   });
 }
+
+/** An XLSX or DOCX has a few dozen parts; 5,000 is generous. */
+const OFFICE_MAX_ENTRIES = 5_000;
 
 const tooLarge = (key: MessageKey, values?: MessageValues) =>
   importError("IMPORT-TOO-LARGE", key, values);
@@ -180,14 +184,33 @@ function readEntry(zip: yauzl.ZipFile, entry: yauzl.Entry, cap: number): Promise
 }
 
 /**
- * Office files (XLSX, DOCX) are ZIPs: check them with the same guard before handing
- * them to a parser, so a crafted spreadsheet cannot exhaust memory.
+ * Office files (XLSX, DOCX) are ZIPs: before a parser decompresses anything, every part it
+ * can ask for (the XML and relationship parts) is inflated once through the shared guarded
+ * reader (counted and dropped, never kept), counting the bytes really produced (never the
+ * declared sizes). Each part is bounded by `maxPartBytes` and all parts together by the
+ * higher `maxTotalBytes`, so one big pivot cache is fine but a single oversized part, a
+ * package past the ceiling, a ZIP that lies about its sizes, overlaps its entries or is a
+ * decompression bomb all stop at the budget.
+ * Media and other parts are never read by these parsers, so they are not inflated.
  */
-export async function assertSafeOfficeFile(data: Buffer, name: string): Promise<void> {
-  await readZip(data, {
-    label: name,
-    maxEntries: 5_000,
-    maxUncompressedBytes: IMPORT_LIMITS.officeUncompressedBytes,
-    maxEntryRatio: 1_000,
-  });
+export async function assertSafeOfficeFile(
+  data: Buffer,
+  name: string,
+  limits: { maxPartBytes?: number; maxTotalBytes?: number } = {},
+): Promise<void> {
+  const label = { named: "yes", name };
+  try {
+    await validateZipParts(data, {
+      select: (part) => /\.(xml|rels)$/i.test(part),
+      maxEntries: OFFICE_MAX_ENTRIES,
+      maxEntryBytes: limits.maxPartBytes ?? IMPORT_LIMITS.officePartBytes,
+      maxTotalBytes: limits.maxTotalBytes ?? IMPORT_LIMITS.officeTotalBytes,
+    });
+  } catch (err) {
+    if (err instanceof ZipLimitError)
+      throw err.reason === "entries"
+        ? tooLarge("products.errors.zipTooManyEntries", { ...label, max: OFFICE_MAX_ENTRIES })
+        : tooLarge("products.errors.zipTooLargeUncompressed", label);
+    throw importError("IMPORT-INVALID", "products.errors.zipDamaged", label);
+  }
 }

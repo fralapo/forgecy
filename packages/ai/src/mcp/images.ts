@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { ProviderId } from "@forgecy/core";
+import type { HostCheck } from "@forgecy/core/net-guard";
 import { AiProviderError } from "../errors";
 import type {
   GeneratedImage,
@@ -89,6 +90,7 @@ async function settle(
   result: unknown,
   timeoutMs: number,
   doFetch: typeof fetch | undefined,
+  hostCheck: HostCheck | undefined,
   poll: ((id: string) => Promise<unknown>) | undefined,
 ): Promise<Run> {
   const inline = inlineImages(result);
@@ -102,7 +104,7 @@ async function settle(
   const done = !status || /complet|succe|done|finish|ready/i.test(status);
   const urls = done ? collectUrls(result) : [];
   if (urls.length) {
-    const images = await downloadImages(urls, provider, timeoutMs, doFetch);
+    const images = await downloadImages(urls, provider, timeoutMs, doFetch, hostCheck);
     if (images.length) return { state: "done", images };
   }
   const id = findString(
@@ -113,7 +115,7 @@ async function settle(
   if (id && poll && (!done || (!status && !urls.length)))
     return {
       state: "polling",
-      poll: async () => settle(provider, await poll(id), timeoutMs, doFetch, poll),
+      poll: async () => settle(provider, await poll(id), timeoutMs, doFetch, hostCheck, poll),
     };
   return { state: "failed", error: `${provider} returned no image and no job to follow` };
 }
@@ -140,6 +142,8 @@ function missingTool(provider: ProviderId, wanted: string, tools: McpTool[]): Ai
 export interface HiggsfieldImageOptions {
   caller: McpToolCaller;
   fetch?: typeof fetch;
+  /** Tests only; production uses the public-only check from net-guard. */
+  hostCheck?: HostCheck;
 }
 
 /** Higgsfield's hosted MCP server: `generate_image`, polled with a status tool if async. */
@@ -174,7 +178,9 @@ export function createHiggsfieldImageProvider(opts: HiggsfieldImageOptions): Ima
       const runs: Run[] = [];
       for (let i = 0; i < input.variants; i++) {
         const result = await opts.caller.callTool(tool.name, args);
-        runs.push(await settle("higgsfield", result, input.timeoutMs, opts.fetch, poll));
+        runs.push(
+          await settle("higgsfield", result, input.timeoutMs, opts.fetch, opts.hostCheck, poll),
+        );
       }
       return jobs.start(runs, input.model || "default");
     },

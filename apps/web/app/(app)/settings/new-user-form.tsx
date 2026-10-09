@@ -4,7 +4,7 @@ import { Button, Input, Label } from "@forgecy/ui";
 import { UserPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
-import { PASSWORD_MIN } from "@/lib/password";
+import { PASSWORD_MAX, PASSWORD_MIN } from "@/lib/password";
 import { createUserAction, type NewUserState } from "./actions";
 
 export function NewUserForm() {
@@ -13,12 +13,8 @@ export function NewUserForm() {
   return (
     <form action={action} className="mt-4 space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="user-name">{t("name")}</Label>
-        <Input id="user-name" name="name" required />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="user-email">{t("email")}</Label>
-        <Input id="user-email" name="email" type="email" required />
+        <Label htmlFor="user-username">{t("username")}</Label>
+        <Input id="user-username" name="username" autoComplete="off" required />
       </div>
       <div className="space-y-2">
         <Label htmlFor="user-password">{t("password")}</Label>
@@ -27,6 +23,7 @@ export function NewUserForm() {
           name="password"
           type="password"
           minLength={PASSWORD_MIN}
+          maxLength={PASSWORD_MAX}
           autoComplete="new-password"
           required
         />

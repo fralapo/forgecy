@@ -317,7 +317,7 @@ async function expandArchive(run: Run, archive: ImportFileRow) {
         const needsInspect = sniff.kind !== "image";
         const inspection = needsInspect
           ? await inspectFile(sniff.format, name, { data })
-          : { valid: true, meta: {} as FileMeta, summary: "Valid" };
+          : { valid: true, meta: {} as FileMeta, summary: englishMessage("products.files.valid") };
         const { key, sha256 } = await storeBuffer(storage, {
           clientId: run.client.id,
           data,

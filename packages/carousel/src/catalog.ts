@@ -1,5 +1,15 @@
 import { type Actor, assertCan } from "@forgecy/core";
-import { type Database, and, desc, eq, inArray, recordAuditEvent, templates } from "@forgecy/db";
+import {
+  type Database,
+  and,
+  desc,
+  eq,
+  inArray,
+  isNull,
+  or,
+  recordAuditEvent,
+  templates,
+} from "@forgecy/db";
 import { type StorageDriver, contentKey, sha256 } from "@forgecy/files";
 import { localizedError } from "@forgecy/i18n";
 import { type Zippable, zipSync } from "fflate";
@@ -46,11 +56,32 @@ export function isPublishable(row: Pick<TemplateRow, "validation">): boolean {
   return v.ok && v.rendered;
 }
 
-/** "1.10.0" > "1.9.3" */
+/**
+ * "1.10.0" > "1.9.3"; a prerelease ("1.0.0-import.1", what an import gives a template whose
+ * version is taken) is older than its release and its identifiers compare as in semver.
+ */
 export function compareVersions(a: string, b: string): number {
-  const pa = a.split(".").map(Number);
-  const pb = b.split(".").map(Number);
+  const [coreA = "", preA] = a.split(/-(.*)/s);
+  const [coreB = "", preB] = b.split(/-(.*)/s);
+  const pa = coreA.split(".").map(Number);
+  const pb = coreB.split(".").map(Number);
   for (let i = 0; i < 3; i++) if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pa[i] ?? 0) - (pb[i] ?? 0);
+  if (preA === undefined || preB === undefined)
+    return preA === preB ? 0 : preA === undefined ? 1 : -1;
+  const ia = preA.split(".");
+  const ib = preB.split(".");
+  for (let i = 0; i < Math.max(ia.length, ib.length); i++) {
+    const x = ia[i];
+    const y = ib[i];
+    if (x === undefined) return -1;
+    if (y === undefined) return 1;
+    const nx = /^\d+$/.test(x);
+    const ny = /^\d+$/.test(y);
+    if (nx && ny) {
+      if (Number(x) !== Number(y)) return Number(x) - Number(y);
+    } else if (nx !== ny) return nx ? -1 : 1;
+    else if (x !== y) return x < y ? -1 : 1;
+  }
   return 0;
 }
 
@@ -245,21 +276,35 @@ export async function loadTemplatePackage(
   const bytes = new Uint8Array(Buffer.concat(chunks));
   if (sha256(bytes) !== row.packageSha256)
     throw localizedError("conflict", "templates.errors.packageAltered", { key: row.packageKey });
-  const pkg = packageFromFiles(unzipTemplatePackage(bytes));
+  const pkg = packageFromFiles(await unzipTemplatePackage(bytes));
   if (cache.size >= 32) cache.delete(cache.keys().next().value!);
   cache.set(row.packageSha256, pkg);
   return pkg;
 }
 
+/** Agency templates (no client) and the client's own; another client's private template never. */
+export function templatesVisibleTo<T extends { clientId: string | null }>(
+  rows: readonly T[],
+  clientId: string | null,
+): T[] {
+  return rows.filter((r) => r.clientId === null || r.clientId === clientId);
+}
+
 /**
  * Templates for exports and editors: without a version, the newest published one;
  * with a version (pinned by a carousel), that version as long as it was published
- * (archived versions keep exporting the carousels that use them).
+ * (archived versions keep exporting the carousels that use them). Only agency templates and
+ * those of `clientId` are served (null: agency templates only): a key and version written in
+ * a row never reaches another client's private template.
  */
-export function dbTemplateSource(deps: { db: Database; storage: StorageDriver }): TemplateSource {
+export function dbTemplateSource(deps: {
+  db: Database;
+  storage: StorageDriver;
+  clientId: string | null;
+}): TemplateSource {
   return {
     async get(key, version) {
-      const rows = await deps.db
+      const found = await deps.db
         .select()
         .from(templates)
         .where(
@@ -267,8 +312,13 @@ export function dbTemplateSource(deps: { db: Database; storage: StorageDriver })
             eq(templates.key, key),
             version ? eq(templates.version, version) : undefined,
             inArray(templates.status, version ? ["published", "archived"] : ["published"]),
+            or(
+              isNull(templates.clientId),
+              deps.clientId ? eq(templates.clientId, deps.clientId) : undefined,
+            ),
           ),
         );
+      const rows = templatesVisibleTo(found, deps.clientId);
       const row = rows.sort((a, b) => compareVersions(b.version, a.version))[0];
       return row ? loadTemplatePackage(deps.storage, row) : undefined;
     },

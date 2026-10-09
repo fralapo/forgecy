@@ -1,5 +1,8 @@
 import {
   auditChannels,
+  auditSourceKinds,
+  auditSourceMethods,
+  auditSourceProviders,
   auditStatuses,
   competitorStatuses,
   findingAreas,
@@ -243,11 +246,11 @@ export const auditSources = pgTable(
       onDelete: "cascade",
     }),
     channel: auditChannelEnum("channel").notNull(),
-    kind: text("kind", { enum: ["page", "screenshot", "file", "manual"] }).notNull(),
+    kind: text("kind", { enum: auditSourceKinds }).notNull(),
     method: text("method", {
-      enum: ["public_page", "screenshot", "manual_import", "manual", "ai_inference"],
+      enum: auditSourceMethods,
     }).notNull(),
-    providedBy: text("provided_by", { enum: ["crawl", "upload", "manual"] }).notNull(),
+    providedBy: text("provided_by", { enum: auditSourceProviders }).notNull(),
     status: sourceStatusEnum("status").notNull().default("collected"),
     url: text("url"),
     title: text("title"),

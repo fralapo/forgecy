@@ -1,38 +1,74 @@
 /**
  * Forgecy CLI: one entry point for the self-hosted install.
- *   pnpm forgecy <start|stop|migrate|seed|backup|restore|upgrade|health> [options]
+ *   pnpm forgecy <init|start|stop|migrate|seed|backup|restore|upgrade|health> [options]
  */
+import "./lib/load-env";
+import { existsSync, readFileSync } from "node:fs";
 import { backup, restore } from "./lib/backup";
-import { compose, run } from "./lib/shell";
+import { parseDotenv } from "./lib/dotenv";
+import { checkHealth, healthTargets } from "./lib/health";
+import { databaseExists, initEnv, MAIN_DB_MARKER } from "./lib/init";
+import { checkSecrets } from "./lib/secrets";
+import { compose, readOnlyComposeEnv, run } from "./lib/shell";
 
 const [command, ...args] = process.argv.slice(2);
 
 async function health(): Promise<void> {
-  const base = process.env.FORGECY_BASE_URL ?? "http://localhost:3000";
-  const targets = [
-    ["web", `${base}/api/health`],
-    ["worker", process.env.FORGECY_WORKER_HEALTH_URL ?? "http://localhost:3001/health"],
-  ] as const;
-  let ok = true;
-  for (const [name, url] of targets) {
-    try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      console.log(
-        `${name.padEnd(7)} ${res.ok ? "ok" : `error ${res.status}`}  ${JSON.stringify(await res.json())}`,
-      );
-      ok &&= res.ok;
-    } catch (error) {
-      console.log(`${name.padEnd(7)} unreachable (${(error as Error).message})`);
-      ok = false;
-    }
-  }
-  process.exitCode = ok ? 0 : 1;
+  const results = await checkHealth(healthTargets(process.env));
+  for (const result of results) console.log(result.line);
+  process.exitCode = results.every((r) => r.ok) ? 0 : 1;
+}
+
+/**
+ * Stops before anything is built or started with a missing or guessable secret. Reads .env itself:
+ * parseCliEnv deliberately keeps secrets out of process.env, so they never reach child processes.
+ * A POSTGRES_PASSWORD set in the shell wins over .env, as it does in Compose.
+ */
+function preflight(): void {
+  if (!existsSync(".env")) throw new Error("No .env file. Run `pnpm forgecy init` to create one.");
+  const rawText = readFileSync(".env", "utf8");
+  const file = parseDotenv(rawText);
+  const env = {
+    ...file,
+    POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD ?? file.POSTGRES_PASSWORD,
+  };
+  const { errors, warnings } = checkSecrets(env, {
+    existingDatabase: databaseExists(MAIN_DB_MARKER),
+    rawText,
+  });
+  for (const warning of warnings) console.warn(`warning: ${warning}`);
+  if (errors.length) throw new Error(`Fix .env before starting:\n- ${errors.join("\n- ")}`);
+}
+
+/** Creates .env with generated secrets, or with --fill fills the ones that are empty. See initEnv. */
+function init(): void {
+  const { created, filled, passwordSkipped } = initEnv(process.cwd(), {
+    fill: args.includes("--fill"),
+  });
+  if (filled.length)
+    console.log(`${created ? "Created .env with" : "Filled"}: ${filled.join(", ")}.`);
+  else if (!passwordSkipped) console.log("Nothing to fill: every secret already has a value.");
+  if (passwordSkipped)
+    console.log(
+      "POSTGRES_PASSWORD was left empty: a database already exists in data/db or data/dev-db. Set it to that database's current password (`forgecy` if the old .env left it empty, `change-me` if it kept the example value), see README, Upgrading.",
+    );
+  if (filled.includes("FORGECY_ENCRYPTION_KEY"))
+    console.log(
+      "Keep a copy of FORGECY_ENCRYPTION_KEY outside the backups: without it the saved AI keys cannot be read.",
+    );
 }
 
 const commands: Record<string, () => unknown> = {
-  start: () => compose(["up", "-d", "--build"]),
-  stop: () => compose(["down"]),
-  migrate: () => compose(["run", "--rm", "migrate"]),
+  init,
+  start: () => {
+    preflight();
+    return compose(["up", "-d", "--build"]);
+  },
+  stop: () => compose(["down"], readOnlyComposeEnv(process.env)),
+  migrate: () => {
+    preflight();
+    return compose(["run", "--rm", "migrate"]);
+  },
   seed: () => run("pnpm", ["--filter", "@forgecy/db", "seed"]),
   backup: async () => {
     const file = await backup();
@@ -48,6 +84,7 @@ const commands: Record<string, () => unknown> = {
   },
   // Backup first, then rebuild, migrate and restart (spec: "Upgrades").
   upgrade: async () => {
+    preflight();
     const file = await backup();
     console.log(`Pre-upgrade backup: ${file}`);
     compose(["build"]);

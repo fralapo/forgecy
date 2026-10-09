@@ -41,3 +41,10 @@ export type AssetSource = (typeof assetSources)[number];
 
 export const approvalDecisions = ["approved", "changes_requested"] as const;
 export type ApprovalDecision = (typeof approvalDecisions)[number];
+
+export const frequencyUnits = ["week", "month"] as const;
+/** Where an outline version came from (differs from `contentVersionOrigins`, which has "submit"). */
+export const outlineOrigins = ["ai", "manual", "restore"] as const;
+export const slideEditStatuses = ["queued", "applied", "kept", "reverted", "failed"] as const;
+export const contentTypes = ["carousel"] as const;
+export const contentAssetKinds = ["image"] as const;

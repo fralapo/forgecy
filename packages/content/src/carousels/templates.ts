@@ -28,7 +28,10 @@ export interface UsableTemplate {
 }
 
 /** `locale` localizes the texts shown to people (name, layout and slot names); omit it for AI and checks. */
-function parseRow(row: typeof templates.$inferSelect, locale?: Locale): UsableTemplate | null {
+export function parseRow(
+  row: typeof templates.$inferSelect,
+  locale?: Locale,
+): UsableTemplate | null {
   const r = templateManifestSchema.safeParse(row.manifest);
   // Only carousel templates bound to a channel (report templates have none).
   if (!r.success || r.data.kind !== "carousel" || !r.data.channel) return null;

@@ -1,6 +1,8 @@
 import {
   aiPolicies,
   assertCan,
+  DEFAULT_AI_POLICY_KEY,
+  resolveDefaultAiPolicy,
   isLocalProvider,
   providerIds,
   sendableAssetTypes,
@@ -34,7 +36,7 @@ import { monthKey } from "./ledger";
  * following months until an Admin changes or removes it (see `createDbLedger`).
  */
 
-export const DEFAULT_POLICY_KEY = "ai.default_policy";
+export const DEFAULT_POLICY_KEY = DEFAULT_AI_POLICY_KEY;
 
 function userId(actor: Actor): string | null {
   return actor.type === "user" ? actor.id : null;
@@ -56,7 +58,7 @@ export async function getDefaultAiPolicy(db: Pick<Database, "select">): Promise<
     })
     .from(appSettings)
     .where(eq(appSettings.key, DEFAULT_POLICY_KEY));
-  const policy = aiPolicies.find((p) => p === row?.value) ?? "external_allowed";
+  const policy = resolveDefaultAiPolicy(row?.value);
   return row
     ? { policy, updatedAt: row.updatedAt, updatedBy: row.updatedBy }
     : { policy, updatedAt: null, updatedBy: null };

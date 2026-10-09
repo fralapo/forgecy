@@ -1,3 +1,4 @@
+import { overlappingZip, pdfWithPages, zipArchive } from "@forgecy/core/testing/archives";
 import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { chunkPages } from "../src/import/analyst";
@@ -71,51 +72,57 @@ function ttf(family: string, subfamily: string): Uint8Array {
 }
 
 describe("detectImportFile", () => {
-  it("recognizes OOXML from the bytes, not the name", () => {
-    expect(detectImportFile({ name: "book.zip", mime: "", bytes: docx() })).toMatchObject({
+  it("recognizes OOXML from the bytes, not the name", async () => {
+    expect(await detectImportFile({ name: "book.zip", mime: "", bytes: docx() })).toMatchObject({
       ok: true,
       type: "docx",
     });
-    expect(detectImportFile({ name: "deck.docx", mime: "", bytes: pptx() })).toMatchObject({
+    expect(await detectImportFile({ name: "deck.docx", mime: "", bytes: pptx() })).toMatchObject({
       ok: true,
       type: "pptx",
     });
     const other = zipSync({ "a.txt": strToU8("x") });
-    expect(detectImportFile({ name: "a.zip", mime: "application/zip", bytes: other }).ok).toBe(
-      false,
-    );
+    expect(
+      (await detectImportFile({ name: "a.zip", mime: "application/zip", bytes: other })).ok,
+    ).toBe(false);
   });
 
-  it("accepts PDF, text and WOFF and refuses empty or unknown files", () => {
+  it("accepts PDF, text and WOFF and refuses empty or unknown files", async () => {
     expect(
-      detectImportFile({ name: "b.pdf", mime: "application/pdf", bytes: strToU8("%PDF-1.7\n...") }),
+      await detectImportFile({
+        name: "b.pdf",
+        mime: "application/pdf",
+        bytes: strToU8("%PDF-1.7\n..."),
+      }),
     ).toMatchObject({
       ok: true,
       type: "pdf",
     });
     expect(
-      detectImportFile({ name: "note.md", mime: "", bytes: strToU8("# Tono\nCaldo") }),
+      await detectImportFile({ name: "note.md", mime: "", bytes: strToU8("# Tono\nCaldo") }),
     ).toMatchObject({
       ok: true,
       type: "text",
     });
     expect(
-      detectImportFile({ name: "f.woff", mime: "", bytes: strToU8("wOFF....") }),
+      await detectImportFile({ name: "f.woff", mime: "", bytes: strToU8("wOFF....") }),
     ).toMatchObject({
       ok: true,
       type: "font",
     });
-    expect(detectImportFile({ name: "x.pdf", mime: "", bytes: new Uint8Array() })).toEqual({
+    expect(await detectImportFile({ name: "x.pdf", mime: "", bytes: new Uint8Array() })).toEqual({
       ok: false,
       message: "The file is empty.",
       ref: { key: "brand.errors.fileEmpty" },
     });
     expect(
-      detectImportFile({
-        name: "x.exe",
-        mime: "application/octet-stream",
-        bytes: strToU8("MZ\x90\x00"),
-      }).ok,
+      (
+        await detectImportFile({
+          name: "x.exe",
+          mime: "application/octet-stream",
+          bytes: strToU8("MZ\x90\x00"),
+        })
+      ).ok,
     ).toBe(false);
   });
 });
@@ -179,4 +186,152 @@ describe("colorName", () => {
     expect(colorName("#123456", "#123456", "color-1")).toBe("color-1");
     // The first import loads the db and service modules, slow on a busy CI runner.
   }, 30_000);
+});
+
+// Multi-MB buffers: generous timeout for a loaded parallel run.
+describe("hostile imports", { timeout: 30_000 }, () => {
+  const key = (err: unknown) => (err as { ref: { key: string } }).ref.key;
+
+  it("refuses an Office file that inflates far beyond its limits", async () => {
+    const bomb = zipArchive([{ name: "word/document.xml", data: Buffer.alloc(60 * 1024 * 1024) }]);
+    const err = await extractFile("docx", bomb, "bomb.docx").catch((e) => e);
+    expect(key(err)).toBe("brand.import.errors.archiveTooLarge");
+  });
+  it("refuses an Office file whose parts add up past the total limit", async () => {
+    const part = (n: number) => ({
+      name: `ppt/slides/slide${n}.xml`,
+      data: Buffer.alloc(40 * 1024 * 1024),
+    });
+    const err = await extractFile(
+      "pptx",
+      zipArchive([part(1), part(2), part(3)]),
+      "sum.pptx",
+    ).catch((e) => e);
+    expect(key(err)).toBe("brand.import.errors.archiveTooLarge");
+  });
+  it("refuses an Office file with thousands of entries", async () => {
+    const entries = Array.from({ length: 10_001 }, (_, i) => ({
+      name: `junk/${i}.txt`,
+      data: "x",
+    }));
+    const zip = zipArchive([{ name: "word/document.xml", data: "<w:document/>" }, ...entries]);
+    const err = await extractFile("docx", zip, "many.docx").catch((e) => e);
+    expect(key(err)).toBe("brand.import.errors.archiveTooLarge");
+  });
+  it("refuses an entry whose real size differs from the size it declares", async () => {
+    const lying = zipArchive([
+      { name: "word/document.xml", data: Buffer.alloc(40 * 1024 * 1024), declaredSize: 1000 },
+    ]);
+    const err = await extractFile("docx", lying, "lie.docx").catch((e) => e);
+    expect(key(err)).toBe("brand.import.errors.damaged");
+  });
+  it("bounds stored entries that overlap and declare no size, by the bytes really read", async () => {
+    const zip = overlappingZip({
+      data: Buffer.alloc(1024 * 1024, 0x41),
+      entries: 300,
+      store: true,
+      declaredSize: 0,
+      name: (i) => `ppt/slides/slide${i}.xml`,
+    });
+    const err = await extractFile("pptx", zip, "overlap.pptx").catch((e) => e);
+    expect(key(err)).toBe("brand.import.errors.damaged");
+    // Same, when the sizes agree: only the real-byte budget can stop it (300 MiB asked, 100 MiB cap).
+    const honest = overlappingZip({
+      data: Buffer.alloc(1024 * 1024, 0x41),
+      entries: 300,
+      store: true,
+      declaredSize: 1024 * 1024,
+      name: (i) => `ppt/slides/slide${i}.xml`,
+    });
+    const err2 = await extractFile("pptx", honest, "overlap2.pptx").catch((e) => e);
+    expect(key(err2)).toBe("brand.import.errors.archiveTooLarge");
+  });
+  it("stops an overlapping deflate bomb early instead of inflating it once per entry", async () => {
+    const zip = overlappingZip({
+      data: Buffer.alloc(64 * 1024 * 1024),
+      entries: 20,
+      declaredSize: 1,
+      name: (i) => `ppt/slides/slide${i}.xml`,
+    });
+    const t = Date.now();
+    const err = await extractFile("pptx", zip, "cpu.pptx").catch((e) => e);
+    expect(Date.now() - t).toBeLessThan(10_000);
+    expect(key(err)).toBe("brand.import.errors.damaged");
+  });
+  it("stops an honest overlapping deflate bomb at the byte budget", async () => {
+    const zip = overlappingZip({
+      data: Buffer.alloc(64 * 1024 * 1024),
+      entries: 20,
+      declaredSize: 64 * 1024 * 1024,
+      name: (i) => `ppt/slides/slide${i}.xml`,
+    });
+    const t = Date.now();
+    const err = await extractFile("pptx", zip, "cpu2.pptx").catch((e) => e);
+    expect(Date.now() - t).toBeLessThan(10_000);
+    expect(key(err)).toBe("brand.import.errors.archiveTooLarge");
+  });
+  it("applies the same limits in the type detection that runs before extraction", async () => {
+    const t = Date.now();
+    const overlap = overlappingZip({
+      data: Buffer.alloc(1024),
+      entries: 12_000,
+      store: true,
+      declaredSize: 1024,
+      name: (i) => (i === 1 ? "word/document.xml" : `junk/${i}.xml`),
+    });
+    const r = await detectImportFile({ name: "x.docx", mime: "", bytes: overlap });
+    expect(r).toMatchObject({ ok: false, ref: { key: "brand.import.errors.archiveTooLarge" } });
+    expect(Date.now() - t).toBeLessThan(10_000);
+  });
+  it("still detects a normal document through the guarded path", async () => {
+    expect(await detectImportFile({ name: "ok.docx", mime: "", bytes: docx() })).toMatchObject({
+      ok: true,
+      type: "docx",
+    });
+  });
+  it("never inflates parts it does not read, however big (a media-heavy deck stays legit)", async () => {
+    const deck = zipArchive([
+      {
+        name: "ppt/slides/slide1.xml",
+        data: "<p:sld><a:p><a:r><a:t>Brand book</a:t></a:r></a:p></p:sld>",
+      },
+      { name: "ppt/media/huge.bin", data: Buffer.alloc(120 * 1024 * 1024) },
+    ]);
+    const out = await extractFile("pptx", deck, "media.pptx");
+    expect(out.pages.map((p) => p.text)).toEqual(["Brand book"]);
+  });
+  it("accepts a 50 MB deck with thousands of media entries and small text parts", async () => {
+    const media = Array.from({ length: 4_000 }, (_, i) => ({
+      name: `ppt/media/image${i}.png`,
+      data: Buffer.alloc(12 * 1024, i % 251),
+      store: true,
+    }));
+    const deck = zipArchive([
+      { name: "ppt/presentation.xml", data: "<p:presentation/>" },
+      {
+        name: "ppt/slides/slide1.xml",
+        data: "<p:sld><a:p><a:r><a:t>Brand book</a:t></a:r></a:p></p:sld>",
+      },
+      ...media,
+    ]);
+    expect(deck.length).toBeGreaterThan(45 * 1024 * 1024);
+    expect(await detectImportFile({ name: "deck.pptx", mime: "", bytes: deck })).toMatchObject({
+      ok: true,
+      type: "pptx",
+    });
+    const out = await extractFile("pptx", deck, "deck.pptx");
+    expect(out.pages.map((p) => p.text)).toEqual(["Brand book"]);
+  });
+  it("still reads a normal document", async () => {
+    const out = await extractFile("docx", docx(), "ok.docx");
+    expect(out.pages.length).toBeGreaterThan(0);
+  });
+  it("refuses a PDF with an absurd page count before reading any page", async () => {
+    const err = await extractFile("pdf", pdfWithPages(2_500), "pages.pdf").catch((e) => e);
+    expect(key(err)).toBe("brand.import.errors.pdfTooManyPages");
+  });
+  it("reads only the first pages of a long PDF and says so", async () => {
+    const out = await extractFile("pdf", pdfWithPages(450), "long.pdf");
+    expect(out.warnings.map((w) => w.key)).toContain("brand.import.warnings.firstPages");
+  });
 });

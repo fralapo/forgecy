@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   templateId: z.string().min(1).max(64),
-  templateVersion: z.string().max(20).optional(),
+  templateVersion: z.string().max(32).optional(),
   slide: slideSchema,
   index: z.number().int().min(0).max(19).default(0),
   total: z.number().int().min(1).max(20).default(1),
@@ -39,7 +39,7 @@ export const POST = withUser(async (user, request: Request) => {
     return NextResponse.json({ error: "validation", issues: parsed.error.issues }, { status: 422 });
   const body = parsed.data;
   assertCan(user.actor, "view", body.clientId);
-  const pkg = await catalogSource().get(body.templateId, body.templateVersion);
+  const pkg = await catalogSource(body.clientId ?? null).get(body.templateId, body.templateVersion);
   if (!pkg) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const keys = collectAssetKeys([body.slide], body.brand ?? brandThemeSchema.parse({}));

@@ -1,5 +1,5 @@
 import type { ConfidenceLevel, MessageRef } from "@forgecy/core";
-import { englishMessage, messageRef } from "@forgecy/i18n";
+import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import { readTextDocument } from "./documents";
 import { isImportError, type ImportErrorCode } from "../import/errors";
 import { IMPORT_LIMITS } from "../import/limits";
@@ -49,7 +49,9 @@ export interface MappingProposalData extends ColumnMapping {
   savedName?: string;
 }
 
-const fmt = (n: number) => n.toLocaleString("en-GB");
+/** English text of a `products.files.*` message: the stored fallback; the interface rebuilds it from `meta`. */
+const files = (key: MessageKey & `products.files.${string}`, values?: MessageValues) =>
+  englishMessage(key, values);
 
 /**
  * Validate and read the useful facts of one file: rows and headers of a sheet,
@@ -77,7 +79,7 @@ export async function inspectFile(
             woocommerce: isWooCommerceExport(sheet.headers),
             ...(csv ? { csv } : {}),
           },
-          summary: `Valid · ${fmt(sheet.rows.length)} rows`,
+          summary: files("products.files.sheet", { rows: sheet.rows.length }),
         };
       }
       case "pdf": {
@@ -86,9 +88,9 @@ export async function inspectFile(
         return {
           valid: true,
           meta: { pages: pdf.totalPages, chars, textless: pdf.textless },
-          summary: pdf.textless
-            ? `${fmt(pdf.totalPages)} pages · no readable text (source only)`
-            : `Valid · ${fmt(pdf.totalPages)} pages`,
+          summary: files(pdf.textless ? "products.files.pdfTextless" : "products.files.pdf", {
+            pages: pdf.totalPages,
+          }),
         };
       }
       case "zip": {
@@ -115,18 +117,23 @@ export async function inspectFile(
         }
         counts.ignored += listing.skipped;
         const parts = [
-          counts.sheets ? `${fmt(counts.sheets)} sheets` : "",
-          counts.images ? `${fmt(counts.images)} images` : "",
-          counts.pdfs ? `${fmt(counts.pdfs)} PDF` : "",
-          counts.texts ? `${fmt(counts.texts)} texts` : "",
+          counts.sheets ? files("products.files.zipSheets", { count: counts.sheets }) : "",
+          counts.images ? files("products.files.zipImages", { count: counts.images }) : "",
+          counts.pdfs ? files("products.files.zipPdfs", { count: counts.pdfs }) : "",
+          counts.texts ? files("products.files.zipTexts", { count: counts.texts }) : "",
         ].filter(Boolean);
+        const head = parts.length
+          ? files("products.files.zip", { contents: parts.join(", ") })
+          : files("products.files.zipEmpty");
         const usable = counts.entries - counts.ignored + listing.skipped > 0;
         const noFiles = messageRef("products.errors.zipNoUsableFiles", { name });
         return {
           valid: usable,
           // The stored meta keeps the reference so the file list shows it in any language.
           meta: usable ? { archive: counts } : { archive: counts, messageRef: noFiles },
-          summary: `ZIP: ${parts.join(", ") || "no usable files"}${counts.ignored ? ` · ${fmt(counts.ignored)} files ignored: formats not allowed` : ""}`,
+          summary: counts.ignored
+            ? `${head} · ${files("products.files.zipIgnored", { count: counts.ignored })}`
+            : head,
           ...(usable
             ? {}
             : {
@@ -139,10 +146,10 @@ export async function inspectFile(
       case "txt":
       case "docx": {
         const text = await readTextDocument(source.data!, name, format);
-        return { valid: true, meta: { chars: text.length }, summary: "Valid · text" };
+        return { valid: true, meta: { chars: text.length }, summary: files("products.files.text") };
       }
       default:
-        return { valid: true, meta: {}, summary: "Valid" };
+        return { valid: true, meta: {}, summary: files("products.files.valid") };
     }
   } catch (err) {
     if (isImportError(err))
@@ -152,7 +159,7 @@ export async function inspectFile(
         code: err.code,
         message: err.message,
         ...(err.ref ? { messageRef: err.ref } : {}),
-        summary: "Not valid",
+        summary: files("products.files.invalid"),
       };
     throw err;
   }

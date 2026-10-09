@@ -1,9 +1,10 @@
 import { UnrecoverableError, Worker, type Job } from "bullmq";
-import { JOB_MAX_ATTEMPTS, messageRefOf } from "@forgecy/core";
+import { JOB_HEARTBEAT_MS, JOB_MAX_ATTEMPTS, messageRefOf } from "@forgecy/core";
 import { and, eq, inArray, jobs, sql, type Database } from "@forgecy/db";
 import type { z } from "zod";
 import { FORGECY_BACKOFF, forgecyBackoff } from "./backoff";
 import { errorMessage, isNeedsAttentionError, isUnrecoverableError } from "./errors";
+import { startHeartbeat } from "./heartbeat";
 import { QUEUE_PREFIX, type BullJobData, type JobRow } from "./queues";
 import {
   jobDefinitions,
@@ -31,7 +32,7 @@ export interface JobContext {
   logger: JobLogger;
   /** Report progress 0–100 (persisted; the UI reads it via SSE). */
   progress(percent: number): Promise<void>;
-  /** Touch updated_at so recoverStaleJobs doesn't treat a long step as a crash. */
+  /** Touch updated_at now. The worker also does this every JOB_HEARTBEAT_MS while the handler runs; call it yourself only for sub-minute precision. */
   heartbeat(): Promise<void>;
   /** True once someone cancelled the job: stop early. */
   isCancelled(): Promise<boolean>;
@@ -70,16 +71,30 @@ export interface JobWorker {
 
 const ACTIVE = ["queued", "retrying", "running"] as const;
 
-/** Statuses written by the processor; guarded so a cancelled job isn't overwritten. */
+/**
+ * Final write of an attempt. Matches the attempt number, so a stale processor (recovery
+ * gave up on it and a newer attempt owns the row) cannot overwrite the newer state, and
+ * accepts `retrying` too, so a live handler's result survives a recovery that flipped the
+ * row under it. A cancelled job is never overwritten. Returns false when nothing matched.
+ */
 async function finish(
   db: Database,
   id: string,
+  attempt: number,
   values: Partial<typeof jobs.$inferInsert>,
-): Promise<void> {
-  await db
+): Promise<boolean> {
+  const rows = await db
     .update(jobs)
     .set(values)
-    .where(and(eq(jobs.id, id), eq(jobs.status, "running")));
+    .where(
+      and(
+        eq(jobs.id, id),
+        eq(jobs.attempts, attempt),
+        inArray(jobs.status, ["running", "retrying"]),
+      ),
+    )
+    .returning({ id: jobs.id });
+  return rows.length > 0;
 }
 
 export function createProcessor(db: Database, handlers: JobHandlers, logger: JobLogger) {
@@ -109,6 +124,7 @@ export function createProcessor(db: Database, handlers: JobHandlers, logger: Job
     const maxAttempts = JOB_MAX_ATTEMPTS;
     const log = { jobId: id, kind: row.kind, attempt };
 
+    let stopBeat: () => void = () => undefined;
     try {
       const def: AnyJobDefinition | undefined = jobDefinitions.get(row.kind);
       const handler = handlers[row.kind];
@@ -148,9 +164,15 @@ export function createProcessor(db: Database, handlers: JobHandlers, logger: Job
         },
       };
 
+      stopBeat = startHeartbeat(
+        () => ctx.heartbeat(),
+        JOB_HEARTBEAT_MS,
+        (err) => logger.warn({ ...log, err: errorMessage(err) }, "job heartbeat failed"),
+      );
+
       logger.info(log, "job started");
       const result = (await handler(parsed.data, ctx)) ?? null;
-      await finish(db, id, {
+      const saved = await finish(db, id, attempt, {
         status: "completed",
         progress: 100,
         result,
@@ -158,7 +180,8 @@ export function createProcessor(db: Database, handlers: JobHandlers, logger: Job
         errorRef: null,
         endedAt: new Date(),
       });
-      logger.info(log, "job completed");
+      if (saved) logger.info(log, "job completed");
+      else logger.warn(log, "job is no longer running; result not saved");
       return result;
     } catch (err) {
       const needsAttention = isNeedsAttentionError(err);
@@ -166,7 +189,7 @@ export function createProcessor(db: Database, handlers: JobHandlers, logger: Job
         needsAttention || isUnrecoverableError(err) || bullFinal || attempt >= maxAttempts;
       const status = !final ? "retrying" : needsAttention ? "needs_attention" : "failed";
       const message = errorMessage(err);
-      await finish(db, id, {
+      await finish(db, id, attempt, {
         status,
         error: message,
         errorRef: messageRefOf(err),
@@ -178,6 +201,8 @@ export function createProcessor(db: Database, handlers: JobHandlers, logger: Job
       // Make sure BullMQ does not retry what we already recorded as terminal.
       if (final && !isUnrecoverableError(err)) throw new UnrecoverableError(message);
       throw err;
+    } finally {
+      stopBeat();
     }
   };
 }

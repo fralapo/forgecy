@@ -1,4 +1,5 @@
 import type { SocialPostField } from "@forgecy/core";
+import { validateZipParts } from "@forgecy/files";
 import { localizedError } from "@forgecy/i18n";
 
 export interface Table {
@@ -61,6 +62,10 @@ function cellToString(value: unknown): string {
   return String(value).trim();
 }
 
+/** A social export has at most a few thousand rows: 20 MB of inflated XML is far above that. */
+const XLSX_MAX_BYTES = 20 * 1024 * 1024;
+const XLSX_MAX_ENTRIES = 5_000;
+
 /** Read a CSV or XLSX upload into a header row and data rows (all strings). */
 export async function readTable(
   bytes: Uint8Array,
@@ -72,6 +77,17 @@ export async function readTable(
     const rows = parseCsv(decoded);
     if (rows.length < 2) throw localizedError("validation", "audit.errors.fileNoRows");
     return { sheets: [], headers: rows[0]!.map((h) => h.trim()), rows: rows.slice(1) };
+  }
+  // Real-byte guard before the parser inflates anything (lying sizes, overlaps, bombs).
+  try {
+    await validateZipParts(bytes, {
+      select: (part) => /\.(xml|rels)$/i.test(part),
+      maxEntries: XLSX_MAX_ENTRIES,
+      maxEntryBytes: XLSX_MAX_BYTES,
+      maxTotalBytes: XLSX_MAX_BYTES,
+    });
+  } catch {
+    throw localizedError("validation", "audit.errors.xlsxUnreadable");
   }
   const { default: readXlsxFile } = await import("read-excel-file/node");
   let sheets: Array<{ sheet: string; data: unknown[][] }>;

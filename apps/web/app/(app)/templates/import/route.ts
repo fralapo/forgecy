@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   if (!(file instanceof File) || file.size === 0) return back("/templates", t("chooseZip"));
   if (file.size > MAX) return back("/templates", t("fileTooLarge"));
   try {
-    const files = unzipTemplatePackage(new Uint8Array(await file.arrayBuffer()));
+    const files = await unzipTemplatePackage(new Uint8Array(await file.arrayBuffer()));
     const { row } = await importTemplate({
       db: getDb(),
       storage: getStorage(),

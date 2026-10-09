@@ -1,5 +1,6 @@
 import type { MessageRef } from "@forgecy/core";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
+import { guardedFetch, readTextCapped } from "@forgecy/core/net-guard";
 import robotsParser from "robots-parser";
 import { CrawlError, crawlError, describeFetchError, type AuditErrorCode } from "../errors";
 import { sameSite, type HostCheck } from "../url";
@@ -131,19 +132,30 @@ export function pickPages(input: {
   return [input.home, ...picked].slice(0, input.maxPages);
 }
 
+const MAX_ROBOTS_SITEMAP_BYTES = 500_000;
+/** Root, landed site and two more (www/apex, http/https variants). */
+const MAX_ROBOTS_ORIGINS = 4;
+
+/**
+ * robots.txt / sitemap fetch: every redirect hop goes through the host check, the body is
+ * read up to a byte cap. Null for anything that goes wrong (blocked hop, loop, network).
+ */
 async function fetchText(
   url: string,
   options: Pick<CrawlOptions, "userAgent" | "fetchImpl" | "hostCheck">,
 ): Promise<{ status: number; text: string } | null> {
-  if (!(await options.hostCheck(url))) return null;
   try {
-    const res = await (options.fetchImpl ?? fetch)(url, {
+    const { res } = await guardedFetch(url, {
+      hostCheck: options.hostCheck,
+      ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
       headers: { "user-agent": options.userAgent },
-      redirect: "follow",
-      signal: AbortSignal.timeout(10_000),
+      timeoutMs: 10_000,
     });
-    const text = res.ok ? (await res.text()).slice(0, 500_000) : "";
-    return { status: res.status, text };
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => undefined);
+      return { status: res.status, text: "" };
+    }
+    return { status: res.status, text: await readTextCapped(res, MAX_ROBOTS_SITEMAP_BYTES) };
   } catch {
     return null;
   }
@@ -188,12 +200,32 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
 
   // 1. robots.txt
   await progress({ step: "robots", status: "running" });
-  const robotsUrl = `${root.origin}/robots.txt`;
-  const robotsRes = await fetchText(robotsUrl, options);
-  const robotsFound = robotsRes !== null && robotsRes.status === 200;
-  const robots = robotsParser(robotsUrl, robotsFound ? robotsRes!.text : "");
-  const isAllowed = (url: string) => robots.isAllowed(url, AUDIT_USER_AGENT_TOKEN) !== false;
-  const blockedAll = !isAllowed(home);
+  // robots-parser answers only for its own origin (undefined for any other), so every
+  // origin read gets its own robots.txt, fetched once through the guarded path.
+  const readRobots = async (origin: string) => {
+    const url = `${origin}/robots.txt`;
+    const res = await fetchText(url, options);
+    const found = res !== null && res.status === 200;
+    return { found, parser: robotsParser(url, found ? res!.text : "") };
+  };
+  // At most MAX_ROBOTS_ORIGINS robots.txt per crawl: a URL on a further origin is not read.
+  const robotsByOrigin = new Map<string, ReturnType<typeof readRobots>>();
+  const robotsOf = (origin: string) => {
+    if (!robotsByOrigin.has(origin)) {
+      if (robotsByOrigin.size >= MAX_ROBOTS_ORIGINS) return null;
+      robotsByOrigin.set(origin, readRobots(origin));
+    }
+    return robotsByOrigin.get(origin)!;
+  };
+  const isAllowed = async (url: string) => {
+    const robotsTxt = robotsOf(new URL(url).origin);
+    return (
+      robotsTxt !== null &&
+      (await robotsTxt).parser.isAllowed(url, AUDIT_USER_AGENT_TOKEN) !== false
+    );
+  };
+  const { found: robotsFound, parser: robots } = (await robotsOf(root.origin))!;
+  const blockedAll = !(await isAllowed(home));
   const aiCrawlersBlocked = AI_CRAWLERS.filter((bot) => robots.isAllowed(home, bot) === false);
   await progress({
     step: "robots",
@@ -220,6 +252,14 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
       detail: describeFetchError(err),
     });
   }
+  // A redirect to another site is followed only if where it landed passes the host check
+  // too (the browser fetcher already discards inward hops; this holds for any fetcher).
+  if (!(await options.hostCheck(homePage.finalUrl))) {
+    await progress({ step: "discovery", status: "failed" });
+    throw crawlError("AUD-HOST-BLOCKED", "audit.stored.crawl.addressLocal", {
+      url: homePage.finalUrl,
+    });
+  }
   if (homePage.status >= 400 || homePage.status === 0) {
     await progress({ step: "discovery", status: "failed" });
     throw crawlError("SOURCE-UNAVAILABLE", "audit.stored.crawl.httpError", {
@@ -227,22 +267,37 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
       status: homePage.status,
     });
   }
+  // The site is where the home page landed (oldbrand.it may 301 to newbrand.com).
+  const site = canonicalUrl(homePage.finalUrl);
+  const siteOrigin = new URL(site).origin;
+  if (!(await isAllowed(site))) {
+    await progress({ step: "discovery", status: "failed" });
+    throw crawlError("AUD-ROBOTS-BLOCKED", "audit.stored.crawl.robotsBlocked");
+  }
+  // The second origin of the map, so robotsOf never returns null here.
+  const siteRobots = (await robotsOf(siteOrigin))!.parser;
   const sitemapUrls: string[] = [];
-  for (const sm of robots.getSitemaps().length
-    ? robots.getSitemaps().slice(0, 2)
-    : [`${root.origin}/sitemap.xml`]) {
+  const listed = [...new Set([...siteRobots.getSitemaps(), ...robots.getSitemaps()])].filter((sm) =>
+    sameSite(sm, site),
+  );
+  const sitemapCandidates = listed.length
+    ? listed.slice(0, 2)
+    : [...new Set([`${siteOrigin}/sitemap.xml`, `${root.origin}/sitemap.xml`])];
+  for (const sm of sitemapCandidates) {
+    if (!sameSite(sm, site)) continue;
     const res = await fetchText(sm, options);
     if (!res || res.status !== 200) continue;
     const parsed = parseSitemap(res.text);
     sitemapUrls.push(...parsed.urls.slice(0, 200));
     for (const child of parsed.sitemaps.slice(0, 2)) {
+      if (!sameSite(child, site)) continue;
       const c = await fetchText(child, options);
       if (c?.status === 200) sitemapUrls.push(...parseSitemap(c.text).urls.slice(0, 200));
     }
     if (sitemapUrls.length) break;
   }
   const targets = pickPages({
-    home: canonicalUrl(homePage.finalUrl),
+    home: site,
     navLinks: homePage.navLinks,
     links: homePage.links,
     sitemapUrls,
@@ -270,7 +325,12 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
       stoppedEarly = "cancelled";
       break;
     }
-    if (!isAllowed(url)) {
+    // Fail closed: a URL off the site has no robots.txt of ours to answer for it.
+    if (!sameSite(url, site)) {
+      skipped.push({ url, ...skip("redirect"), code: "HTTP" });
+      continue;
+    }
+    if (!(await isAllowed(url))) {
       skipped.push({ url, ...skip("robots"), code: "AUD-ROBOTS-BLOCKED" });
       continue;
     }
@@ -279,8 +339,13 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
         ...fetchOpts,
         timeoutMs: Math.min(options.pageTimeoutMs, Math.max(1000, deadline - now())),
       });
-      if (!sameSite(page.finalUrl, home)) {
+      if (!(await options.hostCheck(page.finalUrl))) {
+        skipped.push({ url, ...skip("unreachable"), code: "AUD-HOST-BLOCKED" });
+      } else if (!sameSite(page.finalUrl, site)) {
         skipped.push({ url, ...skip("redirect"), code: "HTTP" });
+      } else if (!(await isAllowed(page.finalUrl))) {
+        // A redirect into a disallowed path: the request happened, the page is not kept.
+        skipped.push({ url, ...skip("robots"), code: "AUD-ROBOTS-BLOCKED" });
       } else if (page.requiresLogin || LOGIN_PATH.test(new URL(page.finalUrl).pathname)) {
         skipped.push({ url, ...skip("login"), code: "LOGIN" });
       } else if (page.status >= 400) {

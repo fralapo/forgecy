@@ -38,7 +38,7 @@ export default async function BrandBookPage({
   const [versions, exportsList, templateVersion, locale] = await Promise.all([
     exportableVersions(db, user.actor, client.id),
     listBrandBookExports(db, user.actor, client.id),
-    publishedBookTemplate(db),
+    publishedBookTemplate(db, client.id),
     getLocale(),
   ]);
   const emptySections = await emptySectionsByVersion(db, user.actor, {

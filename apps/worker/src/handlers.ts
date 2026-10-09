@@ -21,6 +21,7 @@ const backupEnv = {
   dataDir: resolveMediaRoot(env.FORGECY_DATA_DIR),
   mediaDir: resolveMediaRoot(env.MEDIA_ROOT),
   databaseUrl: env.DATABASE_URL,
+  restoreDatabaseUrl: env.FORGECY_RESTORE_DATABASE_URL,
   appVersion: pkg.version,
 };
 

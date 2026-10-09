@@ -4,7 +4,13 @@
  * server and the worker use.
  */
 import { FORMATS, slideRoles, slideSchema, type FormatId, type Slide } from "@forgecy/carousel";
-import { confidenceLevels, contentObjectives, funnelStages, messageRefSchema } from "@forgecy/core";
+import {
+  confidenceLevels,
+  contentObjectives,
+  frequencyUnits,
+  funnelStages,
+  messageRefSchema,
+} from "@forgecy/core";
 import { z } from "zod";
 
 const text = (max: number) => z.string().trim().max(max);
@@ -61,7 +67,7 @@ export const funnelSchema = z.enum(funnelStages);
 
 export const frequencySchema = z.object({
   count: z.number().int().min(1).max(60),
-  unit: z.enum(["week", "month"]),
+  unit: z.enum(frequencyUnits),
 });
 export type Frequency = z.infer<typeof frequencySchema>;
 

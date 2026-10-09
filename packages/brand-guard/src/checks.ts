@@ -17,7 +17,7 @@ import {
 import type { BrandCheckSeverity } from "@forgecy/core";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import { checkContrast, colorToHex, formatRatio, WCAG } from "@forgecy/ui/tokens";
-import { coherenceScore } from "./score";
+import { coherenceScore, RENDER_UNVERIFIED } from "./score";
 import type {
   BrandCheckFinding,
   BrandCheckReport,
@@ -49,6 +49,8 @@ export interface CheckOptions {
   thumbnailMinPx?: number;
   /** Words of the hook when the Content Strategy gives none. */
   defaultHookMaxWords?: number;
+  /** Add a warning when no render was measured, so an approver sees the layout checks did not run. */
+  flagUnverifiedRender?: boolean;
 }
 
 export const DEFAULTS = {
@@ -167,7 +169,9 @@ interface Ctx {
   doc: BrandIdentityDocument;
   render: GuardRender | undefined;
   out: Findings;
-  options: Required<Omit<CheckOptions, "now">>;
+  options: Required<
+    Pick<CheckOptions, "thumbnailWidth" | "thumbnailMinPx" | "defaultHookMaxWords">
+  >;
   notRun: BrandCheckReport["notRun"];
 }
 
@@ -1269,6 +1273,17 @@ export function checkContent(
   checkThumbnail(ctx);
   checkImages(ctx);
   checkRender(ctx, pal);
+  if (!render && options.flagUnverifiedRender)
+    ctx.out.add({
+      check: RENDER_UNVERIFIED,
+      category: "layout",
+      severity: "warning",
+      origin: "json",
+      slide: null,
+      slot: null,
+      ...say("review.guard.finding.renderUnverified"),
+      blockHash: hash(RENDER_UNVERIFIED),
+    });
   ctx.notRun.push(notRunReason("reviewer_judgement", "review.guard.notRun.reviewer"));
 
   const order = (s: number | null) => (s === null ? Number.MAX_SAFE_INTEGER : s);

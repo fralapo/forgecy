@@ -19,7 +19,7 @@ import { createStorageFromEnv } from "@forgecy/files";
 import { englishMessage, messageRef, type MessageKey } from "@forgecy/i18n";
 import { handle, NeedsAttentionError, type JobContext, type JobHandlers } from "@forgecy/jobs";
 import { requireClient } from "./access";
-import { getContentRow, recordExport } from "./carousels/carousels";
+import { getContentRow, isFinalExportable, recordExport } from "./carousels/carousels";
 import { parseDocument, toRenderSlide } from "./document";
 import {
   creativeDirectionJob,
@@ -105,6 +105,8 @@ async function runExport(
     .from(contentVersions)
     .where(and(eq(contentVersions.id, payload.versionId), eq(contentVersions.contentId, c.id)));
   if (!version) throw attention("content.jobErrors.versionNotFound");
+  // The gate was checked when the export was requested; the carousel may have been edited since.
+  if (!payload.draft && !isFinalExportable(c)) throw attention("content.jobErrors.notApproved");
   if (!payload.draft && c.approvedVersionId !== version.id)
     throw attention("content.jobErrors.notApprovedVersion");
   const doc = parseDocument(version.document);

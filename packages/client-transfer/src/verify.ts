@@ -16,6 +16,8 @@ import {
   packagePeopleSchema,
   type ClientPackage,
 } from "./package";
+import { assertPackageData, UnsafePackageError } from "./safety";
+import { templateReuse } from "./templates";
 
 export interface PackageVerification {
   problems: ClientImportProblem[];
@@ -79,19 +81,21 @@ async function conflictsOf(
       name: string;
     }[];
     for (const t of rows) {
-      const res = await db.execute<{ version: string }>(
-        sql`select version from templates where key = ${t.key} order by created_at desc`,
+      // The decision the import takes (templates.ts), for a new client: agency templates only.
+      // A version held by another client's private template is not listed; the import renames it.
+      const res = await db.execute<{ id: string; version: string; client_id: string | null }>(
+        sql`select id, version, client_id from templates where key = ${t.key} order by created_at desc`,
       );
-      const versions = res.rows.map((r) => r.version);
-      if (versions.includes(t.version))
+      const decision = templateReuse(res.rows, t.version, null, undefined);
+      if (decision.kind === "exact")
         resolved.push({ kind: "templateReused", key: t.key, version: t.version });
-      else if (versions.length)
+      else if (decision.conflictVersions.length)
         conflicts.push({
           kind: "template",
           key: t.key,
           version: t.version,
           name: t.name,
-          existingVersions: versions,
+          existingVersions: decision.conflictVersions,
         });
     }
   }
@@ -140,16 +144,16 @@ export async function verifyClientPackage(
   let pkg: ClientPackage;
   try {
     pkg = await openClientPackage(file);
-  } catch {
-    return fail("unreadable");
+  } catch (err) {
+    return fail(err instanceof UnsafePackageError ? err.problem : "unreadable");
   }
   try {
     if (!pkg.has("manifest.json")) return fail("format");
     let manifest: Manifest;
     try {
       manifest = packageManifestSchema.parse(JSON.parse(await pkg.text("manifest.json")));
-    } catch {
-      return fail("format");
+    } catch (err) {
+      return fail(err instanceof UnsafePackageError ? err.problem : "format");
     }
     const counts: Record<string, number> = {};
     for (const [table, info] of Object.entries(manifest.tables)) {
@@ -171,7 +175,19 @@ export async function verifyClientPackage(
     const known = new Set(clientTables().map((t) => t.name));
     if (Object.entries(manifest.tables).some(([t, info]) => info.rows > 0 && !known.has(t)))
       return fail("unknownTable", report);
-    if (!(await checksums(pkg, manifest))) return fail("checksum", report);
+    try {
+      if (!(await checksums(pkg, manifest))) return fail("checksum", report);
+    } catch (err) {
+      // Over a cap or unsafe: that problem. An entry that cannot be inflated (a size that lies,
+      // a damaged stream) cannot be read.
+      return fail(err instanceof UnsafePackageError ? err.problem : "unreadable", report);
+    }
+    try {
+      await assertPackageData(pkg, manifest);
+    } catch (err) {
+      if (err instanceof UnsafePackageError) return fail(err.problem, report);
+      throw err;
+    }
     return { problems: [], report, ...(await conflictsOf(db, pkg, manifest)) };
   } finally {
     pkg.close();

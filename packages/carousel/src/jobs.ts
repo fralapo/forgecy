@@ -20,7 +20,8 @@ export const carouselExportPayloadSchema = z.object({
   version: z.number().int().min(1),
   templateId: z.string().min(1).max(64),
   /** Pin a template version; omitted = the version the catalog serves now. */
-  templateVersion: z.string().max(20).optional(),
+  /** Up to 32: a version an import renamed ("100.100.100-import.999") is longer than 20. */
+  templateVersion: z.string().max(32).optional(),
   slides: z.array(slideSchema).min(1).max(20),
   brand: brandThemeSchema.default({ name: "", handle: "", colors: {}, fonts: {} }),
   /** The longest channel limit (LinkedIn); the content module checks each channel's own limit. */

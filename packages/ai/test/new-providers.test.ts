@@ -152,6 +152,17 @@ describe("openrouter images", () => {
       timeoutMs: 1000,
     };
     await expect(empty.generate(input)).rejects.toMatchObject({ kind: "invalid_output" });
+    const refused = createOpenRouterImageProvider({
+      apiKey: "k",
+      fetch: fakeFetch([], {
+        choices: [{ message: { refusal: "no" } }],
+        usage: { prompt_tokens: 3, completion_tokens: 4, cost: 0.01 },
+      }),
+    });
+    await expect(refused.generate(input)).rejects.toMatchObject({
+      kind: "refusal",
+      usage: { inputTokens: 3, outputTokens: 4, providerCostUsd: 0.01 },
+    });
     const limited = createOpenRouterImageProvider({
       apiKey: "k",
       fetch: fakeFetch([], { error: "slow down" }, 429),

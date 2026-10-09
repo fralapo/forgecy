@@ -44,15 +44,15 @@ const { data } = await ai.generateObject({
 | `local`      | yes  | no     | `LOCAL_LLM_ENABLED`, `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`  |
 | `higgsfield` | no   | yes    | MCP + OAuth (Connect in Settings), `HIGGSFIELD_IMAGE_MODEL`   |
 
-Image providers are tried in the order of `IMAGE_PROVIDERS` (default `openai,google,openrouter`): first configured one primary, next one fallback. Logging in with a ChatGPT account is not supported (see `docs/adr/0006`).
+Image providers are tried in the order of `IMAGE_PROVIDERS` (default: the order of `imageProviderIds` in `src/registry.ts`): first configured one primary, next one fallback. Signing in with ChatGPT is built but inert until OpenAI issues a client id (`docs/adr/0012-sign-in-with-chatgpt.md`); sharing a ChatGPT plan's usage is not supported (`docs/adr/0006-deepseek-openrouter-images-no-chatgpt-login.md`).
 
 ### Choosing services and models
 
-Admins pick the text service and model (plus a fallback) and the image services in order in Settings > AI providers. `loadAiRoutingSettings` / `saveAiRoutingSettings` store the choice in `app_settings` (`ai.routing`); `resolveRouting` keeps only usable providers and fills empty models with defaults; `createRoutingSource` / `settingsRouting` give the gateway a routing function read per request (cached 15 s). With nothing saved, the `.env` routing applies. See `docs/adr/0008`.
+Admins pick the text service and model (plus a fallback) and the image services in order in Settings > AI providers. `loadAiRoutingSettings` / `saveAiRoutingSettings` store the choice in `app_settings` (`ai.routing`); `resolveRouting` keeps only usable providers and fills empty models with defaults; `createRoutingSource` / `settingsRouting` give the gateway a routing function read per request (cached 15 s). With nothing saved, the `.env` routing applies. See `docs/adr/0008-provider-and-model-choice-in-settings.md`.
 
 ### Subscriptions over MCP
 
-`src/mcp/` connects to remote MCP servers as an OAuth client (`@modelcontextprotocol/sdk`): `StoredMcpOAuthProvider` keeps the registration and tokens encrypted in `mcp_connections`, `beginMcpConnection` / `completeMcpConnection` drive the Admin's login, and `createMcpImageProviders` builds the Higgsfield adapter. The adapter reads tool schemas at run time and polls async jobs through the gateway's usual `getStatus` loop. The routing (below) uses it only while connected. See `docs/adr/0007`.
+`src/mcp/` connects to remote MCP servers as an OAuth client (`@modelcontextprotocol/sdk`): `StoredMcpOAuthProvider` keeps the registration and tokens encrypted in `mcp_connections`, `beginMcpConnection` / `completeMcpConnection` drive the Admin's login, and `createMcpImageProviders` builds the Higgsfield adapter. The adapter reads tool schemas at run time and polls async jobs through the gateway's usual `getStatus` loop. The routing (below) uses it only while connected. See `docs/adr/0007-image-subscriptions-over-mcp.md`.
 
 ## Adding a provider
 

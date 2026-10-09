@@ -8,10 +8,13 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { currentRouting } from "@/lib/ai";
+import { hasPassword } from "@/lib/change-password";
 import { env } from "@/lib/env";
 import { requireUser } from "@/lib/session";
 import { getTheme } from "@/lib/theme";
 import { providerIcons } from "./_lib/provider-icons";
+import { emailToUsername } from "@/lib/username";
+import { ChangePasswordForm } from "./change-password-form";
 import { EmailNotificationsForm } from "./email-notifications-form";
 import { LanguageForm } from "./language-form";
 import { NewUserForm } from "./new-user-form";
@@ -37,6 +40,7 @@ export default async function SettingsPage() {
   const languages = await Promise.all(
     LOCALES.map(async (code) => ({ code, name: (await loadMessages(code)).meta.languageName })),
   );
+  const canChangePassword = await hasPassword(user.id);
   const { routing } = await currentRouting();
   const browser = negotiateLocale((await headers()).get("accept-language"));
   // Only whether a key is configured, never the key itself.
@@ -68,6 +72,7 @@ export default async function SettingsPage() {
             current={me?.emailNotifications ?? false}
             smtpReady={smtpOptionsFromEnv(env) !== null}
           />
+          {canChangePassword ? <ChangePasswordForm /> : null}
         </Card>
         <Card className="p-6">
           <div className="flex items-center gap-2">
@@ -134,7 +139,7 @@ export default async function SettingsPage() {
                   <li key={p.id} className="flex items-center justify-between py-2 text-body-sm">
                     <span>
                       <span className="block text-fg">{p.name}</span>
-                      <span className="text-fg-muted">{p.email}</span>
+                      <span className="text-fg-muted">{emailToUsername(p.email)}</span>
                     </span>
                     <span className="flex gap-2">
                       {p.isAdmin ? <Badge>{tc("role.admin")}</Badge> : null}

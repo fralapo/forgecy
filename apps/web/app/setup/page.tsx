@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { AuthShell } from "@/components/auth-shell";
+import { env } from "@/lib/env";
 import { countUsers } from "@/lib/users";
 import { SetupForm } from "./setup-form";
 
@@ -16,7 +17,7 @@ export default async function SetupPage() {
   const t = await getTranslations("auth.setup");
   return (
     <AuthShell title={t("title")} description={t("description")}>
-      <SetupForm />
+      <SetupForm tokenRequired={Boolean(env.FORGECY_SETUP_TOKEN)} />
     </AuthShell>
   );
 }

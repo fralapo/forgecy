@@ -12,8 +12,8 @@ export function getStorage(): StorageDriver {
 }
 
 /** Published templates (pinned versions also when archived): what editors and exports use. */
-export function catalogSource() {
-  return dbTemplateSource({ db: getDb(), storage: getStorage() });
+export function catalogSource(clientId: string | null) {
+  return dbTemplateSource({ db: getDb(), storage: getStorage(), clientId });
 }
 
 /** Any version by row id, drafts included: catalog and template editor previews. */

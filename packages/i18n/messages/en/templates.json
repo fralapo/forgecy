@@ -186,6 +186,15 @@
     "minItems": "minItems > maxItems",
     "colorAndFont": "A variable cannot be both a color and a font"
   },
+  "renderIssues": {
+    "overflow": "The text of “{slot}” overflows its box.",
+    "outsideSlide": "“{slot}” goes outside the slide.",
+    "outsideSafeZone": "“{slot}” is outside the safe zone.",
+    "tooManyLines": "“{slot}” takes {lines, plural, one {# line} other {# lines}} out of {max}.",
+    "imageMissing": "The image of “{slot}” did not load.",
+    "lowResolution": "The image of “{slot}” is {width}×{height} px, below the minimum.",
+    "overlap": "“{slot}” overlaps “{other}”."
+  },
   "errors": {
     "invalidFolder": "Invalid folder",
     "fileTooLarge": "The file exceeds 50 MB",

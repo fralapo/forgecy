@@ -60,7 +60,7 @@ export const GET = withUser(
     if (!contentSlide) return notFound();
 
     const [pkg, brand] = await Promise.all([
-      catalogSource().get(c.templateKey, templateVersion ?? undefined),
+      catalogSource(client.id).get(c.templateKey, templateVersion ?? undefined),
       loadBrand(db, user.actor, {
         clientId: client.id,
         clientName: client.name,

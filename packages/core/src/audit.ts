@@ -286,3 +286,13 @@ export interface ReportSection {
   /** Set when the text came from an agent and nobody changed it since. */
   byAgent?: boolean;
 }
+
+export const auditSourceKinds = ["page", "screenshot", "file", "manual"] as const;
+export const auditSourceMethods = [
+  "public_page",
+  "screenshot",
+  "manual_import",
+  "manual",
+  "ai_inference",
+] as const;
+export const auditSourceProviders = ["crawl", "upload", "manual"] as const;

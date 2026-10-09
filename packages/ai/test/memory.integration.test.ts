@@ -1,5 +1,14 @@
-import type { Actor } from "@forgecy/core";
-import { clients, createDb, eq, jobsLog, users, type Database } from "@forgecy/db";
+import { isSensitiveMemoryCategory, type Actor } from "@forgecy/core";
+import {
+  clients,
+  createDb,
+  eq,
+  jobsLog,
+  memoryItems,
+  memoryItemVersions,
+  users,
+  type Database,
+} from "@forgecy/db";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addMemory,
@@ -13,18 +22,50 @@ import {
   loadClientMemorySettings,
   memoryCounts,
   promoteMemory,
-  recordAgentMemory,
   rejectMemory,
   saveClientMemorySetting,
 } from "../src";
 
 const dbUrl = process.env.FORGECY_TEST_DATABASE_URL;
 
+/** Seeds what an agent proposal used to insert; the tests are about the human decisions. */
+async function seed(
+  db: Database,
+  clientId: string,
+  o: {
+    content: string;
+    category: "style" | "tone" | "fact" | "preference";
+    confidence: "low" | "medium" | "high";
+    status: "observed" | "candidate";
+  },
+) {
+  const [row] = await db
+    .insert(memoryItems)
+    .values({
+      clientId,
+      agent: "copywriter",
+      category: o.category,
+      sensitive: isSensitiveMemoryCategory(o.category),
+      content: o.content,
+      status: o.status,
+      confidence: o.confidence,
+      proposedByAgent: "copywriter",
+    })
+    .returning();
+  await db.insert(memoryItemVersions).values({
+    memoryId: row!.id,
+    version: 1,
+    content: o.content,
+    category: o.category,
+    authorAgent: "copywriter",
+  });
+  return row!;
+}
+
 describe.skipIf(!dbUrl)("agent memory (integration)", () => {
   let db: Database;
   let person: Actor;
   let clientId: string;
-  let noAiClientId: string;
   const agent: Actor = { type: "agent", role: "copywriter" };
   const suffix = Math.random().toString(36).slice(2, 8);
 
@@ -35,26 +76,20 @@ describe.skipIf(!dbUrl)("agent memory (integration)", () => {
       .values({ name: "Laura", email: `memory-${suffix}@example.test` })
       .returning({ id: users.id });
     person = { type: "user", id: u!.id, isAdmin: false, active: true };
-    const [c, n] = await db
+    const [c] = await db
       .insert(clients)
-      .values([
-        { name: "Rossi", slug: `rossi-${suffix}` },
-        { name: "Offline", slug: `offline-${suffix}`, aiPolicy: "no_ai" },
-      ])
+      .values({ name: "Rossi", slug: `rossi-${suffix}` })
       .returning({ id: clients.id });
     clientId = c!.id;
-    noAiClientId = n!.id;
   });
 
   afterAll(async () => {
     await db.delete(clients).where(eq(clients.id, clientId));
-    await db.delete(clients).where(eq(clients.id, noAiClientId));
     await db.delete(users).where(eq(users.id, (person as { id: string }).id));
   });
 
   it("agents only note or propose; people decide", async () => {
-    const proposed = await recordAgentMemory(db, "copywriter", {
-      clientId,
+    const proposed = await seed(db, clientId, {
       content: "The client prefers titles without rhetorical questions.",
       category: "style",
       confidence: "medium",
@@ -70,15 +105,6 @@ describe.skipIf(!dbUrl)("agent memory (integration)", () => {
     await expect(
       saveClientMemorySetting(db, agent, clientId, "slide_count", 5),
     ).rejects.toMatchObject({ code: "permission_denied" });
-    await expect(
-      recordAgentMemory(db, "copywriter", {
-        clientId: noAiClientId,
-        content: "Something noted.",
-        category: "fact",
-        confidence: "high",
-        status: "observed",
-      }),
-    ).rejects.toMatchObject({ code: "policy_blocked" });
 
     expect(await approvedMemoriesFor(db, clientId, "copywriter")).toHaveLength(0);
     await approveMemory(db, person, proposed.id);
@@ -111,8 +137,7 @@ describe.skipIf(!dbUrl)("agent memory (integration)", () => {
   });
 
   it("needs a note at low confidence, a reason to reject, and no bulk for sensitive ones", async () => {
-    const low = await recordAgentMemory(db, "copywriter", {
-      clientId,
+    const low = await seed(db, clientId, {
       content: "Maybe avoid emoji.",
       category: "style",
       confidence: "low",
@@ -124,8 +149,7 @@ describe.skipIf(!dbUrl)("agent memory (integration)", () => {
     });
     await rejectMemory(db, person, low.id, "Not true for this client");
 
-    const tone = await recordAgentMemory(db, "copywriter", {
-      clientId,
+    const tone = await seed(db, clientId, {
       content: "The tone is formal.",
       category: "tone",
       confidence: "high",
@@ -136,8 +160,7 @@ describe.skipIf(!dbUrl)("agent memory (integration)", () => {
       code: "validation",
     });
 
-    const note = await recordAgentMemory(db, "copywriter", {
-      clientId,
+    const note = await seed(db, clientId, {
       content: "Carousels end with a question.",
       category: "preference",
       confidence: "high",

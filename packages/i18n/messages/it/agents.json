@@ -476,7 +476,6 @@
     "errors": {
       "content": "Scrivi tra 3 e 500 caratteri.",
       "notFound": "Questa memoria non esiste più.",
-      "noAi": "La policy AI del cliente è no_ai: gli agenti non possono proporre memorie.",
       "alreadyDecided": "Questa memoria è già stata decisa nel frattempo.",
       "alreadyDecidedBy": "{name} ha già deciso questa memoria nel frattempo.",
       "noteRequired": "Con attendibilità bassa, per approvare serve una nota (almeno 3 caratteri).",

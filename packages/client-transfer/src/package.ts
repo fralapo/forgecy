@@ -1,13 +1,28 @@
 /**
  * Reading a client package: the ZIP written by `writeClientPackage`. Entries are read on
- * demand, so a large gallery never sits in memory as a whole.
+ * demand, so a large gallery never sits in memory as a whole. The ZIP is untrusted input:
+ * names are validated, and sizes are enforced on the bytes actually inflated (the sizes a
+ * ZIP declares are only a claim), so a small upload cannot expand without bound. The ratio
+ * guard is package-wide: one entry of repetitive text may compress far more than 200:1 and
+ * still be a legitimate backup.
  */
 import { createHash } from "node:crypto";
-import type { Readable } from "node:stream";
-import { CLIENT_PACKAGE_FORMAT, clientTransferAreas } from "@forgecy/core";
+import { stat } from "node:fs/promises";
+import { Readable } from "node:stream";
+import {
+  CLIENT_PACKAGE_FORMAT,
+  CLIENT_PACKAGE_MAX_ENTRIES,
+  CLIENT_PACKAGE_MAX_JSON_BYTES,
+  CLIENT_PACKAGE_MAX_JSON_TOTAL_BYTES,
+  CLIENT_PACKAGE_MAX_RATIO,
+  CLIENT_PACKAGE_MAX_UNCOMPRESSED_BYTES,
+  CLIENT_PACKAGE_RATIO_FLOOR_BYTES,
+  clientTransferAreas,
+} from "@forgecy/core";
 import yauzl from "yauzl";
 import { z } from "zod";
 import type { PackageManifest } from "./export";
+import { UnsafePackageError } from "./safety";
 
 export const packageManifestSchema = z.object({
   format: z.number().int().min(1).max(CLIENT_PACKAGE_FORMAT),
@@ -30,49 +45,168 @@ export type PackagePerson = z.infer<typeof packagePeopleSchema>[number];
 export interface ClientPackage {
   names(): string[];
   has(name: string): boolean;
+  /** The inflated bytes of an entry; fails once they exceed what the limits allow. */
   stream(name: string): Promise<Readable>;
+  /** An entry as text; refuses one larger than `jsonBytes`. */
   text(name: string): Promise<string>;
   sha256(name: string): Promise<string>;
   close(): void;
 }
 
-/** Opens the ZIP at `file`; throws when it is not a readable ZIP. */
-export async function openClientPackage(file: string): Promise<ClientPackage> {
+export interface PackageLimits {
+  entries: number;
+  /** Absolute ceiling on the inflated bytes of the package. */
+  uncompressedBytes: number;
+  /** Largest single JSON text read into memory. */
+  jsonBytes: number;
+  /** All the JSON text read from one open package (each entry counted once). */
+  jsonTotalBytes: number;
+  /** The package may inflate to `ratio` times its own size... */
+  ratio: number;
+  /** ...but never less than this many bytes. */
+  ratioFloorBytes: number;
+}
+export const DEFAULT_PACKAGE_LIMITS: PackageLimits = {
+  entries: CLIENT_PACKAGE_MAX_ENTRIES,
+  uncompressedBytes: CLIENT_PACKAGE_MAX_UNCOMPRESSED_BYTES,
+  jsonBytes: CLIENT_PACKAGE_MAX_JSON_BYTES,
+  jsonTotalBytes: CLIENT_PACKAGE_MAX_JSON_TOTAL_BYTES,
+  ratio: CLIENT_PACKAGE_MAX_RATIO,
+  ratioFloorBytes: CLIENT_PACKAGE_RATIO_FLOOR_BYTES,
+};
+
+const MAX_NAME_BYTES = 1024;
+
+/**
+ * Names are exact keys and are never written to disk, but a name that could escape a folder
+ * (or that another reader would normalize into a different one) is a sign of a hostile
+ * package: refused outright, whatever the entry holds.
+ */
+function entryName(raw: Buffer): string {
+  const bad = () => new UnsafePackageError("an entry has a name that is not allowed");
+  if (raw.length > MAX_NAME_BYTES) throw bad();
+  let name: string;
+  try {
+    name = new TextDecoder("utf-8", { fatal: true }).decode(raw);
+  } catch {
+    throw bad();
+  }
+  if (name.includes("\0") || name.includes("\\") || name.startsWith("/") || /^[a-zA-Z]:/.test(name))
+    throw bad();
+  const parts = (name.endsWith("/") ? name.slice(0, -1) : name).split("/");
+  if (parts.some((p) => p === "" || p === "." || p === "..")) throw bad();
+  return name;
+}
+
+/** Opens the ZIP at `file`; throws when it is not a readable ZIP or is hostile. */
+export async function openClientPackage(
+  file: string,
+  limits: PackageLimits = DEFAULT_PACKAGE_LIMITS,
+): Promise<ClientPackage> {
+  const tooBig = () => new UnsafePackageError("the package is larger than any Forgecy writes");
+  // The most the package may inflate to: a multiple of its own size (with a floor, since small
+  // exports of repetitive text are legitimate) and never over the absolute ceiling.
+  const archiveBytes = (await stat(file)).size;
+  const maxTotal = Math.min(
+    limits.uncompressedBytes,
+    Math.max(limits.ratioFloorBytes, limits.ratio * archiveBytes),
+  );
   const zip = await new Promise<yauzl.ZipFile>((resolve, reject) =>
-    yauzl.open(file, { lazyEntries: true, autoClose: false }, (err, z) =>
+    // decodeStrings off: the names are decoded and checked here, exactly as they are stored.
+    yauzl.open(file, { lazyEntries: true, autoClose: false, decodeStrings: false }, (err, z) =>
       err || !z ? reject(err ?? new Error("Unreadable ZIP")) : resolve(z),
     ),
   );
   const entries = new Map<string, yauzl.Entry>();
-  await new Promise<void>((resolve, reject) => {
-    zip.on("entry", (e: yauzl.Entry) => {
-      if (!e.fileName.endsWith("/")) entries.set(e.fileName, e);
+  const seen = new Set<string>();
+  let total = 0;
+  try {
+    if (zip.entryCount > limits.entries) throw tooBig();
+    await new Promise<void>((resolve, reject) => {
+      zip.on("entry", (e: yauzl.Entry) => {
+        try {
+          const name = entryName(e.fileNameRaw);
+          if (seen.has(name)) throw new UnsafePackageError("an entry name is repeated");
+          if (seen.size + 1 > limits.entries) throw tooBig();
+          seen.add(name);
+          if (!name.endsWith("/")) {
+            total += e.uncompressedSize;
+            // The sizes are a claim; reads are counted again on the bytes inflated (below), and
+            // yauzl refuses an entry whose bytes differ from its claim.
+            if (total > maxTotal) throw tooBig();
+            entries.set(name, e);
+          }
+        } catch (err) {
+          return reject(err);
+        }
+        zip.readEntry();
+      });
+      zip.on("end", () => resolve());
+      zip.on("error", reject);
       zip.readEntry();
     });
-    zip.on("end", () => resolve());
-    zip.on("error", reject);
-    zip.readEntry();
-  });
+  } catch (err) {
+    zip.close();
+    throw err;
+  }
 
-  const stream = (name: string) => {
+  // Bytes really inflated, per entry (the most any read of it produced) and in all.
+  const inflated = new Map<string, number>();
+  let inflatedTotal = 0;
+  async function* counted(name: string, source: Readable, cap: number): AsyncGenerator<Buffer> {
+    let n = 0;
+    for await (const chunk of source) {
+      const b = chunk as Buffer;
+      n += b.length;
+      if (n > cap) throw new UnsafePackageError(`${name} inflates beyond the limits`);
+      const before = inflated.get(name) ?? 0;
+      if (n > before) {
+        inflated.set(name, n);
+        inflatedTotal += n - before;
+        if (inflatedTotal > maxTotal) throw tooBig();
+      }
+      yield b;
+    }
+  }
+  const open = (name: string, cap: number) => {
     const entry = entries.get(name);
     if (!entry) return Promise.reject(new Error(`Missing entry ${name}`));
     return new Promise<Readable>((resolve, reject) =>
       zip.openReadStream(entry, (err, s) =>
-        err || !s ? reject(err ?? new Error(`Unreadable entry ${name}`)) : resolve(s),
+        err || !s
+          ? reject(err ?? new Error(`Unreadable entry ${name}`))
+          : resolve(Readable.from(counted(name, s, cap))),
       ),
     );
   };
-  const buffer = async (name: string) => {
-    const chunks: Buffer[] = [];
-    for await (const chunk of await stream(name)) chunks.push(chunk as Buffer);
-    return Buffer.concat(chunks);
-  };
+  const stream = (name: string) => open(name, maxTotal);
+  // JSON text held in memory, per entry (the most any read produced) and in all.
+  const jsonRead = new Map<string, number>();
+  let jsonTotal = 0;
   return {
     names: () => [...entries.keys()],
     has: (name) => entries.has(name),
     stream,
-    text: async (name) => (await buffer(name)).toString("utf8"),
+    text: async (name) => {
+      const entry = entries.get(name);
+      if (entry && entry.uncompressedSize > limits.jsonBytes)
+        throw new UnsafePackageError(`${name} is too large to read`);
+      const chunks: Buffer[] = [];
+      let n = 0;
+      for await (const chunk of await open(name, limits.jsonBytes)) {
+        const b = chunk as Buffer;
+        n += b.length;
+        const before = jsonRead.get(name) ?? 0;
+        if (n > before) {
+          jsonRead.set(name, n);
+          jsonTotal += n - before;
+          if (jsonTotal > limits.jsonTotalBytes)
+            throw new UnsafePackageError("the package holds more JSON than any Forgecy writes");
+        }
+        chunks.push(b);
+      }
+      return Buffer.concat(chunks).toString("utf8");
+    },
     sha256: async (name) => {
       const hash = createHash("sha256");
       for await (const chunk of await stream(name)) hash.update(chunk as Buffer);

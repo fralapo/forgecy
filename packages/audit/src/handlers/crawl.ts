@@ -36,7 +36,7 @@ type StepUpdate = {
   detailRef?: ScanStep["detailRef"];
 };
 
-async function openFetcher(
+export async function openFetcher(
   deps: AuditHandlerDeps,
   ctx: JobContext,
   rootUrl: string,
@@ -44,8 +44,14 @@ async function openFetcher(
   try {
     return await deps.createFetcher(rootUrl);
   } catch (err) {
-    if (err instanceof CrawlError && err.code === "AUD-BROWSER-UNAVAILABLE") {
-      ctx.logger.warn({ jobId: ctx.jobId, err: err.message }, "chromium unavailable, html only");
+    // No Chromium, or one that could not be pinned to a public address (a private or
+    // unresolvable root host): the markup-only fetcher is host-checked and pinned per
+    // connection, and crawlSite then fails the scan with the proper recorded error.
+    if (
+      err instanceof CrawlError &&
+      (err.code === "AUD-BROWSER-UNAVAILABLE" || err.code === "AUD-HOST-BLOCKED")
+    ) {
+      ctx.logger.warn({ jobId: ctx.jobId, err: err.message }, "browser not used, html only");
       return createHtmlFetcher({
         userAgent: deps.userAgent,
         hostCheck: deps.hostCheck,

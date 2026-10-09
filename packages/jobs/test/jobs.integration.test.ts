@@ -32,6 +32,10 @@ const flakyJob = defineJob({
 });
 const attentionJob = defineJob({ kind: "test.attention", queue: "default", payload: z.object({}) });
 
+const slowJob = defineJob({ kind: "test.slow", queue: "default", payload: z.object({}) });
+let openGate: () => void = () => {};
+const gate = () => new Promise<void>((resolve) => (openGate = resolve));
+
 const silent = { info() {}, warn() {}, error() {}, debug() {} };
 
 async function waitTerminal(db: Database, id: string): Promise<JobEvent[]> {
@@ -68,6 +72,10 @@ describe.skipIf(!dbUrl || !redisUrl)("jobs (integration)", () => {
         }),
         ...handle(attentionJob, async () => {
           throw new NeedsAttentionError("Needs a person");
+        }),
+        ...handle(slowJob, async () => {
+          await gate();
+          return { done: true };
         }),
       },
     });
@@ -128,6 +136,25 @@ describe.skipIf(!dbUrl || !redisUrl)("jobs (integration)", () => {
     expect(last.error).toBe("Needs a person");
   }, 15_000);
 
+  it("keeps the result of a live job even if recovery flipped its row to retrying", async () => {
+    const row = await enqueueJob(db, queues, { kind: slowJob, payload: {} });
+    created.push(row.id);
+    for (let i = 0; i < 100; i++) {
+      const [r] = await db.select().from(jobs).where(eq(jobs.id, row.id));
+      if (r?.status === "running") break;
+      await new Promise((r2) => setTimeout(r2, 50));
+    }
+    await db.execute(
+      sql`update jobs set updated_at = now() - interval '1 hour' where id = ${row.id}`,
+    );
+    const res = await recoverStaleJobs(db, 10 * 60 * 1000, { queues });
+    expect(res.retried).toContain(row.id);
+    openGate(); // the handler was alive all along
+    const last = (await waitTerminal(db, row.id)).at(-1)!;
+    expect(last.status).toBe("completed");
+    expect(last.result).toEqual({ done: true });
+  }, 20_000);
+
   it("recovers stale running jobs", async () => {
     const [a] = await db
       .insert(jobs)
@@ -156,6 +183,34 @@ describe.skipIf(!dbUrl || !redisUrl)("jobs (integration)", () => {
     const [bRow] = await db.select().from(jobs).where(eq(jobs.id, b!.id));
     expect(bRow?.status).toBe("failed");
   }, 15_000);
+
+  it("re-enqueues a queued row whose BullMQ job never reached Redis", async () => {
+    // What a crash between the INSERT and queue.add in enqueueJob leaves behind.
+    const [row] = await db
+      .insert(jobs)
+      .values({ kind: "system.ping", status: "queued", payload: { message: "orphan" } })
+      .returning();
+    created.push(row!.id);
+    await db.execute(
+      sql`update jobs set updated_at = now() - interval '10 minutes' where id = ${row!.id}`,
+    );
+    const res = await recoverStaleJobs(db, 10 * 60 * 1000, { queues });
+    expect(res.requeued).toContain(row!.id);
+    const last = (await waitTerminal(db, row!.id)).at(-1)!;
+    expect(last.status).toBe("completed");
+    expect(last.result).toEqual({ echo: "orphan" });
+  }, 15_000);
+
+  it("leaves a fresh queued row alone (the enqueue may still be in flight)", async () => {
+    const [row] = await db
+      .insert(jobs)
+      .values({ kind: "system.ping", status: "queued", payload: { message: "fresh" } })
+      .returning();
+    created.push(row!.id);
+    const res = await recoverStaleJobs(db, 10 * 60 * 1000, { queues });
+    expect(res.requeued).not.toContain(row!.id);
+    await db.update(jobs).set({ status: "cancelled" }).where(eq(jobs.id, row!.id));
+  });
 
   describe("content locks", () => {
     // Throwaway table with the same lock columns `contents` will have.

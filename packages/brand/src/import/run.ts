@@ -276,7 +276,7 @@ export async function runSourceImport(
   let candidates: CandidateProposal[];
   if (source.storageKey) {
     const bytes = await readAll(await deps.storage.get(source.storageKey));
-    const detected = detectImportFile({ name: source.title, mime: source.mime ?? "", bytes });
+    const detected = await detectImportFile({ name: source.title, mime: source.mime ?? "", bytes });
     if (!detected.ok) {
       await updateSourceStatus(db, source.id, {
         status: "failed",

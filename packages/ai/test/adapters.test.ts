@@ -264,6 +264,51 @@ describe("image adapters", () => {
     expect(Array.from(job.images![0]!.data)).toEqual([1, 2, 3]);
   });
 
+  it("openai reports the usage it was billed when no image comes back", async () => {
+    const client = new OpenAI({
+      apiKey: "k",
+      maxRetries: 0,
+      fetch: fakeFetch([], { created: 0, data: [], usage: { input_tokens: 7, output_tokens: 90 } }),
+    });
+    await expect(
+      createOpenAIImageProvider({ apiKey: "k", client }).generate({
+        model: "gpt-image-2",
+        prompt: "p",
+        size: { w: 1, h: 1 },
+        variants: 1,
+        timeoutMs: 1000,
+      }),
+    ).rejects.toMatchObject({
+      kind: "invalid_output",
+      usage: { inputTokens: 7, outputTokens: 90 },
+    });
+  });
+
+  it("google reports the images already billed when a later variant fails", async () => {
+    let n = 0;
+    const provider = createGoogleImageProvider({
+      apiKey: "k",
+      fetch: (async () =>
+        ++n === 1
+          ? Response.json({
+              candidates: [
+                { content: { parts: [{ inlineData: { mimeType: "image/png", data: png } }] } },
+              ],
+              usageMetadata: { promptTokenCount: 5 },
+            })
+          : Response.json({ error: "down" }, { status: 503 })) as typeof fetch,
+    });
+    await expect(
+      provider.generate({
+        model: "gemini-3.1-flash-image",
+        prompt: "p",
+        size: { w: 1, h: 1 },
+        variants: 2,
+        timeoutMs: 1000,
+      }),
+    ).rejects.toMatchObject({ kind: "server", usage: { inputTokens: 5, images: 1 } });
+  });
+
   it("google parses inlineData", async () => {
     const captured: Captured[] = [];
     const provider = createGoogleImageProvider({

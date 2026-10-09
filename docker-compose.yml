@@ -5,26 +5,48 @@ name: forgecy
 x-app-env: &app-env
   env_file: .env
   environment:
-    DATABASE_URL: postgres://${POSTGRES_USER:-forgecy}:${POSTGRES_PASSWORD:-forgecy}@postgres:5432/${POSTGRES_DB:-forgecy}
+    DATABASE_URL: "postgres://${POSTGRES_USER:-forgecy}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env, or run pnpm forgecy init}@postgres:5432/${POSTGRES_DB:-forgecy}"
     REDIS_URL: redis://redis:6379
     MEDIA_ROOT: /data/media
     FORGECY_DATA_DIR: /data
     FORGECY_BASE_URL: ${FORGECY_BASE_URL:-http://localhost:3000}
+    # The worker listens on 3001 inside the container whatever .env says (that value is for `pnpm dev`).
+    WORKER_HEALTH_PORT: "3001"
     # Dates in the interface and in exports are shown in the agency's time zone.
     TZ: ${FORGECY_TIMEZONE:-Europe/Rome}
+
+# Hardening, decided per service.
+# - no-new-privileges on every service: no setuid binary or file capability can add privileges.
+#   Entrypoints that start as root and drop with setuid()/su-exec/gosu are not affected.
+# - cap_drop ALL on migrate, web and worker: they run as an unprivileged uid (node / 1000),
+#   listen above 1024 and need no capability. Chromium in the worker runs with Playwright's
+#   default --no-sandbox (chromiumSandbox is never enabled), so it needs neither SYS_ADMIN nor
+#   user namespaces.
+x-hardened: &hardened
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
 
 services:
   postgres:
     image: pgvector/pgvector:pg17
     restart: unless-stopped
+    # The entrypoint starts as root: it walks the 0700 data directory (DAC_READ_SEARCH), chowns what
+    # postgres does not own (CHOWN), chmods it 0700 when another uid owns it (FOWNER), then drops
+    # to postgres with gosu (SETUID, SETGID). Tested on first init and restart, Linux volumes.
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_READ_SEARCH, FOWNER, SETUID, SETGID]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-forgecy}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forgecy}
+      # No default: an unset or empty value stops Compose instead of falling back to a known password.
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env, or run pnpm forgecy init}"
       POSTGRES_DB: ${POSTGRES_DB:-forgecy}
     volumes:
       - ./data/db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      # Over TCP: on first init the entrypoint runs a temporary socket-only server, and a socket
+      # check passes then, so migrate connects just as that server stops (ECONNREFUSED).
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -32,6 +54,11 @@ services:
   redis:
     image: redis:8-alpine
     restart: unless-stopped
+    # The entrypoint starts as root: it walks /data, including the 0700 appendonlydir
+    # (DAC_READ_SEARCH), chowns what redis does not own (CHOWN) and drops to redis (SETUID, SETGID).
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_READ_SEARCH, SETUID, SETGID]
     command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
     volumes:
       - ./data/redis:/data
@@ -45,6 +72,10 @@ services:
   data-init:
     image: forgecy-migrate:local
     user: "0:0"
+    # Root only to mkdir and chown ./data (created by Docker as root, or by another uid).
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER]
     command:
       [
         "sh",
@@ -60,7 +91,7 @@ services:
   migrate:
     build: { context: ., dockerfile: docker/Dockerfile, target: migrate }
     image: forgecy-migrate:local
-    <<: *app-env
+    <<: [*app-env, *hardened]
     depends_on:
       postgres: { condition: service_healthy }
     restart: "no"
@@ -69,9 +100,11 @@ services:
     build: { context: ., dockerfile: docker/Dockerfile, target: web }
     image: forgecy-web:local
     restart: unless-stopped
-    <<: *app-env
+    <<: [*app-env, *hardened]
+    # Loopback by default: Caddy (--profile https) reaches web over the internal network. Set
+    # FORGECY_BIND_ADDRESS=0.0.0.0 to expose http://host:3000 on the LAN without Caddy.
     ports:
-      - "${FORGECY_PORT:-3000}:3000"
+      - "${FORGECY_BIND_ADDRESS:-127.0.0.1}:${FORGECY_PORT:-3000}:3000"
     volumes:
       - ./data:/data
     depends_on:
@@ -82,7 +115,10 @@ services:
     build: { context: ., dockerfile: docker/Dockerfile, target: worker }
     image: forgecy-worker:local
     restart: unless-stopped
-    <<: *app-env
+    <<: [*app-env, *hardened]
+    # Loopback only: lets `pnpm forgecy health` on this machine reach the worker's /health.
+    ports:
+      - "127.0.0.1:${FORGECY_WORKER_HEALTH_PORT:-3001}:3001"
     volumes:
       - ./data:/data
     depends_on:
@@ -93,9 +129,10 @@ services:
     image: axllent/mailpit:latest
     profiles: ["dev"]
     restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
     ports:
-      - "8025:8025"
-      - "1025:1025"
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
 
   s3:
     image: chrislusf/seaweedfs:latest
@@ -103,6 +140,7 @@ services:
     restart: unless-stopped
     env_file: .env
     entrypoint: ["/bin/sh", "/entrypoint-forgecy.sh"]
+    security_opt: ["no-new-privileges:true"]
     volumes:
       - ./docker/seaweedfs-entrypoint.sh:/entrypoint-forgecy.sh:ro
       - ./data/s3:/data
@@ -113,6 +151,16 @@ services:
     image: caddy:2-alpine
     profiles: ["https"]
     restart: unless-stopped
+    # The Caddyfile reads {$FORGECY_HOSTNAME}; without this the container never sees it.
+    environment:
+      FORGECY_HOSTNAME: ${FORGECY_HOSTNAME:-forgecy.local}
+    # Runs as root: capabilities are dropped to NET_BIND_SERVICE (ports 80 and 443; the image
+    # sets it as a file capability on /usr/bin/caddy, so it must stay in the bounding set) and
+    # DAC_OVERRIDE (root must still write ./data/caddy, where `tls internal` creates its CA, and
+    # read the Caddyfile when ./data or the file belong to the host user or are mode 600).
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [DAC_OVERRIDE, NET_BIND_SERVICE]
     ports:
       - "80:80"
       - "443:443"

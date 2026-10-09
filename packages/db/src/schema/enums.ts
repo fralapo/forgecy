@@ -1,6 +1,8 @@
 import {
   aiPolicies,
+  budgetScopes,
   clientStatuses,
+  connectionScopes,
   contentStatuses,
   itemStatuses,
   jobStatuses,
@@ -21,5 +23,5 @@ export const proposalStatusEnum = pgEnum("proposal_status", proposalStatuses);
 export const providerEnum = pgEnum("ai_provider", providerIds);
 export const sendableAssetEnum = pgEnum("ai_sendable_asset", sendableAssetTypes);
 export const versionStatusEnum = pgEnum("version_status", versionStatuses);
-export const scopeEnum = pgEnum("budget_scope", ["agency", "client"]);
-export const connectionScopeEnum = pgEnum("connection_scope", ["agency", "client", "user"]);
+export const scopeEnum = pgEnum("budget_scope", budgetScopes);
+export const connectionScopeEnum = pgEnum("connection_scope", connectionScopes);

@@ -136,6 +136,25 @@ function assertNotLocked(c: ContentRow) {
     });
 }
 
+/**
+ * WHERE of a write that must not overtake a concurrent change: the row must still have the
+ * status and draft revision the caller decided on. `submitForReview` changes the status
+ * without bumping `draft_rev` and `saveDraft` bumps it, so with both here exactly one of two
+ * racing calls wins and the other gets a revision conflict.
+ */
+export function unchangedSince(c: { id: string; status: ContentStatus; draftRev: number }) {
+  return and(
+    eq(contents.id, c.id),
+    eq(contents.status, c.status),
+    eq(contents.draftRev, c.draftRev),
+  );
+}
+
+/** A FINAL export needs the carousel to be approved (or already exported once). */
+export function isFinalExportable(c: { status: ContentStatus }): boolean {
+  return c.status === "approved" || c.status === "exported";
+}
+
 /** Move the status through the core state machine, checking the permission it needs. */
 function nextStatus(actor: Actor, c: ContentRow, to: ContentStatus) {
   if (c.status === to) return to;
@@ -562,7 +581,7 @@ export async function saveDraft(
       status,
       ...(doc.title ? { title: doc.title } : {}),
     })
-    .where(and(eq(contents.id, c.id), eq(contents.draftRev, input.draftRev)))
+    .where(unchangedSince({ id: c.id, status: c.status, draftRev: input.draftRev }))
     .returning({ draftRev: contents.draftRev, status: contents.status });
   if (!row)
     revConflict({
@@ -612,6 +631,7 @@ export async function restoreVersion(
   humanOnly(actor, "edit_draft", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
   if (c.status === "in_review") conflict("content.errors.withdrawBeforeRestore");
+  if (!EDITABLE.includes(c.status)) conflict("content.errors.notEditable");
   assertNotLocked(c);
   const [old] = await db
     .select()
@@ -621,7 +641,7 @@ export async function restoreVersion(
   const doc = parseDocument(old.document);
   const status = c.status === "changes_requested" ? c.status : nextStatus(actor, c, "draft");
   return db.transaction(async (tx) => {
-    await tx
+    const [moved] = await tx
       .update(contents)
       .set({
         draft: doc as unknown as Record<string, unknown>,
@@ -630,7 +650,9 @@ export async function restoreVersion(
         draftUpdatedAt: new Date(),
         status,
       })
-      .where(eq(contents.id, c.id));
+      .where(unchangedSince(c))
+      .returning({ id: contents.id });
+    if (!moved) revConflict({ draftRev: c.draftRev });
     const v = await createVersion(tx, {
       content: c,
       document: doc,
@@ -844,6 +866,7 @@ export async function submitForReview(
   const c = await getContentRow(db, input.clientId, input.id);
   assertNotLocked(c);
   if (c.draftRev !== input.draftRev) revConflict({ draftRev: c.draftRev });
+  const fromStatus = c.status;
   if (c.status === "changes_requested") c.status = nextStatus(actor, c, "draft");
   nextStatus(actor, c, "in_review");
   const doc = parseDocument(c.draft);
@@ -863,7 +886,7 @@ export async function submitForReview(
         reviewerId: input.reviewerId ?? null,
         reviewNote: null,
       })
-      .where(and(eq(contents.id, c.id), eq(contents.draftRev, input.draftRev)))
+      .where(unchangedSince({ id: c.id, status: fromStatus, draftRev: input.draftRev }))
       .returning();
     if (!row) revConflict({ draftRev: c.draftRev });
     await audit(tx, actor, "submitted", c, {
@@ -897,7 +920,12 @@ export async function withdrawFromReview(
   const c = await getContentRow(db, input.clientId, input.id);
   if (c.status !== "in_review") conflict("content.errors.notInReview");
   const to = nextStatus(actor, c, "draft");
-  await db.update(contents).set({ status: to }).where(eq(contents.id, c.id));
+  const [moved] = await db
+    .update(contents)
+    .set({ status: to })
+    .where(and(eq(contents.id, c.id), eq(contents.status, "in_review")))
+    .returning({ id: contents.id });
+  if (!moved) conflict("content.errors.notInReview");
   await audit(db, actor, "withdrawn", c);
   return { ok: true as const };
 }
@@ -997,7 +1025,15 @@ export async function decideReview(
         reviewNote: note || null,
         ...(input.decision === "approved" ? { approvedVersionId: version.id } : {}),
       })
-      .where(and(eq(contents.id, c.id), eq(contents.status, "in_review")))
+      // Still the version decided on: a new one submitted during the brand-guard run must
+      // not inherit an approval of the old one.
+      .where(
+        and(
+          eq(contents.id, c.id),
+          eq(contents.status, "in_review"),
+          eq(contents.currentVersionId, version.id),
+        ),
+      )
       .returning();
     if (!row) conflict("content.errors.changedMeanwhile");
     await audit(tx, actor, input.decision, c, { version: version.number, selfApproval });
@@ -1091,7 +1127,7 @@ export async function prepareExport(
   humanOnly(actor, input.draft ? "edit_draft" : "reports.export", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
   if (!input.draft) {
-    if (c.status !== "approved" && c.status !== "exported")
+    if (!isFinalExportable(c))
       conflict("content.errors.exportNotApproved", {
         code: "EXPORT-NOT-APPROVED",
       });

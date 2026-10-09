@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { can, checkAiPolicy, loadEnv, transitionPermission } from "../src";
+import {
+  can,
+  canViewJob,
+  checkAiPolicy,
+  loadEnv,
+  resolveDefaultAiPolicy,
+  transitionPermission,
+} from "../src";
 
 describe("permissions", () => {
   const user = { type: "user" as const, id: "u1", isAdmin: false, active: true };
@@ -33,6 +40,15 @@ describe("permissions", () => {
       expect(can(agent, p)).toBe(false);
     }
   });
+
+  it("a clientId never widens what an actor may do", () => {
+    const client = "11111111-1111-1111-1111-111111111111";
+    expect(can(user, "users.manage", client)).toBe(false);
+    expect(can({ ...admin, active: false }, "view", client)).toBe(false);
+    const agent = { type: "agent" as const, role: "reviewer" as const };
+    expect(can(agent, "approve", client)).toBe(false);
+    expect(can(agent, "propose", client)).toBe(true);
+  });
 });
 
 describe("AI policy", () => {
@@ -46,6 +62,11 @@ describe("AI policy", () => {
   it("restricts to approved providers", () => {
     expect(checkAiPolicy("external_restricted", "openai", ["anthropic"]).allowed).toBe(false);
     expect(checkAiPolicy("external_restricted", "anthropic", ["anthropic"]).allowed).toBe(true);
+  });
+  it("reads the stored default policy, external_allowed when there is none or it is not a policy", () => {
+    expect(resolveDefaultAiPolicy("local_only")).toBe("local_only");
+    expect(resolveDefaultAiPolicy(undefined)).toBe("external_allowed");
+    expect(resolveDefaultAiPolicy("anything")).toBe("external_allowed");
   });
 });
 
@@ -71,5 +92,44 @@ describe("env", () => {
     expect(() => loadEnv({ DATABASE_URL: "x", BETTER_AUTH_SECRET: "short" })).toThrow(
       /BETTER_AUTH_SECRET/,
     );
+  });
+  it("accepts an unset or empty setup token and rejects a short one", () => {
+    const base = { DATABASE_URL: "x", BETTER_AUTH_SECRET: "x".repeat(32) };
+    expect(loadEnv({ ...base }).FORGECY_SETUP_TOKEN).toBeUndefined();
+    expect(loadEnv({ ...base, FORGECY_SETUP_TOKEN: "" }).FORGECY_SETUP_TOKEN).toBeUndefined();
+    expect(loadEnv({ ...base, FORGECY_SETUP_TOKEN: "x".repeat(16) }).FORGECY_SETUP_TOKEN).toBe(
+      "x".repeat(16),
+    );
+    expect(() => loadEnv({ ...base, FORGECY_SETUP_TOKEN: "short" })).toThrow(/FORGECY_SETUP_TOKEN/);
+  });
+});
+
+describe("job visibility", () => {
+  const user = { type: "user" as const, id: "u1", isAdmin: false, active: true };
+  const admin = { ...user, isAdmin: true };
+
+  it("lets any active person watch an ordinary job", () => {
+    expect(canViewJob(user, { kind: "content.generate_outline", clientId: "c1" })).toBe(true);
+    expect(canViewJob(user, { kind: "system.ping", clientId: null })).toBe(true);
+  });
+
+  it("keeps backup, restore and client transfer jobs for the Admin", () => {
+    for (const kind of [
+      "system.backup",
+      "system.restore",
+      "client.export",
+      "client.import.verify",
+      "client.import",
+    ]) {
+      expect(canViewJob(user, { kind, clientId: null })).toBe(false);
+      expect(canViewJob(admin, { kind, clientId: null })).toBe(true);
+    }
+  });
+
+  it("denies inactive people and does not trust prototype keys", () => {
+    expect(canViewJob({ ...admin, active: false }, { kind: "system.ping", clientId: null })).toBe(
+      false,
+    );
+    expect(canViewJob(user, { kind: "constructor", clientId: null })).toBe(true);
   });
 });

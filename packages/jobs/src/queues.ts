@@ -74,7 +74,6 @@ export interface EnqueueInput<S extends z.ZodType = z.ZodType> {
   entity?: string | null;
   entityId?: string | null;
   createdBy?: string | null;
-  dependsOnJobId?: string | null;
   /** Delay before the first attempt. */
   delayMs?: number;
 }
@@ -108,7 +107,6 @@ export async function enqueueJob<S extends z.ZodType>(
       entity: input.entity ?? null,
       entityId: input.entityId ?? null,
       createdBy: input.createdBy ?? null,
-      dependsOnJobId: input.dependsOnJobId ?? null,
     })
     .returning();
   if (!row) throw new Error("jobs insert returned no row");

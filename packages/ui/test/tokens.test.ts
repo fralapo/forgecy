@@ -70,7 +70,11 @@ describe("generated CSS", () => {
 
   it("is deterministic and matches the checked-in file", () => {
     expect(buildTokensCss(tree)).toBe(css);
-    const checkedIn = readFileSync(new URL("../src/generated/tokens.css", import.meta.url), "utf8");
+    // A Windows checkout (core.autocrlf) may hold the file with CRLF; git stores it with LF.
+    const checkedIn = readFileSync(
+      new URL("../src/generated/tokens.css", import.meta.url),
+      "utf8",
+    ).replace(/\r\n/g, "\n");
     expect(checkedIn, "run `pnpm tokens`").toBe(css);
   });
 

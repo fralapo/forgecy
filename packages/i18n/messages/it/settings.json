@@ -18,6 +18,16 @@
     "emailNotificationsNoSmtp": "L’email non è ancora configurata su questa istanza: un Admin può farlo in Impostazioni › Email (SMTP).",
     "emailNotificationsSaved": "Preferenza email salvata."
   },
+  "password": {
+    "title": "Cambia password",
+    "current": "Password attuale",
+    "new": "Nuova password",
+    "submit": "Cambia password",
+    "saved": "Password cambiata. Gli altri dispositivi sono stati disconnessi.",
+    "wrongCurrent": "La password attuale non è corretta.",
+    "unchanged": "La nuova password deve essere diversa da quella attuale.",
+    "noPassword": "Questo account accede senza password, quindi non c'è nulla da cambiare."
+  },
   "instance": {
     "title": "Istanza",
     "access": "Accesso",
@@ -44,7 +54,8 @@
     "password": "Password iniziale",
     "isAdmin": "Admin (impostazioni, chiavi, budget e backup)",
     "created": "Account creato.",
-    "submit": "Crea account"
+    "submit": "Crea account",
+    "username": "Utente"
   },
   "worker": {
     "check": "Verifica il worker",

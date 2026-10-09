@@ -1,11 +1,12 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { parse, TYPE, type MessageFormatElement } from "@formatjs/icu-messageformat-parser";
 import { describe, expect, it } from "vitest";
 import { LOCALES } from "../src/locales";
 import { loadMessages, loadRawMessages, withFallback, type MessageTree } from "../src/messages";
 
-const root = new URL("../messages/", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../messages/", import.meta.url));
 
 function flatten(tree: MessageTree, prefix = ""): Map<string, string> {
   const out = new Map<string, string>();

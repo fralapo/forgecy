@@ -7,6 +7,7 @@ import {
   WEBSITE_AREAS,
 } from "@forgecy/core";
 import { withPlaybooks } from "@forgecy/ai/playbooks";
+import { escapeDelimiters, inlineValue } from "@forgecy/ai/untrusted";
 import { z } from "zod";
 
 /**
@@ -14,7 +15,7 @@ import { z } from "zod";
  * with Zod; the server then verifies every evidence reference against the stored
  * sources and computes confidence itself (never from the model).
  */
-export const PROMPT_VERSION = "audit-2026-10-06g";
+export const PROMPT_VERSION = "audit-2026-10-08a";
 
 const SHARED_RULES = `
 Rules you always follow:
@@ -269,10 +270,9 @@ ${SHARED_RULES}`,
   "copywriting",
 );
 
-/** Wrap untrusted content so the model treats it as data. */
+/** Wrap untrusted content so the model treats it as data (delimiters escaped, never stripped). */
 export function dataBlock(label: string, content: string): string {
-  const safe = content.replace(/<\/?data[^>]*>/gi, "");
-  return `<data source="${label}">\n${safe}\n</data>`;
+  return `<data source="${inlineValue(label)}">\n${escapeDelimiters(content)}\n</data>`;
 }
 
 /** Normalize text for verbatim-quote checks: case, spacing and typographic quotes. */

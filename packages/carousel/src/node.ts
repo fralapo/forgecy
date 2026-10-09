@@ -1,8 +1,9 @@
 import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import { ForgecyError, loadToolEnv } from "@forgecy/core";
+import { readZipParts, ZipLimitError } from "@forgecy/files/safe-zip";
 import { localizedError } from "@forgecy/i18n";
-import { unzipSync } from "fflate";
 import {
   MANIFEST_FILE,
   MAX_PACKAGE_BYTES,
@@ -45,26 +46,42 @@ export async function readTemplateDir(dir: string): Promise<Map<string, Uint8Arr
 /**
  * Unpack an uploaded template ZIP (max 50 MB). A single top-level folder is
  * stripped, so both "zip of the folder" and "zip of its contents" work.
+ * Read with the shared guarded reader: limits count the bytes really inflated, never the
+ * sizes the archive declares (a client package brings template ZIPs that the web render
+ * route unpacks, so a lying entry must not keep its event loop busy).
  */
-export function unzipTemplatePackage(zip: Uint8Array): Map<string, Uint8Array> {
+export async function unzipTemplatePackage(zip: Uint8Array): Promise<Map<string, Uint8Array>> {
   if (zip.length > MAX_PACKAGE_BYTES)
     throw localizedError("validation", "templates.errors.zipTooLarge");
-  let total = 0;
   let count = 0;
-  const raw = unzipSync(zip, {
-    filter: (f) => {
-      if (f.name.endsWith("/")) return false;
-      count++;
-      total += f.originalSize;
-      if (count > MAX_PACKAGE_FILES || total > MAX_PACKAGE_BYTES)
-        throw localizedError("validation", "templates.errors.extractedTooLarge");
-      const parts = f.name.split("/");
-      if (f.name.startsWith("/") || parts.includes(".."))
-        throw localizedError("validation", "templates.errors.zipPathNotAllowed", { name: f.name });
-      return !parts.some((s) => s.startsWith(".") || s === "__MACOSX");
-    },
-  });
-  const names = Object.keys(raw);
+  let raw: Map<string, Uint8Array>;
+  try {
+    raw = await readZipParts(zip, {
+      // Folders and hidden files are entries too: room for them, the files are counted below.
+      maxEntries: MAX_PACKAGE_FILES * 2,
+      maxEntryBytes: MAX_PACKAGE_BYTES,
+      maxTotalBytes: MAX_PACKAGE_BYTES,
+      select: (name) => {
+        if (++count > MAX_PACKAGE_FILES) throw new ZipLimitError("entries");
+        const parts = name.split("/");
+        if (name.startsWith("/") || parts.includes(".."))
+          throw localizedError("validation", "templates.errors.zipPathNotAllowed", { name });
+        return !parts.some((s) => s.startsWith(".") || s === "__MACOSX");
+      },
+    });
+  } catch (err) {
+    if (err instanceof ForgecyError) throw err;
+    if (err instanceof ZipLimitError)
+      throw localizedError("validation", "templates.errors.extractedTooLarge");
+    // yauzl refuses absolute and ".." names itself, before `select` sees them.
+    const path = /^(?:invalid relative path|absolute path): (.*)$/.exec(
+      err instanceof Error ? err.message : "",
+    );
+    if (path)
+      throw localizedError("validation", "templates.errors.zipPathNotAllowed", { name: path[1]! });
+    throw localizedError("validation", "templates.errors.unreadableZip");
+  }
+  const names = [...raw.keys()];
   const first = names[0]?.split("/")[0];
   const strip =
     first && !names.includes(MANIFEST_FILE) && names.every((n) => n.startsWith(`${first}/`))
@@ -75,14 +92,14 @@ export function unzipTemplatePackage(zip: Uint8Array): Map<string, Uint8Array> {
     const rel = name.slice(strip.length);
     if (!isSafePackagePath(name) || !isSafePackagePath(rel))
       throw localizedError("validation", "templates.errors.zipPathNotAllowed", { name });
-    files.set(rel, raw[name]!);
+    files.set(rel, raw.get(name)!);
   }
   return files;
 }
 
 /** `templates` of the repository, or FORGECY_TEMPLATES_DIR when set. */
 export function defaultTemplatesDir(): string {
-  const fromEnv = process.env.FORGECY_TEMPLATES_DIR;
+  const fromEnv = loadToolEnv().FORGECY_TEMPLATES_DIR;
   if (fromEnv) return path.resolve(fromEnv);
   let dir = process.cwd();
   for (let i = 0; i < 6; i++) {

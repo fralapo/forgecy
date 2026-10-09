@@ -476,7 +476,6 @@
     "errors": {
       "content": "Write between 3 and 500 characters.",
       "notFound": "This memory no longer exists.",
-      "noAi": "The client's AI policy is no_ai: agents cannot propose memories.",
       "alreadyDecided": "This memory was already decided in the meantime.",
       "alreadyDecidedBy": "{name} already decided this memory in the meantime.",
       "noteRequired": "At low confidence, approving needs a note (at least 3 characters).",

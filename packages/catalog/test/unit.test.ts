@@ -14,6 +14,8 @@ import {
   parseProductText,
   parseXlsx,
   productsToCsv,
+  assertSafeOfficeFile,
+  IMPORT_LIMITS,
   readPdfText,
   readZip,
   safeEntryPath,
@@ -27,7 +29,8 @@ import {
 import { csvCell, englishCsvLabels } from "../src/products/csv-export";
 import { fieldDefs } from "../src/products/fields";
 import { LOCALES } from "@forgecy/core";
-import { messagesFor } from "@forgecy/i18n";
+import { overlappingZip, zipArchive } from "@forgecy/core/testing/archives";
+import { englishMessage, messagesFor } from "@forgecy/i18n";
 import { makePdf, makeXlsx, makeZip, PNG } from "./fixtures";
 
 const WOO_HEADERS = [
@@ -74,6 +77,16 @@ describe("sniffFile", () => {
 });
 
 describe("CSV and XLSX", () => {
+  it("writes summaries from the message catalog, with real plurals", async () => {
+    const one = await inspectFile("csv", "one.csv", {
+      data: Buffer.from("Name,Price\nCream,10\n"),
+    });
+    expect(one.summary).toBe(englishMessage("products.files.sheet", { rows: 1 }));
+    expect(one.summary).toBe("Valid · 1 row");
+    expect((await inspectFile("txt", "a.txt", { data: Buffer.from("hello") })).summary).toBe(
+      englishMessage("products.files.text"),
+    );
+  });
   // Italian headers and an accented Italian word: the Windows-1252 path exists for Italian Excel exports.
   it("reads semicolon CSV in Windows-1252", () => {
     const bytes = Buffer.from([
@@ -181,7 +194,7 @@ describe("mapping", () => {
   });
 });
 
-describe("ZIP guard", () => {
+describe("ZIP guard", { timeout: 30_000 }, () => {
   it("lists entries, skips junk and refuses path traversal", async () => {
     const zip = await makeZip([
       { path: "cream/photo.png", data: PNG },
@@ -221,9 +234,101 @@ describe("ZIP guard", () => {
     ]);
     const res = await inspectFile("zip", "photos.zip", { data: zip });
     expect(res.valid).toBe(true);
-    expect(res.summary).toBe(
-      "ZIP: 1 sheets, 1 images, 1 texts · 1 files ignored: formats not allowed",
-    );
+    expect(res.summary).toBe("ZIP: 1 sheet, 1 image, 1 text · 1 file ignored: format not allowed");
+  });
+});
+
+describe("Office file guard", { timeout: 30_000 }, () => {
+  const MB = 1024 * 1024;
+  it("accepts a normal spreadsheet", async () => {
+    const xlsx = await makeXlsx([["Name"], ["Cream"]]);
+    await expect(assertSafeOfficeFile(xlsx, "ok.xlsx")).resolves.toBeUndefined();
+  });
+  it("stops a file whose central directory lies about a part size", async () => {
+    const lying = zipArchive([
+      { name: "xl/sharedStrings.xml", data: Buffer.alloc(64 * MB), declaredSize: 4096 },
+    ]);
+    await expect(assertSafeOfficeFile(lying, "lie.xlsx")).rejects.toMatchObject({
+      code: "IMPORT-INVALID",
+    });
+  });
+  it("stops overlapping stored parts that add up past the total ceiling", async () => {
+    const overlap = overlappingZip({
+      data: Buffer.alloc(MB, 65),
+      entries: 150,
+      store: true,
+      declaredSize: MB,
+      name: (i) => `xl/worksheets/sheet${i}.xml`,
+    });
+    await expect(
+      assertSafeOfficeFile(overlap, "overlap.xlsx", {
+        maxPartBytes: 4 * MB,
+        maxTotalBytes: 100 * MB,
+      }),
+    ).rejects.toMatchObject({ code: "IMPORT-TOO-LARGE" });
+  });
+  it("bounds each part on its own and the package by a higher ceiling", () => {
+    expect(IMPORT_LIMITS.officeTotalBytes).toBeGreaterThan(IMPORT_LIMITS.officePartBytes);
+  });
+  it("accepts many mid-size parts that add up past the per-part limit", async () => {
+    // 3 pivot-cache-like parts of 30 MB: 90 MB in all, over the old 50 MB sum, each under the part limit.
+    const parts = [
+      "pivotCache/pivotCacheRecords1.xml",
+      "pivotCache/pivotCacheRecords2.xml",
+      "xl/sharedStrings.xml",
+    ];
+    const big = zipArchive(parts.map((name) => ({ name, data: Buffer.alloc(30 * MB, 65) })));
+    await expect(assertSafeOfficeFile(big, "pivots.xlsx")).resolves.toBeUndefined();
+  });
+  it("refuses a single part above the per-part limit even when the total would fit", async () => {
+    const one = zipArchive([
+      { name: "xl/worksheets/sheet1.xml", data: Buffer.alloc(51 * MB, 65) },
+      { name: "xl/sharedStrings.xml", data: "<sst/>" },
+    ]);
+    await expect(assertSafeOfficeFile(one, "huge.xlsx")).rejects.toMatchObject({
+      code: "IMPORT-TOO-LARGE",
+    });
+  });
+  it("refuses parts that each fit but add up past the total ceiling", async () => {
+    const parts = Array.from({ length: 5 }, (_, i) => ({
+      name: `xl/worksheets/sheet${i}.xml`,
+      data: Buffer.alloc(MB, 65),
+    }));
+    const pkg = zipArchive(parts);
+    await expect(
+      assertSafeOfficeFile(pkg, "sum.xlsx", { maxPartBytes: 2 * MB, maxTotalBytes: 4 * MB }),
+    ).rejects.toMatchObject({ code: "IMPORT-TOO-LARGE" });
+    await expect(
+      assertSafeOfficeFile(pkg, "sum.xlsx", { maxPartBytes: 2 * MB, maxTotalBytes: 5 * MB }),
+    ).resolves.toBeUndefined();
+  });
+  it("stops a deflate bomb", async () => {
+    const bomb = zipArchive([{ name: "word/document.xml", data: Buffer.alloc(101 * MB) }]);
+    await expect(assertSafeOfficeFile(bomb, "bomb.docx")).rejects.toMatchObject({
+      code: "IMPORT-TOO-LARGE",
+    });
+  });
+  it("stops a file with too many entries", async () => {
+    const many = zipArchive(Array.from({ length: 5_001 }, (_, i) => ({ name: `f${i}.xml` })));
+    await expect(assertSafeOfficeFile(many, "many.xlsx")).rejects.toMatchObject({
+      code: "IMPORT-TOO-LARGE",
+    });
+  });
+  it("does not count or inflate non-XML parts such as media", async () => {
+    const withMedia = zipArchive([
+      { name: "word/document.xml", data: "<w:document/>" },
+      { name: "word/media/image1.png", data: Buffer.alloc(60 * MB), declaredSize: 10 },
+    ]);
+    await expect(assertSafeOfficeFile(withMedia, "media.docx")).resolves.toBeUndefined();
+  });
+  it("accepts parts just under the cap", async () => {
+    const big = zipArchive([{ name: "xl/worksheets/sheet1.xml", data: Buffer.alloc(49 * MB) }]);
+    await expect(assertSafeOfficeFile(big, "big.xlsx")).resolves.toBeUndefined();
+  });
+  it("refuses a file that is not a ZIP", async () => {
+    await expect(assertSafeOfficeFile(Buffer.from("nope"), "x.xlsx")).rejects.toMatchObject({
+      code: "IMPORT-INVALID",
+    });
   });
 });
 

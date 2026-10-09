@@ -1,14 +1,13 @@
 /**
- * Agent memory (spec page 56). Agents only write `observed` notes and `candidate`
- * proposals; a person approves, rejects (with a reason), edits (a new version) or
- * archives. The gateway adds a client's approved memories to the agent's prompt and
- * records their ids in the run (`input_summary.memory`).
+ * Agent memory (spec page 56). A person approves, rejects (with a reason), edits (a new
+ * version) or archives; agents have no write path here (a future producer must sit behind
+ * `assertCan(agent, "propose")`). The gateway adds a client's approved memories to the
+ * agent's prompt and records their ids in the run (`input_summary.memory`).
  */
 import {
   assertCan,
   isSensitiveMemoryCategory,
   memoryCategories,
-  memoryConfidences,
   memoryContentSchema,
   memorySettingKeys,
   memorySettingSchemas,
@@ -17,7 +16,6 @@ import {
   type Actor,
   type AgentRole,
   type MemoryCategory,
-  type MemoryConfidence,
   type MemorySettingKey,
   type MemorySettingValues,
   type MemoryStatus,
@@ -221,77 +219,11 @@ function person(actor: Actor, clientId?: string): Extract<Actor, { type: "user" 
 }
 
 const categorySchema = z.enum(memoryCategories);
-const confidenceSchema = z.enum(memoryConfidences);
 
 function content(text: string): string {
   const parsed = memoryContentSchema.safeParse(text);
   if (!parsed.success) throw localizedError("validation", "agents.memory.errors.content");
   return parsed.data;
-}
-
-export interface AgentMemoryInput {
-  clientId: string;
-  content: string;
-  category: MemoryCategory;
-  confidence: MemoryConfidence;
-  confidenceReason?: string | null;
-  runId?: string | null;
-  sourceNote?: string | null;
-  /** `observed`: a note of the agent; `candidate`: proposed for approval. */
-  status: "observed" | "candidate";
-}
-
-/**
- * An agent writes a note or a proposal. It can never write an approved memory; a
- * client with policy `no_ai` gets no new memories from agents.
- */
-export async function recordAgentMemory(
-  db: Database,
-  agent: AgentRole,
-  input: AgentMemoryInput,
-): Promise<MemoryItem> {
-  const actor: Actor = { type: "agent", role: agent, runId: input.runId ?? undefined };
-  assertCan(actor, "propose", input.clientId);
-  const status = z.enum(["observed", "candidate"]).parse(input.status);
-  const category = categorySchema.parse(input.category);
-  const confidence = confidenceSchema.parse(input.confidence);
-  const text = content(input.content);
-  return db.transaction(async (tx) => {
-    const [client] = await tx
-      .select({ aiPolicy: clients.aiPolicy })
-      .from(clients)
-      .where(eq(clients.id, input.clientId));
-    if (!client) throw localizedError("not_found", "agents.memory.errors.notFound");
-    if (client.aiPolicy === "no_ai")
-      throw localizedError("policy_blocked", "agents.memory.errors.noAi");
-    const [row] = await tx
-      .insert(memoryItems)
-      .values({
-        clientId: input.clientId,
-        agent,
-        category,
-        sensitive: isSensitiveMemoryCategory(category),
-        content: text,
-        status,
-        confidence,
-        confidenceReason: input.confidenceReason ?? null,
-        proposedByAgent: agent,
-        sourceRunId: input.runId ?? null,
-        sourceNote: input.sourceNote ?? null,
-      })
-      .returning();
-    await tx
-      .insert(memoryItemVersions)
-      .values({ memoryId: row!.id, version: 1, content: text, category, authorAgent: agent });
-    await recordAuditEvent(tx, {
-      actor,
-      action: `memory.${status}`,
-      entity: "memory",
-      entityId: row!.id,
-      clientId: input.clientId,
-    });
-    return row!;
-  });
 }
 
 /** “Add memory”: a person's memory is approved at once (they are the approver). */

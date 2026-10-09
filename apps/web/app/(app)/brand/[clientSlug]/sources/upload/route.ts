@@ -62,7 +62,7 @@ async function upload(
     ? (kindValue as (typeof fileKinds)[number])
     : "brand_book";
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const detected = detectImportFile({ name: file.name, mime: file.type, bytes });
+  const detected = await detectImportFile({ name: file.name, mime: file.type, bytes });
   if (!detected.ok) throw new ForgecyError("validation", detected.message, undefined, detected.ref);
 
   const hash = sha256(bytes);

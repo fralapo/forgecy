@@ -8,10 +8,15 @@ import {
   approvalDecisions,
   assetSources,
   assetStatuses,
+  contentAssetKinds,
   contentObjectives,
   contentPlanStatuses,
+  contentTypes,
   contentVersionOrigins,
+  frequencyUnits,
   funnelStages,
+  outlineOrigins,
+  slideEditStatuses,
   strategyItemStatuses,
   type MessageRef,
 } from "@forgecy/core";
@@ -97,7 +102,7 @@ export const contentPillars = pgTable(
       .notNull()
       .default(sql`'{}'::text[]`),
     frequencyCount: integer("frequency_count"),
-    frequencyUnit: text("frequency_unit", { enum: ["week", "month"] }),
+    frequencyUnit: text("frequency_unit", { enum: frequencyUnits }),
     cta: text("cta"),
     emotion: text("emotion"),
     examples: jsonb("examples").$type<Json[]>().notNull().default([]),
@@ -125,7 +130,7 @@ export const contentRubrics = pgTable(
       .references(() => contentPillars.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     frequencyCount: integer("frequency_count"),
-    frequencyUnit: text("frequency_unit", { enum: ["week", "month"] }),
+    frequencyUnit: text("frequency_unit", { enum: frequencyUnits }),
     /** Ordered steps: [{ name, role }], role = slide role of the template. */
     structure: jsonb("structure").$type<Json[]>().notNull().default([]),
     hookFormula: text("hook_formula"),
@@ -216,9 +221,7 @@ export const contents = pgTable(
     clientId: uuid("client_id")
       .notNull()
       .references(() => clients.id, { onDelete: "cascade" }),
-    type: text("type", { enum: ["carousel"] })
-      .notNull()
-      .default("carousel"),
+    type: text("type", { enum: contentTypes }).notNull().default("carousel"),
     title: text("title").notNull(),
     status: contentStatusEnum("status").notNull().default("draft"),
     objective: contentObjectiveEnum("objective").notNull(),
@@ -322,7 +325,7 @@ export const contentOutlines = pgTable(
       .references(() => contents.id, { onDelete: "cascade" }),
     number: integer("number").notNull(),
     outline: jsonb("outline").$type<Json>().notNull(),
-    origin: text("origin", { enum: ["ai", "manual", "restore"] }).notNull(),
+    origin: text("origin", { enum: outlineOrigins }).notNull(),
     instruction: text("instruction"),
     jobId: uuid("job_id").references(() => jobs.id, { onDelete: "set null" }),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
@@ -375,9 +378,7 @@ export const contentSlideEdits = pgTable(
       .references(() => contents.id, { onDelete: "cascade" }),
     slideId: text("slide_id").notNull(),
     instruction: text("instruction").notNull(),
-    status: text("status", { enum: ["queued", "applied", "kept", "reverted", "failed"] })
-      .notNull()
-      .default("queued"),
+    status: text("status", { enum: slideEditStatuses }).notNull().default("queued"),
     before: jsonb("before").$type<Json>(),
     after: jsonb("after").$type<Json>(),
     note: text("note"),
@@ -469,9 +470,7 @@ export const assets = pgTable(
     clientId: uuid("client_id")
       .notNull()
       .references(() => clients.id, { onDelete: "cascade" }),
-    kind: text("kind", { enum: ["image"] })
-      .notNull()
-      .default("image"),
+    kind: text("kind", { enum: contentAssetKinds }).notNull().default("image"),
     source: assetSourceEnum("source").notNull(),
     status: assetStatusEnum("status").notNull().default("draft"),
     storageKey: text("storage_key").notNull(),

@@ -14,6 +14,29 @@ export interface ForeignKey {
   notNull: boolean;
 }
 
+/**
+ * A uuid column that holds the id of another row without a declared foreign key.
+ * `package`: the row must travel in the package (checked, and remapped on import).
+ * `nullIfOutside`: may point at something that does not travel (a job, an agency
+ * template); the import empties it unless it points at a row of the package.
+ */
+export interface SoftRef {
+  column: string;
+  target: string;
+  notNull: boolean;
+  mode: "package" | "nullIfOutside";
+}
+
+/**
+ * A `uuid[]` column whose ids are rows of `target`, without a foreign key. It follows the
+ * rule of `nullIfOutside`: the import keeps the ids of rows it writes for this client, and
+ * drops every other (a deleted row leaves its id behind, so an honest export has them too).
+ */
+export interface ArrayRef {
+  column: string;
+  target: string;
+}
+
 export interface ClientTable {
   name: string;
   area: ClientTransferArea | "client";
@@ -26,6 +49,10 @@ export interface ClientTable {
   userColumns: ForeignKey[];
   /** Foreign keys to tables that never travel (jobs): emptied on import. */
   droppedColumns: ForeignKey[];
+  /** uuid columns that point at rows without a foreign key (see SOFT_REFS). */
+  softRefs: SoftRef[];
+  /** uuid[] columns that point at rows without a foreign key (see ARRAY_REFS). */
+  arrayRefs: ArrayRef[];
 }
 
 /** Never in a package: people, sessions, settings, the job queue, budgets, history of this install. */
@@ -98,9 +125,45 @@ export const TABLE_AREAS: Record<string, ClientTransferArea | "client"> = {
   client_memory_settings: "client",
 };
 
+/**
+ * Every uuid column of a client table that is neither `id` nor a foreign key, with the table
+ * it points to. A new one without an entry makes `clientTables()` fail, so nobody adds a
+ * reference that an import would silently leave pointing at another client's data.
+ * `brand_check_*.subject_id` is generic (`subject_type`); the only subject today is a carousel.
+ * A new subject type needs a per-type target here (and in the checks), not another contents entry.
+ */
+export const SOFT_REFS: Record<string, { target: string; mode: SoftRef["mode"] }> = {
+  // No foreign key and deleteProduct does not clear them: a deleted product leaves its id
+  // behind, so these must not make an honest export unsafe. The import empties a stranger's.
+  "contents.product_id": { target: "products", mode: "nullIfOutside" },
+  "assets.product_id": { target: "products", mode: "nullIfOutside" },
+  "brand_examples.content_version_id": { target: "content_versions", mode: "package" },
+  "brand_check_runs.subject_id": { target: "contents", mode: "package" },
+  "brand_check_issue_states.subject_id": { target: "contents", mode: "package" },
+  "audit_reports.template_id": { target: "templates", mode: "nullIfOutside" },
+  "brand_identity_proposals.run_id": { target: "jobs", mode: "nullIfOutside" },
+};
+
+/**
+ * Every `uuid[]` column of a client table and the table its ids point to. A new one without
+ * an entry makes `clientTables()` fail, for the same reason as SOFT_REFS. Deleting a product,
+ * or an observation a problem rests on, does not clear these, so none can be required to
+ * resolve: the import drops what does not (a stranger's id included).
+ */
+export const ARRAY_REFS: Record<string, string> = {
+  "audit_findings.parent_ids": "audit_findings",
+  "audit_reports.excluded_finding_ids": "audit_findings",
+  "content_pillars.product_ids": "products",
+  "content_rubrics.product_ids": "products",
+  "content_plan_items.product_ids": "products",
+};
+
 function allTables(): PgTable[] {
   return (Object.values(schema) as unknown[]).filter((v): v is PgTable => v instanceof PgTable);
 }
+
+const isUuidArray = (col: unknown): boolean =>
+  (col as { baseColumn?: { columnType?: string } }).baseColumn?.columnType === "PgUUID";
 
 let cached: ClientTable[] | null = null;
 
@@ -149,6 +212,31 @@ export function clientTables(): ClientTable[] {
         parents: fks.filter((f) => included.has(f.target)),
         userColumns: fks.filter((f) => f.target === "users"),
         droppedColumns: fks.filter((f) => !included.has(f.target) && f.target !== "users"),
+        softRefs: c.columns
+          .filter(
+            (col) =>
+              col.columnType === "PgUUID" &&
+              col.name !== "id" &&
+              !fks.some((f) => f.column === col.name),
+          )
+          .map((col): SoftRef => {
+            const soft = SOFT_REFS[`${c.name}.${col.name}`];
+            if (!soft)
+              throw new Error(
+                `Column ${c.name}.${col.name} has no entry in client-transfer SOFT_REFS`,
+              );
+            return { column: col.name, notNull: col.notNull, ...soft };
+          }),
+        arrayRefs: c.columns
+          .filter((col) => col.columnType === "PgArray" && isUuidArray(col))
+          .map((col): ArrayRef => {
+            const target = ARRAY_REFS[`${c.name}.${col.name}`];
+            if (!target)
+              throw new Error(
+                `Column ${c.name}.${col.name} has no entry in client-transfer ARRAY_REFS`,
+              );
+            return { column: col.name, target };
+          }),
       };
     });
 

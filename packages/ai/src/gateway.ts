@@ -258,8 +258,10 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
    */
   async function approvedFor(req: CommonRequest): Promise<readonly ProviderId[]> {
     if (req.clientPolicy !== "external_restricted") return [];
-    if (!ledger.approvedProviders) return req.approvedProviders ?? [];
-    const stored = req.clientId ? await ledger.approvedProviders(req.clientId) : [];
+    // Fail closed: no client, or a ledger that cannot say what the Admin approved, approves
+    // nothing. The request can only narrow the stored list, never supply one.
+    const stored =
+      req.clientId && ledger.approvedProviders ? await ledger.approvedProviders(req.clientId) : [];
     const narrow = req.approvedProviders;
     return narrow ? stored.filter((p) => narrow.includes(p)) : stored;
   }
@@ -318,10 +320,12 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
       if (decision.allowed) allowed.push(c);
       else firstDenial ??= decision.reason;
     }
-    if (req.clientPolicy === "external_restricted" && req.sends?.length && allowed.length) {
+    const sends = req.sends;
+    if (req.clientPolicy === "external_restricted" && sends?.length && allowed.length) {
+      // Fail closed: no client or no ledger answer means no file kind may leave.
       const sendable =
-        req.clientId && ledger.sendableAssets ? await ledger.sendableAssets(req.clientId) : null;
-      const refused = sendable ? req.sends.filter((k) => !sendable.includes(k)) : [];
+        req.clientId && ledger.sendableAssets ? await ledger.sendableAssets(req.clientId) : [];
+      const refused = sends.filter((k) => !sendable.includes(k));
       if (refused.length) {
         // Those files never leave Forgecy: only a local model may read them.
         const onSite = allowed.filter((c) => isLocalProvider(c.provider));
@@ -575,7 +579,7 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
             if (!c.priced)
               logger?.warn(
                 { provider: cand.provider, model: cand.model },
-                "model missing from price table; cost logged as 0",
+                "model missing from price table; charged at the conservative default price",
               );
           };
 
@@ -742,12 +746,24 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
           };
         } catch (e) {
           const err = classifyError(e, cand.provider);
+          // A failure after the provider already charged keeps its cost in the log and the budget.
+          const charged = err.usage
+            ? computeCost(cand.provider, cand.model, err.usage)
+            : { costMicroUsd: 0, priced: true };
           await ledger.record({
             ...baseEntry(kind, req),
             provider: cand.provider,
             model: cand.model,
             status: "error",
-            inputSummary: { ...summary, attempt: ci + 1, fallback: ci > 0 },
+            inputSummary: {
+              ...summary,
+              attempt: ci + 1,
+              fallback: ci > 0,
+              ...(charged.priced ? {} : { unpriced: true }),
+            },
+            tokensIn: err.usage?.inputTokens ?? 0,
+            tokensOut: err.usage?.outputTokens ?? 0,
+            costMicroUsd: charged.costMicroUsd,
             error: `${err.kind}: ${err.message}`,
             startedAt,
             endedAt: now(),
@@ -797,7 +813,7 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
       throw new AiProviderError(
         "unknown",
         `Image job ${status.state}: ${status.error ?? "no details"}`,
-        { provider: cand.provider },
+        { provider: cand.provider, ...(status.usage ? { usage: status.usage } : {}) },
       );
     }
     return status;

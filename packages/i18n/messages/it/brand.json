@@ -782,7 +782,9 @@
       "damaged": "Non leggibile: il file è danneggiato o protetto da password.",
       "wordEmpty": "Documento Word senza contenuto leggibile.",
       "pdfProtected": "Non leggibile: PDF protetto. Carica una versione senza password.",
-      "pdfDamaged": "Non leggibile: il PDF è danneggiato."
+      "pdfDamaged": "Non leggibile: il PDF è danneggiato.",
+      "archiveTooLarge": "Non leggibile: il file contiene molti più dati di un documento normale.",
+      "pdfTooManyPages": "Non leggibile: il PDF ha troppe pagine."
     },
     "rationale": {
       "color": "Colore trovato nel file ({count, plural, one {# occorrenza} other {# occorrenze}}).",

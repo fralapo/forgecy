@@ -3,9 +3,8 @@
  * fonts and plain text. Types come from the bytes, never from the name alone.
  */
 import type { MessageRef } from "@forgecy/core";
-import { UPLOAD_LIMITS, validateUpload } from "@forgecy/files";
+import { listZipNames, UPLOAD_LIMITS, validateUpload, ZipLimitError } from "@forgecy/files";
 import { englishMessage, messageRef, type MessageKey } from "@forgecy/i18n";
-import { unzipSync } from "fflate";
 
 export type ImportFileType = "pdf" | "docx" | "pptx" | "image" | "svg" | "font" | "text";
 
@@ -20,44 +19,51 @@ export type DetectResult =
   /** `message` is English; `ref`, when set, is the same text for the interface. */
   | { ok: false; message: string; ref?: MessageRef };
 
-const refused = (key: MessageKey & `brand.errors.${string}`) =>
-  ({ ok: false, message: englishMessage(key), ref: messageRef(key) }) as const;
+const refused = (
+  key: (MessageKey & `brand.errors.${string}`) | "brand.import.errors.archiveTooLarge",
+) => ({ ok: false, message: englishMessage(key), ref: messageRef(key) }) as const;
 
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
 const isZip = (b: Uint8Array) => b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04;
 
-function ooxmlKind(bytes: Uint8Array): "docx" | "pptx" | null {
-  try {
-    const names = Object.keys(
-      unzipSync(bytes, {
-        filter: (f) => f.name === "word/document.xml" || f.name === "ppt/presentation.xml",
-      }),
-    );
-    if (names.includes("word/document.xml")) return "docx";
-    if (names.includes("ppt/presentation.xml")) return "pptx";
-  } catch {
-    // not a readable zip
-  }
+/** More entries than any real Office file holds (a media-heavy 50 MB deck has a few thousand). */
+const MAX_DETECT_ENTRIES = 10_000;
+
+/** From the central directory alone: nothing is inflated, however the archive is built. */
+async function ooxmlKind(bytes: Uint8Array): Promise<"docx" | "pptx" | null> {
+  const names = await listZipNames(bytes, { maxEntries: MAX_DETECT_ENTRIES }).catch(
+    (err: unknown): string[] => {
+      if (err instanceof ZipLimitError) throw err;
+      return []; // not a readable zip
+    },
+  );
+  if (names.includes("word/document.xml")) return "docx";
+  if (names.includes("ppt/presentation.xml")) return "pptx";
   return null;
 }
 
 const ext = (name: string) => name.slice(name.lastIndexOf(".") + 1).toLowerCase();
 
 /** Detects the file type and enforces the size limits (documents 50 MB, images 20 MB, fonts 10 MB). */
-export function detectImportFile(input: {
+export async function detectImportFile(input: {
   name: string;
   mime: string;
   bytes: Uint8Array;
-}): DetectResult {
+}): Promise<DetectResult> {
   const { bytes, name } = input;
   const size = bytes.byteLength;
   if (size === 0) return refused("brand.errors.fileEmpty");
 
   if (isZip(bytes)) {
     if (size > UPLOAD_LIMITS.document) return refused("brand.errors.fileTooLarge");
-    const kind = ooxmlKind(bytes);
+    let kind: Awaited<ReturnType<typeof ooxmlKind>>;
+    try {
+      kind = await ooxmlKind(bytes);
+    } catch {
+      return refused("brand.import.errors.archiveTooLarge");
+    }
     if (kind === "docx") return { ok: true, type: "docx", mime: DOCX_MIME, ext: "docx" };
     if (kind === "pptx") return { ok: true, type: "pptx", mime: PPTX_MIME, ext: "pptx" };
     return refused("brand.errors.archiveUnsupported");

@@ -18,6 +18,16 @@
     "emailNotificationsNoSmtp": "Email is not set up on this instance yet: an Admin can configure it in Settings › Email (SMTP).",
     "emailNotificationsSaved": "Email preference saved."
   },
+  "password": {
+    "title": "Change password",
+    "current": "Current password",
+    "new": "New password",
+    "submit": "Change password",
+    "saved": "Password changed. Your other devices were signed out.",
+    "wrongCurrent": "The current password is not correct.",
+    "unchanged": "The new password must be different from the current one.",
+    "noPassword": "This account signs in without a password, so there is none to change."
+  },
   "instance": {
     "title": "Instance",
     "access": "Access",
@@ -44,7 +54,8 @@
     "password": "Initial password",
     "isAdmin": "Admin (settings, keys, budget and backups)",
     "created": "Account created.",
-    "submit": "Create account"
+    "submit": "Create account",
+    "username": "Username"
   },
   "worker": {
     "check": "Check the worker",

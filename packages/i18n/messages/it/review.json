@@ -73,7 +73,8 @@
       "imageMissing": "Slide {slide} · {slot}: l’immagine non si è caricata.",
       "logoOutsideSafe": "Slide {slide} · {slot}: il logo è fuori dall’area di sicurezza del formato.",
       "overlap": "Slide {slide} · {slot}: si sovrappone a “{other}”.",
-      "contrastOnRender": "Slide {slide} · {slot}: contrasto {ratio}{onImage, select, yes { su un’immagine} other {}}; minimo {min}."
+      "contrastOnRender": "Slide {slide} · {slot}: contrasto {ratio}{onImage, select, yes { su un’immagine} other {}}; minimo {min}.",
+      "renderUnverified": "Layout, area di sicurezza e contrasto non sono stati verificati sul render delle slide. Controlla l’anteprima prima di approvare."
     },
     "suggestion": {
       "moveText": "Sposta parte del testo in un’altra slide o nella didascalia.",

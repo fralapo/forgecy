@@ -4,4 +4,6 @@ export * from "./signing";
 export * from "./local";
 export * from "./s3";
 export * from "./validate";
+export * from "./safe-zip";
 export * from "./env";
+export * from "./headers";

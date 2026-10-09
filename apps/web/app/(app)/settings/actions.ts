@@ -27,23 +27,28 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { resetProviders } from "@/lib/ai";
 import { env } from "@/lib/env";
-import { errorMessage, firstIssue, vmsg } from "@/lib/i18n";
-import { PASSWORD_MIN } from "@/lib/password";
+import { errorMessage, firstIssue, refText, vmsg } from "@/lib/i18n";
+import { changeOwnPassword } from "@/lib/change-password";
+import { refinePassword } from "@/lib/password-schema";
 import { requireUser } from "@/lib/session";
 import { isTheme, THEME_COOKIE } from "@/lib/theme";
+import { emailToUsername, isValidUsername, usernameToEmail } from "@/lib/username";
 import { createPasswordUser } from "@/lib/users";
 
-const newUserSchema = z.object({
-  name: z.string().trim().min(1, vmsg("validation.nameRequired")),
-  email: z.email(vmsg("validation.emailInvalid")),
-  password: z
-    .string()
-    .min(PASSWORD_MIN, vmsg("validation.passwordTooShort", { min: PASSWORD_MIN })),
-  isAdmin: z
-    .literal("on")
-    .optional()
-    .transform((v) => v === "on"),
-});
+const newUserSchema = z
+  .object({
+    username: z
+      .string()
+      .trim()
+      .refine(isValidUsername, vmsg("validation.usernameInvalid"))
+      .transform(usernameToEmail),
+    password: z.string(),
+    isAdmin: z
+      .literal("on")
+      .optional()
+      .transform((v) => v === "on"),
+  })
+  .superRefine(refinePassword);
 
 export type NewUserState = { error?: string; ok?: boolean };
 
@@ -53,11 +58,18 @@ export async function createUserAction(_prev: NewUserState, form: FormData): Pro
   const parsed = newUserSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: await firstIssue(parsed.error) };
   const exists = await getDb().query.users.findFirst({
-    where: eq(users.email, parsed.data.email.toLowerCase()),
+    where: eq(users.email, parsed.data.username),
     columns: { id: true },
   });
   if (exists) return { error: (await getTranslations("errors"))("userExists") };
-  await createPasswordUser({ ...parsed.data, createdBy: admin.id });
+  const { username: email, password, isAdmin } = parsed.data;
+  await createPasswordUser({
+    name: emailToUsername(email),
+    email,
+    password,
+    isAdmin,
+    createdBy: admin.id,
+  });
   revalidatePath("/settings");
   return { ok: true };
 }
@@ -116,6 +128,27 @@ export async function setLocaleAction(_prev: LocaleState, form: FormData): Promi
   await getDb().update(users).set({ locale: parsed.data }).where(eq(users.id, user.id));
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+export type ChangePasswordState = { error?: string; ok?: boolean };
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, vmsg("validation.invalid")),
+  newPassword: z.string(),
+});
+
+/** Changes the signed-in person's own password; their other devices are signed out. */
+export async function changePasswordAction(
+  _prev: ChangePasswordState,
+  form: FormData,
+): Promise<ChangePasswordState> {
+  await requireUser();
+  const parsed = changePasswordSchema.safeParse(Object.fromEntries(form));
+  if (!parsed.success) return { error: await firstIssue(parsed.error) };
+  const result = await changeOwnPassword(parsed.data.currentPassword, parsed.data.newPassword);
+  return "error" in result
+    ? { error: await refText(result.error, "Invalid password.") }
+    : { ok: true };
 }
 
 export type McpConnectState = { error?: string };

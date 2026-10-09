@@ -1,14 +1,5 @@
 import { sql } from "drizzle-orm";
-import {
-  index,
-  integer,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-  type AnyPgColumn,
-} from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import type { MessageRef } from "@forgecy/core";
 import { users } from "./auth";
 import { clients } from "./clients";
@@ -17,8 +8,7 @@ import { jobStatusEnum } from "./enums";
 
 /**
  * Persistent state of every background job. BullMQ moves the work; this table is
- * what the UI reads. `dependsOnJobId` chains pipeline steps so a failed step
- * restarts from itself instead of from the beginning.
+ * what the UI reads.
  */
 export const jobs = pgTable(
   "jobs",
@@ -29,9 +19,6 @@ export const jobs = pgTable(
     clientId: uuid("client_id").references(() => clients.id, { onDelete: "cascade" }),
     entity: text("entity"),
     entityId: uuid("entity_id"),
-    dependsOnJobId: uuid("depends_on_job_id").references((): AnyPgColumn => jobs.id, {
-      onDelete: "set null",
-    }),
     payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
     result: jsonb("result").$type<Record<string, unknown>>(),
     progress: integer("progress").notNull().default(0),

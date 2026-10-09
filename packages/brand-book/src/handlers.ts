@@ -73,7 +73,7 @@ export async function runBrandBookRender(
     versionId: row.brandVersionId,
   });
   if (!brand) throw unrecoverable("brand.book.jobErrors.versionMissing");
-  const pkg = await dbTemplateSource({ db, storage }).get(
+  const pkg = await dbTemplateSource({ db, storage, clientId: client.id }).get(
     row.templateKey ?? BRAND_BOOK_TEMPLATE_KEY,
     row.templateVersion ?? undefined,
   );

@@ -5,7 +5,8 @@
  */
 import type { MessageRef } from "@forgecy/core";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
-import { unzipSync, strFromU8 } from "fflate";
+import { readZipParts, ZipLimitError } from "@forgecy/files";
+import { strFromU8 } from "fflate";
 import { normalizeHex } from "../tokens";
 import type { ImportFileType } from "./detect";
 import { familyFromFileName, readFontNames, weightFromName } from "./fonts";
@@ -57,7 +58,16 @@ export class ExtractionError extends Error {
 const warning = (key: ImportKey<"warnings">, values?: MessageValues) => messageRef(key, values);
 
 const MAX_PAGES = 400;
+const MAX_PDF_PAGES = 2_000; // above this the PDF is refused; below it only MAX_PAGES are read
 const MAX_PAGE_CHARS = 20_000;
+// Office files come from uploads capped at 50 MB (UPLOAD_LIMITS.document in @forgecy/files), so a
+// real deck with many images can hold thousands of entries; only the text parts are ever inflated.
+const MAX_ZIP_ENTRIES = 10_000;
+const MAX_ZIP_ENTRY_BYTES = 50 * 1024 * 1024;
+const MAX_ZIP_TOTAL_BYTES = 100 * 1024 * 1024;
+/** The only parts of a DOCX/PPTX this file reads; everything else is never inflated. */
+const OOXML_PARTS =
+  /^(?:word\/document\.xml|word\/theme\/[^/]+\.xml|ppt\/slides\/slide\d+\.xml|ppt\/theme\/[^/]+\.xml)$/;
 
 const decodeXml = (s: string) =>
   s
@@ -128,11 +138,26 @@ export function colorsInText(pages: readonly ExtractedPage[]): ExtractedColor[] 
 
 // ---- Office Open XML ----
 
-function unzip(bytes: Uint8Array): Record<string, Uint8Array> {
+/**
+ * The text parts of a DOCX/PPTX. Limits apply to the bytes really inflated (declared sizes
+ * are only a claim), the parts read share one budget and a stream is stopped as soon as it
+ * exceeds it, so neither memory nor CPU grows with what the archive says about itself.
+ */
+async function unzip(bytes: Uint8Array): Promise<Record<string, Uint8Array>> {
   try {
-    return unzipSync(bytes);
-  } catch {
-    throw new ExtractionError("brand.import.errors.damaged");
+    const parts = await readZipParts(bytes, {
+      select: (name) => OOXML_PARTS.test(name),
+      maxEntries: MAX_ZIP_ENTRIES,
+      maxEntryBytes: MAX_ZIP_ENTRY_BYTES,
+      maxTotalBytes: MAX_ZIP_TOTAL_BYTES,
+    });
+    return Object.fromEntries(parts);
+  } catch (err) {
+    throw new ExtractionError(
+      err instanceof ZipLimitError
+        ? "brand.import.errors.archiveTooLarge"
+        : "brand.import.errors.damaged",
+    );
   }
 }
 
@@ -193,8 +218,8 @@ function paragraphs(
   return out;
 }
 
-function extractDocx(bytes: Uint8Array): Extraction {
-  const files = unzip(bytes);
+async function extractDocx(bytes: Uint8Array): Promise<Extraction> {
+  const files = await unzip(bytes);
   const doc = files["word/document.xml"];
   if (!doc) throw new ExtractionError("brand.import.errors.wordEmpty");
   const pages: ExtractedPage[] = [];
@@ -222,8 +247,8 @@ function extractDocx(bytes: Uint8Array): Extraction {
   };
 }
 
-function extractPptx(bytes: Uint8Array): Extraction {
-  const files = unzip(bytes);
+async function extractPptx(bytes: Uint8Array): Promise<Extraction> {
+  const files = await unzip(bytes);
   const slides = Object.keys(files)
     .map((n) => /^ppt\/slides\/slide(\d+)\.xml$/.exec(n))
     .filter((m): m is RegExpExecArray => !!m)
@@ -259,8 +284,8 @@ function extractPptx(bytes: Uint8Array): Extraction {
 // ---- PDF ----
 
 async function extractPdf(bytes: Uint8Array): Promise<Extraction> {
-  const { getDocumentProxy, extractText } = await import("unpdf");
-  let pdf;
+  const { getDocumentProxy } = await import("unpdf");
+  let pdf: Awaited<ReturnType<typeof getDocumentProxy>>;
   try {
     pdf = await getDocumentProxy(new Uint8Array(bytes));
   } catch (err) {
@@ -269,18 +294,35 @@ async function extractPdf(bytes: Uint8Array): Promise<Extraction> {
       throw new ExtractionError("brand.import.errors.pdfProtected");
     throw new ExtractionError("brand.import.errors.pdfDamaged");
   }
-  const { totalPages, text } = await extractText(pdf, { mergePages: false });
-  const pages = text
-    .slice(0, MAX_PAGES)
-    .map((t, i) => ({ locator: `p. ${i + 1}`, text: clean(t).slice(0, MAX_PAGE_CHARS) }))
-    .filter((p) => p.text);
-  const warnings: MessageRef[] = [];
-  if (totalPages > MAX_PAGES)
-    warnings.push(warning("brand.import.warnings.firstPages", { max: MAX_PAGES }));
-  if (totalPages > 0 && pages.length === 0)
-    warnings.push(warning("brand.import.warnings.pdfNoText"));
-  await pdf.cleanup?.();
-  return { pages, colors: colorsInText(pages), fonts: [], warnings };
+  try {
+    const totalPages = pdf.numPages;
+    // Checked before any page is touched: unpdf's extractText would start all of them at once.
+    if (totalPages > MAX_PDF_PAGES)
+      throw new ExtractionError("brand.import.errors.pdfTooManyPages");
+    const pages: ExtractedPage[] = [];
+    try {
+      for (let n = 1; n <= Math.min(totalPages, MAX_PAGES); n++) {
+        const content = await (await pdf.getPage(n)).getTextContent();
+        // Trimmed per page as it is read, so the text kept never exceeds MAX_PAGES * MAX_PAGE_CHARS.
+        const text = clean(
+          content.items.map((it) => ("str" in it ? it.str + (it.hasEOL ? "\n" : "") : "")).join(""),
+        ).slice(0, MAX_PAGE_CHARS);
+        if (text) pages.push({ locator: `p. ${n}`, text });
+      }
+    } catch {
+      throw new ExtractionError("brand.import.errors.pdfDamaged");
+    }
+    const warnings: MessageRef[] = [];
+    if (totalPages > MAX_PAGES)
+      warnings.push(warning("brand.import.warnings.firstPages", { max: MAX_PAGES }));
+    if (totalPages > 0 && pages.length === 0)
+      warnings.push(warning("brand.import.warnings.pdfNoText"));
+    return { pages, colors: colorsInText(pages), fonts: [], warnings };
+  } finally {
+    // loadingTask.destroy() also stops the worker and frees the document; cleanup() only
+    // drops page caches.
+    await pdf.loadingTask.destroy();
+  }
 }
 
 // ---- SVG, fonts, text ----

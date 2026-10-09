@@ -4,22 +4,38 @@
  * the jobs table is replaced too, progress is kept in `data/backups/restore-status.json`.
  */
 import { createWriteStream, existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { appSettings, eq, type Database } from "@forgecy/db";
 import {
-  BACKUP_FORMAT,
+  backupDbFormat,
   backupPath,
   backupsDir,
+  checksumMatches,
+  extractedDump,
   fileSha256,
+  pgRestoreArgs,
   runTool,
   type BackupFile,
   type BackupManifest,
 } from "./archive";
+import { stripExtensionStatements, withoutExtensionEntries } from "./restore-role";
+import { assertSafeDumpFile } from "./safe-dump";
+import { assertPlainTar, extractBackupArchive, UnsafeArchiveError } from "./safe-tar";
 
-export type RestoreProblem = "unreadable" | "format" | "newer_version" | "checksum_mismatch";
+export type RestoreProblem =
+  "unreadable" | "format" | "newer_version" | "checksum_mismatch" | "unsafe";
+
+export class BackupChecksumError extends Error {
+  constructor() {
+    super(
+      "The backup does not match its recorded checksum: it may be corrupted or changed. If this backup was made before checksums were recorded, delete its .json sidecar file",
+    );
+    this.name = "BackupChecksumError";
+  }
+}
 
 export interface BackupInspection {
   name: string;
@@ -43,23 +59,19 @@ export async function inspectBackup(
   try {
     let manifest: BackupManifest;
     try {
-      await runTool("tar", ["-xzf", file, "-C", work, "manifest.json"]);
+      // One extra decompression pass so a link anywhere is reported now, not after the confirm.
+      await assertPlainTar(file);
+      await extractBackupArchive(file, work, ["manifest.json"]);
       manifest = JSON.parse(await readFile(join(work, "manifest.json"), "utf8")) as BackupManifest;
-    } catch {
-      return { name, manifest: null, problems: ["unreadable"], migrationsToApply: 0 };
+    } catch (err) {
+      const problem = err instanceof UnsafeArchiveError ? "unsafe" : "unreadable";
+      return { name, manifest: null, problems: [problem], migrationsToApply: 0 };
     }
     const problems: RestoreProblem[] = [];
-    if (manifest.format !== BACKUP_FORMAT) problems.push("format");
-    // Sidecar written at creation/upload time; archives from before this check have none.
-    let expectedSha256: string | undefined;
-    try {
-      const sidecar = JSON.parse(await readFile(`${file}.json`, "utf8")) as { sha256?: string };
-      expectedSha256 = sidecar.sha256;
-    } catch {
-      expectedSha256 = undefined;
-    }
-    if (expectedSha256 && (await fileSha256(file)) !== expectedSha256)
-      problems.push("checksum_mismatch");
+    if (!knownFormat(manifest)) problems.push("format");
+    // Sidecar written at creation/upload time. It detects corruption and accidental changes,
+    // not deliberate tampering by someone who can rewrite the sidecar too.
+    if (!(await checksumMatches(file))) problems.push("checksum_mismatch");
     const index = manifest.lastMigration
       ? shipped.findIndex((m) => m.tag === manifest.lastMigration)
       : -1;
@@ -72,37 +84,110 @@ export async function inspectBackup(
   }
 }
 
+/**
+ * psql reads the file as ONE transaction (a failed restore leaves the old data) and ignores
+ * ~/.psqlrc. ON_ERROR_STOP=1 is load-bearing for the dump scanner: if the server rejected a
+ * `COPY ... FROM stdin;` header, psql would otherwise run the data lines as SQL (and
+ * backslash lines as meta-commands) while the scanner had skipped them as COPY data.
+ */
+export function psqlArgs(file: string, databaseUrl: string): string[] {
+  return ["-X", "--single-transaction", "-v", "ON_ERROR_STOP=1", "-q", "-f", file, databaseUrl];
+}
+
 /** Loads a SQL file into the database at `databaseUrl` with the local `psql`. */
 export function psqlLoadInto(databaseUrl: string): (file: string) => Promise<void> {
-  return (file) => runTool("psql", ["-v", "ON_ERROR_STOP=1", "-q", "-f", file, databaseUrl]);
+  return (file) => runTool("psql", psqlArgs(file, databaseUrl), { PGCLIENTENCODING: "UTF8" });
 }
+
+/** Restores a custom-format dump into the database at `databaseUrl` with the local `pg_restore`. */
+export function pgRestoreInto(
+  databaseUrl: string,
+): (archive: string, list: string | undefined) => Promise<void> {
+  return (archive, list) => runTool("pg_restore", pgRestoreArgs(archive, { databaseUrl, list }));
+}
+
+const knownFormat = (manifest: BackupManifest): boolean => {
+  try {
+    backupDbFormat(manifest);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 export async function restoreArchive(opts: {
   dataDir: string;
   mediaDir: string;
   name: string;
+  /** Loads a plain SQL dump (backups of format 1). */
   load: (sqlFile: string) => Promise<void>;
+  /** Restores a custom-format dump, with only the entries of `list` when one is given. */
+  loadArchive?: (archive: string, list: string | undefined) => Promise<void>;
+  /** The loaders run as the FORGECY_RESTORE_DATABASE_URL role: leave out what only a superuser can do. */
+  restricted?: boolean;
 }): Promise<{ media: boolean }> {
   const file = backupPath(opts.dataDir, opts.name);
+  // Before anything is read: the bytes must be the ones recorded when the backup was made.
+  if (!(await checksumMatches(file))) throw new BackupChecksumError();
   const work = await mkdtemp(join(tmpdir(), "forgecy-restore-"));
   try {
-    await runTool("tar", ["-xzf", file, "-C", work]);
+    await extractBackupArchive(file, work);
     const manifest = JSON.parse(
       await readFile(join(work, "manifest.json"), "utf8"),
     ) as BackupManifest;
-    if (manifest.format !== BACKUP_FORMAT)
-      throw new Error(`Unsupported backup format ${manifest.format}`);
-    await opts.load(join(work, "db.sql"));
+    const dump = extractedDump(work, manifest);
+    if (dump.db === "custom") await restoreCustomDump(dump.file, opts);
+    else {
+      // Before the scan, so the scanner reads exactly what psql will.
+      if (opts.restricted) await stripExtensionStatements(dump.file);
+      // A backup may come from elsewhere: no psql meta-commands (\!, \copy, \i...) get through.
+      await assertSafeDumpFile(dump.file);
+      await opts.load(dump.file);
+    }
     const mediaDir = resolve(opts.mediaDir);
     const extracted = join(work, basename(mediaDir));
     const media = manifest.media && existsSync(extracted);
     if (media) {
       await mkdir(mediaDir, { recursive: true });
-      await runTool("cp", ["-a", `${extracted}/.`, mediaDir]);
+      // Plain files and folders only (checked above): nothing to dereference or preserve.
+      await cp(extracted, mediaDir, { recursive: true, force: true });
     }
     return { media };
   } finally {
     await rm(work, { recursive: true, force: true });
+  }
+}
+
+/**
+ * ADR 0019. pg_restore sends SQL through libpq, so psql meta-commands do not exist on this
+ * path, but the archive's statements still run as the restoring role: the SQL rendering of the
+ * very same archive file, with the very same list, goes through the scanner first. Rendering
+ * needs no database connection, so a refused archive never reaches the server.
+ */
+async function restoreCustomDump(
+  archive: string,
+  opts: {
+    loadArchive?: (archive: string, list: string | undefined) => Promise<void>;
+    restricted?: boolean;
+  },
+): Promise<void> {
+  if (!opts.loadArchive) throw new Error("This restore cannot load a custom-format backup");
+  // Not next to the extracted files, whose names the archive chooses.
+  const dir = await mkdtemp(join(tmpdir(), "forgecy-pg-restore-"));
+  try {
+    let list: string | undefined;
+    if (opts.restricted) {
+      list = join(dir, "db.list");
+      await runTool("pg_restore", ["--list", "--file", list, archive]);
+      await writeFile(list, withoutExtensionEntries(await readFile(list, "utf8")));
+    }
+    const rendered = join(dir, "db.rendered.sql");
+    await runTool("pg_restore", pgRestoreArgs(archive, { file: rendered, list }));
+    await assertSafeDumpFile(rendered);
+    await rm(rendered, { force: true });
+    await opts.loadArchive(archive, list);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
   }
 }
 
@@ -191,12 +276,14 @@ export async function saveUploadedBackup(
     await pipeline(body, createWriteStream(partial));
     let manifest: BackupManifest;
     try {
-      await runTool("tar", ["-xzf", partial, "-C", work, "manifest.json"]);
+      // Uploads are the hostile vector: refuse links and special files up front.
+      await assertPlainTar(partial);
+      await extractBackupArchive(partial, work, ["manifest.json"]);
       manifest = JSON.parse(await readFile(join(work, "manifest.json"), "utf8")) as BackupManifest;
     } catch {
       throw new BackupInvalidError();
     }
-    if (manifest.format !== BACKUP_FORMAT || typeof manifest.createdAt !== "string")
+    if (!knownFormat(manifest) || typeof manifest.createdAt !== "string")
       throw new BackupInvalidError();
     await rename(partial, file);
     const sizeBytes = (await stat(file)).size;
