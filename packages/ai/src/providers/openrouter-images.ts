@@ -64,6 +64,18 @@ export function decodeDataUrl(url: string): GeneratedImage | undefined {
   return { data: new Uint8Array(Buffer.from(m[2]!, "base64")), mimeType: m[1]! };
 }
 
+/** The prompt alone, or with the reference images as data URLs before the text (never logged). */
+function userContent(input: ImageGenerationInput) {
+  if (!input.references?.length) return input.prompt;
+  return [
+    ...input.references.map((r) => ({
+      type: "image_url" as const,
+      image_url: { url: `data:${r.mimeType};base64,${Buffer.from(r.data).toString("base64")}` },
+    })),
+    { type: "text" as const, text: input.prompt },
+  ];
+}
+
 export function createOpenRouterImageProvider(opts: OpenRouterImageProviderOptions): ImageProvider {
   const doFetch = opts.fetch ?? fetch;
   const base = (opts.baseURL ?? OPENROUTER_BASE_URL).replace(/\/$/, "");
@@ -84,7 +96,7 @@ export function createOpenRouterImageProvider(opts: OpenRouterImageProviderOptio
         },
         body: JSON.stringify({
           model: input.model,
-          messages: [{ role: "user", content: input.prompt }],
+          messages: [{ role: "user", content: userContent(input) }],
           modalities: ["image", "text"],
           image_config: { aspect_ratio: nearestAspect(input.size, ratios).ar },
         }),

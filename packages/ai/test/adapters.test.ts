@@ -6,6 +6,7 @@ import {
   createGoogleImageProvider,
   createOpenAICompatibleProvider,
   createOpenAIImageProvider,
+  createOpenRouterImageProvider,
 } from "../src/index";
 
 type Captured = { url: string; body: Record<string, unknown> };
@@ -332,5 +333,101 @@ describe("image adapters", () => {
       generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "4:5" } },
     });
     expect(job.images).toHaveLength(1);
+  });
+});
+
+describe("brand reference images", () => {
+  const out = Buffer.from([9, 9]).toString("base64");
+  const orResponse = {
+    model: "google/gemini-3.1-flash-image-preview",
+    choices: [{ message: { images: [{ image_url: { url: `data:image/png;base64,${out}` } }] } }],
+  };
+  const input = {
+    model: "google/gemini-3.1-flash-image-preview",
+    prompt: "a jar on a table",
+    size: { w: 1080, h: 1350 },
+    variants: 1 as const,
+    timeoutMs: 1000,
+  };
+  const refs = [
+    { data: new Uint8Array([1, 2, 3]), mimeType: "image/jpeg" as const },
+    { data: new Uint8Array([4, 5]), mimeType: "image/png" as const },
+  ];
+
+  it("openrouter sends the references as image parts before the text", async () => {
+    const captured: Captured[] = [];
+    const provider = createOpenRouterImageProvider({
+      apiKey: "k",
+      fetch: fakeFetch(captured, orResponse),
+    });
+    await provider.generate({ ...input, references: refs });
+    expect(captured[0]!.body.messages).toEqual([
+      {
+        role: "user",
+        content: [
+          { type: "image_url", image_url: { url: "data:image/jpeg;base64,AQID" } },
+          { type: "image_url", image_url: { url: "data:image/png;base64,BAU=" } },
+          { type: "text", text: "a jar on a table" },
+        ],
+      },
+    ]);
+  });
+
+  it("openrouter body is the same as before without references", async () => {
+    const plain: Captured[] = [];
+    const empty: Captured[] = [];
+    await createOpenRouterImageProvider({
+      apiKey: "k",
+      fetch: fakeFetch(plain, orResponse),
+    }).generate(input);
+    await createOpenRouterImageProvider({
+      apiKey: "k",
+      fetch: fakeFetch(empty, orResponse),
+    }).generate({ ...input, references: [] });
+    expect(plain[0]!.body).toEqual({
+      model: input.model,
+      messages: [{ role: "user", content: "a jar on a table" }],
+      modalities: ["image", "text"],
+      image_config: { aspect_ratio: "4:5" },
+    });
+    expect(JSON.stringify(empty[0]!.body)).toBe(JSON.stringify(plain[0]!.body));
+  });
+
+  it("openrouter errors do not carry the request body", async () => {
+    const provider = createOpenRouterImageProvider({
+      apiKey: "k",
+      fetch: fakeFetch([], { error: "bad" }, 400),
+    });
+    const err = await provider.generate({ ...input, references: refs }).catch((e: Error) => e);
+    expect((err as Error).message).not.toContain("AQID");
+  });
+
+  it("google and openai ignore the references", async () => {
+    const gBody: Captured[] = [];
+    const g = createGoogleImageProvider({
+      apiKey: "k",
+      fetch: fakeFetch(gBody, {
+        candidates: [
+          { content: { parts: [{ inlineData: { mimeType: "image/png", data: out } }] } },
+        ],
+      }),
+    });
+    await g.generate({ ...input, references: refs });
+    await g.generate(input);
+    expect(gBody[0]!.body).toEqual(gBody[1]!.body);
+    expect(JSON.stringify(gBody[0]!.body)).not.toContain("AQID");
+
+    const oBody: Captured[] = [];
+    const o = createOpenAIImageProvider({
+      apiKey: "k",
+      client: new OpenAI({
+        apiKey: "k",
+        maxRetries: 0,
+        fetch: fakeFetch(oBody, { created: 0, data: [{ b64_json: out }] }),
+      }),
+    });
+    await o.generate({ ...input, references: refs });
+    await o.generate(input);
+    expect(oBody[0]!.body).toEqual(oBody[1]!.body);
   });
 });

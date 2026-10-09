@@ -132,6 +132,11 @@ export interface ImageGenerationInput {
   size: ImageSize;
   variants: 1 | 2 | 3 | 4;
   timeoutMs: number;
+  /**
+   * Visual references the model should match (the client's brand images). Only the
+   * OpenRouter provider sends them; the others ignore the field.
+   */
+  references?: InputImage[];
   signal?: AbortSignal;
 }
 

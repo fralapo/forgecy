@@ -47,6 +47,9 @@ const DEFAULT_MAX_OUTPUT_TOKENS = 16_000;
 export const MAX_INPUT_IMAGES = 20;
 /** Raw bytes per image: base64 of 3.75 MB stays under Anthropic's 5 MB per-image limit. */
 export const MAX_INPUT_IMAGE_BYTES = 3_750_000;
+/** Brand reference images of an image request: few and small, they only steer the style. */
+export const MAX_IMAGE_REFERENCES = 4;
+export const MAX_IMAGE_REFERENCE_BYTES = 1_500_000;
 
 export interface TaskRoute {
   primary: ModelRef;
@@ -158,6 +161,11 @@ export interface GenerateImageRequest extends CommonRequest {
   prompt: string;
   size: ImageSize;
   variants: 1 | 2 | 3 | 4;
+  /**
+   * The client's brand images the result should match. They count as `brand_assets`
+   * for the client's policy, and the log keeps only how many were sent.
+   */
+  references?: InputImage[];
 }
 
 export interface GenerateImageResult {
@@ -691,16 +699,35 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
       if (!route) throw new ForgecyError("unavailable", "No image provider route configured");
       // Images are the Art Director's work: switched off, no image is generated.
       const agent = req.agent ?? "art_director";
+      const references = req.references ?? [];
+      validateInputImages(references);
+      if (references.length > MAX_IMAGE_REFERENCES)
+        throw new ForgecyError(
+          "validation",
+          `Too many reference images (${references.length}); the limit is ${MAX_IMAGE_REFERENCES}`,
+        );
+      if (references.some((r) => r.data.byteLength > MAX_IMAGE_REFERENCE_BYTES))
+        throw new ForgecyError(
+          "validation",
+          `A reference image is over ${MAX_IMAGE_REFERENCE_BYTES} bytes`,
+        );
+      // Brand images are client assets: the same `sends` rule as any other file applies.
+      const sendsKinds = references.length
+        ? [...new Set([...(req.sends ?? []), "brand_assets" as const])]
+        : req.sends;
       const summary = summarize(kind, req, { prompt: req.prompt });
       Object.assign(summary, {
         size: req.size,
         variants: req.variants,
         agent: { key: agent, instructionsVersion: null },
+        ...(references.length
+          ? { meta: { ...req.inputSummary?.meta, references: references.length } }
+          : {}),
       });
       await agentGate(kind, req, agent, routing.agents?.[agent], summary);
       const candidates = await resolveCandidates(
         kind,
-        req,
+        sendsKinds ? { ...req, sends: sendsKinds } : req,
         route,
         routing.localImage,
         (p) => !!providers.image[p],
@@ -795,6 +822,7 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
       size: req.size,
       variants: req.variants,
       timeoutMs,
+      ...(req.references?.length ? { references: req.references } : {}),
       ...(req.signal ? { signal: req.signal } : {}),
     });
     while (status.state === "queued" || status.state === "running") {
