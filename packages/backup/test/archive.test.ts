@@ -10,7 +10,34 @@ import {
   isBackupName,
   listBackups,
   pruneExpiredBackups,
+  tarArgs,
 } from "../src";
+
+describe("tarArgs", () => {
+  const call = ["-xzf", "C:\\data\\b.tar.gz", "-C", "C:\\work", "manifest.json"];
+  it("adds --force-local for GNU tar only, so a drive path is never read as a remote host", () => {
+    expect(tarArgs(call, { gnu: true, windows: false })).toEqual(["--force-local", ...call]);
+    expect(tarArgs(call, { gnu: false, windows: false })).toEqual(call);
+    expect(tarArgs(call, { gnu: false, windows: true })).not.toContain("--force-local");
+  });
+  it("gives paths with forward slashes on Windows only (a backslash is a file name character elsewhere)", () => {
+    expect(tarArgs(call, { gnu: true, windows: true })).toEqual([
+      "--force-local",
+      "-xzf",
+      "C:/data/b.tar.gz",
+      "-C",
+      "C:/work",
+      "manifest.json",
+    ]);
+    expect(tarArgs(call, { gnu: false, windows: true })).toEqual([
+      "-xzf",
+      "C:/data/b.tar.gz",
+      "-C",
+      "C:/work",
+      "manifest.json",
+    ]);
+  });
+});
 
 describe("backup archives", () => {
   let dataDir: string;
@@ -37,7 +64,7 @@ describe("backup archives", () => {
       now: new Date("2026-10-06T10:00:00Z"),
     });
     expect(created.name).toBe("forgecy-2026-10-06T10-00-00-000Z.tar.gz");
-    const entries = execFileSync("tar", ["-tzf", backupPath(dataDir, created.name)], {
+    const entries = execFileSync("tar", tarArgs(["-tzf", backupPath(dataDir, created.name)]), {
       encoding: "utf8",
     });
     expect(entries).toContain("db.sql");

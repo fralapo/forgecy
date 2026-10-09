@@ -31,7 +31,7 @@ import {
   writeRestoreStatus,
 } from "../src";
 
-const hasTar = process.platform !== "win32" && spawnSync("tar", ["--version"]).status === 0;
+const hasTar = spawnSync("tar", ["--version"]).status === 0;
 const shipped = [{ tag: "0000_a" }, { tag: "0001_b" }, { tag: "0002_c" }];
 
 describe("restore", () => {
@@ -143,7 +143,7 @@ describe("restore", () => {
     expect(loaded).toEqual([]);
   });
 
-  // Hostile archives built in memory; they need the system tar (Linux/macOS CI), like the rest.
+  // Hostile archives built in memory; they need a system tar (GNU or bsdtar), like the rest.
   describe.skipIf(!hasTar)("archives holding links", () => {
     const manifest = JSON.stringify({
       format: BACKUP_FORMAT,

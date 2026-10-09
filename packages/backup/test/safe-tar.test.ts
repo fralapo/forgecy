@@ -69,7 +69,7 @@ describe("assertPlainTree hard links", () => {
   });
 });
 
-const hasTar = process.platform !== "win32" && spawnSync("tar", ["--version"]).status === 0;
+const hasTar = spawnSync("tar", ["--version"]).status === 0;
 
 describe.skipIf(!hasTar)("extractBackupArchive with the system tar", () => {
   let dir: string;

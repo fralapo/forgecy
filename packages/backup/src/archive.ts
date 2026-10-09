@@ -70,17 +70,37 @@ export function backupPath(dataDir: string, name: string): string {
  */
 export const TAR_ENV = { TAR_OPTIONS: "" };
 
-let hardDereference: string[] | undefined;
-/** GNU tar only: bsdtar (macOS, Windows) rejects the flag, and its archives are still checked at restore. */
-function hardDereferenceFlag(): string[] {
-  hardDereference ??= /GNU tar/.test(
-    spawnSync("tar", ["--version"], { encoding: "utf8", env: { ...process.env, ...TAR_ENV } })
-      .stdout ?? "",
-  )
-    ? ["--hard-dereference"]
-    : [];
-  return hardDereference;
+export interface TarHost {
+  /** GNU tar (Linux, MSYS/Git Bash on Windows) rather than bsdtar (macOS, Windows System32). */
+  gnu: boolean;
+  windows: boolean;
 }
+
+let host: TarHost | undefined;
+function tarHost(): TarHost {
+  host ??= {
+    gnu: /GNU tar/.test(
+      spawnSync("tar", ["--version"], { encoding: "utf8", env: { ...process.env, ...TAR_ENV } })
+        .stdout ?? "",
+    ),
+    windows: process.platform === "win32",
+  };
+  return host;
+}
+
+/**
+ * The arguments of a tar call that names archive files and folders. GNU tar reads `C:\x` as
+ * the host `C` unless --force-local (which bsdtar rejects), and on Windows the MSYS build
+ * cannot `-C` into a backslash path, so paths are given with forward slashes there (both tars
+ * accept them). On other systems a backslash is a valid file name character and is kept.
+ */
+export function tarArgs(args: readonly string[], on: TarHost = tarHost()): string[] {
+  const out = on.gnu ? ["--force-local", ...args] : [...args];
+  return on.windows ? out.map((a) => a.replaceAll("\\", "/")) : out;
+}
+
+/** GNU tar only: bsdtar rejects the flag, and its archives are still checked at restore. */
+const hardDereferenceFlag = (): string[] => (tarHost().gnu ? ["--hard-dereference"] : []);
 
 /** Runs a command; stderr is kept for the error, with credentials in URLs masked. */
 export function runTool(cmd: string, args: string[], env?: Record<string, string>): Promise<void> {
@@ -187,7 +207,7 @@ export async function createBackupArchive(opts: CreateBackupOptions): Promise<Ba
     // Hard-linked media files are stored as plain files, or restore would refuse the archive.
     const args = ["-czf", partial, ...hardDereferenceFlag(), "-C", work, "db.sql", "manifest.json"];
     if (media) args.push("-C", dirname(mediaDir), basename(mediaDir));
-    await runTool("tar", args, TAR_ENV);
+    await runTool("tar", tarArgs(args), TAR_ENV);
     await rename(partial, file);
   } catch (err) {
     await rm(partial, { force: true });

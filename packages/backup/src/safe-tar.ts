@@ -9,7 +9,7 @@ import { spawn } from "node:child_process";
 import { lstat, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
-import { runTool, TAR_ENV } from "./archive";
+import { runTool, TAR_ENV, tarArgs } from "./archive";
 
 // ponytail: no --quoting-style=escape. It is GNU-only (bsdtar rejects it) and a newline in a
 // member name can only add extra listing lines, which at worst refuse a good archive.
@@ -27,7 +27,7 @@ export const isPlainTarEntry = (line: string): boolean =>
 
 /** Streams the listing and stops at the first link or special file. */
 export async function assertPlainTar(file: string): Promise<void> {
-  const child = spawn("tar", ["-tvzf", file], {
+  const child = spawn("tar", tarArgs(["-tvzf", file]), {
     stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env, ...TAR_ENV },
   });
@@ -80,7 +80,15 @@ export async function extractBackupArchive(
   if (!members) await assertPlainTar(file);
   await runTool(
     "tar",
-    ["-xzf", file, "-C", work, "--no-same-owner", "--no-same-permissions", ...(members ?? [])],
+    tarArgs([
+      "-xzf",
+      file,
+      "-C",
+      work,
+      "--no-same-owner",
+      "--no-same-permissions",
+      ...(members ?? []),
+    ]),
     TAR_ENV,
   );
   await assertPlainTree(work);
