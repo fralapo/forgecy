@@ -232,7 +232,7 @@ export async function runClientImport(
         entity: "client_import",
         entityId: row.id,
         clientId: outcome.clientId,
-        meta: { counts: outcome.counts, fileName: row.fileName },
+        meta: { counts: outcome.counts, skipped: outcome.skipped, fileName: row.fileName },
       });
       await notify(tx, {
         kind: "client_import_done",

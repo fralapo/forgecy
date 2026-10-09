@@ -57,6 +57,8 @@ export interface ImportOutcome {
   name: string;
   /** Rows written per area, plus `files`. */
   counts: Partial<Record<ClientTransferArea | "files", number>>;
+  /** Rows left out because the person they need is not on this installation, per table. */
+  skipped: Record<string, number>;
   /** For the notification: “4 versions, 23 carousels, 2 audits”. */
   summary: { versions: number; carousels: number; audits: number };
 }
@@ -313,6 +315,7 @@ export async function importClientPackage(
     const prepared: { table: ClientTable; rows: Row[] }[] = [];
     const deferred: Deferred[] = [];
     const droppedTexts: string[] = [];
+    const skipped: Record<string, number> = {};
     for (const table of tables) {
       const forward = table.parents.filter(
         (p) => !p.notNull && (position.get(p.target) ?? 0) >= (position.get(table.name) ?? 0),
@@ -340,7 +343,18 @@ export async function importClientPackage(
           if (local === null && u.notNull) keep = false;
           r[u.column] = local;
         }
-        if (!keep) continue;
+        // brand_proposals_author wants a person for a user's proposal: one whose author is not
+        // here is left out, not credited to somebody who did not write it.
+        if (
+          table.name === "brand_identity_proposals" &&
+          r.author_type === "user" &&
+          !r.author_user_id
+        )
+          keep = false;
+        if (!keep) {
+          skipped[table.name] = (skipped[table.name] ?? 0) + 1;
+          continue;
+        }
         for (const d of table.droppedColumns) if (!d.notNull) r[d.column] = null;
         // A job or an agency template of the other installation means nothing here.
         emptyOutsideRefs(table, r, hereIds);
@@ -422,6 +436,7 @@ export async function importClientPackage(
       slug,
       name: manifest.client.name,
       counts,
+      skipped,
       summary: {
         versions: rowsOf("brand_identity_versions"),
         carousels: rowsOf("contents"),

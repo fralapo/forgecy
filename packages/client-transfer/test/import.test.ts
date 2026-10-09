@@ -9,6 +9,7 @@ import {
   appSettings,
   assets,
   brandIdentities,
+  brandIdentityProposals,
   clientImports,
   clients,
   contentApprovals,
@@ -50,6 +51,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
     imported?: string;
     imported2?: string;
     imported3?: string;
+    imported4?: string;
   } = {};
   const importIds: string[] = [];
 
@@ -77,7 +79,27 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       .values({ name: `Rossi ${suffix}`, slug: `rossi-${suffix}`, status: "active" })
       .returning();
     ids.client = c!.id;
-    await db.insert(brandIdentities).values({ clientId: c!.id });
+    const [identity] = await db.insert(brandIdentities).values({ clientId: c!.id }).returning();
+    // One proposal by Ada (still a user there), one by Bruno (not a user there) and one by an agent.
+    const proposal = (author: { authorUserId?: string; agentRole?: string }, title: string) => ({
+      clientId: c!.id,
+      brandIdentityId: identity!.id,
+      authorType: author.authorUserId ? ("user" as const) : ("agent" as const),
+      ...author,
+      fieldPath: "/document/strategy/oneLiner",
+      category: "strategy",
+      title,
+      changes: [],
+      confidence: "low" as const,
+      sensitive: true,
+    });
+    await db
+      .insert(brandIdentityProposals)
+      .values([
+        proposal({ authorUserId: here!.id }, "by Ada"),
+        proposal({ authorUserId: gone!.id }, "by Bruno"),
+        proposal({ agentRole: "strategist" }, "by an agent"),
+      ]);
     const assetKey = `clients/${c!.id}/assets/${sha("approved")}.png`;
     await storage.put(assetKey, Buffer.from("approved"), { contentType: "image/png" });
     await db.insert(assets).values({
@@ -158,7 +180,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
   afterAll(async () => {
     if (importIds.length)
       await db.delete(clientImports).where(inArray(clientImports.id, importIds));
-    const own = [ids.client, ids.imported, ids.imported2, ids.imported3].filter(
+    const own = [ids.client, ids.imported, ids.imported2, ids.imported3, ids.imported4].filter(
       (x): x is string => !!x,
     );
     await db.delete(templates).where(eq(templates.key, tplKey));
@@ -334,6 +356,20 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       .from(contentVersions)
       .where(eq(contentVersions.contentId, content!.id));
     expect(version!.meta).toMatchObject({ templateKey: tplKey, templateVersion: "1.0.0-import.1" });
+  });
+
+  it("keeps the proposals whose author is here and leaves out the one whose author is not", async () => {
+    const out = await importClientPackage({ db, storage }, pkgFile, {
+      choices: { client: { mode: "new", slug: `rossi-${suffix}-5` }, templates: {} },
+    });
+    ids.imported4 = out.clientId;
+    const rows = await db
+      .select()
+      .from(brandIdentityProposals)
+      .where(eq(brandIdentityProposals.clientId, out.clientId));
+    expect(rows.map((r) => r.title).sort()).toEqual(["by Ada", "by an agent"]);
+    expect(rows.find((r) => r.title === "by Ada")!.authorUserId).toBe(ids.here);
+    expect(out.skipped).toEqual({ brand_identity_proposals: 1 });
   });
 
   it("blocks a package that points rows at a client that is not in it", async () => {
