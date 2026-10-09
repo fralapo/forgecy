@@ -14,6 +14,7 @@ import {
   type TaskRoute,
 } from "@forgecy/ai";
 import {
+  brandReferenceImages,
   getPublishedBrandIdentity,
   loadBrandContext,
   type BrandContext,
@@ -28,7 +29,15 @@ import {
   type SlotValue,
   type TemplateManifest,
 } from "@forgecy/carousel";
-import { ForgecyError, isLocale, type Actor, type AgentRole, type ProviderId } from "@forgecy/core";
+import {
+  ForgecyError,
+  isLocale,
+  type Actor,
+  type AgentRole,
+  type AiPolicy,
+  type ProviderId,
+  type SendableAssetType,
+} from "@forgecy/core";
 import {
   and,
   contentPillars,
@@ -77,6 +86,7 @@ import {
   CREATIVE_DIRECTION_SYSTEM,
   EDIT_SLIDE_SYSTEM,
   IMAGE_PROMPT_SYSTEM,
+  IMAGE_REFERENCES_NOTE,
   OUTLINE_SYSTEM,
   PLAN_SYSTEM,
   PLANNER_SYSTEM,
@@ -1064,6 +1074,17 @@ export async function imageRouteFor(
   };
 }
 
+/** Whether the client's policy lets brand pictures go to an image model (no_ai never reaches here). */
+function brandAssetsAllowed(client: {
+  aiPolicy: AiPolicy;
+  sendableAssets: readonly SendableAssetType[];
+}): boolean {
+  if (client.aiPolicy === "no_ai") return false;
+  return (
+    client.aiPolicy !== "external_restricted" || client.sendableAssets.includes("brand_assets")
+  );
+}
+
 export async function runGenerateImage(
   deps: PipelineDeps,
   ctx: PipelineContext,
@@ -1133,15 +1154,23 @@ export async function runGenerateImage(
     }),
   );
   await ctx.progress(20);
+  // The client's own site pictures set the look; the gateway applies the policy again (brand_assets).
+  const references = brandAssetsAllowed(client)
+    ? await brandReferenceImages(deps.db, deps.storage, actor, input.clientId)
+    : [];
+  const imagePrompt = references.length
+    ? `${prompt.data.prompt}\n\n${IMAGE_REFERENCES_NOTE}`
+    : prompt.data.prompt;
   const res = await guarded(() =>
     ai.generateImage({
-      prompt: prompt.data.prompt,
+      prompt: imagePrompt,
       size: imageSizeFor(c.format as FormatId),
       variants: Math.min(4, Math.max(1, input.variants)) as 1 | 2 | 3 | 4,
       route: routed.route,
       ...common,
+      ...(references.length ? { references } : {}),
       inputSummary: {
-        fields: { prompt: prompt.data.prompt },
+        fields: { prompt: imagePrompt },
         meta: { promptVersion: CONTENT_PROMPT_VERSION, slot: input.slot },
       },
     }),
