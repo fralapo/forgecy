@@ -315,10 +315,27 @@ Decisions and checks nobody has made yet; each is a known limitation until it is
       Compose network and still publishes 80 and 443 on all interfaces. Set
       `FORGECY_BIND_ADDRESS=0.0.0.0` only to expose http on the LAN without Caddy
       (`docs/adr/0017-web-port-loopback.md`).
-- [ ] The Docker choices (`cap_drop`, `no-new-privileges`, Caddy's
-      `NET_BIND_SERVICE`) and Compose parity of the `.env` parser were never run on
-      the Windows dev host. On Linux run `docker compose config`, then a fresh
-      `docker compose up` and `docker compose --profile https up`.
+- [x] The Docker hardening ran on Linux containers (Docker Desktop engine 29.8, Compose
+      5.5.1, 2026-10-09): `docker compose config` with and without `--profile https`, a
+      fresh `up`, `--profile https up`, then a restart on existing data. Every service
+      has `no-new-privileges`; migrate, web and worker run with no capability (Chromium
+      in the worker launches and takes a screenshot); Caddy keeps only `DAC_OVERRIDE` and
+      `NET_BIND_SERVICE` (without it its binary does not even exec), redirects :80 to
+      https and serves the app with `tls internal` for `FORGECY_HOSTNAME`. Postgres and
+      Redis now drop all capabilities too, keeping what their entrypoints use (tested on
+      first init, restart and files owned by another uid). An unset or empty
+      `POSTGRES_PASSWORD` stops `config`. The run found and fixed: a socket-only
+      `pg_isready` passed during first init, so a fresh `up` failed migrate with
+      ECONNREFUSED (now `-h 127.0.0.1`); a CRLF checkout broke
+      `docker/seaweedfs-entrypoint.sh` (`.gitattributes` keeps `*.sh` LF); a secret
+      wrapped in backticks, which Compose keeps and the CLI drops (now refused). Other
+      `.env` differences are refused in secrets: `$VAR`, expanded by Compose only, and
+      `#` with no space before it.
+- [ ] Not verified: Caddy on host ports 80 and 443 (the run published them on loopback
+      18080 and 18443, as 80 and 443 were taken), public certificates (ACME) for a real
+      hostname, bind mounts on a native Linux file system (the run used Docker Desktop:
+      Windows bind mounts, and VM volumes for the Postgres and Redis capability check),
+      and the `s3` and `dev` profiles.
 
 ## Sign-off
 
