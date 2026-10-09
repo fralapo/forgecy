@@ -19,19 +19,21 @@ import {
 import type { StorageDriver } from "@forgecy/files";
 import {
   addSourceProposals,
+  keepBestSingleValues,
   mergeSiteItems,
   rationale,
   visualCandidates,
   type CandidateProposal,
 } from "./candidates";
 import { detectImportFile } from "./detect";
-import { ExtractionError, extractFile, type Extraction } from "./extract";
+import { ExtractionError, extractFile, type ExtractedPage, type Extraction } from "./extract";
 import {
   analystOutputSchema,
   analystUserPrompt,
   ANALYST_SYSTEM,
   BRAND_ANALYST_PROMPT_VERSION,
   chunkPages,
+  orderPages,
   WEBSITE_ANALYST_PROMPT_VERSION,
   WEBSITE_ANALYST_SYSTEM,
   type AnalystItem,
@@ -63,6 +65,12 @@ function detail(refs: MessageRef[]) {
 }
 
 const MAX_KNOWN_COLORS = 24;
+/** A dozen pages can yield over a hundred items: above the gateway's default output cap. */
+const ANALYST_MAX_OUTPUT_TOKENS = 24_000;
+
+/** The provider stopped at the output cap (AiProviderError kind "max_tokens"). */
+const isTruncation = (err: unknown) =>
+  err instanceof ForgecyError && err.details?.kind === "max_tokens";
 
 export interface ImportDeps {
   db: Database;
@@ -410,9 +418,8 @@ export async function runSourceImport(
   else if (!textPages.length) aiNote = msg("brand.import.status.noText");
   else {
     try {
-      const chunks = chunkPages(textPages);
-      for (const [i, chunk] of chunks.entries()) {
-        const res = await deps.ai.generateObject({
+      const ask = (chunk: ExtractedPage[]) =>
+        deps.ai!.generateObject({
           task: "brand_propose",
           schema: analystOutputSchema,
           schemaName: "brand_identity_items",
@@ -435,6 +442,7 @@ export async function runSourceImport(
           sends: ["documents"],
           authorizedBy: ctx.requestedBy ?? null,
           jobId: ctx.jobId,
+          maxOutputTokens: ANALYST_MAX_OUTPUT_TOKENS,
           inputSummary: {
             fields: { document: chunk.map((p) => p.text).join("\n") },
             meta: {
@@ -444,20 +452,42 @@ export async function runSourceImport(
             },
           },
         });
-        const locators = new Set(chunk.map((p) => p.locator));
-        for (const item of res.data.items) {
-          // On a site, colors and fonts rest on the probe, not on a page.
-          const fromSite = website && (item.field === "color" || item.field === "typography");
-          if (!fromSite && !locators.has(item.locator)) continue; // cites a page that does not exist
-          const c = fromAnalyst(item);
-          if (!c) continue;
-          candidates.push({
-            ...c,
-            ...(fromSite
-              ? { evidence: { locator: SITE_LOCATORS.styles }, ...(c.kind ? { named: true } : {}) }
-              : {}),
-            agentModel: `${res.provider}/${res.model}`,
-          });
+      // The home page and the about pages go first: the brand-level fields come from there.
+      const chunks = chunkPages(website ? orderPages(textPages) : textPages);
+      let order = 0;
+      for (const [i, chunk] of chunks.entries()) {
+        let answers: Array<{ chunk: ExtractedPage[]; res: Awaited<ReturnType<typeof ask>> }>;
+        try {
+          answers = [{ chunk, res: await ask(chunk) }];
+        } catch (err) {
+          // A long answer cut at the output cap: the same pages once more, as two halves.
+          if (!isTruncation(err) || chunk.length < 2) throw err;
+          const half = Math.ceil(chunk.length / 2);
+          answers = [];
+          for (const part of [chunk.slice(0, half), chunk.slice(half)])
+            answers.push({ chunk: part, res: await ask(part) });
+        }
+        for (const { chunk: pagesAsked, res } of answers) {
+          const locators = new Set(pagesAsked.map((p) => p.locator));
+          for (const item of res.data.items) {
+            // On a site, colors and fonts rest on the probe, not on a page.
+            const fromSite = website && (item.field === "color" || item.field === "typography");
+            if (!fromSite && !locators.has(item.locator)) continue; // cites a page that does not exist
+            const c = fromAnalyst(item);
+            if (!c) continue;
+            candidates.push({
+              ...c,
+              ...(fromSite
+                ? {
+                    evidence: { locator: SITE_LOCATORS.styles },
+                    ...(c.kind ? { named: true } : {}),
+                  }
+                : {}),
+              agentModel: `${res.provider}/${res.model}`,
+              chunk: order,
+            });
+          }
+          order++;
         }
         await ctx.progress?.(30 + Math.round(((i + 1) / chunks.length) * 50));
       }
@@ -484,6 +514,8 @@ export async function runSourceImport(
     candidates = mergeSiteItems(gated.keep);
     discarded = gated.discarded.length;
   }
+  // After the gate, so a verified value is never dropped for one the gate then refuses.
+  candidates = keepBestSingleValues(candidates);
 
   const { created, skipped } = await addSourceProposals(
     db,

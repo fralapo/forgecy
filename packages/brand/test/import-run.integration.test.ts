@@ -1,5 +1,5 @@
 import type { SiteProbe } from "@forgecy/audit";
-import type { AiGateway } from "@forgecy/ai";
+import { AiProviderError, type AiGateway } from "@forgecy/ai";
 import type { Actor, MessageRef } from "@forgecy/core";
 import {
   auditEvents,
@@ -224,6 +224,83 @@ describe.skipIf(!dbUrl)("runSourceImport on a website (integration)", () => {
   it("treats a malformed stored probe as absent", async () => {
     const { result } = await run({ kind: "website", visual: { cssVars: "oops" } }, ITEMS);
     expect(result.discarded).toBe(5);
+  });
+
+  describe("a site read in several requests", () => {
+    const filler = " Testo di riempimento della pagina.".repeat(700); // ~25,000 characters
+    const LONG = [
+      { locator: "/prodotti/x/", text: `Morbido profuma il bucato a lungo.${filler}` },
+      { locator: "/contatti/", text: `Scrivici per ogni domanda sui prodotti.${filler}` },
+      { locator: "/", text: `DeoDue porta il profumo del Sud in casa tua.${filler}` },
+    ];
+    const one = (text: string, quote: string, locator: string, confidence: number) =>
+      ({ field: "oneLiner", text, quote, locator, rationale: "r", confidence }) as AnalystItem;
+
+    const longRun = async (generateObject: (req: { input: string }) => Promise<unknown>) => {
+      const s = await addSource(db, anna, { clientId, kind: "website", title: "Long site" });
+      await updateSourceStatus(db, s.id, { pages: LONG, visual: VISUAL as never });
+      const jobId = crypto.randomUUID();
+      const result = await runSourceImport(
+        { db, storage, ai: { generateObject } as unknown as AiGateway },
+        { jobId, attempt: 1, maxAttempts: 1 },
+        { clientId, sourceId: s.id },
+      );
+      const mine = (
+        await db
+          .select()
+          .from(brandIdentityProposals)
+          .where(eq(brandIdentityProposals.clientId, clientId))
+      ).filter((p) => p.evidence[0]?.sourceId === s.id);
+      return { result, mine };
+    };
+
+    it("keeps one one-liner for the run: the home page's request wins, nothing is contested", async () => {
+      const inputs: string[] = [];
+      const { mine } = await longRun(async (req) => {
+        inputs.push(req.input);
+        const items = req.input.includes('locator="/"')
+          ? [one("Il profumo del Sud in casa", "porta il profumo del Sud in casa tua", "/", 0.5)]
+          : [one("Scrivici", "Scrivici per ogni domanda sui prodotti", "/contatti/", 0.99)];
+        return { data: { items }, provider: "openrouter", model: "fake/model" };
+      });
+      // Two requests, the home page first in the first one.
+      expect(inputs).toHaveLength(2);
+      expect(inputs[0]!.indexOf('locator="/"')).toBeLessThan(inputs[0]!.indexOf("/prodotti/x/"));
+      const oneLiners = mine.filter((p) => p.fieldPath === "/document/strategy/oneLiner");
+      expect(oneLiners).toHaveLength(1);
+      expect(JSON.stringify(oneLiners[0]!.changes)).toContain("Il profumo del Sud in casa");
+    });
+
+    it("asks a request cut at the output cap again as two halves", async () => {
+      const asked: Array<{ pages: number; maxOutputTokens?: number }> = [];
+      let cut = false;
+      const { result, mine } = await longRun(async (req) => {
+        const r = req as { input: string; maxOutputTokens?: number };
+        asked.push({
+          pages: (r.input.match(/<page /g) ?? []).length,
+          ...(r.maxOutputTokens ? { maxOutputTokens: r.maxOutputTokens } : {}),
+        });
+        if (!cut) {
+          cut = true;
+          throw new AiProviderError("max_tokens", "openrouter output truncated at max_tokens");
+        }
+        const items = r.input.includes('locator="/"')
+          ? [one("Il profumo del Sud in casa", "porta il profumo del Sud in casa tua", "/", 0.5)]
+          : [];
+        return { data: { items }, provider: "openrouter", model: "fake/model" };
+      });
+      expect(asked.map((a) => a.pages)).toEqual([2, 1, 1, 1]);
+      expect(asked.every((a) => a.maxOutputTokens === 24_000)).toBe(true);
+      expect(result.ai).toBe("done");
+      expect(mine.some((p) => p.fieldPath === "/document/strategy/oneLiner")).toBe(true);
+    });
+
+    it("marks the analyst failed when a half is cut again", async () => {
+      const { result } = await longRun(async () => {
+        throw new AiProviderError("max_tokens", "openrouter output truncated at max_tokens");
+      });
+      expect(result.ai).toBe("failed");
+    });
   });
 
   it("leaves document sources as they were: old prompt, colors and quotes not gated", async () => {

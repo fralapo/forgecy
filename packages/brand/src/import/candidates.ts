@@ -3,7 +3,8 @@ import { ForgecyError, type Actor, type MessageRef } from "@forgecy/core";
 import type { SiteProbe } from "@forgecy/audit";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import type { Database } from "@forgecy/db";
-import { BRAND_ANALYST_PROMPT_VERSION } from "./analyst";
+import { BRAND_ANALYST_PROMPT_VERSION, pagePriority } from "./analyst";
+import { matchField } from "../fields";
 import { cleanFamily, knownColors, knownFonts, SITE_LOCATORS } from "./site-colors";
 import { proposeChange, type ProposeInput } from "../service";
 import { hexToDtcg, normalizeHex, referenceColors, tokenNameFrom } from "../tokens";
@@ -25,6 +26,37 @@ export interface CandidateProposal {
   evidence: { locator?: string; quote?: string };
   /** provider/model, for the activity log. */
   agentModel?: string;
+  /** Order of the analyst request that proposed it (0 = the one with the home page). */
+  chunk?: number;
+}
+
+/** A `set` on a field that holds one value (one-liner, positioning, voice...). */
+const isSingleValue = (c: CandidateProposal) =>
+  !c.kind && c.op === "set" && matchField(c.path)?.field.shape === "sourced";
+
+/**
+ * One value per single-value field for the whole run, so a run never contests itself: the first
+ * request (home and about pages) wins, then the model's surer item, then the home/about page.
+ */
+export function keepBestSingleValues(
+  candidates: readonly CandidateProposal[],
+): CandidateProposal[] {
+  const rank = (c: CandidateProposal) => [
+    c.chunk ?? 0,
+    -(c.modelConfidence ?? 0),
+    pagePriority(c.evidence.locator ?? ""),
+  ];
+  const before = (a: number[], b: number[]) => {
+    const i = a.findIndex((v, k) => v !== b[k]);
+    return i >= 0 && a[i]! < b[i]!;
+  };
+  const best = new Map<string, CandidateProposal>();
+  for (const c of candidates) {
+    if (!isSingleValue(c)) continue;
+    const kept = best.get(c.path);
+    if (!kept || before(rank(c), rank(kept))) best.set(c.path, c);
+  }
+  return candidates.filter((c) => !isSingleValue(c) || best.get(c.path) === c);
 }
 
 export function rationale(

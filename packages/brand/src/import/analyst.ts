@@ -152,9 +152,35 @@ export interface AnalystInput {
   pages: readonly ExtractedPage[];
 }
 
-/** Splits pages into requests of at most `maxChars` characters each. */
+// Path segments of the pages where a site speaks about itself (Italian and English).
+const ABOUT_PAGE =
+  /(?:^|\/)(?:azienda|chi-?siamo|about(?:-us)?|brand|storia|la-nostra-storia|our-story|story|company|who-we-are)(?:\/|$)/i;
+
+/** 0 for the home page, 1 for an about page, 2 for anything else (documents' "p. 3" included). */
+export function pagePriority(locator: string): number {
+  if (locator === "/" || locator === "") return 0;
+  return ABOUT_PAGE.test(locator) ? 1 : 2;
+}
+
+/** Home first, then the about pages, then the rest in their order: the brand speaks there. */
+export function orderPages<T extends { locator: string }>(pages: readonly T[]): T[] {
+  return pages
+    .map((p, i) => ({ p, i, r: pagePriority(p.locator) }))
+    .sort((a, b) => a.r - b.r || a.i - b.i)
+    .map((x) => x.p);
+}
+
+/** A last request smaller than this share of `maxChars` is balanced with the one before it. */
+const MIN_LAST_SHARE = 0.3;
+
+/**
+ * Splits pages into requests of at most `maxChars` characters each. A small last request (a
+ * single product page) would read without the rest of the site: pages move into it from the
+ * previous one until the two are balanced.
+ */
 export function chunkPages(pages: readonly ExtractedPage[], maxChars = 60_000): ExtractedPage[][] {
   const chunks: ExtractedPage[][] = [];
+  const sizeOf = (p: ExtractedPage) => Math.min(p.text.length + p.locator.length + 8, maxChars);
   let current: ExtractedPage[] = [];
   let size = 0;
   for (const p of pages) {
@@ -170,6 +196,22 @@ export function chunkPages(pages: readonly ExtractedPage[], maxChars = 60_000): 
     size += Math.min(len, maxChars);
   }
   if (current.length) chunks.push(current);
+
+  const last = chunks.at(-1);
+  const prev = chunks.at(-2);
+  if (last && prev) {
+    const total = (list: ExtractedPage[]) => list.reduce((n, p) => n + sizeOf(p), 0);
+    let lastSize = total(last);
+    let prevSize = total(prev);
+    if (lastSize < maxChars * MIN_LAST_SHARE)
+      // Moving a page only while it narrows the gap keeps both under maxChars.
+      while (prev.length > 1 && lastSize + sizeOf(prev.at(-1)!) < prevSize) {
+        const moved = prev.pop()!;
+        last.unshift(moved);
+        lastSize += sizeOf(moved);
+        prevSize -= sizeOf(moved);
+      }
+  }
   return chunks;
 }
 
