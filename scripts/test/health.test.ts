@@ -18,8 +18,25 @@ describe("healthTargets", () => {
       "http://127.0.0.1:8080/api/health",
       "http://127.0.0.1:9001/health",
     ]);
-    // `pnpm dev`: the worker listens on WORKER_HEALTH_PORT
-    expect(urls({ WORKER_HEALTH_PORT: "3500" })[1]).toBe("http://127.0.0.1:3500/health");
+  });
+
+  it("checks the port Compose publishes first, then the one `pnpm dev` listens on", () => {
+    const worker = (env: Record<string, string>) => healthTargets(env)[1];
+    // WORKER_HEALTH_PORT in .env is for `pnpm dev`; Compose pins 3001 inside and publishes
+    // FORGECY_WORKER_HEALTH_PORT (default 3001) on the host.
+    expect(worker({ WORKER_HEALTH_PORT: "3500" })).toEqual({
+      name: "worker",
+      url: "http://127.0.0.1:3001/health",
+      alternates: ["http://127.0.0.1:3500/health"],
+    });
+    expect(
+      worker({ FORGECY_WORKER_HEALTH_PORT: "9001", WORKER_HEALTH_PORT: "3500" })?.alternates,
+    ).toEqual(["http://127.0.0.1:3500/health"]);
+    // nothing to fall back to when both name the same port, or a full URL is given
+    expect(worker({ WORKER_HEALTH_PORT: "3001" })?.alternates).toBeUndefined();
+    expect(worker({ FORGECY_WORKER_HEALTH_URL: "http://w/h", WORKER_HEALTH_PORT: "3500" })).toEqual(
+      { name: "worker", url: "http://w/h" },
+    );
   });
 
   it("lets a full URL win", () => {
@@ -102,6 +119,43 @@ describe("checkHealth", () => {
     expect(r?.ok).toBe(false);
     expect(r?.line).toContain("unreachable (connect ECONNREFUSED)");
     expect(r?.line).toContain("http://127.0.0.1:3001/health");
+  });
+
+  describe("alternates", () => {
+    const withAlt = [
+      {
+        name: "worker",
+        url: "http://127.0.0.1:3001/health",
+        alternates: ["http://127.0.0.1:3500/health"],
+      },
+    ];
+    const byPort = (ports: Record<string, Response | Error>) =>
+      vi.fn(async (url: string | URL | Request) => {
+        const hit = ports[new URL(String(url)).port];
+        if (!hit || hit instanceof Error) throw hit ?? new Error("connect ECONNREFUSED");
+        return hit;
+      }) as unknown as typeof fetch;
+
+    it("falls back to the dev port when the published one does not answer", async () => {
+      const [r] = await checkHealth(
+        withAlt,
+        byPort({ "3500": new Response("{}", { status: 200 }) }),
+      );
+      expect(r).toMatchObject({ name: "worker", ok: true });
+    });
+
+    it("does not touch the dev port when the published one is healthy", async () => {
+      const fetchImpl = byPort({ "3001": new Response("{}", { status: 200 }) });
+      const [r] = await checkHealth(withAlt, fetchImpl);
+      expect(r?.ok).toBe(true);
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
+    it("reports the published port when nothing answers", async () => {
+      const [r] = await checkHealth(withAlt, byPort({}));
+      expect(r?.ok).toBe(false);
+      expect(r?.line).toContain("http://127.0.0.1:3001/health");
+    });
   });
 
   it("checks every target independently", async () => {
