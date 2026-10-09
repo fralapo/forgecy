@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-10-06
+- Note 2026-10-08: this number was used twice; refer to this ADR by its file name (see 0016).
 
 ## Context
 

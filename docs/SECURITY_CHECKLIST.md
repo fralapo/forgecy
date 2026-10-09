@@ -19,16 +19,26 @@ confirm by hand against a real target, not just the unit tests in
 
 - [ ] Submit `http://127.0.0.1/`, `http://localhost/`, `http://[::1]/`, and a
       `169.254.169.254` (cloud metadata) URL as an audit/brand source. Each
-      must fail with "address is local or private", not hang or succeed.
+      must be refused with a "local network" message (`audit.stored.crawl.hostLocal`,
+      "points to the local network", or `audit.stored.crawl.addressLocal`, "Address on
+      the local network"), not hang or succeed.
 - [ ] Submit a URL that 302-redirects to one of the addresses above. The
-      redirect must be refused on the hop that resolves to it, not followed.
+      redirect must be refused on the hop that resolves to it, not followed, for
+      pages, `robots.txt` and sitemaps alike (`guardedFetch` in
+      `packages/core/src/net-guard.ts` follows redirects by hand and runs the host
+      check on every hop).
 - [ ] Point a domain you control at a short-TTL DNS record, start a scan,
       then repoint the record to `127.0.0.1` before the scan's second
       request. The scan must still fail safely (this is what the pinned
       fetch and Chromium `--host-resolver-rules` pinning exist for).
-- [ ] Submit `http://[::ffff:a9fe:a9fe]/`, `http://[64:ff9b::a9fe:a9fe]/` and
+- [ ] Submit `http://[::ffff:a9fe:a9fe]/`, `http://[64:ff9b::a9fe:a9fe]/`,
       `http://[2002:a9fe:a9fe::1]/` (hex-mapped, NAT64 and 6to4 forms of the
-      metadata address). Each must be refused like the dotted forms above.
+      metadata address) and `http://[fec0::1]/` (site-local). Each must be
+      refused like the dotted forms above.
+- [ ] Serve `/robots.txt` and `/sitemap.xml` that answer 302 to
+      `http://169.254.169.254/`. The target is never requested: the crawl treats
+      the file as missing ("No robots.txt: reading allowed", no sitemap pages)
+      and carries on from the page's own links.
 - [ ] Serve a page whose script runs `fetch("http://192.168.1.1/")` and an
       `<img src="http://169.254.169.254/">`. Neither request may leave the
       machine (the browser logs `blockedbyclient`); a `Sitemap:` line pointing
@@ -196,12 +206,51 @@ recommended follow-up, not built yet.
       `POSTGRES_PASSWORD` in `.env`) is told to add `POSTGRES_PASSWORD=forgecy` to
       keep its database; rotate it with `ALTER USER` (README, Upgrading).
 
+## 7. Upgrading, and follow-ups left open by the hardening work
+
+Upgrading from a version before this work needs three things, none of them
+automatic:
+
+- `POSTGRES_PASSWORD` must be set in `.env` before the stack starts (README,
+  "Upgrading from an install without POSTGRES_PASSWORD").
+- `FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS` must be exactly `true` or `false` (or
+  empty): `1`, `yes` or `TRUE` stop startup and name the variable.
+- A backup whose sidecar has no `sha256` cannot be restored until you delete
+  that sidecar (section 5).
+
+Decisions and checks nobody has made yet; each is a known limitation until it is:
+
+- [ ] Restore under a least-privilege database role instead of the superuser in
+      `DATABASE_URL` (section 5 calls the dump scanner a barrier, not a sandbox).
+- [ ] Restore through `pg_dump -Fc` and `pg_restore` instead of scanning plain
+      SQL. Until then, run the scanner (`packages/backup/src/safe-dump.ts`)
+      against a real `pg_dump` of a populated install: it was only tested on
+      hand-written dumps.
+- [ ] Per-client access control: any active human can read any client by id
+      (ADR 0014). It needs a grants table, a resolver in `can()` and a filter in
+      every query.
+- [ ] Carousel template zip import (`unzipTemplatePackage` in
+      `packages/carousel/src/node.ts`) still trusts the sizes the archive declares
+      (fflate `filter`); switch it to `readZipParts` (`packages/files/src/safe-zip.ts`).
+      Template reuse across clients by key and version was only scoped in ADR 0015.
+- [ ] `packages/client-transfer/src/export.ts` does not enforce the import's JSON
+      caps (64 MiB per entry, 256 MiB per package): a very large client exports
+      fine and then fails import as unsafe.
+- [ ] The Docker choices (`cap_drop`, `no-new-privileges`, Caddy's
+      `NET_BIND_SERVICE`) and Compose parity of the `.env` parser were never run on
+      the Windows dev host. On Linux run `docker compose config`, then a fresh
+      `docker compose up` and `docker compose --profile https up`.
+
 ## Sign-off
 
-Record the date, the person who ran it, and which of the six sections
+Record the date, the person who ran it, and which of the seven sections
 passed in the PR or ticket that references this checklist. A failing item
 blocks go-live until fixed or explicitly accepted as a known limitation
-(e.g. the documented residual gap: a crawl redirect to a _different_
-domain mid-crawl still relies on `crawlSite`'s own per-navigation check
-rather than a second DNS pin, since Chromium is only pinned for the
-crawl's starting host).
+(e.g. the documented residual gap: when a page is opened in Chromium, a
+redirect to a _different_ domain is checked by the per-request host check
+(`allowBrowserRequest`) but not by a second DNS pin, since Chromium is only
+pinned for the crawl's starting host).
+
+This list is only as strong as its last full run: re-run section 1 whenever
+`packages/core/src/net-guard.ts`, `packages/audit/src/url.ts` or
+`packages/audit/src/crawl/` changes.

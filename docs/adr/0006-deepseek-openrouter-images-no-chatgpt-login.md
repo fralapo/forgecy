@@ -1,6 +1,6 @@
 # 0006 · DeepSeek, OpenRouter images, no "Sign in with ChatGPT"
 
-- Status: accepted
+- Status: accepted; the "no ChatGPT login" decision is superseded by 0012, and the image-provider default order by 0016
 - Date: 2026-10-06
 
 ## Context

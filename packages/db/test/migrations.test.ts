@@ -32,6 +32,18 @@ describe("migrations", () => {
     const whens = journal.entries.map((e) => e.when);
     expect(whens).toEqual([...whens].sort((a, b) => a - b));
   });
+
+  it("each snapshot's prevId is the id of the one before it in the journal", () => {
+    const snapshot = (tag: string) =>
+      JSON.parse(readFileSync(join(root, `meta/${tag.slice(0, 4)}_snapshot.json`), "utf8")) as {
+        id: string;
+        prevId: string;
+      };
+    journal.entries.forEach((e, i) => {
+      if (i > 0)
+        expect(snapshot(e.tag).prevId, e.tag).toBe(snapshot(journal.entries[i - 1]!.tag).id);
+    });
+  });
 });
 
 describe("jobs table", () => {
