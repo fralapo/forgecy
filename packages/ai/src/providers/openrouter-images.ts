@@ -142,6 +142,7 @@ export function createOpenRouterImageProvider(opts: OpenRouterImageProviderOptio
 
   return {
     id: "openrouter",
+    acceptsReferences: true,
     async generate(input) {
       // Most image models answer with one image per request: run the variants in sequence.
       const all: GeneratedImage[] = [];

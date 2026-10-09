@@ -59,6 +59,7 @@ describe.skipIf(!dbUrl)("brand images as references for image generation (integr
   const seen: ImageGenerationInput[] = [];
   const image: ImageProvider = {
     id: "openrouter",
+    acceptsReferences: true,
     async generate(input) {
       seen.push(input);
       return {

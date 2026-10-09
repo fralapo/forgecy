@@ -22,14 +22,22 @@ const CLASSES = ["product", "scene", "graphic"] as const satisfies readonly Bran
 /** SVG is left out on purpose: it is not a photo and the models do not take it. */
 const MIMES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 
-async function readCapped(stream: AsyncIterable<unknown>, max: number): Promise<Uint8Array> {
+async function readCapped(
+  stream: AsyncIterable<unknown> & { destroy?: () => unknown },
+  max: number,
+): Promise<Uint8Array> {
   const chunks: Buffer[] = [];
   let size = 0;
-  for await (const c of stream) {
-    const b = Buffer.from(c as Uint8Array);
-    size += b.byteLength;
-    if (size > max) throw new Error("file too large");
-    chunks.push(b);
+  try {
+    for await (const c of stream) {
+      const b = Buffer.from(c as Uint8Array);
+      size += b.byteLength;
+      if (size > max) throw new Error("file too large");
+      chunks.push(b);
+    }
+  } finally {
+    // Stop downloading a file that is over the cap instead of leaving the socket open.
+    stream.destroy?.();
   }
   return Buffer.concat(chunks);
 }

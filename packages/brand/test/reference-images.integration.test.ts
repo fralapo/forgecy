@@ -184,6 +184,18 @@ describe.skipIf(!dbUrl)("brandReferenceImages (integration)", () => {
     expect(ref!.data.byteLength).toBeLessThanOrEqual(REFERENCE_MAX_BYTES);
   });
 
+  it("stops reading a file over the byte cap and closes its stream", async () => {
+    await clear();
+    const huge = Buffer.alloc(21 * 1024 * 1024);
+    await asset(clientId, huge, { size: 1000 });
+    let stream: Readable | undefined;
+    const spying = {
+      get: async (key: string) => (stream = (await storage.get(key)) as Readable),
+    } as unknown as StorageDriver;
+    expect(await brandReferenceImages(db, spying, member, clientId)).toEqual([]);
+    expect(stream!.destroyed).toBe(true);
+  });
+
   it("refuses a decompression bomb instead of decoding it", async () => {
     await clear();
     const bomb = await sharp({

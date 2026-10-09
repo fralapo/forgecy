@@ -492,10 +492,11 @@ describe("images", () => {
       variants: 1 as const,
       clientId: baseReq.clientId,
       references: [ref(1), ref(2)],
+      referenceNote: "MATCH THE STYLE",
     };
     function withImages(local = false) {
       const ledger = createMemoryLedger();
-      const openai = createFakeImageProvider("openai");
+      const openai = createFakeImageProvider("openai", { acceptsReferences: true });
       const localImage = createFakeImageProvider("local");
       const gateway = createAiGateway({
         ledger,
@@ -514,6 +515,7 @@ describe("images", () => {
       const { gateway, ledger, openai } = withImages();
       await gateway.generateImage({ ...req, clientPolicy: "external_allowed" });
       expect(openai.calls[0]!.references).toHaveLength(2);
+      expect(openai.calls[0]!.prompt).toBe("a jar\n\nMATCH THE STYLE");
       expect(ledger.entries[0]!.inputSummary).toMatchObject({ meta: { references: 2 } });
       expect(JSON.stringify(ledger.entries)).not.toContain("iVBOR");
       await gateway.generateImage({
@@ -522,7 +524,93 @@ describe("images", () => {
         clientPolicy: "external_allowed",
       });
       expect(openai.calls[1]!.references).toBeUndefined();
+      expect(openai.calls[1]!.prompt).toBe("a jar");
       expect(ledger.entries[1]!.inputSummary).not.toHaveProperty("meta");
+    });
+
+    describe("only a provider that takes references gets them, the note and the log count", () => {
+      function routed() {
+        const ledger = createMemoryLedger();
+        const openrouter = createFakeImageProvider("openrouter", { acceptsReferences: true });
+        const google = createFakeImageProvider("google");
+        const local = createFakeImageProvider("local");
+        const gateway = createAiGateway({
+          ledger,
+          providers: { text: {}, image: { openrouter, google, local } },
+          routing: {
+            default: setupRouting.default,
+            image: { primary: { provider: "openrouter", model: "or" } },
+            localImage: { provider: "local", model: "flux" },
+          },
+          now: () => NOW,
+        });
+        return { ledger, gateway, openrouter, google, local };
+      }
+      const via = (provider: "openrouter" | "google") => ({
+        route: { primary: { provider, model: "m" } },
+      });
+
+      it("openrouter serving: references, note and count", async () => {
+        const { gateway, ledger, openrouter } = routed();
+        await gateway.generateImage({
+          ...req,
+          ...via("openrouter"),
+          clientPolicy: "external_allowed",
+        });
+        expect(openrouter.calls[0]!.references).toHaveLength(2);
+        expect(openrouter.calls[0]!.prompt).toBe("a jar\n\nMATCH THE STYLE");
+        expect(ledger.entries[0]!.inputSummary).toMatchObject({ meta: { references: 2 } });
+      });
+
+      it("google serving: nothing attached, no note, count 0", async () => {
+        const { gateway, ledger, google } = routed();
+        await gateway.generateImage({ ...req, ...via("google"), clientPolicy: "external_allowed" });
+        expect(google.calls[0]!.references).toBeUndefined();
+        expect(google.calls[0]!.prompt).toBe("a jar");
+        expect(ledger.entries[0]).toMatchObject({ status: "ok", provider: "google" });
+        expect(ledger.entries[0]!.inputSummary).toMatchObject({ meta: { references: 0 } });
+      });
+
+      it("local model serving: nothing attached, no note, count 0", async () => {
+        const { gateway, ledger, local, openrouter } = routed();
+        await gateway.generateImage({ ...req, clientPolicy: "local_only" });
+        expect(local.calls[0]!.references).toBeUndefined();
+        expect(local.calls[0]!.prompt).toBe("a jar");
+        expect(openrouter.calls).toHaveLength(0);
+        expect(ledger.entries[0]!.inputSummary).toMatchObject({ meta: { references: 0 } });
+      });
+
+      it("openrouter fails and google serves: each attempt logs what it really sent", async () => {
+        const ledger = createMemoryLedger();
+        const openrouter = createFakeImageProvider("openrouter", {
+          acceptsReferences: true,
+          fail: "server",
+        });
+        const google = createFakeImageProvider("google");
+        const gateway = createAiGateway({
+          ledger,
+          providers: { text: {}, image: { openrouter, google } },
+          routing: {
+            default: setupRouting.default,
+            image: {
+              primary: { provider: "openrouter", model: "or" },
+              fallback: { provider: "google", model: "g" },
+            },
+          },
+          now: () => NOW,
+        });
+        const res = await gateway.generateImage({ ...req, clientPolicy: "external_allowed" });
+        expect(res).toMatchObject({ provider: "google", fallbackUsed: true });
+        expect(openrouter.calls[0]!.references).toHaveLength(2);
+        expect(google.calls[0]!.references).toBeUndefined();
+        expect(google.calls[0]!.prompt).toBe("a jar");
+        expect(
+          ledger.entries.map((e) => [e.status, (e.inputSummary as { meta?: unknown }).meta]),
+        ).toEqual([
+          ["error", { references: 2 }],
+          ["ok", { references: 0 }],
+        ]);
+      });
     });
 
     it("no_ai blocks them before any provider call", async () => {

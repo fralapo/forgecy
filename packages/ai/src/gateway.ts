@@ -163,9 +163,12 @@ export interface GenerateImageRequest extends CommonRequest {
   variants: 1 | 2 | 3 | 4;
   /**
    * The client's brand images the result should match. They count as `brand_assets`
-   * for the client's policy, and the log keeps only how many were sent.
+   * for the client's policy. Only a provider with `acceptsReferences` gets them (and the
+   * note); each attempt's log row keeps only how many were really sent.
    */
   references?: InputImage[];
+  /** Added to the prompt, only on an attempt that attaches the references. */
+  referenceNote?: string;
 }
 
 export interface GenerateImageResult {
@@ -720,9 +723,6 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
         size: req.size,
         variants: req.variants,
         agent: { key: agent, instructionsVersion: null },
-        ...(references.length
-          ? { meta: { ...req.inputSummary?.meta, references: references.length } }
-          : {}),
       });
       await agentGate(kind, req, agent, routing.agents?.[agent], summary);
       const candidates = await resolveCandidates(
@@ -740,8 +740,18 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
         const cand = candidates[ci]!;
         const provider = providers.image[cand.provider]!;
         const startedAt = now();
+        // Providers that cannot use the references never get them, and the log says so.
+        const attach = references.length > 0 && provider.acceptsReferences === true;
+        const attemptMeta = references.length
+          ? {
+              meta: {
+                ...(summary.meta as Record<string, string | number | boolean | null> | undefined),
+                references: attach ? references.length : 0,
+              },
+            }
+          : {};
         try {
-          const status = await runImageJob(provider, cand, req, timeoutMs);
+          const status = await runImageJob(provider, cand, req, timeoutMs, attach);
           const usage = status.usage ?? { ...emptyUsage(), images: status.images?.length ?? 0 };
           const c = computeCost(cand.provider, cand.model, usage);
           await ledger.record({
@@ -751,6 +761,7 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
             status: "ok",
             inputSummary: {
               ...summary,
+              ...attemptMeta,
               attempt: ci + 1,
               fallback: ci > 0,
               ...(c.priced ? {} : { unpriced: true }),
@@ -784,6 +795,7 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
             status: "error",
             inputSummary: {
               ...summary,
+              ...attemptMeta,
               attempt: ci + 1,
               fallback: ci > 0,
               ...(charged.priced ? {} : { unpriced: true }),
@@ -814,15 +826,16 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
     cand: ModelRef,
     req: GenerateImageRequest,
     timeoutMs: number,
+    attach: boolean,
   ): Promise<ImageGenerationStatus> {
     const deadline = Date.now() + timeoutMs;
     let status: ImageGenerationStatus = await provider.generate({
       model: cand.model,
-      prompt: req.prompt,
+      prompt: attach && req.referenceNote ? `${req.prompt}\n\n${req.referenceNote}` : req.prompt,
       size: req.size,
       variants: req.variants,
       timeoutMs,
-      ...(req.references?.length ? { references: req.references } : {}),
+      ...(attach ? { references: req.references! } : {}),
       ...(req.signal ? { signal: req.signal } : {}),
     });
     while (status.state === "queued" || status.state === "running") {

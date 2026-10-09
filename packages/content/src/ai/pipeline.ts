@@ -1079,7 +1079,8 @@ function brandAssetsAllowed(client: {
   aiPolicy: AiPolicy;
   sendableAssets: readonly SendableAssetType[];
 }): boolean {
-  if (client.aiPolicy === "no_ai") return false;
+  // local_only keeps everything on site, and a local image model does not take references.
+  if (client.aiPolicy === "no_ai" || client.aiPolicy === "local_only") return false;
   return (
     client.aiPolicy !== "external_restricted" || client.sendableAssets.includes("brand_assets")
   );
@@ -1158,19 +1159,17 @@ export async function runGenerateImage(
   const references = brandAssetsAllowed(client)
     ? await brandReferenceImages(deps.db, deps.storage, actor, input.clientId)
     : [];
-  const imagePrompt = references.length
-    ? `${prompt.data.prompt}\n\n${IMAGE_REFERENCES_NOTE}`
-    : prompt.data.prompt;
   const res = await guarded(() =>
     ai.generateImage({
-      prompt: imagePrompt,
+      prompt: prompt.data.prompt,
       size: imageSizeFor(c.format as FormatId),
       variants: Math.min(4, Math.max(1, input.variants)) as 1 | 2 | 3 | 4,
       route: routed.route,
       ...common,
-      ...(references.length ? { references } : {}),
+      // The gateway adds the note only on an attempt whose provider really takes the pictures.
+      ...(references.length ? { references, referenceNote: IMAGE_REFERENCES_NOTE } : {}),
       inputSummary: {
-        fields: { prompt: imagePrompt },
+        fields: { prompt: prompt.data.prompt },
         meta: { promptVersion: CONTENT_PROMPT_VERSION, slot: input.slot },
       },
     }),
