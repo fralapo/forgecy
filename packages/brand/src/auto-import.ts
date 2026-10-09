@@ -196,7 +196,8 @@ async function requester(
   if (typeof requestedBy !== "string" || !UUID.test(requestedBy)) return "no_requester";
   const actor = await userActor(db, requestedBy);
   if (!actor) return "no_requester";
-  if (actor.active && !canAccessClient(actor, clientId)) return "no_access";
+  // A deactivated person reaches no client: the same reason as one without access.
+  if (!actor.active || !canAccessClient(actor, clientId)) return "no_access";
   if (!NEEDED.every((p) => can(actor, p, clientId))) return "no_permission";
   return actor;
 }
@@ -549,7 +550,8 @@ export async function undoImport(
         changelog: `Undo of automatic import v${current.number}`,
         note: "Undo of automatic import",
       },
-      { undoOf: current.number },
+      // Said explicitly: a person's undo is never taken for an automatic publish.
+      { auto: false, undoOf: current.number },
     );
   });
 }
@@ -565,6 +567,8 @@ export interface LatestAutoImport {
   needsReview: number;
   /** Still the published version: "Undo import" applies to it. */
   current: boolean;
+  /** A version came before it: false on a first import, which "Undo import" cannot undo. */
+  previous: boolean;
 }
 
 /** The last version an automatic import published for this client, or null. */
@@ -608,5 +612,6 @@ export async function latestAutoImport(
     discarded: n("discarded"),
     needsReview: n("needsReview"),
     current: version?.status === "published",
+    previous: typeof meta.previous === "number",
   };
 }

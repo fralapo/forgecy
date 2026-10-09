@@ -111,7 +111,7 @@ export async function ImportCard({
           <p className="text-body-sm text-fg-muted">{t("importedReplaced")}</p>
         ) : null}
       </div>
-      {latest.current && canUndo ? (
+      {latest.current && latest.previous && canUndo ? (
         <UndoImportButton slug={slug} clientId={clientId} versionId={latest.versionId} />
       ) : null}
     </Card>

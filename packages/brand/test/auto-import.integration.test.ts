@@ -281,6 +281,7 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
       number: 1,
       accepted: result.auto!.accepted,
       current: true,
+      previous: false,
     });
     expect(await refOf(latestAutoImport(db, outsider, main))).toBe("permission_denied");
   });
@@ -340,7 +341,7 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
     const mine = await proposalsOf(jobId);
     expect(mine.length).toBeGreaterThan(0);
     expect(mine.every((p) => p.status === "proposed")).toBe(true);
-    expect((await versionsOf(clientId)).every((v) => v.status === "draft")).toBe(true);
+    expect((await versionsOf(clientId)).map((v) => v.status)).toEqual(["draft"]);
     expect(source.statusDetailRef?.map((r) => r.key)).toContain(
       "brand.import.status.autoNotApplied",
     );
@@ -348,16 +349,18 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
   });
 
   it("writes nothing for a person without access, or no longer active", async () => {
-    for (const [who, reason] of [
-      [outsider.id, "no_access"],
-      [inactive.id, "no_permission"],
-      [crypto.randomUUID(), "no_requester"],
-    ] as const) {
-      const clientId = await mkClient(`denied-${reason}`);
+    for (const [i, [who, reason]] of (
+      [
+        [outsider.id, "no_access"],
+        [inactive.id, "no_access"],
+        [crypto.randomUUID(), "no_requester"],
+      ] as const
+    ).entries()) {
+      const clientId = await mkClient(`denied-${i}`);
       const { result, jobId } = await runImport(clientId, [POSITIONING], { requestedBy: who });
       expect(result.auto).toMatchObject({ accepted: 0, published: false, reason });
       expect((await proposalsOf(jobId)).every((p) => p.status === "proposed")).toBe(true);
-      expect((await versionsOf(clientId)).every((v) => v.status === "draft")).toBe(true);
+      expect((await versionsOf(clientId)).map((v) => v.status)).toEqual(["draft"]);
       expect(await eventsOf(clientId, "brand.proposal.auto_accept")).toEqual([]);
     }
   });
@@ -456,7 +459,7 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
 
   it("undoes an automatic import back to the version before it", async () => {
     const before = await latestAutoImport(db, anna, main);
-    expect(before).toMatchObject({ number: 3, current: true });
+    expect(before).toMatchObject({ number: 3, current: true, previous: true });
     const v3 = before!.versionId;
 
     expect(await refOf(undoImport(db, agent, { clientId: main, versionId: v3 }))).toBe(
@@ -493,6 +496,11 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
       changelog: "Undo of automatic import v3",
     });
     expect(v4.document).toEqual(v2.document);
+    // The undo's own publish says it was not automatic.
+    const undoPublish = (await eventsOf(main, "brand.version.publish")).find(
+      (e) => e.entityId === v4.id,
+    );
+    expect(undoPublish!.meta).toMatchObject({ auto: false, undoOf: 3 });
     expect(await latestAutoImport(db, anna, main)).toMatchObject({ number: 3, current: false });
 
     // v4 was published by a person, not by an import.

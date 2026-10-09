@@ -240,6 +240,16 @@ const PARTIAL_KEY = {
   unreachable: "brand.import.status.socialUnreachable",
 } as const satisfies Record<SocialPartial, MessageKey>;
 
+/**
+ * A person's own page (LinkedIn `/in/`), judged on the canonical address so `//in/x` or
+ * `/IN/x` do not slip past; a LinkedIn link that is not a recognizable page counts as one.
+ */
+export function isPersonProfile(kind: string, url: string): boolean {
+  if (kind !== "linkedin") return false;
+  const canonical = socialProfileOf(url)?.url;
+  return !canonical || new URL(canonical).pathname.startsWith("/in/");
+}
+
 export interface SocialSourceOptions extends SocialNet {
   clientId: string;
   requestedBy?: string | null;
@@ -273,8 +283,7 @@ export async function readSocialSource(
   }
   await updateSourceStatus(deps.db, source.id, { pages: profile.pages });
   // Never a private person's headshot: a LinkedIn /in/ profile keeps its text and no picture.
-  const person = source.kind === "linkedin" && /^\/in\//i.test(new URL(source.url).pathname);
-  if (profile.image && !person)
+  if (profile.image && !isPersonProfile(source.kind, source.url))
     try {
       const picture: ProbeImage = {
         url: profile.image,

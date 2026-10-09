@@ -454,9 +454,11 @@ Use an Admin, a person assigned to client X, and a person with no access to X
 (or a person without the publish permissions). Use a site you control for the
 pages, and a second one for the attacker's page.
 
-1. Add a website to X as the Admin, then remove the person's access (or the
-   publish permissions) from X while the crawl they started is still queued,
-   so the import runs as a requester without access: it reads the site, but
+1. As the person assigned to X, add a website to X; then, as the Admin, remove
+   that person's access to X (or deactivate them) while the crawl they started
+   is still queued, so the import runs as a requester without access. The run
+   must be started by that person, not by the Admin: an Admin always has
+   access, so a run the Admin starts always applies. The import reads the site, but
    nothing is written to X's draft or published versions, no proposal is
    accepted, and the source status says the import was not applied
    automatically. X's pages answer 404 for that person.

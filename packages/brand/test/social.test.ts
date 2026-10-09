@@ -2,7 +2,12 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { collectSocialProfiles } from "../src/crawl";
-import { parseSocialMeta, readSocialProfile, socialKindOf } from "../src/import/social";
+import {
+  isPersonProfile,
+  parseSocialMeta,
+  readSocialProfile,
+  socialKindOf,
+} from "../src/import/social";
 import { linkSourceReader } from "../src/social-url";
 
 const page = (head: string) => `<!doctype html><html><head>${head}</head><body>x</body></html>`;
@@ -52,6 +57,17 @@ describe("linkSourceReader", () => {
     expect(linkSourceReader("facebook", "https://www.instagram.com/deodue")).toBeNull();
     expect(linkSourceReader("instagram", undefined)).toBeNull();
     expect(linkSourceReader("competitor", "https://rival.example/")).toBeNull();
+  });
+});
+
+describe("isPersonProfile", () => {
+  it("judges the canonical address, so an odd spelling of /in/ is still a person", () => {
+    expect(isPersonProfile("linkedin", "https://www.linkedin.com/in/jane")).toBe(true);
+    expect(isPersonProfile("linkedin", "https://www.linkedin.com//in/jane")).toBe(true);
+    expect(isPersonProfile("linkedin", "https://it.linkedin.com/IN/Jane/")).toBe(true);
+    expect(isPersonProfile("linkedin", "https://www.linkedin.com/feed/")).toBe(true);
+    expect(isPersonProfile("linkedin", "https://www.linkedin.com/company/deodue")).toBe(false);
+    expect(isPersonProfile("instagram", "https://www.instagram.com/in")).toBe(false);
   });
 });
 
