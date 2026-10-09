@@ -89,32 +89,67 @@ export function visualCandidates(
   visual: SiteProbe,
   logo?: { sourceId: string; image: { url: string } },
 ): CandidateProposal[] {
-  const colors: CandidateProposal[] = knownColors(visual)
-    .slice(0, MAX_SITE_COLORS)
-    .map((c) => ({
-      kind: "color",
-      named: true,
-      path: "",
-      op: "set",
-      value: { name: c.name, hex: c.hex, usage: "" },
-      ...rationale("brand.import.rationale.siteColor"),
-      evidence: { locator: c.locator },
-    }));
-  const fonts: CandidateProposal[] = knownFonts(visual)
-    .slice(0, MAX_SITE_FONTS)
-    .map((f) => ({
-      path: "/document/visual/typography",
-      op: "append",
-      value: {
-        role: f.roles.includes("headings") ? "display" : "body",
-        family: f.family,
-        weights: [],
-        licenseStatus: "to_verify",
-      },
-      ...rationale("brand.import.rationale.siteFont"),
-      evidence: { locator: SITE_LOCATORS.fonts },
-    }));
-  return [...colors, ...fonts, ...(logo ? [logoCandidate(logo.sourceId, logo.image)] : [])];
+  const colors: CandidateProposal[] = knownColors(visual, MAX_SITE_COLORS).map((c) => ({
+    kind: "color",
+    named: true,
+    path: "",
+    op: "set",
+    value: { name: c.name, hex: c.hex, usage: "" },
+    ...rationale("brand.import.rationale.siteColor"),
+    evidence: { locator: c.locator },
+  }));
+  const families = knownFonts(visual).slice(0, MAX_SITE_FONTS);
+  const roles = fontRoles(families);
+  const fonts: CandidateProposal[] = families.map((f, i) => ({
+    path: "/document/visual/typography",
+    op: "append",
+    value: { role: roles[i], family: f.family, weights: [], licenseStatus: "to_verify" },
+    ...rationale("brand.import.rationale.siteFont"),
+    evidence: { locator: SITE_LOCATORS.fonts },
+  }));
+  // The font tokens follow, so carousels use the site's fonts; the automatic import only
+  // replaces a token that still holds the starting value (auto-import.ts overwritesHandEdit).
+  const tokens: CandidateProposal[] = (["display", "body"] as const).flatMap((role) => {
+    // A site with one font uses it for the text too.
+    const f =
+      families[roles.indexOf(role)] ??
+      (role === "body" ? families.find((x) => x.roles.includes("body")) : undefined);
+    return f
+      ? [
+          {
+            path: `/tokens/font/family/${role}`,
+            op: "set" as const,
+            value: { $value: [f.family, "sans-serif"] },
+            ...rationale("brand.import.rationale.siteFont"),
+            evidence: { locator: SITE_LOCATORS.fonts },
+          },
+        ]
+      : [];
+  });
+  return [
+    ...colors,
+    ...fonts,
+    ...tokens,
+    ...(logo ? [logoCandidate(logo.sourceId, logo.image)] : []),
+  ];
+}
+
+/**
+ * Role of each family from where the page uses it. Headings only: display. Body only: body.
+ * Both: display only when no other family is used for headings (the site's only font).
+ */
+export function fontRoles(
+  families: ReadonlyArray<{ roles: readonly string[]; loaded: boolean }>,
+): Array<"display" | "body"> {
+  const headings = families.filter((f) => f.roles.includes("headings"));
+  const display =
+    headings.find((f) => !f.roles.includes("body")) ??
+    (headings.length === 1 ? headings[0] : headings.find((f) => f.loaded));
+  return families.map((f) =>
+    f === display || (f.roles.includes("headings") && !f.roles.includes("body"))
+      ? "display"
+      : "body",
+  );
 }
 
 // Matches Italian and English color words in client documents.

@@ -34,7 +34,7 @@ import {
 import { localizedError, messageRef } from "@forgecy/i18n";
 import { emptyDocument, parseDocument } from "./document";
 import { matchField, type FieldDef } from "./fields";
-import { getAt, isJsonPatch, type JsonPatch } from "./json-patch";
+import { deepEqual, getAt, isJsonPatch, type JsonPatch } from "./json-patch";
 import type { DraftState } from "./proposals";
 import {
   acceptOne,
@@ -114,6 +114,9 @@ export function overwritesHandEdit(state: DraftState, patch: JsonPatch, field: F
   if (!last || last.op === "add") return false;
   const current = getAt(state, last.path) as Record<string, unknown> | undefined;
   if (current === undefined) return false;
+  // The value every identity starts with (the "sans-serif" font tokens) is nobody's work.
+  if (deepEqual(current, getAt({ document: emptyDocument(), tokens: defaultTokens() }, last.path)))
+    return false;
   const provenance =
     field.shape === "token-group"
       ? (current.$extensions as { forgecy?: Record<string, unknown> } | undefined)?.forgecy

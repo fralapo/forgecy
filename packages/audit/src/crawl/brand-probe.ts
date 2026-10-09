@@ -54,6 +54,8 @@ const MAX_NAME = 200;
 const MAX_DESCRIPTION = 1000;
 /** Entries examined per list, so a hostile page cannot make the worker chew through millions. */
 const MAX_SCANNED = 500;
+/** A custom property named for a role in the palette. */
+const BRAND_VAR_NAME = /primary|secondary|accent|brand|main|text|background/i;
 
 const channel = (n: number) =>
   Math.max(0, Math.min(255, Math.round(n)))
@@ -308,8 +310,16 @@ export function buildSiteProbe(raw: RawProbe, html: string, baseUrl: string): Si
 
   const themeColor =
     typeof raw.themeColor === "string" ? toHex(raw.themeColor.slice(0, 200)) : null;
+  // The cap must not cut the brand's own colors behind a long ramp of grays: names that state a
+  // role, then the page builder's globals, then the rest, each in page order.
+  const varRank = (name: string) =>
+    BRAND_VAR_NAME.test(name) ? 0 : /^--e-global-color-/i.test(name) ? 1 : 2;
   return {
-    cssVars: cssVars.slice(0, MAX_CSS_VARS),
+    cssVars: cssVars
+      .map((v, i) => ({ v, i, r: varRank(v.name) }))
+      .sort((a, b) => a.r - b.r || a.i - b.i)
+      .slice(0, MAX_CSS_VARS)
+      .map((x) => x.v),
     ...(themeColor ? { themeColor } : {}),
     buttonColors: [...buttons.values()]
       .sort((a, b) => b.weight - a.weight)
@@ -343,13 +353,19 @@ export function measureBrand(): RawProbe {
   };
   const unquote = (s: string) => s.replace(/["']/g, "").trim();
 
-  // Custom properties declared on :root/html, resolved to a computed rgb() by a scratch element.
+  // Custom properties declared on :root/html/body or on a page builder's kit class (Elementor
+  // puts its global colors on `.elementor-kit-N`, a class of <body>), resolved on <body> to a
+  // computed rgb() by a scratch element.
   const names = new Set<string>();
   const walk = (rules: CSSRuleList, depth: number): void => {
     for (const rule of Array.from(rules)) {
       if (names.size >= 400) return;
       if (rule instanceof CSSStyleRule) {
-        if (rule.selectorText.split(",").some((s) => /^\s*(:root|html)\s*$/i.test(s)))
+        if (
+          rule.selectorText
+            .split(",")
+            .some((s) => /^\s*(:root|html|body)\s*$/i.test(s) || /elementor-kit/i.test(s))
+        )
           for (const prop of Array.from(rule.style)) if (prop.startsWith("--")) names.add(prop);
       } else if (depth < 2 && "cssRules" in rule) {
         walk((rule as CSSGroupingRule).cssRules, depth + 1);
@@ -367,7 +383,8 @@ export function measureBrand(): RawProbe {
   scratch.style.display = "none";
   root.appendChild(scratch);
   const cssVars: RawProbe["cssVars"] = [];
-  const rootStyle = getComputedStyle(root);
+  // <body> inherits :root's properties and holds the kit's: the values the page really uses.
+  const rootStyle = getComputedStyle(document.body ?? root);
   for (const name of names) {
     try {
       const value = rootStyle.getPropertyValue(name).trim();

@@ -48,28 +48,95 @@ export function isFrameworkColor(hex: string, visual: SiteProbe | undefined): bo
   return !visual?.cssVars.some((v) => v.hex.toLowerCase() === h && BRAND_VAR.test(v.name));
 }
 
+/** Role words in a variable's name, strongest first; text and background name the neutrals. */
+const ROLE_WORDS = ["primary", "secondary", "accent", "brand", "main", "text", "background"];
+/** Page-builder globals (Elementor's kit): what the site's owner picked, even under a code name. */
+const BUILDER_GLOBAL = /^--e-global-color-/i;
+
+/** Nearly no hue (grays, off-whites): chroma guards the near-white/near-black where HSL saturation jumps. */
+export function isNeutral(hex: string): boolean {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [
+    number,
+    number,
+    number,
+  ];
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const saturation = max === min ? 0 : (max - min) / (1 - Math.abs(2 * l - 1));
+  return max - min < 0.08 || saturation < 0.12;
+}
+
+const lightness = (hex: string) => {
+  const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return (Math.max(...c) + Math.min(...c)) / 510;
+};
+
 /**
- * Brand colors in order of trust: CSS variables (brand-named first), `theme-color`, then
- * button/link/header colors by weight. Exact duplicates and framework defaults are left out.
+ * Every color the site declares, best first: `theme-color`, variables named for a role
+ * (primary, secondary, accent... in that order), button colors by weight, the page builder's
+ * other globals, then the remaining variables. Exact duplicates and framework defaults are out.
  */
-export function knownColors(visual: SiteProbe): KnownColor[] {
+function rankedColors(visual: SiteProbe): KnownColor[] {
+  const ranked: Array<KnownColor & { rank: number }> = [];
+  const roleOf = (name: string) => {
+    const i = ROLE_WORDS.findIndex((w) => name.toLowerCase().includes(w));
+    return i < 0 ? ROLE_WORDS.length : i;
+  };
+  if (visual.themeColor)
+    ranked.push({
+      hex: visual.themeColor,
+      name: "theme",
+      locator: SITE_LOCATORS.themeColor,
+      rank: 0,
+    });
+  for (const v of visual.cssVars) {
+    const role = roleOf(v.name);
+    const name =
+      v.name
+        .replace(/^--/, "")
+        .replace(/^(?:e-global-color-|wp--preset--color--|color-|brand-)+/i, "") || v.name;
+    ranked.push({
+      hex: v.hex,
+      name,
+      locator: v.name,
+      rank: role < ROLE_WORDS.length ? 1 + role / 10 : BUILDER_GLOBAL.test(v.name) ? 3 : 4,
+    });
+  }
+  // Already sorted by weight (buildSiteProbe), but a stored probe is not trusted to be.
+  [...visual.buttonColors]
+    .sort((a, c) => c.weight - a.weight)
+    .forEach((b, i) =>
+      ranked.push({
+        hex: b.hex,
+        name: b.role === "bg" ? "button" : "button-text",
+        locator: SITE_LOCATORS.buttons,
+        rank: 2 + i / 1000,
+      }),
+    );
   const out: KnownColor[] = [];
   const seen = new Set<string>();
-  const add = (hex: string, name: string, locator: string) => {
+  for (const { hex, name, locator } of ranked.sort((a, b) => a.rank - b.rank)) {
     const h = hex.toLowerCase();
-    if (seen.has(h) || isFrameworkColor(h, visual)) return;
+    if (seen.has(h) || isFrameworkColor(h, visual)) continue;
     seen.add(h);
     out.push({ hex: h, name, locator });
-  };
-  const vars = [...visual.cssVars].sort(
-    (a, b) => Number(BRAND_VAR.test(b.name)) - Number(BRAND_VAR.test(a.name)),
-  );
-  for (const v of vars)
-    add(v.hex, v.name.replace(/^--/, "").replace(/^(?:color-|brand-)+/, "") || v.name, v.name);
-  if (visual.themeColor) add(visual.themeColor, "theme", SITE_LOCATORS.themeColor);
-  for (const b of [...visual.buttonColors].sort((a, c) => c.weight - a.weight))
-    add(b.hex, b.role === "bg" ? "button" : "button-text", SITE_LOCATORS.buttons);
+  }
   return out;
+}
+
+/**
+ * The palette the site really uses, at most `max` colors: the chromatic ones by rank, then at
+ * most two neutrals (one light for backgrounds, one dark for text). The rest of a gray ramp
+ * says nothing about the brand and is left out.
+ */
+export function knownColors(visual: SiteProbe, max = Infinity): KnownColor[] {
+  const all = rankedColors(visual);
+  const light = all.find((c) => isNeutral(c.hex) && lightness(c.hex) >= 0.5);
+  const dark = all.find((c) => isNeutral(c.hex) && lightness(c.hex) < 0.5);
+  const neutrals = [light, dark].filter((c): c is KnownColor => !!c).slice(0, max);
+  const chromatic = all.filter((c) => !isNeutral(c.hex)).slice(0, max - neutrals.length);
+  return [...chromatic, ...neutrals];
 }
 
 /** Fonts worth proposing: loaded by the page, or not a system/generic family. */

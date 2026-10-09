@@ -26,6 +26,7 @@ export interface GateResult {
 }
 
 const TYPOGRAPHY_PATH = "/document/visual/typography";
+const FONT_TOKEN_PATH = "/tokens/font/family/";
 
 type Page = { locator: string; text: string };
 
@@ -75,8 +76,9 @@ export function gateCandidates(input: {
       else result.keep.push(c);
       continue;
     }
-    if (c.path === TYPOGRAPHY_PATH) {
-      const family = (c.value as { family: string }).family;
+    if (c.path === TYPOGRAPHY_PATH || c.path.startsWith(FONT_TOKEN_PATH)) {
+      const v = c.value as { family?: string; $value?: unknown };
+      const family = v.family ?? (Array.isArray(v.$value) ? String(v.$value[0] ?? "") : "");
       const known = fonts.get(cleanFamily(family));
       if (!known) discard(c.path, "font_not_extracted");
       else if (isGenericFont(family) && !known.loaded) discard(c.path, "generic_font");

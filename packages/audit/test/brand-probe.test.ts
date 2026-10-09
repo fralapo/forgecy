@@ -267,6 +267,35 @@ describe("buildSiteProbe", () => {
     expect(probe.logos).toHaveLength(8);
     expect(probe.images).toHaveLength(60);
   });
+
+  it("keeps role-named and page-builder variables when a gray ramp fills the cap", () => {
+    const ramp = Array.from({ length: 60 }, (_, i) => ({
+      name: `--gray-${i}`,
+      color: `rgb(${i}, ${i}, ${i})`,
+    }));
+    const probe = buildSiteProbe(
+      {
+        cssVars: [
+          ...ramp,
+          { name: "--e-global-color-5c1b2a3", color: "#00707a" },
+          { name: "--e-global-color-primary", color: "#2B2E83" },
+          { name: "--brand-accent", color: "#00A9B6" },
+        ],
+        buttonColors: [],
+        fonts: [],
+        logos: [],
+        images: [],
+      },
+      "",
+      "https://e.com/",
+    );
+    expect(probe.cssVars).toHaveLength(40);
+    expect(probe.cssVars.slice(0, 3)).toEqual([
+      { name: "--e-global-color-primary", hex: "#2b2e83" },
+      { name: "--brand-accent", hex: "#00a9b6" },
+      { name: "--e-global-color-5c1b2a3", hex: "#00707a" },
+    ]);
+  });
 });
 
 // Real browser: runs only where a Chromium is available (FORGECY_CHROMIUM_PATH or
@@ -279,8 +308,9 @@ const PAGE = `<!doctype html><html><head><title>Acme</title>
 <style>
 :root{--brand-primary:#1d3a8a;--brand-accent:orange;--e-global-color-primary:#6EC1E4;--spacing:12px}
 body{font-family:Arial,sans-serif;margin:0}
+.elementor-kit-4{--e-global-color-primary:#2B2E83;--e-global-color-secondary:#00C1CF}
 .elementor-button{background-color:#69727d;color:#fff;font-family:Arial,sans-serif;padding:12px 24px;display:inline-block}
-</style></head><body>
+</style></head><body class="elementor-kit-4">
 <header><a href="/"><img src="/assets/acme-logo.png" alt="Acme logo" width="160" height="48"></a></header>
 <main><h1>Hello</h1><img src="/assets/photo.jpg" alt="Team" width="400" height="300">
 <a class="elementor-button" href="/contact">Contact us</a></main>
@@ -330,7 +360,9 @@ describe.skipIf(!chromium)("brand probe in the browser", () => {
         expect.arrayContaining([
           { name: "--brand-primary", hex: "#1d3a8a" },
           { name: "--brand-accent", hex: "#ffa500" },
-          { name: "--e-global-color-primary", hex: "#6ec1e4" },
+          // The kit on <body> overrides the :root default: the value the page really uses.
+          { name: "--e-global-color-primary", hex: "#2b2e83" },
+          { name: "--e-global-color-secondary", hex: "#00c1cf" },
         ]),
       );
       expect(brand!.cssVars.map((v) => v.name)).not.toContain("--spacing");

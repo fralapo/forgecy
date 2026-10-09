@@ -431,7 +431,7 @@ export async function runSourceImport(
             pages: chunk,
             ...(website
               ? {
-                  knownColors: visual ? knownColors(visual).slice(0, MAX_KNOWN_COLORS) : [],
+                  knownColors: visual ? knownColors(visual, MAX_KNOWN_COLORS) : [],
                   knownFonts: visual ? knownFonts(visual) : [],
                   ...(visual?.organization ? { organization: visual.organization } : {}),
                 }

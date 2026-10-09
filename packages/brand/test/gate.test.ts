@@ -1,9 +1,14 @@
 import type { SiteProbe } from "@forgecy/audit";
 import { describe, expect, it } from "vitest";
-import { mergeSiteItems, type CandidateProposal } from "../src/import/candidates";
+import {
+  fontRoles,
+  mergeSiteItems,
+  visualCandidates,
+  type CandidateProposal,
+} from "../src/import/candidates";
 import { gateCandidates } from "../src/import/gate";
 import { parseSiteProbe } from "../src/import/probe-schema";
-import { knownColors, knownFonts, SITE_LOCATORS } from "../src/import/site-colors";
+import { isNeutral, knownColors, knownFonts, SITE_LOCATORS } from "../src/import/site-colors";
 import { quoteInPage } from "../src/import/verify";
 
 const probe = (over: Partial<SiteProbe> = {}): SiteProbe => ({
@@ -237,14 +242,100 @@ describe("known colors and fonts", () => {
     ],
   });
 
-  it("orders CSS variables first (named from the variable), then theme-color, then buttons by weight", () => {
+  it("ranks theme-color, role-named variables, then buttons by weight; neutrals last", () => {
     const known = knownColors(visual);
     expect(known.map((c) => [c.hex, c.name])).toEqual([
-      ["#1d3a8a", "primary"],
-      ["#222222", "text"],
       ["#f5ebdc", "theme"],
-      ["#ffffff", "button-text"],
+      ["#1d3a8a", "primary"],
       ["#c0392b", "button"],
+      ["#ffffff", "button-text"],
+      ["#222222", "text"],
+    ]);
+  });
+
+  it("keeps the brand's colors over a gray ramp: chromatic first, at most two neutrals", () => {
+    const ramp = [
+      "fafafa",
+      "f2f2f2",
+      "e6e6e6",
+      "d4d4d4",
+      "bdbdbd",
+      "9e9e9e",
+      "7a7a7b",
+      "5c5c5c",
+      "3d3d3d",
+      "1f1f1f",
+    ];
+    const site = probe({
+      cssVars: [
+        ...ramp.map((h, i) => ({ name: `--neutral-${(i + 1) * 100}`, hex: `#${h}` })),
+        { name: "--navy-700", hex: "#2b2e83" },
+        { name: "--e-global-color-primary", hex: "#2b2e83" },
+        { name: "--e-global-color-secondary", hex: "#00c1cf" },
+        { name: "--e-global-color-text", hex: "#3a3a3a" },
+        { name: "--e-global-color-accent", hex: "#00a9b6" },
+      ],
+      buttonColors: [
+        { hex: "#ffffff", role: "bg", weight: 2_200_000 },
+        { hex: "#00707a", role: "bg", weight: 640_000 },
+        { hex: "#2b2e83", role: "text", weight: 800_000 },
+      ],
+    });
+    const palette = knownColors(site, 6);
+    expect(palette.map((c) => [c.hex, c.name])).toEqual([
+      ["#2b2e83", "primary"],
+      ["#00c1cf", "secondary"],
+      ["#00a9b6", "accent"],
+      ["#00707a", "button"],
+      ["#ffffff", "button"],
+      ["#3a3a3a", "text"],
+    ]);
+    expect(palette.filter((c) => isNeutral(c.hex))).toHaveLength(2);
+    // The analyst's list follows the same ranking, and also leaves the ramp out.
+    expect(knownColors(site, 24).filter((c) => isNeutral(c.hex))).toHaveLength(2);
+  });
+
+  it("gives each family its role from where the page uses it", () => {
+    const f = (roles: string[], loaded = true) => ({ roles, loaded });
+    // deodue: Montserrat on headings, Lato on body, buttons and one heading.
+    expect(fontRoles([f(["headings"]), f(["body", "button", "headings"])])).toEqual([
+      "display",
+      "body",
+    ]);
+    expect(fontRoles([f(["body", "headings"])])).toEqual(["display"]);
+    expect(fontRoles([f(["body", "headings"], false), f(["headings", "body"])])).toEqual([
+      "body",
+      "display",
+    ]);
+    expect(fontRoles([f(["body"]), f(["button"])])).toEqual(["body", "body"]);
+  });
+
+  it("proposes the font tokens with the families, and the gate checks them like fonts", () => {
+    const site = probe({
+      fonts: [
+        { family: "Montserrat", roles: ["headings"], loaded: true },
+        { family: "Lato", roles: ["body", "headings"], loaded: true },
+      ],
+    });
+    const all = visualCandidates(site);
+    const typography = all.filter((c) => c.path === "/document/visual/typography");
+    expect(typography.map((c) => c.value)).toEqual([
+      expect.objectContaining({ family: "Montserrat", role: "display" }),
+      expect.objectContaining({ family: "Lato", role: "body" }),
+    ]);
+    const tokens = all.filter((c) => c.path.startsWith("/tokens/font/family/"));
+    expect(tokens.map((c) => [c.path, c.value])).toEqual([
+      ["/tokens/font/family/display", { $value: ["Montserrat", "sans-serif"] }],
+      ["/tokens/font/family/body", { $value: ["Lato", "sans-serif"] }],
+    ]);
+    const gated = gateCandidates({
+      candidates: [...tokens, { ...tokens[0]!, value: { $value: ["Comic Sans", "sans-serif"] } }],
+      pages: [],
+      visual: site,
+    });
+    expect(gated.keep).toHaveLength(2);
+    expect(gated.discarded).toEqual([
+      { path: "/tokens/font/family/display", reason: "font_not_extracted" },
     ]);
   });
 

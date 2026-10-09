@@ -108,6 +108,16 @@ describe("overwritesHandEdit", () => {
     expect(overwrites(fromImport, "/tokens/color/reference/brand", "set", value)).toBe(false);
     expect(overwrites(handMade, "/tokens/color/reference/new-one", "set", value)).toBe(false);
   });
+
+  it("replaces a font token still at the starting value, never one a person set", () => {
+    const value = { $value: ["Montserrat", "sans-serif"] };
+    expect(overwrites(stateWith(), "/tokens/font/family/display", "set", value)).toBe(false);
+    const set = stateWith();
+    (set.tokens as { font: { family: Record<string, unknown> } }).font.family.display = {
+      $value: ["Georgia", "serif"],
+    };
+    expect(overwrites(set, "/tokens/font/family/display", "set", value)).toBe(true);
+  });
 });
 
 describe("autoImportStatus", () => {
