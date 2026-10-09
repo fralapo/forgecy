@@ -89,7 +89,9 @@ confirm by hand against a real target, not just the unit tests in
 
 ## 3. Off-host restore drill (`pnpm forgecy backup` / `restore`)
 
-- [ ] Take a backup on the live install (`pnpm forgecy backup`).
+- [ ] Take a backup on the live install (`pnpm forgecy backup`). It holds
+      `db.dump` (`pg_dump --format=custom`) and a manifest with `"format": 2`
+      (`docs/adr/0019-custom-format-backups.md`).
 - [ ] Copy the archive to a second, unrelated machine or container with a
       fresh Forgecy checkout and an empty database.
 - [ ] Restore it there (`pnpm forgecy restore <name>`) and confirm:
@@ -100,7 +102,9 @@ confirm by hand against a real target, not just the unit tests in
   - a backup with a newer "last migration" than the restoring version is
     refused (`newer_version`) instead of partially applying;
   - after a clean restore, `pnpm forgecy health` reports healthy and the
-    client/prospect data matches the source install.
+    client/prospect data matches the source install;
+  - a backup made before ADR 0019 (`db.sql`, `"format": 1`) restores too,
+    through psql as before.
 - [ ] Repeat with a backup that was uploaded through
       `apps/web/app/api/system/backups/upload/route.ts` rather than taken
       locally, to confirm the upload path enforces the same checks.
@@ -130,7 +134,7 @@ A backup and a client package are both files someone else may have written.
 Restore only backups you made or trust: the role in `DATABASE_URL` is a
 superuser in the official postgres image, so the dump scanner is a barrier,
 not a sandbox. Setting `FORGECY_RESTORE_DATABASE_URL` to a NOSUPERUSER role
-(`docs/adr/0018-restore-role.md`) makes psql load the dump as that role: no
+(`docs/adr/0018-restore-role.md`) makes psql or pg_restore load the dump as that role: no
 `COPY ... PROGRAM`, no server files, no `ALTER SYSTEM`. It is optional and not
 enforced, and a hostile dump can still plant triggers that later run as the
 `DATABASE_URL` superuser, so it narrows the risk without removing it.
@@ -140,7 +144,10 @@ enforced, and a hostile dump can still plant triggers that later run as the
 - [ ] Upload a `.tar.gz` that holds a symlink, a hard link or a device entry:
       the upload is refused and nothing is kept (no `.partial` file, no
       extracted folder).
-- [ ] Put `\! touch /tmp/forgecy-pwned` on its own line in `db.sql` inside an
+- [ ] Plain backups (`db.sql`, `"format": 1`, made before ADR 0019; to build
+      one, put a `pg_dump --clean --if-exists --no-owner` output and a manifest
+      without a `db` field in a `.tar.gz`): put `\! touch /tmp/forgecy-pwned` on
+      its own line in `db.sql` inside an
       otherwise valid backup, repack it, and restore it: the restore fails
       before psql starts with an unsafe-dump message, the file is not
       created, the database is unchanged. Repeat with a `\copy` line and
@@ -153,13 +160,25 @@ enforced, and a hostile dump can still plant triggers that later run as the
       writes a fresh sidecar) and restore it from there, or delete the
       sidecar `<archive>.json` next to it. A checksum error means the drill
       was run incorrectly, not that it passed.
+- [ ] Custom-format backups (`db.dump`, `docs/adr/0019-custom-format-backups.md`)
+      never go through psql, so meta-commands do not apply; their statements
+      still run as the restoring role. Check that a manifest saying
+      `"db": "custom"` with `db.sql` instead of `db.dump`, with both files, or
+      with any other `db` value is refused before anything is loaded (upload
+      and restore, same route as above). An archive whose SQL rendering the
+      scanner refuses fails with an unsafe-dump message before pg_restore
+      connects, and the database is unchanged.
+      `packages/backup/test/custom-format.integration.test.ts` builds one from
+      a table named `x) TO PROGRAM 'id'; --` and checks this.
 - [ ] False refusals fail closed. The scanner was run against a real
       `pg_dump` 17 (`pgvector/pgvector:pg17`, 17.11, with `--clean`,
       `--if-exists`, `--no-owner` and the `\restrict`/`\unrestrict` lines) of
       every migration plus seeded awkward data, through `assertSafeDumpFile` at
       several chunk sizes (accepted), and that dump was restored with
       `psql -X --single-transaction -v ON_ERROR_STOP=1` into an empty and into
-      an existing database (exit 0, data round-tripped). On any other Postgres
+      an existing database (exit 0, data round-tripped). The `pg_restore` 17.10
+      rendering of a custom dump of the migrated schema is scanned and accepted
+      by the integration tests (ADR 0019). On any other Postgres
       major (`pg_dump` 18 may change the header, and the scanner then refuses
       the dump) take a backup (`pnpm forgecy backup`), restore it onto an empty
       database and confirm it restores. If a genuine backup is refused as an
@@ -176,11 +195,13 @@ enforced, and a hostile dump can still plant triggers that later run as the
       since it drops the checksum check.
 - [ ] Append a statement that fails (for example
       `ALTER TABLE no_such_table ADD COLUMN x int;`) to the end of the
-      `db.sql` of an otherwise valid backup and restore it (same route as the
+      `db.sql` of an otherwise valid plain backup and restore it (same route as the
       `\!` drill above: upload it, or delete the sidecar): psql runs with
       `-X --single-transaction -v ON_ERROR_STOP=1`, so the restore stops at
       the error and the database is exactly as it was before, not half
-      loaded.
+      loaded. pg_restore runs with `--single-transaction --exit-on-error` for
+      the same result; `restore-role.integration.test.ts` checks that a
+      custom restore that fails leaves the data unchanged.
 - [ ] Stop the worker before restoring a live install (stop the `worker`
       service). A single-transaction restore holds its locks until commit, so
       running jobs and web requests wait for it; a deadlock aborts the whole
@@ -264,17 +285,30 @@ automatic (README, Upgrading, covers the first):
   before. Set, the worker refuses to start if it is not a `postgres://` URL
   naming a role, and each restore first hands that role ownership of the app's
   tables (README, Backups; `docs/adr/0018-restore-role.md`).
+- New backups are custom-format (`db.dump`, manifest `"format": 2`;
+  `docs/adr/0019-custom-format-backups.md`). Older backups still restore. A
+  Forgecy from before this change refuses the new ones as an unknown format,
+  so before downgrading, restore the pre-upgrade backup with this version, or
+  restore its `db.dump` by hand with `pg_restore`.
 
 Decisions and checks nobody has made yet; each is a known limitation until it is:
 
 - [x] Restore under a least-privilege database role instead of the superuser in
       `DATABASE_URL`: optional, set `FORGECY_RESTORE_DATABASE_URL`; not enforced
       (`docs/adr/0018-restore-role.md`, which also says what it does not stop).
-- [ ] Restore through `pg_dump -Fc` and `pg_restore` instead of scanning plain
-      SQL.
+- [x] Restore through `pg_dump -Fc` and `pg_restore` instead of scanning plain
+      SQL: new backups are custom-format and restored by `pg_restore`, after
+      the scanner has read their SQL rendering
+      (`docs/adr/0019-custom-format-backups.md`). What remains: the archive's
+      statements still run as the restoring role, so the scanner and the
+      optional restore role (ADR 0018) stay, with the same residual (SQL built
+      at run time). Plain backups made before still go through psql and the
+      scanner's model of psql's lexer. The scanner can refuse a genuine dump
+      with unusual names (a quote or `;` in a table name).
 - [ ] Re-run the dump scanner (`packages/backup/src/safe-dump.ts`) drill of
       section 5 on any Postgres major other than 17: it was validated against
-      `pg_dump` 17 only, and a changed header makes it refuse the dump.
+      `pg_dump` and `pg_restore` 17 only, and a changed header makes it refuse
+      the dump.
 - [ ] Per-client access control: any active human can read any client by id
       (ADR 0014). It needs a grants table, a resolver in `can()` and a filter in
       every query.
