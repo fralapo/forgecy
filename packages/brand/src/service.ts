@@ -53,6 +53,7 @@ import {
   computeConfidence,
   currentValue,
   findConflicts,
+  normalizeHumanTokens,
   proposedValue,
   stillApplies,
   withEditedValue,
@@ -400,7 +401,10 @@ export async function saveDraftTokens(
         code: "CONFLICT-DRAFT-REV",
       });
     const state = stateOf(draft);
-    const next = { document: state.document, tokens: input.tokens };
+    const next = {
+      document: state.document,
+      tokens: normalizeHumanTokens(state.tokens, input.tokens) as TokenTree,
+    };
     const row = await writeDraft(tx, draft, next, actor.id);
     const staled = await refreshStale(tx, draft.brandIdentityId, next);
     await recordAuditEvent(tx, {

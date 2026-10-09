@@ -18,7 +18,6 @@ import {
 } from "@forgecy/core";
 import {
   and,
-  asc,
   auditEvents,
   brandIdentityProposals,
   brandIdentityVersions,
@@ -33,21 +32,21 @@ import {
   type Database,
 } from "@forgecy/db";
 import { localizedError, messageRef } from "@forgecy/i18n";
-import { parseDocument } from "./document";
+import { emptyDocument, parseDocument } from "./document";
 import { matchField, type FieldDef } from "./fields";
 import { getAt, isJsonPatch, type JsonPatch } from "./json-patch";
-import { sourceRank, type DraftState } from "./proposals";
+import type { DraftState } from "./proposals";
 import {
   acceptOne,
+  conflictsFor,
   lockOpenDraft,
-  openDraft,
   publishDraft,
   restoreDraft,
   type BrandTx,
   type PublishInput,
   type PublishResult,
 } from "./service";
-import type { TokenTree } from "./tokens";
+import { defaultTokens, type TokenTree } from "./tokens";
 
 /** Source kinds whose imports apply themselves: read from public pages and verified by the gate. */
 export const AUTO_IMPORT_KINDS: ReadonlySet<BrandSourceKind> = new Set<BrandSourceKind>([
@@ -64,9 +63,11 @@ const NEEDED: readonly Permission[] = ["review", "edit_draft", "publish", "brand
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const AUTO_NOTE = "Automatic import";
 const HAND_EDITED_NOTE = "hand-edited field kept";
-const CHANGELOG_MAX = 500;
+const CHANGELOG_MAX = 300;
+const TITLE_MAX = 60;
 
 export type AutoNotAppliedReason = "no_requester" | "no_access" | "no_permission";
+export type AutoNotPublishedReason = "draft_shared" | "not_publishable";
 
 export interface AutoImportInput {
   clientId: string;
@@ -79,12 +80,17 @@ export interface AutoImportResult {
   accepted: number;
   /** Proposals not applied because a person wrote that field (marked rejected). */
   skippedHandEdited: number;
+  /** Left pending for a person: contested by another source, or sensitive and uncertain. */
+  needsReview: number;
   /** Proposals that no longer apply (stale) or are invalid; invalid ones stay pending for a person. */
   discarded: number;
   published: boolean;
   versionId?: string;
-  /** Why nothing was applied (proposals stay pending), or why the draft was not published. */
-  reason?: AutoNotAppliedReason | "not_publishable";
+  /**
+   * Why nothing was applied (proposals stay pending), or why the accepted items were not
+   * published: the draft holds someone else's work, or does not pass the publish checks.
+   */
+  reason?: AutoNotAppliedReason | AutoNotPublishedReason;
 }
 
 /** A value a person typed (no cited source) or confirmed by hand (high, not from a proposal). */
@@ -127,6 +133,7 @@ export function overwritesHandEdit(state: DraftState, patch: JsonPatch, field: F
 const notApplied = (reason: AutoNotAppliedReason): AutoImportResult => ({
   accepted: 0,
   skippedHandEdited: 0,
+  needsReview: 0,
   discarded: 0,
   published: false,
   reason,
@@ -172,11 +179,62 @@ async function publishAcknowledged(
   }
 }
 
+/** Kept to letters, digits and `._@/-`: a source title is page data, and the changelog is exported. */
+export function changelogFor(titles: readonly string[]): string {
+  const clean = titles
+    .map((t) =>
+      t
+        .replace(/[^A-Za-z0-9._@/-]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, TITLE_MAX),
+    )
+    .filter(Boolean);
+  return `Automatic import from ${clean.join(", ") || "public pages"}`.slice(0, CHANGELOG_MAX);
+}
+
+/** The state a proposal would be applied to: the open draft, else what a new draft would copy. */
+async function currentState(tx: BrandTx, clientId: string): Promise<DraftState> {
+  const row =
+    (await lockOpenDraft(tx, clientId)) ??
+    (
+      await tx
+        .select()
+        .from(brandIdentityVersions)
+        .where(
+          and(
+            eq(brandIdentityVersions.clientId, clientId),
+            eq(brandIdentityVersions.status, "published"),
+          ),
+        )
+    )[0];
+  return row
+    ? { document: parseDocument(row.document), tokens: row.tokens as TokenTree }
+    : { document: emptyDocument(), tokens: defaultTokens() };
+}
+
+/**
+ * Someone else's work is in the draft: it is in review, or a person other than the requester
+ * created or edited it. Drafts opened by a proposal have no creator. `editorIds` lists everyone
+ * who changed the draft (edits and accepts), so it is the signal for a colleague's edits.
+ */
+export function isSharedDraft(
+  draft: { status: string; createdBy: string | null; editorIds: string[] },
+  requester: string,
+): boolean {
+  return (
+    draft.status !== "draft" ||
+    (draft.createdBy !== null && draft.createdBy !== requester) ||
+    draft.editorIds.some((id) => id !== requester)
+  );
+}
+
 /**
  * Accepts the run's pending proposals into the draft and publishes it, in one transaction, as
  * the person who started the run. Without that person, or when they may not do it on this
- * client, nothing is written and the proposals stay pending (`reason` says why). When the draft
- * cannot be published, the accepted items stay in the draft (`reason: "not_publishable"`).
+ * client, nothing is written and the proposals stay pending (`reason` says why). What needs a
+ * person stays pending too: a field another source or person also proposes, a sensitive field
+ * in conflict or with low confidence. When the draft holds someone else's work, or cannot be
+ * published, the accepted items stay in the draft (`reason` says why).
  */
 export async function applyImport(db: Database, input: AutoImportInput): Promise<AutoImportResult> {
   const actor = await requester(db, input.clientId, input.requestedBy);
@@ -187,23 +245,36 @@ export async function applyImport(db: Database, input: AutoImportInput): Promise
     // One import at a time per client, then the draft (the order every draft writer uses).
     await lockClient(tx, clientId);
     await lockOpenDraft(tx, clientId);
-    const rows = await tx
+    const pending = await tx
       .select({
         id: brandIdentityProposals.id,
+        runId: brandIdentityProposals.runId,
+        authorType: brandIdentityProposals.authorType,
         fieldPath: brandIdentityProposals.fieldPath,
         changes: brandIdentityProposals.changes,
         evidence: brandIdentityProposals.evidence,
+        sensitive: brandIdentityProposals.sensitive,
+        confidence: brandIdentityProposals.confidence,
+        modelConfidence: brandIdentityProposals.modelConfidence,
+        createdAt: brandIdentityProposals.createdAt,
       })
       .from(brandIdentityProposals)
       .where(
         and(
           eq(brandIdentityProposals.clientId, clientId),
-          eq(brandIdentityProposals.runId, runId),
-          eq(brandIdentityProposals.authorType, "agent"),
           eq(brandIdentityProposals.status, "proposed"),
         ),
-      )
-      .orderBy(asc(brandIdentityProposals.createdAt));
+      );
+    const ours = (p: (typeof pending)[number]) => p.runId === runId && p.authorType === "agent";
+    const rows = pending.filter(ours);
+    // Fields someone else proposes too (a brand book, a person, another run): theirs to settle.
+    const contested = new Set(
+      pending
+        .filter((p) => !ours(p))
+        .map((p) => p.fieldPath)
+        .filter((f) => !f.endsWith("/-")),
+    );
+    const conflicting = new Set((await conflictsFor(tx, clientId)).flatMap((g) => g.proposalIds));
     const sourceIds = [...new Set(rows.flatMap((r) => r.evidence.map((e) => e.sourceId)))];
     const sources = sourceIds.length
       ? await tx
@@ -218,10 +289,8 @@ export async function applyImport(db: Database, input: AutoImportInput): Promise
           )
       : [];
     const byId = new Map(sources.map((s) => [s.id, s]));
-    const rank = (r: (typeof rows)[number]) =>
-      Math.min(...r.evidence.map((e) => sourceRank(byId.get(e.sourceId)!.kind)));
-    // Only proposals resting on public pages apply themselves; the stronger source goes first, so
-    // when the site and a profile disagree on a field the site's value wins and the other goes stale.
+    // Only proposals resting on public pages apply themselves. Within the run, when two values
+    // compete for a field, the one the model was surer of goes first and the other goes stale.
     const eligible = rows
       .filter(
         (r) =>
@@ -231,13 +300,26 @@ export async function applyImport(db: Database, input: AutoImportInput): Promise
             return !!kind && AUTO_IMPORT_KINDS.has(kind);
           }),
       )
-      .sort((a, b) => rank(a) - rank(b));
+      .sort(
+        (a, b) =>
+          (b.modelConfidence ?? -1) - (a.modelConfidence ?? -1) ||
+          a.createdAt.getTime() - b.createdAt.getTime(),
+      );
 
     let accepted = 0;
     let skippedHandEdited = 0;
+    let needsReview = 0;
     let discarded = 0;
     const used = new Set<string>();
     for (const p of eligible) {
+      // What a person must settle (the cases acceptOne asks a note for) is left to a person.
+      if (
+        contested.has(p.fieldPath) ||
+        (p.sensitive && (p.confidence === "low" || conflicting.has(p.id)))
+      ) {
+        needsReview++;
+        continue;
+      }
       const [now] = await tx
         .select({ status: brandIdentityProposals.status })
         .from(brandIdentityProposals)
@@ -247,11 +329,7 @@ export async function applyImport(db: Database, input: AutoImportInput): Promise
         continue;
       }
       const match = matchField(p.fieldPath.replace(/\[.*\]$/, "").replace(/\/-$/, ""));
-      const draft = await openDraft(tx, clientId, actor.id);
-      const state: DraftState = {
-        document: parseDocument(draft.document),
-        tokens: draft.tokens as TokenTree,
-      };
+      const state = await currentState(tx, clientId);
       if (match && isJsonPatch(p.changes) && overwritesHandEdit(state, p.changes, match.field)) {
         await tx
           .update(brandIdentityProposals)
@@ -274,8 +352,10 @@ export async function applyImport(db: Database, input: AutoImportInput): Promise
         continue;
       }
       try {
+        // acceptOne opens the draft when there is none, inside the savepoint: a refused
+        // proposal leaves no empty draft behind.
         const r = await tx.transaction((sp) =>
-          acceptOne(sp, actor, { clientId, proposalId: p.id, note: AUTO_NOTE }, false, { runId }),
+          acceptOne(sp, actor, { clientId, proposalId: p.id }, false, { runId }),
         );
         if (r.status === "accepted") {
           accepted++;
@@ -289,10 +369,11 @@ export async function applyImport(db: Database, input: AutoImportInput): Promise
       }
     }
 
-    const counts = { accepted, skippedHandEdited, discarded };
+    const counts = { accepted, skippedHandEdited, needsReview, discarded };
     if (!accepted) return { ...counts, published: false };
     const draft = (await lockOpenDraft(tx, clientId))!;
-    const titles = [...used].map((id) => byId.get(id)!.title).join(", ");
+    if (isSharedDraft(draft, actor.id))
+      return { ...counts, published: false, reason: "draft_shared" as const };
     try {
       const pub = await publishAcknowledged(
         tx,
@@ -301,7 +382,7 @@ export async function applyImport(db: Database, input: AutoImportInput): Promise
           clientId,
           versionId: draft.id,
           rev: draft.rev,
-          changelog: `Automatic import from ${titles}`.slice(0, CHANGELOG_MAX),
+          changelog: changelogFor([...used].map((id) => byId.get(id)!.title)),
           note: AUTO_NOTE,
         },
         { auto: true, runId, ...counts },
@@ -314,9 +395,11 @@ export async function applyImport(db: Database, input: AutoImportInput): Promise
   });
 }
 
+const NOT_APPLIED: ReadonlySet<string> = new Set(["no_requester", "no_access", "no_permission"]);
+
 /** The lines the source status shows about an automatic import. */
 export function autoImportStatus(result: AutoImportResult): MessageRef[] {
-  if (result.reason && result.reason !== "not_publishable")
+  if (result.reason && NOT_APPLIED.has(result.reason))
     return [messageRef("brand.import.status.autoNotApplied", { reason: result.reason })];
   const refs: MessageRef[] = [];
   if (result.accepted)
@@ -328,8 +411,10 @@ export function autoImportStatus(result: AutoImportResult): MessageRef[] {
     );
   if (result.skippedHandEdited)
     refs.push(messageRef("brand.import.status.autoKept", { count: result.skippedHandEdited }));
-  if (result.reason === "not_publishable")
-    refs.push(messageRef("brand.import.status.autoNotPublished"));
+  if (result.needsReview)
+    refs.push(messageRef("brand.import.status.autoNeedsReview", { count: result.needsReview }));
+  if (result.reason)
+    refs.push(messageRef("brand.import.status.autoNotPublished", { reason: result.reason }));
   return refs;
 }
 
@@ -358,12 +443,13 @@ async function autoPublishEvent(db: Pick<Database, "select">, clientId: string, 
 /**
  * "Undo import": the version an automatic import published goes back to the one before it,
  * restored as a new draft and published by this person. Only the current version, only when an
- * automatic import published it, only when there is an earlier one.
+ * automatic import published it, only when there is an earlier one. An open draft is replaced
+ * only with `replaceDraft` (the person confirmed, as for "Restore as draft").
  */
 export async function undoImport(
   db: Database,
   actor: Actor,
-  input: { clientId: string; versionId: string },
+  input: { clientId: string; versionId: string; replaceDraft?: boolean },
 ): Promise<PublishResult> {
   if (actor.type !== "user") throw new PermissionDeniedError("publish", actor);
   for (const p of NEEDED) assertCan(actor, p, input.clientId);
@@ -399,7 +485,7 @@ export async function undoImport(
     const draft = await restoreDraft(tx, actor, {
       clientId: input.clientId,
       versionId: previous.id,
-      replaceDraft: true,
+      replaceDraft: input.replaceDraft ?? false,
     });
     return publishAcknowledged(
       tx,

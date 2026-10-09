@@ -10,7 +10,40 @@ export * from "./checks";
 export * from "./diff";
 export * from "./context";
 export * from "./read";
-export * from "./service";
+// Explicit list: service.ts also holds transaction-level internals (openDraft, lockOpenDraft,
+// acceptOne, publishDraft, restoreDraft, updateSourceStatus...) that stay inside this package.
+export {
+  acceptProposal,
+  acceptProposals,
+  addSource,
+  approveAndPublish,
+  CHANGELOG_MIN,
+  conflictsFor,
+  ensureDraft,
+  findOrCreateSocialSource,
+  findOrCreateWebsiteSource,
+  isSelfApproval,
+  normalizeHumanEdit,
+  proposeChange,
+  rejectProposals,
+  removeSource,
+  restoreAsDraft,
+  returnToDraft,
+  saveDraftSection,
+  saveDraftTokens,
+  SELF_APPROVAL_NOTE_MIN,
+  submitForReview,
+  type AcceptInput,
+  type AcceptResult,
+  type AddSourceInput,
+  type ProposalRow,
+  type ProposeInput,
+  type PublishInput,
+  type PublishResult,
+  type SaveSectionInput,
+  type SourceRow,
+  type VersionRow,
+} from "./service";
 export {
   applyImport,
   isHandEdited,

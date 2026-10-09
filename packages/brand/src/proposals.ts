@@ -341,7 +341,10 @@ export function stillApplies(state: DraftState, patch: JsonPatch): boolean {
   }
 }
 
-/** Replaces the value of the last write op (used by "Accept with changes"). */
+/**
+ * Replaces the value of the last write op (used by "Accept with changes"). The corrected value is
+ * the person's: it loses the proposal's provenance, so a later import treats it as hand-edited.
+ */
 export function withEditedValue(patch: JsonPatch, edited: unknown, field: FieldDef): JsonPatch {
   const raw = parseValue(field, edited);
   const out = structuredClone(patch);
@@ -349,14 +352,43 @@ export function withEditedValue(patch: JsonPatch, edited: unknown, field: FieldD
   if (!last || (last.op !== "add" && last.op !== "replace")) invalid("brand.errors.nothingToEdit");
   const v = last.value;
   if (field.shape === "sourced" || field.shape === "sourced-list") {
-    (v as { value: unknown }).value = raw;
+    const { acceptedFromProposalId: _a, ...rest } = v as Record<string, unknown>;
+    last.value = { ...rest, value: raw, sourceIds: [], confidence: "high" };
   } else if (field.shape === "token-group") {
-    const ext = (v as Record<string, unknown>).$extensions;
-    last.value = { ...(raw as Record<string, unknown>), $extensions: ext };
+    last.value = withoutProvenance({
+      ...(raw as Record<string, unknown>),
+      $extensions: (v as Record<string, unknown>).$extensions,
+    });
   } else if (field.shape === "object-list") {
     last.value = { ...(raw as Record<string, unknown>), id: (v as { id?: unknown }).id };
   } else last.value = raw;
   return out;
+}
+
+/** A token without the import provenance in `$extensions.forgecy` (other extensions stay). */
+export function withoutProvenance(token: Record<string, unknown>): Record<string, unknown> {
+  if (!isObject(token.$extensions) || !("forgecy" in token.$extensions)) return token;
+  const { forgecy: _f, ...ext } = token.$extensions;
+  const { $extensions: _e, ...rest } = token;
+  return Object.keys(ext).length ? { ...rest, $extensions: ext } : rest;
+}
+
+/**
+ * Tokens a person changed in the editor lose their import provenance; untouched ones keep it.
+ * A token counts as changed when its `$value` differs from the one at the same path before.
+ */
+export function normalizeHumanTokens(before: unknown, after: unknown): unknown {
+  if (!isObject(after)) return after;
+  if ("$value" in after)
+    return isObject(before) && deepEqual(before.$value, after.$value)
+      ? after
+      : withoutProvenance(after);
+  return Object.fromEntries(
+    Object.entries(after).map(([k, v]) => [
+      k,
+      normalizeHumanTokens(isObject(before) ? before[k] : undefined, v),
+    ]),
+  );
 }
 
 /** The raw (unwrapped) value a patch writes, for display and conflict comparison. */

@@ -783,7 +783,8 @@
       "autoApplied": "{accepted, plural, one {# elemento applicato automaticamente} other {# elementi applicati automaticamente}}{published, select, yes { · versione pubblicata} other {}}",
       "autoKept": "{count, plural, one {# campo modificato a mano mantenuto} other {# campi modificati a mano mantenuti}}",
       "autoNotApplied": "Non applicato automaticamente: {reason, select, no_requester {l’importazione non è stata avviata da una persona} no_access {chi l’ha avviata non può aprire questo cliente} no_permission {chi l’ha avviata non può pubblicare la Brand Identity} other {non consentito}}. Le proposte attendono una revisione",
-      "autoNotPublished": "Applicato alla bozza ma non pubblicato automaticamente: la bozza va controllata"
+      "autoNeedsReview": "{count, plural, one {# elemento attende una revisione} other {# elementi attendono una revisione}}",
+      "autoNotPublished": "Applicato alla bozza ma non pubblicato automaticamente: {reason, select, draft_shared {la bozza contiene lavoro di altri o è in revisione} other {la bozza va controllata}}"
     },
     "warnings": {
       "firstPages": "Sono state lette solo le prime {max} pagine",

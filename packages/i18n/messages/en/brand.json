@@ -783,7 +783,8 @@
       "autoApplied": "{accepted, plural, one {# item applied automatically} other {# items applied automatically}}{published, select, yes { · version published} other {}}",
       "autoKept": "{count, plural, one {# field edited by hand kept} other {# fields edited by hand kept}}",
       "autoNotApplied": "Not applied automatically: {reason, select, no_requester {the import was not started by a person} no_access {the person who started it cannot open this client} no_permission {the person who started it cannot publish the Brand Identity} other {not allowed}}. The proposals wait for a review",
-      "autoNotPublished": "Applied to the draft but not published automatically: the draft needs a check"
+      "autoNeedsReview": "{count, plural, one {# item waits for a review} other {# items wait for a review}}",
+      "autoNotPublished": "Applied to the draft but not published automatically: {reason, select, draft_shared {the draft holds work by someone else or is in review} other {the draft needs a check}}"
     },
     "warnings": {
       "firstPages": "Only the first {max} pages were read",

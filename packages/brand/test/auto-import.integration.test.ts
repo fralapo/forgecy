@@ -24,13 +24,18 @@ import { parseDocument } from "../src/document";
 import type { AnalystItem } from "../src/import/analyst";
 import { runSourceImport } from "../src/import/run";
 import {
+  acceptProposal,
   addSource,
   approveAndPublish,
   ensureDraft,
+  proposeChange,
   saveDraftSection,
+  saveDraftTokens,
+  submitForReview,
   updateSourceStatus,
+  type VersionRow,
 } from "../src/service";
-import type { TokenTree } from "../src/tokens";
+import { hexToDtcg, type TokenTree } from "../src/tokens";
 
 const dbUrl = process.env.FORGECY_TEST_DATABASE_URL;
 
@@ -110,6 +115,7 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
   let anna: User;
   let outsider: User;
   let inactive: User;
+  let bruno: User;
   const agent: Actor = { type: "agent", role: "brand_analyst", runId: crypto.randomUUID() };
   const storage = {} as StorageDriver;
 
@@ -127,10 +133,11 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
       .values({ name: `Auto ${name} ${suffix}`, slug: `brand-auto-${name}-${suffix}` })
       .returning();
     clientIds.push(c!.id);
-    for (const u of [anna, inactive])
+    for (const u of [anna, inactive, bruno])
       await grantClientAccess(db, { userId: u.id, clientId: c!.id, createdBy: null });
-    // The actor is read again: it carries the client scope.
+    // The actors are read again: they carry the client scope.
     anna = (await userActor(db, anna.id))!;
+    bruno = (await userActor(db, bruno.id))!;
     return c!.id;
   };
 
@@ -190,7 +197,23 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
     anna = { type: "user", id: await mkUser("anna"), ...scope };
     outsider = { type: "user", id: await mkUser("otto"), ...scope };
     inactive = { type: "user", id: await mkUser("ines", { active: false }), ...scope };
+    bruno = { type: "user", id: await mkUser("bruno"), ...scope };
   });
+
+  /** A person writes the insight in the client's open draft. */
+  const editDraft = async (who: User, clientId: string, draft: VersionRow) => {
+    const strategy = (draft.document as { strategy: Record<string, unknown> }).strategy;
+    await saveDraftSection(db, who, {
+      clientId,
+      versionId: draft.id,
+      rev: draft.rev,
+      section: "strategy",
+      value: {
+        ...strategy,
+        insight: { id: "i1", value: "Typed by a person", sourceIds: [], confidence: "high" },
+      },
+    });
+  };
 
   afterAll(async () => {
     if (db)
@@ -446,10 +469,22 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
       "brand.errors.undoNotCurrent",
     );
 
-    const undone = await undoImport(db, anna, { clientId: main, versionId: v3 });
-    expect(undone).toMatchObject({ number: 4, archivedVersionId: v3 });
+    // An open draft is replaced only when the person confirms it.
+    const open = await ensureDraft(db, anna, main);
+    expect(await refOf(undoImport(db, anna, { clientId: main, versionId: v3 }))).toBe(
+      "brand.errors.draftExists",
+    );
+    expect((await versionsOf(main)).find((v) => v.id === open.id)!.status).toBe("draft");
+
+    const undone = await undoImport(db, anna, {
+      clientId: main,
+      versionId: v3,
+      replaceDraft: true,
+    });
+    expect(undone).toMatchObject({ number: 5, archivedVersionId: v3 });
     const versions = await versionsOf(main);
-    const v4 = versions.find((v) => v.number === 4)!;
+    expect(versions.find((v) => v.id === open.id)!.status).toBe("archived");
+    const v4 = versions.find((v) => v.number === 5)!;
     const v2 = versions.find((v) => v.number === 2)!;
     expect(v4).toMatchObject({
       status: "published",
@@ -473,5 +508,166 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
     expect(
       await refOf(undoImport(db, anna, { clientId, versionId: result.auto!.versionId! })),
     ).toBe("brand.errors.undoNoPrevious");
+  });
+  it("leaves a field another source proposes to a person, and does not touch that proposal", async () => {
+    const clientId = await mkClient("contested");
+    const book = await addSource(db, anna, { clientId, kind: "document", title: "Brand book" });
+    await updateSourceStatus(db, book.id, { pages: PAGES });
+    const bookRun = crypto.randomUUID();
+    await runSourceImport(
+      {
+        db,
+        storage,
+        ai: fakeAi([
+          item({ field: "positioning", text: "Il deodorante di famiglia" }),
+          item({ field: "category", text: "Deodoranti" }),
+        ]),
+      },
+      { jobId: bookRun, attempt: 1, maxAttempts: 1, requestedBy: anna.id },
+      { clientId, sourceId: book.id, autoApply: true },
+    );
+    // A sensitive field in conflict, and a plain one: both are the brand book's to settle.
+    const contested = async (runId: string) =>
+      (await proposalsOf(runId))
+        .filter((p) => /positioning|category/.test(p.fieldPath))
+        .sort((a, b) => a.fieldPath.localeCompare(b.fieldPath));
+    const before = await contested(bookRun);
+    expect(before.map((p) => p.status)).toEqual(["proposed", "proposed"]);
+
+    const category = item({ field: "category", text: "Cosmetica" });
+    const { result, jobId } = await runImport(clientId, [POSITIONING, category, VALUE]);
+    expect(result.auto).toMatchObject({ accepted: 1, needsReview: 2, published: true });
+    expect((await contested(jobId)).map((p) => p.status)).toEqual(["proposed", "proposed"]);
+    expect(await contested(bookRun)).toEqual(before);
+    const published = (await versionsOf(clientId)).find((v) => v.status === "published")!;
+    const strategy = parseDocument(published.document).strategy;
+    expect(strategy.positioning).toBeUndefined();
+    expect(strategy.category).toBeUndefined();
+    expect(result.detail).toContain("2 items wait for a review");
+  });
+
+  it("leaves an uncertain sensitive item pending, and no empty draft behind", async () => {
+    const clientId = await mkClient("uncertain");
+    const { jobId } = await runImport(clientId, [POSITIONING], { autoApply: false });
+    const [p] = await proposalsOf(jobId);
+    await db
+      .update(brandIdentityProposals)
+      .set({ confidence: "low" })
+      .where(eq(brandIdentityProposals.id, p!.id));
+    // A person publishes the draft the proposal opened: no draft is open any more.
+    const [draft] = await versionsOf(clientId);
+    const human = {
+      clientId,
+      versionId: draft!.id,
+      rev: draft!.rev,
+      changelog: "Published by hand before the import",
+    };
+    await approveAndPublish(db, anna, {
+      ...human,
+      acknowledged: await missingChecks(
+        approveAndPublish(db, anna, { ...human, acknowledged: [] }),
+      ),
+    });
+
+    const result = await applyImport(db, { clientId, requestedBy: anna.id, runId: jobId });
+    expect(result).toMatchObject({ accepted: 0, needsReview: 1, published: false });
+    expect((await proposalsOf(jobId))[0]!.status).toBe("proposed");
+    expect((await versionsOf(clientId)).map((v) => v.status)).toEqual(["published"]);
+  });
+
+  it("keeps a color a person changed in the token editor when an import proposes it again", async () => {
+    const clientId = await mkClient("tokens");
+    const { source, result: first } = await runImport(clientId, [], { visual: VISUAL });
+    expect(first.auto?.published).toBe(true);
+    const draft = await ensureDraft(db, anna, clientId);
+    type Token = { $value: unknown; $extensions?: { forgecy?: unknown } };
+    const tokens = structuredClone(draft.tokens) as { color: { reference: Record<string, Token> } };
+    const imported = Object.keys(tokens.color.reference).filter(
+      (n) => tokens.color.reference[n]!.$extensions?.forgecy,
+    );
+    expect(imported.length).toBeGreaterThanOrEqual(2);
+    const [edited, untouched] = imported as [string, string];
+    tokens.color.reference[edited]!.$value = hexToDtcg("#000000");
+    await saveDraftTokens(db, anna, {
+      clientId,
+      versionId: draft.id,
+      rev: draft.rev,
+      tokens: tokens as unknown as TokenTree,
+    });
+    const reference = async () =>
+      (
+        (await versionsOf(clientId)).find((v) => v.id === draft.id)!.tokens as {
+          color: { reference: Record<string, Token> };
+        }
+      ).color.reference;
+    expect((await reference())[edited]!.$extensions?.forgecy).toBeUndefined();
+    expect((await reference())[untouched]!.$extensions?.forgecy).toBeDefined();
+
+    // A later import proposes the site's value for that color again.
+    const runId = crypto.randomUUID();
+    await proposeChange(
+      db,
+      { type: "agent", role: "brand_analyst", runId },
+      {
+        clientId,
+        path: `/tokens/color/reference/${edited}`,
+        value: { $value: hexToDtcg("#1D3A8A") },
+        evidence: [{ sourceId: source.id }],
+      },
+    );
+    const result = await applyImport(db, { clientId, requestedBy: anna.id, runId });
+    expect(result).toMatchObject({ accepted: 0, skippedHandEdited: 1 });
+    expect((await reference())[edited]!.$value).toEqual(hexToDtcg("#000000"));
+  });
+
+  it("keeps a value a person corrected with Accept with changes", async () => {
+    const clientId = await mkClient("edited");
+    const first = await runImport(clientId, [ONE_LINER], { autoApply: false });
+    const [p] = await proposalsOf(first.jobId);
+    await acceptProposal(db, anna, {
+      clientId,
+      proposalId: p!.id,
+      editedValue: "Corrected by Anna",
+    });
+    const { result } = await runImport(clientId, [
+      item({ field: "oneLiner", text: "Nata nel Sud Italia" }),
+    ]);
+    expect(result.auto).toMatchObject({ accepted: 0, skippedHandEdited: 1 });
+    const draft = (await versionsOf(clientId)).find((v) => v.status === "draft")!;
+    expect(parseDocument(draft.document).strategy.oneLiner?.value).toBe("Corrected by Anna");
+  });
+
+  it("does not publish a draft that holds a colleague's work", async () => {
+    const inReview = await mkClient("review");
+    const d1 = await ensureDraft(db, bruno, inReview);
+    await submitForReview(db, bruno, { clientId: inReview, versionId: d1.id, rev: d1.rev });
+    const r1 = await runImport(inReview, [POSITIONING]);
+    expect(r1.result.auto).toMatchObject({
+      accepted: 1,
+      published: false,
+      reason: "draft_shared",
+    });
+    expect(r1.source.statusDetailRef?.map((r) => r.key)).toContain(
+      "brand.import.status.autoNotPublished",
+    );
+    expect(r1.source.statusDetail).toContain("the draft holds work by someone else");
+    const [v] = await versionsOf(inReview);
+    expect(v!.status).toBe("in_review");
+    expect(parseDocument(v!.document).strategy.positioning?.value).toBe(
+      "Il deodorante bifase del Sud Italia",
+    );
+
+    const colleague = await mkClient("colleague");
+    await editDraft(bruno, colleague, await ensureDraft(db, bruno, colleague));
+    const r2 = await runImport(colleague, [POSITIONING]);
+    expect(r2.result.auto).toMatchObject({ accepted: 1, published: false, reason: "draft_shared" });
+    expect((await versionsOf(colleague)).every((x) => x.status === "draft")).toBe(true);
+  });
+
+  it("publishes a draft only the requester worked on", async () => {
+    const own = await mkClient("own");
+    await editDraft(anna, own, await ensureDraft(db, anna, own));
+    const { result } = await runImport(own, [POSITIONING]);
+    expect(result.auto).toMatchObject({ accepted: 1, published: true });
   });
 });
