@@ -1,17 +1,29 @@
 import {
+  brandCompleteness,
+  brandImageClasses,
   completeness,
   diffVersions,
+  latestAutoImport,
+  listBrandImages,
   parseDocument,
   publishChecks,
   referenceColors,
   type TokenTree,
 } from "@forgecy/brand";
+import { can } from "@forgecy/core";
 import { Badge, Card } from "@forgecy/ui";
 import Link from "next/link";
 import type { Route } from "next";
 import { getTranslations } from "next-intl/server";
+import {
+  CompletenessCard,
+  ImagesCard,
+  ImportCard,
+  WebsiteCard,
+} from "../_components/overview-panels";
 import { brandPath } from "../_lib/labels";
-import { loadBrand, openConflicts, shownVersion } from "../_lib/server";
+import { imageUrls, loadBrand, openConflicts, shownVersion, sourcesFor } from "../_lib/server";
+import { libraryPath } from "../../content/_lib/paths";
 import { getFormat, refText } from "@/lib/i18n";
 
 export async function generateMetadata() {
@@ -29,13 +41,15 @@ const blockPage = {
 
 export default async function BrandOverviewPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ clientSlug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { clientSlug } = await params;
+  const [{ clientSlug }, sp] = await Promise.all([params, searchParams]);
   const t = await getTranslations("brand");
   const format = await getFormat();
-  const { client, ws } = await loadBrand(clientSlug);
+  const { db, user, client, ws } = await loadBrand(clientSlug);
   const shown = shownVersion(ws);
   const conflicts = await openConflicts(client.id);
   const base = brandPath(client.slug);
@@ -114,6 +128,23 @@ export default async function BrandOverviewPage({
 
   const palette = referenceColors(shown.tokens).slice(0, 6);
 
+  const [latest, images, allSources] = await Promise.all([
+    latestAutoImport(db, user.actor, client.id),
+    listBrandImages(db, user.actor, client.id),
+    sourcesFor(client.id),
+  ]);
+  const imageFilter = brandImageClasses.find((c) => c === sp.images);
+  const urls = await imageUrls(
+    client.id,
+    images.map((i) => i.storageKey),
+  );
+  const website = allSources.find((s) => s.kind === "website") ?? null;
+  const canEdit = can(user.actor, "edit_draft", client.id);
+  // The same permissions the review, edit and publish buttons ask for.
+  const canUndo = (["review", "edit_draft", "publish", "brand_identity.approve"] as const).every(
+    (p) => can(user.actor, p, client.id),
+  );
+
   return (
     <div className="space-y-6">
       <p className="text-body-md text-fg">
@@ -129,6 +160,26 @@ export default async function BrandOverviewPage({
           t("overview.fillAndPublish")
         )}
       </p>
+
+      <CompletenessCard
+        completeness={brandCompleteness(shown.document, shown.tokens, images.length)}
+      />
+      {latest ? (
+        <ImportCard
+          slug={client.slug}
+          clientId={client.id}
+          base={base}
+          latest={latest}
+          canUndo={canUndo}
+        />
+      ) : null}
+      <WebsiteCard
+        slug={client.slug}
+        clientId={client.id}
+        websiteUrl={client.websiteUrl}
+        source={website}
+        canEdit={canEdit}
+      />
 
       <section aria-labelledby="pipeline" className="grid gap-3 md:grid-cols-4">
         <h2 id="pipeline" className="sr-only">
@@ -218,6 +269,14 @@ export default async function BrandOverviewPage({
           );
         })}
       </section>
+
+      <ImagesCard
+        base={base}
+        libraryHref={libraryPath(client.slug)}
+        images={images}
+        urls={urls}
+        filter={imageFilter}
+      />
 
       <Card className="p-5">
         <h2 className="text-heading-sm text-fg">{t("overview.readyTitle")}</h2>

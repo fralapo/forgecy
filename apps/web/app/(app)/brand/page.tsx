@@ -8,12 +8,14 @@ import {
   isNull,
   sql,
 } from "@forgecy/db";
+import { can } from "@forgecy/core";
 import { Badge, Card } from "@forgecy/ui";
 import Link from "next/link";
 import type { Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/session";
+import { AddBrand } from "./_components/add-brand";
 import { brandPath } from "./_lib/labels";
 
 export async function generateMetadata() {
@@ -46,6 +48,7 @@ export default async function BrandPickerPage() {
   return (
     <>
       <PageHeader title={t("title")} description={t("picker.description")} />
+      {can(user.actor, "project.edit") ? <AddBrand /> : null}
       {rows.length === 0 ? (
         <Card className="p-6">
           <p className="text-body-md text-fg-muted">

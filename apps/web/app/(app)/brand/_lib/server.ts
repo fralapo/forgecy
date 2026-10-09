@@ -11,7 +11,9 @@ import {
 } from "@forgecy/brand";
 import { canAccessClient } from "@forgecy/core";
 import { clients, eq, getDb, inArray, users } from "@forgecy/db";
+import { createStorageFromEnv } from "@forgecy/files";
 import { notFound } from "next/navigation";
+import { env } from "@/lib/env";
 import { requireUser } from "@/lib/session";
 
 export type Workspace = Awaited<ReturnType<typeof getBrandWorkspace>>;
@@ -72,4 +74,15 @@ export async function sourcesFor(clientId: string) {
 
 export async function openConflicts(clientId: string) {
   return conflictsFor(getDb(), clientId);
+}
+
+/** Short-lived URLs for thumbnails (the library signs them the same way); keys are always the client's own. */
+export async function imageUrls(clientId: string, keys: readonly string[]) {
+  const storage = createStorageFromEnv(env);
+  const own = [...new Set(keys)].filter((k) => k.startsWith(`clients/${clientId}/`));
+  return new Map(
+    await Promise.all(
+      own.map(async (k) => [k, await storage.signedUrl(k, { expiresInSeconds: 600 })] as const),
+    ),
+  );
 }
