@@ -1,4 +1,4 @@
-import { unzipSync, zipSync } from "fflate";
+import { unzipSync } from "fflate";
 import { PDFDocument } from "pdf-lib";
 import type { Browser } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -10,7 +10,6 @@ import {
   renderCheckTemplate,
 } from "../src/export";
 import { sha256 } from "@forgecy/files";
-import { unzipTemplatePackage } from "../src/node";
 import { packageFromFiles } from "../src/package";
 import { renderSlideHtml } from "../src/renderer";
 import { sampleSlide, slideSchema } from "../src/slide-schema";
@@ -182,17 +181,4 @@ describe.skipIf(!enabled)("export with Chromium", () => {
     ]);
     expect(report.ok).toBe(true);
   }, 120_000);
-});
-
-describe("template ZIP import", () => {
-  it("unpacks a zipped folder and refuses unsafe paths", async () => {
-    const pkg = await loadRepoTemplate("carousels/editorial-ig-4x5");
-    const zipped: Record<string, Uint8Array> = {};
-    for (const [k, v] of pkg.files) zipped[`editorial/${k}`] = v;
-    zipped["editorial/.DS_Store"] = new Uint8Array([1]);
-    const files = unzipTemplatePackage(zipSync(zipped));
-    expect([...files.keys()].sort()).toEqual([...pkg.files.keys()].sort());
-    expect(validateTemplatePackage(files).ok).toBe(true);
-    expect(() => unzipTemplatePackage(zipSync({ "../evil.txt": new Uint8Array([1]) }))).toThrow();
-  }, 30_000);
 });

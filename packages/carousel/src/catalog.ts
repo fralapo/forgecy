@@ -276,7 +276,7 @@ export async function loadTemplatePackage(
   const bytes = new Uint8Array(Buffer.concat(chunks));
   if (sha256(bytes) !== row.packageSha256)
     throw localizedError("conflict", "templates.errors.packageAltered", { key: row.packageKey });
-  const pkg = packageFromFiles(unzipTemplatePackage(bytes));
+  const pkg = packageFromFiles(await unzipTemplatePackage(bytes));
   if (cache.size >= 32) cache.delete(cache.keys().next().value!);
   cache.set(row.packageSha256, pkg);
   return pkg;
