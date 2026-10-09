@@ -764,6 +764,7 @@
       "pagesRead": "{count, plural, one {# pagina letta} other {# pagine lette}}",
       "proposals": "{count, plural, one {# proposta} other {# proposte}}",
       "skipped": "{count, plural, one {# già presente o non valida} other {# già presenti o non valide}}",
+      "discarded": "{count, plural, one {# elemento scartato: non verificabile} other {# elementi scartati: non verificabili}}",
       "noProvider": "Nessun provider AI configurato: solo estrazione automatica",
       "aiOff": "Funzioni AI disattivate per questo cliente",
       "noText": "Nessun testo da interpretare",
@@ -790,6 +791,8 @@
       "color": "Colore trovato nel file ({count, plural, one {# occorrenza} other {# occorrenze}}).",
       "fontImported": "Font importato: conferma ruolo e licenza.",
       "fontTheme": "Font indicato nel tema del documento.",
+      "siteColor": "Colore trovato negli stili del sito.",
+      "siteFont": "Font in uso sul sito.",
       "logo": "File del logo importato: conferma il ruolo della variante."
     },
     "locators": {

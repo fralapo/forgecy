@@ -764,6 +764,7 @@
       "pagesRead": "{count, plural, one {# page read} other {# pages read}}",
       "proposals": "{count, plural, one {# proposal} other {# proposals}}",
       "skipped": "{count} already present or invalid",
+      "discarded": "{count, plural, one {# item discarded: not verifiable} other {# items discarded: not verifiable}}",
       "noProvider": "No AI provider configured: automatic extraction only",
       "aiOff": "AI features turned off for this client",
       "noText": "No text to interpret",
@@ -790,6 +791,8 @@
       "color": "Color found in the file ({count, plural, one {# occurrence} other {# occurrences}}).",
       "fontImported": "Imported font: confirm role and license.",
       "fontTheme": "Font named in the document theme.",
+      "siteColor": "Color found in the site's styles.",
+      "siteFont": "Font in use on the site.",
       "logo": "Imported logo file: confirm the variant's role."
     },
     "locators": {

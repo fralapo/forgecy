@@ -1,8 +1,10 @@
 /** Turns extracted candidates into proposals, skipping duplicates and values already in the draft. */
 import { ForgecyError, type Actor, type MessageRef } from "@forgecy/core";
-import { englishMessage, messageRef } from "@forgecy/i18n";
+import type { SiteProbe } from "@forgecy/audit";
+import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import type { Database } from "@forgecy/db";
 import { BRAND_ANALYST_PROMPT_VERSION } from "./analyst";
+import { cleanFamily, knownColors, knownFonts } from "./site-colors";
 import { proposeChange, type ProposeInput } from "../service";
 import { hexToDtcg, normalizeHex, referenceColors, tokenNameFrom } from "../tokens";
 import { getDraftTokens } from "./draft-tokens";
@@ -11,6 +13,8 @@ import type { ProposalOp } from "../proposals";
 export interface CandidateProposal {
   /** "color" candidates get their token path assigned here. */
   kind?: "color";
+  /** The color's name is final (read from the site or chosen by the analyst), not to be guessed from context. */
+  named?: boolean;
   path: string;
   op: ProposalOp;
   value: unknown;
@@ -21,6 +25,50 @@ export interface CandidateProposal {
   evidence: { locator?: string; quote?: string };
   /** provider/model, for the activity log. */
   agentModel?: string;
+}
+
+export function rationale(
+  key: MessageKey & `brand.import.rationale.${string}`,
+  values?: MessageValues,
+) {
+  return { rationale: englishMessage(key, values), rationaleRef: messageRef(key, values) };
+}
+
+/** Most colors proposed straight from the site's styles; the analyst may name more of the known ones. */
+const MAX_SITE_COLORS = 6;
+const MAX_SITE_FONTS = 3;
+
+/**
+ * Colors and fonts the browser read on the site, as proposals. Nothing here comes from a model.
+ * Logos are not proposed yet: a logo variant needs the image stored as a source first.
+ */
+export function visualCandidates(visual: SiteProbe, _sourceId?: string): CandidateProposal[] {
+  const colors: CandidateProposal[] = knownColors(visual)
+    .slice(0, MAX_SITE_COLORS)
+    .map((c) => ({
+      kind: "color",
+      named: true,
+      path: "",
+      op: "set",
+      value: { name: c.name, hex: c.hex, usage: "" },
+      ...rationale("brand.import.rationale.siteColor"),
+      evidence: { locator: c.locator },
+    }));
+  const fonts: CandidateProposal[] = knownFonts(visual)
+    .slice(0, MAX_SITE_FONTS)
+    .map((f) => ({
+      path: "/document/visual/typography",
+      op: "append",
+      value: {
+        role: f.roles.includes("headings") ? "display" : "body",
+        family: f.family,
+        weights: [],
+        licenseStatus: "to_verify",
+      },
+      ...rationale("brand.import.rationale.siteFont"),
+      evidence: { locator: "Site fonts" },
+    }));
+  return [...colors, ...fonts];
 }
 
 // Matches Italian and English color words in client documents.
@@ -53,12 +101,44 @@ export function colorName(context: string, hex: string, fallback: string): strin
   return word ?? fallback;
 }
 
+/**
+ * One proposal per color and font family. The analyst's name and usage fill a color the site
+ * already gave bare; a font keeps its role from the computed styles.
+ */
+export function mergeSiteItems(candidates: readonly CandidateProposal[]): CandidateProposal[] {
+  const colors = new Map<string, CandidateProposal>();
+  const families = new Set<string>();
+  const out: CandidateProposal[] = [];
+  for (const c of candidates) {
+    if (c.kind === "color") {
+      const v = c.value as { name: string; hex: string; usage?: string };
+      const key = normalizeHex(v.hex) ?? v.hex;
+      const first = colors.get(key);
+      if (!first) {
+        colors.set(key, c);
+        out.push(c);
+      } else {
+        const f = first.value as { usage?: string };
+        if (!f.usage)
+          first.value = { ...(first.value as object), name: v.name, usage: v.usage ?? "" };
+      }
+    } else if (c.path === "/document/visual/typography") {
+      const family = cleanFamily((c.value as { family: string }).family);
+      if (families.has(family)) continue;
+      families.add(family);
+      out.push(c);
+    } else out.push(c);
+  }
+  return out;
+}
+
 export async function addSourceProposals(
   db: Database,
   agent: Actor,
   clientId: string,
   sourceId: string,
   candidates: readonly CandidateProposal[],
+  promptVersion: string = BRAND_ANALYST_PROMPT_VERSION,
 ): Promise<{ created: number; skipped: number }> {
   let created = 0;
   let skipped = 0;
@@ -80,7 +160,10 @@ export async function addSourceProposals(
       seen.add(`color:${hex}`);
       existingHex.add(hex);
       n++;
-      let name = tokenNameFrom(colorName(v.name, hex, `color-${n}`), `color-${n}`);
+      let name = tokenNameFrom(
+        c.named ? v.name : colorName(v.name, hex, `color-${n}`),
+        `color-${n}`,
+      );
       while (usedNames.has(name)) name = `${name}-${n}`;
       usedNames.add(name);
       input = {
@@ -116,7 +199,7 @@ export async function addSourceProposals(
             ...(c.evidence.quote ? { quote: c.evidence.quote.slice(0, 300) } : {}),
           },
         ],
-        auditMeta: { promptVersion: BRAND_ANALYST_PROMPT_VERSION, model: c.agentModel ?? null },
+        auditMeta: { promptVersion, model: c.agentModel ?? null },
       });
       created++;
     } catch (err) {

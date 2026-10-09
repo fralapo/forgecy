@@ -8,7 +8,13 @@ import { englishMessage, messageRef, type MessageKey, type MessageValues } from 
 import type { AiGateway } from "@forgecy/ai";
 import { and, brandIdentityProposals, brandSources, clients, eq, type Database } from "@forgecy/db";
 import type { StorageDriver } from "@forgecy/files";
-import { addSourceProposals, type CandidateProposal } from "./candidates";
+import {
+  addSourceProposals,
+  mergeSiteItems,
+  rationale,
+  visualCandidates,
+  type CandidateProposal,
+} from "./candidates";
 import { detectImportFile } from "./detect";
 import { ExtractionError, extractFile, type Extraction } from "./extract";
 import {
@@ -17,8 +23,13 @@ import {
   ANALYST_SYSTEM,
   BRAND_ANALYST_PROMPT_VERSION,
   chunkPages,
+  WEBSITE_ANALYST_PROMPT_VERSION,
+  WEBSITE_ANALYST_SYSTEM,
   type AnalystItem,
 } from "./analyst";
+import { gateCandidates } from "./gate";
+import { parseSiteProbe } from "./probe-schema";
+import { knownColors, knownFonts } from "./site-colors";
 import { updateSourceStatus } from "../service";
 
 const msg = (key: MessageKey & `brand.import.${string}`, values?: MessageValues) =>
@@ -34,6 +45,10 @@ function detail(refs: MessageRef[]) {
     statusDetailRef: refs,
   };
 }
+
+/** Evidence locator of colors and fonts: they come from the site's styles, not from a page of text. */
+const SITE_LOCATOR = "Site styles";
+const MAX_KNOWN_COLORS = 24;
 
 export interface ImportDeps {
   db: Database;
@@ -56,6 +71,8 @@ export interface ImportResult {
   candidates: number;
   proposals: number;
   skipped: number;
+  /** Items the gate refused because the site does not support them. */
+  discarded: number;
   ai: "done" | "skipped" | "failed";
   detail: string;
 }
@@ -179,10 +196,6 @@ function fromAnalyst(item: AnalystItem): CandidateProposal | null {
   }
 }
 
-function rationale(key: MessageKey & `brand.import.rationale.${string}`, values?: MessageValues) {
-  return { rationale: englishMessage(key, values), rationaleRef: messageRef(key, values) };
-}
-
 function deterministic(
   extraction: Extraction,
   fileName: string,
@@ -290,6 +303,7 @@ export async function runSourceImport(
         candidates: 0,
         proposals: 0,
         skipped: 0,
+        discarded: 0,
         ai: "skipped",
         detail: detected.message,
       };
@@ -305,6 +319,7 @@ export async function runSourceImport(
         candidates: 0,
         proposals: 0,
         skipped: 0,
+        discarded: 0,
         ai: "skipped",
         detail: err.message,
       };
@@ -315,6 +330,14 @@ export async function runSourceImport(
     extraction = { pages: source.pages ?? [], colors: [], fonts: [], warnings: [] };
     candidates = deterministic(extraction, source.title, "text", source.id);
   }
+  // What the browser read on a website: its colors and fonts are proposed directly, and are the
+  // only ones the analyst may name. An unreadable value counts as absent.
+  const visual = parseSiteProbe(source.visual);
+  if (visual) candidates.push(...visualCandidates(visual, source.id));
+  // Documents keep their own checks (their hex values come from the text); only a site's items
+  // are verified against the page and the probe, so imports of brand books behave as before.
+  const website = source.kind === "website";
+  const promptVersion = website ? WEBSITE_ANALYST_PROMPT_VERSION : BRAND_ANALYST_PROMPT_VERSION;
   await ctx.progress?.(30);
 
   // ---- Brand Analyst ----
@@ -332,12 +355,19 @@ export async function runSourceImport(
           task: "brand_propose",
           schema: analystOutputSchema,
           schemaName: "brand_identity_items",
-          system: ANALYST_SYSTEM,
+          system: website ? WEBSITE_ANALYST_SYSTEM : ANALYST_SYSTEM,
           input: analystUserPrompt({
             clientName: client.name,
             sourceTitle: source.title,
             language: input.language ?? "en",
             pages: chunk,
+            ...(website
+              ? {
+                  knownColors: visual ? knownColors(visual).slice(0, MAX_KNOWN_COLORS) : [],
+                  knownFonts: visual ? knownFonts(visual) : [],
+                  ...(visual?.organization ? { organization: visual.organization } : {}),
+                }
+              : {}),
           }),
           clientId: input.clientId,
           clientPolicy: client.aiPolicy,
@@ -347,7 +377,7 @@ export async function runSourceImport(
           inputSummary: {
             fields: { document: chunk.map((p) => p.text).join("\n") },
             meta: {
-              promptVersion: BRAND_ANALYST_PROMPT_VERSION,
+              promptVersion,
               sourceId: source.id,
               pages: chunk.length,
             },
@@ -355,9 +385,18 @@ export async function runSourceImport(
         });
         const locators = new Set(chunk.map((p) => p.locator));
         for (const item of res.data.items) {
-          if (!locators.has(item.locator)) continue; // cites a page that does not exist
+          // On a site, colors and fonts rest on the probe, not on a page.
+          const fromSite = website && (item.field === "color" || item.field === "typography");
+          if (!fromSite && !locators.has(item.locator)) continue; // cites a page that does not exist
           const c = fromAnalyst(item);
-          if (c) candidates.push({ ...c, agentModel: `${res.provider}/${res.model}` });
+          if (!c) continue;
+          candidates.push({
+            ...c,
+            ...(fromSite
+              ? { evidence: { locator: SITE_LOCATOR }, ...(c.kind ? { named: true } : {}) }
+              : {}),
+            agentModel: `${res.provider}/${res.model}`,
+          });
         }
         await ctx.progress?.(30 + Math.round(((i + 1) / chunks.length) * 50));
       }
@@ -374,12 +413,24 @@ export async function runSourceImport(
     }
   }
 
+  let discarded = 0;
+  if (website) {
+    const gated = gateCandidates({
+      candidates,
+      pages: extraction.pages,
+      ...(visual ? { visual } : {}),
+    });
+    candidates = mergeSiteItems(gated.keep);
+    discarded = gated.discarded.length;
+  }
+
   const { created, skipped } = await addSourceProposals(
     db,
     agent,
     input.clientId,
     source.id,
     candidates,
+    promptVersion,
   );
   await ctx.progress?.(95);
   const parts = [
@@ -388,6 +439,7 @@ export async function runSourceImport(
       : null,
     msg("brand.import.status.proposals", { count: created }),
     skipped ? msg("brand.import.status.skipped", { count: skipped }) : null,
+    discarded ? msg("brand.import.status.discarded", { count: discarded }) : null,
     ...extraction.warnings,
     aiNote,
   ].filter((r): r is MessageRef => r !== null);
@@ -400,6 +452,7 @@ export async function runSourceImport(
     candidates: candidates.length,
     proposals: created,
     skipped,
+    discarded,
     ai,
     detail: summary.statusDetail,
   };
