@@ -204,6 +204,7 @@
     "invalidPackage": "Invalid template.json: {path}: {detail}",
     "invalidPackageUnknown": "Invalid template.json: error",
     "versionLocked": "Version {version} of “{name}” is {status, select, in_review {in review} published {published} archived {archived} other {draft}}: bump \"version\" in template.json.",
+    "versionPrivate": "Version {version} of “{name}” belongs to a client’s private template: bump \"version\" in template.json.",
     "invalidTransition": "Cannot move from “{from, select, draft {Draft} in_review {In review} published {Published} archived {Archived} other {{from}}}” to “{to, select, draft {Draft} in_review {In review} published {Published} archived {Archived} other {{to}}}”",
     "notesRequired": "Describe what changes in this version",
     "notValidated": "The template has not passed validation",

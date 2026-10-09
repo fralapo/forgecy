@@ -132,6 +132,13 @@ export async function importTemplate(input: ImportTemplateInput): Promise<Import
   const existing = await db.query.templates.findFirst({
     where: and(eq(templates.key, m.id), eq(templates.version, m.version)),
   });
+  // Key and version are unique across the installation: an agency upload must never replace the
+  // package of a client's private draft (it would stay private, with the agency's files).
+  if (existing?.clientId)
+    throw localizedError("conflict", "templates.errors.versionPrivate", {
+      version: m.version,
+      name: m.name,
+    });
   if (existing && existing.status !== "draft")
     throw localizedError("conflict", "templates.errors.versionLocked", {
       version: m.version,
@@ -219,6 +226,8 @@ export async function transitionTemplate(input: TransitionInput): Promise<Templa
   assertCan(actor, "templates.manage");
   const row = await db.query.templates.findFirst({ where: eq(templates.id, id) });
   if (!row) throw localizedError("not_found", "templates.errors.notFound");
+  // A client's private template needs access to that client too (ADR 0020).
+  if (row.clientId) assertCan(actor, "templates.manage", row.clientId);
   const from = row.status as TemplateStatus;
   if (!TRANSITIONS[from]?.includes(to))
     throw localizedError("conflict", "templates.errors.invalidTransition", { from, to });

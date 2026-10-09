@@ -204,6 +204,7 @@
     "invalidPackage": "template.json non valido: {path}: {detail}",
     "invalidPackageUnknown": "template.json non valido: errore",
     "versionLocked": "La versione {version} di “{name}” è {status, select, in_review {in revisione} published {pubblicata} archived {archiviata} other {in bozza}}: incrementa \"version\" in template.json.",
+    "versionPrivate": "La versione {version} di “{name}” appartiene al template privato di un cliente: incrementa \"version\" in template.json.",
     "invalidTransition": "Impossibile passare da “{from, select, draft {Bozza} in_review {In revisione} published {Pubblicato} archived {Archiviato} other {{from}}}” a “{to, select, draft {Bozza} in_review {In revisione} published {Pubblicato} archived {Archiviato} other {{to}}}”",
     "notesRequired": "Descrivi cosa cambia in questa versione",
     "notValidated": "Il template non ha superato la validazione",

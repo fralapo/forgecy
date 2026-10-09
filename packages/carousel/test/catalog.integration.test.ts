@@ -64,7 +64,7 @@ describe.skipIf(!dbUrl)("template catalog (integration)", () => {
       .insert(users)
       .values({ name: "Catalog test", email: `${key}@example.test` })
       .returning();
-    actor = { type: "user", id: user!.id, isAdmin: false, active: true };
+    actor = { type: "user", id: user!.id, isAdmin: false, active: true, clients: "all" as const };
   });
 
   afterAll(async () => {
@@ -139,6 +139,108 @@ describe.skipIf(!dbUrl)("template catalog (integration)", () => {
     } finally {
       await db.update(templates).set({ clientId: null }).where(eq(templates.id, first.row.id));
       await db.delete(clients).where(eq(clients.id, owner!.id));
+    }
+  });
+
+  it("serves each client its own private template sharing a key, never another client's", async () => {
+    // Key and version are unique across the installation, so two clients' private templates
+    // with one key differ in version (the client import renames a taken one `-import.n`).
+    const shared = `${key}-shared`;
+    const made = await db
+      .insert(clients)
+      .values(["a", "b", "c"].map((x) => ({ name: `${shared}-${x}`, slug: `${shared}-${x}` })))
+      .returning();
+    const [a, b, c] = made;
+    const exportFor = (clientId: string, templateVersion?: string) =>
+      carouselHandlers({
+        storage,
+        browser: async () => {
+          throw new Error("refused before rendering");
+        },
+      })["carousel.export"](
+        {
+          clientId,
+          client: "x",
+          content: "x",
+          version: 1,
+          templateId: shared,
+          ...(templateVersion ? { templateVersion } : {}),
+          slides: [],
+          outputs: ["zip"],
+        } as never,
+        { db } as never,
+      );
+    try {
+      const agency = await importTemplate({ db, storage, actor, files: await testPackage(shared) });
+      const mineA = await importTemplate({
+        db,
+        storage,
+        actor,
+        files: await testPackage(shared, "2.0.0"),
+      });
+      const mineB = await importTemplate({
+        db,
+        storage,
+        actor,
+        files: await testPackage(shared, "3.0.0"),
+      });
+      await db.update(templates).set({ status: "published" }).where(eq(templates.key, shared));
+      await db.update(templates).set({ clientId: a!.id }).where(eq(templates.id, mineA.row.id));
+      await db.update(templates).set({ clientId: b!.id }).where(eq(templates.id, mineB.row.id));
+      const served = async (clientId: string | null, version?: string) =>
+        (await dbTemplateSource({ db, storage, clientId }).get(shared, version))?.manifest.version;
+
+      // By key alone, each client gets the newest version it may use: its own, else the agency's.
+      expect(await served(a!.id)).toBe("2.0.0");
+      expect(await served(b!.id)).toBe("3.0.0");
+      expect(await served(c!.id)).toBe("1.0.0");
+      expect(await served(null)).toBe("1.0.0");
+      // A pinned version of another client's private template is never served.
+      expect(await served(a!.id, "3.0.0")).toBeUndefined();
+      expect(await served(b!.id, "2.0.0")).toBeUndefined();
+      expect(await served(null, "2.0.0")).toBeUndefined();
+      expect(await served(b!.id, "1.0.0")).toBe("1.0.0");
+      // The export job refuses it the same way, before any rendering.
+      await expect(exportFor(b!.id, "2.0.0")).rejects.toMatchObject({
+        name: "NeedsAttentionError",
+        ref: { key: "jobs.errors.templateVersionNotFound" },
+      });
+      // Without the agency version, a client with no template of its own gets nothing by key.
+      await db.update(templates).set({ status: "archived" }).where(eq(templates.id, agency.row.id));
+      expect(await served(c!.id)).toBeUndefined();
+      expect(await served(a!.id)).toBe("2.0.0");
+      await expect(exportFor(c!.id)).rejects.toMatchObject({
+        ref: { key: "jobs.errors.templateIdNotFound" },
+      });
+
+      // An agency upload of a version a client's private draft holds never replaces its package.
+      const draft = await importTemplate({
+        db,
+        storage,
+        actor,
+        files: await testPackage(shared, "4.0.0"),
+      });
+      await db.update(templates).set({ clientId: a!.id }).where(eq(templates.id, draft.row.id));
+      const changed = await testPackage(shared, "4.0.0");
+      const m = JSON.parse(dec.decode(changed.get("template.json")!));
+      changed.set("template.json", enc.encode(JSON.stringify({ ...m, name: "Agency upload" })));
+      await expect(importTemplate({ db, storage, actor, files: changed })).rejects.toMatchObject({
+        ref: { key: "templates.errors.versionPrivate" },
+      });
+      const after = await db.query.templates.findFirst({ where: eq(templates.id, draft.row.id) });
+      expect(after).toMatchObject({
+        clientId: a!.id,
+        packageSha256: draft.row.packageSha256,
+        name: draft.row.name,
+      });
+    } finally {
+      await db.delete(templates).where(eq(templates.key, shared));
+      await db.delete(clients).where(
+        inArray(
+          clients.id,
+          made.map((x) => x.id),
+        ),
+      );
     }
   });
 

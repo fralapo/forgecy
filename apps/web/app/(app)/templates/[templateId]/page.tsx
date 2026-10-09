@@ -6,7 +6,7 @@ import {
   storedValidation,
   type TemplateStatus,
 } from "@forgecy/carousel/catalog";
-import { can } from "@forgecy/core";
+import { can, canAccessClient } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
 import { Badge, Button, Card, Input, Label } from "@forgecy/ui";
 import { CircleCheck, CircleMinus, CircleX, LoaderCircle } from "lucide-react";
@@ -86,13 +86,17 @@ export default async function TemplateDetailPage({
   const q = await searchParams;
   const db = getDb();
   const row = await getTemplateRow(db, templateId);
-  if (!row) notFound();
+  // A client's private template only for people who may open that client (ADR 0020).
+  if (!row || (row.clientId && !canAccessClient(user.actor, row.clientId))) notFound();
   const m = (await getManifestLocalizer())(row.manifest as TemplateManifest);
   const validation = storedValidation(row);
   const status = row.status as TemplateStatus;
   const manage = can(user.actor, "templates.manage");
   const publishable = isPublishable(row);
-  const versions = (await listTemplates(db)).filter((r) => r.key === row.key);
+  // Versions of the same owner: a client's private template with this key is another template.
+  const versions = (await listTemplates(db)).filter(
+    (r) => r.key === row.key && r.clientId === row.clientId,
+  );
 
   const flags = { long: q.long === "1", safe: q.safe === "1", slots: q.slots === "1" };
   const query = (f: typeof flags) =>

@@ -52,6 +52,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
     imported2?: string;
     imported3?: string;
     imported4?: string;
+    imported5?: string;
   } = {};
   const importIds: string[] = [];
 
@@ -72,7 +73,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       .returning();
     ids.here = here!.id;
     ids.gone = gone!.id;
-    admin = { type: "user", id: here!.id, isAdmin: true, active: true };
+    admin = { type: "user", id: here!.id, isAdmin: true, active: true, clients: "all" as const };
 
     const [c] = await db
       .insert(clients)
@@ -180,9 +181,14 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
   afterAll(async () => {
     if (importIds.length)
       await db.delete(clientImports).where(inArray(clientImports.id, importIds));
-    const own = [ids.client, ids.imported, ids.imported2, ids.imported3, ids.imported4].filter(
-      (x): x is string => !!x,
-    );
+    const own = [
+      ids.client,
+      ids.imported,
+      ids.imported2,
+      ids.imported3,
+      ids.imported4,
+      ids.imported5,
+    ].filter((x): x is string => !!x);
     await db.delete(templates).where(eq(templates.key, tplKey));
     if (own.length) await db.delete(clients).where(inArray(clients.id, own));
     await db.delete(users).where(inArray(users.id, [ids.here!, ids.gone!]));
@@ -356,6 +362,34 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       .from(contentVersions)
       .where(eq(contentVersions.contentId, content!.id));
     expect(version!.meta).toMatchObject({ templateKey: tplKey, templateVersion: "1.0.0-import.1" });
+  });
+
+  it("never reuses or changes another client's private template, even when asked to reuse", async () => {
+    // Every version of this key here is private to some client: none can be offered or reused.
+    const before = await db.select().from(templates).where(eq(templates.key, tplKey));
+    expect(before.every((t) => t.clientId !== null)).toBe(true);
+    const verified = await verifyClientPackage(db, pkgFile, 100);
+    expect(verified.conflicts.filter((c) => c.kind === "template")).toEqual([]);
+    const out = await importClientPackage({ db, storage }, pkgFile, {
+      choices: {
+        client: { mode: "new", slug: `rossi-${suffix}-6` },
+        templates: { [`${tplKey}@1.0.0`]: "useExisting" },
+      },
+    });
+    ids.imported5 = out.clientId;
+    const after = await db.select().from(templates).where(eq(templates.key, tplKey));
+    for (const t of before)
+      expect(after.find((r) => r.id === t.id)).toMatchObject({
+        clientId: t.clientId,
+        version: t.version,
+        status: t.status,
+        packageSha256: t.packageSha256,
+      });
+    const own = after.filter((r) => r.clientId === out.clientId);
+    expect(own).toHaveLength(1);
+    expect(before.map((t) => t.version)).not.toContain(own[0]!.version);
+    const [content] = await db.select().from(contents).where(eq(contents.clientId, out.clientId));
+    expect(content!.templateVersion).toBe(own[0]!.version);
   });
 
   it("keeps the proposals whose author is here and leaves out the one whose author is not", async () => {

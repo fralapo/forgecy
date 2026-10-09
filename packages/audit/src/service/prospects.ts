@@ -14,7 +14,9 @@ import {
   auditSources,
   audits,
   clients,
+  clientScopeWhere,
   eq,
+  grantClientAccess,
   inArray,
   isNull,
   jobs,
@@ -23,6 +25,7 @@ import {
   prospectProfiles,
   recordAuditEvent,
   sql,
+  templates,
   type Database,
 } from "@forgecy/db";
 import { cancelJob } from "@forgecy/jobs";
@@ -126,9 +129,13 @@ export interface DuplicateMatch {
   reason: "domain" | "name";
 }
 
-/** Prospects or clients with the same site domain or the same name (Page 5 warning). */
+/**
+ * Prospects or clients with the same site domain or the same name (Page 5 warning), among
+ * the ones the actor may open: a hidden client is not revealed by its name (ADR 0020).
+ */
 export async function findDuplicates(
   db: Database,
+  actor: Actor,
   input: { name?: string; websiteUrl?: string | null },
   excludeId?: string,
 ): Promise<DuplicateMatch[]> {
@@ -150,7 +157,13 @@ export async function findDuplicates(
       websiteUrl: clients.websiteUrl,
     })
     .from(clients)
-    .where(and(or(...conds), excludeId ? ne(clients.id, excludeId) : undefined))
+    .where(
+      and(
+        or(...conds),
+        excludeId ? ne(clients.id, excludeId) : undefined,
+        clientScopeWhere(actor, clients.id),
+      ),
+    )
     .limit(5);
   return rows.map((r) => ({
     id: r.id,
@@ -215,6 +228,8 @@ export async function createProspect(
       socialUrls: data.socialUrls,
       updatedBy: userId,
     });
+    // Whoever creates a client can open it (ADR 0020).
+    if (userId) await grantClientAccess(tx, { userId, clientId: id, createdBy: userId });
     await recordAuditEvent(tx, {
       actor,
       action: "prospect.create",
@@ -409,6 +424,9 @@ export async function deleteProspect(
     .innerJoin(audits, eq(audits.id, auditSources.auditId))
     .where(eq(audits.clientId, clientId));
   await deps.db.transaction(async (tx) => {
+    // Its private templates go with it: the foreign key would set `client_id` to null and turn
+    // them into agency templates, shared with every client (ADR 0021).
+    await tx.delete(templates).where(eq(templates.clientId, clientId));
     await tx.delete(clients).where(eq(clients.id, clientId));
     await recordAuditEvent(tx, {
       actor,
