@@ -11,6 +11,15 @@ export * from "./diff";
 export * from "./context";
 export * from "./read";
 export * from "./service";
+export {
+  applyImport,
+  isHandEdited,
+  latestAutoImport,
+  undoImport,
+  type AutoImportInput,
+  type AutoImportResult,
+  type LatestAutoImport,
+} from "./auto-import";
 export * from "./jobs";
 export { detectImportFile, type DetectResult, type ImportFileType } from "./import/detect";
 export type { ImportResult } from "./import/run";

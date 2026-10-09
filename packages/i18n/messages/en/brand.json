@@ -734,6 +734,9 @@
     "checksNotAcknowledged": "Confirm the open checks: {checks}",
     "versionNotFound": "Version not found",
     "restoreOnlyPublished": "Only published or archived versions can be restored.",
+    "undoNotCurrent": "Only the current published version can be undone.",
+    "undoNotAutomatic": "This version was not published by an automatic import.",
+    "undoNoPrevious": "There is no earlier version to go back to.",
     "draftExists": "Draft v{number} already exists. Confirm to replace it.",
     "addressProtocol": "Invalid address: only http and https",
     "duplicateSource": "The file is already among the sources: {title}",
@@ -776,7 +779,11 @@
       "socialLoginWall": "The profile is not public without logging in: nothing was read",
       "socialRobots": "The profile's site does not allow automatic reading: nothing was read",
       "socialUnreachable": "The profile could not be reached or has nothing public to read",
-      "socialImportFailed": "The profile was read but could not be imported ({reason}); it will be tried again"
+      "socialImportFailed": "The profile was read but could not be imported ({reason}); it will be tried again",
+      "autoApplied": "{accepted, plural, one {# item applied automatically} other {# items applied automatically}}{published, select, yes { · version published} other {}}",
+      "autoKept": "{count, plural, one {# field edited by hand kept} other {# fields edited by hand kept}}",
+      "autoNotApplied": "Not applied automatically: {reason, select, no_requester {the import was not started by a person} no_access {the person who started it cannot open this client} no_permission {the person who started it cannot publish the Brand Identity} other {not allowed}}. The proposals wait for a review",
+      "autoNotPublished": "Applied to the draft but not published automatically: the draft needs a check"
     },
     "warnings": {
       "firstPages": "Only the first {max} pages were read",

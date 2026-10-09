@@ -734,6 +734,9 @@
     "checksNotAcknowledged": "Conferma i controlli aperti: {checks}",
     "versionNotFound": "Versione non trovata",
     "restoreOnlyPublished": "Si possono ripristinare solo le versioni pubblicate o archiviate.",
+    "undoNotCurrent": "Si può annullare solo la versione pubblicata attuale.",
+    "undoNotAutomatic": "Questa versione non è stata pubblicata da un’importazione automatica.",
+    "undoNoPrevious": "Non c’è una versione precedente a cui tornare.",
     "draftExists": "La bozza v{number} esiste già. Conferma per sostituirla.",
     "addressProtocol": "Indirizzo non valido: solo http e https",
     "duplicateSource": "Il file è già tra le fonti: {title}",
@@ -776,7 +779,11 @@
       "socialLoginWall": "Il profilo non è pubblico senza accedere: non è stato letto nulla",
       "socialRobots": "Il sito del profilo non consente la lettura automatica: non è stato letto nulla",
       "socialUnreachable": "Il profilo non è raggiungibile o non ha nulla di pubblico da leggere",
-      "socialImportFailed": "Il profilo è stato letto ma non è stato possibile importarlo ({reason}); verrà ritentato"
+      "socialImportFailed": "Il profilo è stato letto ma non è stato possibile importarlo ({reason}); verrà ritentato",
+      "autoApplied": "{accepted, plural, one {# elemento applicato automaticamente} other {# elementi applicati automaticamente}}{published, select, yes { · versione pubblicata} other {}}",
+      "autoKept": "{count, plural, one {# campo modificato a mano mantenuto} other {# campi modificati a mano mantenuti}}",
+      "autoNotApplied": "Non applicato automaticamente: {reason, select, no_requester {l’importazione non è stata avviata da una persona} no_access {chi l’ha avviata non può aprire questo cliente} no_permission {chi l’ha avviata non può pubblicare la Brand Identity} other {non consentito}}. Le proposte attendono una revisione",
+      "autoNotPublished": "Applicato alla bozza ma non pubblicato automaticamente: la bozza va controllata"
     },
     "warnings": {
       "firstPages": "Sono state lette solo le prime {max} pagine",
