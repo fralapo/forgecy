@@ -176,6 +176,19 @@ describe.skipIf(!dbUrl)("runSourceImport on a website (integration)", () => {
     expect(mine.every((p) => p.status === "proposed")).toBe(true);
 
     const events = await db.select().from(auditEvents).where(eq(auditEvents.clientId, clientId));
+    // Why the four were dropped, in the activity log: counts by reason, no page text.
+    const gate = events.find((e) => e.action === "brand.import.gate" && e.entityId === row.id);
+    expect(gate?.meta).toEqual({
+      runId: expect.any(String),
+      sourceId: row.id,
+      discarded: 4,
+      reasons: {
+        hex_not_extracted: 1,
+        framework_default: 1,
+        quote_not_in_page: 1,
+        font_not_extracted: 1,
+      },
+    });
     expect(
       events.some(
         (e) =>
@@ -285,7 +298,7 @@ describe.skipIf(!dbUrl)("runSourceImport on a website (integration)", () => {
           throw new AiProviderError("max_tokens", "openrouter output truncated at max_tokens");
         }
         const items = r.input.includes('locator="/"')
-          ? [one("Il profumo del Sud in casa", "porta il profumo del Sud in casa tua", "/", 0.5)]
+          ? [one("DeoDue, il Sud in casa", "DeoDue porta il profumo", "/", 0.5)]
           : [];
         return { data: { items }, provider: "openrouter", model: "fake/model" };
       });

@@ -1,10 +1,16 @@
 import { and, brandIdentityVersions, eq, inArray, type Database } from "@forgecy/db";
+import { emptyDocument, parseDocument } from "../document";
+import type { DraftState } from "../proposals";
 import { defaultTokens, type TokenTree } from "../tokens";
 
-/** Tokens of the open draft, else of the published version, else the defaults. */
-export async function getDraftTokens(db: Database, clientId: string): Promise<TokenTree> {
+/** Document and tokens of the open draft, else of the published version, else the defaults. */
+export async function getDraftState(db: Database, clientId: string): Promise<DraftState> {
   const rows = await db
-    .select({ status: brandIdentityVersions.status, tokens: brandIdentityVersions.tokens })
+    .select({
+      status: brandIdentityVersions.status,
+      document: brandIdentityVersions.document,
+      tokens: brandIdentityVersions.tokens,
+    })
     .from(brandIdentityVersions)
     .where(
       and(
@@ -13,5 +19,8 @@ export async function getDraftTokens(db: Database, clientId: string): Promise<To
       ),
     );
   const open = rows.find((r) => r.status !== "published") ?? rows[0];
-  return (open?.tokens as TokenTree | undefined) ?? defaultTokens();
+  return {
+    document: open ? parseDocument(open.document) : emptyDocument(),
+    tokens: (open?.tokens as TokenTree | undefined) ?? defaultTokens(),
+  };
 }

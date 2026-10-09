@@ -2,14 +2,17 @@
 import { ForgecyError, type Actor, type MessageRef } from "@forgecy/core";
 import type { SiteProbe } from "@forgecy/audit";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
-import type { Database } from "@forgecy/db";
+import { and, brandIdentityProposals, eq, inArray, or, type Database } from "@forgecy/db";
 import { BRAND_ANALYST_PROMPT_VERSION, pagePriority } from "./analyst";
-import { matchField } from "../fields";
+import { fields, matchField } from "../fields";
+import { getAt, isJsonPatch, type JsonPatch } from "../json-patch";
 import { cleanFamily, knownColors, knownFonts, SITE_LOCATORS } from "./site-colors";
 import { proposeChange, type ProposeInput } from "../service";
 import { hexToDtcg, normalizeHex, referenceColors, tokenNameFrom } from "../tokens";
-import { getDraftTokens } from "./draft-tokens";
-import type { ProposalOp } from "../proposals";
+import { getDraftState } from "./draft-tokens";
+import { MIN_QUOTE_CHARS } from "./gate";
+import { normalizeText } from "./verify";
+import { proposedValue, type DraftState, type ProposalOp } from "../proposals";
 
 export interface CandidateProposal {
   /** "color" candidates get their token path assigned here; "logo" is the file the crawl itself stored. */
@@ -220,6 +223,135 @@ export function mergeSiteItems(candidates: readonly CandidateProposal[]): Candid
   return out;
 }
 
+/** Text compared for sameness: case, accents, punctuation and spacing do not count. */
+export function sameTextKey(text: string): string {
+  return normalizeText(text)
+    .normalize("NFD")
+    .replace(/\p{M}+/gu, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+/** The words that identify an item of a field: the text, the name, the "we are", the logo file. */
+function itemKey(value: unknown): string | undefined {
+  const v =
+    typeof value === "string"
+      ? value
+      : value && typeof value === "object"
+        ? ((value as Record<string, unknown>).text ??
+          (value as Record<string, unknown>).name ??
+          (value as Record<string, unknown>).weAre ??
+          (value as Record<string, unknown>).sourceId)
+        : undefined;
+  const key = typeof v === "string" ? sameTextKey(v) : "";
+  return key || undefined;
+}
+
+/** Fields whose items are deduplicated by their words (tokens and fonts replace by name instead). */
+const textField = (path: string) => {
+  const field = matchField(path.replace(/\[.*\]$/, "").replace(/\/-$/, ""))?.field;
+  return field && field.shape !== "token-group" && field.pointer !== "/document/visual/typography"
+    ? field
+    : undefined;
+};
+
+/**
+ * What the client already has or already waits for, so a re-run proposes nothing twice: the
+ * items of the draft (by their words, and by the quote that proposed them), the pending
+ * proposals of any run (by their words), and the single-value fields this run proposed
+ * from another source (a run never contests itself).
+ */
+async function knownItems(db: Database, clientId: string, state: DraftState, runId?: string) {
+  const texts = new Set<string>();
+  const quotes = new Set<string>();
+  const hexes = new Set<string>();
+  const ownSingles = new Set<string>();
+  const quoteKey = (pointer: string, quote: string | undefined) => {
+    const q = quote ? sameTextKey(quote) : "";
+    return q.length >= MIN_QUOTE_CHARS ? `${pointer}|${q}` : undefined;
+  };
+  const acceptedFrom = new Map<string, string>(); // proposal id → field pointer
+  for (const field of fields) {
+    if (field.shape === "token-group" || field.pointer === "/document/visual/typography") continue;
+    const at = getAt(state, field.pointer);
+    for (const item of field.shape === "sourced" ? (at ? [at] : []) : Array.isArray(at) ? at : []) {
+      const sourced = field.shape === "sourced" || field.shape === "sourced-list";
+      const key = itemKey(sourced ? (item as { value?: unknown }).value : item);
+      if (key) texts.add(`${field.pointer}|${key}`);
+      const from = sourced
+        ? (item as { acceptedFromProposalId?: unknown }).acceptedFromProposalId
+        : undefined;
+      if (typeof from === "string") acceptedFrom.set(from, field.pointer);
+    }
+  }
+  const rows = await db
+    .select({
+      id: brandIdentityProposals.id,
+      status: brandIdentityProposals.status,
+      runId: brandIdentityProposals.runId,
+      fieldPath: brandIdentityProposals.fieldPath,
+      changes: brandIdentityProposals.changes,
+      evidence: brandIdentityProposals.evidence,
+    })
+    .from(brandIdentityProposals)
+    .where(
+      and(
+        eq(brandIdentityProposals.clientId, clientId),
+        or(
+          eq(brandIdentityProposals.status, "proposed"),
+          acceptedFrom.size
+            ? inArray(brandIdentityProposals.id, [...acceptedFrom.keys()])
+            : undefined,
+        ),
+      ),
+    );
+  for (const p of rows) {
+    if (p.status !== "proposed") {
+      const pointer = acceptedFrom.get(p.id);
+      for (const e of p.evidence) {
+        const q = pointer && quoteKey(pointer, e.quote);
+        if (q) quotes.add(q);
+      }
+      continue;
+    }
+    if (!isJsonPatch(p.changes)) continue;
+    const match = matchField(p.fieldPath.replace(/\[.*\]$/, "").replace(/\/-$/, ""));
+    if (!match) continue;
+    const value = proposedValue(p.changes as JsonPatch, match.field);
+    if (match.field.pointer === "/tokens/color/reference") {
+      const hex = (value as { $value?: { hex?: string } } | undefined)?.$value?.hex;
+      if (hex) hexes.add(hex.toUpperCase());
+      continue;
+    }
+    const field = textField(p.fieldPath);
+    if (!field) continue;
+    const key = itemKey(value);
+    if (key) texts.add(`${field.pointer}|${key}`);
+    if (runId && p.runId === runId && field.shape === "sourced") ownSingles.add(field.pointer);
+  }
+  return {
+    hexes,
+    /** True when the candidate repeats something the client has or waits for. */
+    has(c: CandidateProposal): boolean {
+      const field = textField(c.path);
+      if (!field) return false;
+      const key = itemKey(c.value);
+      const q = quoteKey(field.pointer, c.evidence.quote);
+      return (
+        (key !== undefined && texts.has(`${field.pointer}|${key}`)) ||
+        (q !== undefined && quotes.has(q)) ||
+        (field.shape === "sourced" && ownSingles.has(field.pointer))
+      );
+    },
+    /** Records a candidate this run proposes, so a near-copy later in the run is not proposed. */
+    add(c: CandidateProposal): void {
+      const field = textField(c.path);
+      const key = field && itemKey(c.value);
+      if (field && key) texts.add(`${field.pointer}|${key}`);
+    },
+  };
+}
+
 export async function addSourceProposals(
   db: Database,
   agent: Actor,
@@ -231,13 +363,23 @@ export async function addSourceProposals(
   let created = 0;
   let skipped = 0;
   const seen = new Set<string>();
-  const tokens = await getDraftTokens(db, clientId);
-  const existingHex = new Set(referenceColors(tokens).map((c) => c.hex));
-  const usedNames = new Set(referenceColors(tokens).map((c) => c.name));
+  const state = await getDraftState(db, clientId);
+  const known = await knownItems(
+    db,
+    clientId,
+    state,
+    agent.type === "agent" ? agent.runId : undefined,
+  );
+  const existingHex = new Set([...referenceColors(state.tokens).map((c) => c.hex), ...known.hexes]);
+  const usedNames = new Set(referenceColors(state.tokens).map((c) => c.name));
   let n = usedNames.size;
 
   for (const c of candidates) {
     let input: ProposeInput;
+    if (c.kind !== "color" && known.has(c)) {
+      skipped++;
+      continue;
+    }
     if (c.kind === "color") {
       const v = c.value as { name: string; hex: string; usage?: string };
       const hex = normalizeHex(v.hex);
@@ -272,6 +414,7 @@ export async function addSourceProposals(
         continue;
       }
       seen.add(key);
+      known.add(c);
       input = { clientId, path: c.path, op: c.op, value: c.value };
     }
     try {

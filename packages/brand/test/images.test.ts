@@ -7,6 +7,7 @@ import {
   classifyImageHeuristic,
   describeImage,
   MAX_INPUT_PIXELS,
+  siteDomain,
   svgIsSafe,
   svgSize,
   type ImageFacts,
@@ -42,9 +43,41 @@ describe("classifyImageHeuristic", () => {
     );
     expect(classifyImageHeuristic(facts({ paletteSize: 15 }))).toBe("graphic");
   });
-  it("logo in the url or the alt wins over everything else", () => {
-    expect(classifyImageHeuristic(facts({ url: "https://x.test/img/Logo-dark.png" }))).toBe("logo");
-    expect(classifyImageHeuristic(facts({ alt: "Our logo", whiteBorderRatio: 1 }))).toBe("logo");
+  it("logo in the url or the alt is a logo in the header or declared on the site's own domain", () => {
+    const site = "https://www.deodue.test/";
+    expect(
+      classifyImageHeuristic(facts({ url: "https://x.test/img/Logo-dark.png", inHeader: true })),
+    ).toBe("logo");
+    expect(
+      classifyImageHeuristic(facts({ alt: "Our logo", whiteBorderRatio: 1, inHeader: true })),
+    ).toBe("logo");
+    for (const source of ["jsonld", "og", "icon"] as const)
+      expect(
+        classifyImageHeuristic(
+          facts({ url: "https://cdn.deodue.test/logo.png", source, siteUrl: site }),
+        ),
+      ).toBe("logo");
+  });
+
+  it("a logo elsewhere (a parent company's in the page body, another domain) is a graphic", () => {
+    const site = "https://www.deodue.test/";
+    // deodue: the parent company's logo among the content images.
+    expect(
+      classifyImageHeuristic(
+        facts({ url: "https://www.deodue.test/up/logochimicleanspa@300x.png", siteUrl: site }),
+      ),
+    ).toBe("graphic");
+    expect(
+      classifyImageHeuristic(
+        facts({ url: "https://partner.test/logo.png", source: "jsonld", siteUrl: site }),
+      ),
+    ).toBe("graphic");
+  });
+
+  it("compares registrable domains", () => {
+    expect(siteDomain("https://cdn.deodue.test/a.png")).toBe("deodue.test");
+    expect(siteDomain("https://shop.rossi.co.uk/")).toBe("rossi.co.uk");
+    expect(siteDomain("not a url")).toBeNull();
   });
 });
 

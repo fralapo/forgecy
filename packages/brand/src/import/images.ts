@@ -9,7 +9,7 @@ import { createHostCheck, createPinnedFetch, type ProbeImage } from "@forgecy/au
 import { auditUserAgent } from "@forgecy/audit/crawl/fetcher";
 import { can } from "@forgecy/core";
 import { guardedFetch, readCapped, type HostCheck } from "@forgecy/core/net-guard";
-import { and, assets, brandSources, eq, isNull, userActor, type Database } from "@forgecy/db";
+import { and, assets, brandSources, eq, isNull, sql, userActor, type Database } from "@forgecy/db";
 import { contentKey, sha256, validateUpload, type StorageDriver } from "@forgecy/files";
 import sharp from "sharp";
 
@@ -48,11 +48,43 @@ export interface ImageFacts {
   mime: string;
   whiteBorderRatio: number;
   paletteSize: number;
+  /** Drawn in the page header. */
+  inHeader?: boolean;
+  /** Where the page declared it. */
+  source?: ProbeImage["source"];
+  /** The site's own address, to tell its logo from a partner's or a parent company's. */
+  siteUrl?: string;
 }
 
-/** A rule of thumb, not a verdict: the class is a tag a person can read and change. */
+/** Registrable domain, approximately: the last two labels, three for "co.uk"-like suffixes. */
+export function siteDomain(url: string): string | null {
+  try {
+    const labels = new URL(url).hostname.toLowerCase().replace(/\.$/, "").split(".");
+    // ponytail: no public-suffix list; a 2-letter TLD under a short label ("co.uk", "com.au")
+    // takes three labels. Add a PSL package if a real case gets it wrong.
+    const n =
+      labels.length >= 3 && labels.at(-1)!.length === 2 && labels.at(-2)!.length <= 3 ? 3 : 2;
+    return labels.slice(-n).join(".");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A rule of thumb, not a verdict: the class is a tag a person can read and change. "Logo" needs
+ * the word and a place that makes it the site's own: the header, or the page's declared
+ * logo/icon/share image on the site's own domain. A "logo" elsewhere (a parent company's, a
+ * partner's) is a graphic.
+ */
 export function classifyImageHeuristic(i: ImageFacts): ImageClass {
-  if (/logo/i.test(i.url) || /logo/i.test(i.alt)) return "logo";
+  if (/logo/i.test(i.url) || /logo/i.test(i.alt)) {
+    const declared =
+      (i.source === "jsonld" || i.source === "og" || i.source === "icon") &&
+      !!i.siteUrl &&
+      siteDomain(i.url) !== null &&
+      siteDomain(i.url) === siteDomain(i.siteUrl);
+    return i.inHeader || declared ? "logo" : "graphic";
+  }
   if (i.mime === "image/svg+xml") return "graphic";
   if (i.whiteBorderRatio > 0.85) return "product";
   if (i.paletteSize <= 8) return "graphic";
@@ -300,6 +332,9 @@ export async function harvestImages(
           mime: file.mime,
           whiteBorderRatio,
           paletteSize,
+          inHeader: image.inHeader,
+          source: image.source,
+          siteUrl: pageUrl,
         });
     const key = contentKey({
       clientId: input.clientId,
@@ -369,14 +404,32 @@ export async function harvestImages(
     }
   }
 
-  const queue = [...new Map(input.images.map((i) => [i.url, i])).values()].slice(0, max * 3);
+  // A re-run only tops the site's pictures up to the limit; it never adds a dozen more each time.
+  // ponytail: counted per client (an asset does not record its source); a second website of
+  // the same client shares the limit. Add a source column to assets if that matters.
+  let room = max;
+  if (!input.tags) {
+    const [{ count } = { count: 0 }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(assets)
+      .where(
+        and(
+          eq(assets.clientId, input.clientId),
+          eq(assets.source, "site"),
+          sql`'site' = any(${assets.tags})`,
+          sql`not ('logo' = any(${assets.tags}))`,
+        ),
+      );
+    room = Math.max(0, Math.min(max, IMAGE_LIMITS.max - count));
+  }
+  const queue = [...new Map(input.images.map((i) => [i.url, i])).values()].slice(0, room * 3);
   let savedImages = 0;
-  for (let at = 0; at < queue.length && savedImages < max; at += BATCH) {
+  for (let at = 0; at < queue.length && savedImages < room; at += BATCH) {
     const batch = queue.slice(at, at + BATCH);
     const files = await Promise.all(batch.map((i) => download(i.url, net)));
     for (const [n, image] of batch.entries()) {
       const file = files[n];
-      if (savedImages >= max) break;
+      if (savedImages >= room) break;
       let stored: Stored | null = null;
       try {
         stored = file ? await store(file, image, false) : null;

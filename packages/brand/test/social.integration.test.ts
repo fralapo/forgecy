@@ -203,9 +203,12 @@ describe.skipIf(!dbUrl)("social profiles (integration)", () => {
     for (const kind of ["instagram", "tiktok"]) {
       expect(byKind[kind]).toMatchObject({ status: "extracted" });
       expect(byKind[kind]!.pages?.[0]).toMatchObject({ locator: "Profile" });
-      const mine = await proposalsOf(clientId, byKind[kind]!.id);
-      expect(mine.map((p) => p.fieldPath)).toEqual(["/document/strategy/positioning"]);
     }
+    // One positioning for the run: the second profile repeats it and does not contest it.
+    expect((await proposalsOf(clientId, byKind.instagram!.id)).map((p) => p.fieldPath)).toEqual([
+      "/document/strategy/positioning",
+    ]);
+    expect(await proposalsOf(clientId, byKind.tiktok!.id)).toEqual([]);
     expect(seen).toHaveLength(2);
     expect(seen[0]!.system).toContain('ONLY among the "Known colors"');
     // Unreadable ones: partial with the reason, nothing invented.

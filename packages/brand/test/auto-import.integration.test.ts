@@ -662,7 +662,9 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
     const [fromBook] = await proposalsOf(bookRun);
     await acceptProposal(db, anna, { clientId, proposalId: fromBook!.id });
 
-    const { result, jobId } = await runImport(clientId, [POSITIONING]);
+    // The site quotes its own words, not the book's.
+    const fromSite = { ...POSITIONING, quote: "Nata nel Sud Italia." } as AnalystItem;
+    const { result, jobId } = await runImport(clientId, [fromSite]);
     expect(result.auto).toMatchObject({ accepted: 0, skippedHandEdited: 1 });
     const [site] = await proposalsOf(jobId);
     expect(site).toMatchObject({ status: "rejected", reviewNote: "hand-edited field kept" });
@@ -679,13 +681,58 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
     expect(p!.confidence).toBe("medium");
     await acceptProposal(db, anna, { clientId, proposalId: p!.id });
 
-    const other = item({ field: "positioning", text: "Nata nel Sud Italia" });
+    const other = item({
+      field: "positioning",
+      text: "Nata nel Sud Italia",
+      quote: "Nata nel Sud Italia.",
+    });
     const { result } = await runImport(clientId, [other]);
     expect(result.auto).toMatchObject({ accepted: 0, skippedHandEdited: 1 });
     const draft = (await versionsOf(clientId)).find((v) => v.status === "draft")!;
     expect(parseDocument(draft.document).strategy.positioning?.value).toBe(
       "Il deodorante bifase del Sud Italia",
     );
+  });
+
+  it("proposes nothing a second run of the site already applied or left waiting", async () => {
+    const clientId = await mkClient("rerun");
+    const tagline = item({ field: "message", kind: "tagline", text: "Solo profumo.", proof: "" });
+    const first = await runImport(clientId, [VALUE, AUDIENCE, tagline, POSITIONING]);
+    expect(first.result.auto).toMatchObject({ published: true });
+    // A tagline left waiting for a person (as a contested or uncertain item would be).
+    const waiting = item({
+      field: "avoidTopic",
+      text: "Prezzi",
+      quote: "Siamo una famiglia che produce",
+      locator: "/about",
+    });
+    await runImport(clientId, [waiting], { autoApply: false });
+    const queue = async () =>
+      (
+        await db
+          .select()
+          .from(brandIdentityProposals)
+          .where(eq(brandIdentityProposals.clientId, clientId))
+      ).filter((p) => p.status === "proposed");
+    expect(await queue()).toHaveLength(1);
+
+    // The same site again, written a little differently by the model.
+    const { result } = await runImport(clientId, [
+      { ...VALUE, name: "famiglia." } as AnalystItem,
+      { ...AUDIENCE, name: "Famiglie del sud" } as AnalystItem,
+      // Other words, same evidence: the tagline the site already gave.
+      { ...tagline, text: "Profumo, e basta" } as AnalystItem,
+      { ...waiting, text: "prezzi!" } as AnalystItem,
+      { ...POSITIONING, text: "Il deodorante bifase del Sud Italia" } as AnalystItem,
+    ]);
+    expect(result.proposals).toBe(0);
+    expect(result.skipped).toBeGreaterThanOrEqual(5);
+    expect(await queue()).toHaveLength(1);
+    const published = (await versionsOf(clientId)).find((v) => v.status === "published")!;
+    const strategy = parseDocument(published.document).strategy;
+    expect(strategy.values).toHaveLength(1);
+    expect(strategy.audience).toHaveLength(1);
+    expect(strategy.messages).toHaveLength(1);
   });
 
   it("does not publish a draft that holds a colleague's work", async () => {

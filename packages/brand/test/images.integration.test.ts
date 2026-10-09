@@ -388,6 +388,41 @@ describe.skipIf(!dbUrl)("harvestImages (integration)", () => {
     expect((await rows(t.clientId)).map((r) => r.tags[0]).sort()).toEqual(["logo", "scene"]);
   });
 
+  it("only tops the site's pictures up to the limit on a re-run", async () => {
+    const t = await setup();
+    // Eleven site pictures from earlier runs (and a logo and a social picture, which do not count).
+    const fake = (i: number, tags: string[]) => ({
+      clientId: t.clientId,
+      source: "site" as const,
+      storageKey: `clients/${t.clientId}/assets/${i}.png`,
+      sha256: `${i}`.padStart(64, "0"),
+      mime: "image/png",
+      size: 1,
+      tags,
+    });
+    await db
+      .insert(assets)
+      .values([
+        ...Array.from({ length: 11 }, (_, i) => fake(i, ["scene", "site"])),
+        fake(20, ["logo", "site"]),
+        fake(21, ["social"]),
+      ]);
+    const input = {
+      clientId: t.clientId,
+      sourceId: t.sourceId,
+      requestedBy: userId,
+      allowPrivate: true,
+      images: [img("/photo.png"), img("/product.png")],
+    };
+    expect(await harvestImages({ db, storage: t.storage }, input)).toMatchObject({ saved: 1 });
+    // Full: nothing more is downloaded or saved.
+    expect(await harvestImages({ db, storage: t.storage }, input)).toMatchObject({
+      saved: 0,
+      skipped: 0,
+    });
+    expect(await rows(t.clientId)).toHaveLength(14);
+  });
+
   it("registers the first logo that validates as an asset and as a brand source, once", async () => {
     const t = await setup();
     const input = {

@@ -13,6 +13,7 @@ import {
   brandSources,
   clients,
   eq,
+  recordAuditEvent,
   sql,
   type Database,
 } from "@forgecy/db";
@@ -513,6 +514,19 @@ export async function runSourceImport(
     });
     candidates = mergeSiteItems(gated.keep);
     discarded = gated.discarded.length;
+    // Why items were dropped, for the activity log: counts only, never the page text.
+    if (discarded) {
+      const reasons: Record<string, number> = {};
+      for (const d of gated.discarded) reasons[d.reason] = (reasons[d.reason] ?? 0) + 1;
+      await recordAuditEvent(db, {
+        actor: agent,
+        action: "brand.import.gate",
+        entity: "brand_source",
+        entityId: source.id,
+        clientId: input.clientId,
+        meta: { runId: ctx.jobId, sourceId: source.id, discarded, reasons },
+      });
+    }
   }
   // After the gate, so a verified value is never dropped for one the gate then refuses.
   candidates = keepBestSingleValues(candidates);
