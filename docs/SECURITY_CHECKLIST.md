@@ -485,10 +485,15 @@ pages, and a second one for the attacker's page.
 8. Images: the ones found on the site appear on the brand page and in the
    content library (source "site"); confirm the rights of one in the library.
    A profile picture stays a draft until its rights are confirmed.
-9. Automated: `pnpm --filter @forgecy/brand exec vitest run` (the
-   `auto-import`, `social` and `images` suites) and
-   `pnpm --filter @forgecy/content exec vitest run asset-rights`, with
-   `FORGECY_TEST_DATABASE_URL` set.
+9. "Add a brand" with a link whose host is not the brand's name: the client
+   is renamed to the site's own name once the crawl ran, with
+   `client.rename` (`auto: true`) in the activity log, only when the person
+   who added it may edit the client. A client whose name a person typed or
+   saved is never renamed.
+10. Automated: `pnpm --filter @forgecy/brand exec vitest run` (the
+    `auto-import`, `brand-name`, `social` and `images` suites) and
+    `pnpm --filter @forgecy/content exec vitest run asset-rights`, with
+    `FORGECY_TEST_DATABASE_URL` set.
 
 ## Sign-off
 
