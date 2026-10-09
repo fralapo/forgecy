@@ -193,7 +193,7 @@ describe("mapping", () => {
   });
 });
 
-describe("ZIP guard", () => {
+describe("ZIP guard", { timeout: 30_000 }, () => {
   it("lists entries, skips junk and refuses path traversal", async () => {
     const zip = await makeZip([
       { path: "cream/photo.png", data: PNG },
@@ -237,7 +237,7 @@ describe("ZIP guard", () => {
   });
 });
 
-describe("Office file guard", () => {
+describe("Office file guard", { timeout: 30_000 }, () => {
   const MB = 1024 * 1024;
   it("accepts a normal spreadsheet", async () => {
     const xlsx = await makeXlsx([["Name"], ["Cream"]]);

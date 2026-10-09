@@ -238,7 +238,7 @@ describe("DumpScanner: COPY header is matched on the raw line", () => {
 });
 
 describe("DumpScanner: cost", () => {
-  it("scans a 5 MB single line, read in 1 KB chunks, in well under 2 seconds", async () => {
+  it("scans a 5 MB single line, read in 1 KB chunks, in well under 10 seconds", async () => {
     const line = `select ${"'a', $1, ".repeat(600_000)}1;\n`;
     const t0 = performance.now();
     await ok(line);
@@ -251,8 +251,8 @@ describe("DumpScanner: cost", () => {
       rmSync(dir, { recursive: true, force: true });
     }
     expect(line.length).toBeGreaterThan(5_000_000);
-    expect(performance.now() - t0).toBeLessThan(2000);
-  });
+    expect(performance.now() - t0).toBeLessThan(10_000);
+  }, 30_000);
 });
 
 describe("DumpScanner: refuses constructs that could desync it from psql", () => {

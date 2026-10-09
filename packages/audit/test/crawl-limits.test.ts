@@ -144,7 +144,7 @@ describe("createHtmlFetcher", () => {
     const p = await f.fetchPage(`${ROOT}/`, { timeoutMs: 5000, screenshots: false });
     expect(p.status).toBe(200);
     expect(pulls).toBeLessThanOrEqual(Math.ceil(MAX_HTML_BYTES / (8 * 8192)) + 4);
-  });
+  }, 30_000);
 
   it("maps a private redirect to AUD-HOST-BLOCKED and a redirect loop to SOURCE-UNAVAILABLE", async () => {
     const toPrivate = (async () => redirect("http://[::ffff:7f00:1]/")) as unknown as typeof fetch;

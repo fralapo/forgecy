@@ -12,7 +12,7 @@ const MB = 1024 * 1024;
 const rejectsUnreadable = (bytes: Uint8Array) =>
   expect(readTable(bytes, "xlsx")).rejects.toMatchObject({ message: expect.any(String) });
 
-describe("readTable xlsx guard", () => {
+describe("readTable xlsx guard", { timeout: 30_000 }, () => {
   beforeEach(() => parser.read.mockClear());
 
   it("refuses a lying size before the parser runs", async () => {

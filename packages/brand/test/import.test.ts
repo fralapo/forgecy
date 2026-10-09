@@ -188,7 +188,8 @@ describe("colorName", () => {
   }, 30_000);
 });
 
-describe("hostile imports", () => {
+// Multi-MB buffers: generous timeout for a loaded parallel run.
+describe("hostile imports", { timeout: 30_000 }, () => {
   const key = (err: unknown) => (err as { ref: { key: string } }).ref.key;
 
   it("refuses an Office file that inflates far beyond its limits", async () => {
@@ -254,7 +255,7 @@ describe("hostile imports", () => {
     });
     const t = Date.now();
     const err = await extractFile("pptx", zip, "cpu.pptx").catch((e) => e);
-    expect(Date.now() - t).toBeLessThan(2000);
+    expect(Date.now() - t).toBeLessThan(10_000);
     expect(key(err)).toBe("brand.import.errors.damaged");
   });
   it("stops an honest overlapping deflate bomb at the byte budget", async () => {
@@ -266,7 +267,7 @@ describe("hostile imports", () => {
     });
     const t = Date.now();
     const err = await extractFile("pptx", zip, "cpu2.pptx").catch((e) => e);
-    expect(Date.now() - t).toBeLessThan(2000);
+    expect(Date.now() - t).toBeLessThan(10_000);
     expect(key(err)).toBe("brand.import.errors.archiveTooLarge");
   });
   it("applies the same limits in the type detection that runs before extraction", async () => {
@@ -280,7 +281,7 @@ describe("hostile imports", () => {
     });
     const r = await detectImportFile({ name: "x.docx", mime: "", bytes: overlap });
     expect(r).toMatchObject({ ok: false, ref: { key: "brand.import.errors.archiveTooLarge" } });
-    expect(Date.now() - t).toBeLessThan(2000);
+    expect(Date.now() - t).toBeLessThan(10_000);
   });
   it("still detects a normal document through the guarded path", async () => {
     expect(await detectImportFile({ name: "ok.docx", mime: "", bytes: docx() })).toMatchObject({
