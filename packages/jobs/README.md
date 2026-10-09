@@ -18,7 +18,7 @@ Queues: `default`, `ai`, `export`, `media`. The `system.ping` job (payload `{ me
 
 ## Enqueuing
 
-`enqueueJob(db, queues, { kind, payload, clientId?, entity?, entityId?, createdBy?, dependsOnJobId? })` validates the payload, inserts the row (`queued`) and adds the BullMQ job with `jobId` = row id, 3 attempts and waits of 0 s / 5 s / 30 s. Only the `kind` goes to Redis; the payload stays in Postgres. `cancelJob` cancels.
+`enqueueJob(db, queues, { kind, payload, clientId?, entity?, entityId?, createdBy? })` validates the payload, inserts the row (`queued`) and adds the BullMQ job with `jobId` = row id, 3 attempts and waits of 0 s / 5 s / 30 s. Only the `kind` goes to Redis; the payload stays in Postgres. `cancelJob` cancels.
 
 ## Worker
 

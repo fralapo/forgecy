@@ -204,6 +204,13 @@
       "when": 1791375570507,
       "tag": "0030_siwc_connections",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1791503865677,
+      "tag": "0031_drop_jobs_depends_on",
+      "breakpoints": true
     }
   ]
 }
