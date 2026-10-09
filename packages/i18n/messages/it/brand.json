@@ -233,6 +233,10 @@
     "importedEdits": "{count, plural, one {# campo scritto da te è rimasto com’era} other {# campi scritti da te sono rimasti com’erano}}",
     "importedReview": "Rivedili",
     "importedReplaced": "Una versione successiva l’ha sostituito: da qui non si può più annullare.",
+    "importUndone": "L’importazione automatica v{number} è stata annullata: la versione v{by} ripristina la v{restores}",
+    "importRunningTitle": "Importazione in corso",
+    "importRunning": "Stiamo leggendo il sito e i profili. Ci vuole qualche minuto: la pagina si aggiorna da sola.",
+    "completeOpenPoints": "{count, plural, one {Completa # punto aperto} other {Completa # punti aperti}}",
     "undoImport": "Annulla importazione",
     "reanalyze": "Analizza di nuovo",
     "analysisTitle": "Sito web",
@@ -629,6 +633,7 @@
     "size": "{unit, select, mb {{value} MB} other {{value} KB}}",
     "partsRead": "{count, plural, one {# parte letta} other {# parti lette}}",
     "readAgain": "Rileggi",
+    "logoSource": "Logo",
     "runScan": "Esegui scan",
     "scanAgain": "Esegui di nuovo lo scan",
     "notScannedYet": "Il sito di questo cliente non è ancora stato scansionato. Esegui uno scan per estrarre automaticamente informazioni su brand, prodotti e contatti.",
@@ -837,7 +842,8 @@
       "autoKept": "{count, plural, one {# campo modificato a mano mantenuto} other {# campi modificati a mano mantenuti}}",
       "autoNotApplied": "Non applicato automaticamente: {reason, select, no_requester {l’importazione non è stata avviata da una persona} no_access {chi l’ha avviata non può aprire questo cliente} no_permission {chi l’ha avviata non può pubblicare la Brand Identity} other {non consentito}}. Le proposte attendono una revisione",
       "autoNeedsReview": "{count, plural, one {# elemento attende una revisione} other {# elementi attendono una revisione}}",
-      "autoNotPublished": "Applicato alla bozza ma non pubblicato automaticamente: {reason, select, draft_shared {la bozza contiene lavoro di altri o è in revisione} other {la bozza va controllata}}"
+      "autoNotPublished": "Applicato alla bozza ma non pubblicato automaticamente: {reason, select, draft_shared {la bozza contiene lavoro di altri o è in revisione} other {la bozza va controllata}}",
+      "linkNotProfile": "Salvato come link, non letto: non è un profilo di questo social"
     },
     "warnings": {
       "firstPages": "Sono state lette solo le prime {max} pagine",
@@ -860,7 +866,8 @@
       "siteColor": "Colore trovato negli stili del sito.",
       "siteFont": "Font in uso sul sito.",
       "logo": "File del logo importato: conferma il ruolo della variante.",
-      "logoSite": "Logo trovato sul sito: conferma il ruolo della variante."
+      "logoSite": "Logo trovato sul sito: conferma il ruolo della variante.",
+      "colorRole": "Colore del brand dalla palette del sito: conferma il ruolo."
     },
     "locators": {
       "theme": "Tema del documento",
@@ -888,6 +895,13 @@
       "fieldChanged": "Il campo è cambiato dopo la proposta",
       "restored": "La bozza v{number} è stata sostituita da un ripristino",
       "sourceRemoved": "La fonte della proposta è stata rimossa"
+    },
+    "version": {
+      "changelog": "Importazione automatica da {sources}",
+      "changelogPublic": "Importazione automatica dalle pagine pubbliche",
+      "note": "Importazione automatica",
+      "undoChangelog": "Annullamento dell’importazione automatica v{version}",
+      "undoNote": "Annullamento dell’importazione automatica"
     }
   },
   "book": {

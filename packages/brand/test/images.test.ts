@@ -6,6 +6,7 @@ import { logoCandidate, visualCandidates } from "../src/import/candidates";
 import {
   classifyImageHeuristic,
   describeImage,
+  fallbackAlt,
   MAX_INPUT_PIXELS,
   siteDomain,
   svgIsSafe,
@@ -199,5 +200,27 @@ describe("logo candidate", () => {
     const gated = gateCandidates({ candidates: all, pages: [], visual: probe });
     expect(gated.keep.map((c) => c.kind)).toEqual(["logo"]);
     expect(gated.discarded).toEqual([]);
+  });
+});
+
+describe("fallbackAlt", () => {
+  it("takes the page title, with the class", () => {
+    expect(fallbackAlt("Prodotti - DeoDue", "https://x.it/a.jpg", "product")).toBe(
+      "Prodotti - DeoDue (product)",
+    );
+  });
+
+  it("else the words of the file name, without size suffix, numbers or extension", () => {
+    expect(
+      fallbackAlt(undefined, "https://x.it/wp/2024/05/deo-spray_bifase-1024x768.webp", "scene"),
+    ).toBe("deo spray bifase (scene)");
+    expect(fallbackAlt("  ", "https://x.it/Fiori%20blu.png", "graphic")).toBe(
+      "Fiori blu (graphic)",
+    );
+  });
+
+  it("is empty when nothing gives words", () => {
+    expect(fallbackAlt(undefined, "https://x.it/12345.jpg", "product")).toBe("");
+    expect(fallbackAlt(undefined, "not a url", "product")).toBe("");
   });
 });

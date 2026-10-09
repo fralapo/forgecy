@@ -233,6 +233,10 @@
     "importedEdits": "{count, plural, one {# field you wrote was kept as it was} other {# fields you wrote were kept as they were}}",
     "importedReview": "Review them",
     "importedReplaced": "A later version replaced it, so it can no longer be undone from here.",
+    "importUndone": "Automatic import v{number} was undone: version v{by} restores v{restores}",
+    "importRunningTitle": "Import in progress",
+    "importRunning": "We’re reading the website and profiles. This takes a couple of minutes: the page updates by itself.",
+    "completeOpenPoints": "{count, plural, one {Complete # open point} other {Complete # open points}}",
     "undoImport": "Undo import",
     "reanalyze": "Re-analyze",
     "analysisTitle": "Website",
@@ -629,6 +633,7 @@
     "size": "{unit, select, mb {{value} MB} other {{value} KB}}",
     "partsRead": "{count, plural, one {# part read} other {# parts read}}",
     "readAgain": "Read again",
+    "logoSource": "Logo",
     "runScan": "Run scan",
     "scanAgain": "Scan again",
     "notScannedYet": "This client's website hasn't been scanned yet. Run a scan to pull brand, product and contact details from it automatically.",
@@ -837,7 +842,8 @@
       "autoKept": "{count, plural, one {# field edited by hand kept} other {# fields edited by hand kept}}",
       "autoNotApplied": "Not applied automatically: {reason, select, no_requester {the import was not started by a person} no_access {the person who started it cannot open this client} no_permission {the person who started it cannot publish the Brand Identity} other {not allowed}}. The proposals wait for a review",
       "autoNeedsReview": "{count, plural, one {# item waits for a review} other {# items wait for a review}}",
-      "autoNotPublished": "Applied to the draft but not published automatically: {reason, select, draft_shared {the draft holds work by someone else or is in review} other {the draft needs a check}}"
+      "autoNotPublished": "Applied to the draft but not published automatically: {reason, select, draft_shared {the draft holds work by someone else or is in review} other {the draft needs a check}}",
+      "linkNotProfile": "Saved as a link, not read: not a profile of this network"
     },
     "warnings": {
       "firstPages": "Only the first {max} pages were read",
@@ -860,7 +866,8 @@
       "siteColor": "Color found in the site's styles.",
       "siteFont": "Font in use on the site.",
       "logo": "Imported logo file: confirm the variant's role.",
-      "logoSite": "Logo found on the site: confirm the variant's role."
+      "logoSite": "Logo found on the site: confirm the variant's role.",
+      "colorRole": "Brand color from the site's palette: confirm the role."
     },
     "locators": {
       "theme": "Document theme",
@@ -888,6 +895,13 @@
       "fieldChanged": "The field changed after the proposal",
       "restored": "Draft v{number} was replaced by a restore",
       "sourceRemoved": "The proposal's source was removed"
+    },
+    "version": {
+      "changelog": "Automatic import from {sources}",
+      "changelogPublic": "Automatic import from public pages",
+      "note": "Automatic import",
+      "undoChangelog": "Undo of automatic import v{version}",
+      "undoNote": "Undo of automatic import"
     }
   },
   "book": {

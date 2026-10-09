@@ -1146,6 +1146,9 @@ export interface AddSourceInput {
   /** Pages already extracted (manual notes, audit observations). */
   pages?: Array<{ locator: string; text: string }>;
   status?: SourceRow["status"];
+  /** Why the source has this status: English text, and the references the interface shows. */
+  statusDetail?: string | null;
+  statusDetailRef?: MessageRef[] | null;
 }
 
 /**
@@ -1189,7 +1192,7 @@ export async function findOrCreateWebsiteSource(
 export async function findOrCreateSocialSource(
   db: Database,
   actor: Actor,
-  input: { clientId: string; kind: SocialKind; url: string },
+  input: { clientId: string; kind: SocialKind; url: string; title?: string; note?: string | null },
 ): Promise<{ source: SourceRow; created: boolean }> {
   assertCan(actor, "view", input.clientId);
   const same = (url: string | null) =>
@@ -1209,8 +1212,10 @@ export async function findOrCreateSocialSource(
   const source = await addSource(db, actor, {
     clientId: input.clientId,
     kind: input.kind,
-    title: `${input.kind} ${new URL(input.url).pathname.replace(/^\/|\/$/g, "")}`.trim(),
+    title:
+      input.title ?? `${input.kind} ${new URL(input.url).pathname.replace(/^\/|\/$/g, "")}`.trim(),
     url: input.url,
+    note: input.note ?? null,
     status: "pending",
   });
   return { source, created: true };
@@ -1266,6 +1271,8 @@ export async function addSource(
         note: input.note ?? null,
         pages: input.pages ?? null,
         status: input.status ?? (input.storageKey ? "pending" : "extracted"),
+        statusDetail: input.statusDetail ?? null,
+        statusDetailRef: input.statusDetailRef ?? null,
         createdBy: userId(actor),
       })
       .returning();

@@ -93,6 +93,29 @@ export function classifyImageHeuristic(i: ImageFacts): ImageClass {
   return "graphic";
 }
 
+/**
+ * Alt text for a picture the page left without one: the title of the page it was found on, else
+ * the words of its file name, with the class ("Prodotti - DeoDue (product)"). Only page text and
+ * the class tag: nothing written in a reader's language. Empty when there is nothing to go on.
+ */
+export function fallbackAlt(pageTitle: string | undefined, url: string, cls: ImageClass): string {
+  let base = (pageTitle ?? "").replace(/\s+/g, " ").trim();
+  if (!base)
+    try {
+      const file = decodeURIComponent(new URL(url).pathname.split("/").pop() ?? "");
+      base = file
+        .replace(/\.[a-z0-9]{2,5}$/i, "") // extension
+        .replace(/-\d+x\d+$/, "") // a CMS's resized copy: "-1024x768"
+        .replace(/[-_.+]+/g, " ")
+        .replace(/\b\d+\b/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    } catch {
+      // An address that does not parse or decode gives no words.
+    }
+  return base ? `${base.slice(0, 200)} (${cls})` : "";
+}
+
 const NEAR_WHITE = 240;
 const SAMPLE = 64;
 /** A color only counts when it covers this share of the sample, so anti-aliasing does not inflate it. */
@@ -250,6 +273,8 @@ export interface HarvestInput {
    * recorded as its creator, but nobody has attested the rights, so it stays a draft.
    */
   unattested?: boolean;
+  /** Title of the page each picture was found on, by its url: the alt when the page gave none. */
+  pageTitles?: ReadonlyMap<string, string>;
   /** Smallest side kept for a content image (a profile picture is small by nature). */
   minSide?: number;
   /** The person who started the import; they attest the rights. Null: images wait for a person. */
@@ -360,7 +385,9 @@ export async function harvestImages(
         size: file.bytes.length,
         width: w || null,
         height: h || null,
-        alt: image.alt.trim().slice(0, 300),
+        alt: (
+          image.alt.trim() || fallbackAlt(input.pageTitles?.get(image.url), image.url, cls)
+        ).slice(0, 300),
         tags: input.tags ?? [cls, "site"],
         rights: attested ? siteRights(requestedBy!, pageUrl) : null,
         createdBy: requestedBy,

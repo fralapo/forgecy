@@ -12,6 +12,7 @@ import { AUDIT_LIMITS, loadToolEnv, type Actor, type MessageRef } from "@forgecy
 import { and, brandSources, eq } from "@forgecy/db";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import { applyImport, autoImportStatus } from "./auto-import";
+import { renameFromSite, siteBrandName } from "./brand-name";
 import type { ImportContext, ImportDeps, ImportResult } from "./import/run";
 import { runSourceImport } from "./import/run";
 import { harvestImages } from "./import/images";
@@ -67,6 +68,9 @@ export async function runWebsiteCrawl(
   let fetcher: PageFetcher | undefined;
   let visual: ReturnType<typeof mergeProbes> | undefined;
   const pageLinks: string[] = [];
+  /** The first page each picture was seen on: its title is the alt when the page gave none. */
+  const pageTitles = new Map<string, string>();
+  const titles: string[] = [];
 
   try {
     // The browser reads the real colors, fonts and logos; without Chromium (or when it cannot
@@ -125,14 +129,16 @@ export async function runWebsiteCrawl(
         : null,
     ].filter((r): r is MessageRef => r !== null);
     pageLinks.push(...result.pages.flatMap((p) => p.links));
+    for (const p of result.pages) {
+      if (p.title?.trim()) titles.push(p.title);
+      for (const i of [...(p.brand?.images ?? []), ...(p.brand?.logos ?? [])])
+        if (p.title?.trim() && !pageTitles.has(i.url)) pageTitles.set(i.url, p.title.trim());
+    }
     const probes = result.pages.flatMap((p) => (p.brand ? [p.brand] : []));
     if (probes.length) visual = mergeProbes(probes);
     await updateSourceStatus(db, source.id, {
-      status: pages.length
-        ? result.stoppedEarly || result.skipped.length
-          ? "partial"
-          : "extracted"
-        : "failed",
+      // Still being read until the import below ends (it sets the final status).
+      status: pages.length ? "extracting" : "failed",
       pages,
       visual: visual ? (visual as unknown as Record<string, unknown>) : null,
       ...detail(parts),
@@ -173,6 +179,18 @@ export async function runWebsiteCrawl(
   }
   await ctx.progress?.(20);
 
+  // A name guessed from the address ("Staging g") becomes the one the site gives itself. A bonus:
+  // it never fails the import.
+  await renameFromSite(db, {
+    clientId: input.clientId,
+    requestedBy: ctx.requestedBy ?? null,
+    name: siteBrandName({
+      organizationName: visual?.organization?.name,
+      siteName: visual?.siteName,
+      titles,
+    }),
+  }).catch(() => false);
+
   // The images and the logo go into the asset library before the import, so the logo can be proposed.
   let logo: Awaited<ReturnType<typeof harvestImages>>["logo"];
   const notes: MessageRef[] = [];
@@ -185,6 +203,7 @@ export async function runWebsiteCrawl(
         logos: visual.logos,
         requestedBy: ctx.requestedBy ?? null,
         allowPrivate,
+        pageTitles,
       });
       logo = harvest.logo;
       if (harvest.failed)
@@ -197,33 +216,42 @@ export async function runWebsiteCrawl(
   await ctx.progress?.(30);
 
   // The pages are now on the source: the rest is identical to a typed-in text source.
+  // The source stays "extracting" until the end of the run: the page shows the import in
+  // progress until the automatic import below has applied and published.
   const result = await runSourceImport(deps, ctx, {
     ...input,
     ...(logo ? { logo } : {}),
     ...(notes.length ? { notes } : {}),
+    holdStatus: true,
   });
 
-  // The profiles the site links to come after the site itself, in the same run.
-  await runSocialProfiles(deps, ctx, {
-    clientId: input.clientId,
-    ...(input.language ? { language: input.language } : {}),
-    allowPrivate,
-    profiles: collectSocialProfiles([...(visual?.organization?.sameAs ?? []), ...pageLinks]),
-  });
+  let auto: Awaited<ReturnType<typeof applyImport>> | undefined;
+  try {
+    // The profiles the site links to come after the site itself, in the same run.
+    await runSocialProfiles(deps, ctx, {
+      clientId: input.clientId,
+      ...(input.language ? { language: input.language } : {}),
+      allowPrivate,
+      profiles: collectSocialProfiles([...(visual?.organization?.sameAs ?? []), ...pageLinks]),
+    });
 
-  // Applied once for the whole run (site and profiles), so one import publishes one version.
-  const auto = await applyImport(db, {
-    clientId: input.clientId,
-    requestedBy: ctx.requestedBy ?? null,
-    runId: ctx.jobId,
-  });
-  const lines = autoImportStatus(auto);
-  if (lines.length) {
+    // Applied once for the whole run (site and profiles), so one import publishes one version.
+    auto = await applyImport(db, {
+      clientId: input.clientId,
+      requestedBy: ctx.requestedBy ?? null,
+      runId: ctx.jobId,
+    });
+  } finally {
+    // Apply first, then the final status: also when a step failed, so the source never stays
+    // "extracting" (a retry of the job sets it again).
     const [row] = await db
       .select({ refs: brandSources.statusDetailRef })
       .from(brandSources)
       .where(eq(brandSources.id, source.id));
-    await updateSourceStatus(db, source.id, detail([...(row?.refs ?? []), ...lines]));
+    await updateSourceStatus(db, source.id, {
+      status: result.status ?? "extracted",
+      ...detail([...(row?.refs ?? []), ...(auto ? autoImportStatus(auto) : [])]),
+    });
   }
   return { ...result, auto };
 }

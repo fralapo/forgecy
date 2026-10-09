@@ -31,7 +31,7 @@ import {
   userActor,
   type Database,
 } from "@forgecy/db";
-import { localizedError, messageRef } from "@forgecy/i18n";
+import { englishMessage, localizedError, messageRef } from "@forgecy/i18n";
 import { emptyDocument, parseDocument } from "./document";
 import { matchField, type FieldDef } from "./fields";
 import { deepEqual, getAt, isJsonPatch, type JsonPatch } from "./json-patch";
@@ -61,8 +61,8 @@ export const AUTO_IMPORT_KINDS: ReadonlySet<BrandSourceKind> = new Set<BrandSour
 const NEEDED: readonly Permission[] = ["review", "edit_draft", "publish", "brand_identity.approve"];
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const AUTO_NOTE = "Automatic import";
 const HAND_EDITED_NOTE = "hand-edited field kept";
+const SEMANTIC = "/tokens/color/semantic/";
 const CHANGELOG_MAX = 300;
 const TITLE_MAX = 60;
 
@@ -227,7 +227,10 @@ async function publishAcknowledged(
   }
 }
 
-/** Kept to letters, digits and `._@/-`: a source title is page data, and the changelog is exported. */
+/**
+ * Kept to letters, digits and `._@/-`: a source title is page data, and the changelog is exported.
+ * Stored in English (audit, export); the versions page shows it in the reader's language.
+ */
 export function changelogFor(titles: readonly string[]): string {
   const clean = titles
     .map((t) =>
@@ -237,7 +240,11 @@ export function changelogFor(titles: readonly string[]): string {
         .slice(0, TITLE_MAX),
     )
     .filter(Boolean);
-  return `Automatic import from ${clean.join(", ") || "public pages"}`.slice(0, CHANGELOG_MAX);
+  return (
+    clean.length
+      ? englishMessage("brand.import.version.changelog", { sources: clean.join(", ") })
+      : englishMessage("brand.import.version.changelogPublic")
+  ).slice(0, CHANGELOG_MAX);
 }
 
 /** The state a proposal would be applied to: the open draft, else what a new draft would copy. */
@@ -350,6 +357,8 @@ export async function applyImport(db: Database, input: AutoImportInput): Promise
       )
       .sort(
         (a, b) =>
+          // A color role names a palette color: it goes after the colors, or its alias is unresolved.
+          Number(a.fieldPath.startsWith(SEMANTIC)) - Number(b.fieldPath.startsWith(SEMANTIC)) ||
           (b.modelConfidence ?? -1) - (a.modelConfidence ?? -1) ||
           a.createdAt.getTime() - b.createdAt.getTime(),
       );
@@ -436,7 +445,7 @@ export async function applyImport(db: Database, input: AutoImportInput): Promise
           versionId: draft.id,
           rev: draft.rev,
           changelog: changelogFor([...used].map((id) => byId.get(id)!.title)),
-          note: AUTO_NOTE,
+          note: englishMessage("brand.import.version.note"),
         },
         { auto: true, runId, ...counts },
       );
@@ -547,8 +556,10 @@ export async function undoImport(
         clientId: input.clientId,
         versionId: draft.id,
         rev: draft.rev,
-        changelog: `Undo of automatic import v${current.number}`,
-        note: "Undo of automatic import",
+        changelog: englishMessage("brand.import.version.undoChangelog", {
+          version: current.number,
+        }),
+        note: englishMessage("brand.import.version.undoNote"),
       },
       // Said explicitly: a person's undo is never taken for an automatic publish.
       { auto: false, undoOf: current.number },
@@ -569,6 +580,8 @@ export interface LatestAutoImport {
   current: boolean;
   /** A version came before it: false on a first import, which "Undo import" cannot undo. */
   previous: boolean;
+  /** A person undid it: version `by` restores version `restores` (the one before the import). */
+  undone?: { by: number; restores: number };
 }
 
 /** The last version an automatic import published for this client, or null. */
@@ -603,6 +616,20 @@ export async function latestAutoImport(
     );
   const meta = event.meta as Record<string, unknown>;
   const n = (k: string) => (typeof meta[k] === "number" ? (meta[k] as number) : 0);
+  const [undo] = await db
+    .select({ meta: auditEvents.meta })
+    .from(auditEvents)
+    .where(
+      and(
+        eq(auditEvents.clientId, clientId),
+        eq(auditEvents.entity, "brand_identity_version"),
+        eq(auditEvents.action, "brand.version.publish"),
+        sql`${auditEvents.meta}->>'undoOf' = ${String(n("number"))}`,
+      ),
+    )
+    .orderBy(desc(auditEvents.at), desc(auditEvents.id))
+    .limit(1);
+  const by = (undo?.meta as { number?: unknown } | undefined)?.number;
   return {
     versionId: event.entityId,
     number: n("number"),
@@ -613,5 +640,8 @@ export async function latestAutoImport(
     needsReview: n("needsReview"),
     current: version?.status === "published",
     previous: typeof meta.previous === "number",
+    ...(typeof by === "number" && typeof meta.previous === "number"
+      ? { undone: { by, restores: meta.previous } }
+      : {}),
   };
 }

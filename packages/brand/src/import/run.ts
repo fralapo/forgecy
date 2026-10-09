@@ -102,6 +102,8 @@ export interface ImportResult {
   discarded: number;
   ai: "done" | "skipped" | "failed";
   detail: string;
+  /** The status the import ended with; with `holdStatus` the caller still has to write it. */
+  status?: "extracted" | "partial";
   /** What the automatic import applied and published (website and social sources only). */
   auto?: AutoImportResult;
 }
@@ -297,6 +299,12 @@ export async function runSourceImport(
      * website crawl leaves it off and applies once, after the site and its profiles.
      */
     autoApply?: boolean;
+    /**
+     * Leave the source "extracting" and write only the status line: the caller (the website
+     * crawl) sets the final status once the profiles and the automatic import ran, so the page
+     * keeps showing the import in progress until it really ends.
+     */
+    holdStatus?: boolean;
   },
 ): Promise<ImportResult> {
   const { db } = deps;
@@ -538,6 +546,8 @@ export async function runSourceImport(
     source.id,
     candidates,
     promptVersion,
+    // The site's brand color and accent go to the color roles still at their starting value.
+    { colorRoles: source.kind === "website" },
   );
   const auto =
     input.autoApply && AUTO_IMPORT_KINDS.has(source.kind)
@@ -562,8 +572,9 @@ export async function runSourceImport(
   ].filter((r): r is MessageRef => r !== null);
   const summary = detail(parts);
   const status = extraction.warnings.length || ai === "failed" ? "partial" : "extracted";
-  await updateSourceStatus(db, source.id, { status, ...summary });
+  await updateSourceStatus(db, source.id, input.holdStatus ? summary : { status, ...summary });
   return {
+    status,
     sourceId: source.id,
     pages: extraction.pages.length,
     candidates: candidates.length,

@@ -35,7 +35,7 @@ import {
   updateSourceStatus,
   type VersionRow,
 } from "../src/service";
-import { hexToDtcg, type TokenTree } from "../src/tokens";
+import { hexToDtcg, tokenColorHex, type TokenTree } from "../src/tokens";
 
 const dbUrl = process.env.FORGECY_TEST_DATABASE_URL;
 
@@ -151,6 +151,7 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
       autoApply?: boolean;
       jobId?: string;
       title?: string;
+      holdStatus?: boolean;
     } = {},
   ) => {
     const s = await addSource(db, anna, {
@@ -171,7 +172,12 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
         maxAttempts: 1,
         requestedBy: opts.requestedBy === undefined ? anna.id : opts.requestedBy,
       },
-      { clientId, sourceId: s.id, autoApply: opts.autoApply ?? true },
+      {
+        clientId,
+        sourceId: s.id,
+        autoApply: opts.autoApply ?? true,
+        ...(opts.holdStatus ? { holdStatus: true } : {}),
+      },
     );
     const [source] = await db.select().from(brandSources).where(eq(brandSources.id, s.id));
     return { result, source: source!, jobId };
@@ -260,6 +266,8 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
     });
     const doc = parseDocument(v1!.document);
     expect(doc.strategy.positioning?.value).toBe("Il deodorante bifase del Sud Italia");
+    // The site's navy is the brand color now; it was the starting ink.
+    expect(tokenColorHex(v1!.tokens as TokenTree, "color.semantic.brand-primary")).toBe("#1D3A8A");
     // The open checks were acknowledged, and exactly those.
     const open = publishChecks(doc, v1!.tokens as TokenTree, {}).map((c) => c.key);
     expect(v1!.acknowledgedChecks.length).toBeGreaterThan(0);
@@ -330,6 +338,17 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
     const doc = parseDocument(v3.document);
     expect(doc.strategy.oneLiner?.value).toBe("Written by Anna");
     expect(doc.strategy.values.map((v) => v.value.name)).toContain("Famiglia");
+  });
+
+  it("with holdStatus the source stays extracting, with its status line, until the caller ends it", async () => {
+    const clientId = await mkClient("hold");
+    const { source, result } = await runImport(clientId, [POSITIONING], {
+      autoApply: false,
+      holdStatus: true,
+    });
+    expect(source.status).toBe("extracting");
+    expect(source.statusDetailRef?.map((r) => r.key)).toContain("brand.import.status.proposals");
+    expect(result.status).toBe("extracted");
   });
 
   it("leaves the proposals pending when nobody started the run", async () => {
@@ -460,6 +479,7 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
   it("undoes an automatic import back to the version before it", async () => {
     const before = await latestAutoImport(db, anna, main);
     expect(before).toMatchObject({ number: 3, current: true, previous: true });
+    expect(before!.undone).toBeUndefined();
     const v3 = before!.versionId;
 
     expect(await refOf(undoImport(db, agent, { clientId: main, versionId: v3 }))).toBe(
@@ -501,7 +521,12 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
       (e) => e.entityId === v4.id,
     );
     expect(undoPublish!.meta).toMatchObject({ auto: false, undoOf: 3 });
-    expect(await latestAutoImport(db, anna, main)).toMatchObject({ number: 3, current: false });
+    // The card says what happened: v5 undid v3 and restores v2.
+    expect(await latestAutoImport(db, anna, main)).toMatchObject({
+      number: 3,
+      current: false,
+      undone: { by: 5, restores: 2 },
+    });
 
     // v4 was published by a person, not by an import.
     expect(await refOf(undoImport(db, anna, { clientId: main, versionId: v4.id }))).toBe(
@@ -626,6 +651,47 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
     const result = await applyImport(db, { clientId, requestedBy: anna.id, runId });
     expect(result).toMatchObject({ accepted: 0, skippedHandEdited: 1 });
     expect((await reference())[edited]!.$value).toEqual(hexToDtcg("#000000"));
+  });
+
+  it("sets only the color roles still at their starting value, once", async () => {
+    const clientId = await mkClient("roles");
+    // A person chose the brand color by hand before any import.
+    const draft = await ensureDraft(db, anna, clientId);
+    const tokens = structuredClone(draft.tokens) as {
+      color: { semantic: Record<string, unknown> };
+    };
+    tokens.color.semantic["brand-primary"] = { $value: "{color.reference.gray}" };
+    await saveDraftTokens(db, anna, {
+      clientId,
+      versionId: draft.id,
+      rev: draft.rev,
+      tokens: tokens as unknown as TokenTree,
+    });
+    const visual: SiteProbe = {
+      ...VISUAL,
+      themeColor: undefined,
+      cssVars: [
+        { name: "--brand-primary", hex: "#1d3a8a" },
+        { name: "--accent", hex: "#c0392b" },
+      ],
+    };
+    const { jobId } = await runImport(clientId, [POSITIONING], { visual });
+    const roles = (await proposalsOf(jobId)).filter((p) =>
+      p.fieldPath.startsWith("/tokens/color/semantic/"),
+    );
+    // The brand color is the person's: only the accent is proposed, and applied.
+    expect(roles.map((p) => p.fieldPath)).toEqual(["/tokens/color/semantic/accent"]);
+    const [v] = await versionsOf(clientId);
+    expect(tokenColorHex(v!.tokens as TokenTree, "color.semantic.brand-primary")).toBe("#5C5C5C");
+    expect(tokenColorHex(v!.tokens as TokenTree, "color.semantic.accent")).toBe("#C0392B");
+
+    // Imported again: the accent is no longer the starting value, nothing is proposed for it.
+    const again = await runImport(clientId, [], { visual });
+    expect(
+      (await proposalsOf(again.jobId)).filter((p) =>
+        p.fieldPath.startsWith("/tokens/color/semantic/"),
+      ),
+    ).toEqual([]);
   });
 
   it("keeps a value a person corrected with Accept with changes", async () => {

@@ -5,10 +5,18 @@ import { englishMessage, messageRef, type MessageKey, type MessageValues } from 
 import { and, brandIdentityProposals, eq, inArray, or, type Database } from "@forgecy/db";
 import { BRAND_ANALYST_PROMPT_VERSION, pagePriority } from "./analyst";
 import { fields, matchField } from "../fields";
-import { getAt, isJsonPatch, type JsonPatch } from "../json-patch";
-import { cleanFamily, knownColors, knownFonts, SITE_LOCATORS } from "./site-colors";
+import { deepEqual, getAt, isJsonPatch, type JsonPatch } from "../json-patch";
+import { checkContrast, WCAG } from "@forgecy/ui/tokens";
+import { cleanFamily, isNeutral, knownColors, knownFonts, SITE_LOCATORS } from "./site-colors";
 import { proposeChange, type ProposeInput } from "../service";
-import { hexToDtcg, normalizeHex, referenceColors, tokenNameFrom } from "../tokens";
+import {
+  defaultTokens,
+  hexToDtcg,
+  normalizeHex,
+  referenceColors,
+  tokenColorHex,
+  tokenNameFrom,
+} from "../tokens";
 import { getDraftState } from "./draft-tokens";
 import { MIN_QUOTE_CHARS } from "./gate";
 import { normalizeText } from "./verify";
@@ -359,11 +367,15 @@ export async function addSourceProposals(
   sourceId: string,
   candidates: readonly CandidateProposal[],
   promptVersion: string = BRAND_ANALYST_PROMPT_VERSION,
+  opts: { colorRoles?: boolean } = {},
 ): Promise<{ created: number; skipped: number }> {
   let created = 0;
   let skipped = 0;
   const seen = new Set<string>();
   const state = await getDraftState(db, clientId);
+  // Palette name of each hex (in the draft, or proposed below), and the colors in rank order.
+  const nameOfHex = new Map(referenceColors(state.tokens).map((c) => [c.hex, c.name]));
+  const ranked: string[] = [];
   const known = await knownItems(
     db,
     clientId,
@@ -383,6 +395,7 @@ export async function addSourceProposals(
     if (c.kind === "color") {
       const v = c.value as { name: string; hex: string; usage?: string };
       const hex = normalizeHex(v.hex);
+      if (hex && !ranked.includes(hex)) ranked.push(hex);
       if (!hex || existingHex.has(hex) || seen.has(`color:${hex}`)) {
         skipped++;
         continue;
@@ -433,11 +446,87 @@ export async function addSourceProposals(
         auditMeta: { promptVersion, model: c.agentModel ?? null },
       });
       created++;
+      if (c.kind === "color") {
+        const hex = (input.value as { $value: { hex: string } }).$value.hex;
+        nameOfHex.set(hex, input.path.split("/").pop()!);
+      }
     } catch (err) {
       if (err instanceof ForgecyError && (err.code === "validation" || err.code === "conflict"))
         skipped++;
       else throw err;
     }
   }
+  if (opts.colorRoles)
+    for (const role of await colorRoles(db, clientId, state, ranked, nameOfHex))
+      try {
+        await proposeChange(db, agent, {
+          clientId,
+          path: `/tokens/color/semantic/${role.role}`,
+          op: "set",
+          value: { $value: `{color.reference.${role.name}}` },
+          ...rationale("brand.import.rationale.colorRole"),
+          evidence: [{ sourceId, locator: SITE_LOCATORS.styles }],
+          auditMeta: { promptVersion, model: null },
+        });
+        created++;
+      } catch (err) {
+        if (err instanceof ForgecyError && (err.code === "validation" || err.code === "conflict"))
+          skipped++;
+        else throw err;
+      }
   return { created, skipped };
+}
+
+/**
+ * The brand color and the accent from the site's palette, for the roles that still hold the
+ * value every identity starts with (a role a person or an earlier import set is left alone):
+ * the brand color is the best-ranked chromatic color readable with its text and on the
+ * background, the accent the next chromatic one. Proposals like any other, so they go through
+ * the same review, automatic import and provenance rules.
+ */
+export async function colorRoles(
+  db: Database,
+  clientId: string,
+  state: DraftState,
+  ranked: readonly string[],
+  nameOfHex: ReadonlyMap<string, string>,
+): Promise<Array<{ role: "brand-primary" | "accent"; name: string }>> {
+  const starting = { document: state.document, tokens: defaultTokens() };
+  const untouched = (role: string) =>
+    deepEqual(
+      getAt(state, `/tokens/color/semantic/${role}`),
+      getAt(starting, `/tokens/color/semantic/${role}`),
+    );
+  const pending = new Set(
+    (
+      await db
+        .select({ fieldPath: brandIdentityProposals.fieldPath })
+        .from(brandIdentityProposals)
+        .where(
+          and(
+            eq(brandIdentityProposals.clientId, clientId),
+            eq(brandIdentityProposals.status, "proposed"),
+          ),
+        )
+    ).map((p) => p.fieldPath),
+  );
+  const open = (role: string) => untouched(role) && !pending.has(`/tokens/color/semantic/${role}`);
+  const chromatic = ranked.filter((hex) => nameOfHex.has(hex) && !isNeutral(hex));
+  const onBrand = tokenColorHex(state.tokens, "color.semantic.on-brand-primary");
+  const background = tokenColorHex(state.tokens, "color.semantic.background");
+  const readable = (hex: string) =>
+    !!onBrand &&
+    !!background &&
+    checkContrast(hex, onBrand) >= WCAG.largeText &&
+    checkContrast(hex, background) >= WCAG.largeText;
+  const brand = chromatic.find(readable);
+  const accent = chromatic.find((hex) => hex !== brand);
+  return [
+    ...(brand && open("brand-primary")
+      ? [{ role: "brand-primary" as const, name: nameOfHex.get(brand)! }]
+      : []),
+    ...(accent && open("accent")
+      ? [{ role: "accent" as const, name: nameOfHex.get(accent)! }]
+      : []),
+  ];
 }
