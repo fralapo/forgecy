@@ -16,3 +16,6 @@ next-env.d.ts
 # Local artifacts that must never be committed
 *.rdb
 *.whl
+
+# Local scratch workspace (agent plans, reviews, reports)
+.superpowers/
