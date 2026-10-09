@@ -195,6 +195,8 @@ describe.skipIf(!dbUrl)("social profiles (integration)", () => {
     });
 
     expect(results.map((r) => r.pages)).toEqual([1, 1]);
+    // Inside a crawl the profiles never apply themselves: the crawl applies once, at its end.
+    expect(results.every((r) => r.auto === undefined)).toBe(true);
     const sources = await db.select().from(brandSources).where(eq(brandSources.clientId, clientId));
     const byKind = Object.fromEntries(sources.map((s) => [s.kind, s]));
     // Readable bios: extracted, gated proposals (the invented mission is gone), website prompt.

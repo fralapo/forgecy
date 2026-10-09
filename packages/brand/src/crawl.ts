@@ -11,6 +11,7 @@ import { auditUserAgent, createHtmlFetcher, type PageFetcher } from "@forgecy/au
 import { AUDIT_LIMITS, loadToolEnv, type Actor, type MessageRef } from "@forgecy/core";
 import { and, brandSources, eq } from "@forgecy/db";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
+import { applyImport, autoImportStatus } from "./auto-import";
 import type { ImportContext, ImportDeps, ImportResult } from "./import/run";
 import { runSourceImport } from "./import/run";
 import { harvestImages } from "./import/images";
@@ -209,7 +210,22 @@ export async function runWebsiteCrawl(
     allowPrivate,
     profiles: collectSocialProfiles([...(visual?.organization?.sameAs ?? []), ...pageLinks]),
   });
-  return result;
+
+  // Applied once for the whole run (site and profiles), so one import publishes one version.
+  const auto = await applyImport(db, {
+    clientId: input.clientId,
+    requestedBy: ctx.requestedBy ?? null,
+    runId: ctx.jobId,
+  });
+  const lines = autoImportStatus(auto);
+  if (lines.length) {
+    const [row] = await db
+      .select({ refs: brandSources.statusDetailRef })
+      .from(brandSources)
+      .where(eq(brandSources.id, source.id));
+    await updateSourceStatus(db, source.id, detail([...(row?.refs ?? []), ...lines]));
+  }
+  return { ...result, auto };
 }
 
 /** A site rarely lists more than a handful of real profiles; the rest is noise. */

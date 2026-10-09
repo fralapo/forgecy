@@ -1,7 +1,8 @@
 /**
  * The import job: file → pages, colors, fonts → Brand Analyst → proposals.
  * Every extracted element becomes a proposal in state `proposed`, citing the
- * source and the page; nothing becomes official without a person.
+ * source and the page. Documents wait for a person; website and social imports
+ * can apply themselves on behalf of the person who started them (auto-import.ts).
  */
 import { ForgecyError, loadToolEnv, type Actor, type MessageRef } from "@forgecy/core";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
@@ -40,6 +41,12 @@ import { parseSiteProbe } from "./probe-schema";
 import { isSocialKind, readSocialSource, type SocialNet } from "./social";
 import { knownColors, knownFonts, SITE_LOCATORS } from "./site-colors";
 import { updateSourceStatus } from "../service";
+import {
+  applyImport,
+  autoImportStatus,
+  AUTO_IMPORT_KINDS,
+  type AutoImportResult,
+} from "../auto-import";
 
 const msg = (key: MessageKey & `brand.import.${string}`, values?: MessageValues) =>
   messageRef(key, values);
@@ -86,6 +93,8 @@ export interface ImportResult {
   discarded: number;
   ai: "done" | "skipped" | "failed";
   detail: string;
+  /** What the automatic import applied and published (website and social sources only). */
+  auto?: AutoImportResult;
 }
 
 async function readAll(stream: AsyncIterable<unknown>): Promise<Uint8Array> {
@@ -274,6 +283,11 @@ export async function runSourceImport(
     logo?: { sourceId: string; image: { url: string } };
     /** Lines for the source status from steps that ran before the import (e.g. images not saved). */
     notes?: MessageRef[];
+    /**
+     * Apply and publish this run's proposals at the end (website and social sources only). The
+     * website crawl leaves it off and applies once, after the site and its profiles.
+     */
+    autoApply?: boolean;
   },
 ): Promise<ImportResult> {
   const { db } = deps;
@@ -479,6 +493,14 @@ export async function runSourceImport(
     candidates,
     promptVersion,
   );
+  const auto =
+    input.autoApply && AUTO_IMPORT_KINDS.has(source.kind)
+      ? await applyImport(db, {
+          clientId: input.clientId,
+          requestedBy: ctx.requestedBy ?? null,
+          runId: ctx.jobId,
+        })
+      : undefined;
   await ctx.progress?.(95);
   const parts = [
     extraction.pages.length
@@ -490,6 +512,7 @@ export async function runSourceImport(
     ...(input.notes ?? []),
     ...extraction.warnings,
     aiNote,
+    ...(auto ? autoImportStatus(auto) : []),
   ].filter((r): r is MessageRef => r !== null);
   const summary = detail(parts);
   const status = extraction.warnings.length || ai === "failed" ? "partial" : "extracted";
@@ -503,5 +526,6 @@ export async function runSourceImport(
     discarded,
     ai,
     detail: summary.statusDetail,
+    ...(auto ? { auto } : {}),
   };
 }
