@@ -206,9 +206,12 @@ export function buildProposalPatch(
       if (input.op === "append") {
         if (rest !== "" && rest !== "/-")
           invalid("brand.errors.useAppend", { pointer: field.pointer });
-        let raw = parseValue(field, input.value);
-        if (field.shape === "object-list" && isObject(raw) && !raw.id)
-          raw = { ...raw, id: newItemId() };
+        // Items of an object list carry an id the proposer cannot know (logo variants require it).
+        const given =
+          field.shape === "object-list" && isObject(input.value) && !input.value.id
+            ? { ...input.value, id: newItemId() }
+            : input.value;
+        const raw = parseValue(field, given);
         const key = field.uniqueBy?.(raw);
         const existing = key
           ? items.findIndex((it) => field.uniqueBy?.(itemValue(it)) === key)
