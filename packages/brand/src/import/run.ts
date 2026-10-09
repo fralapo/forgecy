@@ -3,10 +3,18 @@
  * Every extracted element becomes a proposal in state `proposed`, citing the
  * source and the page; nothing becomes official without a person.
  */
-import { ForgecyError, type Actor, type MessageRef } from "@forgecy/core";
+import { ForgecyError, loadToolEnv, type Actor, type MessageRef } from "@forgecy/core";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import type { AiGateway } from "@forgecy/ai";
-import { and, brandIdentityProposals, brandSources, clients, eq, type Database } from "@forgecy/db";
+import {
+  and,
+  brandIdentityProposals,
+  brandSources,
+  clients,
+  eq,
+  sql,
+  type Database,
+} from "@forgecy/db";
 import type { StorageDriver } from "@forgecy/files";
 import {
   addSourceProposals,
@@ -29,6 +37,7 @@ import {
 } from "./analyst";
 import { gateCandidates } from "./gate";
 import { parseSiteProbe } from "./probe-schema";
+import { isSocialKind, readSocialSource } from "./social";
 import { knownColors, knownFonts, SITE_LOCATORS } from "./site-colors";
 import { updateSourceStatus } from "../service";
 
@@ -277,13 +286,15 @@ export async function runSourceImport(
   if (!client) throw new ForgecyError("not_found", "Client not found");
 
   const agent: Actor = { type: "agent", role: "brand_analyst", runId: ctx.jobId };
-  // A retry of the same run replaces what the failed attempt left pending.
+  // A retry replaces what the failed attempt left pending for THIS source only: one job imports
+  // several sources in turn (the site, then its social profiles) under the same run id.
   await db
     .delete(brandIdentityProposals)
     .where(
       and(
         eq(brandIdentityProposals.runId, ctx.jobId),
         eq(brandIdentityProposals.status, "proposed"),
+        sql`${brandIdentityProposals.evidence} @> ${JSON.stringify([{ sourceId: source.id }])}::jsonb`,
       ),
     );
   await updateSourceStatus(db, source.id, {
@@ -333,7 +344,32 @@ export async function runSourceImport(
     await updateSourceStatus(db, source.id, { pages: extraction.pages });
     candidates = deterministic(extraction, source.title, detected.type, source.id);
   } else {
-    extraction = { pages: source.pages ?? [], colors: [], fonts: [], warnings: [] };
+    let pages = source.pages ?? [];
+    // A profile link added by hand has an address and nothing read yet.
+    if (isSocialKind(source.kind) && source.url && !pages.length) {
+      const read = await readSocialSource(
+        { db, storage: deps.storage },
+        { id: source.id, url: source.url },
+        {
+          clientId: input.clientId,
+          requestedBy: ctx.requestedBy ?? null,
+          allowPrivate: loadToolEnv().FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS,
+        },
+      );
+      if (!read.pages.length)
+        return {
+          sourceId: source.id,
+          pages: 0,
+          candidates: 0,
+          proposals: 0,
+          skipped: 0,
+          discarded: 0,
+          ai: "skipped",
+          detail: read.detail,
+        };
+      pages = read.pages;
+    }
+    extraction = { pages, colors: [], fonts: [], warnings: [] };
     candidates = deterministic(extraction, source.title, "text", source.id);
   }
   // What the browser read on a website: its colors and fonts are proposed directly, and are the
@@ -342,7 +378,7 @@ export async function runSourceImport(
   if (visual) candidates.push(...visualCandidates(visual, input.logo));
   // Documents keep their own checks (their hex values come from the text); only a site's items
   // are verified against the page and the probe, so imports of brand books behave as before.
-  const website = source.kind === "website";
+  const website = source.kind === "website" || isSocialKind(source.kind);
   const promptVersion = website ? WEBSITE_ANALYST_PROMPT_VERSION : BRAND_ANALYST_PROMPT_VERSION;
   await ctx.progress?.(30);
 

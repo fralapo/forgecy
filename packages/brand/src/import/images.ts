@@ -210,6 +210,10 @@ export interface HarvestInput {
   /** Logo candidates, best first: the first one that downloads and validates is kept. */
   logos?: ProbeImage[];
   max?: number;
+  /** Replaces the class and "site" tags, for pictures that are not the site's own (a social profile image). */
+  tags?: string[];
+  /** Smallest side kept for a content image (a profile picture is small by nature). */
+  minSide?: number;
   /** The person who started the import; they attest the rights. Null: images wait for a person. */
   requestedBy?: string | null;
   allowPrivate?: boolean;
@@ -273,7 +277,7 @@ export async function harvestImages(
     }
     const { w, h, whiteBorderRatio, paletteSize } = look;
     // The size on the page is what the browser drew; only the decoded one counts here.
-    const min = isLogo ? 16 : IMAGE_LIMITS.minSide;
+    const min = isLogo ? 16 : (input.minSide ?? IMAGE_LIMITS.minSide);
     if (!svg && (w < min || h < min)) return null;
     if (totalBytes + file.bytes.length > IMAGE_LIMITS.totalBytes) return null;
 
@@ -320,7 +324,7 @@ export async function harvestImages(
         width: w || null,
         height: h || null,
         alt: image.alt.trim().slice(0, 300),
-        tags: [cls, "site"],
+        tags: input.tags ?? [cls, "site"],
         rights: requestedBy ? siteRights(requestedBy, pageUrl) : null,
         createdBy: requestedBy,
         ...(requestedBy ? { decidedBy: requestedBy, decidedAt: now } : {}),

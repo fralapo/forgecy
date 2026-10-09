@@ -8,14 +8,16 @@ import { createPinnedFetch, CrawlError, createHostCheck } from "@forgecy/audit";
 import { createBrowserFetcher, resolveChromiumPath } from "@forgecy/audit/crawl/browser";
 import { crawlSite } from "@forgecy/audit/crawl/crawler";
 import { auditUserAgent, createHtmlFetcher, type PageFetcher } from "@forgecy/audit/crawl/fetcher";
-import { AUDIT_LIMITS, loadToolEnv, type MessageRef } from "@forgecy/core";
+import { AUDIT_LIMITS, loadToolEnv, type Actor, type MessageRef } from "@forgecy/core";
 import { and, brandSources, eq } from "@forgecy/db";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import type { ImportContext, ImportDeps, ImportResult } from "./import/run";
 import { runSourceImport } from "./import/run";
 import { harvestImages } from "./import/images";
+import { readSocialSource, type SocialKind, type SocialNet } from "./import/social";
 import { mergeProbes } from "./probe-merge";
-import { updateSourceStatus } from "./service";
+import { findOrCreateSocialSource, updateSourceStatus } from "./service";
+import { socialProfileOf } from "./social-url";
 
 export { mergeProbes } from "./probe-merge";
 
@@ -63,6 +65,7 @@ export async function runWebsiteCrawl(
   const hostCheck = createHostCheck({ allowPrivate });
   let fetcher: PageFetcher | undefined;
   let visual: ReturnType<typeof mergeProbes> | undefined;
+  const pageLinks: string[] = [];
 
   try {
     // The browser reads the real colors, fonts and logos; without Chromium (or when it cannot
@@ -120,6 +123,7 @@ export async function runWebsiteCrawl(
         ? msg("brand.import.status.crawlSkipped", { count: result.skipped.length })
         : null,
     ].filter((r): r is MessageRef => r !== null);
+    pageLinks.push(...result.pages.flatMap((p) => p.links));
     const probes = result.pages.flatMap((p) => (p.brand ? [p.brand] : []));
     if (probes.length) visual = mergeProbes(probes);
     await updateSourceStatus(db, source.id, {
@@ -192,9 +196,95 @@ export async function runWebsiteCrawl(
   await ctx.progress?.(30);
 
   // The pages are now on the source: the rest is identical to a typed-in text source.
-  return runSourceImport(deps, ctx, {
+  const result = await runSourceImport(deps, ctx, {
     ...input,
     ...(logo ? { logo } : {}),
     ...(notes.length ? { notes } : {}),
   });
+
+  // The profiles the site links to come after the site itself, in the same run.
+  await runSocialProfiles(deps, ctx, {
+    clientId: input.clientId,
+    ...(input.language ? { language: input.language } : {}),
+    allowPrivate,
+    profiles: collectSocialProfiles([...(visual?.organization?.sameAs ?? []), ...pageLinks]),
+  });
+  return result;
+}
+
+/** A site rarely lists more than a handful of real profiles; the rest is noise. */
+const MAX_SOCIAL_PROFILES = 4;
+
+/** Profile links among the given addresses, canonical, without duplicates; share and post links drop out. */
+export function collectSocialProfiles(urls: string[]): Array<{ kind: SocialKind; url: string }> {
+  const seen = new Map<string, { kind: SocialKind; url: string }>();
+  for (const raw of urls) {
+    const profile = socialProfileOf(raw);
+    if (profile && !seen.has(profile.url)) seen.set(profile.url, profile);
+  }
+  return [...seen.values()].slice(0, MAX_SOCIAL_PROFILES);
+}
+
+/**
+ * Registers and imports each public social profile as its own source, one after the other. A
+ * profile that cannot be read leaves its source `partial` with the reason; it never stops the
+ * others or the site import that already ran.
+ */
+export async function runSocialProfiles(
+  deps: ImportDeps,
+  ctx: ImportContext,
+  input: {
+    clientId: string;
+    language?: string;
+    allowPrivate: boolean;
+    profiles: Array<{ kind: SocialKind; url: string }>;
+    net?: Pick<SocialNet, "hostCheck" | "timeoutMs"> & { fetchImpl?: typeof fetch };
+  },
+): Promise<ImportResult[]> {
+  const { db } = deps;
+  const agent: Actor = { type: "agent", role: "brand_analyst", runId: ctx.jobId };
+  // Progress already moved on with the site; a profile restarting at 30% would only confuse it.
+  const quiet: ImportContext = { ...ctx, progress: async () => undefined };
+  const results: ImportResult[] = [];
+  for (const profile of input.profiles) {
+    let sourceId: string | undefined;
+    try {
+      const { source, created } = await findOrCreateSocialSource(db, agent, {
+        clientId: input.clientId,
+        ...profile,
+      });
+      sourceId = source.id;
+      // A profile already read keeps what it has: its proposals were made, and may have been judged.
+      if (!created && source.pages?.length) continue;
+      await updateSourceStatus(db, source.id, {
+        status: "extracting",
+        ...detail([msg("brand.import.status.reading")]),
+      });
+      const read = await readSocialSource(
+        { db, storage: deps.storage },
+        { id: source.id, url: profile.url },
+        {
+          clientId: input.clientId,
+          requestedBy: ctx.requestedBy ?? null,
+          allowPrivate: input.allowPrivate,
+          ...input.net,
+        },
+      );
+      if (!read.pages.length) continue;
+      results.push(
+        await runSourceImport(deps, quiet, {
+          clientId: input.clientId,
+          sourceId: source.id,
+          ...(input.language ? { language: input.language } : {}),
+        }),
+      );
+    } catch {
+      if (sourceId)
+        await updateSourceStatus(db, sourceId, {
+          status: "partial",
+          ...detail([msg("brand.import.status.socialUnreachable")]),
+        }).catch(() => undefined);
+    }
+  }
+  return results;
 }

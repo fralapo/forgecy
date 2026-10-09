@@ -60,6 +60,7 @@ import {
   type EvidenceItem,
   type ProposalOp,
 } from "./proposals";
+import { socialProfileOf, type SocialKind } from "./social-url";
 import { defaultTokens, removedTokenPaths, validateTokens, type TokenTree } from "./tokens";
 
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
@@ -1126,6 +1127,41 @@ export async function findOrCreateWebsiteSource(
     url: input.websiteUrl,
     status: "pending",
   });
+}
+
+/**
+ * The client's source for a public social profile, or a new `pending` one. The profile is the
+ * same when it normalizes to the same address, so a link typed by hand and the one found on the
+ * site meet in one row. `created` is false when the row already existed.
+ */
+export async function findOrCreateSocialSource(
+  db: Database,
+  actor: Actor,
+  input: { clientId: string; kind: SocialKind; url: string },
+): Promise<{ source: SourceRow; created: boolean }> {
+  assertCan(actor, "view", input.clientId);
+  const same = (url: string | null) =>
+    !!url && (socialProfileOf(url)?.url ?? url) === (socialProfileOf(input.url)?.url ?? input.url);
+  const rows = await db
+    .select()
+    .from(brandSources)
+    .where(
+      and(
+        eq(brandSources.clientId, input.clientId),
+        eq(brandSources.kind, input.kind),
+        isNull(brandSources.removedAt),
+      ),
+    );
+  const existing = rows.find((r) => same(r.url));
+  if (existing) return { source: existing, created: false };
+  const source = await addSource(db, actor, {
+    clientId: input.clientId,
+    kind: input.kind,
+    title: `${input.kind} ${new URL(input.url).pathname.replace(/^\/|\/$/g, "")}`.trim(),
+    url: input.url,
+    status: "pending",
+  });
+  return { source, created: true };
 }
 
 /** Registers a source. Agents may add their own observations as sources. */
