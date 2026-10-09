@@ -181,7 +181,8 @@ describe("resolveMediaRoot", () => {
   });
   it("keeps absolute roots and falls back to the cwd outside a checkout", () => {
     expect(resolveMediaRoot("/data/media")).toBe("/data/media");
-    expect(resolveMediaRoot("media", "/")).toBe("/media");
+    // path.resolve: "/media" on Linux, "<drive>:\media" on Windows.
+    expect(resolveMediaRoot("media", "/")).toBe(path.resolve("/media"));
   });
 });
 
