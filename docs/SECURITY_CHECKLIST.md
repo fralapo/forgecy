@@ -239,10 +239,11 @@ Decisions and checks nobody has made yet; each is a known limitation until it is
 - [ ] Per-client access control: any active human can read any client by id
       (ADR 0014). It needs a grants table, a resolver in `can()` and a filter in
       every query.
-- [ ] Carousel template zip import (`unzipTemplatePackage` in
-      `packages/carousel/src/node.ts`) still trusts the sizes the archive declares
-      (fflate `filter`); switch it to `readZipParts` (`packages/files/src/safe-zip.ts`).
-      Template reuse across clients by key and version was only scoped in ADR 0015.
+- [ ] Template reuse across clients by key and version was only scoped in ADR 0015.
+      (Template ZIPs themselves are now read through `readZipParts`.)
+- [ ] Image generation logs no cost when it ends in an error, even if the provider
+      already charged (images refused after generation or over the size cap):
+      `jobs_log` and the budget under-count those runs (`packages/ai/src/gateway.ts`).
 - [ ] `packages/client-transfer/src/export.ts` does not enforce the import's JSON
       caps (64 MiB per entry, 256 MiB per package): a very large client exports
       fine and then fails import as unsafe.

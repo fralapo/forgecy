@@ -746,6 +746,8 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
           };
         } catch (e) {
           const err = classifyError(e, cand.provider);
+          // Known under-count: no cost is logged on an error, even when the provider already
+          // charged (results refused after generation, over the size cap). SECURITY_CHECKLIST §7.
           await ledger.record({
             ...baseEntry(kind, req),
             provider: cand.provider,
