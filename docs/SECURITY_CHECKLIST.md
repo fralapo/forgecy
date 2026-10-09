@@ -270,26 +270,33 @@ Decisions and checks nobody has made yet; each is a known limitation until it is
       every query.
 - [ ] Template reuse across clients by key and version was only scoped in ADR 0015.
       (Template ZIPs themselves are now read through `readZipParts`.)
-- [ ] Image generation logs no cost when it ends in an error, even if the provider
-      already charged (images refused after generation or over the size cap):
-      `jobs_log` and the budget under-count those runs (`packages/ai/src/gateway.ts`).
+- [x] Image generation logs the cost of a run that fails after the provider already
+      charged (a failed job, no image returned, a refusal, or a later variant failing):
+      the error carries its `usage`, and the `jobs_log` error row and the budget count it
+      (`packages/ai/src/gateway.ts`). A provider answer over the size cap or not valid JSON
+      carries no usage and is still logged at zero.
 - [x] `packages/client-transfer/src/export.ts` enforces the import's JSON caps
       (64 MiB per entry, 256 MiB per package): a client too large for one package
       fails the export with a clear message instead of failing import as unsafe.
       The integration test needs `FORGECY_TEST_DATABASE_URL`; it was not run where it
       was written (no database available), so run it once in CI or locally.
-- [ ] A brand proposal authored by a person who does not exist on the target
-      installation fails the whole client import on the `brand_proposals_author`
-      CHECK.
+- [x] A brand proposal authored by a person who does not exist on the target
+      installation is left out of the client import (the `brand_proposals_author`
+      CHECK needs a person for a user's proposal, and crediting it to somebody else
+      would be false); the rest imports, and `ImportOutcome.skipped` and the import's
+      audit event count the rows left out.
 - [ ] The catalog Office guard (`packages/catalog/src/parsers/zip.ts`) counts every
       `.xml` and `.rels` part against a 50 MB bound, so it may refuse a huge
       spreadsheet with pivot caches.
-- [ ] Client import remaps the `uuid[]` columns (`product_ids`, `audience_ids`,
-      `parent_ids`, `excluded_finding_ids`) but does not check that the ids
-      belong to the same client.
-- [ ] `pnpm forgecy health` checks `WORKER_HEALTH_PORT` when only that is set in
-      `.env`, while Docker publishes the worker on `FORGECY_WORKER_HEALTH_PORT`
-      (default 3001): set the second one too.
+- [x] Client import filters the `uuid[]` columns that point at rows (`product_ids` on
+      pillars, rubrics and plan items, `parent_ids` of findings,
+      `excluded_finding_ids` of reports) like a soft reference: after the remap only
+      ids of rows written for the same client survive, the rest are dropped. A new
+      `uuid[]` column needs an entry in `ARRAY_REFS` (`graph.ts`) or the graph fails.
+      (`audience_ids` are text segment ids of the Brand Identity, not row ids.)
+- [x] `pnpm forgecy health` checks the worker on the port Docker publishes
+      (`FORGECY_WORKER_HEALTH_PORT`, default 3001) and falls back to
+      `WORKER_HEALTH_PORT` (`pnpm dev`) only if that does not answer healthy.
 - [ ] The web port is published on all interfaces (`FORGECY_PORT`), so plain
       http on `:3000` reaches the app without going through Caddy. Firewall it
       or bind it to `127.0.0.1` when using `--profile https`.
