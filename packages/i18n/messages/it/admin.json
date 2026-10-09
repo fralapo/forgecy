@@ -2,6 +2,7 @@
   "nav": {
     "label": "Sezioni delle impostazioni",
     "general": "Generali",
+    "clientAccess": "Accesso ai clienti",
     "aiProviders": "Provider AI",
     "aiPolicies": "Policy AI e budget",
     "smtp": "Email (SMTP)",
@@ -397,5 +398,21 @@
       "failed": "Il caricamento non è riuscito. Riprova.",
       "cancelled": "Caricamento annullato."
     }
+  },
+  "clientAccess": {
+    "title": "Accesso ai clienti",
+    "description": "Scegli quali clienti ogni persona può vedere e su quali può lavorare.",
+    "adminNote": "Gli Admin vedono tutti i clienti e non sono in elenco. Una persona senza clienti assegnati non ne vede nessuno. Chi crea un cliente ottiene l’accesso a quel cliente.",
+    "people": "Persone",
+    "noPeople": "Non c’è ancora nessuno da assegnare: tutti gli account sono Admin.",
+    "noClients": "Non ci sono ancora clienti.",
+    "inactive": "Disattivato",
+    "clientCount": "{count, plural, =0 {Nessun cliente} one {# cliente} other {# clienti}}",
+    "clientsFor": "Clienti che {name} può aprire",
+    "archivedClient": "{name} (archiviato)",
+    "prospectClient": "{name} (prospect)",
+    "granted": "Accesso concesso.",
+    "revoked": "Accesso rimosso.",
+    "invalid": "La richiesta non è valida. Ricarica la pagina e riprova."
   }
 }

@@ -1,8 +1,8 @@
 import { buildCarouselSchema, NEUTRAL_BRAND } from "@forgecy/carousel";
 import { dbTemplateSource } from "@forgecy/carousel/catalog";
 import { ExportCancelledError, exportCarousel } from "@forgecy/carousel/export";
-import type { Actor, ReportVariant } from "@forgecy/core";
-import { auditReports, eq } from "@forgecy/db";
+import type { ReportVariant } from "@forgecy/core";
+import { auditReports, eq, userActor } from "@forgecy/db";
 import { contentKey, sha256 } from "@forgecy/files";
 import { getTranslator } from "@forgecy/i18n";
 import { UnrecoverableError, type JobContext } from "@forgecy/jobs";
@@ -98,8 +98,9 @@ export async function runReportExport(
     variant: payload.variant,
     final: payload.final,
   });
-  // The person who asked for the export; permissions were checked when it was queued.
-  const actor: Actor = { type: "user", id: ctx.row.createdBy, isAdmin: false, active: true };
+  // The person who asked for the export, with the clients they can open today (ADR 0020).
+  const actor = await userActor(db, ctx.row.createdBy);
+  if (!actor) throw new UnrecoverableError("Export without a person who requested it");
   const row = await recordReportExport(db, actor, {
     reportId: report.id,
     variant: payload.variant,

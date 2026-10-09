@@ -38,10 +38,10 @@ const summarySchema = z
 
 /** Agent run details (spec page 57): what was asked, sent, returned and paid. */
 export default async function RunPage({ params }: { params: Promise<{ runId: string }> }) {
-  await requireUser();
+  const user = await requireUser();
   const id = z.uuid().safeParse((await params).runId);
   if (!id.success) notFound();
-  const detail = await getAgentRun(getDb(), id.data);
+  const detail = await getAgentRun(getDb(), user.actor, id.data);
   if (!detail) notFound();
   const { run, agent } = detail;
   const t = await getTranslations("agents");

@@ -21,14 +21,14 @@ export default async function AuditListPage({
 }: {
   searchParams: Promise<{ q?: string; status?: string; archived?: string }>;
 }) {
-  await requireUser();
+  const user = await requireUser();
   const sp = await searchParams;
   const status =
     sp.status === "none" || auditStatuses.includes(sp.status as AuditStatus)
       ? (sp.status as AuditStatus | "none")
       : undefined;
   const archived = sp.archived === "1";
-  const rows = await listProspects(readDeps().db, {
+  const rows = await listProspects(readDeps().db, user.actor, {
     ...(sp.q ? { q: sp.q } : {}),
     ...(status ? { status } : {}),
     archived,

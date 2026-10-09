@@ -86,8 +86,20 @@ describe.skipIf(!dbUrl)("client Brand Book flow (integration)", () => {
         { name: "marco", email: `marco-${suffix}@example.test` },
       ])
       .returning();
-    anna = { type: "user", id: people[0]!.id, isAdmin: false, active: true };
-    marco = { type: "user", id: people[1]!.id, isAdmin: false, active: true };
+    anna = {
+      type: "user",
+      id: people[0]!.id,
+      isAdmin: false,
+      active: true,
+      clients: "all" as const,
+    };
+    marco = {
+      type: "user",
+      id: people[1]!.id,
+      isAdmin: false,
+      active: true,
+      clients: "all" as const,
+    };
     const [identity] = await db.insert(brandIdentities).values({ clientId }).returning();
     const [v] = await db
       .insert(brandIdentityVersions)

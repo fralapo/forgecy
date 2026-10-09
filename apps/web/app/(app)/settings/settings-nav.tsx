@@ -8,6 +8,7 @@ import {
   Bot,
   DatabaseBackup,
   HardDrive,
+  KeyRound,
   Mail,
   Settings2,
   ShieldCheck,
@@ -20,6 +21,7 @@ import { useTranslations } from "next-intl";
 type Group = "workspace" | "ai" | "system";
 type NavLabel =
   | "general"
+  | "clientAccess"
   | "aiProviders"
   | "aiPolicies"
   | "smtp"
@@ -39,6 +41,13 @@ interface Section {
 // Admin sections appear only for Admins; each page checks the Admin flag again on the server.
 const sections: readonly Section[] = [
   { href: "/settings", label: "general", icon: Settings2, admin: false, group: "workspace" },
+  {
+    href: "/settings/client-access",
+    label: "clientAccess",
+    icon: KeyRound,
+    admin: true,
+    group: "workspace",
+  },
   { href: "/settings/ai-providers", label: "aiProviders", icon: Bot, admin: true, group: "ai" },
   {
     href: "/settings/ai-policies",

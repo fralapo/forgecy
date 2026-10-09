@@ -2,8 +2,8 @@
 
 import { getDefaultAiPolicy } from "@forgecy/ai";
 import { brandCrawlWebsiteJob, findOrCreateWebsiteSource } from "@forgecy/brand";
-import { aiPolicies, assertCan, clientStatuses } from "@forgecy/core";
-import { clients, eq, getDb, recordAuditEvent } from "@forgecy/db";
+import { actorWithClient, aiPolicies, assertCan, clientStatuses } from "@forgecy/core";
+import { clients, eq, getDb, grantClientAccess, recordAuditEvent } from "@forgecy/db";
 import { enqueueJob } from "@forgecy/jobs";
 import { revalidatePath } from "next/cache";
 import { getLocale } from "next-intl/server";
@@ -64,6 +64,8 @@ export async function createClientAction(
         slug,
       })
       .returning({ id: clients.id });
+    // Whoever creates a client can open it (ADR 0020).
+    await grantClientAccess(tx, { userId: user.id, clientId: row!.id, createdBy: user.id });
     await recordAuditEvent(tx, {
       actor: user.actor,
       action: "client.create",
@@ -76,7 +78,8 @@ export async function createClientAction(
   });
 
   if (parsed.data.websiteUrl) {
-    const source = await findOrCreateWebsiteSource(db, user.actor, {
+    // The actor was read before the client existed; its creator was just given access.
+    const source = await findOrCreateWebsiteSource(db, actorWithClient(user.actor, clientId), {
       clientId,
       websiteUrl: parsed.data.websiteUrl,
     });

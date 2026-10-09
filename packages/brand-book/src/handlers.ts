@@ -11,8 +11,8 @@ import {
   sharedRenderBrowser,
 } from "@forgecy/carousel/export";
 import { loadBrand } from "@forgecy/content";
-import { isLocale, loadEnv, type Actor } from "@forgecy/core";
-import { appSettings, brandBookExports, clients, eq } from "@forgecy/db";
+import { isLocale, loadEnv } from "@forgecy/core";
+import { appSettings, brandBookExports, clients, eq, userActor } from "@forgecy/db";
 import { contentKey, createStorageFromEnv, sha256, type StorageDriver } from "@forgecy/files";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import {
@@ -65,8 +65,9 @@ export async function runBrandBookRender(
   const client = await db.query.clients.findFirst({ where: eq(clients.id, row.clientId) });
   if (!client) throw new UnrecoverableError("Client not found");
 
-  // The person who asked for the render; permissions were checked when it was queued.
-  const actor: Actor = { type: "user", id: ctx.row.createdBy, isAdmin: false, active: true };
+  // The person who asked for the render, with the clients they can open today (ADR 0020).
+  const actor = await userActor(db, ctx.row.createdBy);
+  if (!actor) throw new UnrecoverableError("Render without a person who requested it");
   const brand = await loadBrand(db, actor, {
     clientId: client.id,
     clientName: client.name,

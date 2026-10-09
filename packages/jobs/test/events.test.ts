@@ -3,7 +3,13 @@ import { describe, expect, it } from "vitest";
 import { jobVisibleTo } from "../src";
 
 const ID = "00000000-0000-4000-8000-000000000001";
-const user = { type: "user" as const, id: "u1", isAdmin: false, active: true };
+const user = {
+  type: "user" as const,
+  id: "u1",
+  isAdmin: false,
+  active: true,
+  clients: "all" as const,
+};
 const admin = { ...user, isAdmin: true };
 
 describe("jobVisibleTo", () => {
@@ -20,5 +26,14 @@ describe("jobVisibleTo", () => {
   it("shows an ordinary job to any active person", async () => {
     const row = [{ kind: "content.export", clientId: "c1" }];
     expect(await jobVisibleTo(createFakeDb({ selects: [row] }).db, user, ID)).toBe(true);
+  });
+
+  it("hides the job of a client the person is not assigned to (ADR 0020)", async () => {
+    const row = [{ kind: "content.export", clientId: "c1" }];
+    const member = { ...user, clients: ["c2"] };
+    expect(await jobVisibleTo(createFakeDb({ selects: [row] }).db, member, ID)).toBe(false);
+    expect(
+      await jobVisibleTo(createFakeDb({ selects: [row] }).db, { ...member, clients: ["c1"] }, ID),
+    ).toBe(true);
   });
 });

@@ -21,6 +21,7 @@ import {
   automations,
   brandIdentityVersions,
   clients,
+  clientScopeWhere,
   contentPlanItems,
   contentPlans,
   desc,
@@ -140,6 +141,7 @@ export async function listAutomations(
     .innerJoin(clients, eq(clients.id, automations.clientId))
     .where(
       and(
+        clientScopeWhere(actor, automations.clientId),
         filter.clientId ? eq(automations.clientId, filter.clientId) : undefined,
         filter.status ? eq(automations.status, filter.status) : undefined,
         filter.source ? eq(automations.source, filter.source) : undefined,

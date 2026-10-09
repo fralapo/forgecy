@@ -49,7 +49,7 @@ describe.skipIf(!dbUrl || !redisUrl)("audit report and conversion (integration)"
       .insert(users)
       .values({ name: "Test", email: `report-${suffix}@example.test`, isAdmin: true })
       .returning({ id: users.id });
-    human = { type: "user", id: u!.id, isAdmin: true, active: true };
+    human = { type: "user", id: u!.id, isAdmin: true, active: true, clients: "all" as const };
     const created = await createProspect({ db }, human, {
       name: `Pastry Test ${suffix}`,
       websiteUrl: `pastry-${suffix}.example`,

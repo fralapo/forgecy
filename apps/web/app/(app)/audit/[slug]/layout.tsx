@@ -9,6 +9,7 @@ import { JobWatch } from "../_components/job-watch";
 import { SectionTabs } from "../_components/section-tabs";
 import { auditStatusVariant, jobLabelId } from "../_lib/labels";
 import { readDeps } from "../_lib/server";
+import { requireUser } from "@/lib/session";
 
 export default async function ProspectLayout({
   children,
@@ -18,8 +19,9 @@ export default async function ProspectLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const user = await requireUser();
   const { db } = readDeps();
-  const prospect = await getProspectBySlug(db, slug);
+  const prospect = await getProspectBySlug(db, user.actor, slug);
   if (!prospect) notFound();
   const { client, audit } = prospect;
   const jobs = audit ? await auditJobStates(db, audit.id) : [];

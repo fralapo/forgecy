@@ -469,7 +469,7 @@ export default async function AgentPage({
       </div>
     );
   } else {
-    const runs = await listAgentRuns(getDb(), agent, RUNS_LIMIT);
+    const runs = await listAgentRuns(getDb(), user.actor, agent, RUNS_LIMIT);
     main =
       runs.length === 0 ? (
         <Card className="p-6">

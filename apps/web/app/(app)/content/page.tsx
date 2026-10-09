@@ -1,4 +1,4 @@
-import { asc, clients, contents, getDb, isNull, sql } from "@forgecy/db";
+import { and, asc, clients, clientScopeWhere, contents, getDb, isNull, sql } from "@forgecy/db";
 import { Badge, Card } from "@forgecy/ui";
 import Link from "next/link";
 import type { Route } from "next";
@@ -13,7 +13,7 @@ export async function generateMetadata() {
 }
 
 export default async function ContentPickerPage() {
-  await requireUser();
+  const user = await requireUser();
   const t = await getTranslations("content");
   const db = getDb();
   const rows = await db
@@ -27,7 +27,7 @@ export default async function ContentPickerPage() {
         where ${contents.clientId} = ${clients.id} and ${contents.status} in ('draft', 'changes_requested'))`,
     })
     .from(clients)
-    .where(isNull(clients.archivedAt))
+    .where(and(isNull(clients.archivedAt), clientScopeWhere(user.actor, clients.id)))
     .orderBy(asc(clients.name));
 
   return (

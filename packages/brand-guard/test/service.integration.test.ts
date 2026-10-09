@@ -77,7 +77,7 @@ describe.skipIf(!dbUrl)("brand guard service (integration)", () => {
       .insert(users)
       .values({ name: "anna", email: `anna-${suffix}@example.test` })
       .returning();
-    anna = { type: "user", id: u!.id, isAdmin: false, active: true };
+    anna = { type: "user", id: u!.id, isAdmin: false, active: true, clients: "all" as const };
     const [identity] = await db.insert(brandIdentities).values({ clientId }).returning();
     const document = emptyDocument();
     document.verbal.forbiddenWords = ["economico"];

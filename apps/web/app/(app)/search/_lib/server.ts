@@ -1,4 +1,5 @@
 import "server-only";
+import type { Actor } from "@forgecy/core";
 import {
   and,
   assets,
@@ -6,6 +7,7 @@ import {
   audits,
   brandIdentityVersions,
   clients,
+  clientScopeWhere,
   contents,
   desc,
   eq,
@@ -50,9 +52,10 @@ const countAll = sql<number>`count(*)::int`;
 const ilike = (col: unknown, pattern: string) => sql`${col} ilike ${pattern}` as Cond;
 const all = (conds: Array<Cond | undefined>) => and(...conds.filter(Boolean)) as Cond;
 
-/** Conditions shared by every type that belongs to a client. */
-function clientScope(p: SearchParams): Array<Cond | undefined> {
+/** Conditions shared by every type that belongs to a client: only clients the actor may open. */
+function clientScope(actor: Actor, p: SearchParams): Array<Cond | undefined> {
   return [
+    clientScopeWhere(actor, clients.id) as Cond | undefined,
     p.client ? eq(clients.slug, p.client) : undefined,
     p.archived ? undefined : isNull(clients.archivedAt),
   ];
@@ -60,6 +63,7 @@ function clientScope(p: SearchParams): Array<Cond | undefined> {
 
 async function searchType(
   db: Db,
+  actor: Actor,
   type: SearchType,
   p: SearchParams,
   limit: number,
@@ -70,7 +74,7 @@ async function searchType(
     case "client": {
       const where = all([
         or(ilike(clients.name, pat), ilike(clients.slug, pat), ilike(clients.websiteUrl, pat)),
-        ...clientScope(p),
+        ...clientScope(actor, p),
       ]);
       const [rows, [n]] = await Promise.all([
         db
@@ -105,7 +109,7 @@ async function searchType(
       const where = all([
         ilike(contents.title, pat),
         p.archived ? undefined : isNull(contents.archivedAt),
-        ...clientScope(p),
+        ...clientScope(actor, p),
       ]);
       const [rows, [n]] = await Promise.all([
         db
@@ -149,7 +153,7 @@ async function searchType(
           ilike(sql`array_to_string(${products.tags}, ' ')`, pat),
         ),
         p.archived ? undefined : isNull(products.archivedAt),
-        ...clientScope(p),
+        ...clientScope(actor, p),
       ]);
       const [rows, [n]] = await Promise.all([
         db
@@ -190,7 +194,7 @@ async function searchType(
         p.archived
           ? undefined
           : inArray(brandIdentityVersions.status, ["draft", "in_review", "published"]),
-        ...clientScope(p),
+        ...clientScope(actor, p),
       ]);
       const [rows, [n]] = await Promise.all([
         db
@@ -228,7 +232,7 @@ async function searchType(
       const where = all([
         ilike(clients.name, pat),
         p.archived ? undefined : ne(audits.status, "archived"),
-        ...clientScope(p),
+        ...clientScope(actor, p),
       ]);
       const [rows, [n]] = await Promise.all([
         db
@@ -261,7 +265,7 @@ async function searchType(
       const where = all([
         ilike(clients.name, pat),
         p.archived ? undefined : ne(auditReports.status, "superseded"),
-        ...clientScope(p),
+        ...clientScope(actor, p),
       ]);
       const [rows, [n]] = await Promise.all([
         db
@@ -303,6 +307,8 @@ async function searchType(
         or(ilike(templates.name, pat), ilike(templates.key, pat)),
         p.archived ? undefined : ne(templates.status, "archived"),
         p.client ? eq(clients.slug, p.client) : undefined,
+        // A client's own templates only for people who may open that client.
+        or(isNull(templates.clientId), clientScopeWhere(actor, templates.clientId)) as Cond,
       ]);
       const [rows, [n]] = await Promise.all([
         db
@@ -343,7 +349,7 @@ async function searchType(
       const where = all([
         or(ilike(assets.alt, pat), ilike(sql`array_to_string(${assets.tags}, ' ')`, pat)),
         p.archived ? undefined : ne(assets.status, "rejected"),
-        ...clientScope(p),
+        ...clientScope(actor, p),
       ]);
       const [rows, [n]] = await Promise.all([
         db
@@ -379,12 +385,12 @@ async function searchType(
  * Searches every type (for the counts) and returns the groups to show: all of
  * them with a few hits each, or the selected types with up to FULL_LIMIT hits.
  */
-export async function runSearch(p: SearchParams) {
+export async function runSearch(actor: Actor, p: SearchParams) {
   const db = getDb();
   const selected = p.types.length ? p.types : searchTypes;
   const limit = p.types.length === 1 ? FULL_LIMIT : GROUP_LIMIT;
   const groups = await Promise.all(
-    searchTypes.map((t) => searchType(db, t, p, selected.includes(t) ? limit : 0)),
+    searchTypes.map((t) => searchType(db, actor, t, p, selected.includes(t) ? limit : 0)),
   );
   const counts = Object.fromEntries(groups.map((g) => [g.type, g.total])) as Record<
     SearchType,
@@ -396,10 +402,11 @@ export async function runSearch(p: SearchParams) {
   };
 }
 
-/** Every client, for the client filter. */
-export async function clientOptions() {
+/** The clients the actor may open, for the client filter. */
+export async function clientOptions(actor: Actor) {
   return getDb()
     .select({ name: clients.name, slug: clients.slug })
     .from(clients)
+    .where(clientScopeWhere(actor, clients.id))
     .orderBy(clients.name);
 }

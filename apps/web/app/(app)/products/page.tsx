@@ -1,5 +1,5 @@
 import { products, sql } from "@forgecy/db";
-import { asc, clients, getDb, isNull } from "@forgecy/db";
+import { and, asc, clients, clientScopeWhere, getDb, isNull } from "@forgecy/db";
 import { Card } from "@forgecy/ui";
 import { Package } from "lucide-react";
 import Link from "next/link";
@@ -16,11 +16,15 @@ export async function generateMetadata() {
 
 /** Entry from the sidebar: pick the client whose catalog to open (only clients, not prospects). */
 export default async function ProductsIndexPage() {
-  await requireUser();
+  const user = await requireUser();
   const t = await getTranslations("products");
   const db = getDb();
   const [rows, counts] = await Promise.all([
-    db.select().from(clients).where(isNull(clients.archivedAt)).orderBy(asc(clients.name)),
+    db
+      .select()
+      .from(clients)
+      .where(and(isNull(clients.archivedAt), clientScopeWhere(user.actor, clients.id)))
+      .orderBy(asc(clients.name)),
     db
       .select({
         clientId: products.clientId,
@@ -29,6 +33,7 @@ export default async function ProductsIndexPage() {
         proposed: sql<number>`count(*) filter (where ${products.status} = 'proposed')::int`,
       })
       .from(products)
+      .where(clientScopeWhere(user.actor, products.clientId))
       .groupBy(products.clientId),
   ]);
   const by = new Map(counts.map((c) => [c.clientId, c]));

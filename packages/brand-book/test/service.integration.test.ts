@@ -66,7 +66,7 @@ describe.skipIf(!dbUrl)("brand system export (integration)", () => {
       .insert(users)
       .values({ name: "anna", email: `anna-${suffix}@example.test` })
       .returning();
-    anna = { type: "user", id: u!.id, isAdmin: false, active: true };
+    anna = { type: "user", id: u!.id, isAdmin: false, active: true, clients: "all" as const };
 
     const logo = new TextEncoder().encode("<svg/>");
     const key = `clients/${clientId}/brand-sources/${sha256(logo)}.svg`;

@@ -1,4 +1,5 @@
 import { addProductImage, IMPORT_LIMITS, loadCatalogClient, spoolToTemp } from "@forgecy/catalog";
+import { canAccessClient } from "@forgecy/core";
 import { clients, eq, getDb } from "@forgecy/db";
 import { NextResponse } from "next/server";
 import { withUser } from "@/lib/api";
@@ -16,7 +17,8 @@ export const POST = withUser(
     const { clientSlug, productId } = await params;
     const db = getDb();
     const client = await db.query.clients.findFirst({ where: eq(clients.slug, clientSlug) });
-    if (!client || !request.body) return NextResponse.json({ error: "not_found" }, { status: 404 });
+    if (!client || !canAccessClient(user.actor, client.id) || !request.body)
+      return NextResponse.json({ error: "not_found" }, { status: 404 });
     await loadCatalogClient(db, client.id);
     const fileName = decodeURIComponent(request.headers.get("x-file-name") ?? "image").slice(
       0,

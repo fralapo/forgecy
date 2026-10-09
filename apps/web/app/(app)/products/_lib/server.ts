@@ -9,7 +9,12 @@ import {
   type EnqueueImportStep,
 } from "@forgecy/catalog";
 import type { FieldKey } from "@forgecy/catalog/fields";
-import { ForgecyError, PermissionDeniedError, type MessageRef } from "@forgecy/core";
+import {
+  canAccessClient,
+  ForgecyError,
+  PermissionDeniedError,
+  type MessageRef,
+} from "@forgecy/core";
 import { clients, eq, getDb } from "@forgecy/db";
 import { createStorageFromEnv, type StorageDriver } from "@forgecy/files";
 import { cancelJob, enqueueJob } from "@forgecy/jobs";
@@ -33,7 +38,8 @@ export function actingUser(user: CurrentUser): ActingUser {
 export async function catalogPage(clientSlug: string) {
   const user = await requireUser();
   const client = await getDb().query.clients.findFirst({ where: eq(clients.slug, clientSlug) });
-  if (!client) notFound();
+  // A client the person may not open looks like one that does not exist (ADR 0020).
+  if (!client || !canAccessClient(user.actor, client.id)) notFound();
   const { routing } = await currentRouting();
   const ai = importAiSetup(env, client.aiPolicy, routing);
   return {

@@ -68,7 +68,13 @@ describe.skipIf(!dbUrl)("brand identity workflow (integration)", () => {
         .insert(users)
         .values({ name, email: `${name}-${suffix}@example.test` })
         .returning();
-      return { type: "user" as const, id: u!.id, isAdmin: false, active: true };
+      return {
+        type: "user" as const,
+        id: u!.id,
+        isAdmin: false,
+        active: true,
+        clients: "all" as const,
+      };
     };
     anna = await mk("anna");
     bruno = await mk("bruno");

@@ -6,6 +6,7 @@
  */
 import {
   assertCan,
+  canAccessClient,
   isSensitiveMemoryCategory,
   memoryCategories,
   memoryContentSchema,
@@ -24,6 +25,7 @@ import {
   and,
   clientMemorySettings,
   clients,
+  clientScopeWhere,
   desc,
   eq,
   inArray,
@@ -62,11 +64,13 @@ const decider = sql<
   string | null
 >`(select name from users d where d.id = ${memoryItems.decidedBy})`;
 
+/** Memories of the clients the actor may open (ADR 0020). */
 export async function listMemories(
   db: Pick<Database, "select">,
+  actor: Actor,
   filter: MemoryFilter = {},
 ): Promise<MemoryRow[]> {
-  const where = [];
+  const where = [clientScopeWhere(actor, memoryItems.clientId)];
   if (filter.agent) where.push(eq(memoryItems.agent, filter.agent));
   if (filter.clientId) where.push(eq(memoryItems.clientId, filter.clientId));
   const status = filter.status ?? "default";
@@ -83,7 +87,7 @@ export async function listMemories(
     .from(memoryItems)
     .innerJoin(clients, eq(clients.id, memoryItems.clientId))
     .leftJoin(users, eq(users.id, memoryItems.createdBy))
-    .where(where.length ? and(...where) : undefined)
+    .where(and(...where))
     // Candidates first (they wait for a decision), then newest.
     .orderBy(
       sql`case ${memoryItems.status} when 'candidate' then 0 when 'approved' then 1 else 2 end`,
@@ -102,9 +106,13 @@ export async function listMemories(
 /** Counters of the page header: candidates to decide and approved memories. */
 export async function memoryCounts(
   db: Pick<Database, "select">,
+  actor: Actor,
   filter: Pick<MemoryFilter, "agent" | "clientId"> = {},
 ): Promise<{ candidate: number; approved: number }> {
-  const where = [inArray(memoryItems.status, ["candidate", "approved"])];
+  const where = [
+    inArray(memoryItems.status, ["candidate", "approved"]),
+    clientScopeWhere(actor, memoryItems.clientId),
+  ];
   if (filter.agent) where.push(eq(memoryItems.agent, filter.agent));
   if (filter.clientId) where.push(eq(memoryItems.clientId, filter.clientId));
   const rows = await db
@@ -132,6 +140,7 @@ export interface MemoryDetail {
 
 export async function getMemory(
   db: Pick<Database, "select">,
+  actor: Actor,
   id: string,
 ): Promise<MemoryDetail | null> {
   const [row] = await db
@@ -146,7 +155,8 @@ export async function getMemory(
     .innerJoin(clients, eq(clients.id, memoryItems.clientId))
     .leftJoin(users, eq(users.id, memoryItems.createdBy))
     .where(eq(memoryItems.id, id));
-  if (!row) return null;
+  // A memory of a client the actor may not open reads like one that does not exist.
+  if (!row || !canAccessClient(actor, row.item.clientId)) return null;
   const [versions, usedIn] = await Promise.all([
     db
       .select({
@@ -268,10 +278,19 @@ export async function addMemory(
 
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
-/** Locks the row and checks it is in one of `from`; otherwise someone decided first. */
-async function lockIn(tx: Tx, id: string, from: readonly MemoryStatus[]): Promise<MemoryItem> {
+/**
+ * Locks the row and checks it is in one of `from`; otherwise someone decided first. The
+ * person's access to its client is checked first, so a hidden memory reveals nothing.
+ */
+async function lockIn(
+  tx: Tx,
+  actor: Actor,
+  id: string,
+  from: readonly MemoryStatus[],
+): Promise<MemoryItem> {
   const [row] = await tx.select().from(memoryItems).where(eq(memoryItems.id, id)).for("update");
   if (!row) throw localizedError("not_found", "agents.memory.errors.notFound");
+  person(actor, row.clientId);
   if (!from.includes(row.status)) {
     const [who] = row.decidedBy
       ? await tx.select({ name: users.name }).from(users).where(eq(users.id, row.decidedBy))
@@ -301,7 +320,7 @@ async function decide(
 ): Promise<MemoryItem> {
   if (actor.type !== "user") throw new PermissionDeniedError("memory.approve", actor);
   return db.transaction(async (tx) => {
-    const row = await lockIn(tx, id, from);
+    const row = await lockIn(tx, actor, id, from);
     const user = person(actor, row.clientId);
     check(row);
     const [updated] = await tx
@@ -455,7 +474,7 @@ export async function editMemory(
   if (actor.type !== "user") throw new PermissionDeniedError("memory.approve", actor);
   const text = content(input.content);
   return db.transaction(async (tx) => {
-    const row = await lockIn(tx, id, ["candidate", "approved"]);
+    const row = await lockIn(tx, actor, id, ["candidate", "approved"]);
     const user = person(actor, row.clientId);
     const category = input.category ? categorySchema.parse(input.category) : row.category;
     const version = row.version + 1;

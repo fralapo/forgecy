@@ -1,4 +1,5 @@
 import { discardsToCsv, importReview, loadCatalogClient, type FileMeta } from "@forgecy/catalog";
+import { canAccessClient } from "@forgecy/core";
 import { clients, eq, getDb } from "@forgecy/db";
 import { getTranslations } from "next-intl/server";
 import { withUser } from "@/lib/api";
@@ -10,14 +11,14 @@ export const dynamic = "force-dynamic";
 /** “Download rejected rows report”: rows and pages not imported, with the reason. */
 export const GET = withUser(
   async (
-    _user,
+    user,
     _request: Request,
     { params }: { params: Promise<{ clientSlug: string; importId: string }> },
   ) => {
     const { clientSlug, importId } = await params;
     const db = getDb();
     const client = await db.query.clients.findFirst({ where: eq(clients.slug, clientSlug) });
-    if (!client || !/^[0-9a-f-]{36}$/i.test(importId))
+    if (!client || !canAccessClient(user.actor, client.id) || !/^[0-9a-f-]{36}$/i.test(importId))
       return new Response("Not found", { status: 404 });
     await loadCatalogClient(db, client.id);
     const review = await importReview(db, client.id, importId);

@@ -1,5 +1,6 @@
 import "server-only";
 import { isLocale, type Actor, type Locale } from "@forgecy/core";
+import { clientScopeOf, getDb } from "@forgecy/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { maintenanceFor } from "./maintenance";
@@ -19,7 +20,8 @@ export type CurrentUser = {
 
 /**
  * The signed-in user, validated against the database (the proxy only checks the cookie).
- * Cached per request: pages and the i18n request config share one lookup.
+ * Cached per request: pages and the i18n request config share one lookup. The actor carries
+ * the clients the person may open (ADR 0020), read here once per request.
  */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -32,7 +34,13 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     isAdmin: user.isAdmin,
     isProductOwner: user.isProductOwner,
     locale: isLocale(user.locale) ? user.locale : null,
-    actor: { type: "user", id: user.id, isAdmin: user.isAdmin, active: user.active },
+    actor: {
+      type: "user",
+      id: user.id,
+      isAdmin: user.isAdmin,
+      active: user.active,
+      clients: await clientScopeOf(getDb(), user),
+    },
   };
 });
 

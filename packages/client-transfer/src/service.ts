@@ -58,6 +58,8 @@ export async function startClientExport(
   const user = admin(actor);
   const parsed = exportInputSchema.safeParse(input);
   if (!parsed.success) throw localizedError("validation", "clientTransfer.errors.invalidInput");
+  // Exporting a client needs access to it as well (ADR 0020; Admins have every client).
+  assertCan(user, "clients.transfer", parsed.data.clientId);
   const { db } = deps;
   const [client] = await db.select().from(clients).where(eq(clients.id, parsed.data.clientId));
   if (!client) throw localizedError("not_found", "clientTransfer.errors.clientNotFound");
@@ -139,7 +141,7 @@ export async function estimateClientExport(
   actor: Actor,
   clientId: string,
 ): Promise<{ rows: Record<ClientTransferArea, number>; imageBytes: number }> {
-  admin(actor);
+  assertCan(admin(actor), "clients.transfer", clientId);
   const rows = Object.fromEntries(clientTransferAreas.map((a) => [a, 0])) as Record<
     ClientTransferArea,
     number

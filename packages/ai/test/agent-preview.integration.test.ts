@@ -18,6 +18,7 @@ describe.skipIf(!dbUrl)("try instructions on an example (integration)", () => {
     id: "00000000-0000-4000-8000-0000000000aa",
     isAdmin: true,
     active: true,
+    clients: "all",
   };
   const member: Actor = { ...admin, isAdmin: false };
   const routing: Routing = { default: { primary: { provider: "anthropic", model: "m" } } };

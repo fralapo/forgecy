@@ -1,7 +1,8 @@
 import type { NotificationKind, NotificationParams } from "@forgecy/core";
 import { and, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Database } from "./client";
-import { clients, notifications, users } from "./schema";
+import { withClientAccess } from "./client-access";
+import { clientAccess, clients, notifications, users } from "./schema";
 
 type Tx = Pick<Database, "insert" | "select">;
 
@@ -28,7 +29,7 @@ export async function notify(db: Tx, input: NotifyInput): Promise<number> {
       ? null
       : [...new Set(input.to.filter((x): x is string => !!x && x !== input.except))];
   if (wanted && !wanted.length) return 0;
-  const recipients = (
+  let recipients = (
     await db
       .select({ id: users.id })
       .from(users)
@@ -38,6 +39,8 @@ export async function notify(db: Tx, input: NotifyInput): Promise<number> {
   )
     .map((u) => u.id)
     .filter((id) => id !== input.except);
+  // Nobody hears about a client they cannot open (ADR 0020).
+  if (input.clientId) recipients = await withClientAccess(db, input.clientId, recipients);
   if (!recipients.length) return 0;
 
   let params = input.params ?? {};
@@ -65,6 +68,15 @@ export async function notify(db: Tx, input: NotifyInput): Promise<number> {
   return recipients.length;
 }
 
+/**
+ * Notifications about a client stay hidden once the reader can no longer open it (ADR 0020):
+ * new ones are not sent (`notify`), and this hides the ones sent before.
+ */
+const stillVisible = sql`(${notifications.clientId} is null
+  or exists (select 1 from ${users} where ${users.id} = ${notifications.userId} and ${users.isAdmin})
+  or exists (select 1 from ${clientAccess} where ${clientAccess.userId} = ${notifications.userId}
+    and ${clientAccess.clientId} = ${notifications.clientId}))`;
+
 /** The reader's own notifications, newest first: nobody reads someone else's. */
 export async function listNotifications(
   db: Pick<Database, "select">,
@@ -77,6 +89,7 @@ export async function listNotifications(
     .where(
       and(
         eq(notifications.userId, userId),
+        stillVisible,
         options.unreadOnly ? isNull(notifications.readAt) : undefined,
       ),
     )
@@ -91,7 +104,7 @@ export async function unreadNotificationCount(
   const [row] = await db
     .select({ n: count() })
     .from(notifications)
-    .where(and(eq(notifications.userId, userId), isNull(notifications.readAt)));
+    .where(and(eq(notifications.userId, userId), isNull(notifications.readAt), stillVisible));
   return row?.n ?? 0;
 }
 

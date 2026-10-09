@@ -57,13 +57,14 @@ import {
   type TablePreview,
 } from "@forgecy/audit";
 import { brandCrawlWebsiteJob, findOrCreateWebsiteSource } from "@forgecy/brand";
-import type {
-  AiPolicy,
-  ComparisonOutcome,
-  Level,
-  ReportSectionKey,
-  ReportVariant,
-  SocialChannel,
+import {
+  actorWithClient,
+  type AiPolicy,
+  type ComparisonOutcome,
+  type Level,
+  type ReportSectionKey,
+  type ReportVariant,
+  type SocialChannel,
 } from "@forgecy/core";
 import { clients, eq, getDb } from "@forgecy/db";
 import { enqueueJob } from "@forgecy/jobs";
@@ -114,7 +115,9 @@ export async function createProspectAction(input: ProspectInput) {
   const result = await act((u, d) => createProspect(d, u.actor, input), { queues: false });
   if (result.ok && result.data && input.websiteUrl) {
     const user = await requireUser();
-    await crawlWebsite(user.actor, user.id, result.data.id, input.websiteUrl);
+    // The actor was read before the prospect existed; its creator was just given access.
+    const actor = actorWithClient(user.actor, result.data.id);
+    await crawlWebsite(actor, user.id, result.data.id, input.websiteUrl);
   }
   return result;
 }
@@ -124,8 +127,8 @@ export async function checkDuplicatesAction(input: {
   websiteUrl?: string;
   excludeId?: string;
 }): Promise<DuplicateMatch[]> {
-  await requireUser();
-  return findDuplicates(readDeps().db, input, input.excludeId);
+  const user = await requireUser();
+  return findDuplicates(readDeps().db, user.actor, input, input.excludeId);
 }
 
 export async function updateProspectAction(

@@ -5,7 +5,7 @@ import {
   renderSlideHtml,
   sampleSlide,
 } from "@forgecy/carousel";
-import { assertCan, isLocale, type Locale } from "@forgecy/core";
+import { assertCan, canAccessClient, isLocale, type Locale } from "@forgecy/core";
 import { NextResponse } from "next/server";
 import { getLocale } from "next-intl/server";
 import { withUser } from "@/lib/api";
@@ -27,7 +27,9 @@ export const GET = withUser(
     assertCan(user.actor, "view");
     const { templateId, layoutId } = await params;
     const found = await templateById(templateId);
-    const pkg = found?.pkg;
+    // A client's private template only for people who may open that client (ADR 0020).
+    const hidden = !!found?.row.clientId && !canAccessClient(user.actor, found.row.clientId);
+    const pkg = hidden ? undefined : found?.pkg;
     const layout = pkg && findLayout(pkg.manifest, layoutId);
     if (!pkg || !layout) return NextResponse.json({ error: "not_found" }, { status: 404 });
     const q = new URL(request.url).searchParams;

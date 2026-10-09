@@ -23,6 +23,7 @@ import {
   automationRunItems,
   automationRuns,
   automations,
+  clientScopeOf,
   eq,
   isNull,
   jobsLog,
@@ -78,7 +79,14 @@ async function starterActor(db: Database, userId: string | null): Promise<Actor>
     : [];
   if (!user?.active)
     throw new ItemError("STARTER-INACTIVE", "automations.itemErrors.starterInactive");
-  return { type: "user", id: user.id, isAdmin: user.isAdmin, active: true };
+  // The starter's clients today (ADR 0020): unassigned since the start, the items fail.
+  return {
+    type: "user",
+    id: user.id,
+    isAdmin: user.isAdmin,
+    active: true,
+    clients: await clientScopeOf(db, user),
+  };
 }
 
 /** The configured template when it fits the item's format, else the first usable one. */

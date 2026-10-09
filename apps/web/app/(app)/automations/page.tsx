@@ -5,7 +5,7 @@ import {
   type AutomationSource,
   type AutomationStatus,
 } from "@forgecy/core";
-import { clients, getDb, inArray, users } from "@forgecy/db";
+import { clients, clientScopeWhere, getDb, inArray, users } from "@forgecy/db";
 import { Button, Card } from "@forgecy/ui";
 import { Info } from "lucide-react";
 import type { Route } from "next";
@@ -45,7 +45,10 @@ export default async function AutomationsPage({
   const [all, eligible, clientRows] = await Promise.all([
     listAutomations(db, user.actor),
     eligibleClients(db, user.actor),
-    db.select({ id: clients.id, slug: clients.slug, aiPolicy: clients.aiPolicy }).from(clients),
+    db
+      .select({ id: clients.id, slug: clients.slug, aiPolicy: clients.aiPolicy })
+      .from(clients)
+      .where(clientScopeWhere(user.actor, clients.id)),
   ]);
   const clientBySlug = new Map(clientRows.map((c) => [c.slug, c]));
   const policyOf = new Map(clientRows.map((c) => [c.id, c.aiPolicy]));

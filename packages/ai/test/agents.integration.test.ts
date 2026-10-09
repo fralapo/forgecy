@@ -31,6 +31,7 @@ describe.skipIf(!dbUrl)("agent configuration (integration)", () => {
     id: "00000000-0000-4000-8000-000000000001",
     isAdmin: false,
     active: true,
+    clients: "all",
   };
   const agent: Actor = { type: "agent", role: "reviewer" };
   const suffix = Math.random().toString(36).slice(2, 8);
@@ -52,7 +53,7 @@ describe.skipIf(!dbUrl)("agent configuration (integration)", () => {
       .insert(users)
       .values({ name: "Admin", email: `agents-${suffix}@example.test`, isAdmin: true })
       .returning({ id: users.id });
-    admin = { type: "user", id: u!.id, isAdmin: true, active: true };
+    admin = { type: "user", id: u!.id, isAdmin: true, active: true, clients: "all" as const };
   });
 
   afterAll(async () => {
@@ -130,7 +131,7 @@ describe.skipIf(!dbUrl)("agent configuration (integration)", () => {
     const stats = await agentRunStats(db);
     expect(stats.reviewer.runs).toBeGreaterThanOrEqual(1);
     expect(stats.reviewer.failed).toBeGreaterThanOrEqual(1);
-    const runs = await listAgentRuns(db, "reviewer");
+    const runs = await listAgentRuns(db, member, "reviewer");
     expect(runs.find((r) => r.id === logId)).toMatchObject({ instructionsVersion: 1 });
   });
 });
