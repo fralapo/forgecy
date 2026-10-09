@@ -1,8 +1,12 @@
 /**
  * Completeness of a brand profile, as shown on the brand page: nine sections, each filled or
- * not. Pure: the page passes the shown version and how many brand images the client has.
+ * not. A section counts as filled when it has content and passes the publish checks that
+ * judge it (checks.ts), so the percent never says "complete" while the blocks say "missing";
+ * the font license is informational and does not empty a section. Pure: the page passes the
+ * shown version and how many brand images the client has.
  */
-import type { BrandIdentityDocument } from "./document";
+import { publishChecks } from "./checks";
+import { ONE_LINER_MAX_WORDS, wordCount, type BrandIdentityDocument } from "./document";
 import { defaultTokens, referenceColors, type TokenTree } from "./tokens";
 
 export const completenessSections = [
@@ -44,23 +48,29 @@ export function brandCompleteness(
   imageCount: number,
 ): BrandCompleteness {
   const v = doc.visual;
+  const open = new Set(publishChecks(doc, tokens).map((c) => c.key));
+  const oneLiner = doc.strategy.oneLiner;
+  const oneLinerTooLong = !!oneLiner && wordCount(oneLiner.value) > ONE_LINER_MAX_WORDS;
   const rule: Record<CompletenessSection, boolean> = {
-    // About: the one-liner or the positioning statement.
-    about: !!doc.strategy.oneLiner || !!doc.strategy.positioning,
-    // Tagline: the one-liner.
-    tagline: !!doc.strategy.oneLiner,
+    // About: the one-liner or the positioning statement; a one-liner over the limit does not pass.
+    about: (!!oneLiner || !!doc.strategy.positioning) && !oneLinerTooLong,
+    // Tagline: the one-liner, within the word limit.
+    tagline: !!oneLiner && !open.has("incomplete:one-liner"),
     // Audience: at least one segment still in use.
-    audience: doc.strategy.audience.some((a) => !a.deprecated),
-    // Tone: at least one tone axis.
-    tone: doc.verbal.toneAxes.length > 0,
+    audience: !open.has("incomplete:audience"),
+    // Tone: every tone axis and enough "we are / we are not" rows.
+    tone:
+      doc.verbal.toneAxes.length > 0 &&
+      !open.has("incomplete:tone-axes") &&
+      !open.has("incomplete:we-are"),
     // Aesthetics: the imagery description, or at least one visual do/don't.
     aesthetics: !!v.imagery || v.do.length > 0 || v.dont.length > 0,
     // Fonts: at least one typography role.
     fonts: v.typography.length > 0,
     // Palette: at least three reference colors, not counting the untouched starting ones.
     palette: referenceColors(tokens).filter((c) => !isStarting(c)).length >= MIN_COLORS,
-    // Logo: at least one logo variant.
-    logo: v.logo.variants.length > 0,
+    // Logo: the primary logo variant.
+    logo: v.logo.variants.length > 0 && !open.has("incomplete:logo"),
     // Images: at least three pictures in the brand image library.
     images: imageCount >= MIN_IMAGES,
   };
