@@ -12,7 +12,8 @@ services:
     ports: ["127.0.0.1:5432:5432"]
     volumes: ["./data/dev-db:/var/lib/postgresql/data"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U forgecy -d forgecy"]
+      # Over TCP: a socket check passes while first init runs a temporary socket-only server.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U forgecy -d forgecy"]
       interval: 5s
       retries: 20
   redis:

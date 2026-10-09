@@ -30,9 +30,12 @@ services:
   postgres:
     image: pgvector/pgvector:pg17
     restart: unless-stopped
-    # Default capabilities kept: the entrypoint starts as root, chowns the data directory and
-    # drops to postgres with gosu on first init (CHOWN, SETUID, SETGID, DAC_OVERRIDE, FOWNER).
+    # The entrypoint starts as root: it walks the 0700 data directory (DAC_READ_SEARCH), chowns what
+    # postgres does not own (CHOWN), chmods it 0700 when another uid owns it (FOWNER), then drops
+    # to postgres with gosu (SETUID, SETGID). Tested on first init and restart, Linux volumes.
     security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_READ_SEARCH, FOWNER, SETUID, SETGID]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-forgecy}
       # No default: an unset or empty value stops Compose instead of falling back to a known password.
@@ -41,7 +44,9 @@ services:
     volumes:
       - ./data/db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      # Over TCP: on first init the entrypoint runs a temporary socket-only server, and a socket
+      # check passes then, so migrate connects just as that server stops (ECONNREFUSED).
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -49,9 +54,11 @@ services:
   redis:
     image: redis:8-alpine
     restart: unless-stopped
-    # Default capabilities kept: the entrypoint starts as root, chowns /data and drops to redis
-    # with su-exec (CHOWN, SETUID, SETGID, DAC_OVERRIDE).
+    # The entrypoint starts as root: it walks /data, including the 0700 appendonlydir
+    # (DAC_READ_SEARCH), chowns what redis does not own (CHOWN) and drops to redis (SETUID, SETGID).
     security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_READ_SEARCH, SETUID, SETGID]
     command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
     volumes:
       - ./data/redis:/data

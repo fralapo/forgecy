@@ -30,9 +30,14 @@ const BREAKS_PASSWORD = /[^\x21-\x7e]|[/@:%?#[\]$'"\\`]/;
  * comment and keeps all of it, so the two disagree on what the secret is.
  */
 export function hashInValue(text: string, key: string): boolean {
-  const line = new RegExp(`^[ \\t]*(?:export[ \\t]+)?${key}[ \\t]*[=:](.*)$`, "gm");
-  const value = [...text.matchAll(line)].at(-1)?.[1]?.trimStart() ?? "";
+  const value = rawValue(text, key);
   return !/^["']/.test(value) && /[^ ]#/.test(value);
+}
+
+/** The value of the winning raw line of `key`, untouched by any parser. */
+function rawValue(text: string, key: string): string {
+  const line = new RegExp(`^[ \\t]*(?:export[ \\t]+)?${key}[ \\t]*[=:](.*)$`, "gm");
+  return [...text.matchAll(line)].at(-1)?.[1]?.trimStart() ?? "";
 }
 
 /**
@@ -46,11 +51,18 @@ export function checkSecrets(
 ): { errors: string[]; warnings: string[] } {
   const errors: string[] = [];
   const warnings: string[] = [];
-  for (const key of ["POSTGRES_PASSWORD", "BETTER_AUTH_SECRET"])
-    if (options.rawText !== undefined && hashInValue(options.rawText, key))
+  for (const key of ["POSTGRES_PASSWORD", "BETTER_AUTH_SECRET"]) {
+    if (options.rawText === undefined) continue;
+    if (hashInValue(options.rawText, key))
       errors.push(
         `${key} contains a # that is not preceded by a space: Compose reads the whole value while other tools stop at the #, and the # breaks DATABASE_URL. Use only letters, digits and - _ + = (for example \`openssl rand -hex 24\`).`,
       );
+    // Node reads `x` as a quoted x; Compose keeps the backticks, so the two see different secrets.
+    if (rawValue(options.rawText, key).startsWith("`"))
+      errors.push(
+        `${key} starts with a backtick: Compose keeps the backticks as part of the value while other tools drop them. Remove them (for example \`openssl rand -hex 24\`).`,
+      );
+  }
   const password = env.POSTGRES_PASSWORD ?? "";
   if (!password) {
     errors.push(

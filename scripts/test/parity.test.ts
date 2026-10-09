@@ -108,6 +108,18 @@ describe("N5: `KEY: value` is a setting in Compose and ignored by Node", () => {
   });
 });
 
+describe("N6: Node reads `x` as a quoted x, Compose keeps the backticks", () => {
+  it("refuses a secret wrapped in backticks, whose parsed value would pass", () => {
+    expect(parseDotenv("P=`abcdefgh1234`\n").P).toBe("abcdefgh1234");
+    expect(check("`abcdefgh1234`").errors.join()).toMatch(
+      /POSTGRES_PASSWORD starts with a backtick/,
+    );
+    const raw = `POSTGRES_PASSWORD=aaaaaaaa11111111\nBETTER_AUTH_SECRET=\`${"s".repeat(40)}\`\n`;
+    const { errors } = checkSecrets(parseDotenv(raw), { existingDatabase: false, rawText: raw });
+    expect(errors.join()).toMatch(/BETTER_AUTH_SECRET starts with a backtick/);
+  });
+});
+
 describe("configuredPostgresPassword: a set but empty shell variable wins, as in Compose", () => {
   const dir = mkdtempSync(join(tmpdir(), "forgecy-parity-"));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
