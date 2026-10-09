@@ -9,6 +9,7 @@ import {
   brandImportSourceJob,
   ensureDraft,
   findOrCreateWebsiteSource,
+  linkSourceReader,
   rejectProposals,
   removeSource,
   restoreAsDraft,
@@ -311,17 +312,45 @@ export async function addLinkSourceAction(input: {
       ok: false as const,
       error: (await getTranslations("brand.validation"))("addressOrNote"),
     };
-  return run(input.slug, async ({ actor }) => {
-    const row = await addSource(getDb(), actor, {
-      clientId: uuid.parse(input.clientId),
-      kind: parsed.data.kind,
-      title: parsed.data.title,
-      url: parsed.data.url ?? null,
-      note: parsed.data.note ?? null,
-      ...(parsed.data.note ? { pages: [{ locator: "Note", text: parsed.data.note }] } : {}),
-      status: "extracted",
+  return run(input.slug, async ({ actor, userId }) => {
+    const db = getDb();
+    const clientId = uuid.parse(input.clientId);
+    const reader = linkSourceReader(parsed.data.kind, parsed.data.url);
+    if (!reader) {
+      const row = await addSource(db, actor, {
+        clientId,
+        kind: parsed.data.kind,
+        title: parsed.data.title,
+        url: parsed.data.url ?? null,
+        note: parsed.data.note ?? null,
+        ...(parsed.data.note ? { pages: [{ locator: "Note", text: parsed.data.note }] } : {}),
+        status: "extracted",
+      });
+      return { sourceId: row.id };
+    }
+    // A site or a public profile is read now, as this person: the import applies itself with
+    // them as approver (ADR 0022). The note stays on the source, not among the pages read.
+    assertCan(actor, "edit_draft", clientId);
+    const source =
+      reader.job === "crawl"
+        ? await findOrCreateWebsiteSource(db, actor, { clientId, websiteUrl: reader.url })
+        : await addSource(db, actor, {
+            clientId,
+            kind: reader.kind,
+            title: parsed.data.title,
+            url: reader.url,
+            note: parsed.data.note ?? null,
+            status: "pending",
+          });
+    await enqueueJob(db, await getQueues(), {
+      kind: reader.job === "crawl" ? brandCrawlWebsiteJob : brandImportSourceJob,
+      payload: { clientId, sourceId: source.id, requestedBy: userId, language: await getLocale() },
+      clientId,
+      entity: "brand_source",
+      entityId: source.id,
+      createdBy: userId,
     });
-    return { sourceId: row.id };
+    return { sourceId: source.id };
   });
 }
 

@@ -93,14 +93,28 @@ export interface AutoImportResult {
   reason?: AutoNotAppliedReason | AutoNotPublishedReason;
 }
 
-/** A value a person typed (no cited source) or confirmed by hand (high, not from a proposal). */
-export function isHandEdited(item: {
-  sourceIds: string[];
-  confidence: string;
-  acceptedFromProposalId?: string;
-}): boolean {
+/** What decides whether a value in the draft is a person's work, read once per run. */
+export interface Provenance {
+  /** The client's live sources an import reads by itself (website, social profiles). */
+  autoSourceIds: ReadonlySet<string>;
+  /** Proposals a person accepted from the review queue (not an import run on their behalf). */
+  personAccepted: ReadonlySet<string>;
+}
+
+/**
+ * A value an import must leave alone: a person typed it (no cited source), it is confirmed
+ * (high), it rests on a source an import does not read by itself (a brand book, an interview,
+ * a removed source), or a person accepted it from the review queue.
+ */
+export function isHandEdited(
+  item: { sourceIds: string[]; confidence: string; acceptedFromProposalId?: string },
+  provenance: Provenance,
+): boolean {
   return (
-    item.sourceIds.length === 0 || (item.confidence === "high" && !item.acceptedFromProposalId)
+    item.sourceIds.length === 0 ||
+    item.confidence === "high" ||
+    item.sourceIds.some((id) => !provenance.autoSourceIds.has(id)) ||
+    (!!item.acceptedFromProposalId && provenance.personAccepted.has(item.acceptedFromProposalId))
   );
 }
 
@@ -109,7 +123,12 @@ export function isHandEdited(item: {
  * empty slot or appends (an add over a value set meanwhile goes stale in acceptOne). Values with
  * no provenance (logo variants, plain word lists) count as written by a person.
  */
-export function overwritesHandEdit(state: DraftState, patch: JsonPatch, field: FieldDef): boolean {
+export function overwritesHandEdit(
+  state: DraftState,
+  patch: JsonPatch,
+  field: FieldDef,
+  provenance: Provenance,
+): boolean {
   const last = patch.at(-1);
   if (!last || last.op === "add") return false;
   const current = getAt(state, last.path) as Record<string, unknown> | undefined;
@@ -117,20 +136,45 @@ export function overwritesHandEdit(state: DraftState, patch: JsonPatch, field: F
   // The value every identity starts with (the "sans-serif" font tokens) is nobody's work.
   if (deepEqual(current, getAt({ document: emptyDocument(), tokens: defaultTokens() }, last.path)))
     return false;
-  const provenance =
+  const written =
     field.shape === "token-group"
       ? (current.$extensions as { forgecy?: Record<string, unknown> } | undefined)?.forgecy
       : field.shape === "sourced" || field.shape === "sourced-list"
         ? current
         : undefined;
-  if (!provenance) return true;
-  return isHandEdited({
-    sourceIds: Array.isArray(provenance.sourceIds) ? (provenance.sourceIds as string[]) : [],
-    confidence: typeof provenance.confidence === "string" ? provenance.confidence : "",
-    ...(typeof provenance.acceptedFromProposalId === "string"
-      ? { acceptedFromProposalId: provenance.acceptedFromProposalId }
-      : {}),
-  });
+  if (!written) return true;
+  return isHandEdited(
+    {
+      sourceIds: Array.isArray(written.sourceIds) ? (written.sourceIds as string[]) : [],
+      confidence: typeof written.confidence === "string" ? written.confidence : "",
+      ...(typeof written.acceptedFromProposalId === "string"
+        ? { acceptedFromProposalId: written.acceptedFromProposalId }
+        : {}),
+    },
+    provenance,
+  );
+}
+
+/** The client's auto-read sources and the proposals people accepted by hand. */
+async function provenanceOf(tx: BrandTx, clientId: string): Promise<Provenance> {
+  const sources = await tx
+    .select({ id: brandSources.id, kind: brandSources.kind })
+    .from(brandSources)
+    .where(and(eq(brandSources.clientId, clientId), isNull(brandSources.removedAt)));
+  const accepted = await tx
+    .select({ id: auditEvents.entityId })
+    .from(auditEvents)
+    .where(
+      and(
+        eq(auditEvents.clientId, clientId),
+        eq(auditEvents.entity, "brand_identity_proposal"),
+        eq(auditEvents.action, "brand.proposal.accept"),
+      ),
+    );
+  return {
+    autoSourceIds: new Set(sources.filter((s) => AUTO_IMPORT_KINDS.has(s.kind)).map((s) => s.id)),
+    personAccepted: new Set(accepted.flatMap((a) => (a.id ? [a.id] : []))),
+  };
 }
 
 const notApplied = (reason: AutoNotAppliedReason): AutoImportResult => ({
@@ -314,6 +358,7 @@ export async function applyImport(db: Database, input: AutoImportInput): Promise
     let needsReview = 0;
     let discarded = 0;
     const used = new Set<string>();
+    const provenance = await provenanceOf(tx, clientId);
     for (const p of eligible) {
       // What a person must settle (the cases acceptOne asks a note for) is left to a person.
       if (
@@ -333,7 +378,11 @@ export async function applyImport(db: Database, input: AutoImportInput): Promise
       }
       const match = matchField(p.fieldPath.replace(/\[.*\]$/, "").replace(/\/-$/, ""));
       const state = await currentState(tx, clientId);
-      if (match && isJsonPatch(p.changes) && overwritesHandEdit(state, p.changes, match.field)) {
+      if (
+        match &&
+        isJsonPatch(p.changes) &&
+        overwritesHandEdit(state, p.changes, match.field, provenance)
+      ) {
         await tx
           .update(brandIdentityProposals)
           .set({

@@ -74,5 +74,19 @@ export function socialProfileOf(url: string): { kind: SocialKind; url: string } 
   return path ? { kind, url: `${ROOT[kind]}${path}` } : null;
 }
 
+/**
+ * What reads a link a person adds by hand: the site crawl for a website, the profile import for
+ * a public profile of the chosen network (at its canonical address), nothing for any other link.
+ */
+export function linkSourceReader(
+  kind: string,
+  url: string | null | undefined,
+): { job: "crawl"; url: string } | { job: "import"; kind: SocialKind; url: string } | null {
+  if (!url) return null;
+  if (kind === "website") return { job: "crawl", url };
+  const profile = isSocialKind(kind) ? socialProfileOf(url) : null;
+  return profile?.kind === kind ? { job: "import", kind, url: profile.url } : null;
+}
+
 /** The platform of a profile link; null for anything else (share, intent or post links included). */
 export const socialKindOf = (url: string): SocialKind | null => socialProfileOf(url)?.kind ?? null;

@@ -11,7 +11,8 @@ export * from "./diff";
 export * from "./context";
 export * from "./read";
 export * from "./completeness";
-export * from "./reference-images";
+// Not here: reference-images.ts and import/images.ts load sharp (native); the worker side
+// imports them by subpath, so this entry stays safe for the web app (like @forgecy/audit's).
 // Explicit list: service.ts also holds transaction-level internals (openDraft, lockOpenDraft,
 // acceptOne, publishDraft, restoreDraft, updateSourceStatus...) that stay inside this package.
 export {
@@ -54,8 +55,10 @@ export {
   type AutoImportInput,
   type AutoImportResult,
   type LatestAutoImport,
+  type Provenance,
 } from "./auto-import";
 export * from "./jobs";
 export { detectImportFile, type DetectResult, type ImportFileType } from "./import/detect";
 export type { ImportResult } from "./import/run";
 export { newItemId } from "./ids";
+export { linkSourceReader } from "./social-url";

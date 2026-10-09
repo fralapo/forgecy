@@ -5,6 +5,7 @@ import {
   isHandEdited,
   isSharedDraft,
   overwritesHandEdit,
+  type Provenance,
 } from "../src/auto-import";
 import { emptyDocument } from "../src/document";
 import { matchField } from "../src/fields";
@@ -29,30 +30,55 @@ function stateWith(
   return { document, tokens: t as DraftState["tokens"] };
 }
 
+/** "s", "s-old" and "s-site" are website/social sources; "p-person" was accepted by a person. */
+const PROV: Provenance = {
+  autoSourceIds: new Set(["s", "s-old", "s-site"]),
+  personAccepted: new Set(["p-person"]),
+};
+
 const overwrites = (state: DraftState, path: string, op: "set" | "append", value: unknown) =>
   overwritesHandEdit(
     state,
     buildProposalPatch(state, { path, op, value }, meta).patch,
     matchField(path)!.field,
+    PROV,
   );
 
 describe("isHandEdited", () => {
   it("is true for a value typed by a person (no source)", () => {
-    expect(isHandEdited({ sourceIds: [], confidence: "high" })).toBe(true);
-    expect(isHandEdited({ sourceIds: [], confidence: "low", acceptedFromProposalId: "p" })).toBe(
-      true,
-    );
-  });
-
-  it("is true for a high-confidence value that did not come from a proposal", () => {
-    expect(isHandEdited({ sourceIds: ["s"], confidence: "high" })).toBe(true);
-  });
-
-  it("is false for values accepted from a proposal or observed with lower confidence", () => {
+    expect(isHandEdited({ sourceIds: [], confidence: "high" }, PROV)).toBe(true);
     expect(
-      isHandEdited({ sourceIds: ["s"], confidence: "high", acceptedFromProposalId: "p" }),
+      isHandEdited({ sourceIds: [], confidence: "low", acceptedFromProposalId: "p" }, PROV),
+    ).toBe(true);
+  });
+
+  it("is true for a confirmed (high) value, even one that came from a proposal", () => {
+    expect(isHandEdited({ sourceIds: ["s"], confidence: "high" }, PROV)).toBe(true);
+    expect(
+      isHandEdited({ sourceIds: ["s"], confidence: "high", acceptedFromProposalId: "p" }, PROV),
+    ).toBe(true);
+  });
+
+  it("is true for a value resting on a source no import reads by itself (brand book, removed)", () => {
+    const fromBook = { sourceIds: ["s-book"], confidence: "medium", acceptedFromProposalId: "p" };
+    expect(isHandEdited(fromBook, PROV)).toBe(true);
+    expect(isHandEdited({ ...fromBook, sourceIds: ["s", "s-book"] }, PROV)).toBe(true);
+  });
+
+  it("is true for a value a person accepted from the review queue", () => {
+    expect(
+      isHandEdited(
+        { sourceIds: ["s"], confidence: "medium", acceptedFromProposalId: "p-person" },
+        PROV,
+      ),
+    ).toBe(true);
+  });
+
+  it("is false for what an earlier import observed and applied by itself", () => {
+    expect(
+      isHandEdited({ sourceIds: ["s"], confidence: "medium", acceptedFromProposalId: "p" }, PROV),
     ).toBe(false);
-    expect(isHandEdited({ sourceIds: ["s"], confidence: "medium" })).toBe(false);
+    expect(isHandEdited({ sourceIds: ["s"], confidence: "medium" }, PROV)).toBe(false);
   });
 });
 
@@ -210,7 +236,7 @@ describe("provenance of what a person changes", () => {
     };
     expect(item.value).toMatchObject({ value: "Corrected", sourceIds: [], confidence: "high" });
     expect(item.value).not.toHaveProperty("acceptedFromProposalId");
-    expect(isHandEdited(item.value as never)).toBe(true);
+    expect(isHandEdited(item.value as never, PROV)).toBe(true);
 
     const token = buildProposalPatch(
       state,

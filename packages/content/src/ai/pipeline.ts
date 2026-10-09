@@ -14,7 +14,6 @@ import {
   type TaskRoute,
 } from "@forgecy/ai";
 import {
-  brandReferenceImages,
   getPublishedBrandIdentity,
   loadBrandContext,
   type BrandContext,
@@ -1156,8 +1155,12 @@ export async function runGenerateImage(
   );
   await ctx.progress(20);
   // The client's own site pictures set the look; the gateway applies the policy again (brand_assets).
+  // Loaded here, by subpath: it pulls in sharp, and this module is also reachable from the web
+  // app through @forgecy/content's index, which must never load it (only the worker runs this).
   const references = brandAssetsAllowed(client)
-    ? await brandReferenceImages(deps.db, deps.storage, actor, input.clientId)
+    ? await (
+        await import("@forgecy/brand/reference-images")
+      ).brandReferenceImages(deps.db, deps.storage, actor, input.clientId)
     : [];
   const res = await guarded(() =>
     ai.generateImage({

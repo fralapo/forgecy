@@ -637,6 +637,49 @@ describe.skipIf(!dbUrl)("automatic import (integration)", () => {
     expect(parseDocument(draft.document).strategy.oneLiner?.value).toBe("Corrected by Anna");
   });
 
+  it("keeps a brand-book value a person accepted when the site proposes another", async () => {
+    const clientId = await mkClient("book-kept");
+    const book = await addSource(db, anna, { clientId, kind: "document", title: "Brand book" });
+    await updateSourceStatus(db, book.id, { pages: PAGES });
+    const bookRun = crypto.randomUUID();
+    await runSourceImport(
+      {
+        db,
+        storage,
+        ai: fakeAi([item({ field: "positioning", text: "Il deodorante di famiglia" })]),
+      },
+      { jobId: bookRun, attempt: 1, maxAttempts: 1, requestedBy: anna.id },
+      { clientId, sourceId: book.id },
+    );
+    const [fromBook] = await proposalsOf(bookRun);
+    await acceptProposal(db, anna, { clientId, proposalId: fromBook!.id });
+
+    const { result, jobId } = await runImport(clientId, [POSITIONING]);
+    expect(result.auto).toMatchObject({ accepted: 0, skippedHandEdited: 1 });
+    const [site] = await proposalsOf(jobId);
+    expect(site).toMatchObject({ status: "rejected", reviewNote: "hand-edited field kept" });
+    const draft = (await versionsOf(clientId)).find((v) => v.status === "draft")!;
+    expect(parseDocument(draft.document).strategy.positioning?.value).toBe(
+      "Il deodorante di famiglia",
+    );
+  });
+
+  it("keeps a site value a person accepted from the review queue", async () => {
+    const clientId = await mkClient("queue-kept");
+    const first = await runImport(clientId, [POSITIONING], { autoApply: false });
+    const [p] = await proposalsOf(first.jobId);
+    expect(p!.confidence).toBe("medium");
+    await acceptProposal(db, anna, { clientId, proposalId: p!.id });
+
+    const other = item({ field: "positioning", text: "Nata nel Sud Italia" });
+    const { result } = await runImport(clientId, [other]);
+    expect(result.auto).toMatchObject({ accepted: 0, skippedHandEdited: 1 });
+    const draft = (await versionsOf(clientId)).find((v) => v.status === "draft")!;
+    expect(parseDocument(draft.document).strategy.positioning?.value).toBe(
+      "Il deodorante bifase del Sud Italia",
+    );
+  });
+
   it("does not publish a draft that holds a colleague's work", async () => {
     const inReview = await mkClient("review");
     const d1 = await ensureDraft(db, bruno, inReview);

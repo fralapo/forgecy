@@ -7,8 +7,9 @@
 import type { AiGateway } from "@forgecy/ai";
 import { createHostCheck, createPinnedFetch, type ProbeImage } from "@forgecy/audit";
 import { auditUserAgent } from "@forgecy/audit/crawl/fetcher";
+import { can } from "@forgecy/core";
 import { guardedFetch, readCapped, type HostCheck } from "@forgecy/core/net-guard";
-import { and, assets, brandSources, eq, isNull, users, type Database } from "@forgecy/db";
+import { and, assets, brandSources, eq, isNull, userActor, type Database } from "@forgecy/db";
 import { contentKey, sha256, validateUpload, type StorageDriver } from "@forgecy/files";
 import sharp from "sharp";
 
@@ -253,17 +254,12 @@ export async function harvestImages(
     .where(and(eq(brandSources.id, input.sourceId), eq(brandSources.clientId, input.clientId)));
   const pageUrl = site?.url ?? "";
   // A requester who no longer exists would fail every insert (foreign key): keep the images, unattributed.
-  let requestedBy = input.requestedBy ?? null;
-  if (requestedBy) {
-    const [who] = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.id, requestedBy))
-      .catch(() => []);
-    if (!who) requestedBy = null;
-  }
+  const who = input.requestedBy ? await userActor(db, input.requestedBy).catch(() => null) : null;
+  const requestedBy = who?.id ?? null;
   const max = input.max ?? IMAGE_LIMITS.max;
-  const attested = !!requestedBy && !input.unattested;
+  // Only someone who may upload to this client right now (active, with access) attests the
+  // rights; anyone else's images wait as drafts for a person who may.
+  const attested = !!who && can(who, "assets.upload", input.clientId) && !input.unattested;
   let totalBytes = 0;
 
   /** Measures, classifies and registers one downloaded file. Null: not usable or already there. */

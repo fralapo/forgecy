@@ -9,6 +9,7 @@ import {
   clients,
   createDb,
   eq,
+  grantClientAccess,
   sql,
   users,
   type Database,
@@ -50,6 +51,10 @@ describe.skipIf(!dbUrl)("harvestImages (integration)", () => {
   let server: Server;
   let base: string;
   let userId: string;
+  /** Deactivated, with access to every test client. */
+  let inactiveId: string;
+  /** Active, with access to none. */
+  let outsiderId: string;
   const clientIds: string[] = [];
   const suffix = Math.random().toString(36).slice(2, 8);
   const routes = new Map<string, { type: string; body: Uint8Array | string }>();
@@ -73,6 +78,16 @@ describe.skipIf(!dbUrl)("harvestImages (integration)", () => {
       .values({ name: "bea", email: `bea-${suffix}@example.test` })
       .returning();
     userId = u!.id;
+    const [inactive] = await db
+      .insert(users)
+      .values({ name: "dora", email: `dora-${suffix}@example.test`, active: false })
+      .returning();
+    inactiveId = inactive!.id;
+    const [outsider] = await db
+      .insert(users)
+      .values({ name: "otto", email: `otto-${suffix}@example.test` })
+      .returning();
+    outsiderId = outsider!.id;
     routes.set("/photo.png", { type: "image/png", body: await noise(320, 240) });
     routes.set("/photo-copy.png", { type: "image/png", body: routes.get("/photo.png")!.body });
     routes.set("/pixel.gif", { type: "image/gif", body: GIF_1X1 });
@@ -133,6 +148,8 @@ describe.skipIf(!dbUrl)("harvestImages (integration)", () => {
       .values({ name: `Img ${suffix} ${n}`, slug: `brand-img-${suffix}-${n}` })
       .returning();
     clientIds.push(c!.id);
+    for (const id of [userId, inactiveId])
+      await grantClientAccess(db, { userId: id, clientId: c!.id, createdBy: null });
     const actor = {
       type: "user",
       id: userId,
@@ -216,6 +233,31 @@ describe.skipIf(!dbUrl)("harvestImages (integration)", () => {
     );
     const [row] = await rows(t.clientId);
     expect(row).toMatchObject({ status: "draft", rights: null, createdBy: null, decidedBy: null });
+  });
+
+  it("attests nothing for a deactivated requester or one without access to the client", async () => {
+    for (const who of [inactiveId, outsiderId]) {
+      const t = await setup();
+      const result = await harvestImages(
+        { db, storage: t.storage },
+        {
+          clientId: t.clientId,
+          sourceId: t.sourceId,
+          requestedBy: who,
+          allowPrivate: true,
+          images: [img("/photo.png")],
+          logos: [img("/logo.svg")],
+        },
+      );
+      expect(result).toMatchObject({ saved: 2, failed: 0 });
+      for (const row of await rows(t.clientId))
+        expect(row).toMatchObject({
+          status: "draft",
+          rights: null,
+          createdBy: who,
+          decidedBy: null,
+        });
+    }
   });
 
   it("refuses a private address when private hosts are not allowed", async () => {

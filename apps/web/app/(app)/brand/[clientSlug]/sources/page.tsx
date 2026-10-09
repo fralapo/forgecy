@@ -1,3 +1,4 @@
+import { linkSourceReader } from "@forgecy/brand";
 import { createStorageFromEnv } from "@forgecy/files";
 import { Badge, Card } from "@forgecy/ui";
 import { getTranslations } from "next-intl/server";
@@ -142,7 +143,9 @@ export default async function SourcesPage({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap justify-end gap-2">
-                        {s.storageKey && s.status !== "pending" && s.status !== "extracting" ? (
+                        {(s.storageKey || linkSourceReader(s.kind, s.url)?.job === "import") &&
+                        s.status !== "pending" &&
+                        s.status !== "extracting" ? (
                           <ActionButton
                             variant="secondary"
                             size="sm"

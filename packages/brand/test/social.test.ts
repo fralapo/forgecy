@@ -3,6 +3,7 @@ import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { collectSocialProfiles } from "../src/crawl";
 import { parseSocialMeta, readSocialProfile, socialKindOf } from "../src/import/social";
+import { linkSourceReader } from "../src/social-url";
 
 const page = (head: string) => `<!doctype html><html><head>${head}</head><body>x</body></html>`;
 
@@ -30,6 +31,27 @@ describe("socialKindOf", () => {
     expect(socialKindOf("https://www.tiktok.com/share?url=x")).toBeNull();
     expect(socialKindOf("https://example.com")).toBeNull();
     expect(socialKindOf("not a url")).toBeNull();
+  });
+});
+
+describe("linkSourceReader", () => {
+  it("crawls a website, imports a profile of the chosen network, reads nothing else", () => {
+    expect(linkSourceReader("website", "https://deodue.it/")).toEqual({
+      job: "crawl",
+      url: "https://deodue.it/",
+    });
+    expect(linkSourceReader("instagram", "https://instagram.com/DeoDue.it/?hl=it")).toEqual({
+      job: "import",
+      kind: "instagram",
+      url: "https://www.instagram.com/deodue.it",
+    });
+    // A person's LinkedIn page added by hand is read (its picture never is: social.ts).
+    expect(linkSourceReader("linkedin", "https://www.linkedin.com/in/jane")?.job).toBe("import");
+    // A post, another network's profile, a note-only source, other kinds: plain links.
+    expect(linkSourceReader("instagram", "https://www.instagram.com/p/abc/")).toBeNull();
+    expect(linkSourceReader("facebook", "https://www.instagram.com/deodue")).toBeNull();
+    expect(linkSourceReader("instagram", undefined)).toBeNull();
+    expect(linkSourceReader("competitor", "https://rival.example/")).toBeNull();
   });
 });
 
