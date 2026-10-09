@@ -57,10 +57,10 @@ describe.skipIf(!enabled)("export with Chromium", () => {
       },
       texts: { caption: "Five checks before sending.", hashtags: ["invoice", "#smb"] },
     };
-    const steps: string[] = [];
+    const percents: number[] = [];
     const a = await exportCarousel(browser, {
       ...input,
-      onProgress: (_p, s) => void steps.push(s),
+      onProgress: (p) => void percents.push(p),
     });
     const b = await exportCarousel(browser, input);
 
@@ -75,7 +75,8 @@ describe.skipIf(!enabled)("export with Chromium", () => {
     ]);
     expect(a.files.map((f) => sha256(f.data))).toEqual(b.files.map((f) => sha256(f.data)));
     expect(a.issues).toEqual([]);
-    expect(steps).toContain("Rendering slide 5 of 5");
+    expect(percents.at(-1)).toBe(100);
+    expect(percents).toEqual([...percents].sort((a, b) => a - b));
     for (const f of a.files.filter((f) => f.kind === "png"))
       expect(pngSize(f.data)).toEqual({ width: 1080, height: 1350 });
 

@@ -29,7 +29,7 @@ import { csvCell, englishCsvLabels } from "../src/products/csv-export";
 import { fieldDefs } from "../src/products/fields";
 import { LOCALES } from "@forgecy/core";
 import { overlappingZip, zipArchive } from "@forgecy/core/testing/archives";
-import { messagesFor } from "@forgecy/i18n";
+import { englishMessage, messagesFor } from "@forgecy/i18n";
 import { makePdf, makeXlsx, makeZip, PNG } from "./fixtures";
 
 const WOO_HEADERS = [
@@ -76,6 +76,16 @@ describe("sniffFile", () => {
 });
 
 describe("CSV and XLSX", () => {
+  it("writes summaries from the message catalog, with real plurals", async () => {
+    const one = await inspectFile("csv", "one.csv", {
+      data: Buffer.from("Name,Price\nCream,10\n"),
+    });
+    expect(one.summary).toBe(englishMessage("products.files.sheet", { rows: 1 }));
+    expect(one.summary).toBe("Valid · 1 row");
+    expect((await inspectFile("txt", "a.txt", { data: Buffer.from("hello") })).summary).toBe(
+      englishMessage("products.files.text"),
+    );
+  });
   // Italian headers and an accented Italian word: the Windows-1252 path exists for Italian Excel exports.
   it("reads semicolon CSV in Windows-1252", () => {
     const bytes = Buffer.from([
@@ -223,9 +233,7 @@ describe("ZIP guard", () => {
     ]);
     const res = await inspectFile("zip", "photos.zip", { data: zip });
     expect(res.valid).toBe(true);
-    expect(res.summary).toBe(
-      "ZIP: 1 sheets, 1 images, 1 texts · 1 files ignored: formats not allowed",
-    );
+    expect(res.summary).toBe("ZIP: 1 sheet, 1 image, 1 text · 1 file ignored: format not allowed");
   });
 });
 

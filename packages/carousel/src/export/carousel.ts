@@ -38,7 +38,7 @@ export interface ExportCarouselInput {
   /** Language of the deliverable: template labels, watermark, PDF and page language. */
   language?: Locale;
   /** Called with 0–100 as the export advances. */
-  onProgress?: (percent: number, step: string) => Promise<void> | void;
+  onProgress?: (percent: number) => Promise<void> | void;
   /** Checked between slides: stop early when it returns true. */
   isCancelled?: () => Promise<boolean>;
 }
@@ -84,7 +84,7 @@ export async function exportCarousel(
     : {};
   const warnings: string[] = [];
 
-  await progress(5, "Preparing");
+  await progress(5);
   const captureInputs: CaptureInput[] = slides.map((slide, index) => {
     const layout = findLayout(m, slide.layout);
     const rendered = renderSlideHtml({
@@ -106,10 +106,7 @@ export async function exportCarousel(
     captureInputs,
     async (i) => {
       if (await input.isCancelled?.()) throw new ExportCancelledError();
-      await progress(
-        10 + Math.round(((i + 1) / slides.length) * 70),
-        `Rendering slide ${i + 1} of ${slides.length}`,
-      );
+      await progress(10 + Math.round(((i + 1) / slides.length) * 70));
     },
     intlLocale(language),
   );
@@ -132,7 +129,7 @@ export async function exportCarousel(
 
   let pdf: Uint8Array | undefined;
   if (input.outputs.includes("pdf") || wantZip) {
-    await progress(85, "Composing PDF");
+    await progress(85);
     const page = pdfPageSize(m.format);
     pdf = await pngsToPdf(pngs, page.width, page.height, {
       language: intlLocale(language),
@@ -152,7 +149,7 @@ export async function exportCarousel(
   }
 
   if (wantZip) {
-    await progress(95, "Creating ZIP");
+    await progress(95);
     const enc = new TextEncoder();
     const entries = [
       ...files.map((f) => ({ name: f.name, data: f.data })),
@@ -168,6 +165,6 @@ export async function exportCarousel(
     });
   }
 
-  await progress(100, "Done");
+  await progress(100);
   return { files, issues: captures.flatMap((c) => c.issues), warnings };
 }

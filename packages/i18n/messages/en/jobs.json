@@ -4,6 +4,9 @@
     "interruptedFinal": "Worker interrupted after the last attempt.",
     "queueUnavailable": "Job queue unavailable.",
     "exportCancelled": "Export cancelled.",
-    "templateNotFound": "Template not found."
+    "templateNotFound": "Template not found.",
+    "templateIdNotFound": "Template {id} not found.",
+    "templateVersionNotFound": "Template {id} v{version} not found.",
+    "slidesInvalid": "Slides not valid for the template: {detail}"
   }
 }

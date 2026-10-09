@@ -34,18 +34,24 @@ async function runExport(deps: CarouselHandlerDeps, p: CarouselExportPayload, ct
   const source =
     deps.templates ?? dbTemplateSource({ db: ctx.db, storage: deps.storage, clientId: p.clientId });
   const pkg = await source.get(p.templateId, p.templateVersion);
-  if (!pkg)
-    throw new NeedsAttentionError(
-      `Template ${p.templateId}${p.templateVersion ? ` v${p.templateVersion}` : ""} not found`,
-    );
+  if (!pkg) {
+    const [key, values] = p.templateVersion
+      ? ([
+          "jobs.errors.templateVersionNotFound",
+          { id: p.templateId, version: p.templateVersion },
+        ] as const)
+      : (["jobs.errors.templateIdNotFound", { id: p.templateId }] as const);
+    throw new NeedsAttentionError(englishMessage(key, values), undefined, messageRef(key, values));
+  }
   const check = buildCarouselSchema(pkg.manifest).safeParse(p.slides);
-  if (!check.success)
+  if (!check.success) {
+    const detail = check.error.issues[0]?.message ?? "?";
     throw new NeedsAttentionError(
-      `Slides not valid for the template: ${check.error.issues[0]?.message ?? "error"}`,
-      {
-        issues: check.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
-      },
+      englishMessage("jobs.errors.slidesInvalid", { detail }),
+      { issues: check.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) },
+      messageRef("jobs.errors.slidesInvalid", { detail }),
     );
+  }
 
   let assets: Map<string, string>;
   try {

@@ -4,6 +4,9 @@
     "interruptedFinal": "Worker interrotto dopo l’ultimo tentativo.",
     "queueUnavailable": "Coda dei job non disponibile.",
     "exportCancelled": "Esportazione annullata.",
-    "templateNotFound": "Template non trovato."
+    "templateNotFound": "Template non trovato.",
+    "templateIdNotFound": "Template {id} non trovato.",
+    "templateVersionNotFound": "Template {id} v{version} non trovato.",
+    "slidesInvalid": "Le slide non sono valide per il template: {detail}"
   }
 }

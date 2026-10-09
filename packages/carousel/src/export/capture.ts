@@ -1,5 +1,7 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
+import type { MessageRef } from "@forgecy/core";
+import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import type { Browser, Page } from "playwright-core";
 import type { RenderedSlide } from "../renderer";
 import type { SafeZone } from "../formats";
@@ -20,6 +22,8 @@ export interface RenderIssue {
   slot: string;
   kind: RenderIssueKind;
   message: string;
+  /** The message in the reader's language; `message` stays English for logs and fallbacks. */
+  ref?: MessageRef;
 }
 
 export interface SlotMeasure {
@@ -115,35 +119,56 @@ export function issuesFromMeasures(
   limits: CaptureInput["limits"] = {},
 ): RenderIssue[] {
   const issues: RenderIssue[] = [];
-  const add = (slot: string, kind: RenderIssueKind, message: string) =>
-    issues.push({ slide, slot, kind, message });
+  const add = (
+    slot: string,
+    kind: RenderIssueKind,
+    key: MessageKey & `templates.renderIssues.${string}`,
+    values: MessageValues,
+  ) =>
+    issues.push({
+      slide,
+      slot,
+      kind,
+      message: englishMessage(key, values),
+      ref: messageRef(key, values),
+    });
   for (const s of slots) {
     const lim = limits[s.name] ?? {};
+    const slot = s.name;
     if (s.kind === "text") {
-      if (s.overflow) add(s.name, "overflow", `The text of “${s.name}” overflows its box.`);
-      if (s.outsideSlide) add(s.name, "outside_slide", `“${s.name}” goes outside the slide.`);
+      if (s.overflow) add(slot, "overflow", "templates.renderIssues.overflow", { slot });
+      if (s.outsideSlide)
+        add(slot, "outside_slide", "templates.renderIssues.outsideSlide", { slot });
       else if (s.outsideSafe)
-        add(s.name, "outside_safe_zone", `“${s.name}” is outside the safe zone.`);
+        add(slot, "outside_safe_zone", "templates.renderIssues.outsideSafeZone", { slot });
       if (lim.maxLines && s.lines > lim.maxLines)
-        add(s.name, "too_many_lines", `“${s.name}” takes ${s.lines} lines out of ${lim.maxLines}.`);
+        add(slot, "too_many_lines", "templates.renderIssues.tooManyLines", {
+          slot,
+          lines: s.lines,
+          max: lim.maxLines,
+        });
     } else {
-      if (!s.naturalWidth) add(s.name, "image_missing", `The image of “${s.name}” did not load.`);
+      if (!s.naturalWidth)
+        add(slot, "image_missing", "templates.renderIssues.imageMissing", { slot });
       else if (
         (lim.minWidth && s.naturalWidth < lim.minWidth) ||
         (lim.minHeight && s.naturalHeight < lim.minHeight)
       )
-        add(
-          s.name,
-          "low_resolution",
-          `The image of “${s.name}” is ${s.naturalWidth}×${s.naturalHeight} px, below the minimum.`,
-        );
+        add(slot, "low_resolution", "templates.renderIssues.lowResolution", {
+          slot,
+          width: s.naturalWidth,
+          height: s.naturalHeight,
+        });
     }
   }
   const texts = slots.filter((s) => s.kind === "text");
   for (let i = 0; i < texts.length; i++)
     for (let j = i + 1; j < texts.length; j++)
       if (intersects(texts[i]!.rect, texts[j]!.rect))
-        add(texts[i]!.name, "overlap", `“${texts[i]!.name}” overlaps “${texts[j]!.name}”.`);
+        add(texts[i]!.name, "overlap", "templates.renderIssues.overlap", {
+          slot: texts[i]!.name,
+          other: texts[j]!.name,
+        });
   return issues;
 }
 

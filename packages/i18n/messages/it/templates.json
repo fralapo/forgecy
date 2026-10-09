@@ -186,6 +186,15 @@
     "minItems": "minItems > maxItems",
     "colorAndFont": "Una variabile non può essere sia un colore sia un font"
   },
+  "renderIssues": {
+    "overflow": "Il testo di “{slot}” esce dal proprio riquadro.",
+    "outsideSlide": "“{slot}” esce dalla slide.",
+    "outsideSafeZone": "“{slot}” è fuori dalla zona di sicurezza.",
+    "tooManyLines": "“{slot}” occupa {lines, plural, one {# riga} other {# righe}} su {max}.",
+    "imageMissing": "L’immagine di “{slot}” non si è caricata.",
+    "lowResolution": "L’immagine di “{slot}” è {width}×{height} px, sotto il minimo.",
+    "overlap": "“{slot}” si sovrappone a “{other}”."
+  },
   "errors": {
     "invalidFolder": "Cartella non valida",
     "fileTooLarge": "Il file supera i 50 MB",
