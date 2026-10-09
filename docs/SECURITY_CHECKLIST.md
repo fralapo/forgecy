@@ -241,6 +241,24 @@ enforced, and a hostile dump can still plant triggers that later run as the
       already exists here): both imports succeed, the second one's template
       is renamed `X.Y.Z-import.N`, and no carousel, preview or export picks
       up another client's template.
+- [ ] Private templates (`docs/adr/0021-private-client-templates.md`): import
+      one package as client A and again as client B, so each owns a private
+      template with the same key (B's renamed `-import.1`); publish both and
+      one agency version of that key below them. In A and in B the new
+      carousel picker shows each client's own version only, a third client
+      sees the agency one; set a B carousel's `template_version` (and its
+      version's `meta.templateVersion`) to A's version in the database: the
+      editor, the preview and the export say the template is unavailable or
+      not found, and nothing is rendered. Do the same with a Brand Book row
+      (`brand_book_exports.template_version`): the render needs attention
+      with "template missing". Upload, on the Templates screen, a package
+      with the key and version of a client's private Draft: refused
+      ("belongs to a client's private template"), the Draft unchanged.
+      Delete a prospect that owns a template: the template is gone, not
+      listed as an agency template. Automated:
+      `pnpm --filter @forgecy/carousel exec vitest run test/catalog.integration.test.ts`
+      and the `template-scope` suites of `content` and `brand-book`, with
+      `FORGECY_TEST_DATABASE_URL` set.
 
 ## 6. Secrets and database password
 
@@ -295,6 +313,12 @@ automatic (README, Upgrading, covers the first):
   Forgecy from before this change refuses the new ones as an unknown format,
   so before downgrading, restore the pre-upgrade backup with this version, or
   restore its `db.dump` by hand with `pg_restore`.
+- Per-client access (`docs/adr/0020-per-client-access.md`): migration 0032
+  assigns every existing client to every person who is not an Admin, so nobody
+  loses or gains access in the upgrade. Afterwards a new person sees no client
+  until an Admin assigns some in Settings → Client access, and a new client is
+  visible to its creator and the Admins only. Demoting an Admin leaves them
+  with no client until assigned.
 
 Decisions and checks nobody has made yet; each is a known limitation until it is:
 
@@ -314,10 +338,28 @@ Decisions and checks nobody has made yet; each is a known limitation until it is
       section 5 on any Postgres major other than 17: it was validated against
       `pg_dump` and `pg_restore` 17 only, and a changed header makes it refuse
       the dump.
-- [ ] Per-client access control: any active human can read any client by id
-      (ADR 0014). It needs a grants table, a resolver in `can()` and a filter in
-      every query.
-- [ ] Template reuse across clients by key and version was only scoped in ADR 0015.
+- [x] Per-client access control (`docs/adr/0020-per-client-access.md`): a person
+      who is not an Admin sees and acts only on the clients assigned to them
+      (`client_access`); Admins on all. Enforced by `can()` whenever a client is
+      given (services, SSE job events, worker jobs started by a person), by
+      `clientScopeWhere` in cross-client lists (clients, brand, content and
+      products pickers, search, prospects and the duplicate warning, automations,
+      agent memory and runs, Templates catalog), by the slug loaders and products
+      routes (404), and in notifications. Drill in section 8. Not covered:
+      signed file URLs stay valid until they expire, agency-wide agent statistics
+      and runs without a client stay visible to everyone, and there is no
+      row-level security in Postgres.
+- [x] Template reuse across clients by key and version: a client's template is
+      private to it (`docs/adr/0021-private-client-templates.md`). Content,
+      carousel export and preview, `/render/slide`, the Brand Book, the audit
+      report and automations resolve only agency templates and the
+      deliverable's client's own; another client's is treated as missing. The
+      client import never reuses or changes another client's template, even
+      when "use existing" is chosen; key and version stay unique across the
+      installation (a collision is renamed `-import.N`). An agency upload never
+      replaces a client's private Draft, and deleting a prospect deletes its
+      templates. Not covered: who may see private templates in the Templates
+      catalog, its previews and search (per-client access, ADR 0020).
       (Template ZIPs themselves are now read through `readZipParts`.)
 - [x] Image generation logs the cost of a run that fails after the provider already
       charged (a failed job, no image returned, a refusal, or a later variant failing):
@@ -376,9 +418,39 @@ Decisions and checks nobody has made yet; each is a known limitation until it is
       Windows bind mounts, and VM volumes for the Postgres and Redis capability check),
       and the `s3` and `dev` profiles.
 
+## 8. Per-client access (see `docs/adr/0020-per-client-access.md`)
+
+Use three accounts: an Admin, a person assigned to client X only, and a person
+with no client. Create X and Y as the Admin (the creator is assigned, so then
+remove the Admin-created assignments you do not want in Settings → Client access).
+
+1. As the assigned person, the Clients, Brand Identity, Content, Products and
+   Audit lists, the search (with and without the client filter) and Agents →
+   Memory show X and never Y.
+2. Still as that person, open Y's pages by URL: `/clients/<y>`, `/brand/<y>`,
+   `/content/<y>`, `/products/<y>`, `/products/<y>/export`, `/audit/<y>`:
+   each answers 404. A carousel, automation or agent run of Y opened by id
+   answers 404 or "permission denied", never its content.
+3. Open `/api/jobs/<id>/events` for a job of Y: 404.
+4. Request a review of a Y carousel as the Admin, choosing the assigned person
+   as reviewer: no notification reaches them; one about X does.
+5. As the person with no client: every list is empty and X's pages answer 404.
+6. As the Admin, assign Y to the person in Settings → Client access: Y appears
+   on their next page load, the client page of Y lists them under "Who has
+   access", and the activity log of Y shows `client_access.grant`. Remove it:
+   Y disappears again, and Y's notifications leave their bell.
+7. As the assigned person, create a client: it is theirs (listed, openable)
+   and the Admin sees it too; the person with no client does not.
+8. After upgrading an existing install, a person who could open every client
+   before still can (migration 0032 backfill). Automated:
+   `pnpm --filter @forgecy/db exec vitest run test/client-access.integration.test.ts`
+   and the `client-access` suites of `ai`, `audit`, `automations`, `brand`,
+   `brand-book`, `brand-guard`, `catalog` and `content`, with
+   `FORGECY_TEST_DATABASE_URL` (and `FORGECY_TEST_REDIS_URL` for `audit`) set.
+
 ## Sign-off
 
-Record the date, the person who ran it, and which of the seven sections
+Record the date, the person who ran it, and which of the eight sections
 passed in the PR or ticket that references this checklist. A failing item
 blocks go-live until fixed or explicitly accepted as a known limitation
 (e.g. the documented residual gaps: when a page is opened in Chromium, a

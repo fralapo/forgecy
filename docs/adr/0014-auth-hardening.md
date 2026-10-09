@@ -1,6 +1,6 @@
 # 0014 · Sign-in and web hardening
 
-- Status: accepted
+- Status: accepted; the "Single-tenant trust boundary" bullet is superseded by 0020 (per-client access)
 - Date: 2026-10-08
 
 ## Context
@@ -16,7 +16,7 @@ An audit of the sign-in path and the web surface found: unlimited password guess
 - **Login `next`.** `safeNext` (`apps/web/lib/safe-next.ts`) resolves the value like a browser against a dummy origin and returns `/` for anything that leaves the origin, including `/\evil.com`, a literal tab, and dot-segment tricks that normalize to `//host`.
 - **Static security headers.** `next.config.ts` sends `Content-Security-Policy: frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'`, `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and a `Permissions-Policy` that disables camera, microphone, geolocation, payment and usb. There is deliberately no `script-src`: a nonce CSP forces every page to render dynamically and needs the proxy, so it is its own future change. Until then XSS from stored data is limited only by React escaping and the SVG sandbox. `/render/*` and `/api/files/*` are excluded because they set their own CSP (the editor frames `/render`) and a second policy would intersect with theirs. `Strict-Transport-Security` is added only when `FORGECY_BASE_URL` starts with `https://` at build time.
 - **SVG downloads.** `fileResponseHeaders` (`packages/files`) always sends `nosniff`, and for `image/svg+xml` also `default-src 'none'; style-src 'unsafe-inline'; sandbox`, so an SVG opened through its signed URL is an inert image with no scripts and an opaque origin.
-- **Single-tenant trust boundary.** Every active human can read every client, job and file listing by id; `can()` gates by role and action, never by client, and a `clientId` never widens what an actor may do. Core tests pin this contract. Per-client access (freelancers, client logins) is deferred: it needs a grants or members table with a generated migration, a resolver passed into `can()` and a filter in every service query, which is a milestone of its own. The SSE endpoint `/api/jobs/:id/events` already checks the job kind's permission for admin-only kinds.
+- **Single-tenant trust boundary** (superseded by `docs/adr/0020-per-client-access.md`: people now reach only the clients assigned to them). Every active human can read every client, job and file listing by id; `can()` gates by role and action, never by client, and a `clientId` never widens what an actor may do. Core tests pin this contract. Per-client access (freelancers, client logins) is deferred: it needs a grants or members table with a generated migration, a resolver passed into `can()` and a filter in every service query, which is a milestone of its own. The SSE endpoint `/api/jobs/:id/events` already checks the job kind's permission for admin-only kinds.
 - **AI gateway fails closed.** For an `external_restricted` client, a request without `clientId`, or a ledger without `approvedProviders` or `sendableAssets`, approves no cloud provider and keeps files on the local model. A request can only narrow what the Admin approved, never widen it.
 
 ## Consequences
