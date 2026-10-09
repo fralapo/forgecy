@@ -273,9 +273,11 @@ Decisions and checks nobody has made yet; each is a known limitation until it is
 - [ ] Image generation logs no cost when it ends in an error, even if the provider
       already charged (images refused after generation or over the size cap):
       `jobs_log` and the budget under-count those runs (`packages/ai/src/gateway.ts`).
-- [ ] `packages/client-transfer/src/export.ts` does not enforce the import's JSON
-      caps (64 MiB per entry, 256 MiB per package): a very large client exports
-      fine and then fails import as unsafe.
+- [x] `packages/client-transfer/src/export.ts` enforces the import's JSON caps
+      (64 MiB per entry, 256 MiB per package): a client too large for one package
+      fails the export with a clear message instead of failing import as unsafe.
+      The integration test needs `FORGECY_TEST_DATABASE_URL`; it was not run where it
+      was written (no database available), so run it once in CI or locally.
 - [ ] A brand proposal authored by a person who does not exist on the target
       installation fails the whole client import on the `brand_proposals_author`
       CHECK.

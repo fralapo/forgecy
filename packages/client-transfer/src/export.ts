@@ -6,9 +6,14 @@
  * settings or data of other clients.
  */
 import { createWriteStream } from "node:fs";
-import { Readable } from "node:stream";
+import type { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { CLIENT_PACKAGE_FORMAT, type ClientTransferArea } from "@forgecy/core";
+import {
+  CLIENT_PACKAGE_FORMAT,
+  CLIENT_PACKAGE_MAX_JSON_BYTES,
+  CLIENT_PACKAGE_MAX_JSON_TOTAL_BYTES,
+  type ClientTransferArea,
+} from "@forgecy/core";
 import { migrationStatus, sql, type Database } from "@forgecy/db";
 import { isValidKey, sha256, type StorageDriver } from "@forgecy/files";
 import { ZipFile } from "yazl";
@@ -112,18 +117,41 @@ export async function writeClientPackage(
   opts: ExportOptions,
   outFile: string,
   onProgress: (pct: number) => Promise<void> = async () => {},
+  limits = {
+    jsonBytes: CLIENT_PACKAGE_MAX_JSON_BYTES,
+    jsonTotalBytes: CLIENT_PACKAGE_MAX_JSON_TOTAL_BYTES,
+  },
 ): Promise<{ manifest: PackageManifest; counts: Record<string, number> }> {
   const { db, storage } = deps;
   const areas = new Set<string>(["client", ...opts.areas]);
   const tables = clientTables().filter((t) => areas.has(t.area));
   const zip = new ZipFile();
   const done = pipeline(zip.outputStream, createWriteStream(outFile));
+  // An export refused for size destroys the stream; keep that rejection from surfacing as an
+  // unhandled one (the awaited `done` below still reports a real write error).
+  done.catch(() => {});
   const ids = new Map<string, string[]>();
   const tableInfo: PackageManifest["tables"] = {};
   const counts: Record<string, number> = {};
   const fileKeys = new Set<string>();
   const people = new Set<string>();
   let client: PackageManifest["client"] | null = null;
+
+  // The reader refuses JSON above these caps, so an export that would exceed them fails here
+  // with a clear reason instead of producing a package that imports as unsafe.
+  let jsonTotal = 0;
+  const tooLarge = (message: string): never => {
+    (zip.outputStream as unknown as Readable).destroy();
+    throw new Error(message);
+  };
+  const addJson = (name: string, bytes: Buffer) => {
+    jsonTotal += bytes.length;
+    if (bytes.length > limits.jsonBytes)
+      tooLarge(`${name} is larger than a package may hold (${bytes.length} bytes)`);
+    if (jsonTotal > limits.jsonTotalBytes)
+      tooLarge("The data of this client is larger than a package may hold");
+    zip.addBuffer(bytes, name);
+  };
 
   for (const [i, table] of tables.entries()) {
     const where = whereFor(table, opts, ids);
@@ -142,7 +170,7 @@ export async function writeClientPackage(
       for (const u of table.userColumns)
         if (typeof r[u.column] === "string") people.add(r[u.column] as string);
     const bytes = Buffer.from(text);
-    zip.addBuffer(bytes, `data/${table.name}.json`);
+    addJson(`data/${table.name}.json`, bytes);
     tableInfo[table.name] = { rows: rows.length, sha256: sha256(bytes) };
     if (rows.length) counts[table.name] = rows.length;
     await onProgress(Math.round((i / tables.length) * 50));
@@ -169,7 +197,7 @@ export async function writeClientPackage(
         )
       ).rows
     : [];
-  zip.addBuffer(Buffer.from(JSON.stringify(peopleRows)), "people.json");
+  addJson("people.json", Buffer.from(JSON.stringify(peopleRows)));
   if (opts.areas.includes("activity"))
     zip.addBuffer(Buffer.from(await activityCsv(db, opts.clientId)), "activity.csv");
 
@@ -189,7 +217,7 @@ export async function writeClientPackage(
     files,
     people: peopleRows.length,
   };
-  zip.addReadStream(Readable.from([JSON.stringify(manifest, null, 2)]), "manifest.json");
+  addJson("manifest.json", Buffer.from(JSON.stringify(manifest, null, 2)));
   zip.end();
   await done;
   await onProgress(95);

@@ -196,6 +196,28 @@ describe.skipIf(!dbUrl)("full client export (integration)", () => {
     expect((await readZip(file)).has("activity.csv")).toBe(false);
   });
 
+  it("refuses an export whose JSON the importer would refuse", async () => {
+    const opts = {
+      clientId: ids.client!,
+      areas: [...clientTransferAreas],
+      excludeUnapprovedAi: true,
+      includeAgencyTemplates: false,
+    };
+    const noop = async () => {};
+    await expect(
+      writeClientPackage({ db, storage }, opts, join(dir, "big1.zip"), noop, {
+        jsonBytes: 10,
+        jsonTotalBytes: 1 << 20,
+      }),
+    ).rejects.toThrow(/larger than a package may hold/);
+    await expect(
+      writeClientPackage({ db, storage }, opts, join(dir, "big2.zip"), noop, {
+        jsonBytes: 1 << 20,
+        jsonTotalBytes: 100,
+      }),
+    ).rejects.toThrow(/data of this client is larger/);
+  });
+
   it("estimates rows per area for Admins only", async () => {
     const est = await estimateClientExport(db, admin, ids.client!);
     expect(est.rows.content).toBe(2);
