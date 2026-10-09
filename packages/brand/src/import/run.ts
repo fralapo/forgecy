@@ -253,7 +253,13 @@ function deterministic(
 export async function runSourceImport(
   deps: ImportDeps,
   ctx: ImportContext,
-  input: { clientId: string; sourceId: string; language?: string },
+  input: {
+    clientId: string;
+    sourceId: string;
+    language?: string;
+    /** The logo the website crawl just stored as a source, proposed as the primary logo variant. */
+    logo?: { sourceId: string; image: { url: string } };
+  },
 ): Promise<ImportResult> {
   const { db } = deps;
   const [source] = await db
@@ -331,7 +337,7 @@ export async function runSourceImport(
   // What the browser read on a website: its colors and fonts are proposed directly, and are the
   // only ones the analyst may name. An unreadable value counts as absent.
   const visual = parseSiteProbe(source.visual);
-  if (visual) candidates.push(...visualCandidates(visual, source.id));
+  if (visual) candidates.push(...visualCandidates(visual, input.logo));
   // Documents keep their own checks (their hex values come from the text); only a site's items
   // are verified against the page and the probe, so imports of brand books behave as before.
   const website = source.kind === "website";

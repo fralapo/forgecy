@@ -13,6 +13,7 @@ import { and, brandSources, eq } from "@forgecy/db";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import type { ImportContext, ImportDeps, ImportResult } from "./import/run";
 import { runSourceImport } from "./import/run";
+import { harvestImages } from "./import/images";
 import { mergeProbes } from "./probe-merge";
 import { updateSourceStatus } from "./service";
 
@@ -61,6 +62,7 @@ export async function runWebsiteCrawl(
   const userAgent = auditUserAgent();
   const hostCheck = createHostCheck({ allowPrivate });
   let fetcher: PageFetcher | undefined;
+  let visual: ReturnType<typeof mergeProbes> | undefined;
 
   try {
     // The browser reads the real colors, fonts and logos; without Chromium (or when it cannot
@@ -119,6 +121,7 @@ export async function runWebsiteCrawl(
         : null,
     ].filter((r): r is MessageRef => r !== null);
     const probes = result.pages.flatMap((p) => (p.brand ? [p.brand] : []));
+    if (probes.length) visual = mergeProbes(probes);
     await updateSourceStatus(db, source.id, {
       status: pages.length
         ? result.stoppedEarly || result.skipped.length
@@ -126,7 +129,7 @@ export async function runWebsiteCrawl(
           : "extracted"
         : "failed",
       pages,
-      visual: probes.length ? (mergeProbes(probes) as unknown as Record<string, unknown>) : null,
+      visual: visual ? (visual as unknown as Record<string, unknown>) : null,
       ...detail(parts),
     });
     if (!pages.length)
@@ -163,8 +166,27 @@ export async function runWebsiteCrawl(
   } finally {
     await fetcher?.close().catch(() => undefined);
   }
+  await ctx.progress?.(20);
+
+  // The images and the logo go into the asset library before the import, so the logo can be proposed.
+  let logo: Awaited<ReturnType<typeof harvestImages>>["logo"];
+  if (visual)
+    try {
+      logo = (
+        await harvestImages(deps, {
+          clientId: input.clientId,
+          sourceId: source.id,
+          images: visual.images,
+          logos: visual.logos,
+          requestedBy: ctx.requestedBy ?? null,
+          allowPrivate,
+        })
+      ).logo;
+    } catch {
+      // Pictures are a bonus: the text import goes on without them.
+    }
   await ctx.progress?.(30);
 
   // The pages are now on the source: the rest is identical to a typed-in text source.
-  return runSourceImport(deps, ctx, input);
+  return runSourceImport(deps, ctx, { ...input, ...(logo ? { logo } : {}) });
 }

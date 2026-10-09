@@ -113,6 +113,7 @@ describe.skipIf(!dbUrl)("runSourceImport on a website (integration)", () => {
   const run = async (
     source: { kind: "website" | "document"; visual?: unknown },
     items: AnalystItem[],
+    logo?: { sourceId: string; image: { url: string } },
   ) => {
     const s = await addSource(db, anna, { clientId, kind: source.kind, title: "Site" });
     await updateSourceStatus(db, s.id, {
@@ -123,7 +124,7 @@ describe.skipIf(!dbUrl)("runSourceImport on a website (integration)", () => {
     const result = await runSourceImport(
       { db, storage, ai },
       { jobId: crypto.randomUUID(), attempt: 1, maxAttempts: 1 },
-      { clientId, sourceId: s.id },
+      { clientId, sourceId: s.id, ...(logo ? { logo } : {}) },
     );
     const proposals = await db
       .select()
@@ -180,6 +181,27 @@ describe.skipIf(!dbUrl)("runSourceImport on a website (integration)", () => {
           "brand-analyst/website@1",
       ),
     ).toBe(true);
+  });
+
+  it("proposes the logo the crawl stored as the primary logo variant, with no quote needed", async () => {
+    const logoSource = await addSource(db, anna, {
+      clientId,
+      kind: "screenshot",
+      title: "Logo deodue.test",
+      storageKey: `clients/${clientId}/brand-sources/${"a".repeat(64)}.svg`,
+      mime: "image/svg+xml",
+      size: 100,
+      sha256: "a".repeat(64),
+      status: "extracted",
+    });
+    const { mine } = await run({ kind: "website", visual: VISUAL }, [], {
+      sourceId: logoSource.id,
+      image: { url: "https://deodue.test/logo.svg" },
+    });
+    const logo = mine.find((p) => p.fieldPath.startsWith("/document/visual/logo/variants"))!;
+    expect(logo.status).toBe("proposed");
+    expect(JSON.stringify(logo.changes)).toContain(logoSource.id);
+    expect(JSON.stringify(logo.changes)).toContain("logo_primary");
   });
 
   it("discards every analyst color and font when the site has no visual data", async () => {

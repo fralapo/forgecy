@@ -793,7 +793,8 @@
       "fontTheme": "Font named in the document theme.",
       "siteColor": "Color found in the site's styles.",
       "siteFont": "Font in use on the site.",
-      "logo": "Imported logo file: confirm the variant's role."
+      "logo": "Imported logo file: confirm the variant's role.",
+      "logoSite": "Logo found on the site: confirm the variant's role."
     },
     "locators": {
       "theme": "Document theme",

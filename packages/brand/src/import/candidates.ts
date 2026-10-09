@@ -11,8 +11,8 @@ import { getDraftTokens } from "./draft-tokens";
 import type { ProposalOp } from "../proposals";
 
 export interface CandidateProposal {
-  /** "color" candidates get their token path assigned here. */
-  kind?: "color";
+  /** "color" candidates get their token path assigned here; "logo" is the file the crawl itself stored. */
+  kind?: "color" | "logo";
   /** The color's name is final (read from the site or chosen by the analyst), not to be guessed from context. */
   named?: boolean;
   path: string;
@@ -38,11 +38,25 @@ export function rationale(
 const MAX_SITE_COLORS = 6;
 const MAX_SITE_FONTS = 3;
 
+/** The logo the crawl downloaded and registered as a source; the file itself is the evidence. */
+export function logoCandidate(sourceId: string, logo: { url: string }): CandidateProposal {
+  return {
+    kind: "logo",
+    path: "/document/visual/logo/variants",
+    op: "append",
+    value: { role: "logo_primary", sourceId, background: "any" },
+    ...rationale("brand.import.rationale.logoSite"),
+    evidence: { locator: logo.url },
+  };
+}
+
 /**
- * Colors and fonts the browser read on the site, as proposals. Nothing here comes from a model.
- * Logos are not proposed yet: a logo variant needs the image stored as a source first.
+ * Colors, fonts and the harvested logo from the site, as proposals. Nothing here comes from a model.
  */
-export function visualCandidates(visual: SiteProbe, _sourceId?: string): CandidateProposal[] {
+export function visualCandidates(
+  visual: SiteProbe,
+  logo?: { sourceId: string; image: { url: string } },
+): CandidateProposal[] {
   const colors: CandidateProposal[] = knownColors(visual)
     .slice(0, MAX_SITE_COLORS)
     .map((c) => ({
@@ -68,7 +82,7 @@ export function visualCandidates(visual: SiteProbe, _sourceId?: string): Candida
       ...rationale("brand.import.rationale.siteFont"),
       evidence: { locator: SITE_LOCATORS.fonts },
     }));
-  return [...colors, ...fonts];
+  return [...colors, ...fonts, ...(logo ? [logoCandidate(logo.sourceId, logo.image)] : [])];
 }
 
 // Matches Italian and English color words in client documents.

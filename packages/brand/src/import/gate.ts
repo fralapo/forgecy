@@ -60,6 +60,11 @@ export function gateCandidates(input: {
     );
 
   for (const c of input.candidates) {
+    // The harvested logo is a file the crawl downloaded and stored itself: there is no text to quote.
+    if (c.kind === "logo") {
+      result.keep.push(c);
+      continue;
+    }
     if (c.kind === "color") {
       // Colors and fonts are checked against what the browser read; their quote, if any, is not evidence.
       const value = c.value as { hex: string };
