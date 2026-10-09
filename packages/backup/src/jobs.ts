@@ -24,6 +24,7 @@ import {
 import { z } from "zod";
 import { createBackupArchive, isBackupName, pgDumpTo, pruneExpiredBackups } from "./archive";
 import { psqlLoadInto, readRestoreStatus, restoreArchive, writeRestoreStatus } from "./restore";
+import { restoreDatabaseUrl, restoreOwnershipSql, restoreRoleName } from "./restore-role";
 
 /** Backup started from Settings › Backup (manual) or by the worker every night. */
 export const systemBackupJob = defineJob({
@@ -39,6 +40,8 @@ export interface BackupEnv {
   dataDir: string;
   mediaDir: string;
   databaseUrl: string;
+  /** FORGECY_RESTORE_DATABASE_URL: the role a restore loads the dump as (ADR 0018). */
+  restoreDatabaseUrl?: string;
   appVersion?: string | null;
 }
 
@@ -55,6 +58,8 @@ export const systemRestoreJob = defineJob({
 const ACTIVE_JOB_STATUSES = ["queued", "running", "retrying"] as const;
 
 export function backupHandlers(env: BackupEnv): JobHandlers {
+  // Checked when the worker starts, not in the middle of a restore.
+  const restoreUrl = restoreDatabaseUrl(env.restoreDatabaseUrl);
   return {
     ...handle(systemBackupJob, async (payload, ctx) => {
       await ctx.progress(5);
@@ -108,12 +113,15 @@ export function backupHandlers(env: BackupEnv): JobHandlers {
         preRestoreBackup = pre.name;
         await writeRestoreStatus(env.dataDir, { ...base, state: "running", preRestoreBackup });
         await ctx.progress(40);
+        if (restoreUrl)
+          await ctx.db.execute(sql.raw(restoreOwnershipSql(restoreRoleName(restoreUrl))));
         // From here the jobs table is the backup's: this job's row is gone.
         const { media } = await restoreArchive({
           dataDir: env.dataDir,
           mediaDir: env.mediaDir,
           name: payload.backup,
-          load: psqlLoadInto(env.databaseUrl),
+          load: psqlLoadInto(restoreUrl ?? env.databaseUrl),
+          restricted: Boolean(restoreUrl),
         });
         await applyMigrations(env.databaseUrl);
         // Jobs that were active when the backup was made are not in the queue any more.

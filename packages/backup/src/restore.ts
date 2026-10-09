@@ -19,6 +19,7 @@ import {
   type BackupFile,
   type BackupManifest,
 } from "./archive";
+import { stripExtensionStatements } from "./restore-role";
 import { assertSafeDumpFile } from "./safe-dump";
 import { assertPlainTar, extractBackupArchive, UnsafeArchiveError } from "./safe-tar";
 
@@ -101,6 +102,8 @@ export async function restoreArchive(opts: {
   mediaDir: string;
   name: string;
   load: (sqlFile: string) => Promise<void>;
+  /** `load` runs as the FORGECY_RESTORE_DATABASE_URL role: leave out what only a superuser can do. */
+  restricted?: boolean;
 }): Promise<{ media: boolean }> {
   const file = backupPath(opts.dataDir, opts.name);
   // Before anything is read: the bytes must be the ones recorded when the backup was made.
@@ -113,6 +116,8 @@ export async function restoreArchive(opts: {
     ) as BackupManifest;
     if (manifest.format !== BACKUP_FORMAT)
       throw new Error(`Unsupported backup format ${manifest.format}`);
+    // Before the scan, so the scanner reads exactly what psql will.
+    if (opts.restricted) await stripExtensionStatements(join(work, "db.sql"));
     // A backup may come from elsewhere: no psql meta-commands (\!, \copy, \i...) get through.
     await assertSafeDumpFile(join(work, "db.sql"));
     await opts.load(join(work, "db.sql"));

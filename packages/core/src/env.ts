@@ -38,6 +38,11 @@ export const envSchema = z.object({
     .transform((v) => v === "true"),
 
   DATABASE_URL: z.string().min(1),
+  /**
+   * Optional: restores load the dump as this role instead of DATABASE_URL's (ADR 0018).
+   * Validated by @forgecy/backup when the worker starts (the CLI shares that check).
+   */
+  FORGECY_RESTORE_DATABASE_URL: z.string().optional(),
   REDIS_URL: z.string().default("redis://localhost:6379"),
 
   BETTER_AUTH_SECRET: z.string().min(32, "BETTER_AUTH_SECRET must be at least 32 characters"),

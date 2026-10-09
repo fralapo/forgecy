@@ -19,6 +19,12 @@ import {
   checksumMatches,
   createBackupArchive,
 } from "../../packages/backup/src/archive";
+import {
+  restoreDatabaseUrl,
+  restoreOwnershipSql,
+  restoreRoleName,
+  withoutExtensionStatements,
+} from "../../packages/backup/src/restore-role";
 import { assertSafeDumpText } from "../../packages/backup/src/safe-dump";
 import { extractBackupArchive } from "../../packages/backup/src/safe-tar";
 import { composePostgresRunning, run } from "./shell";
@@ -64,8 +70,15 @@ function dumpDatabase(): string {
   return pgClientTool("pg_dump", ["--clean", "--if-exists", "--no-owner", url], { capture: true });
 }
 
-function loadDatabase(sql: string): void {
+/**
+ * Runs `sql` through psql as one transaction: as `asUrl` when given (the restore role), else as
+ * the Compose superuser or DATABASE_URL. With Compose, psql runs inside the postgres container,
+ * where both `localhost` and the service name `postgres` reach the server.
+ */
+function loadDatabase(sql: string, asUrl?: string): void {
+  const flags = ["-X", "--single-transaction", "-v", "ON_ERROR_STOP=1", "-f", "-"];
   if (composePostgresRunning()) {
+    const target = asUrl ? [asUrl] : ["-U", pgUser(), "-d", pgDb()];
     run(
       "docker",
       [
@@ -76,29 +89,18 @@ function loadDatabase(sql: string): void {
         "PGCLIENTENCODING=UTF8",
         "postgres",
         "psql",
-        "-X",
-        "--single-transaction",
-        "-v",
-        "ON_ERROR_STOP=1",
-        "-U",
-        pgUser(),
-        "-d",
-        pgDb(),
-        "-f",
-        "-",
+        ...flags,
+        ...target,
       ],
       { input: sql },
     );
     return;
   }
-  const url = process.env.DATABASE_URL;
+  const url = asUrl ?? process.env.DATABASE_URL;
   if (!url)
     throw new Error("DATABASE_URL is not set and the Compose postgres service is not running");
   // The scanner reads the dump as UTF-8, so psql must too.
-  pgClientTool("psql", ["-X", "--single-transaction", "-v", "ON_ERROR_STOP=1", "-f", "-", url], {
-    input: sql,
-    env: { PGCLIENTENCODING: "UTF8" },
-  });
+  pgClientTool("psql", [...flags, url], { input: sql, env: { PGCLIENTENCODING: "UTF8" } });
 }
 
 /**
@@ -133,6 +135,8 @@ export async function backup(): Promise<string> {
 }
 
 export async function restore(archive: string): Promise<void> {
+  // ADR 0018: optional, checked before anything is read.
+  const restoreUrl = restoreDatabaseUrl(process.env.FORGECY_RESTORE_DATABASE_URL);
   const work = mkdtempSync(join(tmpdir(), "forgecy-restore-"));
   try {
     const file = resolve(archive);
@@ -149,9 +153,12 @@ export async function restore(archive: string): Promise<void> {
     if (manifest.format !== 1) throw new Error(`Unsupported backup format ${manifest.format}`);
     // No psql meta-commands (\!, \copy, \i...) in a backup that may come from elsewhere.
     // The string scanned is the very string sent to psql.
-    const sql = readFileSync(join(work, "db.sql"), "utf8");
+    const dump = readFileSync(join(work, "db.sql"), "utf8");
+    const sql = restoreUrl ? withoutExtensionStatements(dump) : dump;
     await assertSafeDumpText(sql);
-    loadDatabase(sql);
+    // The restore role must own what the dump drops; fixed SQL, run as the superuser.
+    if (restoreUrl) loadDatabase(restoreOwnershipSql(restoreRoleName(restoreUrl)));
+    loadDatabase(sql, restoreUrl);
     const mediaName = basename(mediaDir);
     if (manifest.media && existsSync(join(work, mediaName))) {
       mkdirSync(mediaDir, { recursive: true });
