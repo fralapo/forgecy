@@ -134,6 +134,23 @@ describe("buildProposalPatch", () => {
     expect(applyProposalPatch(s2, b.patch).document.verbal.toneAxes).toHaveLength(1);
   });
 
+  it("gives a logo variant proposed without an id its own, and keeps one that has it", () => {
+    const variant = { role: "logo_primary", sourceId: "src-1", background: "any" };
+    const path = "/document/visual/logo/variants";
+    const s = fresh();
+    const a = buildProposalPatch(s, { path, op: "append", value: variant }, meta);
+    const written = (a.patch[0] as { value: { id?: string } }).value;
+    expect(written.id).toEqual(expect.any(String));
+    expect(applyProposalPatch(s, a.patch).document.visual.logo.variants).toHaveLength(1);
+
+    const b = buildProposalPatch(
+      fresh(),
+      { path, op: "append", value: { ...variant, id: "logo-fixed" } },
+      meta,
+    );
+    expect((b.patch[0] as { value: { id?: string } }).value.id).toBe("logo-fixed");
+  });
+
   it("requires examples on tone axes (an adjective alone does not pass)", () => {
     expect(() =>
       buildProposalPatch(

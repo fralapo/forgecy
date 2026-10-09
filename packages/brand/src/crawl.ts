@@ -170,23 +170,31 @@ export async function runWebsiteCrawl(
 
   // The images and the logo go into the asset library before the import, so the logo can be proposed.
   let logo: Awaited<ReturnType<typeof harvestImages>>["logo"];
+  const notes: MessageRef[] = [];
   if (visual)
     try {
-      logo = (
-        await harvestImages(deps, {
-          clientId: input.clientId,
-          sourceId: source.id,
-          images: visual.images,
-          logos: visual.logos,
-          requestedBy: ctx.requestedBy ?? null,
-          allowPrivate,
-        })
-      ).logo;
+      const harvest = await harvestImages(deps, {
+        clientId: input.clientId,
+        sourceId: source.id,
+        images: visual.images,
+        logos: visual.logos,
+        requestedBy: ctx.requestedBy ?? null,
+        allowPrivate,
+      });
+      logo = harvest.logo;
+      if (harvest.failed)
+        notes.push(msg("brand.import.status.imagesFailed", { count: harvest.failed }));
     } catch {
-      // Pictures are a bonus: the text import goes on without them.
+      // Pictures are a bonus: the text import goes on, and its status line says they failed.
+      const count = Math.max(1, visual.images.length + (visual.logos.length ? 1 : 0));
+      notes.push(msg("brand.import.status.imagesFailed", { count }));
     }
   await ctx.progress?.(30);
 
   // The pages are now on the source: the rest is identical to a typed-in text source.
-  return runSourceImport(deps, ctx, { ...input, ...(logo ? { logo } : {}) });
+  return runSourceImport(deps, ctx, {
+    ...input,
+    ...(logo ? { logo } : {}),
+    ...(notes.length ? { notes } : {}),
+  });
 }

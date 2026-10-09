@@ -8,7 +8,7 @@ import type { AiGateway } from "@forgecy/ai";
 import { createHostCheck, createPinnedFetch, type ProbeImage } from "@forgecy/audit";
 import { auditUserAgent } from "@forgecy/audit/crawl/fetcher";
 import { guardedFetch, readCapped, type HostCheck } from "@forgecy/core/net-guard";
-import { and, assets, brandSources, eq, isNull, type Database } from "@forgecy/db";
+import { and, assets, brandSources, eq, isNull, users, type Database } from "@forgecy/db";
 import { contentKey, sha256, validateUpload, type StorageDriver } from "@forgecy/files";
 import sharp from "sharp";
 
@@ -22,6 +22,10 @@ export const IMAGE_LIMITS = {
   totalBytes: 40 * 1024 * 1024,
   timeoutMs: 10_000,
 } as const;
+
+/** A decompression bomb is a small file that decodes to billions of pixels; sharp refuses past this. */
+export const MAX_INPUT_PIXELS = 50_000_000;
+const SHARP_INPUT = { limitInputPixels: MAX_INPUT_PIXELS } as const;
 
 /** Candidates downloaded per round: bounded parallelism, results are still applied in order. */
 const BATCH = 4;
@@ -65,8 +69,8 @@ const MIN_COLOR_SHARE = 0.005;
 export async function describeImage(
   bytes: Uint8Array,
 ): Promise<{ w: number; h: number; whiteBorderRatio: number; paletteSize: number }> {
-  const meta = await sharp(bytes).metadata();
-  const { data, info } = await sharp(bytes)
+  const meta = await sharp(bytes, SHARP_INPUT).metadata();
+  const { data, info } = await sharp(bytes, SHARP_INPUT)
     .flatten({ background: "#ffffff" })
     .resize(SAMPLE, SAMPLE, { fit: "inside" })
     .removeAlpha()
@@ -145,7 +149,9 @@ interface NetDeps {
 /** Null for anything wrong: a refused host, a bad status, a wrong or lying type, or too big. */
 async function download(url: string, net: NetDeps): Promise<Downloaded | null> {
   try {
-    if (!/^https?:\/\//i.test(url)) return null;
+    const target = new URL(url);
+    // No file:, data: and the like, and no user:password@ riding along to a third party.
+    if (!/^https?:$/.test(target.protocol) || target.username || target.password) return null;
     const { res } = await guardedFetch(url, {
       hostCheck: net.hostCheck,
       fetchImpl: net.fetchImpl,
@@ -215,6 +221,8 @@ export interface HarvestInput {
 export interface HarvestResult {
   saved: number;
   skipped: number;
+  /** Files that were fine but could not be registered (database or storage error). */
+  failed: number;
   /** The brand source holding the logo file, and the probe entry it came from. */
   logo?: { sourceId: string; image: ProbeImage };
 }
@@ -235,7 +243,16 @@ export async function harvestImages(
     .from(brandSources)
     .where(and(eq(brandSources.id, input.sourceId), eq(brandSources.clientId, input.clientId)));
   const pageUrl = site?.url ?? "";
-  const requestedBy = input.requestedBy ?? null;
+  // A requester who no longer exists would fail every insert (foreign key): keep the images, unattributed.
+  let requestedBy = input.requestedBy ?? null;
+  if (requestedBy) {
+    const [who] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, requestedBy))
+      .catch(() => []);
+    if (!who) requestedBy = null;
+  }
   const max = input.max ?? IMAGE_LIMITS.max;
   let totalBytes = 0;
 
@@ -317,28 +334,33 @@ export async function harvestImages(
 
   let saved = 0;
   let skipped = 0;
+  let failed = 0;
   let logo: HarvestResult["logo"];
 
   // The logo goes first so that, when the same file also sits among the images, it keeps the logo tag.
   for (const candidate of input.logos ?? []) {
     const file = await download(candidate.url, net);
     if (!file) continue;
-    const stored = await store(file, candidate, true);
-    if (!stored) continue;
-    if (stored.created) saved++;
-    logo = {
-      sourceId: await logoSource(
-        db,
-        storage,
-        input.clientId,
-        pageUrl,
-        candidate,
-        file,
-        requestedBy,
-      ),
-      image: candidate,
-    };
-    break;
+    try {
+      const stored = await store(file, candidate, true);
+      if (!stored) continue;
+      if (stored.created) saved++;
+      logo = {
+        sourceId: await logoSource(
+          db,
+          storage,
+          input.clientId,
+          pageUrl,
+          candidate,
+          file,
+          requestedBy,
+        ),
+        image: candidate,
+      };
+      break;
+    } catch {
+      failed++; // the next candidate is tried
+    }
   }
 
   const queue = [...new Map(input.images.map((i) => [i.url, i])).values()].slice(0, max * 3);
@@ -349,14 +371,19 @@ export async function harvestImages(
     for (const [n, image] of batch.entries()) {
       const file = files[n];
       if (savedImages >= max) break;
-      const stored = file ? await store(file, image, false) : null;
+      let stored: Stored | null = null;
+      try {
+        stored = file ? await store(file, image, false) : null;
+      } catch {
+        failed++; // the other images are still tried
+      }
       if (stored?.created) {
         saved++;
         savedImages++;
       } else skipped++;
     }
   }
-  return { saved, skipped, ...(logo ? { logo } : {}) };
+  return { saved, skipped, failed, ...(logo ? { logo } : {}) };
 }
 
 /** The logo as a brand source, so a logo variant can point to it; the same file is registered once. */

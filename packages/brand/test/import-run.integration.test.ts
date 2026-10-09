@@ -1,6 +1,6 @@
 import type { SiteProbe } from "@forgecy/audit";
 import type { AiGateway } from "@forgecy/ai";
-import type { Actor } from "@forgecy/core";
+import type { Actor, MessageRef } from "@forgecy/core";
 import {
   auditEvents,
   brandIdentityProposals,
@@ -13,6 +13,7 @@ import {
   type Database,
 } from "@forgecy/db";
 import type { StorageDriver } from "@forgecy/files";
+import { messageRef } from "@forgecy/i18n";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { AnalystItem } from "../src/import/analyst";
 import { runSourceImport } from "../src/import/run";
@@ -114,6 +115,7 @@ describe.skipIf(!dbUrl)("runSourceImport on a website (integration)", () => {
     source: { kind: "website" | "document"; visual?: unknown },
     items: AnalystItem[],
     logo?: { sourceId: string; image: { url: string } },
+    notes?: MessageRef[],
   ) => {
     const s = await addSource(db, anna, { clientId, kind: source.kind, title: "Site" });
     await updateSourceStatus(db, s.id, {
@@ -124,7 +126,7 @@ describe.skipIf(!dbUrl)("runSourceImport on a website (integration)", () => {
     const result = await runSourceImport(
       { db, storage, ai },
       { jobId: crypto.randomUUID(), attempt: 1, maxAttempts: 1 },
-      { clientId, sourceId: s.id, ...(logo ? { logo } : {}) },
+      { clientId, sourceId: s.id, ...(logo ? { logo } : {}), ...(notes ? { notes } : {}) },
     );
     const proposals = await db
       .select()
@@ -202,6 +204,13 @@ describe.skipIf(!dbUrl)("runSourceImport on a website (integration)", () => {
     expect(logo.status).toBe("proposed");
     expect(JSON.stringify(logo.changes)).toContain(logoSource.id);
     expect(JSON.stringify(logo.changes)).toContain("logo_primary");
+  });
+
+  it("shows what happened before the import (images not saved) on the source status", async () => {
+    const ref = messageRef("brand.import.status.imagesFailed", { count: 2 });
+    const { row } = await run({ kind: "website", visual: VISUAL }, [], undefined, [ref]);
+    expect(row.statusDetail).toContain("2 site images could not be saved");
+    expect(row.statusDetailRef?.map((r) => r.key)).toContain("brand.import.status.imagesFailed");
   });
 
   it("discards every analyst color and font when the site has no visual data", async () => {

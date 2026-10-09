@@ -765,6 +765,7 @@
       "proposals": "{count, plural, one {# proposta} other {# proposte}}",
       "skipped": "{count, plural, one {# già presente o non valida} other {# già presenti o non valide}}",
       "discarded": "{count, plural, one {# elemento scartato: non verificabile} other {# elementi scartati: non verificabili}}",
+      "imagesFailed": "{count, plural, one {# immagine del sito non salvata} other {# immagini del sito non salvate}}",
       "noProvider": "Nessun provider AI configurato: solo estrazione automatica",
       "aiOff": "Funzioni AI disattivate per questo cliente",
       "noText": "Nessun testo da interpretare",

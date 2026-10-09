@@ -6,6 +6,7 @@ import { logoCandidate, visualCandidates } from "../src/import/candidates";
 import {
   classifyImageHeuristic,
   describeImage,
+  MAX_INPUT_PIXELS,
   svgIsSafe,
   svgSize,
   type ImageFacts,
@@ -95,6 +96,17 @@ describe("describeImage", () => {
       .png()
       .toBuffer();
     expect((await describeImage(png)).whiteBorderRatio).toBe(1);
+  });
+
+  it("refuses an image that decodes to more pixels than the limit", async () => {
+    const bomb = await sharp({
+      create: { width: 7200, height: 7200, channels: 3, background: "#ffffff" },
+    })
+      .png()
+      .toBuffer();
+    expect(bomb.length).toBeLessThan(1_000_000);
+    expect(7200 * 7200).toBeGreaterThan(MAX_INPUT_PIXELS);
+    await expect(describeImage(bomb)).rejects.toThrow(/pixel/i);
   });
 
   it("throws on bytes that are not an image", async () => {

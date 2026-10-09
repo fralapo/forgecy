@@ -259,6 +259,8 @@ export async function runSourceImport(
     language?: string;
     /** The logo the website crawl just stored as a source, proposed as the primary logo variant. */
     logo?: { sourceId: string; image: { url: string } };
+    /** Lines for the source status from steps that ran before the import (e.g. images not saved). */
+    notes?: MessageRef[];
   },
 ): Promise<ImportResult> {
   const { db } = deps;
@@ -444,6 +446,7 @@ export async function runSourceImport(
     msg("brand.import.status.proposals", { count: created }),
     skipped ? msg("brand.import.status.skipped", { count: skipped }) : null,
     discarded ? msg("brand.import.status.discarded", { count: discarded }) : null,
+    ...(input.notes ?? []),
     ...extraction.warnings,
     aiNote,
   ].filter((r): r is MessageRef => r !== null);

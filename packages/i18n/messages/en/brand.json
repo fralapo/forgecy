@@ -765,6 +765,7 @@
       "proposals": "{count, plural, one {# proposal} other {# proposals}}",
       "skipped": "{count} already present or invalid",
       "discarded": "{count, plural, one {# item discarded: not verifiable} other {# items discarded: not verifiable}}",
+      "imagesFailed": "{count, plural, one {# site image could not be saved} other {# site images could not be saved}}",
       "noProvider": "No AI provider configured: automatic extraction only",
       "aiOff": "AI features turned off for this client",
       "noText": "No text to interpret",

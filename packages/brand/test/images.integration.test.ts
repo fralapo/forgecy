@@ -33,11 +33,14 @@ const svg = (inner: string) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40">${inner}</svg>`;
 const GIF_1X1 = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
 
-const memoryStorage = () => {
+const memoryStorage = (failPut?: (bytes: Uint8Array) => boolean) => {
   const files = new Map<string, Uint8Array>();
   const storage = {
     exists: async (k: string) => files.has(k),
-    put: async (k: string, b: Uint8Array) => void files.set(k, b),
+    put: async (k: string, b: Uint8Array) => {
+      if (failPut?.(b)) throw new Error("disk full");
+      files.set(k, b);
+    },
   } as unknown as StorageDriver;
   return { storage, files };
 };
@@ -95,6 +98,10 @@ describe.skipIf(!dbUrl)("harvestImages (integration)", () => {
     });
     routes.set("/logo-broken.png", { type: "image/png", body: "nope" });
     server = createServer((req, res) => {
+      if (req.url === "/redirect") {
+        res.writeHead(302, { location: `${base}/photo.png` }).end();
+        return;
+      }
       const route = routes.get(req.url ?? "");
       if (!route) {
         res.writeHead(404).end();
@@ -119,7 +126,7 @@ describe.skipIf(!dbUrl)("harvestImages (integration)", () => {
     await db?.$client.end();
   });
 
-  async function setup() {
+  async function setup(failPut?: (bytes: Uint8Array) => boolean) {
     const n = clientIds.length;
     const [c] = await db
       .insert(clients)
@@ -139,7 +146,7 @@ describe.skipIf(!dbUrl)("harvestImages (integration)", () => {
       title: "Site",
       url: `${base}/`,
     });
-    return { clientId: c!.id, sourceId: site.id, ...memoryStorage() };
+    return { clientId: c!.id, sourceId: site.id, ...memoryStorage(failPut) };
   }
 
   const rows = (clientId: string) => db.select().from(assets).where(eq(assets.clientId, clientId));
@@ -223,8 +230,87 @@ describe.skipIf(!dbUrl)("harvestImages (integration)", () => {
         logos: [img("/logo.svg")],
       },
     );
-    expect(result).toEqual({ saved: 0, skipped: 1 });
+    expect(result).toEqual({ saved: 0, skipped: 1, failed: 0 });
     expect(await rows(t.clientId)).toEqual([]);
+  });
+
+  it("refuses a redirect to a refused host, credentials in the url, and data: or file: urls", async () => {
+    const t = await setup();
+    const checked: string[] = [];
+    const result = await harvestImages(
+      { db, storage: t.storage },
+      {
+        clientId: t.clientId,
+        sourceId: t.sourceId,
+        allowPrivate: true,
+        // The first hop passes, the place it redirects to does not.
+        hostCheck: async (url) => {
+          checked.push(url);
+          return !url.endsWith("/photo.png");
+        },
+        images: [
+          img("/redirect"),
+          {
+            ...img("/photo.png"),
+            url: base.replace("http://", "http://user:secret@") + "/photo.png",
+          },
+          { ...img("/photo.png"), url: "data:image/png;base64,iVBORw0KGgo=" },
+          { ...img("/photo.png"), url: "file:///etc/passwd" },
+        ],
+      },
+    );
+    expect(result).toMatchObject({ saved: 0, skipped: 4, failed: 0 });
+    expect(checked).toEqual([`${base}/redirect`, `${base}/photo.png`]);
+    expect(await rows(t.clientId)).toEqual([]);
+  });
+
+  it("still harvests, unattributed, when the requester no longer exists", async () => {
+    const t = await setup();
+    const result = await harvestImages(
+      { db, storage: t.storage },
+      {
+        clientId: t.clientId,
+        sourceId: t.sourceId,
+        requestedBy: crypto.randomUUID(),
+        allowPrivate: true,
+        images: [img("/photo.png")],
+        logos: [img("/logo.svg")],
+      },
+    );
+    expect(result).toMatchObject({ saved: 2, failed: 0 });
+    expect(result.logo).toBeDefined();
+    for (const row of await rows(t.clientId))
+      expect(row).toMatchObject({
+        status: "draft",
+        rights: null,
+        createdBy: null,
+        decidedBy: null,
+      });
+  });
+
+  it("a failure on one file loses neither the logo nor the other images", async () => {
+    const product = routes.get("/product.png")!.body as Uint8Array;
+    const t = await setup(
+      (bytes) => Buffer.compare(Buffer.from(bytes), Buffer.from(product)) === 0,
+    );
+    const result = await harvestImages(
+      { db, storage: t.storage },
+      {
+        clientId: t.clientId,
+        sourceId: t.sourceId,
+        requestedBy: userId,
+        allowPrivate: true,
+        images: [img("/photo.png"), img("/product.png"), img("/ok.svg")],
+        logos: [img("/logo.svg")],
+      },
+    );
+    expect(result).toMatchObject({ saved: 3, skipped: 1, failed: 1 });
+    expect(result.logo?.image.url).toBe(`${base}/logo.svg`);
+    expect((await rows(t.clientId)).map((r) => r.tags[0]).sort()).toEqual([
+      "graphic",
+      "logo",
+      "scene",
+    ]);
   });
 
   it("keeps the existing row when the same file is harvested again", async () => {
