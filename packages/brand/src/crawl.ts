@@ -188,6 +188,7 @@ export async function runWebsiteCrawl(
       organizationName: visual?.organization?.name,
       siteName: visual?.siteName,
       titles,
+      url: source.url,
     }),
   }).catch(() => false);
 

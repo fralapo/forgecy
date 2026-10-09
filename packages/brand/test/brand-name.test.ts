@@ -18,6 +18,18 @@ describe("siteBrandName", () => {
     expect(siteBrandName({ organizationName: " ", siteName: "DeoDue", titles })).toBe("DeoDue");
   });
 
+  it("a declared name that is the site's domain wins over the company behind it (deodue.it)", () => {
+    const deodue = {
+      organizationName: "ChimiClean S.p.A.",
+      siteName: "DeoDue - ChimiClean S.p.A.",
+      titles: ["DeoDue - ChimiClean S.p.A. - Detersivi e profumatori per la casa"],
+      url: "https://www.staging-g.deodue.it",
+    };
+    expect(siteBrandName(deodue)).toBe("DeoDue");
+    // Nothing matches the domain: the declared organization, as before.
+    expect(siteBrandName({ ...deodue, url: "https://shop.example.com" })).toBe("ChimiClean S.p.A.");
+  });
+
   it("else takes the title part that repeats across pages", () => {
     expect(siteBrandName({ titles })).toBe("DeoDue");
     expect(siteBrandName({ titles: ["Acme | Shop online", "Contatti | Acme"] })).toBe("Acme");

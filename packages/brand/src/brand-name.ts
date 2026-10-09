@@ -45,22 +45,56 @@ const clean = (s: string | undefined) =>
     .trim()
     .slice(0, NAME_MAX);
 
+/** Letters and digits only, lower case: "Deo-Due" and "deodue" are the same word. */
+const wordKey = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+
 /**
- * The name the site gives itself: its JSON-LD Organization name, else og:site_name, else the
- * part of the page titles that repeats across pages (the shortest one on a tie). A title part
- * counts only from a title that has a separator, or when two pages share it. Pure.
+ * The name the site gives itself. A name that is also the site's domain wins wherever it is
+ * declared (the JSON-LD Organization is often the company behind the brand: "ChimiClean S.p.A."
+ * on deodue.it, whose og:site_name is "DeoDue - ChimiClean S.p.A."). Otherwise the JSON-LD
+ * Organization name, else og:site_name, else the part of the page titles that repeats across
+ * pages (the shortest one on a tie); a title part counts only from a title that has a
+ * separator, or when two pages share it. Pure.
  */
 export function siteBrandName(site: {
   organizationName?: string | undefined;
   siteName?: string | undefined;
   titles: readonly string[];
+  /** The site's address: a declared name that matches its domain is the brand's. */
+  url?: string | undefined;
 }): string | null {
+  const titlePart = repeatedTitlePart(site.titles);
+  let labels: string[] = [];
+  try {
+    labels = site.url ? new URL(site.url).hostname.split(".").map(wordKey) : [];
+  } catch {
+    // No address, no domain match.
+  }
+  const inDomain = (name: string) => {
+    const k = wordKey(name);
+    return k.length >= 3 && labels.some((l) => l === k);
+  };
+  const parts = (s: string | undefined) => (s ?? "").split(TITLE_SEPARATOR).map(clean);
+  const domainName = [
+    clean(site.organizationName),
+    ...parts(site.siteName),
+    ...site.titles.flatMap(parts),
+  ].find(inDomain);
+  if (domainName) return domainName;
   for (const declared of [site.organizationName, site.siteName]) {
     const name = clean(declared);
     if (name.length >= 2) return name;
   }
+  return titlePart;
+}
+
+function repeatedTitlePart(titles: readonly string[]): string | null {
   const seen = new Map<string, { name: string; pages: number; split: boolean }>();
-  for (const title of site.titles) {
+  for (const title of titles) {
     const parts = title.split(TITLE_SEPARATOR);
     for (const part of new Set(parts.map(clean))) {
       if (part.length < 2 || GENERIC.test(part)) continue;
