@@ -2,6 +2,7 @@ import { contentStatuses } from "@forgecy/core";
 import { createFakeDb, renderSql } from "@forgecy/db/testing";
 import { describe, expect, it } from "vitest";
 import {
+  decideReview,
   isFinalExportable,
   restoreVersion,
   saveDraft,
@@ -82,6 +83,45 @@ describe("withdrawFromReview", () => {
       withdrawFromReview(fake.db, user, { clientId: CLIENT, id: ID }),
     ).rejects.toMatchObject({ code: "conflict" });
     expect(updateWhere(fake.wheres)).toContain('"contents"."status" = $');
+  });
+});
+
+describe("decideReview", () => {
+  const VERSION = "00000000-0000-4000-8000-0000000000c4";
+  it("writes only if the content is still in review AND still on the version being decided", async () => {
+    // The brand-guard run between the read and the write can take a while; a new version
+    // submitted meanwhile must not inherit the decision about the old one.
+    const fake = createFakeDb({
+      selects: [
+        [
+          row({
+            status: "in_review",
+            currentVersionId: VERSION,
+            submittedBy: null,
+            createdBy: null,
+          }),
+        ],
+        [{ id: VERSION, number: 2, document: doc }],
+      ],
+      inserts: [[]],
+      updates: [[]],
+    });
+    await expect(
+      decideReview(
+        fake.db,
+        { ...user, isAdmin: true },
+        {
+          clientId: CLIENT,
+          id: ID,
+          versionId: VERSION,
+          decision: "changes_requested",
+          note: "Fix the title",
+        },
+      ),
+    ).rejects.toMatchObject({ code: "conflict" });
+    const where = updateWhere(fake.wheres);
+    expect(where).toContain('"contents"."status" = $');
+    expect(where).toContain('"contents"."current_version_id" = $');
   });
 });
 

@@ -1025,7 +1025,15 @@ export async function decideReview(
         reviewNote: note || null,
         ...(input.decision === "approved" ? { approvedVersionId: version.id } : {}),
       })
-      .where(and(eq(contents.id, c.id), eq(contents.status, "in_review")))
+      // Still the version decided on: a new one submitted during the brand-guard run must
+      // not inherit an approval of the old one.
+      .where(
+        and(
+          eq(contents.id, c.id),
+          eq(contents.status, "in_review"),
+          eq(contents.currentVersionId, version.id),
+        ),
+      )
       .returning();
     if (!row) conflict("content.errors.changedMeanwhile");
     await audit(tx, actor, input.decision, c, { version: version.number, selfApproval });
