@@ -16,8 +16,17 @@ export const IMPORT_LIMITS = {
   pdfBytes: 50 * MB,
   sheetBytes: 50 * MB,
   textBytes: 5 * MB,
-  /** XLSX and DOCX are ZIPs too: uncompressed cap for their XML parts (a 10,000-row sheet is a few MB). */
-  officeUncompressedBytes: 50 * MB,
+  /**
+   * XLSX and DOCX are ZIPs too. Each XML/.rels part is bounded on its own (a 10,000-row sheet
+   * is a few MB; one huge sheet or pivot cache is the real outlier worth refusing).
+   */
+  officePartBytes: 50 * MB,
+  /**
+   * Ceiling for all the inflated XML/.rels bytes of one Office package: 4x the per-part limit,
+   * so a spreadsheet with several large parts (pivot caches, shared strings, sheets) passes
+   * while a package of many parts that each look fine still cannot exhaust memory or CPU.
+   */
+  officeTotalBytes: 4 * 50 * MB,
   pdfPages: 500,
   filesPerImport: 2_000,
   /** Characters of PDF text sent to the AI per request. */

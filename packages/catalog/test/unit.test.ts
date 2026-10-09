@@ -15,6 +15,7 @@ import {
   parseXlsx,
   productsToCsv,
   assertSafeOfficeFile,
+  IMPORT_LIMITS,
   readPdfText,
   readZip,
   safeEntryPath,
@@ -251,7 +252,7 @@ describe("Office file guard", { timeout: 30_000 }, () => {
       code: "IMPORT-INVALID",
     });
   });
-  it("stops overlapping stored parts that add up past the cap", async () => {
+  it("stops overlapping stored parts that add up past the total ceiling", async () => {
     const overlap = overlappingZip({
       data: Buffer.alloc(MB, 65),
       entries: 150,
@@ -259,9 +260,47 @@ describe("Office file guard", { timeout: 30_000 }, () => {
       declaredSize: MB,
       name: (i) => `xl/worksheets/sheet${i}.xml`,
     });
-    await expect(assertSafeOfficeFile(overlap, "overlap.xlsx")).rejects.toMatchObject({
+    await expect(
+      assertSafeOfficeFile(overlap, "overlap.xlsx", {
+        maxPartBytes: 4 * MB,
+        maxTotalBytes: 100 * MB,
+      }),
+    ).rejects.toMatchObject({ code: "IMPORT-TOO-LARGE" });
+  });
+  it("bounds each part on its own and the package by a higher ceiling", () => {
+    expect(IMPORT_LIMITS.officeTotalBytes).toBeGreaterThan(IMPORT_LIMITS.officePartBytes);
+  });
+  it("accepts many mid-size parts that add up past the per-part limit", async () => {
+    // 3 pivot-cache-like parts of 30 MB: 90 MB in all, over the old 50 MB sum, each under the part limit.
+    const parts = [
+      "pivotCache/pivotCacheRecords1.xml",
+      "pivotCache/pivotCacheRecords2.xml",
+      "xl/sharedStrings.xml",
+    ];
+    const big = zipArchive(parts.map((name) => ({ name, data: Buffer.alloc(30 * MB, 65) })));
+    await expect(assertSafeOfficeFile(big, "pivots.xlsx")).resolves.toBeUndefined();
+  });
+  it("refuses a single part above the per-part limit even when the total would fit", async () => {
+    const one = zipArchive([
+      { name: "xl/worksheets/sheet1.xml", data: Buffer.alloc(51 * MB, 65) },
+      { name: "xl/sharedStrings.xml", data: "<sst/>" },
+    ]);
+    await expect(assertSafeOfficeFile(one, "huge.xlsx")).rejects.toMatchObject({
       code: "IMPORT-TOO-LARGE",
     });
+  });
+  it("refuses parts that each fit but add up past the total ceiling", async () => {
+    const parts = Array.from({ length: 5 }, (_, i) => ({
+      name: `xl/worksheets/sheet${i}.xml`,
+      data: Buffer.alloc(MB, 65),
+    }));
+    const pkg = zipArchive(parts);
+    await expect(
+      assertSafeOfficeFile(pkg, "sum.xlsx", { maxPartBytes: 2 * MB, maxTotalBytes: 4 * MB }),
+    ).rejects.toMatchObject({ code: "IMPORT-TOO-LARGE" });
+    await expect(
+      assertSafeOfficeFile(pkg, "sum.xlsx", { maxPartBytes: 2 * MB, maxTotalBytes: 5 * MB }),
+    ).resolves.toBeUndefined();
   });
   it("stops a deflate bomb", async () => {
     const bomb = zipArchive([{ name: "word/document.xml", data: Buffer.alloc(101 * MB) }]);
