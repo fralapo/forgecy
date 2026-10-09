@@ -7,12 +7,13 @@ import {
 } from "@forgecy/brand";
 import type { MessageRef } from "@forgecy/core";
 import { Badge, Card, cn } from "@forgecy/ui";
-import { ImageOff } from "lucide-react";
+import { ImageOff, LoaderCircle } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { getFormat, getRefText } from "@/lib/i18n";
 import { RefreshWhile } from "../../content/_components/refresh-while";
+import { importNotes } from "../_lib/import-card";
 import { sourceStatusVariant } from "../_lib/labels";
 import { crawlSourceAction, scanWebsiteAction } from "../actions";
 import { ActionButton } from "./action-button";
@@ -71,6 +72,21 @@ export async function CompletenessCard({ completeness }: { completeness: BrandCo
   );
 }
 
+/** Shown while the website or a profile is read: the page refreshes until the import ends. */
+export async function ImportBanner() {
+  const t = await getTranslations("brand.overview");
+  return (
+    <Card role="status" className="flex items-start gap-3 border-primary p-5">
+      <RefreshWhile active />
+      <LoaderCircle aria-hidden className="mt-1 size-5 shrink-0 animate-spin text-link" />
+      <div className="space-y-1">
+        <h2 className="text-heading-sm text-fg">{t("importRunningTitle")}</h2>
+        <p className="text-body-sm text-fg-muted">{t("importRunning")}</p>
+      </div>
+    </Card>
+  );
+}
+
 /** "Imported automatically on ..." with the way back: review what was kept, or undo. */
 export async function ImportCard({
   slug,
@@ -87,6 +103,15 @@ export async function ImportCard({
 }) {
   const t = await getTranslations("brand.overview");
   const format = await getFormat();
+  const rt = await getRefText();
+  const notes = importNotes(latest);
+  // A person undid it: the card says so instead of describing what the import applied.
+  if (notes.undone)
+    return (
+      <Card className="p-5">
+        <p className="text-body-md text-fg">{rt(notes.undone, "")}</p>
+      </Card>
+    );
   return (
     <Card className="flex flex-wrap items-start justify-between gap-4 p-5">
       <div className="space-y-1">
@@ -95,7 +120,7 @@ export async function ImportCard({
             date: format.date(latest.at, "dateTime"),
             accepted: latest.accepted,
           })}
-          {latest.needsReview ? ` · ${t("importedKept", { count: latest.needsReview })}` : ""}
+          {notes.kept ? ` · ${rt(notes.kept, "")}` : ""}
         </p>
         {latest.skippedHandEdited ? (
           <p className="text-body-sm text-fg-muted">
@@ -252,6 +277,7 @@ export async function ImagesCard({
                     <span className="sr-only">{t("imagesNoPreview")}</span>
                   </div>
                 )}
+                {i.alt ? <p className="line-clamp-2 text-body-sm text-fg-muted">{i.alt}</p> : null}
                 <div className="flex flex-wrap gap-1">
                   <Badge>{i.class ? t(`imageClass.${i.class}`) : t("imagesProfile")}</Badge>
                   {i.status === "draft" ? (

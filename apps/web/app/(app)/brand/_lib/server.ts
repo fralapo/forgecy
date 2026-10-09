@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  AUTO_IMPORT_KINDS,
   conflictsFor,
   getBrandWorkspace,
   listSources,
@@ -71,6 +72,14 @@ export async function sourcesFor(clientId: string) {
   const user = await requireUser();
   return listSources(getDb(), user.actor, clientId);
 }
+
+/** An automatic import (the website or a profile) is queued or being read. */
+export const importRunning = (sources: ReadonlyArray<{ kind: string; status: string }>) =>
+  sources.some(
+    (s) =>
+      (s.status === "pending" || s.status === "extracting") &&
+      (AUTO_IMPORT_KINDS as ReadonlySet<string>).has(s.kind),
+  );
 
 export async function openConflicts(clientId: string) {
   return conflictsFor(getDb(), clientId);

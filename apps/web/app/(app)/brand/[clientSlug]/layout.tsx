@@ -7,7 +7,7 @@ import { ActionButton } from "../_components/action-button";
 import { BrandTabs } from "../_components/brand-tabs";
 import { startDraftAction, submitAction } from "../actions";
 import { brandPath, versionStatusVariant } from "../_lib/labels";
-import { loadBrand, openConflicts, userNames } from "../_lib/server";
+import { importRunning, loadBrand, openConflicts, sourcesFor, userNames } from "../_lib/server";
 import { getFormat } from "@/lib/i18n";
 
 export default async function BrandLayout({
@@ -21,8 +21,10 @@ export default async function BrandLayout({
   const t = await getTranslations("brand");
   const format = await getFormat();
   const { client, ws } = await loadBrand(clientSlug);
-  const conflicts = await openConflicts(client.id);
+  const [conflicts, sources] = await Promise.all([openConflicts(client.id), sourcesFor(client.id)]);
   const { draft, published } = ws;
+  // The first automatic import is still running: nothing to start or to warn about yet.
+  const firstImport = !published && importRunning(sources);
   const names = await userNames([draft?.lastEditedBy, draft?.createdBy]);
   const base = brandPath(client.slug);
   const tabs = [
@@ -85,7 +87,9 @@ export default async function BrandLayout({
             <span className="text-fg-muted">
               {published
                 ? t("layout.noDraftPublished", { number: published.number })
-                : t("layout.noDraft")}
+                : firstImport
+                  ? t("overview.importRunningTitle")
+                  : t("layout.noDraft")}
             </span>
           )}
           {conflicts.length ? (
@@ -95,7 +99,7 @@ export default async function BrandLayout({
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {!draft ? (
+          {!draft && !firstImport ? (
             <ActionButton
               action={startDraftAction.bind(null, client.slug, client.id)}
               variant="secondary"
@@ -149,7 +153,7 @@ export default async function BrandLayout({
           {t("layout.sentBack", { comment: draft.reviewComment })}
         </p>
       ) : null}
-      {!published ? (
+      {!published && !firstImport ? (
         <p
           role="status"
           className="mb-6 rounded-md border border-error-fill bg-surface px-4 py-3 text-body-sm text-fg"

@@ -8,6 +8,7 @@ import {
   brandCrawlWebsiteJob,
   brandImportSourceJob,
   ensureDraft,
+  findOrCreateSocialSource,
   findOrCreateWebsiteSource,
   linkSourceReader,
   rejectProposals,
@@ -36,9 +37,11 @@ import {
   localeSchema,
   ForgecyError,
   PermissionDeniedError,
+  socialChannels,
 } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
 import { createStorageFromEnv } from "@forgecy/files";
+import { englishMessage, messageRef } from "@forgecy/i18n";
 import { enqueueJob } from "@forgecy/jobs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -317,6 +320,9 @@ export async function addLinkSourceAction(input: {
     const clientId = uuid.parse(input.clientId);
     const reader = linkSourceReader(parsed.data.kind, parsed.data.url);
     if (!reader) {
+      // A link given as a profile of a network that is not a profile there is kept, not read.
+      const notProfile =
+        !!parsed.data.url && (socialChannels as readonly string[]).includes(parsed.data.kind);
       const row = await addSource(db, actor, {
         clientId,
         kind: parsed.data.kind,
@@ -324,24 +330,39 @@ export async function addLinkSourceAction(input: {
         url: parsed.data.url ?? null,
         note: parsed.data.note ?? null,
         ...(parsed.data.note ? { pages: [{ locator: "Note", text: parsed.data.note }] } : {}),
-        status: "extracted",
+        status: notProfile ? "partial" : "extracted",
+        ...(notProfile
+          ? {
+              statusDetail: englishMessage("brand.import.status.linkNotProfile"),
+              statusDetailRef: [messageRef("brand.import.status.linkNotProfile")],
+            }
+          : {}),
       });
       return { sourceId: row.id };
     }
     // A site or a public profile is read now, as this person: the import applies itself with
     // them as approver (ADR 0022). The note stays on the source, not among the pages read.
     assertCan(actor, "edit_draft", clientId);
-    const source =
+    // A profile the import already found (or added before) is the same source, read again.
+    const { source, created } =
       reader.job === "crawl"
-        ? await findOrCreateWebsiteSource(db, actor, { clientId, websiteUrl: reader.url })
-        : await addSource(db, actor, {
+        ? {
+            source: await findOrCreateWebsiteSource(db, actor, {
+              clientId,
+              websiteUrl: reader.url,
+            }),
+            created: true,
+          }
+        : await findOrCreateSocialSource(db, actor, {
             clientId,
             kind: reader.kind,
-            title: parsed.data.title,
             url: reader.url,
+            title: parsed.data.title,
             note: parsed.data.note ?? null,
-            status: "pending",
           });
+    // A profile already queued or being read: that run reads it.
+    if (!created && (source.status === "pending" || source.status === "extracting"))
+      return { sourceId: source.id };
     await enqueueJob(db, await getQueues(), {
       kind: reader.job === "crawl" ? brandCrawlWebsiteJob : brandImportSourceJob,
       payload: { clientId, sourceId: source.id, requestedBy: userId, language: await getLocale() },

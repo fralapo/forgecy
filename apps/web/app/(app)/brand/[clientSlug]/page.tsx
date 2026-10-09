@@ -18,11 +18,19 @@ import { getTranslations } from "next-intl/server";
 import {
   CompletenessCard,
   ImagesCard,
+  ImportBanner,
   ImportCard,
   WebsiteCard,
 } from "../_components/overview-panels";
 import { brandPath } from "../_lib/labels";
-import { imageUrls, loadBrand, openConflicts, shownVersion, sourcesFor } from "../_lib/server";
+import {
+  imageUrls,
+  importRunning,
+  loadBrand,
+  openConflicts,
+  shownVersion,
+  sourcesFor,
+} from "../_lib/server";
 import { libraryPath } from "../../content/_lib/paths";
 import { getFormat, refText } from "@/lib/i18n";
 
@@ -51,7 +59,13 @@ export default async function BrandOverviewPage({
   const format = await getFormat();
   const { db, user, client, ws } = await loadBrand(clientSlug);
   const shown = shownVersion(ws);
-  const conflicts = await openConflicts(client.id);
+  const [conflicts, allSources] = await Promise.all([
+    openConflicts(client.id),
+    sourcesFor(client.id),
+  ]);
+  // While the site or a profile is read, the proposals are about to apply themselves: no nudges.
+  const importing = importRunning(allSources);
+  const firstImport = importing && !ws.published;
   const base = brandPath(client.slug);
   const pending = ws.proposalCounts.proposed ?? 0;
   const sources = Object.values(ws.sourceCounts).reduce((a, b) => a + (b ?? 0), 0);
@@ -81,6 +95,11 @@ export default async function BrandOverviewPage({
     }).map(async (c) => ({ key: c.key, message: await refText(c.ref, c.message) })),
   );
 
+  // The same open points the block cards list ("Missing: ..."), so the two never disagree.
+  const openBlock = (["strategy", "verbal", "visual", "content"] as const).find(
+    (b) => missing.get(b)?.length,
+  );
+  const openPoints = [...missing.values()].reduce((n, m) => n + m.length, 0);
   const next = pending
     ? { label: t("overview.reviewProposals", { count: pending }), href: `${base}/proposals` }
     : conflicts.length
@@ -93,7 +112,12 @@ export default async function BrandOverviewPage({
             label: t("overview.approveAndPublish", { number: ws.draft.number }),
             href: `${base}/versions/${ws.draft.number}/approve`,
           }
-        : null;
+        : ws.published && openBlock
+          ? {
+              label: t("overview.completeOpenPoints", { count: openPoints }),
+              href: `${base}/${blockPage[openBlock]}`,
+            }
+          : null;
   const publishedOn = (d: Date | null) => (d ? format.date(d, "dateTime") : "—");
 
   if (empty)
@@ -128,10 +152,9 @@ export default async function BrandOverviewPage({
 
   const palette = referenceColors(shown.tokens).slice(0, 6);
 
-  const [latest, images, allSources] = await Promise.all([
+  const [latest, images] = await Promise.all([
     latestAutoImport(db, user.actor, client.id),
     listBrandImages(db, user.actor, client.id),
-    sourcesFor(client.id),
   ]);
   const imageFilter = brandImageClasses.find((c) => c === sp.images);
   const urls = await imageUrls(
@@ -147,23 +170,29 @@ export default async function BrandOverviewPage({
 
   return (
     <div className="space-y-6">
-      <p className="text-body-md text-fg">
-        <span className="text-fg-muted">{t("overview.nextAction")} </span>
-        {next ? (
-          <Link href={next.href as Route}>{next.label}</Link>
-        ) : ws.published ? (
-          t("overview.nothingPending", {
-            number: ws.published.number,
-            date: publishedOn(ws.published.publishedAt),
-          })
-        ) : (
-          t("overview.fillAndPublish")
-        )}
-      </p>
+      {importing ? (
+        <ImportBanner />
+      ) : (
+        <p className="text-body-md text-fg">
+          <span className="text-fg-muted">{t("overview.nextAction")} </span>
+          {next ? (
+            <Link href={next.href as Route}>{next.label}</Link>
+          ) : ws.published ? (
+            t("overview.nothingPending", {
+              number: ws.published.number,
+              date: publishedOn(ws.published.publishedAt),
+            })
+          ) : (
+            t("overview.fillAndPublish")
+          )}
+        </p>
+      )}
 
-      <CompletenessCard
-        completeness={brandCompleteness(shown.document, shown.tokens, images.length)}
-      />
+      {firstImport ? null : (
+        <CompletenessCard
+          completeness={brandCompleteness(shown.document, shown.tokens, images.length)}
+        />
+      )}
       {latest ? (
         <ImportCard
           slug={client.slug}
@@ -225,50 +254,52 @@ export default async function BrandOverviewPage({
         ))}
       </section>
 
-      <section aria-labelledby="blocks" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <h2 id="blocks" className="sr-only">
-          {t("overview.blocksHeading")}
-        </h2>
-        {(["strategy", "verbal", "visual", "content"] as const).map((b) => {
-          const m = missing.get(b) ?? [];
-          const changes = draftChanges.filter((c) => c.block === b).length;
-          return (
-            <Card key={b} className="flex flex-col gap-3 p-5">
-              <h3 className="text-heading-sm text-fg">{t(`blocks.${b}`)}</h3>
-              {m.length ? (
-                <p className="text-body-sm text-fg-muted">
-                  {t("overview.missing", { items: format.list([...m], "unit") })}
-                </p>
-              ) : (
-                <Badge variant="success">{t("overview.complete")}</Badge>
-              )}
-              {changes ? (
-                <p className="text-body-sm text-fg">
-                  {t("overview.changesInDraft", { count: changes })}
-                </p>
-              ) : null}
-              {b === "strategy" && shown.document.strategy.oneLiner ? (
-                <p className="text-body-sm text-fg">“{shown.document.strategy.oneLiner.value}”</p>
-              ) : null}
-              {b === "visual" && palette.length ? (
-                <ul className="flex gap-1" aria-label={t("overview.palette")}>
-                  {palette.map((c) => (
-                    <li
-                      key={c.name}
-                      title={`${c.name} ${c.hex}`}
-                      className="size-6 rounded-sm border border-subtle"
-                      style={{ backgroundColor: c.hex }}
-                    />
-                  ))}
-                </ul>
-              ) : null}
-              <Link href={`${base}/${blockPage[b]}` as Route} className="mt-auto text-body-sm">
-                {t("overview.openBlock")}
-              </Link>
-            </Card>
-          );
-        })}
-      </section>
+      {firstImport ? null : (
+        <section aria-labelledby="blocks" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <h2 id="blocks" className="sr-only">
+            {t("overview.blocksHeading")}
+          </h2>
+          {(["strategy", "verbal", "visual", "content"] as const).map((b) => {
+            const m = missing.get(b) ?? [];
+            const changes = draftChanges.filter((c) => c.block === b).length;
+            return (
+              <Card key={b} className="flex flex-col gap-3 p-5">
+                <h3 className="text-heading-sm text-fg">{t(`blocks.${b}`)}</h3>
+                {m.length ? (
+                  <p className="text-body-sm text-fg-muted">
+                    {t("overview.missing", { items: format.list([...m], "unit") })}
+                  </p>
+                ) : (
+                  <Badge variant="success">{t("overview.complete")}</Badge>
+                )}
+                {changes ? (
+                  <p className="text-body-sm text-fg">
+                    {t("overview.changesInDraft", { count: changes })}
+                  </p>
+                ) : null}
+                {b === "strategy" && shown.document.strategy.oneLiner ? (
+                  <p className="text-body-sm text-fg">“{shown.document.strategy.oneLiner.value}”</p>
+                ) : null}
+                {b === "visual" && palette.length ? (
+                  <ul className="flex gap-1" aria-label={t("overview.palette")}>
+                    {palette.map((c) => (
+                      <li
+                        key={c.name}
+                        title={`${c.name} ${c.hex}`}
+                        className="size-6 rounded-sm border border-subtle"
+                        style={{ backgroundColor: c.hex }}
+                      />
+                    ))}
+                  </ul>
+                ) : null}
+                <Link href={`${base}/${blockPage[b]}` as Route} className="mt-auto text-body-sm">
+                  {t("overview.openBlock")}
+                </Link>
+              </Card>
+            );
+          })}
+        </section>
+      )}
 
       <ImagesCard
         base={base}
@@ -278,23 +309,25 @@ export default async function BrandOverviewPage({
         filter={imageFilter}
       />
 
-      <Card className="p-5">
-        <h2 className="text-heading-sm text-fg">{t("overview.readyTitle")}</h2>
-        {checks.length ? (
-          <>
-            <ul className="mt-3 space-y-1 text-body-sm text-fg">
-              {checks.map((c) => (
-                <li key={c.key}>
-                  <span className="text-warning">{t("overview.toConfirm")}</span> {c.message}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3 text-body-sm text-fg-muted">{t("overview.canPublish")}</p>
-          </>
-        ) : (
-          <p className="mt-3 text-body-sm text-success">{t("overview.noChecks")}</p>
-        )}
-      </Card>
+      {firstImport ? null : (
+        <Card className="p-5">
+          <h2 className="text-heading-sm text-fg">{t("overview.readyTitle")}</h2>
+          {checks.length ? (
+            <>
+              <ul className="mt-3 space-y-1 text-body-sm text-fg">
+                {checks.map((c) => (
+                  <li key={c.key}>
+                    <span className="text-warning">{t("overview.toConfirm")}</span> {c.message}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-body-sm text-fg-muted">{t("overview.canPublish")}</p>
+            </>
+          ) : (
+            <p className="mt-3 text-body-sm text-success">{t("overview.noChecks")}</p>
+          )}
+        </Card>
+      )}
     </div>
   );
 }
