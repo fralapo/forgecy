@@ -1,5 +1,6 @@
 /// <reference lib="dom" />
 // measureBrand runs in the browser (page.evaluate), so this file needs DOM types in any consumer.
+import { z } from "zod";
 import { JSON_LD } from "./fetcher";
 
 export interface ProbeImage {
@@ -47,6 +48,12 @@ const MAX_FONTS = 12;
 const MAX_IMAGES = 60;
 const MAX_LOGOS = 8;
 const MAX_SAME_AS = 20;
+const MAX_URL = 2048;
+const MAX_ALT = 200;
+const MAX_NAME = 200;
+const MAX_DESCRIPTION = 1000;
+/** Entries examined per list, so a hostile page cannot make the worker chew through millions. */
+const MAX_SCANNED = 500;
 
 const channel = (n: number) =>
   Math.max(0, Math.min(255, Math.round(n)))
@@ -95,15 +102,19 @@ export function toHex(css: string): string | null {
 
 function httpUrl(raw: string, base?: string): string | undefined {
   try {
+    if (raw.length > MAX_URL) return undefined;
     const u = new URL(raw.trim(), base);
-    return u.protocol === "http:" || u.protocol === "https:" ? u.toString() : undefined;
+    const href = u.toString();
+    return (u.protocol === "http:" || u.protocol === "https:") && href.length <= MAX_URL
+      ? href
+      : undefined;
   } catch {
     return undefined;
   }
 }
 
-const str = (v: unknown): string | undefined =>
-  typeof v === "string" && v.trim() ? v.trim() : undefined;
+const str = (v: unknown, max = MAX_URL): string | undefined =>
+  typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined;
 
 /** The organization the site declares about itself in JSON-LD (first Organization/LocalBusiness). */
 export function parseJsonLdOrganization(html: string, baseUrl: string): SiteProbe["organization"] {
@@ -144,9 +155,9 @@ export function parseJsonLdOrganization(html: string, baseUrl: string): SiteProb
     return ref && ref !== o ? logoOf(ref, depth + 1) : undefined;
   };
 
-  const name = str(org.name);
+  const name = str(org.name, MAX_NAME);
   const logo = logoOf(org.logo);
-  const description = str(org.description);
+  const description = str(org.description, MAX_DESCRIPTION);
   const sameAs = [
     ...new Set(
       [org.sameAs]
@@ -212,21 +223,64 @@ const SYSTEM_FONTS = new Set([
   "blinkmacsystemfont",
 ]);
 
-const httpImages = (images: ProbeImage[]): ProbeImage[] =>
-  images.flatMap((i) => {
+// The raw probe comes from a page we do not control (it may even patch builtins), so every
+// field is shape-checked, clamped and defaulted here; an entry that does not fit is dropped.
+const num = (max: number) =>
+  z
+    .unknown()
+    .transform((v) =>
+      typeof v === "number" && Number.isFinite(v) ? Math.min(Math.max(v, 0), max) : 0,
+    );
+const text = (max: number) => z.string().transform((v) => v.slice(0, max));
+const flag = z.unknown().transform((v) => v === true);
+const probeImageSchema = z.object({
+  url: z.string().max(MAX_URL),
+  alt: z.unknown().transform((v) => (typeof v === "string" ? v.slice(0, MAX_ALT) : "")),
+  w: num(100_000),
+  h: num(100_000),
+  inHeader: flag,
+  inFooter: flag,
+  repeats: num(100_000).transform((v) => Math.max(1, Math.round(v))),
+  source: z.enum(["img", "css-bg", "og", "icon", "jsonld"]),
+});
+const rawProbeSchemas = {
+  cssVar: z.object({ name: text(100), color: text(200) }),
+  button: z.object({ color: text(200), role: z.enum(["bg", "text"]), weight: num(1e9) }),
+  font: z.object({
+    family: text(200),
+    roles: z
+      .array(z.unknown())
+      .transform((r) =>
+        r.filter((x): x is FontRole => x === "headings" || x === "body" || x === "button"),
+      ),
+    loaded: flag,
+  }),
+};
+
+/** Valid entries of one list: at most MAX_SCANNED examined, the rest dropped. */
+function validEntries<T extends z.ZodType>(list: unknown, schema: T): Array<z.output<T>> {
+  if (!Array.isArray(list)) return [];
+  return list.slice(0, MAX_SCANNED).flatMap((item) => {
+    const parsed = schema.safeParse(item);
+    return parsed.success ? [parsed.data] : [];
+  });
+}
+
+const httpImages = (images: unknown): ProbeImage[] =>
+  validEntries(images, probeImageSchema).flatMap((i) => {
     const url = httpUrl(i.url);
     return url ? [{ ...i, url }] : [];
   });
 
 /** Turns the page's raw report plus its markup into the stored probe. */
 export function buildSiteProbe(raw: RawProbe, html: string, baseUrl: string): SiteProbe {
-  const cssVars = raw.cssVars.flatMap((v) => {
+  const cssVars = validEntries(raw.cssVars, rawProbeSchemas.cssVar).flatMap((v) => {
     const hex = toHex(v.color);
-    return hex ? [{ name: v.name, hex }] : [];
+    return hex && v.name.startsWith("--") ? [{ name: v.name, hex }] : [];
   });
 
   const buttons = new Map<string, { hex: string; role: "bg" | "text"; weight: number }>();
-  for (const b of raw.buttonColors) {
+  for (const b of validEntries(raw.buttonColors, rawProbeSchemas.button)) {
     const hex = toHex(b.color);
     if (!hex) continue;
     const key = `${hex}|${b.role}`;
@@ -252,15 +306,16 @@ export function buildSiteProbe(raw: RawProbe, html: string, baseUrl: string): Si
       });
   }
 
-  const themeColor = raw.themeColor ? toHex(raw.themeColor) : null;
+  const themeColor =
+    typeof raw.themeColor === "string" ? toHex(raw.themeColor.slice(0, 200)) : null;
   return {
     cssVars: cssVars.slice(0, MAX_CSS_VARS),
     ...(themeColor ? { themeColor } : {}),
     buttonColors: [...buttons.values()]
       .sort((a, b) => b.weight - a.weight)
       .slice(0, MAX_BUTTON_COLORS),
-    fonts: raw.fonts
-      .filter((f) => f.loaded || !SYSTEM_FONTS.has(f.family.toLowerCase()))
+    fonts: validEntries(raw.fonts, rawProbeSchemas.font)
+      .filter((f) => f.family && (f.loaded || !SYSTEM_FONTS.has(f.family.toLowerCase())))
       .slice(0, MAX_FONTS),
     logos: rankLogoCandidates(candidates).slice(0, MAX_LOGOS),
     images: httpImages(raw.images).slice(0, MAX_IMAGES),
@@ -275,9 +330,13 @@ export function buildSiteProbe(raw: RawProbe, html: string, baseUrl: string): Si
  */
 export function measureBrand(): RawProbe {
   const root = document.documentElement;
+  // Only short http(s) addresses leave the page: a data: URL can be megabytes, and the whole
+  // result is serialized to the worker before anything can filter it.
   const abs = (u: string | null | undefined): string => {
     try {
-      return u ? new URL(u, document.baseURI).href : "";
+      if (!u || u.length > 2048) return "";
+      const href = new URL(u, document.baseURI).href;
+      return /^https?:/i.test(href) && href.length <= 2048 ? href : "";
     } catch {
       return "";
     }
@@ -316,7 +375,7 @@ export function measureBrand(): RawProbe {
       if (!CSS.supports("color", value)) continue;
       scratch.style.color = "";
       scratch.style.color = value;
-      cssVars.push({ name, color: getComputedStyle(scratch).color });
+      cssVars.push({ name: name.slice(0, 100), color: getComputedStyle(scratch).color });
     } catch {
       // Skip this property.
     }
@@ -356,7 +415,7 @@ export function measureBrand(): RawProbe {
     try {
       const el = document.querySelector(selector);
       if (!el) continue;
-      const family = unquote(getComputedStyle(el).fontFamily.split(",")[0] ?? "");
+      const family = unquote(getComputedStyle(el).fontFamily.split(",")[0] ?? "").slice(0, 200);
       if (!family) continue;
       fonts.set(family, (fonts.get(family) ?? new Set()).add(role));
     } catch {
@@ -379,15 +438,14 @@ export function measureBrand(): RawProbe {
   };
   for (const img of Array.from(document.images).slice(0, 400)) {
     try {
-      let url = img.currentSrc || img.src;
+      let url = abs(img.currentSrc || img.src);
       // Lazy-loaders leave a data: placeholder in src and the real address in a data attribute.
-      if (!url || url.startsWith("data:"))
-        url = abs(img.getAttribute("data-src") || img.getAttribute("data-lazy-src")) || url;
+      if (!url) url = abs(img.getAttribute("data-src") || img.getAttribute("data-lazy-src"));
       if (!url) continue;
       const rect = img.getBoundingClientRect();
       add(images, {
-        url: abs(url),
-        alt: img.alt.trim(),
+        url,
+        alt: img.alt.trim().slice(0, 200),
         w: Math.round(rect.width || img.naturalWidth),
         h: Math.round(rect.height || img.naturalHeight),
         inHeader: img.closest("header, nav, [role=banner]") !== null,
@@ -411,7 +469,7 @@ export function measureBrand(): RawProbe {
       const rect = el.getBoundingClientRect();
       add(extra, {
         url,
-        alt: el.getAttribute("aria-label")?.trim() ?? "",
+        alt: (el.getAttribute("aria-label") ?? "").trim().slice(0, 200),
         w: Math.round(rect.width),
         h: Math.round(rect.height),
         inHeader: el.closest("header, nav, [role=banner]") !== null,
@@ -454,7 +512,10 @@ export function measureBrand(): RawProbe {
     });
 
   const allImages = [...images.values()];
-  const themeColor = document.querySelector('meta[name="theme-color"]')?.getAttribute("content");
+  const themeColor = document
+    .querySelector('meta[name="theme-color"]')
+    ?.getAttribute("content")
+    ?.slice(0, 100);
   return {
     cssVars,
     ...(themeColor ? { themeColor } : {}),

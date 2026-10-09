@@ -105,6 +105,23 @@ describe("parseJsonLdOrganization", () => {
     ).toBeUndefined();
   });
 
+  it("clamps the name and description and drops oversized urls", () => {
+    const org = parseJsonLdOrganization(
+      page({
+        "@type": "Organization",
+        name: "N".repeat(900),
+        description: "D".repeat(5000),
+        logo: `https://x.test/${"a".repeat(3000)}.png`,
+        sameAs: [`https://x.test/${"b".repeat(3000)}`, "https://x.test/ok"],
+      }),
+      "https://x.test/",
+    );
+    expect(org?.name).toHaveLength(200);
+    expect(org?.description).toHaveLength(1000);
+    expect(org?.logo).toBeUndefined();
+    expect(org?.sameAs).toEqual(["https://x.test/ok"]);
+  });
+
   it("drops a logo that is not http(s)", () => {
     const org = parseJsonLdOrganization(
       page({ "@type": "Organization", name: "A", logo: "data:image/png;base64,AAAA" }),
@@ -172,6 +189,59 @@ describe("buildSiteProbe", () => {
     expect(probe.images.map((i) => i.url)).toEqual(["https://e.com/a.jpg"]);
     expect(probe.logos.map((l) => l.url)).toEqual(["https://e.com/l.png"]);
     expect(probe.organization?.name).toBe("A");
+  });
+
+  it("sanitizes a hostile raw probe: wrong types, bad enums, oversized and inline values", () => {
+    const hostile = {
+      cssVars: [
+        { name: "--ok", color: "#112233" },
+        { name: 5, color: "#112233" },
+        { name: "--" + "x".repeat(500), color: "#445566" },
+        null,
+      ],
+      themeColor: 42,
+      buttonColors: [
+        { color: "#112233", role: "bg", weight: "5" },
+        { color: "#112233", role: "bg", weight: 7 },
+        { color: "#112233", role: "x", weight: 9 },
+        { color: "#112233", role: "text", weight: Infinity },
+        { color: "#112233", role: "text", weight: 1e300 },
+      ],
+      fonts: [
+        { family: "F".repeat(5000), roles: ["body", "nope", 3], loaded: "yes" },
+        { family: 7, roles: [], loaded: true },
+      ],
+      logos: [
+        { ...img({ url: "https://e.com/logo.png", inHeader: true }), w: NaN, h: "80", source: "x" },
+        { ...img({ url: "https://e.com/ok-logo.png", inHeader: true }), w: NaN, h: Infinity },
+        img({ url: `https://e.com/${"a".repeat(5000)}logo.png`, inHeader: true }),
+        img({ url: `data:image/png;base64,${"A".repeat(100_000)}`, inHeader: true }),
+      ],
+      images: [
+        { ...img({ url: "https://e.com/i.png", alt: "z".repeat(1000) }), repeats: -3 },
+        { url: "https://e.com/no-source.png" },
+      ],
+    } as unknown as RawProbe;
+    const probe = buildSiteProbe(hostile, "", "https://e.com/");
+
+    expect(probe.cssVars).toEqual([
+      { name: "--ok", hex: "#112233" },
+      { name: "--" + "x".repeat(98), hex: "#445566" },
+    ]);
+    expect(probe.themeColor).toBeUndefined();
+    // weight "5" counts as 0; role "x" is dropped; Infinity is 0; 1e300 is clamped.
+    expect(probe.buttonColors).toEqual([
+      { hex: "#112233", role: "text", weight: 1e9 },
+      { hex: "#112233", role: "bg", weight: 7 },
+    ]);
+    expect(probe.fonts).toEqual([{ family: "F".repeat(200), roles: ["body"], loaded: false }]);
+    // First logo: bad source, dropped. Second: non-finite sizes become 0 (unknown), so it ranks.
+    expect(probe.logos).toEqual([
+      expect.objectContaining({ url: "https://e.com/ok-logo.png", w: 0, h: 0 }),
+    ]);
+    expect(probe.images).toHaveLength(1);
+    expect(probe.images[0]).toMatchObject({ alt: "z".repeat(200), repeats: 1 });
+    expect(JSON.stringify(probe).length).toBeLessThan(5000);
   });
 
   it("caps every list", () => {
