@@ -227,6 +227,8 @@ describe("after a redirect to another origin, that origin's robots.txt applies",
     robots: Record<string, Response | undefined>;
     navLinks: string[];
     moved?: boolean;
+    land?: (url: string) => string;
+    maxPages?: number;
     sitemaps?: Record<string, string>;
   }) {
     const seen: string[] = [];
@@ -244,7 +246,11 @@ describe("after a redirect to another origin, that origin's robots.txt applies",
       mode: "html",
       fetchPage: async (u) => {
         fetched.push(u);
-        const finalUrl = input.moved !== false && u.startsWith(ROOT) ? `${MOVED}/` : u;
+        const finalUrl = input.land
+          ? input.land(u)
+          : input.moved !== false && u.startsWith(ROOT)
+            ? `${MOVED}/`
+            : u;
         return { ...page(u), finalUrl, navLinks: input.navLinks };
       },
       close: async () => undefined,
@@ -252,7 +258,7 @@ describe("after a redirect to another origin, that origin's robots.txt applies",
     const run = () =>
       crawlSite({
         rootUrl: `${ROOT}/`,
-        maxPages: 5,
+        maxPages: input.maxPages ?? 5,
         fetcher: movedFetcher,
         hostCheck: async (u) => {
           checked.push(u);
@@ -334,5 +340,58 @@ describe("after a redirect to another origin, that origin's robots.txt applies",
     const result = await run();
     expect(seen).toContain(`${MOVED}/sitemap.xml`);
     expect(paths(result.pages.map((p) => p.finalUrl))).toEqual(["/", "/chi-siamo"]);
+  });
+
+  it("still tries the landed sitemap.xml when the root lists only an off-site one", async () => {
+    const { seen, run } = crawlMoved({
+      robots: { [ROOT]: text("User-agent: *\nSitemap: https://elsewhere.example.net/sm.xml\n") },
+      navLinks: [],
+      sitemaps: {
+        [`${MOVED}/sitemap.xml`]: `<urlset><url><loc>${MOVED}/chi-siamo</loc></url></urlset>`,
+      },
+    });
+    const result = await run();
+    expect(seen.some((u) => u.includes("elsewhere.example.net"))).toBe(false);
+    expect(paths(result.pages.map((p) => p.finalUrl))).toEqual(["/", "/chi-siamo"]);
+  });
+
+  it("does not keep a page that redirected to a path another origin's robots.txt disallows", async () => {
+    const HTTP = ROOT.replace("https:", "http:");
+    const { checked, seen, run } = crawlMoved({
+      robots: { [HTTP]: text("User-agent: *\nDisallow: /private\n") },
+      navLinks: [`${ROOT}/a`],
+      land: (u) => (u === `${ROOT}/a` ? `${HTTP}/private` : u),
+    });
+    const result = await run();
+    expect(result.pages.map((p) => p.finalUrl)).toEqual([`${ROOT}/`]);
+    expect(result.skipped).toMatchObject([{ url: `${ROOT}/a`, code: "AUD-ROBOTS-BLOCKED" }]);
+    expect(checked).toContain(`${HTTP}/robots.txt`);
+    expect(seen).toContain(`${HTTP}/robots.txt`);
+  });
+
+  it("does not keep a page that redirected into a disallowed path of the same origin", async () => {
+    const { run } = crawlMoved({
+      robots: { [ROOT]: text("User-agent: *\nDisallow: /private\n") },
+      navLinks: [`${ROOT}/a`],
+      land: (u) => (u === `${ROOT}/a` ? `${ROOT}/private` : u),
+    });
+    const result = await run();
+    expect(result.pages.map((p) => p.finalUrl)).toEqual([`${ROOT}/`]);
+    expect(result.skipped).toMatchObject([{ url: `${ROOT}/a`, code: "AUD-ROBOTS-BLOCKED" }]);
+  });
+
+  it("reads the robots.txt of at most 4 origins per crawl", async () => {
+    const ports = [8441, 8442, 8443, 8444, 8445, 8446, 8447];
+    const { seen, fetched, run } = crawlMoved({
+      robots: {},
+      navLinks: ports.map((p) => `${ROOT}:${p}/x`),
+      moved: false,
+      maxPages: 10,
+    });
+    const result = await run();
+    expect(seen.filter((u) => u.endsWith("/robots.txt")).length).toBeLessThanOrEqual(4);
+    expect(result.pages).toHaveLength(4);
+    expect(result.skipped).toHaveLength(4);
+    expect(fetched).toHaveLength(4);
   });
 });
