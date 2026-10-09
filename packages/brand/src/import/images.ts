@@ -212,6 +212,11 @@ export interface HarvestInput {
   max?: number;
   /** Replaces the class and "site" tags, for pictures that are not the site's own (a social profile image). */
   tags?: string[];
+  /**
+   * The image is not the client's own site content (a social profile picture): the requester is
+   * recorded as its creator, but nobody has attested the rights, so it stays a draft.
+   */
+  unattested?: boolean;
   /** Smallest side kept for a content image (a profile picture is small by nature). */
   minSide?: number;
   /** The person who started the import; they attest the rights. Null: images wait for a person. */
@@ -258,6 +263,7 @@ export async function harvestImages(
     if (!who) requestedBy = null;
   }
   const max = input.max ?? IMAGE_LIMITS.max;
+  const attested = !!requestedBy && !input.unattested;
   let totalBytes = 0;
 
   /** Measures, classifies and registers one downloaded file. Null: not usable or already there. */
@@ -316,7 +322,7 @@ export async function harvestImages(
       .values({
         clientId: input.clientId,
         source: "site",
-        status: requestedBy ? "approved" : "draft",
+        status: attested ? "approved" : "draft",
         storageKey: key,
         sha256: hash,
         mime: file.mime,
@@ -325,9 +331,9 @@ export async function harvestImages(
         height: h || null,
         alt: image.alt.trim().slice(0, 300),
         tags: input.tags ?? [cls, "site"],
-        rights: requestedBy ? siteRights(requestedBy, pageUrl) : null,
+        rights: attested ? siteRights(requestedBy!, pageUrl) : null,
         createdBy: requestedBy,
-        ...(requestedBy ? { decidedBy: requestedBy, decidedAt: now } : {}),
+        ...(attested ? { decidedBy: requestedBy!, decidedAt: now } : {}),
       })
       .onConflictDoNothing()
       .returning({ id: assets.id });

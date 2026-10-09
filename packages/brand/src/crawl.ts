@@ -14,7 +14,7 @@ import { englishMessage, messageRef, type MessageKey, type MessageValues } from 
 import type { ImportContext, ImportDeps, ImportResult } from "./import/run";
 import { runSourceImport } from "./import/run";
 import { harvestImages } from "./import/images";
-import { readSocialSource, type SocialKind, type SocialNet } from "./import/social";
+import { readSocialSource, type SocialKind } from "./import/social";
 import { mergeProbes } from "./probe-merge";
 import { findOrCreateSocialSource, updateSourceStatus } from "./service";
 import { socialProfileOf } from "./social-url";
@@ -238,7 +238,6 @@ export async function runSocialProfiles(
     language?: string;
     allowPrivate: boolean;
     profiles: Array<{ kind: SocialKind; url: string }>;
-    net?: Pick<SocialNet, "hostCheck" | "timeoutMs"> & { fetchImpl?: typeof fetch };
   },
 ): Promise<ImportResult[]> {
   const { db } = deps;
@@ -248,29 +247,36 @@ export async function runSocialProfiles(
   const results: ImportResult[] = [];
   for (const profile of input.profiles) {
     let sourceId: string | undefined;
+    let pagesStored = false;
     try {
       const { source, created } = await findOrCreateSocialSource(db, agent, {
         clientId: input.clientId,
         ...profile,
       });
       sourceId = source.id;
-      // A profile already read keeps what it has: its proposals were made, and may have been judged.
-      if (!created && source.pages?.length) continue;
+      pagesStored = !!source.pages?.length;
+      // A profile already imported keeps what it has: its proposals were made, and may have been
+      // judged. One whose import did not finish (still extracting, or failed) is tried again.
+      if (!created && pagesStored && ["extracted", "partial"].includes(source.status)) continue;
       await updateSourceStatus(db, source.id, {
         status: "extracting",
         ...detail([msg("brand.import.status.reading")]),
       });
-      const read = await readSocialSource(
-        { db, storage: deps.storage },
-        { id: source.id, url: profile.url },
-        {
-          clientId: input.clientId,
-          requestedBy: ctx.requestedBy ?? null,
-          allowPrivate: input.allowPrivate,
-          ...input.net,
-        },
-      );
-      if (!read.pages.length) continue;
+      // The page of an earlier attempt is already on the source: no second request for it.
+      if (!pagesStored) {
+        const read = await readSocialSource(
+          { db, storage: deps.storage },
+          { id: source.id, url: profile.url, kind: profile.kind },
+          {
+            clientId: input.clientId,
+            requestedBy: ctx.requestedBy ?? null,
+            allowPrivate: input.allowPrivate,
+            ...deps.socialNet,
+          },
+        );
+        if (!read.pages.length) continue;
+        pagesStored = true;
+      }
       results.push(
         await runSourceImport(deps, quiet, {
           clientId: input.clientId,
@@ -278,11 +284,17 @@ export async function runSocialProfiles(
           ...(input.language ? { language: input.language } : {}),
         }),
       );
-    } catch {
+    } catch (err) {
+      // Only the kind of error goes on the source (never its message, which may carry an address).
+      const reason = err instanceof Error ? err.name : "Error";
       if (sourceId)
         await updateSourceStatus(db, sourceId, {
-          status: "partial",
-          ...detail([msg("brand.import.status.socialUnreachable")]),
+          status: pagesStored ? "failed" : "partial",
+          ...detail([
+            pagesStored
+              ? msg("brand.import.status.socialImportFailed", { reason })
+              : msg("brand.import.status.socialUnreachable"),
+          ]),
         }).catch(() => undefined);
     }
   }

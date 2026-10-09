@@ -775,7 +775,8 @@
       "crawlSkipped": "{count, plural, one {# pagina saltata} other {# pagine saltate}}",
       "socialLoginWall": "Il profilo non è pubblico senza accedere: non è stato letto nulla",
       "socialRobots": "Il sito del profilo non consente la lettura automatica: non è stato letto nulla",
-      "socialUnreachable": "Il profilo non è raggiungibile o non ha nulla di pubblico da leggere"
+      "socialUnreachable": "Il profilo non è raggiungibile o non ha nulla di pubblico da leggere",
+      "socialImportFailed": "Il profilo è stato letto ma non è stato possibile importarlo ({reason}); verrà ritentato"
     },
     "warnings": {
       "firstPages": "Sono state lette solo le prime {max} pagine",

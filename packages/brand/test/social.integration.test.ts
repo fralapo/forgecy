@@ -10,6 +10,7 @@ import {
   createDb,
   eq,
   sql,
+  users,
   type Database,
 } from "@forgecy/db";
 import type { StorageDriver } from "@forgecy/files";
@@ -23,6 +24,8 @@ import { addSource, findOrCreateSocialSource, updateSourceStatus } from "../src/
 const dbUrl = process.env.FORGECY_TEST_DATABASE_URL;
 
 const agent: Actor = { type: "agent", role: "brand_analyst" };
+// The test server is not a social host: this stands in for the platform check, tests only.
+const socialNet = { allowHost: (u: string) => new URL(u).hostname === "127.0.0.1" };
 const memoryStorage = () => {
   const files = new Map<string, Uint8Array>();
   return {
@@ -59,6 +62,8 @@ describe.skipIf(!dbUrl)("social profiles (integration)", () => {
   let base: string;
   let png: Buffer;
   const clientIds: string[] = [];
+  const hits: string[] = [];
+  let userId: string;
   const suffix = Math.random().toString(36).slice(2, 8);
 
   const newClient = async () => {
@@ -80,11 +85,17 @@ describe.skipIf(!dbUrl)("social profiles (integration)", () => {
 
   beforeAll(async () => {
     db = createDb(dbUrl!, { max: 4 });
+    const [u] = await db
+      .insert(users)
+      .values({ name: "rita", email: `rita-${suffix}@example.test` })
+      .returning();
+    userId = u!.id;
     png = await sharp({ create: { width: 300, height: 300, channels: 3, background: "#c33" } })
       .png()
       .toBuffer();
     server = createServer((req, res) => {
       const path = req.url ?? "/";
+      hits.push(path);
       const html = (body: string, status = 200) => {
         res.writeHead(status, { "content-type": "text/html" });
         res.end(body);
@@ -94,7 +105,7 @@ describe.skipIf(!dbUrl)("social profiles (integration)", () => {
         res.writeHead(200, { "content-type": "image/png" });
         return res.end(png);
       }
-      if (path.startsWith("/ok"))
+      if (path.startsWith("/ok") || path.startsWith("/in/"))
         return html(
           `<head><meta property="og:title" content="Forno ${path}"><meta property="og:description" content="${BIO}"><meta property="og:image" content="/pic.png"></head>`,
         );
@@ -123,6 +134,7 @@ describe.skipIf(!dbUrl)("social profiles (integration)", () => {
         await db.execute(sql`delete from ${sql.identifier(table)} where client_id = ${clientId}`);
       await db.delete(clients).where(eq(clients.id, clientId));
     }
+    await db?.execute(sql`delete from users where email like ${"%-" + suffix + "@example.test"}`);
     await db?.$client.end();
   });
 
@@ -171,7 +183,7 @@ describe.skipIf(!dbUrl)("social profiles (integration)", () => {
       }),
     ]);
     const storage = memoryStorage();
-    const results = await runSocialProfiles({ db, storage, ai }, ctx(), {
+    const results = await runSocialProfiles({ db, storage, ai, socialNet }, ctx(), {
       clientId,
       allowPrivate: true,
       profiles: [
@@ -218,13 +230,123 @@ describe.skipIf(!dbUrl)("social profiles (integration)", () => {
       allowPrivate: true,
       profiles: [{ kind: "instagram" as const, url: `${base}/ok1` }],
     };
-    const deps = { db, storage: memoryStorage(), ai };
+    const deps = { db, storage: memoryStorage(), ai, socialNet };
     expect(await runSocialProfiles(deps, ctx(), input)).toHaveLength(1);
     expect(await runSocialProfiles(deps, ctx(), input)).toHaveLength(0);
     expect(seen).toHaveLength(1);
   });
 
+  it("keeps a social picture a draft without rights, and saves none for a person's /in/ profile", async () => {
+    const clientId = await newClient();
+    const { ai } = fakeAi([]);
+    const deps = { db, storage: memoryStorage(), ai, socialNet };
+    await runSocialProfiles(
+      deps,
+      { ...ctx(), requestedBy: userId },
+      {
+        clientId,
+        allowPrivate: true,
+        profiles: [
+          { kind: "linkedin", url: `${base}/in/jane-doe` },
+          { kind: "instagram", url: `${base}/ok1` },
+        ],
+      },
+    );
+    const saved = await db.select().from(assets).where(eq(assets.clientId, clientId));
+    // One picture: the instagram one. Attributed to the requester, but nobody attested the rights.
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toMatchObject({
+      tags: ["social"],
+      status: "draft",
+      rights: null,
+      createdBy: userId,
+      decidedBy: null,
+      decidedAt: null,
+    });
+    // The person's profile text is still read.
+    const [jane] = await db
+      .select()
+      .from(brandSources)
+      .where(eq(brandSources.clientId, clientId))
+      .then((rows) => rows.filter((r) => r.kind === "linkedin"));
+    expect(jane!.pages).toHaveLength(1);
+  });
+
+  it("tries a profile again when its import failed, without reading the page a second time", async () => {
+    const clientId = await newClient();
+    const input = {
+      clientId,
+      allowPrivate: true,
+      profiles: [{ kind: "instagram" as const, url: `${base}/ok9` }],
+    };
+    const broken = {
+      generateObject: async () => {
+        throw new TypeError("secret address https://private.example/token");
+      },
+    } as unknown as AiGateway;
+    // Not the last attempt: the analyst error is thrown, not recorded as a soft failure.
+    const first = await runSocialProfiles(
+      { db, storage: memoryStorage(), ai: broken, socialNet },
+      { jobId: crypto.randomUUID(), attempt: 1, maxAttempts: 3 },
+      input,
+    );
+    expect(first).toEqual([]);
+    const [failed] = await db
+      .select()
+      .from(brandSources)
+      .where(eq(brandSources.clientId, clientId));
+    expect(failed).toMatchObject({ status: "failed" });
+    expect(failed!.pages).toHaveLength(1);
+    expect(failed!.statusDetailRef?.[0]).toMatchObject({
+      key: "brand.import.status.socialImportFailed",
+      values: { reason: "TypeError" },
+    });
+    expect(failed!.statusDetail).not.toContain("private.example");
+
+    hits.length = 0;
+    const { ai } = fakeAi([item({ field: "positioning", text: "Il pane di Napoli" })]);
+    const second = await runSocialProfiles(
+      { db, storage: memoryStorage(), ai, socialNet },
+      ctx(),
+      input,
+    );
+    expect(second).toHaveLength(1);
+    expect(hits.filter((h) => h === "/ok9")).toEqual([]);
+    const [done] = await db.select().from(brandSources).where(eq(brandSources.clientId, clientId));
+    expect(done).toMatchObject({ status: "extracted" });
+    expect(await proposalsOf(clientId, done!.id)).toHaveLength(1);
+  });
+
   describe("runSourceImport on a social source", () => {
+    it("refuses a link that is not a profile of the source's own platform, without a request", async () => {
+      const clientId = await newClient();
+      const { ai, seen } = fakeAi([item({ field: "positioning", text: "x" })]);
+      hits.length = 0;
+      for (const [kind, url] of [
+        ["instagram", "https://example.com/x"],
+        ["instagram", "https://www.facebook.com/somepage"],
+        ["tiktok", `${base}/ok1`],
+      ] as const) {
+        const s = await addSource(db, agent, {
+          clientId,
+          kind,
+          title: kind,
+          url,
+          status: "extracted",
+        });
+        const result = await runSourceImport({ db, storage: memoryStorage(), ai }, ctx(), {
+          clientId,
+          sourceId: s.id,
+        });
+        expect(result).toMatchObject({ pages: 0, proposals: 0 });
+        const [row] = await db.select().from(brandSources).where(eq(brandSources.id, s.id));
+        expect(row).toMatchObject({ status: "partial", pages: [] });
+        expect(row!.statusDetailRef?.[0]?.key).toBe("brand.import.status.socialUnreachable");
+      }
+      expect(seen).toHaveLength(0);
+      expect(hits).toEqual([]);
+    });
+
     it("proposes from a readable bio only what the bio supports", async () => {
       const clientId = await newClient();
       const s = await addSource(db, agent, {
@@ -267,7 +389,7 @@ describe.skipIf(!dbUrl)("social profiles (integration)", () => {
         status: "extracted",
       });
       const { ai, seen } = fakeAi([item({ field: "positioning", text: "Il pane di Napoli" })]);
-      const deps = { db, storage: memoryStorage(), ai };
+      const deps = { db, storage: memoryStorage(), ai, socialNet };
 
       const walled = await runSourceImport(deps, ctx(), { clientId, sourceId: wall.id });
       expect(walled).toMatchObject({ pages: 0, proposals: 0, ai: "skipped" });

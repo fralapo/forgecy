@@ -775,7 +775,8 @@
       "crawlSkipped": "{count, plural, one {# page skipped} other {# pages skipped}}",
       "socialLoginWall": "The profile is not public without logging in: nothing was read",
       "socialRobots": "The profile's site does not allow automatic reading: nothing was read",
-      "socialUnreachable": "The profile could not be reached or has nothing public to read"
+      "socialUnreachable": "The profile could not be reached or has nothing public to read",
+      "socialImportFailed": "The profile was read but could not be imported ({reason}); it will be tried again"
     },
     "warnings": {
       "firstPages": "Only the first {max} pages were read",

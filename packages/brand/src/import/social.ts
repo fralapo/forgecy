@@ -6,15 +6,27 @@
  * profile host's robots.txt is honored for our agent token, there is no cookie, no login, no
  * retry and no JavaScript rendering, and exactly one GET is made per profile. A login wall, a
  * robots refusal or a network error reads nothing and says so. Only the extracted text (title,
- * description) is kept, never the HTML.
+ * description) is kept, never the HTML. The address must be a profile of the source's own
+ * platform, and so must every redirect hop: nothing off the platform is ever requested.
  */
-import { createHostCheck, createPinnedFetch, type ProbeImage } from "@forgecy/audit";
+import {
+  createHostCheck,
+  createPinnedFetch,
+  socialChannelOf,
+  type ProbeImage,
+} from "@forgecy/audit";
 import { robotsAllows } from "@forgecy/audit/crawl/crawler";
 import { auditUserAgent, JSON_LD } from "@forgecy/audit/crawl/fetcher";
 import type { MessageRef } from "@forgecy/core";
-import { guardedFetch, readCapped, type HostCheck } from "@forgecy/core/net-guard";
+import {
+  guardedFetch,
+  GuardedFetchError,
+  readCapped,
+  type HostCheck,
+} from "@forgecy/core/net-guard";
 import { englishMessage, messageRef, type MessageKey } from "@forgecy/i18n";
 import { updateSourceStatus } from "../service";
+import { socialProfileOf, type SocialKind } from "../social-url";
 import { harvestImages, type HarvestDeps } from "./images";
 
 export { isSocialKind, socialKindOf, socialProfileOf, type SocialKind } from "../social-url";
@@ -51,7 +63,13 @@ const tidy = (s: string | undefined) =>
 
 /** Login, sign-in or "accedi" in a page title: the page is the platform's door, not the profile. */
 const LOGIN_TITLE = /\b(log\s?in|sign\s?in|accedi)\b/i;
-const LOGIN_PATH = /\/(?:accounts\/)?login|authwall|checkpoint/i;
+/** The boilerplate of a door page ("Create an account or log in"), in the languages we read. */
+const WALL_TEXT =
+  /\b(log\s?in|sign\s?in|sign\s?up|create an account|accedi|registrati|iscriviti|crea un account)\b/i;
+/** A title that is only the platform (and its tagline): the generic page of an unavailable profile. */
+const PLATFORM_TITLE = /^(instagram|facebook|linkedin|tiktok)\b/i;
+/** Whole first path segments of the platforms' login pages; a company called "Checkpoint Systems" is not one. */
+const LOGIN_PATH = /^\/(?:login(?:\.php)?|accounts\/login|authwall|checkpoint|uas\/login)(?:\/|$)/i;
 
 function jsonLdDescription(html: string): string | undefined {
   const found: string[] = [];
@@ -100,11 +118,16 @@ export function parseSocialMeta(html: string): {
     jsonLdDescription(html) ||
     "";
   const image = tidy(meta.get("og:image"));
+  const distinct = description !== "" && description !== title;
   return {
     ...(title ? { title } : {}),
     ...(description ? { description } : {}),
     ...(image ? { image } : {}),
-    loginWall: LOGIN_TITLE.test(ogTitle) || LOGIN_TITLE.test(pageTitle),
+    loginWall:
+      LOGIN_TITLE.test(ogTitle) ||
+      LOGIN_TITLE.test(pageTitle) ||
+      WALL_TEXT.test(description) ||
+      (!distinct && PLATFORM_TITLE.test(title)),
   };
 }
 
@@ -124,6 +147,13 @@ export interface SocialNet {
   hostCheck?: HostCheck;
   timeoutMs?: number;
   userAgent?: string;
+  /** The platform the source says it is; the address must be a profile there. */
+  kind?: SocialKind;
+  /**
+   * Tests only (a local server is not a social host): replaces the platform check on the address
+   * and on every redirect hop. Production callers never pass it.
+   */
+  allowHost?: (url: string) => boolean;
 }
 
 const LOGIN_STATUSES = new Set([401, 403, 999]); // 999 is LinkedIn's refusal of anonymous readers
@@ -134,35 +164,50 @@ export async function readSocialProfile(
   net: SocialNet = {},
 ): Promise<SocialProfile> {
   const unreachable: SocialProfile = { pages: [], partial: "unreachable" };
+  // Why a hop was refused before it was requested, when it was not just a blocked host.
+  const stop: { why?: SocialPartial } = {};
   try {
     const target = new URL(url);
     if (!/^https?:$/.test(target.protocol) || target.username || target.password)
       return unreachable;
-    const hostCheck = net.hostCheck ?? createHostCheck({ allowPrivate: !!net.allowPrivate });
+    const start = net.allowHost ? undefined : socialProfileOf(url);
+    if (!net.allowHost && (!start || (net.kind && start.kind !== net.kind))) return unreachable;
+    const allowHost = net.allowHost ?? ((u: string) => socialChannelOf(u) === start!.kind);
+    const base = net.hostCheck ?? createHostCheck({ allowPrivate: !!net.allowPrivate });
     const impl = fetchImpl ?? createPinnedFetch({ allowPrivate: !!net.allowPrivate });
     const userAgent = net.userAgent ?? auditUserAgent();
-    const timeoutMs = net.timeoutMs ?? SOCIAL_LIMITS.timeoutMs;
-    const robots = { userAgent, fetchImpl: impl, hostCheck };
+    const onPlatform: HostCheck = async (u) => allowHost(u) && (await base(u));
+    const robots = { userAgent, fetchImpl: impl, hostCheck: onPlatform };
+    // Asked before each hop is requested, the first one included: a redirect to another host, to
+    // a login page or into a disallowed path is refused without a request.
+    const hostCheck: HostCheck = async (u) => {
+      if (!(await onPlatform(u))) return false;
+      const path = new URL(u).pathname;
+      if (path === "/robots.txt") return true;
+      if (LOGIN_PATH.test(path)) {
+        stop.why = "login_wall";
+        return false;
+      }
+      if (!(await robotsAllows(u, robots))) {
+        stop.why = "robots";
+        return false;
+      }
+      return true;
+    };
 
-    if (!(await robotsAllows(url, robots))) return { pages: [], partial: "robots" };
-    const { res, url: landed } = await guardedFetch(url, {
+    const { res, url: landed } = await guardedFetch(start?.url ?? url, {
       hostCheck,
       fetchImpl: impl,
-      timeoutMs,
+      timeoutMs: net.timeoutMs ?? SOCIAL_LIMITS.timeoutMs,
       headers: { accept: "text/html", "user-agent": userAgent },
     });
-    if (LOGIN_STATUSES.has(res.status) || LOGIN_PATH.test(new URL(landed).pathname)) {
+    if (LOGIN_STATUSES.has(res.status)) {
       await res.body?.cancel().catch(() => undefined);
       return { pages: [], partial: "login_wall" };
     }
     if (!res.ok) {
       await res.body?.cancel().catch(() => undefined);
       return unreachable;
-    }
-    // A redirect to another host is another robots.txt to honor.
-    if (new URL(landed).origin !== target.origin && !(await robotsAllows(landed, robots))) {
-      await res.body?.cancel().catch(() => undefined);
-      return { pages: [], partial: "robots" };
     }
     const { bytes } = await readCapped(res, SOCIAL_LIMITS.bodyBytes);
     const meta = parseSocialMeta(new TextDecoder().decode(bytes));
@@ -180,8 +225,10 @@ export async function readSocialProfile(
       // An unreadable picture address is simply left out.
     }
     return { pages: [{ locator: SOCIAL_LOCATOR, text }], ...(image ? { image } : {}) };
-  } catch {
-    return unreachable;
+  } catch (err) {
+    return err instanceof GuardedFetchError && stop.why
+      ? { pages: [], partial: stop.why }
+      : unreachable;
   }
 }
 
@@ -206,10 +253,13 @@ export interface SocialSourceOptions extends SocialNet {
  */
 export async function readSocialSource(
   deps: Pick<HarvestDeps, "db" | "storage">,
-  source: { id: string; url: string },
+  source: { id: string; url: string; kind: SocialKind },
   options: SocialSourceOptions,
 ): Promise<SocialProfile & { detail: string }> {
-  const profile = await readSocialProfile(source.url, options.fetchImpl, options);
+  const profile = await readSocialProfile(source.url, options.fetchImpl, {
+    ...options,
+    kind: source.kind,
+  });
   if (!profile.pages.length) {
     const ref: MessageRef = messageRef(PARTIAL_KEY[profile.partial ?? "unreachable"]);
     const detail = englishMessage(ref.key as MessageKey);
@@ -222,7 +272,9 @@ export async function readSocialSource(
     return { ...profile, detail };
   }
   await updateSourceStatus(deps.db, source.id, { pages: profile.pages });
-  if (profile.image)
+  // Never a private person's headshot: a LinkedIn /in/ profile keeps its text and no picture.
+  const person = source.kind === "linkedin" && /^\/in\//i.test(new URL(source.url).pathname);
+  if (profile.image && !person)
     try {
       const picture: ProbeImage = {
         url: profile.image,
@@ -239,6 +291,7 @@ export async function readSocialSource(
         sourceId: source.id,
         images: [picture],
         tags: ["social"],
+        unattested: true,
         minSide: 100,
         max: 1,
         requestedBy: options.requestedBy ?? null,

@@ -37,7 +37,7 @@ import {
 } from "./analyst";
 import { gateCandidates } from "./gate";
 import { parseSiteProbe } from "./probe-schema";
-import { isSocialKind, readSocialSource } from "./social";
+import { isSocialKind, readSocialSource, type SocialNet } from "./social";
 import { knownColors, knownFonts, SITE_LOCATORS } from "./site-colors";
 import { updateSourceStatus } from "../service";
 
@@ -62,6 +62,10 @@ export interface ImportDeps {
   storage: StorageDriver;
   /** Missing when no AI provider is configured: only deterministic extraction runs. */
   ai?: AiGateway | null;
+  /** Tests only: how social profiles are fetched. Production never sets it. */
+  socialNet?: Pick<SocialNet, "hostCheck" | "timeoutMs" | "allowHost"> & {
+    fetchImpl?: typeof fetch;
+  };
 }
 
 export interface ImportContext {
@@ -349,11 +353,12 @@ export async function runSourceImport(
     if (isSocialKind(source.kind) && source.url && !pages.length) {
       const read = await readSocialSource(
         { db, storage: deps.storage },
-        { id: source.id, url: source.url },
+        { id: source.id, url: source.url, kind: source.kind },
         {
           clientId: input.clientId,
           requestedBy: ctx.requestedBy ?? null,
           allowPrivate: loadToolEnv().FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS,
+          ...deps.socialNet,
         },
       );
       if (!read.pages.length)
