@@ -40,7 +40,8 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
   let admin: Extract<Actor, { type: "user" }>;
   let pkgFile: string;
   const suffix = Math.random().toString(36).slice(2, 8);
-  const sha = (c: string) => c.repeat(64);
+  // The real checksum of a fixture's content: the import refuses a key whose name is another one.
+  const sha = (content: string) => sha256(Buffer.from(content));
   const tplKey = `tpl-${suffix}`;
   const ids: {
     client?: string;
@@ -77,19 +78,19 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       .returning();
     ids.client = c!.id;
     await db.insert(brandIdentities).values({ clientId: c!.id });
-    const assetKey = `clients/${c!.id}/assets/${sha("a")}.png`;
+    const assetKey = `clients/${c!.id}/assets/${sha("approved")}.png`;
     await storage.put(assetKey, Buffer.from("approved"), { contentType: "image/png" });
     await db.insert(assets).values({
       clientId: c!.id,
       source: "upload",
       status: "approved",
       storageKey: assetKey,
-      sha256: sha("a"),
+      sha256: sha("approved"),
       mime: "image/png",
       size: 8,
       createdBy: gone!.id,
     });
-    const tplStorage = `system/templates/${sha("t")}.zip`;
+    const tplStorage = `system/templates/${sha("zip")}.zip`;
     await storage.put(tplStorage, Buffer.from("zip"), { contentType: "application/zip" });
     await db.insert(templates).values({
       key: tplKey,
@@ -101,7 +102,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       status: "published",
       manifest: {},
       packageKey: tplStorage,
-      packageSha256: sha("t"),
+      packageSha256: sha("zip"),
       packageSize: 3,
     });
     const [content] = await db
@@ -217,7 +218,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       .from(contentVersions)
       .where(eq(contentVersions.contentId, content!.id));
     expect(content!.currentVersionId).toBe(version!.id);
-    const newKey = `clients/${out.clientId}/assets/${sha("a")}.png`;
+    const newKey = `clients/${out.clientId}/assets/${sha("approved")}.png`;
     expect(version!.document).toEqual({ slides: [], image: newKey });
     expect(await storage.exists(newKey)).toBe(true);
     // Approvals are claims of the other installation: none are imported.
@@ -439,7 +440,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
             slug: `rossi-${suffix}`,
             existingId: ids.client!,
             existingName: `Rossi ${suffix}`,
-            proposedSlug: `rossi-${suffix}-3`,
+            proposedSlug: `rossi-${suffix}-free`,
           },
           { kind: "template", key: tplKey, version: "2.0.0", name: "x", existingVersions: [] },
         ],
@@ -457,7 +458,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       confirm(admin, { client: { mode: "new", slug: `rossi-${suffix}` }, templates: {} }),
     ).rejects.toMatchObject({ ref: { key: "clientTransfer.errors.slugTaken" } });
     await expect(
-      confirm(admin, { client: { mode: "new", slug: `rossi-${suffix}-3` }, templates: {} }),
+      confirm(admin, { client: { mode: "new", slug: `rossi-${suffix}-free` }, templates: {} }),
     ).rejects.toMatchObject({ ref: { key: "clientTransfer.errors.unresolvedConflicts" } });
     await expect(
       confirm({ type: "agent", role: "reviewer" }, { client: { mode: "replace" } }),
