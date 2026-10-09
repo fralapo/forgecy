@@ -222,7 +222,8 @@
     "assetSource": {
       "upload": "Uploaded",
       "ai": "Generated with AI",
-      "product": "From product"
+      "product": "From product",
+      "site": "From website"
     },
     "assetStatus": {
       "draft": "To approve",

@@ -222,7 +222,8 @@
     "assetSource": {
       "upload": "Caricata",
       "ai": "Generata con AI",
-      "product": "Da prodotto"
+      "product": "Da prodotto",
+      "site": "Dal sito web"
     },
     "assetStatus": {
       "draft": "Da approvare",

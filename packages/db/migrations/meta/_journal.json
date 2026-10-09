@@ -218,6 +218,13 @@
       "when": 1791543894994,
       "tag": "0032_client_access",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1791550557462,
+      "tag": "0033_brand_visual",
+      "breakpoints": true
     }
   ]
 }
