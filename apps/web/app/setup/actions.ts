@@ -9,7 +9,7 @@ import { firstIssue, vmsg } from "@/lib/i18n";
 import { loginGuard } from "@/lib/login-guard";
 import { refinePassword } from "@/lib/password-schema";
 import { setupTokenOk } from "@/lib/setup-token";
-import { emailToUsername, usernameToEmail } from "@/lib/username";
+import { emailToUsername, isValidUsername, usernameToEmail } from "@/lib/username";
 import { countUsers, createPasswordUser, withSetupLock } from "@/lib/users";
 
 const setupSchema = z
@@ -17,7 +17,7 @@ const setupSchema = z
     username: z
       .string()
       .trim()
-      .regex(/^[A-Za-z0-9._-]+(@[A-Za-z0-9.-]+)?$/, vmsg("validation.usernameInvalid"))
+      .refine(isValidUsername, vmsg("validation.usernameInvalid"))
       .transform(usernameToEmail),
     password: z.string(),
   })
@@ -51,8 +51,14 @@ export async function createFirstAdmin(_prev: SetupState, form: FormData): Promi
     return true;
   });
   if (!created) redirect("/login");
-  await auth.api.signInEmail({
-    body: { email: parsed.data.username, password: parsed.data.password },
-  });
+  // The account exists now: any sign-in failure (a pre-locked username answers 429) sends
+  // the person to the login page instead of an error page.
+  try {
+    await auth.api.signInEmail({
+      body: { email: parsed.data.username, password: parsed.data.password },
+    });
+  } catch {
+    redirect("/login");
+  }
   redirect("/");
 }

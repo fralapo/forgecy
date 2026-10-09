@@ -32,7 +32,7 @@ import { changeOwnPassword } from "@/lib/change-password";
 import { refinePassword } from "@/lib/password-schema";
 import { requireUser } from "@/lib/session";
 import { isTheme, THEME_COOKIE } from "@/lib/theme";
-import { emailToUsername, usernameToEmail } from "@/lib/username";
+import { emailToUsername, isValidUsername, usernameToEmail } from "@/lib/username";
 import { createPasswordUser } from "@/lib/users";
 
 const newUserSchema = z
@@ -40,7 +40,7 @@ const newUserSchema = z
     username: z
       .string()
       .trim()
-      .regex(/^[A-Za-z0-9._-]+(@[A-Za-z0-9.-]+)?$/, vmsg("validation.usernameInvalid"))
+      .refine(isValidUsername, vmsg("validation.usernameInvalid"))
       .transform(usernameToEmail),
     password: z.string(),
     isAdmin: z
