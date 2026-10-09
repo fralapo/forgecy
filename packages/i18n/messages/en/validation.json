@@ -6,5 +6,5 @@
   "passwordTooShort": "The password must be at least {min} characters long",
   "passwordTooLong": "The password can be at most {max} characters long",
   "websiteInvalid": "Invalid website address",
-  "usernameInvalid": "Use only letters, numbers, dot, dash or underscore; a dot cannot come first, last or twice in a row. A full email address also works"
+  "usernameInvalid": "Use only letters, numbers, dot, dash or underscore; a dot cannot come first, last or twice in a row. An email address also works, with the same characters"
 }

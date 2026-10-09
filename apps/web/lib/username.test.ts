@@ -31,6 +31,8 @@ describe("isValidUsername", () => {
     "a..b@studio.it",
     "admin@corp",
     "admin@-x.com",
+    "anna+x@studio.it",
+    "o'brien@studio.it",
     "",
     "has space",
     "a/b",
