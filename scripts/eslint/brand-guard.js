@@ -4,9 +4,14 @@
  * hand-written colors and pixel sizes in string literals and template-literal text, which
  * also covers Tailwind arbitrary values such as `bg-[#fff]` or `w-[13px]`.
  */
-const COLOR =
-  /#[0-9a-fA-F]{3,8}\b|(?<![A-Za-z])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color-mix)\(/;
-const PIXELS = /(?:^|[\s[:(,_])-?(?:\d+\.?\d*|\.\d+)px\b/;
+// Hex: exactly 3, 4, 6 or 8 digits, not glued to a word, path or entity (`foo#abc`, `/#abc`, `&#123;`).
+const HEX = String.raw`(?<![\w/&])#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3,4})(?![0-9a-z_])`;
+const COLOR = new RegExp(
+  String.raw`${HEX}|(?<![a-z])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color-mix)\(`,
+  "i",
+);
+// The lead class includes `-`, `+` and `*` so `calc(100vh-72px)` is caught; `${n}px` stays allowed.
+const PIXELS = /(?:^|[\s[:(,_+*-])-?(?:\d+\.?\d*|\.\d+)px\b/;
 
 /** @type {import("eslint").Rule.RuleModule} */
 const rule = {

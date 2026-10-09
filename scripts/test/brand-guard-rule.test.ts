@@ -4,13 +4,13 @@ import plugin from "../eslint/brand-guard.js";
 import { read } from "./helpers";
 
 const linter = new Linter({ configType: "flat" });
-const lint = (code: string) =>
+const lint = (code: string, filename = "file.tsx") =>
   linter
     .verify(
       code,
       [
         {
-          files: ["**/*.tsx"],
+          files: ["**/*.{ts,tsx}"],
           plugins: { "brand-guard": plugin },
           languageOptions: {
             ecmaVersion: "latest",
@@ -20,7 +20,7 @@ const lint = (code: string) =>
           rules: { "brand-guard/no-hand-written-design-values": "error" },
         },
       ],
-      "file.tsx",
+      filename,
     )
     .map((m) => m.messageId);
 
@@ -34,6 +34,14 @@ describe("brand-guard/no-hand-written-design-values", () => {
     ["<div className={`w-[13px] ${x}`} />", "size"],
     ['<div style={{ width: "13px" }} />', "size"],
     ['<div className="top-[-4px]" />', "size"],
+    ['<div style={{ color: "RGB(0,0,0)" }} />', "color"],
+    ['<div className="h-[calc(100vh-72px)]" />', "size"],
+    ['<div className="w-[calc(100%-16px)]" />', "size"],
+    ['<div className="bg-[#fff]" />', "color"],
+    ['<div className="bg-[#abcd]" />', "color"],
+    ['<div style={{ color: "#ffffff" }} />', "color"],
+    ['<div style={{ color: "#ffffffff" }} />', "color"],
+    ["const b = `border-[#fff]`;", "color"],
   ])("flags %s", (code, messageId) => {
     expect(lint(code)).toEqual([messageId]);
   });
@@ -46,8 +54,20 @@ describe("brand-guard/no-hand-written-design-values", () => {
     '<a href="#main">skip</a>',
     'import x from "@forgecy/ui";',
     "<div style={{ transform: `scale(${s})` }} />",
+    '<a href="#faced">anchor</a>',
+    'const s = "foo#abc";',
+    'const u = "/docs/#abc";',
+    'const e = "&#123;";',
+    'const n = "#12345";',
+    "const d = `calc(100vh - ${n}px)`;",
   ])("accepts %s", (code) => {
     expect(lint(code)).toEqual([]);
+  });
+
+  it("also lints plain .ts files", () => {
+    expect(lint('export const c = "#ff0000";', "lib/theme.ts")).toEqual(["color"]);
+    expect(lint('export const w = "calc(100vh-72px)";', "lib/theme.ts")).toEqual(["size"]);
+    expect(lint('export const ok = "var(--fc-bg)";', "lib/theme.ts")).toEqual([]);
   });
 
   it("is wired into eslint.config.js for app and UI code, not only .tsx literals", () => {

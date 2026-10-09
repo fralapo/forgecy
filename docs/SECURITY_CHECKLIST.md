@@ -223,9 +223,9 @@ Decisions and checks nobody has made yet; each is a known limitation until it is
 - [ ] Restore under a least-privilege database role instead of the superuser in
       `DATABASE_URL` (section 5 calls the dump scanner a barrier, not a sandbox).
 - [ ] Restore through `pg_dump -Fc` and `pg_restore` instead of scanning plain
-      SQL. Until then, run the scanner (`packages/backup/src/safe-dump.ts`)
-      against a real `pg_dump` of a populated install: it was only tested on
-      hand-written dumps.
+      SQL.
+- [ ] Run the dump scanner (`packages/backup/src/safe-dump.ts`) against a real
+      `pg_dump` of a populated install: it was only tested on hand-written dumps.
 - [ ] Per-client access control: any active human can read any client by id
       (ADR 0014). It needs a grants table, a resolver in `can()` and a filter in
       every query.

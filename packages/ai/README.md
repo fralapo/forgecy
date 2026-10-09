@@ -44,7 +44,7 @@ const { data } = await ai.generateObject({
 | `local`      | yes  | no     | `LOCAL_LLM_ENABLED`, `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`  |
 | `higgsfield` | no   | yes    | MCP + OAuth (Connect in Settings), `HIGGSFIELD_IMAGE_MODEL`   |
 
-Image providers are tried in the order of `IMAGE_PROVIDERS` (default: the order of `imageProviderIds` in `src/registry.ts`): first configured one primary, next one fallback. Logging in with a ChatGPT account is not supported (see `docs/adr/0006-deepseek-openrouter-images-no-chatgpt-login.md` and `0012`).
+Image providers are tried in the order of `IMAGE_PROVIDERS` (default: the order of `imageProviderIds` in `src/registry.ts`): first configured one primary, next one fallback. Signing in with ChatGPT is built but inert until OpenAI issues a client id (`docs/adr/0012-sign-in-with-chatgpt.md`); sharing a ChatGPT plan's usage is not supported (`docs/adr/0006-deepseek-openrouter-images-no-chatgpt-login.md`).
 
 ### Choosing services and models
 
