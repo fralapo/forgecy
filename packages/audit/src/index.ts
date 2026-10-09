@@ -13,3 +13,14 @@ export * from "./service/competitors";
 export * from "./service/social";
 export * from "./service/queries";
 export * from "./service/reports";
+// measureBrand runs in the browser only: the web entry exposes the types and the pure helpers.
+export {
+  buildSiteProbe,
+  parseJsonLdOrganization,
+  rankLogoCandidates,
+  toHex,
+  type FontRole,
+  type ProbeImage,
+  type RawProbe,
+  type SiteProbe,
+} from "./crawl/brand-probe";

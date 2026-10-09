@@ -6,6 +6,7 @@ import { CrawlError, crawlError, describeFetchError } from "../errors";
 import { loadToolEnv } from "@forgecy/core";
 import { createHostCheck, resolvePublicAddress } from "@forgecy/core/net-guard";
 import type { HostCheck } from "../url";
+import { buildSiteProbe, measureBrand } from "./brand-probe";
 import { extractFromHtml, type FetchedPage, type PageFetcher } from "./fetcher";
 
 const DESKTOP = { width: 1366, height: 900 };
@@ -254,13 +255,20 @@ export async function createBrowserFetcher(options: {
 
   return {
     mode: "browser",
-    async fetchPage(url, { timeoutMs, screenshots }): Promise<FetchedPage> {
+    async fetchPage(url, { timeoutMs, screenshots, brandProbe }): Promise<FetchedPage> {
       const { page, response, hopsClean } = await open(desktop, url, timeoutMs);
       try {
         const finalUrl = page.url();
         const html = await page.content();
         const extracted = extractFromHtml(html, finalUrl);
         const styles = await page.evaluate(measureStyles);
+        // A page the probe cannot read still yields the rest of the audit data.
+        const brand = brandProbe
+          ? await page
+              .evaluate(measureBrand)
+              .then((raw) => buildSiteProbe(raw, html, finalUrl))
+              .catch(() => undefined)
+          : undefined;
         const desktopShot = screenshots ? await screenshot(page) : undefined;
         let mobileShot: Uint8Array | undefined;
         if (screenshots && !extracted.requiresLogin) {
@@ -285,6 +293,7 @@ export async function createBrowserFetcher(options: {
           },
           colors: styles.colors,
           fonts: styles.fonts,
+          ...(brand ? { brand } : {}),
           ...(desktopShot ? { screenshotDesktop: desktopShot } : {}),
           ...(mobileShot ? { screenshotMobile: mobileShot } : {}),
         };
