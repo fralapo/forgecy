@@ -149,14 +149,16 @@ describe("assertPackageScoped", () => {
       expect(() => run("contents", [content({ product_id: null })], s)).not.toThrow();
       expect(() => run("contents", [content({ product_id: PILLAR })], s)).not.toThrow();
     });
-    it("refuse a product id that is not in the package, or that is a row of another table", () => {
+    it("accept a product id that is not in the package: a deleted product leaves it behind (the import empties it)", () => {
+      // products.product_id has no foreign key and deleteProduct does not clear it.
       const s = scope({
         areas: new Set(["client", "content", "products"]),
         idsByTable: idsOf({ clients: [ME], contents: [ROW], products: [] }),
       });
-      expect(problemOf(() => run("contents", [content({ product_id: VICTIM })], s))).toBe("unsafe");
-      expect(problemOf(() => run("contents", [content({ product_id: ROW })], s))).toBe("unsafe");
-      expect(problemOf(() => run("contents", [content({ product_id: "nope" })], s))).toBe("unsafe");
+      expect(() => run("contents", [content({ product_id: VICTIM })], s)).not.toThrow();
+      expect(() =>
+        run("assets", [{ id: PILLAR, client_id: ME, product_id: VICTIM }], s),
+      ).not.toThrow();
     });
     it("polymorphic check subjects must be package contents", () => {
       const state = { id: ROW, client_id: ME, subject_type: "carousel" };
@@ -201,9 +203,21 @@ describe("assertPackageScoped", () => {
       const row: Row = { run_id: VICTIM };
       emptyOutsideRefs(table("brand_identity_proposals"), row, new Map());
       expect(row.run_id).toBeNull();
-      const product: Row = { product_id: VICTIM };
-      emptyOutsideRefs(table("contents"), product, new Map());
-      expect(product.product_id).toBe(VICTIM);
+      const version: Row = { content_version_id: VICTIM };
+      emptyOutsideRefs(table("brand_examples"), version, new Map());
+      expect(version.content_version_id).toBe(VICTIM);
+    });
+    it("keeps a product of the package and drops a deleted or foreign one, on contents and assets", () => {
+      const here = new Map([["products", new Set([PILLAR])]]);
+      for (const name of ["contents", "assets"]) {
+        const kept: Row = { product_id: PILLAR };
+        const deleted: Row = { product_id: VICTIM };
+        const otherTable: Row = { product_id: ROW };
+        for (const r of [kept, deleted, otherTable]) emptyOutsideRefs(table(name), r, here);
+        expect(kept.product_id).toBe(PILLAR);
+        expect(deleted.product_id).toBeNull();
+        expect(otherTable.product_id).toBeNull();
+      }
     });
   });
 
@@ -214,8 +228,11 @@ describe("assertPackageScoped", () => {
       expect(problemOf(() => run("contents", [row], withoutBrand))).toBe("incompleteArea");
     });
     it("is incompleteArea for a soft reference too", () => {
-      const row = content({ product_id: VICTIM });
-      expect(problemOf(() => run("contents", [row], withoutBrand))).toBe("incompleteArea");
+      const example = { id: ROW, client_id: ME, content_version_id: VICTIM };
+      const withoutContent = scope({ areas: new Set(["client", "brand"]) });
+      expect(problemOf(() => run("brand_examples", [example], withoutContent))).toBe(
+        "incompleteArea",
+      );
     });
     it("is unsafe when the area is in the package and the row is not", () => {
       const row = content({ brand_version_id: VICTIM });
@@ -449,6 +466,15 @@ describe("assertPackageData (the whole package, no database)", () => {
         manifest([{ key: `clients/${ME}/assets/${SHA}.png`, bytes: 1, sha256: SHA }]),
       ),
     ).resolves.toBeUndefined();
+  });
+  it("accepts an exported content whose product was deleted (product_id outside the package)", async () => {
+    const pkg = fakePackage({
+      "data/clients.json": [clientRow],
+      "data/contents.json": [content({ product_id: VICTIM })],
+    });
+    expect(await problem(pkg, manifest([], { areas: ["content", "products"] } as never))).toBe(
+      "none",
+    );
   });
   it("refuses a pillar that is only in the package under another table", async () => {
     // Without the package's own ids a pointer to a sibling row could not be told from a stranger.

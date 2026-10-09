@@ -121,8 +121,10 @@ export const TABLE_AREAS: Record<string, ClientTransferArea | "client"> = {
  * A new subject type needs a per-type target here (and in the checks), not another contents entry.
  */
 export const SOFT_REFS: Record<string, { target: string; mode: SoftRef["mode"] }> = {
-  "contents.product_id": { target: "products", mode: "package" },
-  "assets.product_id": { target: "products", mode: "package" },
+  // No foreign key and deleteProduct does not clear them: a deleted product leaves its id
+  // behind, so these must not make an honest export unsafe. The import empties a stranger's.
+  "contents.product_id": { target: "products", mode: "nullIfOutside" },
+  "assets.product_id": { target: "products", mode: "nullIfOutside" },
   "brand_examples.content_version_id": { target: "content_versions", mode: "package" },
   "brand_check_runs.subject_id": { target: "contents", mode: "package" },
   "brand_check_issue_states.subject_id": { target: "contents", mode: "package" },
