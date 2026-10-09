@@ -4,15 +4,18 @@ import { parseDotenv } from "./dotenv";
  * The only `.env` keys the CLI reads itself (health.ts, backup.ts). Nothing else is copied into
  * process.env: every child process (docker compose, pg_dump, psql, tar) inherits it, and a secret
  * like POSTGRES_PASSWORD or an API key has no business there. DATABASE_URL carries a password but
- * is what the CLI's own pg_dump/psql path (no Compose postgres running) connects with.
+ * is what the CLI's own pg_dump/psql path (no Compose postgres running) connects with;
+ * FORGECY_RESTORE_DATABASE_URL likewise for `restore` (ADR 0018).
  */
 const CLI_KEYS = new Set([
   "FORGECY_DATA_DIR",
   "MEDIA_ROOT",
   "DATABASE_URL",
+  "FORGECY_RESTORE_DATABASE_URL",
   "POSTGRES_USER",
   "POSTGRES_DB",
   "FORGECY_PORT",
+  "FORGECY_BIND_ADDRESS",
   "FORGECY_WORKER_HEALTH_PORT",
   "WORKER_HEALTH_PORT",
   "FORGECY_WEB_HEALTH_URL",
@@ -27,6 +30,7 @@ const COMPOSE_INTERPOLATED = new Set([
   "POSTGRES_USER",
   "POSTGRES_DB",
   "FORGECY_PORT",
+  "FORGECY_BIND_ADDRESS",
   "FORGECY_WORKER_HEALTH_PORT",
 ]);
 

@@ -62,7 +62,20 @@ Optional profiles: `--profile dev` (Mailpit on `:8025` for emails), `--profile s
    - The line is absent or empty: the database used the old default, so add `POSTGRES_PASSWORD=forgecy`.
 2. Then rotate it (recommended). With the stack running, run `docker compose exec postgres psql -U forgecy`, type `\password forgecy` and enter the new password at the prompt, then `\q`. Typing it at the prompt keeps it out of the shell history. Use a long random one such as the output of `openssl rand -hex 24` (no spaces and none of `/ @ : % ? # [ ] $ ' " \`). Put the same value in `POSTGRES_PASSWORD` in `.env` (and in `DATABASE_URL` if you run `pnpm dev` against it) and run `docker compose up -d` so web and worker restart with it.
 
+The web port now listens on 127.0.0.1 only (`FORGECY_BIND_ADDRESS`, default `127.0.0.1`). To reach it from other machines, either use `--profile https` (Caddy) or set `FORGECY_BIND_ADDRESS=0.0.0.0` in `.env` and run `docker compose up -d`.
+
 The other changes to check before upgrading are in [section 7 of the security checklist](docs/SECURITY_CHECKLIST.md#7-upgrading-and-follow-ups-left-open-by-the-hardening-work): the strict `FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS`, backups without a checksum, sign-in by username, the optional setup token, unlocking a locked account, a short window during the migration and the dev database password.
+
+### Backups
+
+A restore runs the backup's SQL as the `DATABASE_URL` role, a superuser in the postgres image. Optionally, restore as a role without superuser rights instead ([ADR 0018](docs/adr/0018-restore-role.md)): create it once, with the stack running:
+
+```bash
+docker compose exec postgres psql -U forgecy -d forgecy -c "CREATE ROLE forgecy_restore LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS"
+docker compose exec postgres psql -U forgecy -d forgecy -c "\password forgecy_restore"
+```
+
+Then set `FORGECY_RESTORE_DATABASE_URL=postgres://forgecy_restore:<password>@postgres:5432/forgecy` in `.env` (host `postgres` for Docker; `localhost` for `pnpm dev`) and run `docker compose up -d`. Before each restore Forgecy gives that role ownership of the app's tables and leaves the pgvector statements out of the dump (only a superuser may drop or create that extension). The role cannot run `COPY ... PROGRAM`, read or write server files, `ALTER SYSTEM` or create roles, so a hostile backup cannot do those while it loads. It can still replace all of the app's data, which is what a restore does, and it can leave triggers or functions that later run with the superuser's rights when the app writes, so restore only backups you trust.
 
 ## Development
 

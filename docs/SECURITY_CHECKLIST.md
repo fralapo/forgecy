@@ -75,7 +75,7 @@ confirm by hand against a real target, not just the unit tests in
       crash. All Office readers go through the guarded reader in
       `packages/files/src/safe-zip.ts` and count real inflated bytes, not
       the sizes the archive declares. Limits: catalog import 50 MB per XML
-      part and in total, 5 000 entries; brand import 50 MiB per part, 100 MiB
+      part and 200 MB for all its XML parts together, 5 000 entries; brand import 50 MiB per part, 100 MiB
       in total, 10 000 entries; social xlsx upload 20 MB and 5 000 entries.
       PDFs: the brand importer reads the first 400 pages and refuses a PDF
       above 2 000; the catalog importer refuses a PDF above 500 pages.
@@ -129,8 +129,11 @@ confirm by hand against a real target, not just the unit tests in
 A backup and a client package are both files someone else may have written.
 Restore only backups you made or trust: the role in `DATABASE_URL` is a
 superuser in the official postgres image, so the dump scanner is a barrier,
-not a sandbox. Running the restore under a least-privilege role is a
-recommended follow-up, not built yet.
+not a sandbox. Setting `FORGECY_RESTORE_DATABASE_URL` to a NOSUPERUSER role
+(`docs/adr/0018-restore-role.md`) makes psql load the dump as that role: no
+`COPY ... PROGRAM`, no server files, no `ALTER SYSTEM`. It is optional and not
+enforced, and a hostile dump can still plant triggers that later run as the
+`DATABASE_URL` superuser, so it narrows the risk without removing it.
 
 ### Backup restore (Backup and restore in Settings, `pnpm forgecy restore`)
 
@@ -248,6 +251,8 @@ automatic (README, Upgrading, covers the first):
 - `FORGECY_SETUP_TOKEN` is optional.
 - To unlock a locked account, delete the `forgecy:login:*` keys in Redis
   (`docs/adr/0014-auth-hardening.md`).
+- The web port now listens on `127.0.0.1` only. To reach it from other machines use
+  `--profile https` (Caddy) or set `FORGECY_BIND_ADDRESS=0.0.0.0` in `.env`.
 - `pnpm forgecy upgrade` runs the migration that drops `jobs.depends_on_job_id`
   while the old web and worker containers still run, until `up -d` recreates
   them. Jobs created in that short window can fail; recovery re-enqueues them
@@ -255,11 +260,16 @@ automatic (README, Upgrading, covers the first):
 - `docker-compose.dev.yml` now takes the database password from
   `POSTGRES_PASSWORD` in `.env` (default `forgecy`). If `data/dev-db` was created
   with another password, recreate `data/dev-db` or set the old value in `.env`.
+- `FORGECY_RESTORE_DATABASE_URL` is new and optional: unset, restores run as
+  before. Set, the worker refuses to start if it is not a `postgres://` URL
+  naming a role, and each restore first hands that role ownership of the app's
+  tables (README, Backups; `docs/adr/0018-restore-role.md`).
 
 Decisions and checks nobody has made yet; each is a known limitation until it is:
 
-- [ ] Restore under a least-privilege database role instead of the superuser in
-      `DATABASE_URL` (section 5 calls the dump scanner a barrier, not a sandbox).
+- [x] Restore under a least-privilege database role instead of the superuser in
+      `DATABASE_URL`: optional, set `FORGECY_RESTORE_DATABASE_URL`; not enforced
+      (`docs/adr/0018-restore-role.md`, which also says what it does not stop).
 - [ ] Restore through `pg_dump -Fc` and `pg_restore` instead of scanning plain
       SQL.
 - [ ] Re-run the dump scanner (`packages/backup/src/safe-dump.ts`) drill of
@@ -285,9 +295,11 @@ Decisions and checks nobody has made yet; each is a known limitation until it is
       CHECK needs a person for a user's proposal, and crediting it to somebody else
       would be false); the rest imports, and `ImportOutcome.skipped` and the import's
       audit event count the rows left out.
-- [ ] The catalog Office guard (`packages/catalog/src/parsers/zip.ts`) counts every
-      `.xml` and `.rels` part against a 50 MB bound, so it may refuse a huge
-      spreadsheet with pivot caches.
+- [x] The catalog Office guard (`packages/catalog/src/parsers/zip.ts`) bounds each
+      `.xml` and `.rels` part separately (50 MB, `IMPORT_LIMITS.officePartBytes`) and
+      the package by a higher total ceiling of 200 MB (4x, `officeTotalBytes`), so a
+      spreadsheet with several large pivot cache parts passes while one oversized part,
+      a package past the ceiling or a bomb is still refused (too large / damaged).
 - [x] Client import filters the `uuid[]` columns that point at rows (`product_ids` on
       pillars, rubrics and plan items, `parent_ids` of findings,
       `excluded_finding_ids` of reports) like a soft reference: after the remap only
@@ -297,9 +309,12 @@ Decisions and checks nobody has made yet; each is a known limitation until it is
 - [x] `pnpm forgecy health` checks the worker on the port Docker publishes
       (`FORGECY_WORKER_HEALTH_PORT`, default 3001) and falls back to
       `WORKER_HEALTH_PORT` (`pnpm dev`) only if that does not answer healthy.
-- [ ] The web port is published on all interfaces (`FORGECY_PORT`), so plain
-      http on `:3000` reaches the app without going through Caddy. Firewall it
-      or bind it to `127.0.0.1` when using `--profile https`.
+- [x] The web port is published on `127.0.0.1` by default
+      (`FORGECY_BIND_ADDRESS`, then `FORGECY_PORT`), so plain http on `:3000` does not
+      reach the app from other machines. Caddy (`--profile https`) reaches `web` over the
+      Compose network and still publishes 80 and 443 on all interfaces. Set
+      `FORGECY_BIND_ADDRESS=0.0.0.0` only to expose http on the LAN without Caddy
+      (`docs/adr/0017-web-port-loopback.md`).
 - [ ] The Docker choices (`cap_drop`, `no-new-privileges`, Caddy's
       `NET_BIND_SERVICE`) and Compose parity of the `.env` parser were never run on
       the Windows dev host. On Linux run `docker compose config`, then a fresh

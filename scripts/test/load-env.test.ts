@@ -39,6 +39,19 @@ describe("parseCliEnv", () => {
     expect(parseCliEnv("﻿FORGECY_PORT=8080\n", {})).toEqual({ FORGECY_PORT: "8080" });
   });
 
+  it("reads FORGECY_BIND_ADDRESS, which health needs to find the web port", () => {
+    expect(parseCliEnv("FORGECY_BIND_ADDRESS=0.0.0.0\n", {})).toEqual({
+      FORGECY_BIND_ADDRESS: "0.0.0.0",
+    });
+  });
+
+  it("reads FORGECY_RESTORE_DATABASE_URL, which `restore` connects with (ADR 0018)", () => {
+    const url = "postgres://forgecy_restore:p@localhost:5432/forgecy";
+    expect(parseCliEnv(`FORGECY_RESTORE_DATABASE_URL=${url}\n`, {})).toEqual({
+      FORGECY_RESTORE_DATABASE_URL: url,
+    });
+  });
+
   it("lets a real environment variable beat the file, even an empty one", () => {
     expect(
       parseCliEnv("FORGECY_PORT=8080\nMEDIA_ROOT=/m\n", { FORGECY_PORT: "1", MEDIA_ROOT: "" }),
