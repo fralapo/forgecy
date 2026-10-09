@@ -143,6 +143,8 @@ export const brandSources = pgTable(
      * locator is a stable English id the AI cites; pages translate it when shown.
      */
     pages: jsonb("pages").$type<Array<{ locator: string; text: string }>>(),
+    /** What the browser read on the site (colors, fonts, logos, images): a SiteProbe from @forgecy/audit, typed there. */
+    visual: jsonb("visual").$type<Record<string, unknown> | null>(),
     note: text("note"),
     capturedAt: timestamp("captured_at", { withTimezone: true }).notNull().defaultNow(),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),

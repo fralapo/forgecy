@@ -1,0 +1,385 @@
+import type { SiteProbe } from "@forgecy/audit";
+import { AiProviderError, type AiGateway } from "@forgecy/ai";
+import type { Actor, MessageRef } from "@forgecy/core";
+import {
+  auditEvents,
+  brandIdentityProposals,
+  brandSources,
+  clients,
+  createDb,
+  eq,
+  sql,
+  users,
+  type Database,
+} from "@forgecy/db";
+import type { StorageDriver } from "@forgecy/files";
+import { messageRef } from "@forgecy/i18n";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { AnalystItem } from "../src/import/analyst";
+import { runSourceImport } from "../src/import/run";
+import { addSource, updateSourceStatus } from "../src/service";
+
+const dbUrl = process.env.FORGECY_TEST_DATABASE_URL;
+
+const PAGES = [
+  {
+    locator: "/",
+    text: "DeoDue è bifase: una fase ammorbidisce, l’altra è solo profumo. Nata nel Sud Italia.",
+  },
+  { locator: "/about", text: "Siamo una famiglia che produce deodoranti dal 1998." },
+];
+
+const VISUAL: SiteProbe = {
+  cssVars: [{ name: "--brand-primary", hex: "#1d3a8a" }],
+  themeColor: "#f5ebdc",
+  buttonColors: [{ hex: "#007bff", role: "bg", weight: 100 }],
+  fonts: [
+    { family: "Playfair Display", roles: ["headings"], loaded: true },
+    { family: "Arial", roles: ["body"], loaded: false },
+  ],
+  logos: [],
+  images: [],
+};
+
+const common = { rationale: "From the home page", confidence: 0.8 };
+const item = (over: Record<string, unknown>) =>
+  ({
+    locator: "/",
+    quote: "una fase ammorbidisce, l'altra è solo profumo",
+    ...common,
+    ...over,
+  }) as AnalystItem;
+
+const ITEMS: AnalystItem[] = [
+  item({ field: "positioning", text: "Il deodorante bifase del Sud Italia" }),
+  item({
+    field: "mission",
+    text: "Dare un profumo vero",
+    quote: "Il deodorante più amato d'Italia",
+  }),
+  item({ field: "color", name: "Azzurro", hex: "#0000FF", usage: "fragrance variant" }),
+  item({ field: "color", name: "Blu DeoDue", hex: "#1D3A8A", usage: "primary" }),
+  item({ field: "color", name: "Bootstrap blue", hex: "#007bff", usage: "accent" }),
+  item({ field: "typography", role: "display", family: "Comic Sans", weights: [] }),
+];
+
+const fakeAi = (items: AnalystItem[]) => {
+  const seen: Array<{ system: string; input: string }> = [];
+  const ai = {
+    generateObject: async (req: { system: string; input: string }) => {
+      seen.push({ system: req.system, input: req.input });
+      return { data: { items }, provider: "openrouter", model: "fake/model" };
+    },
+  } as unknown as AiGateway;
+  return { ai, seen };
+};
+
+describe.skipIf(!dbUrl)("runSourceImport on a website (integration)", () => {
+  let db: Database;
+  let clientId: string;
+  let anna: Extract<Actor, { type: "user" }>;
+  const suffix = Math.random().toString(36).slice(2, 8);
+  const storage = {} as StorageDriver;
+
+  beforeAll(async () => {
+    db = createDb(dbUrl!, { max: 4 });
+    const [c] = await db
+      .insert(clients)
+      .values({ name: `Run ${suffix}`, slug: `brand-run-${suffix}` })
+      .returning();
+    clientId = c!.id;
+    const [u] = await db
+      .insert(users)
+      .values({ name: "anna", email: `anna-${suffix}@example.test` })
+      .returning();
+    anna = { type: "user", id: u!.id, isAdmin: false, active: true, clients: "all" };
+  });
+
+  afterAll(async () => {
+    if (db && clientId) {
+      for (const table of [
+        "brand_identity_proposals",
+        "brand_identity_versions",
+        "brand_identities",
+        "brand_sources",
+        "audit_events",
+      ])
+        await db.execute(sql`delete from ${sql.identifier(table)} where client_id = ${clientId}`);
+      await db.delete(clients).where(eq(clients.id, clientId));
+      await db.execute(sql`delete from users where email like ${"%-" + suffix + "@example.test"}`);
+    }
+    await db?.$client.end();
+  });
+
+  const run = async (
+    source: { kind: "website" | "document"; visual?: unknown },
+    items: AnalystItem[],
+    logo?: { sourceId: string; image: { url: string } },
+    notes?: MessageRef[],
+  ) => {
+    const s = await addSource(db, anna, { clientId, kind: source.kind, title: "Site" });
+    await updateSourceStatus(db, s.id, {
+      pages: PAGES,
+      ...(source.visual !== undefined ? { visual: source.visual as Record<string, unknown> } : {}),
+    });
+    const { ai, seen } = fakeAi(items);
+    const result = await runSourceImport(
+      { db, storage, ai },
+      { jobId: crypto.randomUUID(), attempt: 1, maxAttempts: 1 },
+      { clientId, sourceId: s.id, ...(logo ? { logo } : {}), ...(notes ? { notes } : {}) },
+    );
+    const proposals = await db
+      .select()
+      .from(brandIdentityProposals)
+      .where(eq(brandIdentityProposals.clientId, clientId));
+    const [row] = await db.select().from(brandSources).where(eq(brandSources.id, s.id));
+    return {
+      s,
+      result,
+      seen,
+      row: row!,
+      mine: proposals.filter((p) => p.evidence[0]?.sourceId === s.id),
+    };
+  };
+
+  it("proposes the site's own colors and fonts, and drops what the site does not support", async () => {
+    const { result, seen, row, mine } = await run({ kind: "website", visual: VISUAL }, ITEMS);
+
+    // Known lists reach the analyst, with the website prompt.
+    expect(seen[0]!.system).toContain('ONLY among the "Known colors"');
+    expect(seen[0]!.input).toContain("- #1d3a8a (primary)");
+    expect(seen[0]!.input).toContain("- Playfair Display (headings)");
+    expect(seen[0]!.input).not.toContain("#007bff"); // framework default, not offered
+    expect(seen[0]!.input).not.toContain("#0000FF");
+
+    const paths = mine.map((p) => p.fieldPath);
+    // CSS-derived colors: brand variable (named by the analyst), theme-color. Not the Bootstrap blue.
+    const colorTitles = mine.filter((p) => p.fieldPath.startsWith("/tokens/color/reference/"));
+    expect(colorTitles.map((p) => p.fieldPath).sort()).toEqual([
+      "/tokens/color/reference/blu-deodue",
+      "/tokens/color/reference/theme",
+    ]);
+    const blu = mine.find((p) => p.fieldPath === "/tokens/color/reference/blu-deodue")!;
+    expect(JSON.stringify(blu.changes)).toContain("primary");
+    // Typography from the loaded font only; the invented one is gone.
+    const typography = mine.filter((p) => p.fieldPath.startsWith("/document/visual/typography"));
+    expect(JSON.stringify(typography.map((p) => p.changes))).toContain("Playfair Display");
+    expect(JSON.stringify(typography.map((p) => p.changes))).not.toContain("Comic Sans");
+    // The verified positioning is in, the invented quote is out.
+    expect(paths).toContain("/document/strategy/positioning");
+    expect(paths).not.toContain("/document/strategy/mission");
+
+    // Azzurro #0000FF, the Bootstrap blue, the invented mission and Comic Sans.
+    expect(result.discarded).toBe(4);
+    expect(row.statusDetail).toContain("4 items discarded: not verifiable");
+    expect(row.statusDetailRef?.map((r) => r.key)).toContain("brand.import.status.discarded");
+    expect(mine.every((p) => p.status === "proposed")).toBe(true);
+
+    const events = await db.select().from(auditEvents).where(eq(auditEvents.clientId, clientId));
+    // Why the four were dropped, in the activity log: counts by reason, no page text.
+    const gate = events.find((e) => e.action === "brand.import.gate" && e.entityId === row.id);
+    expect(gate?.meta).toEqual({
+      runId: expect.any(String),
+      sourceId: row.id,
+      discarded: 4,
+      reasons: {
+        hex_not_extracted: 1,
+        framework_default: 1,
+        quote_not_in_page: 1,
+        font_not_extracted: 1,
+      },
+    });
+    expect(
+      events.some(
+        (e) =>
+          (e.meta as { promptVersion?: string } | null)?.promptVersion ===
+          "brand-analyst/website@1",
+      ),
+    ).toBe(true);
+  });
+
+  it("proposes the logo the crawl stored as the primary logo variant, with no quote needed", async () => {
+    const logoSource = await addSource(db, anna, {
+      clientId,
+      kind: "screenshot",
+      title: "Logo deodue.test",
+      storageKey: `clients/${clientId}/brand-sources/${"a".repeat(64)}.svg`,
+      mime: "image/svg+xml",
+      size: 100,
+      sha256: "a".repeat(64),
+      status: "extracted",
+    });
+    const { mine } = await run({ kind: "website", visual: VISUAL }, [], {
+      sourceId: logoSource.id,
+      image: { url: "https://deodue.test/logo.svg" },
+    });
+    const logo = mine.find((p) => p.fieldPath.startsWith("/document/visual/logo/variants"))!;
+    expect(logo.status).toBe("proposed");
+    expect(JSON.stringify(logo.changes)).toContain(logoSource.id);
+    expect(JSON.stringify(logo.changes)).toContain("logo_primary");
+  });
+
+  it("shows what happened before the import (images not saved) on the source status", async () => {
+    const ref = messageRef("brand.import.status.imagesFailed", { count: 2 });
+    const { row } = await run({ kind: "website", visual: VISUAL }, [], undefined, [ref]);
+    expect(row.statusDetail).toContain("2 site images could not be saved");
+    expect(row.statusDetailRef?.map((r) => r.key)).toContain("brand.import.status.imagesFailed");
+  });
+
+  it("discards every analyst color and font when the site has no visual data", async () => {
+    const { result, mine, seen } = await run({ kind: "website" }, ITEMS);
+    expect(seen[0]!.input).toContain("Known colors:\nnone");
+    expect(mine.some((p) => p.fieldPath.startsWith("/tokens/"))).toBe(false);
+    expect(mine.some((p) => p.fieldPath.startsWith("/document/visual/typography"))).toBe(false);
+    expect(result.discarded).toBe(5);
+  });
+
+  it("treats a malformed stored probe as absent", async () => {
+    const { result } = await run({ kind: "website", visual: { cssVars: "oops" } }, ITEMS);
+    expect(result.discarded).toBe(5);
+  });
+
+  describe("a site read in several requests", () => {
+    const filler = " Testo di riempimento della pagina.".repeat(700); // ~25,000 characters
+    const LONG = [
+      { locator: "/prodotti/x/", text: `Morbido profuma il bucato a lungo.${filler}` },
+      { locator: "/contatti/", text: `Scrivici per ogni domanda sui prodotti.${filler}` },
+      { locator: "/", text: `DeoDue porta il profumo del Sud in casa tua.${filler}` },
+    ];
+    const one = (text: string, quote: string, locator: string, confidence: number) =>
+      ({ field: "oneLiner", text, quote, locator, rationale: "r", confidence }) as AnalystItem;
+
+    const longRun = async (generateObject: (req: { input: string }) => Promise<unknown>) => {
+      const s = await addSource(db, anna, { clientId, kind: "website", title: "Long site" });
+      await updateSourceStatus(db, s.id, { pages: LONG, visual: VISUAL as never });
+      const jobId = crypto.randomUUID();
+      const result = await runSourceImport(
+        { db, storage, ai: { generateObject } as unknown as AiGateway },
+        { jobId, attempt: 1, maxAttempts: 1 },
+        { clientId, sourceId: s.id },
+      );
+      const mine = (
+        await db
+          .select()
+          .from(brandIdentityProposals)
+          .where(eq(brandIdentityProposals.clientId, clientId))
+      ).filter((p) => p.evidence[0]?.sourceId === s.id);
+      return { result, mine };
+    };
+
+    it("keeps one one-liner for the run: the home page's request wins, nothing is contested", async () => {
+      const inputs: string[] = [];
+      const { mine } = await longRun(async (req) => {
+        inputs.push(req.input);
+        const items = req.input.includes('locator="/"')
+          ? [one("Il profumo del Sud in casa", "porta il profumo del Sud in casa tua", "/", 0.5)]
+          : [one("Scrivici", "Scrivici per ogni domanda sui prodotti", "/contatti/", 0.99)];
+        return { data: { items }, provider: "openrouter", model: "fake/model" };
+      });
+      // Two requests, the home page first in the first one.
+      expect(inputs).toHaveLength(2);
+      expect(inputs[0]!.indexOf('locator="/"')).toBeLessThan(inputs[0]!.indexOf("/prodotti/x/"));
+      const oneLiners = mine.filter((p) => p.fieldPath === "/document/strategy/oneLiner");
+      expect(oneLiners).toHaveLength(1);
+      expect(JSON.stringify(oneLiners[0]!.changes)).toContain("Il profumo del Sud in casa");
+    });
+
+    it("asks a request cut at the output cap again as two halves", async () => {
+      const asked: Array<{ pages: number; maxOutputTokens?: number }> = [];
+      let cut = false;
+      const { result, mine } = await longRun(async (req) => {
+        const r = req as { input: string; maxOutputTokens?: number };
+        asked.push({
+          pages: (r.input.match(/<page /g) ?? []).length,
+          ...(r.maxOutputTokens ? { maxOutputTokens: r.maxOutputTokens } : {}),
+        });
+        if (!cut) {
+          cut = true;
+          throw new AiProviderError("max_tokens", "openrouter output truncated at max_tokens");
+        }
+        const items = r.input.includes('locator="/"')
+          ? [one("DeoDue, il Sud in casa", "DeoDue porta il profumo", "/", 0.5)]
+          : [];
+        return { data: { items }, provider: "openrouter", model: "fake/model" };
+      });
+      expect(asked.map((a) => a.pages)).toEqual([2, 1, 1, 1]);
+      expect(asked.every((a) => a.maxOutputTokens === 24_000)).toBe(true);
+      expect(result.ai).toBe("done");
+      expect(mine.some((p) => p.fieldPath === "/document/strategy/oneLiner")).toBe(true);
+    });
+
+    it("marks the analyst failed when a half is cut again", async () => {
+      const { result } = await longRun(async () => {
+        throw new AiProviderError("max_tokens", "openrouter output truncated at max_tokens");
+      });
+      expect(result.ai).toBe("failed");
+    });
+
+    describe("a request that times out", () => {
+      const timeout = () => new AiProviderError("timeout", "Request timed out.");
+      const pagesOf = (r: { input: string }) => (r.input.match(/<page /g) ?? []).length;
+      const ok = { data: { items: [] }, provider: "openrouter", model: "fake/model" };
+
+      it("asks the same pages once more and goes on", async () => {
+        const asked: number[] = [];
+        const { result } = await longRun(async (req) => {
+          asked.push(pagesOf(req as { input: string }));
+          if (asked.length === 1) throw timeout();
+          return ok;
+        });
+        // Request 1 (2 pages) timed out and was repeated; request 2 (1 page) went through.
+        expect(asked).toEqual([2, 2, 1]);
+        expect(result.ai).toBe("done");
+      });
+
+      it("splits a chunk of two pages in halves when it times out twice", async () => {
+        const asked: number[] = [];
+        const { result } = await longRun(async (req) => {
+          asked.push(pagesOf(req as { input: string }));
+          if (asked.length <= 2) throw timeout();
+          return ok;
+        });
+        expect(asked).toEqual([2, 2, 1, 1, 1]);
+        expect(result.ai).toBe("done");
+      });
+
+      it("gives each request more time than the gateway default", async () => {
+        const timeouts: unknown[] = [];
+        await longRun(async (req) => {
+          timeouts.push((req as { timeoutMs?: number }).timeoutMs);
+          return ok;
+        });
+        expect(timeouts.every((t) => t === 180_000)).toBe(true);
+      });
+
+      it("does not retry an error that is not a timeout", async () => {
+        let calls = 0;
+        const { result } = await longRun(async () => {
+          calls++;
+          throw new AiProviderError("auth", "bad key");
+        });
+        expect(calls).toBe(1);
+        expect(result.ai).toBe("failed");
+      });
+
+      it("stops within four requests for a chunk that always times out", async () => {
+        let calls = 0;
+        const { result } = await longRun(async () => {
+          calls++;
+          throw timeout();
+        });
+        expect(calls).toBeLessThanOrEqual(4);
+        expect(result.ai).toBe("failed");
+      });
+    });
+  });
+
+  it("leaves document sources as they were: old prompt, colors and quotes not gated", async () => {
+    const { result, seen, mine } = await run({ kind: "document" }, ITEMS);
+    expect(seen[0]!.system).toContain("brand materials");
+    expect(seen[0]!.input).not.toContain("Known colors");
+    expect(result.discarded).toBe(0);
+    expect(mine.map((p) => p.fieldPath)).toContain("/document/strategy/mission");
+    expect(mine.some((p) => p.fieldPath.includes("/tokens/color/reference/"))).toBe(true);
+  });
+});

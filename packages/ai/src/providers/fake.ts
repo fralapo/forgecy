@@ -99,13 +99,14 @@ export interface FakeImageProvider extends ImageProvider {
 /** Returns `variants` tiny deterministic byte arrays; `fail` makes every call throw that kind. */
 export function createFakeImageProvider(
   id: ProviderId = "openai",
-  opts: { fail?: AiErrorKind } = {},
+  opts: { fail?: AiErrorKind; acceptsReferences?: boolean } = {},
 ): FakeImageProvider {
   const store = createJobStore();
   const calls: ImageGenerationInput[] = [];
   return {
     id,
     calls,
+    ...(opts.acceptsReferences ? { acceptsReferences: true } : {}),
     async generate(input) {
       calls.push({ ...input, signal: undefined } as ImageGenerationInput);
       if (opts.fail) throw new AiProviderError(opts.fail, `fake ${opts.fail}`, { provider: id });

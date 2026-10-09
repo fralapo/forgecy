@@ -656,6 +656,7 @@ export const REVIEWED_JSON_COLUMNS: ReadonlySet<string> = new Set([
   "brand_identity_versions.acknowledged_checks",
   "brand_sources.status_detail_ref",
   "brand_sources.pages",
+  "brand_sources.visual",
   "brand_identity_proposals.title_ref",
   "brand_identity_proposals.changes",
   "brand_identity_proposals.rationale_ref",

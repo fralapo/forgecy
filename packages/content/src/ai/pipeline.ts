@@ -28,7 +28,15 @@ import {
   type SlotValue,
   type TemplateManifest,
 } from "@forgecy/carousel";
-import { ForgecyError, isLocale, type Actor, type AgentRole, type ProviderId } from "@forgecy/core";
+import {
+  ForgecyError,
+  isLocale,
+  type Actor,
+  type AgentRole,
+  type AiPolicy,
+  type ProviderId,
+  type SendableAssetType,
+} from "@forgecy/core";
 import {
   and,
   contentPillars,
@@ -77,6 +85,7 @@ import {
   CREATIVE_DIRECTION_SYSTEM,
   EDIT_SLIDE_SYSTEM,
   IMAGE_PROMPT_SYSTEM,
+  IMAGE_REFERENCES_NOTE,
   OUTLINE_SYSTEM,
   PLAN_SYSTEM,
   PLANNER_SYSTEM,
@@ -1064,6 +1073,18 @@ export async function imageRouteFor(
   };
 }
 
+/** Whether the client's policy lets brand pictures go to an image model (no_ai never reaches here). */
+function brandAssetsAllowed(client: {
+  aiPolicy: AiPolicy;
+  sendableAssets: readonly SendableAssetType[];
+}): boolean {
+  // local_only keeps everything on site, and a local image model does not take references.
+  if (client.aiPolicy === "no_ai" || client.aiPolicy === "local_only") return false;
+  return (
+    client.aiPolicy !== "external_restricted" || client.sendableAssets.includes("brand_assets")
+  );
+}
+
 export async function runGenerateImage(
   deps: PipelineDeps,
   ctx: PipelineContext,
@@ -1133,6 +1154,14 @@ export async function runGenerateImage(
     }),
   );
   await ctx.progress(20);
+  // The client's own site pictures set the look; the gateway applies the policy again (brand_assets).
+  // Loaded here, by subpath: it pulls in sharp, and this module is also reachable from the web
+  // app through @forgecy/content's index, which must never load it (only the worker runs this).
+  const references = brandAssetsAllowed(client)
+    ? await (
+        await import("@forgecy/brand/reference-images")
+      ).brandReferenceImages(deps.db, deps.storage, actor, input.clientId)
+    : [];
   const res = await guarded(() =>
     ai.generateImage({
       prompt: prompt.data.prompt,
@@ -1140,6 +1169,8 @@ export async function runGenerateImage(
       variants: Math.min(4, Math.max(1, input.variants)) as 1 | 2 | 3 | 4,
       route: routed.route,
       ...common,
+      // The gateway adds the note only on an attempt whose provider really takes the pictures.
+      ...(references.length ? { references, referenceNote: IMAGE_REFERENCES_NOTE } : {}),
       inputSummary: {
         fields: { prompt: prompt.data.prompt },
         meta: { promptVersion: CONTENT_PROMPT_VERSION, slot: input.slot },

@@ -12,7 +12,7 @@ import {
   visibleLength,
   type TemplateManifest,
 } from "@forgecy/carousel";
-import type { MessageRef } from "@forgecy/core";
+import type { AssetSource, MessageRef } from "@forgecy/core";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import {
   captionLimits,
@@ -69,7 +69,7 @@ function slideIssueText(issue: { message: string; params?: unknown }, slide: num
 
 export interface AssetInfo {
   status: "draft" | "approved" | "rejected";
-  source: "upload" | "ai" | "product";
+  source: AssetSource;
   /** AI image whose provider terms are not verified, or an upload whose rights nobody confirmed. */
   commercialUsePending?: boolean;
   alt: string;

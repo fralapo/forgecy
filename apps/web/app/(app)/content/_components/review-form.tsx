@@ -1,7 +1,7 @@
 "use client";
 
 import type { ContentCheck, GuardBand, GuardFinding } from "@forgecy/content/client";
-import type { MessageRef } from "@forgecy/core";
+import type { AssetSource, MessageRef } from "@forgecy/core";
 import { Badge, Button, Label } from "@forgecy/ui";
 import { BadgeCheck, MessageSquareWarning, RefreshCw, ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -18,7 +18,7 @@ export interface PendingImage {
   id: string;
   alt: string;
   thumb: string | null;
-  source: "upload" | "ai" | "product";
+  source: AssetSource;
   commercialUse: "verified" | "pending_verification" | "rejected" | null;
 }
 

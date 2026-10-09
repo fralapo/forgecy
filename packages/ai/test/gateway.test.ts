@@ -481,6 +481,196 @@ describe("images", () => {
     ).rejects.toMatchObject({ code: "policy_blocked" });
   });
 
+  describe("brand reference images", () => {
+    const ref = (tag: number) => ({
+      data: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, tag]),
+      mimeType: "image/png" as const,
+    });
+    const req = {
+      prompt: "a jar",
+      size: { w: 1080, h: 1350 },
+      variants: 1 as const,
+      clientId: baseReq.clientId,
+      references: [ref(1), ref(2)],
+      referenceNote: "MATCH THE STYLE",
+    };
+    function withImages(local = false) {
+      const ledger = createMemoryLedger();
+      const openai = createFakeImageProvider("openai", { acceptsReferences: true });
+      const localImage = createFakeImageProvider("local");
+      const gateway = createAiGateway({
+        ledger,
+        providers: { text: {}, image: { openai, ...(local ? { local: localImage } : {}) } },
+        routing: {
+          default: setupRouting.default,
+          image: setupRouting.image,
+          ...(local ? { localImage: { provider: "local", model: "flux" } } : {}),
+        },
+        now: () => NOW,
+      });
+      return { ledger, gateway, openai, localImage };
+    }
+
+    it("passes them to the provider and logs only how many", async () => {
+      const { gateway, ledger, openai } = withImages();
+      await gateway.generateImage({ ...req, clientPolicy: "external_allowed" });
+      expect(openai.calls[0]!.references).toHaveLength(2);
+      expect(openai.calls[0]!.prompt).toBe("a jar\n\nMATCH THE STYLE");
+      expect(ledger.entries[0]!.inputSummary).toMatchObject({ meta: { references: 2 } });
+      expect(JSON.stringify(ledger.entries)).not.toContain("iVBOR");
+      await gateway.generateImage({
+        ...req,
+        references: [],
+        clientPolicy: "external_allowed",
+      });
+      expect(openai.calls[1]!.references).toBeUndefined();
+      expect(openai.calls[1]!.prompt).toBe("a jar");
+      expect(ledger.entries[1]!.inputSummary).not.toHaveProperty("meta");
+    });
+
+    describe("only a provider that takes references gets them, the note and the log count", () => {
+      function routed() {
+        const ledger = createMemoryLedger();
+        const openrouter = createFakeImageProvider("openrouter", { acceptsReferences: true });
+        const google = createFakeImageProvider("google");
+        const local = createFakeImageProvider("local");
+        const gateway = createAiGateway({
+          ledger,
+          providers: { text: {}, image: { openrouter, google, local } },
+          routing: {
+            default: setupRouting.default,
+            image: { primary: { provider: "openrouter", model: "or" } },
+            localImage: { provider: "local", model: "flux" },
+          },
+          now: () => NOW,
+        });
+        return { ledger, gateway, openrouter, google, local };
+      }
+      const via = (provider: "openrouter" | "google") => ({
+        route: { primary: { provider, model: "m" } },
+      });
+
+      it("openrouter serving: references, note and count", async () => {
+        const { gateway, ledger, openrouter } = routed();
+        await gateway.generateImage({
+          ...req,
+          ...via("openrouter"),
+          clientPolicy: "external_allowed",
+        });
+        expect(openrouter.calls[0]!.references).toHaveLength(2);
+        expect(openrouter.calls[0]!.prompt).toBe("a jar\n\nMATCH THE STYLE");
+        expect(ledger.entries[0]!.inputSummary).toMatchObject({ meta: { references: 2 } });
+      });
+
+      it("google serving: nothing attached, no note, count 0", async () => {
+        const { gateway, ledger, google } = routed();
+        await gateway.generateImage({ ...req, ...via("google"), clientPolicy: "external_allowed" });
+        expect(google.calls[0]!.references).toBeUndefined();
+        expect(google.calls[0]!.prompt).toBe("a jar");
+        expect(ledger.entries[0]).toMatchObject({ status: "ok", provider: "google" });
+        expect(ledger.entries[0]!.inputSummary).toMatchObject({ meta: { references: 0 } });
+      });
+
+      it("local model serving: nothing attached, no note, count 0", async () => {
+        const { gateway, ledger, local, openrouter } = routed();
+        await gateway.generateImage({ ...req, clientPolicy: "local_only" });
+        expect(local.calls[0]!.references).toBeUndefined();
+        expect(local.calls[0]!.prompt).toBe("a jar");
+        expect(openrouter.calls).toHaveLength(0);
+        expect(ledger.entries[0]!.inputSummary).toMatchObject({ meta: { references: 0 } });
+      });
+
+      it("openrouter fails and google serves: each attempt logs what it really sent", async () => {
+        const ledger = createMemoryLedger();
+        const openrouter = createFakeImageProvider("openrouter", {
+          acceptsReferences: true,
+          fail: "server",
+        });
+        const google = createFakeImageProvider("google");
+        const gateway = createAiGateway({
+          ledger,
+          providers: { text: {}, image: { openrouter, google } },
+          routing: {
+            default: setupRouting.default,
+            image: {
+              primary: { provider: "openrouter", model: "or" },
+              fallback: { provider: "google", model: "g" },
+            },
+          },
+          now: () => NOW,
+        });
+        const res = await gateway.generateImage({ ...req, clientPolicy: "external_allowed" });
+        expect(res).toMatchObject({ provider: "google", fallbackUsed: true });
+        expect(openrouter.calls[0]!.references).toHaveLength(2);
+        expect(google.calls[0]!.references).toBeUndefined();
+        expect(google.calls[0]!.prompt).toBe("a jar");
+        expect(
+          ledger.entries.map((e) => [e.status, (e.inputSummary as { meta?: unknown }).meta]),
+        ).toEqual([
+          ["error", { references: 2 }],
+          ["ok", { references: 0 }],
+        ]);
+      });
+    });
+
+    it("no_ai blocks them before any provider call", async () => {
+      const { gateway, openai, ledger } = withImages();
+      await expect(gateway.generateImage({ ...req, clientPolicy: "no_ai" })).rejects.toMatchObject({
+        code: "policy_blocked",
+      });
+      expect(openai.calls).toHaveLength(0);
+      expect(ledger.entries[0]).toMatchObject({ status: "blocked" });
+    });
+
+    it("local_only never sends them to a cloud provider", async () => {
+      const { gateway, openai } = withImages();
+      await expect(
+        gateway.generateImage({ ...req, clientPolicy: "local_only" }),
+      ).rejects.toMatchObject({ code: "policy_blocked" });
+      expect(openai.calls).toHaveLength(0);
+    });
+
+    it("external_restricted needs brand_assets among the allowed kinds", async () => {
+      const { gateway, openai, ledger } = withImages();
+      ledger.setApprovedProviders(baseReq.clientId, ["openai"]);
+      ledger.setSendableAssets(baseReq.clientId, ["brand_texts"]);
+      await expect(
+        gateway.generateImage({
+          ...req,
+          clientPolicy: "external_restricted",
+          sends: ["brand_texts"],
+        }),
+      ).rejects.toMatchObject({
+        code: "policy_blocked",
+        details: { reason: "asset_type_not_allowed" },
+      });
+      expect(openai.calls).toHaveLength(0);
+      ledger.setSendableAssets(baseReq.clientId, ["brand_texts", "brand_assets"]);
+      await gateway.generateImage({
+        ...req,
+        clientPolicy: "external_restricted",
+        sends: ["brand_texts"],
+      });
+      expect(openai.calls[0]!.references).toHaveLength(2);
+    });
+
+    it("refuses too many, too big or not-an-image references", async () => {
+      const { gateway, openai } = withImages();
+      const go = (references: (typeof req)["references"]) =>
+        gateway.generateImage({ ...req, references, clientPolicy: "external_allowed" });
+      await expect(go([1, 2, 3, 4, 5].map(ref))).rejects.toMatchObject({ code: "validation" });
+      const big = new Uint8Array(1_500_001);
+      big.set(ref(0).data);
+      await expect(go([{ data: big, mimeType: "image/png" }])).rejects.toMatchObject({
+        code: "validation",
+      });
+      await expect(
+        go([{ data: new Uint8Array([1, 2, 3]), mimeType: "image/png" }]),
+      ).rejects.toMatchObject({ code: "validation" });
+      expect(openai.calls).toHaveLength(0);
+    });
+  });
+
   describe("a run that fails after the provider already charged", () => {
     const charged = {
       inputTokens: 100,

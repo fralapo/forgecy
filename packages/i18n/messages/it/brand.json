@@ -16,7 +16,18 @@
     "empty": "Ancora nessun cliente. <link>Aggiungi il primo cliente</link>.",
     "published": "v{number} · Pubblicata",
     "noPublished": "Nessuna versione pubblicata",
-    "draft": "Bozza v{number}"
+    "draft": "Bozza v{number}",
+    "addTitle": "Aggiungi un brand",
+    "addDescription": "Incolla l’indirizzo del sito. Forgecy lo legge, compila il profilo e lo pubblica. Dalla pagina del brand puoi annullare.",
+    "urlLabel": "Indirizzo del sito",
+    "urlPlaceholder": "https://www.esempio.it",
+    "analyze": "Analizza",
+    "analyzing": "Analisi in corso…",
+    "nameTitle": "Dai un nome al tuo brand",
+    "nameDescription": "Parti senza un sito e aggiungi le fonti più tardi.",
+    "nameLabel": "Nome del brand",
+    "namePlaceholder": "Nome del brand",
+    "continue": "Continua"
   },
   "layout": {
     "heading": "Brand Identity · {client}",
@@ -201,7 +212,53 @@
     "readyTitle": "Pronta per la pubblicazione?",
     "toConfirm": "Da confermare:",
     "canPublish": "Puoi pubblicare confermando ogni punto aperto.",
-    "noChecks": "Nessun controllo aperto."
+    "noChecks": "Nessun controllo aperto.",
+    "completenessTitle": "Completezza del profilo",
+    "completenessValue": "{percent}% · {filled} sezioni su {total}",
+    "section": {
+      "about": "Chi è",
+      "tagline": "Tagline",
+      "audience": "Pubblico",
+      "tone": "Tono",
+      "aesthetics": "Estetica",
+      "fonts": "Font",
+      "palette": "Palette",
+      "logo": "Logo",
+      "images": "Immagini"
+    },
+    "sectionFilled": "{section}: completa",
+    "sectionEmpty": "{section}: mancante",
+    "importedLine": "Importato in automatico il {date} · {accepted, plural, one {# elemento} other {# elementi}}",
+    "importedKept": "{count} da rivedere",
+    "importedEdits": "{count, plural, one {# campo scritto da te è rimasto com’era} other {# campi scritti da te sono rimasti com’erano}}",
+    "importedReview": "Rivedili",
+    "importedReplaced": "Una versione successiva l’ha sostituito: da qui non si può più annullare.",
+    "importUndone": "L’importazione automatica v{number} è stata annullata: la versione v{by} ripristina la v{restores}",
+    "importRunningTitle": "Importazione in corso",
+    "importRunning": "Stiamo leggendo il sito e i profili. Ci vuole qualche minuto: la pagina si aggiorna da sola.",
+    "completeOpenPoints": "{count, plural, one {Completa # punto aperto} other {Completa # punti aperti}}",
+    "undoImport": "Annulla importazione",
+    "reanalyze": "Analizza di nuovo",
+    "analysisTitle": "Sito web",
+    "analysisRunning": "Analisi in corso. La pagina si aggiorna da sola.",
+    "analysisNone": "Nessun sito analizzato.",
+    "analysisStart": "Analizza {site}",
+    "imagesTitle": "Immagini del brand",
+    "imagesIntro": "Immagini prese dal sito e dai profili. Qui sono in sola lettura.",
+    "imagesFilterLabel": "Filtra le immagini per tipo",
+    "imagesAll": "Tutte",
+    "imagesEmpty": "Ancora nessuna immagine. Compaiono dopo l’analisi del sito.",
+    "imagesEmptyFiltered": "Nessuna immagine di questo tipo.",
+    "imagesNoPreview": "Anteprima non disponibile",
+    "imagesProfile": "Immagine del profilo",
+    "imagesRightsPending": "Diritti da confermare nella libreria",
+    "imagesDraft": "Bozza",
+    "imageClass": {
+      "product": "Prodotto",
+      "scene": "Scena",
+      "graphic": "Grafica",
+      "logo": "Logo"
+    }
   },
   "checks": {
     "oneLinerMissing": "Manca la frase di sintesi",
@@ -576,6 +633,7 @@
     "size": "{unit, select, mb {{value} MB} other {{value} KB}}",
     "partsRead": "{count, plural, one {# parte letta} other {# parti lette}}",
     "readAgain": "Rileggi",
+    "logoSource": "Logo",
     "runScan": "Esegui scan",
     "scanAgain": "Esegui di nuovo lo scan",
     "notScannedYet": "Il sito di questo cliente non è ancora stato scansionato. Esegui uno scan per estrarre automaticamente informazioni su brand, prodotti e contatti.",
@@ -583,7 +641,7 @@
     "removeConfirm": "Rimuovere la fonte? Le proposte in attesa che la citano diventano sostituite. Il file e lo storico vengono conservati.",
     "importTitle": "Importa il brand book",
     "importNoAi": "Le funzioni AI sono disattivate per questo cliente: viene estratto solo il testo, i colori e i font, senza proposte interpretate.",
-    "importAi": "Testo, colori e font diventano proposte con la pagina da cui provengono. Nulla entra nella bozza senza una persona.",
+    "importAi": "Testo, colori e font dei documenti diventano proposte con la pagina da cui provengono, da rivedere. Siti e profili si applicano da soli.",
     "linkTitle": "Aggiungi un link o una nota",
     "upload": {
       "file": "File",
@@ -612,7 +670,7 @@
     "proposedCount": "{status} ({count})",
     "conflictsOnly": "Solo conflitti ({count})",
     "clearFilters": "Rimuovi i filtri",
-    "nonePending": "Nessuna proposta in attesa.",
+    "nonePending": "Niente in attesa. Siti e profili si applicano da soli; qui aspettano i documenti e tutto ciò che è incerto.",
     "noneWithStatus": "Nessuna proposta con questo stato.",
     "person": "Persona",
     "removedSource": "Fonte rimossa",
@@ -734,6 +792,9 @@
     "checksNotAcknowledged": "Conferma i controlli aperti: {checks}",
     "versionNotFound": "Versione non trovata",
     "restoreOnlyPublished": "Si possono ripristinare solo le versioni pubblicate o archiviate.",
+    "undoNotCurrent": "Si può annullare solo la versione pubblicata attuale.",
+    "undoNotAutomatic": "Questa versione non è stata pubblicata da un’importazione automatica.",
+    "undoNoPrevious": "Non c’è una versione precedente a cui tornare.",
     "draftExists": "La bozza v{number} esiste già. Conferma per sostituirla.",
     "addressProtocol": "Indirizzo non valido: solo http e https",
     "duplicateSource": "Il file è già tra le fonti: {title}",
@@ -764,13 +825,25 @@
       "pagesRead": "{count, plural, one {# pagina letta} other {# pagine lette}}",
       "proposals": "{count, plural, one {# proposta} other {# proposte}}",
       "skipped": "{count, plural, one {# già presente o non valida} other {# già presenti o non valide}}",
+      "discarded": "{count, plural, one {# elemento scartato: non verificabile} other {# elementi scartati: non verificabili}}",
+      "imagesFailed": "{count, plural, one {# immagine del sito non salvata} other {# immagini del sito non salvate}}",
       "noProvider": "Nessun provider AI configurato: solo estrazione automatica",
       "aiOff": "Funzioni AI disattivate per questo cliente",
       "noText": "Nessun testo da interpretare",
       "aiNotRun": "Interpretazione AI non eseguita: {message}",
       "aiFailed": "Interpretazione AI non riuscita",
       "crawlPages": "{count, plural, one {# pagina letta} other {# pagine lette}} dal sito",
-      "crawlSkipped": "{count, plural, one {# pagina saltata} other {# pagine saltate}}"
+      "crawlSkipped": "{count, plural, one {# pagina saltata} other {# pagine saltate}}",
+      "socialLoginWall": "Il profilo non è pubblico senza accedere: non è stato letto nulla",
+      "socialRobots": "Il sito del profilo non consente la lettura automatica: non è stato letto nulla",
+      "socialUnreachable": "Il profilo non è raggiungibile o non ha nulla di pubblico da leggere",
+      "socialImportFailed": "Il profilo è stato letto ma non è stato possibile importarlo ({reason}); verrà ritentato",
+      "autoApplied": "{accepted, plural, one {# elemento applicato automaticamente} other {# elementi applicati automaticamente}}{published, select, yes { · versione pubblicata} other {}}",
+      "autoKept": "{count, plural, one {# campo modificato a mano mantenuto} other {# campi modificati a mano mantenuti}}",
+      "autoNotApplied": "Non applicato automaticamente: {reason, select, no_requester {l’importazione non è stata avviata da una persona} no_access {chi l’ha avviata non può aprire questo cliente} no_permission {chi l’ha avviata non può pubblicare la Brand Identity} other {non consentito}}. Le proposte attendono una revisione",
+      "autoNeedsReview": "{count, plural, one {# elemento attende una revisione} other {# elementi attendono una revisione}}",
+      "autoNotPublished": "Applicato alla bozza ma non pubblicato automaticamente: {reason, select, draft_shared {la bozza contiene lavoro di altri o è in revisione} other {la bozza va controllata}}",
+      "linkNotProfile": "Salvato come link, non letto: non è un profilo di questo social"
     },
     "warnings": {
       "firstPages": "Sono state lette solo le prime {max} pagine",
@@ -790,7 +863,11 @@
       "color": "Colore trovato nel file ({count, plural, one {# occorrenza} other {# occorrenze}}).",
       "fontImported": "Font importato: conferma ruolo e licenza.",
       "fontTheme": "Font indicato nel tema del documento.",
-      "logo": "File del logo importato: conferma il ruolo della variante."
+      "siteColor": "Colore trovato negli stili del sito.",
+      "siteFont": "Font in uso sul sito.",
+      "logo": "File del logo importato: conferma il ruolo della variante.",
+      "logoSite": "Logo trovato sul sito: conferma il ruolo della variante.",
+      "colorRole": "Colore del brand dalla palette del sito: conferma il ruolo."
     },
     "locators": {
       "theme": "Tema del documento",
@@ -801,7 +878,12 @@
       "page": "p. {number}",
       "svg": "File SVG",
       "start": "Inizio",
-      "note": "Nota"
+      "note": "Nota",
+      "siteStyles": "Stili del sito",
+      "siteFonts": "Font del sito",
+      "siteButtons": "Pulsanti e link",
+      "siteThemeColor": "Colore del tema del sito",
+      "socialProfile": "Profilo"
     },
     "quotes": {
       "themeColor": "Colore del tema {slot}",
@@ -813,6 +895,13 @@
       "fieldChanged": "Il campo è cambiato dopo la proposta",
       "restored": "La bozza v{number} è stata sostituita da un ripristino",
       "sourceRemoved": "La fonte della proposta è stata rimossa"
+    },
+    "version": {
+      "changelog": "Importazione automatica da {sources}",
+      "changelogPublic": "Importazione automatica dalle pagine pubbliche",
+      "note": "Importazione automatica",
+      "undoChangelog": "Annullamento dell’importazione automatica v{version}",
+      "undoNote": "Annullamento dell’importazione automatica"
     }
   },
   "book": {

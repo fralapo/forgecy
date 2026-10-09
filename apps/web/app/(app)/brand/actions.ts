@@ -8,11 +8,14 @@ import {
   brandCrawlWebsiteJob,
   brandImportSourceJob,
   ensureDraft,
+  findOrCreateSocialSource,
   findOrCreateWebsiteSource,
+  linkSourceReader,
   rejectProposals,
   removeSource,
   restoreAsDraft,
   returnToDraft,
+  undoImport,
   saveDraftSection,
   saveDraftTokens,
   submitForReview,
@@ -34,13 +37,18 @@ import {
   localeSchema,
   ForgecyError,
   PermissionDeniedError,
+  socialChannels,
 } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
 import { createStorageFromEnv } from "@forgecy/files";
+import { englishMessage, messageRef } from "@forgecy/i18n";
 import { enqueueJob } from "@forgecy/jobs";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
+import { nameFromUrl } from "@/lib/brand-name";
+import { createClientFor } from "@/lib/create-client";
 import { env } from "@/lib/env";
 import { errorMessage, firstIssue, vmsg } from "@/lib/i18n";
 import { getQueues } from "@/lib/queues";
@@ -244,6 +252,39 @@ export async function restoreAction(input: {
   });
 }
 
+const brandUrlSchema = z.object({
+  url: z
+    .string()
+    .trim()
+    .max(2048, vmsg("validation.websiteInvalid"))
+    .pipe(z.url({ protocol: /^https?$/, message: vmsg("validation.websiteInvalid") })),
+});
+const brandNameSchema = z.object({
+  name: z.string().trim().min(1, vmsg("validation.nameRequired")).max(120),
+});
+
+/**
+ * "Add a brand": a website address (the name comes from its host) or just a name. Creates the
+ * client the way "New client" does; with an address its first scan is queued as this person, so
+ * the import applies itself (ADR 0022). Then opens the new brand, where the import shows.
+ */
+export async function addBrandFromUrlAction(input: { url: string } | { name: string }) {
+  const user = await requireUser();
+  assertCan(user.actor, "project.edit");
+  const parsed =
+    "url" in input ? brandUrlSchema.safeParse(input) : brandNameSchema.safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: await firstIssue(parsed.error) };
+  const created = await createClientFor(
+    user,
+    "url" in parsed.data
+      ? { name: nameFromUrl(parsed.data.url), status: "prospect", websiteUrl: parsed.data.url }
+      : { name: parsed.data.name, status: "prospect" },
+  );
+  revalidatePath("/brand");
+  revalidatePath("/clients");
+  redirect(`/brand/${created.slug}`);
+}
+
 const linkSourceSchema = z.object({
   kind: z.enum(brandSourceKinds),
   title: z.string().trim().min(1, vmsg("brand.validation.titleRequired")).max(300),
@@ -274,17 +315,84 @@ export async function addLinkSourceAction(input: {
       ok: false as const,
       error: (await getTranslations("brand.validation"))("addressOrNote"),
     };
-  return run(input.slug, async ({ actor }) => {
-    const row = await addSource(getDb(), actor, {
-      clientId: uuid.parse(input.clientId),
-      kind: parsed.data.kind,
-      title: parsed.data.title,
-      url: parsed.data.url ?? null,
-      note: parsed.data.note ?? null,
-      ...(parsed.data.note ? { pages: [{ locator: "Note", text: parsed.data.note }] } : {}),
-      status: "extracted",
+  return run(input.slug, async ({ actor, userId }) => {
+    const db = getDb();
+    const clientId = uuid.parse(input.clientId);
+    const reader = linkSourceReader(parsed.data.kind, parsed.data.url);
+    if (!reader) {
+      // A link given as a profile of a network that is not a profile there is kept, not read.
+      const notProfile =
+        !!parsed.data.url && (socialChannels as readonly string[]).includes(parsed.data.kind);
+      const row = await addSource(db, actor, {
+        clientId,
+        kind: parsed.data.kind,
+        title: parsed.data.title,
+        url: parsed.data.url ?? null,
+        note: parsed.data.note ?? null,
+        ...(parsed.data.note ? { pages: [{ locator: "Note", text: parsed.data.note }] } : {}),
+        status: notProfile ? "partial" : "extracted",
+        ...(notProfile
+          ? {
+              statusDetail: englishMessage("brand.import.status.linkNotProfile"),
+              statusDetailRef: [messageRef("brand.import.status.linkNotProfile")],
+            }
+          : {}),
+      });
+      return { sourceId: row.id };
+    }
+    // A site or a public profile is read now, as this person: the import applies itself with
+    // them as approver (ADR 0022). The note stays on the source, not among the pages read.
+    assertCan(actor, "edit_draft", clientId);
+    // A profile the import already found (or added before) is the same source, read again.
+    const { source, created } =
+      reader.job === "crawl"
+        ? {
+            source: await findOrCreateWebsiteSource(db, actor, {
+              clientId,
+              websiteUrl: reader.url,
+            }),
+            created: true,
+          }
+        : await findOrCreateSocialSource(db, actor, {
+            clientId,
+            kind: reader.kind,
+            url: reader.url,
+            title: parsed.data.title,
+            note: parsed.data.note ?? null,
+          });
+    // A profile already queued or being read: that run reads it.
+    if (!created && (source.status === "pending" || source.status === "extracting"))
+      return { sourceId: source.id };
+    await enqueueJob(db, await getQueues(), {
+      kind: reader.job === "crawl" ? brandCrawlWebsiteJob : brandImportSourceJob,
+      payload: { clientId, sourceId: source.id, requestedBy: userId, language: await getLocale() },
+      clientId,
+      entity: "brand_source",
+      entityId: source.id,
+      createdBy: userId,
     });
-    return { sourceId: row.id };
+    return { sourceId: source.id };
+  });
+}
+
+/**
+ * "Undo import": goes back to the version before the last automatic import. When a draft is
+ * open the result carries `code: "DRAFT-EXISTS"` and the person confirms replacing it.
+ */
+export async function undoImportAction(input: {
+  slug: string;
+  clientId: string;
+  versionId: string;
+  replaceDraft?: boolean;
+}) {
+  slugSchema.parse(input.slug);
+  return run(input.slug, async ({ actor }) => {
+    const v = await undoImport(getDb(), actor, {
+      clientId: uuid.parse(input.clientId),
+      versionId: uuid.parse(input.versionId),
+      ...(input.replaceDraft ? { replaceDraft: true } : {}),
+    });
+    return { versionId: v.versionId };
   });
 }
 

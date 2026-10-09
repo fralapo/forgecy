@@ -3,6 +3,7 @@ import { parse, type HTMLElement } from "node-html-parser";
 import { crawlError } from "../errors";
 import { GuardedFetchError, guardedFetch, readTextCapped } from "@forgecy/core/net-guard";
 import { createPinnedFetch, type HostCheck } from "../url";
+import type { SiteProbe } from "./brand-probe";
 
 /** What a fetcher returns for one page. Colors and fonts need a browser; HTML-only leaves them empty. */
 export interface FetchedPage {
@@ -20,11 +21,15 @@ export interface FetchedPage {
   requiresLogin: boolean;
   screenshotDesktop?: Uint8Array;
   screenshotMobile?: Uint8Array;
+  /** Real brand visuals read in the browser; only set when FetchOptions.brandProbe was asked. */
+  brand?: SiteProbe;
 }
 
 export interface FetchOptions {
   timeoutMs: number;
   screenshots: boolean;
+  /** Browser fetcher only: also read css variables, button colors, fonts and logo candidates. */
+  brandProbe?: boolean;
 }
 
 export interface PageFetcher {
@@ -67,7 +72,7 @@ function absolute(href: string | undefined, base: string): string | null {
   }
 }
 
-const JSON_LD =
+export const JSON_LD =
   /<script[^>]*type\s*=\s*["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script>/gi;
 
 /** schema.org types declared in the page's JSON-LD blocks (nested @graph included). */

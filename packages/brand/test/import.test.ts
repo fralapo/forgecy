@@ -1,8 +1,8 @@
 import { overlappingZip, pdfWithPages, zipArchive } from "@forgecy/core/testing/archives";
 import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
-import { chunkPages } from "../src/import/analyst";
-import { colorName } from "../src/import/candidates";
+import { chunkPages, orderPages, pagePriority } from "../src/import/analyst";
+import { colorName, keepBestSingleValues, type CandidateProposal } from "../src/import/candidates";
 import { detectImportFile } from "../src/import/detect";
 import { extractFile } from "../src/import/extract";
 import { familyFromFileName, readFontNames, weightFromName } from "../src/import/fonts";
@@ -174,6 +174,77 @@ describe("chunkPages", () => {
   it("keeps pages whole and respects the budget", () => {
     const pages = [1, 2, 3].map((n) => ({ locator: `p. ${n}`, text: "x".repeat(40) }));
     expect(chunkPages(pages, 120).map((c) => c.length)).toEqual([2, 1]);
+  });
+
+  it("never leaves a lone small page in the last request: the last two are balanced", () => {
+    // The deodue run: 15 pages of ~4,200 characters with a 60,000 budget went 14 + 1.
+    const pages = Array.from({ length: 15 }, (_, n) => ({
+      locator: `/p${n}`,
+      text: "x".repeat(4200),
+    }));
+    const chunks = chunkPages(pages, 60_000);
+    expect(chunks.map((c) => c.length)).toEqual([8, 7]);
+    expect(chunks.flat().map((p) => p.locator)).toEqual(pages.map((p) => p.locator));
+    const size = (c: typeof pages) =>
+      c.reduce((n, p) => n + p.text.length + p.locator.length + 8, 0);
+    expect(chunks.every((c) => size(c) <= 60_000)).toBe(true);
+  });
+});
+
+describe("orderPages", () => {
+  it("puts the home page, then the about pages, first; the rest keeps its order", () => {
+    const order = orderPages(
+      ["/prodotti/a/", "/contatti/", "/azienda/", "/", "/prodotti/", "/chi-siamo/storia"].map(
+        (locator) => ({ locator }),
+      ),
+    ).map((p) => p.locator);
+    expect(order).toEqual([
+      "/",
+      "/azienda/",
+      "/chi-siamo/storia",
+      "/prodotti/a/",
+      "/contatti/",
+      "/prodotti/",
+    ]);
+    expect(pagePriority("p. 3")).toBe(2);
+  });
+});
+
+describe("keepBestSingleValues", () => {
+  const set = (path: string, value: string, chunk: number, conf: number, locator = "/x") =>
+    ({
+      path,
+      op: "set",
+      value,
+      modelConfidence: conf,
+      chunk,
+      evidence: { locator, quote: value },
+    }) as CandidateProposal;
+
+  it("keeps one value per single-value field: first request, then confidence, then home/about", () => {
+    const home = set("/document/strategy/oneLiner", "Home", 0, 0.6, "/");
+    const product = set("/document/strategy/oneLiner", "Product", 1, 0.99, "/prodotti/a/");
+    const surer = set("/document/strategy/positioning", "Surer", 0, 0.9, "/prodotti/a/");
+    const lessSure = set("/document/strategy/positioning", "Less", 0, 0.5, "/");
+    const about = set("/document/verbal/voice", "About", 0, 0.7, "/azienda/");
+    const other = set("/document/verbal/voice", "Other", 0, 0.7, "/contatti/");
+    const value = {
+      path: "/document/strategy/values",
+      op: "append",
+      value: { name: "Cura" },
+      evidence: {},
+    } as CandidateProposal;
+    const value2 = { ...value, value: { name: "Qualità" }, chunk: 1 } as CandidateProposal;
+    const color = {
+      kind: "color",
+      path: "",
+      op: "set",
+      value: {},
+      evidence: {},
+    } as CandidateProposal;
+    expect(
+      keepBestSingleValues([product, home, lessSure, surer, other, about, value, value2, color]),
+    ).toEqual([home, surer, about, value, value2, color]);
   });
 });
 

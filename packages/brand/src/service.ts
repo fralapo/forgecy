@@ -53,6 +53,7 @@ import {
   computeConfidence,
   currentValue,
   findConflicts,
+  normalizeHumanTokens,
   proposedValue,
   stillApplies,
   withEditedValue,
@@ -60,9 +61,11 @@ import {
   type EvidenceItem,
   type ProposalOp,
 } from "./proposals";
+import { socialProfileOf, type SocialKind } from "./social-url";
 import { defaultTokens, removedTokenPaths, validateTokens, type TokenTree } from "./tokens";
 
-type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
+export type BrandTx = Parameters<Parameters<Database["transaction"]>[0]>[0];
+type Tx = BrandTx;
 type Executor = Database | Tx;
 
 export type VersionRow = typeof brandIdentityVersions.$inferSelect;
@@ -116,7 +119,8 @@ async function ensureIdentity(db: Executor, clientId: string) {
   return row!;
 }
 
-async function lockOpenDraft(tx: Tx, clientId: string): Promise<VersionRow | undefined> {
+/** Internal (auto-import.ts): the client's open draft, locked for this transaction. */
+export async function lockOpenDraft(tx: Tx, clientId: string): Promise<VersionRow | undefined> {
   const [row] = await tx
     .select()
     .from(brandIdentityVersions)
@@ -156,8 +160,12 @@ const stateOf = (v: Pick<VersionRow, "document" | "tokens">): DraftState => ({
   tokens: v.tokens as TokenTree,
 });
 
-/** Open draft of the client, created on demand from the published version (or empty). */
-async function openDraft(tx: Tx, clientId: string, createdBy: string | null): Promise<VersionRow> {
+/** Internal (also auto-import.ts): open draft of the client, created on demand from the published version (or empty). */
+export async function openDraft(
+  tx: Tx,
+  clientId: string,
+  createdBy: string | null,
+): Promise<VersionRow> {
   const existing = await lockOpenDraft(tx, clientId);
   if (existing) return existing;
   const identity = await ensureIdentity(tx, clientId);
@@ -393,7 +401,10 @@ export async function saveDraftTokens(
         code: "CONFLICT-DRAFT-REV",
       });
     const state = stateOf(draft);
-    const next = { document: state.document, tokens: input.tokens };
+    const next = {
+      document: state.document,
+      tokens: normalizeHumanTokens(state.tokens, input.tokens) as TokenTree,
+    };
     const row = await writeDraft(tx, draft, next, actor.id);
     const staled = await refreshStale(tx, draft.brandIdentityId, next);
     await recordAuditEvent(tx, {
@@ -570,12 +581,20 @@ export interface AcceptResult {
   rev?: number;
 }
 
-async function acceptOne(
+/**
+ * Internal (also used by auto-import.ts): accepts one proposal inside the caller's transaction.
+ * `auto` marks an import run accepting on behalf of the person who started it.
+ */
+export async function acceptOne(
   tx: Tx,
   actor: Extract<Actor, { type: "user" }>,
   input: AcceptInput,
   bulk: boolean,
+  auto?: { runId: string },
 ): Promise<AcceptResult> {
+  humanOnly(actor, "review");
+  assertCan(actor, "review", input.clientId);
+  assertCan(actor, "edit_draft", input.clientId);
   const [p] = await tx
     .select()
     .from(brandIdentityProposals)
@@ -650,8 +669,11 @@ async function acceptOne(
   });
   await recordAuditEvent(tx, {
     actor,
-    action:
-      input.editedValue === undefined ? "brand.proposal.accept" : "brand.proposal.accept_edited",
+    action: auto
+      ? "brand.proposal.auto_accept"
+      : input.editedValue === undefined
+        ? "brand.proposal.accept"
+        : "brand.proposal.accept_edited",
     entity: "brand_identity_proposal",
     entityId: p.id,
     clientId: input.clientId,
@@ -661,6 +683,7 @@ async function acceptOne(
       sensitive: p.sensitive,
       staled,
       note: note || undefined,
+      ...(auto ? { auto: true, runId: auto.runId } : {}),
     },
   });
   return { status: "accepted", staled, rev: row.rev };
@@ -878,7 +901,12 @@ export async function approveAndPublish(
   humanOnly(actor, "brand_identity.approve");
   assertCan(actor, "brand_identity.approve", input.clientId);
   assertCan(actor, "publish", input.clientId);
-  const changelog = input.changelog.trim();
+  checkChangelog(input.changelog);
+  return db.transaction((tx) => publishDraft(tx, actor, input));
+}
+
+function checkChangelog(text: string): string {
+  const changelog = text.trim();
   if (changelog.length < CHANGELOG_MIN)
     invalid(
       "brand.errors.changelogTooShort",
@@ -887,110 +915,126 @@ export async function approveAndPublish(
         code: "CHANGELOG-REQUIRED",
       },
     );
+  return changelog;
+}
 
-  return db.transaction(async (tx) => {
-    const draft = await lockOpenDraft(tx, input.clientId);
-    if (!draft || draft.id !== input.versionId) conflict("brand.errors.draftClosed");
-    if (draft.rev !== input.rev)
-      conflict("brand.errors.draftChangedSinceReview", undefined, {
-        code: "CONFLICT-DRAFT-REV",
-      });
-    const note = input.note?.trim() ?? "";
-    if (isSelfApproval(draft, actor.id) && note.length < SELF_APPROVAL_NOTE_MIN)
-      invalid("brand.errors.selfApprovalNote", undefined, {
-        code: "SELF-APPROVAL-NOTE",
-      });
-
-    const parsed = brandIdentityDocumentSchema.safeParse(draft.document);
-    if (!parsed.success)
-      invalid("brand.errors.draftInvalid", { detail: parsed.error.issues[0]?.message ?? "" });
-    const tokens = draft.tokens as TokenTree;
-    const tokenIssues = validateTokens(tokens);
-    if (tokenIssues.length)
-      invalid(
-        "brand.errors.invalidTokenPath",
-        { path: tokenIssues[0]!.path },
-        { code: "TOKENS-INVALID" },
-      );
-
-    const previous = await publishedRow(tx, input.clientId);
-    const pending = await tx
-      .select({ sensitive: brandIdentityProposals.sensitive })
-      .from(brandIdentityProposals)
-      .where(
-        and(
-          eq(brandIdentityProposals.clientId, input.clientId),
-          eq(brandIdentityProposals.status, "proposed"),
-        ),
-      );
-    const conflicts = await conflictsFor(tx, input.clientId);
-    const checks = publishChecks(parsed.data, tokens, {
-      publishedTokens: (previous?.tokens as TokenTree | undefined) ?? null,
-      pendingSensitive: pending.filter((p) => p.sensitive).length,
-      conflicts: conflicts.length,
+/**
+ * Internal (approveAndPublish, auto-import.ts): approves and publishes the open draft inside the
+ * caller's transaction, with the same checks as the "Approve and publish" button. `meta` is
+ * added to the approve/publish activity log entries (an automatic import marks itself there).
+ */
+export async function publishDraft(
+  tx: Tx,
+  actor: Actor,
+  input: PublishInput,
+  opts: { meta?: Record<string, unknown> } = {},
+): Promise<PublishResult> {
+  humanOnly(actor, "brand_identity.approve");
+  assertCan(actor, "brand_identity.approve", input.clientId);
+  assertCan(actor, "publish", input.clientId);
+  const changelog = checkChangelog(input.changelog);
+  const draft = await lockOpenDraft(tx, input.clientId);
+  if (!draft || draft.id !== input.versionId) conflict("brand.errors.draftClosed");
+  if (draft.rev !== input.rev)
+    conflict("brand.errors.draftChangedSinceReview", undefined, {
+      code: "CONFLICT-DRAFT-REV",
     });
-    const missing = checks.filter((c) => !input.acknowledged.includes(c.key));
-    if (missing.length)
-      invalid(
-        "brand.errors.checksNotAcknowledged",
-        { checks: missing.map((m) => m.message).join("; ") },
-        {
-          code: "CHECKS-NOT-ACKNOWLEDGED",
-          missing: missing.map((m) => m.key),
-        },
-      );
+  const note = input.note?.trim() ?? "";
+  if (isSelfApproval(draft, actor.id) && note.length < SELF_APPROVAL_NOTE_MIN)
+    invalid("brand.errors.selfApprovalNote", undefined, {
+      code: "SELF-APPROVAL-NOTE",
+    });
 
-    const now = new Date();
-    if (previous)
-      await tx
-        .update(brandIdentityVersions)
-        .set({ status: "archived", archivedAt: now })
-        .where(eq(brandIdentityVersions.id, previous.id));
+  const parsed = brandIdentityDocumentSchema.safeParse(draft.document);
+  if (!parsed.success)
+    invalid("brand.errors.draftInvalid", { detail: parsed.error.issues[0]?.message ?? "" });
+  const tokens = draft.tokens as TokenTree;
+  const tokenIssues = validateTokens(tokens);
+  if (tokenIssues.length)
+    invalid(
+      "brand.errors.invalidTokenPath",
+      { path: tokenIssues[0]!.path },
+      { code: "TOKENS-INVALID" },
+    );
+
+  const previous = await publishedRow(tx, input.clientId);
+  const pending = await tx
+    .select({ sensitive: brandIdentityProposals.sensitive })
+    .from(brandIdentityProposals)
+    .where(
+      and(
+        eq(brandIdentityProposals.clientId, input.clientId),
+        eq(brandIdentityProposals.status, "proposed"),
+      ),
+    );
+  const conflicts = await conflictsFor(tx, input.clientId);
+  const checks = publishChecks(parsed.data, tokens, {
+    publishedTokens: (previous?.tokens as TokenTree | undefined) ?? null,
+    pendingSensitive: pending.filter((p) => p.sensitive).length,
+    conflicts: conflicts.length,
+  });
+  const missing = checks.filter((c) => !input.acknowledged.includes(c.key));
+  if (missing.length)
+    invalid(
+      "brand.errors.checksNotAcknowledged",
+      { checks: missing.map((m) => m.message).join("; ") },
+      {
+        code: "CHECKS-NOT-ACKNOWLEDGED",
+        missing: missing.map((m) => m.key),
+      },
+    );
+
+  const now = new Date();
+  if (previous)
     await tx
       .update(brandIdentityVersions)
-      .set({
-        status: "published",
-        document: parsed.data as unknown as Record<string, unknown>,
-        changelog,
-        approvedBy: actor.id,
-        approvedAt: now,
-        approvalNote: note || null,
-        publishedBy: actor.id,
-        publishedAt: now,
-        acknowledgedChecks: checks.map((c) => c.key),
-      })
-      .where(eq(brandIdentityVersions.id, draft.id));
-    const removedTokens = previous ? removedTokenPaths(previous.tokens as TokenTree, tokens) : [];
-    for (const action of ["brand.version.approve", "brand.version.publish"])
-      await recordAuditEvent(tx, {
-        actor,
-        action,
-        entity: "brand_identity_version",
-        entityId: draft.id,
-        clientId: input.clientId,
-        meta: {
-          number: draft.number,
-          previous: previous?.number ?? null,
-          selfApproval: isSelfApproval(draft, actor.id),
-          acknowledged: checks.map((c) => c.key),
-          removedTokens,
-        },
-      });
-    await notify(tx, {
-      kind: "brand_published",
-      to: [draft.submittedBy, draft.createdBy, ...draft.editorIds],
-      except: actor.id,
+      .set({ status: "archived", archivedAt: now })
+      .where(eq(brandIdentityVersions.id, previous.id));
+  await tx
+    .update(brandIdentityVersions)
+    .set({
+      status: "published",
+      document: parsed.data as unknown as Record<string, unknown>,
+      changelog,
+      approvedBy: actor.id,
+      approvedAt: now,
+      approvalNote: note || null,
+      publishedBy: actor.id,
+      publishedAt: now,
+      acknowledgedChecks: checks.map((c) => c.key),
+    })
+    .where(eq(brandIdentityVersions.id, draft.id));
+  const removedTokens = previous ? removedTokenPaths(previous.tokens as TokenTree, tokens) : [];
+  for (const action of ["brand.version.approve", "brand.version.publish"])
+    await recordAuditEvent(tx, {
+      actor,
+      action,
+      entity: "brand_identity_version",
+      entityId: draft.id,
       clientId: input.clientId,
-      params: { version: draft.number },
-      href: (slug) => `/brand/${slug}`,
+      meta: {
+        number: draft.number,
+        previous: previous?.number ?? null,
+        selfApproval: isSelfApproval(draft, actor.id),
+        acknowledged: checks.map((c) => c.key),
+        removedTokens,
+        ...opts.meta,
+      },
     });
-    return {
-      versionId: draft.id,
-      number: draft.number,
-      archivedVersionId: previous?.id ?? null,
-      removedTokens,
-    };
+  await notify(tx, {
+    kind: "brand_published",
+    to: [draft.submittedBy, draft.createdBy, ...draft.editorIds],
+    except: actor.id,
+    clientId: input.clientId,
+    params: { version: draft.number },
+    href: (slug) => `/brand/${slug}`,
   });
+  return {
+    versionId: draft.id,
+    number: draft.number,
+    archivedVersionId: previous?.id ?? null,
+    removedTokens,
+  };
 }
 
 /**
@@ -1005,76 +1049,85 @@ export async function restoreAsDraft(
 ): Promise<VersionRow> {
   humanOnly(actor, "edit_draft");
   assertCan(actor, "edit_draft", input.clientId);
-  return db.transaction(async (tx) => {
-    const [source] = await tx
-      .select()
-      .from(brandIdentityVersions)
+  return db.transaction((tx) => restoreDraft(tx, actor, input));
+}
+
+/** Internal (restoreAsDraft, auto-import.ts): "Restore as draft" inside the caller's transaction. */
+export async function restoreDraft(
+  tx: Tx,
+  actor: Actor,
+  input: { clientId: string; versionId: string; replaceDraft?: boolean },
+): Promise<VersionRow> {
+  humanOnly(actor, "edit_draft");
+  assertCan(actor, "edit_draft", input.clientId);
+  const [source] = await tx
+    .select()
+    .from(brandIdentityVersions)
+    .where(
+      and(
+        eq(brandIdentityVersions.id, input.versionId),
+        eq(brandIdentityVersions.clientId, input.clientId),
+      ),
+    );
+  if (!source) notFound("brand.errors.versionNotFound");
+  if (source.status !== "published" && source.status !== "archived")
+    invalid("brand.errors.restoreOnlyPublished");
+  const open = await lockOpenDraft(tx, input.clientId);
+  if (open) {
+    if (!input.replaceDraft)
+      conflict(
+        "brand.errors.draftExists",
+        { number: open.number },
+        {
+          code: "DRAFT-EXISTS",
+          draftNumber: open.number,
+        },
+      );
+    await tx
+      .update(brandIdentityVersions)
+      .set({ status: "archived", archivedAt: new Date() })
+      .where(eq(brandIdentityVersions.id, open.id));
+    await tx
+      .update(brandIdentityProposals)
+      .set({
+        status: "stale",
+        ...staleOf(staleRef("restored", { number: open.number })),
+      })
       .where(
         and(
-          eq(brandIdentityVersions.id, input.versionId),
-          eq(brandIdentityVersions.clientId, input.clientId),
+          eq(brandIdentityProposals.baseVersionId, open.id),
+          eq(brandIdentityProposals.status, "accepted"),
         ),
       );
-    if (!source) notFound("brand.errors.versionNotFound");
-    if (source.status !== "published" && source.status !== "archived")
-      invalid("brand.errors.restoreOnlyPublished");
-    const open = await lockOpenDraft(tx, input.clientId);
-    if (open) {
-      if (!input.replaceDraft)
-        conflict(
-          "brand.errors.draftExists",
-          { number: open.number },
-          {
-            code: "DRAFT-EXISTS",
-            draftNumber: open.number,
-          },
-        );
-      await tx
-        .update(brandIdentityVersions)
-        .set({ status: "archived", archivedAt: new Date() })
-        .where(eq(brandIdentityVersions.id, open.id));
-      await tx
-        .update(brandIdentityProposals)
-        .set({
-          status: "stale",
-          ...staleOf(staleRef("restored", { number: open.number })),
-        })
-        .where(
-          and(
-            eq(brandIdentityProposals.baseVersionId, open.id),
-            eq(brandIdentityProposals.status, "accepted"),
-          ),
-        );
-    }
-    const [row] = await tx
-      .insert(brandIdentityVersions)
-      .values({
-        brandIdentityId: source.brandIdentityId,
-        clientId: input.clientId,
-        number: await nextNumber(tx, source.brandIdentityId),
-        status: "draft",
-        document: source.document,
-        tokens: source.tokens,
-        restoredFromVersionId: source.id,
-        createdBy: actor.id,
-        editorIds: [actor.id],
-      })
-      .returning();
-    await refreshStale(tx, source.brandIdentityId, stateOf(row!));
-    await recordAuditEvent(tx, {
-      actor,
-      action: "brand.version.restore",
-      entity: "brand_identity_version",
-      entityId: row!.id,
+  }
+  const [row] = await tx
+    .insert(brandIdentityVersions)
+    .values({
+      brandIdentityId: source.brandIdentityId,
       clientId: input.clientId,
-      meta: {
-        number: row!.number,
-        restoredFrom: source.number,
-        replacedDraft: open?.number ?? null,
-      },
-    });
-    return row!;
+      number: await nextNumber(tx, source.brandIdentityId),
+      status: "draft",
+      document: source.document,
+      tokens: source.tokens,
+      restoredFromVersionId: source.id,
+      createdBy: actor.id,
+      editorIds: [actor.id],
+    })
+    .returning();
+  await refreshStale(tx, source.brandIdentityId, stateOf(row!));
+  await recordAuditEvent(tx, {
+    actor,
+    action: "brand.version.restore",
+    entity: "brand_identity_version",
+    entityId: row!.id,
+    clientId: input.clientId,
+    meta: {
+      number: row!.number,
+      restoredFrom: source.number,
+      replacedDraft: open?.number ?? null,
+    },
   });
+  return row!;
 }
 
 // ---------- Sources ----------
@@ -1093,6 +1146,9 @@ export interface AddSourceInput {
   /** Pages already extracted (manual notes, audit observations). */
   pages?: Array<{ locator: string; text: string }>;
   status?: SourceRow["status"];
+  /** Why the source has this status: English text, and the references the interface shows. */
+  statusDetail?: string | null;
+  statusDetailRef?: MessageRef[] | null;
 }
 
 /**
@@ -1126,6 +1182,43 @@ export async function findOrCreateWebsiteSource(
     url: input.websiteUrl,
     status: "pending",
   });
+}
+
+/**
+ * The client's source for a public social profile, or a new `pending` one. The profile is the
+ * same when it normalizes to the same address, so a link typed by hand and the one found on the
+ * site meet in one row. `created` is false when the row already existed.
+ */
+export async function findOrCreateSocialSource(
+  db: Database,
+  actor: Actor,
+  input: { clientId: string; kind: SocialKind; url: string; title?: string; note?: string | null },
+): Promise<{ source: SourceRow; created: boolean }> {
+  assertCan(actor, "view", input.clientId);
+  const same = (url: string | null) =>
+    !!url && (socialProfileOf(url)?.url ?? url) === (socialProfileOf(input.url)?.url ?? input.url);
+  const rows = await db
+    .select()
+    .from(brandSources)
+    .where(
+      and(
+        eq(brandSources.clientId, input.clientId),
+        eq(brandSources.kind, input.kind),
+        isNull(brandSources.removedAt),
+      ),
+    );
+  const existing = rows.find((r) => same(r.url));
+  if (existing) return { source: existing, created: false };
+  const source = await addSource(db, actor, {
+    clientId: input.clientId,
+    kind: input.kind,
+    title:
+      input.title ?? `${input.kind} ${new URL(input.url).pathname.replace(/^\/|\/$/g, "")}`.trim(),
+    url: input.url,
+    note: input.note ?? null,
+    status: "pending",
+  });
+  return { source, created: true };
 }
 
 /** Registers a source. Agents may add their own observations as sources. */
@@ -1178,6 +1271,8 @@ export async function addSource(
         note: input.note ?? null,
         pages: input.pages ?? null,
         status: input.status ?? (input.storageKey ? "pending" : "extracted"),
+        statusDetail: input.statusDetail ?? null,
+        statusDetailRef: input.statusDetailRef ?? null,
         createdBy: userId(actor),
       })
       .returning();
@@ -1241,7 +1336,9 @@ export async function removeSource(
 export async function updateSourceStatus(
   db: Executor,
   sourceId: string,
-  values: Partial<Pick<SourceRow, "status" | "statusDetail" | "statusDetailRef" | "pages">>,
+  values: Partial<
+    Pick<SourceRow, "status" | "statusDetail" | "statusDetailRef" | "pages" | "visual">
+  >,
 ): Promise<void> {
   await db.update(brandSources).set(values).where(eq(brandSources.id, sourceId));
 }

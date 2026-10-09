@@ -272,6 +272,10 @@ Rules:
   "imagery",
 );
 
+/** Added to the image request when the client's own pictures go along as references. */
+export const IMAGE_REFERENCES_NOTE =
+  "Match the visual style of the attached reference images (palette, lighting, composition, product look). Do not copy their text or logos.";
+
 // ---- User prompts ----
 
 const json = (v: unknown) => JSON.stringify(v, null, 1);

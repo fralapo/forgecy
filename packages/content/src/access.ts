@@ -75,6 +75,7 @@ export async function requireClient(db: Executor, clientId: string) {
       slug: clients.slug,
       status: clients.status,
       aiPolicy: clients.aiPolicy,
+      sendableAssets: clients.sendableAssets,
       archivedAt: clients.archivedAt,
     })
     .from(clients)

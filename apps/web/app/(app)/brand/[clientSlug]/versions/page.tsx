@@ -16,7 +16,8 @@ import { VersionCompare } from "../../_components/version-compare";
 import { restoreAction } from "../../actions";
 import { brandPath, versionStatusVariant } from "../../_lib/labels";
 import { loadBrand, userNames, versionParam } from "../../_lib/server";
-import { getFormat } from "@/lib/i18n";
+import { importTextRef } from "../../_lib/stored-text";
+import { getFormat, getRefText } from "@/lib/i18n";
 
 export async function generateMetadata() {
   const t = await getTranslations("brand.meta");
@@ -38,6 +39,9 @@ export default async function VersionsPage({
   const [{ clientSlug }, sp] = await Promise.all([params, searchParams]);
   const t = await getTranslations("brand");
   const format = await getFormat();
+  const rt = await getRefText();
+  // An automatic import writes its changelog and note in English; they are shown translated.
+  const shown = (text: string) => rt(importTextRef(text), text);
   const when = (d: Date | null) => (d ? format.date(d, "dateTime") : "—");
   const { client, ws } = await loadBrand(clientSlug);
   const names = await userNames(
@@ -175,7 +179,11 @@ export default async function VersionsPage({
                         </span>
                       </td>
                       <td className="px-4 py-3 text-fg">
-                        {v.changelog ?? <span className="text-fg-muted">—</span>}
+                        {v.changelog ? (
+                          shown(v.changelog)
+                        ) : (
+                          <span className="text-fg-muted">—</span>
+                        )}
                         <span className="block text-fg-muted">
                           {v.publishedAt
                             ? t("versions.publishedBy", {
@@ -196,7 +204,7 @@ export default async function VersionsPage({
                         </span>
                         {v.approvalNote ? (
                           <span className="block text-fg-muted">
-                            {t("versions.note", { note: v.approvalNote })}
+                            {t("versions.note", { note: shown(v.approvalNote) })}
                           </span>
                         ) : null}
                       </td>

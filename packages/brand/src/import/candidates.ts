@@ -1,16 +1,32 @@
 /** Turns extracted candidates into proposals, skipping duplicates and values already in the draft. */
 import { ForgecyError, type Actor, type MessageRef } from "@forgecy/core";
-import { englishMessage, messageRef } from "@forgecy/i18n";
-import type { Database } from "@forgecy/db";
-import { BRAND_ANALYST_PROMPT_VERSION } from "./analyst";
+import type { SiteProbe } from "@forgecy/audit";
+import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
+import { and, brandIdentityProposals, eq, inArray, or, type Database } from "@forgecy/db";
+import { BRAND_ANALYST_PROMPT_VERSION, pagePriority } from "./analyst";
+import { fields, matchField } from "../fields";
+import { deepEqual, getAt, isJsonPatch, type JsonPatch } from "../json-patch";
+import { checkContrast, WCAG } from "@forgecy/ui/tokens";
+import { cleanFamily, isNeutral, knownColors, knownFonts, SITE_LOCATORS } from "./site-colors";
 import { proposeChange, type ProposeInput } from "../service";
-import { hexToDtcg, normalizeHex, referenceColors, tokenNameFrom } from "../tokens";
-import { getDraftTokens } from "./draft-tokens";
-import type { ProposalOp } from "../proposals";
+import {
+  defaultTokens,
+  hexToDtcg,
+  normalizeHex,
+  referenceColors,
+  tokenColorHex,
+  tokenNameFrom,
+} from "../tokens";
+import { getDraftState } from "./draft-tokens";
+import { MIN_QUOTE_CHARS } from "./gate";
+import { normalizeText } from "./verify";
+import { proposedValue, type DraftState, type ProposalOp } from "../proposals";
 
 export interface CandidateProposal {
-  /** "color" candidates get their token path assigned here. */
-  kind?: "color";
+  /** "color" candidates get their token path assigned here; "logo" is the file the crawl itself stored. */
+  kind?: "color" | "logo";
+  /** The color's name is final (read from the site or chosen by the analyst), not to be guessed from context. */
+  named?: boolean;
   path: string;
   op: ProposalOp;
   value: unknown;
@@ -21,6 +37,130 @@ export interface CandidateProposal {
   evidence: { locator?: string; quote?: string };
   /** provider/model, for the activity log. */
   agentModel?: string;
+  /** Order of the analyst request that proposed it (0 = the one with the home page). */
+  chunk?: number;
+}
+
+/** A `set` on a field that holds one value (one-liner, positioning, voice...). */
+const isSingleValue = (c: CandidateProposal) =>
+  !c.kind && c.op === "set" && matchField(c.path)?.field.shape === "sourced";
+
+/**
+ * One value per single-value field for the whole run, so a run never contests itself: the first
+ * request (home and about pages) wins, then the model's surer item, then the home/about page.
+ */
+export function keepBestSingleValues(
+  candidates: readonly CandidateProposal[],
+): CandidateProposal[] {
+  const rank = (c: CandidateProposal) => [
+    c.chunk ?? 0,
+    -(c.modelConfidence ?? 0),
+    pagePriority(c.evidence.locator ?? ""),
+  ];
+  const before = (a: number[], b: number[]) => {
+    const i = a.findIndex((v, k) => v !== b[k]);
+    return i >= 0 && a[i]! < b[i]!;
+  };
+  const best = new Map<string, CandidateProposal>();
+  for (const c of candidates) {
+    if (!isSingleValue(c)) continue;
+    const kept = best.get(c.path);
+    if (!kept || before(rank(c), rank(kept))) best.set(c.path, c);
+  }
+  return candidates.filter((c) => !isSingleValue(c) || best.get(c.path) === c);
+}
+
+export function rationale(
+  key: MessageKey & `brand.import.rationale.${string}`,
+  values?: MessageValues,
+) {
+  return { rationale: englishMessage(key, values), rationaleRef: messageRef(key, values) };
+}
+
+/** Most colors proposed straight from the site's styles; the analyst may name more of the known ones. */
+const MAX_SITE_COLORS = 6;
+const MAX_SITE_FONTS = 3;
+
+/** The logo the crawl downloaded and registered as a source; the file itself is the evidence. */
+export function logoCandidate(sourceId: string, logo: { url: string }): CandidateProposal {
+  return {
+    kind: "logo",
+    path: "/document/visual/logo/variants",
+    op: "append",
+    value: { role: "logo_primary", sourceId, background: "any" },
+    ...rationale("brand.import.rationale.logoSite"),
+    evidence: { locator: logo.url },
+  };
+}
+
+/**
+ * Colors, fonts and the harvested logo from the site, as proposals. Nothing here comes from a model.
+ */
+export function visualCandidates(
+  visual: SiteProbe,
+  logo?: { sourceId: string; image: { url: string } },
+): CandidateProposal[] {
+  const colors: CandidateProposal[] = knownColors(visual, MAX_SITE_COLORS).map((c) => ({
+    kind: "color",
+    named: true,
+    path: "",
+    op: "set",
+    value: { name: c.name, hex: c.hex, usage: "" },
+    ...rationale("brand.import.rationale.siteColor"),
+    evidence: { locator: c.locator },
+  }));
+  const families = knownFonts(visual).slice(0, MAX_SITE_FONTS);
+  const roles = fontRoles(families);
+  const fonts: CandidateProposal[] = families.map((f, i) => ({
+    path: "/document/visual/typography",
+    op: "append",
+    value: { role: roles[i], family: f.family, weights: [], licenseStatus: "to_verify" },
+    ...rationale("brand.import.rationale.siteFont"),
+    evidence: { locator: SITE_LOCATORS.fonts },
+  }));
+  // The font tokens follow, so carousels use the site's fonts; the automatic import only
+  // replaces a token that still holds the starting value (auto-import.ts overwritesHandEdit).
+  const tokens: CandidateProposal[] = (["display", "body"] as const).flatMap((role) => {
+    // A site with one font uses it for the text too.
+    const f =
+      families[roles.indexOf(role)] ??
+      (role === "body" ? families.find((x) => x.roles.includes("body")) : undefined);
+    return f
+      ? [
+          {
+            path: `/tokens/font/family/${role}`,
+            op: "set" as const,
+            value: { $value: [f.family, "sans-serif"] },
+            ...rationale("brand.import.rationale.siteFont"),
+            evidence: { locator: SITE_LOCATORS.fonts },
+          },
+        ]
+      : [];
+  });
+  return [
+    ...colors,
+    ...fonts,
+    ...tokens,
+    ...(logo ? [logoCandidate(logo.sourceId, logo.image)] : []),
+  ];
+}
+
+/**
+ * Role of each family from where the page uses it. Headings only: display. Body only: body.
+ * Both: display only when no other family is used for headings (the site's only font).
+ */
+export function fontRoles(
+  families: ReadonlyArray<{ roles: readonly string[]; loaded: boolean }>,
+): Array<"display" | "body"> {
+  const headings = families.filter((f) => f.roles.includes("headings"));
+  const display =
+    headings.find((f) => !f.roles.includes("body")) ??
+    (headings.length === 1 ? headings[0] : headings.find((f) => f.loaded));
+  return families.map((f) =>
+    f === display || (f.roles.includes("headings") && !f.roles.includes("body"))
+      ? "display"
+      : "body",
+  );
 }
 
 // Matches Italian and English color words in client documents.
@@ -53,26 +193,209 @@ export function colorName(context: string, hex: string, fallback: string): strin
   return word ?? fallback;
 }
 
+/**
+ * One proposal per color and font family. The analyst's name and usage fill a color the site
+ * already gave bare; a font keeps its role from the computed styles.
+ */
+export function mergeSiteItems(candidates: readonly CandidateProposal[]): CandidateProposal[] {
+  const colors = new Map<string, CandidateProposal>();
+  const families = new Set<string>();
+  const axes = new Set<string>();
+  const out: CandidateProposal[] = [];
+  for (const c of candidates) {
+    if (c.kind === "color") {
+      const v = c.value as { name: string; hex: string; usage?: string };
+      const key = normalizeHex(v.hex) ?? v.hex;
+      const first = colors.get(key);
+      if (!first) {
+        colors.set(key, c);
+        out.push(c);
+      } else {
+        const f = first.value as { usage?: string };
+        if (!f.usage)
+          first.value = { ...(first.value as object), name: v.name, usage: v.usage ?? "" };
+      }
+    } else if (c.path === "/document/visual/typography") {
+      const family = cleanFamily((c.value as { family: string }).family);
+      if (families.has(family)) continue;
+      families.add(family);
+      out.push(c);
+    } else if (c.path === "/document/verbal/toneAxes") {
+      // The prompt asks for one axis per concept; this is the guarantee.
+      const axis = (c.value as { axis: string }).axis;
+      if (axes.has(axis)) continue;
+      axes.add(axis);
+      out.push(c);
+    } else out.push(c);
+  }
+  return out;
+}
+
+/** Text compared for sameness: case, accents, punctuation and spacing do not count. */
+export function sameTextKey(text: string): string {
+  return normalizeText(text)
+    .normalize("NFD")
+    .replace(/\p{M}+/gu, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+/** The words that identify an item of a field: the text, the name, the "we are", the logo file. */
+function itemKey(value: unknown): string | undefined {
+  const v =
+    typeof value === "string"
+      ? value
+      : value && typeof value === "object"
+        ? ((value as Record<string, unknown>).text ??
+          (value as Record<string, unknown>).name ??
+          (value as Record<string, unknown>).weAre ??
+          (value as Record<string, unknown>).sourceId)
+        : undefined;
+  const key = typeof v === "string" ? sameTextKey(v) : "";
+  return key || undefined;
+}
+
+/** Fields whose items are deduplicated by their words (tokens and fonts replace by name instead). */
+const textField = (path: string) => {
+  const field = matchField(path.replace(/\[.*\]$/, "").replace(/\/-$/, ""))?.field;
+  return field && field.shape !== "token-group" && field.pointer !== "/document/visual/typography"
+    ? field
+    : undefined;
+};
+
+/**
+ * What the client already has or already waits for, so a re-run proposes nothing twice: the
+ * items of the draft (by their words, and by the quote that proposed them), the pending
+ * proposals of any run (by their words), and the single-value fields this run proposed
+ * from another source (a run never contests itself).
+ */
+async function knownItems(db: Database, clientId: string, state: DraftState, runId?: string) {
+  const texts = new Set<string>();
+  const quotes = new Set<string>();
+  const hexes = new Set<string>();
+  const ownSingles = new Set<string>();
+  const quoteKey = (pointer: string, quote: string | undefined) => {
+    const q = quote ? sameTextKey(quote) : "";
+    return q.length >= MIN_QUOTE_CHARS ? `${pointer}|${q}` : undefined;
+  };
+  const acceptedFrom = new Map<string, string>(); // proposal id → field pointer
+  for (const field of fields) {
+    if (field.shape === "token-group" || field.pointer === "/document/visual/typography") continue;
+    const at = getAt(state, field.pointer);
+    for (const item of field.shape === "sourced" ? (at ? [at] : []) : Array.isArray(at) ? at : []) {
+      const sourced = field.shape === "sourced" || field.shape === "sourced-list";
+      const key = itemKey(sourced ? (item as { value?: unknown }).value : item);
+      if (key) texts.add(`${field.pointer}|${key}`);
+      const from = sourced
+        ? (item as { acceptedFromProposalId?: unknown }).acceptedFromProposalId
+        : undefined;
+      if (typeof from === "string") acceptedFrom.set(from, field.pointer);
+    }
+  }
+  const rows = await db
+    .select({
+      id: brandIdentityProposals.id,
+      status: brandIdentityProposals.status,
+      runId: brandIdentityProposals.runId,
+      fieldPath: brandIdentityProposals.fieldPath,
+      changes: brandIdentityProposals.changes,
+      evidence: brandIdentityProposals.evidence,
+    })
+    .from(brandIdentityProposals)
+    .where(
+      and(
+        eq(brandIdentityProposals.clientId, clientId),
+        or(
+          eq(brandIdentityProposals.status, "proposed"),
+          acceptedFrom.size
+            ? inArray(brandIdentityProposals.id, [...acceptedFrom.keys()])
+            : undefined,
+        ),
+      ),
+    );
+  for (const p of rows) {
+    if (p.status !== "proposed") {
+      const pointer = acceptedFrom.get(p.id);
+      for (const e of p.evidence) {
+        const q = pointer && quoteKey(pointer, e.quote);
+        if (q) quotes.add(q);
+      }
+      continue;
+    }
+    if (!isJsonPatch(p.changes)) continue;
+    const match = matchField(p.fieldPath.replace(/\[.*\]$/, "").replace(/\/-$/, ""));
+    if (!match) continue;
+    const value = proposedValue(p.changes as JsonPatch, match.field);
+    if (match.field.pointer === "/tokens/color/reference") {
+      const hex = (value as { $value?: { hex?: string } } | undefined)?.$value?.hex;
+      if (hex) hexes.add(hex.toUpperCase());
+      continue;
+    }
+    const field = textField(p.fieldPath);
+    if (!field) continue;
+    const key = itemKey(value);
+    if (key) texts.add(`${field.pointer}|${key}`);
+    if (runId && p.runId === runId && field.shape === "sourced") ownSingles.add(field.pointer);
+  }
+  return {
+    hexes,
+    /** True when the candidate repeats something the client has or waits for. */
+    has(c: CandidateProposal): boolean {
+      const field = textField(c.path);
+      if (!field) return false;
+      const key = itemKey(c.value);
+      const q = quoteKey(field.pointer, c.evidence.quote);
+      return (
+        (key !== undefined && texts.has(`${field.pointer}|${key}`)) ||
+        (q !== undefined && quotes.has(q)) ||
+        (field.shape === "sourced" && ownSingles.has(field.pointer))
+      );
+    },
+    /** Records a candidate this run proposes, so a near-copy later in the run is not proposed. */
+    add(c: CandidateProposal): void {
+      const field = textField(c.path);
+      const key = field && itemKey(c.value);
+      if (field && key) texts.add(`${field.pointer}|${key}`);
+    },
+  };
+}
+
 export async function addSourceProposals(
   db: Database,
   agent: Actor,
   clientId: string,
   sourceId: string,
   candidates: readonly CandidateProposal[],
+  promptVersion: string = BRAND_ANALYST_PROMPT_VERSION,
+  opts: { colorRoles?: boolean } = {},
 ): Promise<{ created: number; skipped: number }> {
   let created = 0;
   let skipped = 0;
   const seen = new Set<string>();
-  const tokens = await getDraftTokens(db, clientId);
-  const existingHex = new Set(referenceColors(tokens).map((c) => c.hex));
-  const usedNames = new Set(referenceColors(tokens).map((c) => c.name));
+  const state = await getDraftState(db, clientId);
+  // Palette name of each hex (in the draft, or proposed below), and the colors in rank order.
+  const nameOfHex = new Map(referenceColors(state.tokens).map((c) => [c.hex, c.name]));
+  const ranked: string[] = [];
+  const known = await knownItems(
+    db,
+    clientId,
+    state,
+    agent.type === "agent" ? agent.runId : undefined,
+  );
+  const existingHex = new Set([...referenceColors(state.tokens).map((c) => c.hex), ...known.hexes]);
+  const usedNames = new Set(referenceColors(state.tokens).map((c) => c.name));
   let n = usedNames.size;
 
   for (const c of candidates) {
     let input: ProposeInput;
+    if (c.kind !== "color" && known.has(c)) {
+      skipped++;
+      continue;
+    }
     if (c.kind === "color") {
       const v = c.value as { name: string; hex: string; usage?: string };
       const hex = normalizeHex(v.hex);
+      if (hex && !ranked.includes(hex)) ranked.push(hex);
       if (!hex || existingHex.has(hex) || seen.has(`color:${hex}`)) {
         skipped++;
         continue;
@@ -80,7 +403,10 @@ export async function addSourceProposals(
       seen.add(`color:${hex}`);
       existingHex.add(hex);
       n++;
-      let name = tokenNameFrom(colorName(v.name, hex, `color-${n}`), `color-${n}`);
+      let name = tokenNameFrom(
+        c.named ? v.name : colorName(v.name, hex, `color-${n}`),
+        `color-${n}`,
+      );
       while (usedNames.has(name)) name = `${name}-${n}`;
       usedNames.add(name);
       input = {
@@ -101,6 +427,7 @@ export async function addSourceProposals(
         continue;
       }
       seen.add(key);
+      known.add(c);
       input = { clientId, path: c.path, op: c.op, value: c.value };
     }
     try {
@@ -116,14 +443,90 @@ export async function addSourceProposals(
             ...(c.evidence.quote ? { quote: c.evidence.quote.slice(0, 300) } : {}),
           },
         ],
-        auditMeta: { promptVersion: BRAND_ANALYST_PROMPT_VERSION, model: c.agentModel ?? null },
+        auditMeta: { promptVersion, model: c.agentModel ?? null },
       });
       created++;
+      if (c.kind === "color") {
+        const hex = (input.value as { $value: { hex: string } }).$value.hex;
+        nameOfHex.set(hex, input.path.split("/").pop()!);
+      }
     } catch (err) {
       if (err instanceof ForgecyError && (err.code === "validation" || err.code === "conflict"))
         skipped++;
       else throw err;
     }
   }
+  if (opts.colorRoles)
+    for (const role of await colorRoles(db, clientId, state, ranked, nameOfHex))
+      try {
+        await proposeChange(db, agent, {
+          clientId,
+          path: `/tokens/color/semantic/${role.role}`,
+          op: "set",
+          value: { $value: `{color.reference.${role.name}}` },
+          ...rationale("brand.import.rationale.colorRole"),
+          evidence: [{ sourceId, locator: SITE_LOCATORS.styles }],
+          auditMeta: { promptVersion, model: null },
+        });
+        created++;
+      } catch (err) {
+        if (err instanceof ForgecyError && (err.code === "validation" || err.code === "conflict"))
+          skipped++;
+        else throw err;
+      }
   return { created, skipped };
+}
+
+/**
+ * The brand color and the accent from the site's palette, for the roles that still hold the
+ * value every identity starts with (a role a person or an earlier import set is left alone):
+ * the brand color is the best-ranked chromatic color readable with its text and on the
+ * background, the accent the next chromatic one. Proposals like any other, so they go through
+ * the same review, automatic import and provenance rules.
+ */
+export async function colorRoles(
+  db: Database,
+  clientId: string,
+  state: DraftState,
+  ranked: readonly string[],
+  nameOfHex: ReadonlyMap<string, string>,
+): Promise<Array<{ role: "brand-primary" | "accent"; name: string }>> {
+  const starting = { document: state.document, tokens: defaultTokens() };
+  const untouched = (role: string) =>
+    deepEqual(
+      getAt(state, `/tokens/color/semantic/${role}`),
+      getAt(starting, `/tokens/color/semantic/${role}`),
+    );
+  const pending = new Set(
+    (
+      await db
+        .select({ fieldPath: brandIdentityProposals.fieldPath })
+        .from(brandIdentityProposals)
+        .where(
+          and(
+            eq(brandIdentityProposals.clientId, clientId),
+            eq(brandIdentityProposals.status, "proposed"),
+          ),
+        )
+    ).map((p) => p.fieldPath),
+  );
+  const open = (role: string) => untouched(role) && !pending.has(`/tokens/color/semantic/${role}`);
+  const chromatic = ranked.filter((hex) => nameOfHex.has(hex) && !isNeutral(hex));
+  const onBrand = tokenColorHex(state.tokens, "color.semantic.on-brand-primary");
+  const background = tokenColorHex(state.tokens, "color.semantic.background");
+  const readable = (hex: string) =>
+    !!onBrand &&
+    !!background &&
+    checkContrast(hex, onBrand) >= WCAG.largeText &&
+    checkContrast(hex, background) >= WCAG.largeText;
+  const brand = chromatic.find(readable);
+  const accent = chromatic.find((hex) => hex !== brand);
+  return [
+    ...(brand && open("brand-primary")
+      ? [{ role: "brand-primary" as const, name: nameOfHex.get(brand)! }]
+      : []),
+    ...(accent && open("accent")
+      ? [{ role: "accent" as const, name: nameOfHex.get(accent)! }]
+      : []),
+  ];
 }

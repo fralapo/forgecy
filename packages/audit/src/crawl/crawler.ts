@@ -49,6 +49,10 @@ export interface CrawlOptions {
   maxPages: number;
   /** Competitor mode: home, services and contacts only. */
   focus?: "site" | "competitor";
+  /** Ask the browser fetcher for the site's real brand visuals (FetchedPage.brand). Audits leave it off. */
+  brandProbe?: boolean;
+  /** Screenshots cost two page loads each: a crawl that only needs the data turns them off. */
+  screenshots?: boolean;
   fetcher: PageFetcher;
   hostCheck: HostCheck;
   userAgent: string;
@@ -161,6 +165,20 @@ async function fetchText(
   }
 }
 
+/**
+ * Whether the ForgecyAudit agent may fetch `url` under its host's robots.txt, for callers that
+ * read a single page outside crawlSite. A missing or unreadable robots.txt allows, as in the crawl.
+ */
+export async function robotsAllows(
+  url: string,
+  options: Pick<CrawlOptions, "userAgent" | "fetchImpl" | "hostCheck">,
+): Promise<boolean> {
+  const robotsUrl = `${new URL(url).origin}/robots.txt`;
+  const res = await fetchText(robotsUrl, options);
+  const parser = robotsParser(robotsUrl, res?.status === 200 ? res.text : "");
+  return parser.isAllowed(url, AUDIT_USER_AGENT_TOKEN) !== false;
+}
+
 /** User agents of the AI answer engines' crawlers, checked against robots.txt. */
 export const AI_CRAWLERS = [
   "GPTBot",
@@ -240,7 +258,11 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
   await progress({ step: "discovery", status: "running" });
   const pages: FetchedPage[] = [];
   const skipped: SkippedPage[] = [];
-  const fetchOpts = { timeoutMs: options.pageTimeoutMs, screenshots: true };
+  const fetchOpts = {
+    timeoutMs: options.pageTimeoutMs,
+    screenshots: options.screenshots ?? true,
+    ...(options.brandProbe ? { brandProbe: true } : {}),
+  };
   let homePage: FetchedPage;
   try {
     homePage = await options.fetcher.fetchPage(home, fetchOpts);

@@ -36,7 +36,7 @@ export type ContentVersionOrigin = (typeof contentVersionOrigins)[number];
 export const assetStatuses = ["draft", "approved", "rejected"] as const;
 export type AssetStatus = (typeof assetStatuses)[number];
 
-export const assetSources = ["upload", "ai", "product"] as const;
+export const assetSources = ["upload", "ai", "product", "site"] as const;
 export type AssetSource = (typeof assetSources)[number];
 
 export const approvalDecisions = ["approved", "changes_requested"] as const;

@@ -1,3 +1,4 @@
+import { linkSourceReader } from "@forgecy/brand";
 import { createStorageFromEnv } from "@forgecy/files";
 import { Badge, Card } from "@forgecy/ui";
 import { getTranslations } from "next-intl/server";
@@ -18,6 +19,14 @@ export async function generateMetadata() {
   const t = await getTranslations("brand.meta");
   return { title: t("sources") };
 }
+
+/** The logo file the website import stores as a source (import/images.ts logoSource). */
+const isSiteLogo = (s: {
+  kind: string;
+  title: string;
+  storageKey: string | null;
+  url: string | null;
+}) => s.kind === "screenshot" && !!s.storageKey && !!s.url && /^Logo\b/.test(s.title);
 
 export default async function SourcesPage({
   params,
@@ -41,7 +50,10 @@ export default async function SourcesPage({
         })
       : t("sources.size", { unit: "kb", value: format.number(Math.ceil(n / 1024)) });
   const { client } = await loadBrand(clientSlug);
-  const sources = await sourcesFor(client.id);
+  // The website first: the other sources mostly come from it.
+  const sources = (await sourcesFor(client.id)).sort(
+    (a, b) => Number(b.kind === "website") - Number(a.kind === "website"),
+  );
   const storage = createStorageFromEnv(env);
   // Files are offered as downloads only: an SVG opened inline could run scripts.
   const links = new Map(
@@ -119,8 +131,12 @@ export default async function SourcesPage({
                       ) : (
                         s.title
                       )}
+                      {s.url && !links.get(s.id) && s.url !== s.title ? (
+                        <span className="block break-all text-fg-muted">{s.url}</span>
+                      ) : null}
                       <span className="block text-fg-muted">
-                        {t(`sourceKind.${s.kind}`)}
+                        {/* The logo the website import saved is a file source like a screenshot. */}
+                        {isSiteLogo(s) ? t("sources.logoSource") : t(`sourceKind.${s.kind}`)}
                         {s.size ? ` · ${size(s.size)}` : ""}
                         {s.pageCount ? ` · ${t("sources.partsRead", { count: s.pageCount })}` : ""}
                       </span>
@@ -142,7 +158,9 @@ export default async function SourcesPage({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap justify-end gap-2">
-                        {s.storageKey && s.status !== "pending" && s.status !== "extracting" ? (
+                        {(s.storageKey || linkSourceReader(s.kind, s.url)?.job === "import") &&
+                        s.status !== "pending" &&
+                        s.status !== "extracting" ? (
                           <ActionButton
                             variant="secondary"
                             size="sm"

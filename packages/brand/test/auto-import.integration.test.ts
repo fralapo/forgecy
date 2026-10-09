@@ -1,0 +1,837 @@
+import type { SiteProbe } from "@forgecy/audit";
+import type { AiGateway } from "@forgecy/ai";
+import { ForgecyError, PermissionDeniedError, type Actor } from "@forgecy/core";
+import {
+  and,
+  auditEvents,
+  brandIdentityProposals,
+  brandIdentityVersions,
+  brandSources,
+  clients,
+  createDb,
+  eq,
+  grantClientAccess,
+  sql,
+  userActor,
+  users,
+  type Database,
+} from "@forgecy/db";
+import type { StorageDriver } from "@forgecy/files";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { applyImport, latestAutoImport, undoImport } from "../src/auto-import";
+import { publishChecks } from "../src/checks";
+import { parseDocument } from "../src/document";
+import type { AnalystItem } from "../src/import/analyst";
+import { runSourceImport } from "../src/import/run";
+import {
+  acceptProposal,
+  addSource,
+  approveAndPublish,
+  ensureDraft,
+  proposeChange,
+  saveDraftSection,
+  saveDraftTokens,
+  submitForReview,
+  updateSourceStatus,
+  type VersionRow,
+} from "../src/service";
+import { hexToDtcg, tokenColorHex, type TokenTree } from "../src/tokens";
+
+const dbUrl = process.env.FORGECY_TEST_DATABASE_URL;
+
+const PAGES = [
+  {
+    locator: "/",
+    text: "DeoDue è bifase: una fase ammorbidisce, l’altra è solo profumo. Nata nel Sud Italia.",
+  },
+  { locator: "/about", text: "Siamo una famiglia che produce deodoranti dal 1998." },
+];
+
+const VISUAL: SiteProbe = {
+  cssVars: [{ name: "--brand-primary", hex: "#1d3a8a" }],
+  themeColor: "#f5ebdc",
+  buttonColors: [],
+  fonts: [{ family: "Playfair Display", roles: ["headings"], loaded: true }],
+  logos: [],
+  images: [],
+};
+
+const item = (over: Record<string, unknown>) =>
+  ({
+    locator: "/",
+    quote: "una fase ammorbidisce, l'altra è solo profumo",
+    rationale: "From the home page",
+    confidence: 0.8,
+    ...over,
+  }) as AnalystItem;
+
+const POSITIONING = item({ field: "positioning", text: "Il deodorante bifase del Sud Italia" });
+const ONE_LINER = item({ field: "oneLiner", text: "Il deodorante bifase" });
+const VALUE = item({
+  field: "value",
+  name: "Famiglia",
+  locator: "/about",
+  quote: "Siamo una famiglia che produce deodoranti dal 1998.",
+});
+const AUDIENCE = item({ field: "audience", name: "Famiglie del Sud" });
+
+const fakeAi = (items: AnalystItem[]) =>
+  ({
+    generateObject: async () => ({
+      data: { items },
+      provider: "openrouter",
+      model: "fake/model",
+    }),
+  }) as unknown as AiGateway;
+
+type User = Extract<Actor, { type: "user" }>;
+
+async function missingChecks(p: Promise<unknown>): Promise<string[]> {
+  try {
+    await p;
+  } catch (err) {
+    if (err instanceof ForgecyError && err.details?.code === "CHECKS-NOT-ACKNOWLEDGED")
+      return err.details.missing as string[];
+    throw err;
+  }
+  return [];
+}
+
+async function refOf(p: Promise<unknown>): Promise<string> {
+  try {
+    await p;
+  } catch (err) {
+    if (err instanceof PermissionDeniedError) return "permission_denied";
+    if (err instanceof ForgecyError) return err.ref?.key ?? err.code;
+    throw err;
+  }
+  return "ok";
+}
+
+describe.skipIf(!dbUrl)("automatic import (integration)", () => {
+  let db: Database;
+  const suffix = Math.random().toString(36).slice(2, 8);
+  const clientIds: string[] = [];
+  let anna: User;
+  let outsider: User;
+  let inactive: User;
+  let bruno: User;
+  const agent: Actor = { type: "agent", role: "brand_analyst", runId: crypto.randomUUID() };
+  const storage = {} as StorageDriver;
+
+  const mkUser = async (name: string, values: { active?: boolean } = {}) => {
+    const [u] = await db
+      .insert(users)
+      .values({ name, email: `${name}-${suffix}@example.test`, ...values })
+      .returning();
+    return u!.id;
+  };
+
+  const mkClient = async (name: string) => {
+    const [c] = await db
+      .insert(clients)
+      .values({ name: `Auto ${name} ${suffix}`, slug: `brand-auto-${name}-${suffix}` })
+      .returning();
+    clientIds.push(c!.id);
+    for (const u of [anna, inactive, bruno])
+      await grantClientAccess(db, { userId: u.id, clientId: c!.id, createdBy: null });
+    // The actors are read again: they carry the client scope.
+    anna = (await userActor(db, anna.id))!;
+    bruno = (await userActor(db, bruno.id))!;
+    return c!.id;
+  };
+
+  /** One website import job, as the worker runs it. */
+  const runImport = async (
+    clientId: string,
+    items: AnalystItem[],
+    opts: {
+      requestedBy?: string | null;
+      visual?: SiteProbe;
+      autoApply?: boolean;
+      jobId?: string;
+      title?: string;
+      holdStatus?: boolean;
+    } = {},
+  ) => {
+    const s = await addSource(db, anna, {
+      clientId,
+      kind: "website",
+      title: opts.title ?? "deodue.test",
+    });
+    await updateSourceStatus(db, s.id, {
+      pages: PAGES,
+      ...(opts.visual ? { visual: opts.visual as unknown as Record<string, unknown> } : {}),
+    });
+    const jobId = opts.jobId ?? crypto.randomUUID();
+    const result = await runSourceImport(
+      { db, storage, ai: fakeAi(items) },
+      {
+        jobId,
+        attempt: 1,
+        maxAttempts: 1,
+        requestedBy: opts.requestedBy === undefined ? anna.id : opts.requestedBy,
+      },
+      {
+        clientId,
+        sourceId: s.id,
+        autoApply: opts.autoApply ?? true,
+        ...(opts.holdStatus ? { holdStatus: true } : {}),
+      },
+    );
+    const [source] = await db.select().from(brandSources).where(eq(brandSources.id, s.id));
+    return { result, source: source!, jobId };
+  };
+
+  const proposalsOf = (runId: string) =>
+    db.select().from(brandIdentityProposals).where(eq(brandIdentityProposals.runId, runId));
+  const versionsOf = (clientId: string) =>
+    db
+      .select()
+      .from(brandIdentityVersions)
+      .where(eq(brandIdentityVersions.clientId, clientId))
+      .orderBy(brandIdentityVersions.number);
+  const eventsOf = (clientId: string, action: string) =>
+    db
+      .select()
+      .from(auditEvents)
+      .where(and(eq(auditEvents.clientId, clientId), eq(auditEvents.action, action)));
+
+  beforeAll(async () => {
+    db = createDb(dbUrl!, { max: 6 });
+    const scope = { isAdmin: false, active: true, clients: [] as string[] };
+    anna = { type: "user", id: await mkUser("anna"), ...scope };
+    outsider = { type: "user", id: await mkUser("otto"), ...scope };
+    inactive = { type: "user", id: await mkUser("ines", { active: false }), ...scope };
+    bruno = { type: "user", id: await mkUser("bruno"), ...scope };
+  });
+
+  /** A person writes the insight in the client's open draft. */
+  const editDraft = async (who: User, clientId: string, draft: VersionRow) => {
+    const strategy = (draft.document as { strategy: Record<string, unknown> }).strategy;
+    await saveDraftSection(db, who, {
+      clientId,
+      versionId: draft.id,
+      rev: draft.rev,
+      section: "strategy",
+      value: {
+        ...strategy,
+        insight: { id: "i1", value: "Typed by a person", sourceIds: [], confidence: "high" },
+      },
+    });
+  };
+
+  afterAll(async () => {
+    if (db)
+      for (const clientId of clientIds) {
+        for (const table of [
+          "brand_identity_proposals",
+          "brand_identity_versions",
+          "brand_identities",
+          "brand_sources",
+          "audit_events",
+          "notifications",
+        ])
+          await db.execute(sql`delete from ${sql.identifier(table)} where client_id = ${clientId}`);
+        await db.delete(clients).where(eq(clients.id, clientId));
+      }
+    await db?.execute(sql`delete from users where email like ${"%-" + suffix + "@example.test"}`);
+    await db?.$client.end();
+  });
+
+  let main: string;
+  let firstVersion: string;
+
+  it("publishes a fresh client's import with the person who started it as approver", async () => {
+    main = await mkClient("main");
+    const { result, source, jobId } = await runImport(main, [POSITIONING], { visual: VISUAL });
+    expect(result.auto).toMatchObject({ published: true, skippedHandEdited: 0 });
+    expect(result.auto!.accepted).toBeGreaterThanOrEqual(4); // positioning, two colors, a font
+
+    const mine = await proposalsOf(jobId);
+    expect(mine.length).toBe(result.auto!.accepted);
+    for (const p of mine)
+      expect(p).toMatchObject({ status: "accepted", reviewedBy: anna.id, authorType: "agent" });
+
+    const [v1] = await versionsOf(main);
+    firstVersion = v1!.id;
+    expect(v1).toMatchObject({
+      id: result.auto!.versionId,
+      number: 1,
+      status: "published",
+      approvedBy: anna.id,
+      publishedBy: anna.id,
+      approvalNote: "Automatic import",
+      changelog: "Automatic import from deodue.test",
+    });
+    const doc = parseDocument(v1!.document);
+    expect(doc.strategy.positioning?.value).toBe("Il deodorante bifase del Sud Italia");
+    // The site's navy is the brand color now; it was the starting ink.
+    expect(tokenColorHex(v1!.tokens as TokenTree, "color.semantic.brand-primary")).toBe("#1D3A8A");
+    // The open checks were acknowledged, and exactly those.
+    const open = publishChecks(doc, v1!.tokens as TokenTree, {}).map((c) => c.key);
+    expect(v1!.acknowledgedChecks.length).toBeGreaterThan(0);
+    expect([...v1!.acknowledgedChecks].sort()).toEqual([...open].sort());
+
+    const autoAccepts = await eventsOf(main, "brand.proposal.auto_accept");
+    expect(autoAccepts.length).toBe(result.auto!.accepted);
+    expect(autoAccepts.every((e) => e.actorUserId === anna.id && e.meta.auto === true)).toBe(true);
+    for (const action of ["brand.version.approve", "brand.version.publish"]) {
+      const [e] = await eventsOf(main, action);
+      expect(e).toMatchObject({ entityId: v1!.id, actorUserId: anna.id });
+      expect(e!.meta).toMatchObject({ auto: true, runId: jobId });
+    }
+    expect(source.statusDetailRef?.map((r) => r.key)).toContain("brand.import.status.autoApplied");
+    expect(source.statusDetail).toContain("applied automatically · version published");
+
+    expect(await latestAutoImport(db, anna, main)).toMatchObject({
+      versionId: v1!.id,
+      number: 1,
+      accepted: result.auto!.accepted,
+      current: true,
+      previous: false,
+    });
+    expect(await refOf(latestAutoImport(db, outsider, main))).toBe("permission_denied");
+  });
+
+  it("keeps a one-liner a person wrote when the site is imported again", async () => {
+    const draft = await ensureDraft(db, anna, main);
+    const strategy = (draft.document as { strategy: Record<string, unknown> }).strategy;
+    const saved = await saveDraftSection(db, anna, {
+      clientId: main,
+      versionId: draft.id,
+      rev: draft.rev,
+      section: "strategy",
+      value: {
+        ...strategy,
+        oneLiner: { id: "o1", value: "Written by Anna", sourceIds: [], confidence: "high" },
+      },
+    });
+    const publish = { clientId: main, versionId: draft.id, rev: saved.rev };
+    const human = {
+      ...publish,
+      changelog: "One-liner written by the team",
+      note: "Written in the kickoff",
+    };
+    const v2 = await approveAndPublish(db, anna, {
+      ...human,
+      acknowledged: await missingChecks(
+        approveAndPublish(db, anna, { ...human, acknowledged: [] }),
+      ),
+    });
+
+    const { result, jobId } = await runImport(main, [ONE_LINER, VALUE]);
+    expect(result.auto).toMatchObject({ accepted: 1, skippedHandEdited: 1, published: true });
+    const kept = (await proposalsOf(jobId)).find(
+      (p) => p.fieldPath === "/document/strategy/oneLiner",
+    )!;
+    expect(kept).toMatchObject({
+      status: "rejected",
+      reviewedBy: anna.id,
+      reviewNote: "hand-edited field kept",
+    });
+
+    const versions = await versionsOf(main);
+    const v3 = versions.find((v) => v.id === result.auto!.versionId)!;
+    expect(v3).toMatchObject({ number: 3, status: "published" });
+    expect(versions.find((v) => v.id === v2.versionId)!.status).toBe("archived");
+    const doc = parseDocument(v3.document);
+    expect(doc.strategy.oneLiner?.value).toBe("Written by Anna");
+    expect(doc.strategy.values.map((v) => v.value.name)).toContain("Famiglia");
+  });
+
+  it("with holdStatus the source stays extracting, with its status line, until the caller ends it", async () => {
+    const clientId = await mkClient("hold");
+    const { source, result } = await runImport(clientId, [POSITIONING], {
+      autoApply: false,
+      holdStatus: true,
+    });
+    expect(source.status).toBe("extracting");
+    expect(source.statusDetailRef?.map((r) => r.key)).toContain("brand.import.status.proposals");
+    expect(result.status).toBe("extracted");
+  });
+
+  it("leaves the proposals pending when nobody started the run", async () => {
+    const clientId = await mkClient("system");
+    const { result, source, jobId } = await runImport(clientId, [POSITIONING], {
+      requestedBy: null,
+    });
+    expect(result.auto).toMatchObject({ accepted: 0, published: false, reason: "no_requester" });
+    const mine = await proposalsOf(jobId);
+    expect(mine.length).toBeGreaterThan(0);
+    expect(mine.every((p) => p.status === "proposed")).toBe(true);
+    expect((await versionsOf(clientId)).map((v) => v.status)).toEqual(["draft"]);
+    expect(source.statusDetailRef?.map((r) => r.key)).toContain(
+      "brand.import.status.autoNotApplied",
+    );
+    expect(source.statusDetail).toContain("the import was not started by a person");
+  });
+
+  it("writes nothing for a person without access, or no longer active", async () => {
+    for (const [i, [who, reason]] of (
+      [
+        [outsider.id, "no_access"],
+        [inactive.id, "no_access"],
+        [crypto.randomUUID(), "no_requester"],
+      ] as const
+    ).entries()) {
+      const clientId = await mkClient(`denied-${i}`);
+      const { result, jobId } = await runImport(clientId, [POSITIONING], { requestedBy: who });
+      expect(result.auto).toMatchObject({ accepted: 0, published: false, reason });
+      expect((await proposalsOf(jobId)).every((p) => p.status === "proposed")).toBe(true);
+      expect((await versionsOf(clientId)).map((v) => v.status)).toEqual(["draft"]);
+      expect(await eventsOf(clientId, "brand.proposal.auto_accept")).toEqual([]);
+    }
+  });
+
+  it("never acts for an agent: it takes no actor, and a non-user id is nobody", async () => {
+    const clientId = await mkClient("agent");
+    const { jobId } = await runImport(clientId, [POSITIONING], { autoApply: false });
+    // @ts-expect-error applyImport takes no actor: it rebuilds the person from requestedBy.
+    const asAgent = await applyImport(db, agent, { clientId, requestedBy: null, runId: jobId });
+    expect(asAgent).toMatchObject({ accepted: 0, reason: "no_requester" });
+    const byName = await applyImport(db, {
+      clientId,
+      requestedBy: "agent:brand_analyst",
+      runId: jobId,
+    });
+    expect(byName).toMatchObject({ accepted: 0, reason: "no_requester" });
+    expect((await proposalsOf(jobId)).every((p) => p.status === "proposed")).toBe(true);
+  });
+
+  it("does not auto-apply an uploaded document's proposals", async () => {
+    const clientId = await mkClient("doc");
+    const s = await addSource(db, anna, { clientId, kind: "document", title: "Brief" });
+    await updateSourceStatus(db, s.id, { pages: PAGES });
+    const jobId = crypto.randomUUID();
+    const result = await runSourceImport(
+      { db, storage, ai: fakeAi([POSITIONING]) },
+      { jobId, attempt: 1, maxAttempts: 1, requestedBy: anna.id },
+      { clientId, sourceId: s.id, autoApply: true },
+    );
+    expect(result.auto).toBeUndefined();
+    // Even asked directly, a document's proposals stay in the queue.
+    expect(await applyImport(db, { clientId, requestedBy: anna.id, runId: jobId })).toMatchObject({
+      accepted: 0,
+      published: false,
+    });
+    expect((await proposalsOf(jobId)).every((p) => p.status === "proposed")).toBe(true);
+  });
+
+  let concurrent: string;
+
+  it("publishes once when the same run is applied twice at the same time", async () => {
+    concurrent = await mkClient("race");
+    const { jobId } = await runImport(concurrent, [POSITIONING, VALUE], { autoApply: false });
+    const input = { clientId: concurrent, requestedBy: anna.id, runId: jobId };
+    const [a, b] = await Promise.all([applyImport(db, input), applyImport(db, input)]);
+    expect([a.published, b.published].filter(Boolean)).toHaveLength(1);
+    expect(a.accepted + b.accepted).toBe(2);
+    const published = (await versionsOf(concurrent)).filter((v) => v.publishedAt);
+    expect(published).toHaveLength(1);
+    expect((await proposalsOf(jobId)).every((p) => p.status === "accepted")).toBe(true);
+  });
+
+  it("serializes two different runs on one client without losing proposals", async () => {
+    const one = await runImport(concurrent, [AUDIENCE], { autoApply: false, title: "one" });
+    const two = await runImport(concurrent, [ONE_LINER], { autoApply: false, title: "two" });
+    const results = await Promise.all(
+      [one.jobId, two.jobId].map((runId) =>
+        applyImport(db, { clientId: concurrent, requestedBy: anna.id, runId }),
+      ),
+    );
+    expect(results.every((r) => r.published && r.accepted === 1)).toBe(true);
+    const versions = await versionsOf(concurrent);
+    expect(versions.filter((v) => v.status === "published")).toHaveLength(1);
+    expect(versions.filter((v) => v.publishedAt)).toHaveLength(3);
+    const doc = parseDocument(versions.find((v) => v.status === "published")!.document);
+    expect(doc.strategy.oneLiner?.value).toBe("Il deodorante bifase");
+    expect(doc.strategy.audience.map((a) => a.value.name)).toContain("Famiglie del Sud");
+    for (const { jobId } of [one, two])
+      expect((await proposalsOf(jobId)).every((p) => p.status === "accepted")).toBe(true);
+  });
+
+  it("keeps accepted items in the draft when the draft cannot be published", async () => {
+    const clientId = await mkClient("invalid");
+    const { jobId } = await runImport(clientId, [POSITIONING], { autoApply: false });
+    // A broken alias in the draft: accepting a text field still works, publishing does not.
+    const [draft] = await versionsOf(clientId);
+    const tokens = structuredClone(draft!.tokens) as {
+      color: { semantic: Record<string, unknown> };
+    };
+    tokens.color.semantic.accent = { $value: "{color.reference.missing}" };
+    await db
+      .update(brandIdentityVersions)
+      .set({ tokens })
+      .where(eq(brandIdentityVersions.id, draft!.id));
+
+    const result = await applyImport(db, { clientId, requestedBy: anna.id, runId: jobId });
+    expect(result).toMatchObject({ accepted: 1, published: false, reason: "not_publishable" });
+    const [after] = await versionsOf(clientId);
+    expect(after!.status).toBe("draft");
+    expect(parseDocument(after!.document).strategy.positioning?.value).toBe(
+      "Il deodorante bifase del Sud Italia",
+    );
+    expect((await proposalsOf(jobId)).every((p) => p.status === "accepted")).toBe(true);
+    expect(await eventsOf(clientId, "brand.version.publish")).toEqual([]);
+  });
+
+  it("undoes an automatic import back to the version before it", async () => {
+    const before = await latestAutoImport(db, anna, main);
+    expect(before).toMatchObject({ number: 3, current: true, previous: true });
+    expect(before!.undone).toBeUndefined();
+    const v3 = before!.versionId;
+
+    expect(await refOf(undoImport(db, agent, { clientId: main, versionId: v3 }))).toBe(
+      "permission_denied",
+    );
+    expect(await refOf(undoImport(db, outsider, { clientId: main, versionId: v3 }))).toBe(
+      "permission_denied",
+    );
+    expect(await refOf(undoImport(db, anna, { clientId: main, versionId: firstVersion }))).toBe(
+      "brand.errors.undoNotCurrent",
+    );
+
+    // An open draft is replaced only when the person confirms it.
+    const open = await ensureDraft(db, anna, main);
+    expect(await refOf(undoImport(db, anna, { clientId: main, versionId: v3 }))).toBe(
+      "brand.errors.draftExists",
+    );
+    expect((await versionsOf(main)).find((v) => v.id === open.id)!.status).toBe("draft");
+
+    const undone = await undoImport(db, anna, {
+      clientId: main,
+      versionId: v3,
+      replaceDraft: true,
+    });
+    expect(undone).toMatchObject({ number: 5, archivedVersionId: v3 });
+    const versions = await versionsOf(main);
+    expect(versions.find((v) => v.id === open.id)!.status).toBe("archived");
+    const v4 = versions.find((v) => v.number === 5)!;
+    const v2 = versions.find((v) => v.number === 2)!;
+    expect(v4).toMatchObject({
+      status: "published",
+      publishedBy: anna.id,
+      restoredFromVersionId: v2.id,
+      changelog: "Undo of automatic import v3",
+    });
+    expect(v4.document).toEqual(v2.document);
+    // The undo's own publish says it was not automatic.
+    const undoPublish = (await eventsOf(main, "brand.version.publish")).find(
+      (e) => e.entityId === v4.id,
+    );
+    expect(undoPublish!.meta).toMatchObject({ auto: false, undoOf: 3 });
+    // The card says what happened: v5 undid v3 and restores v2.
+    expect(await latestAutoImport(db, anna, main)).toMatchObject({
+      number: 3,
+      current: false,
+      undone: { by: 5, restores: 2 },
+    });
+
+    // v4 was published by a person, not by an import.
+    expect(await refOf(undoImport(db, anna, { clientId: main, versionId: v4.id }))).toBe(
+      "brand.errors.undoNotAutomatic",
+    );
+  });
+
+  it("refuses to undo a first import: there is nothing before it", async () => {
+    const clientId = await mkClient("first");
+    const { result } = await runImport(clientId, [POSITIONING]);
+    expect(result.auto?.published).toBe(true);
+    expect(
+      await refOf(undoImport(db, anna, { clientId, versionId: result.auto!.versionId! })),
+    ).toBe("brand.errors.undoNoPrevious");
+  });
+  it("leaves a field another source proposes to a person, and does not touch that proposal", async () => {
+    const clientId = await mkClient("contested");
+    const book = await addSource(db, anna, { clientId, kind: "document", title: "Brand book" });
+    await updateSourceStatus(db, book.id, { pages: PAGES });
+    const bookRun = crypto.randomUUID();
+    await runSourceImport(
+      {
+        db,
+        storage,
+        ai: fakeAi([
+          item({ field: "positioning", text: "Il deodorante di famiglia" }),
+          item({ field: "category", text: "Deodoranti" }),
+        ]),
+      },
+      { jobId: bookRun, attempt: 1, maxAttempts: 1, requestedBy: anna.id },
+      { clientId, sourceId: book.id, autoApply: true },
+    );
+    // A sensitive field in conflict, and a plain one: both are the brand book's to settle.
+    const contested = async (runId: string) =>
+      (await proposalsOf(runId))
+        .filter((p) => /positioning|category/.test(p.fieldPath))
+        .sort((a, b) => a.fieldPath.localeCompare(b.fieldPath));
+    const before = await contested(bookRun);
+    expect(before.map((p) => p.status)).toEqual(["proposed", "proposed"]);
+
+    const category = item({ field: "category", text: "Cosmetica" });
+    const { result, jobId } = await runImport(clientId, [POSITIONING, category, VALUE]);
+    expect(result.auto).toMatchObject({ accepted: 1, needsReview: 2, published: true });
+    expect((await contested(jobId)).map((p) => p.status)).toEqual(["proposed", "proposed"]);
+    expect(await contested(bookRun)).toEqual(before);
+    const published = (await versionsOf(clientId)).find((v) => v.status === "published")!;
+    const strategy = parseDocument(published.document).strategy;
+    expect(strategy.positioning).toBeUndefined();
+    expect(strategy.category).toBeUndefined();
+    expect(result.detail).toContain("2 items wait for a review");
+  });
+
+  it("leaves an uncertain sensitive item pending, and no empty draft behind", async () => {
+    const clientId = await mkClient("uncertain");
+    const { jobId } = await runImport(clientId, [POSITIONING], { autoApply: false });
+    const [p] = await proposalsOf(jobId);
+    await db
+      .update(brandIdentityProposals)
+      .set({ confidence: "low" })
+      .where(eq(brandIdentityProposals.id, p!.id));
+    // A person publishes the draft the proposal opened: no draft is open any more.
+    const [draft] = await versionsOf(clientId);
+    const human = {
+      clientId,
+      versionId: draft!.id,
+      rev: draft!.rev,
+      changelog: "Published by hand before the import",
+    };
+    await approveAndPublish(db, anna, {
+      ...human,
+      acknowledged: await missingChecks(
+        approveAndPublish(db, anna, { ...human, acknowledged: [] }),
+      ),
+    });
+
+    const result = await applyImport(db, { clientId, requestedBy: anna.id, runId: jobId });
+    expect(result).toMatchObject({ accepted: 0, needsReview: 1, published: false });
+    expect((await proposalsOf(jobId))[0]!.status).toBe("proposed");
+    expect((await versionsOf(clientId)).map((v) => v.status)).toEqual(["published"]);
+  });
+
+  it("keeps a color a person changed in the token editor when an import proposes it again", async () => {
+    const clientId = await mkClient("tokens");
+    const { source, result: first } = await runImport(clientId, [], { visual: VISUAL });
+    expect(first.auto?.published).toBe(true);
+    const draft = await ensureDraft(db, anna, clientId);
+    type Token = { $value: unknown; $extensions?: { forgecy?: unknown } };
+    const tokens = structuredClone(draft.tokens) as { color: { reference: Record<string, Token> } };
+    const imported = Object.keys(tokens.color.reference).filter(
+      (n) => tokens.color.reference[n]!.$extensions?.forgecy,
+    );
+    expect(imported.length).toBeGreaterThanOrEqual(2);
+    const [edited, untouched] = imported as [string, string];
+    tokens.color.reference[edited]!.$value = hexToDtcg("#000000");
+    await saveDraftTokens(db, anna, {
+      clientId,
+      versionId: draft.id,
+      rev: draft.rev,
+      tokens: tokens as unknown as TokenTree,
+    });
+    const reference = async () =>
+      (
+        (await versionsOf(clientId)).find((v) => v.id === draft.id)!.tokens as {
+          color: { reference: Record<string, Token> };
+        }
+      ).color.reference;
+    expect((await reference())[edited]!.$extensions?.forgecy).toBeUndefined();
+    expect((await reference())[untouched]!.$extensions?.forgecy).toBeDefined();
+
+    // A later import proposes the site's value for that color again.
+    const runId = crypto.randomUUID();
+    await proposeChange(
+      db,
+      { type: "agent", role: "brand_analyst", runId },
+      {
+        clientId,
+        path: `/tokens/color/reference/${edited}`,
+        value: { $value: hexToDtcg("#1D3A8A") },
+        evidence: [{ sourceId: source.id }],
+      },
+    );
+    const result = await applyImport(db, { clientId, requestedBy: anna.id, runId });
+    expect(result).toMatchObject({ accepted: 0, skippedHandEdited: 1 });
+    expect((await reference())[edited]!.$value).toEqual(hexToDtcg("#000000"));
+  });
+
+  it("sets only the color roles still at their starting value, once", async () => {
+    const clientId = await mkClient("roles");
+    // A person chose the brand color by hand before any import.
+    const draft = await ensureDraft(db, anna, clientId);
+    const tokens = structuredClone(draft.tokens) as {
+      color: { semantic: Record<string, unknown> };
+    };
+    tokens.color.semantic["brand-primary"] = { $value: "{color.reference.gray}" };
+    await saveDraftTokens(db, anna, {
+      clientId,
+      versionId: draft.id,
+      rev: draft.rev,
+      tokens: tokens as unknown as TokenTree,
+    });
+    const visual: SiteProbe = {
+      ...VISUAL,
+      themeColor: undefined,
+      cssVars: [
+        { name: "--brand-primary", hex: "#1d3a8a" },
+        { name: "--accent", hex: "#c0392b" },
+      ],
+    };
+    const { jobId } = await runImport(clientId, [POSITIONING], { visual });
+    const roles = (await proposalsOf(jobId)).filter((p) =>
+      p.fieldPath.startsWith("/tokens/color/semantic/"),
+    );
+    // The brand color is the person's: only the accent is proposed, and applied.
+    expect(roles.map((p) => p.fieldPath)).toEqual(["/tokens/color/semantic/accent"]);
+    const [v] = await versionsOf(clientId);
+    expect(tokenColorHex(v!.tokens as TokenTree, "color.semantic.brand-primary")).toBe("#5C5C5C");
+    expect(tokenColorHex(v!.tokens as TokenTree, "color.semantic.accent")).toBe("#C0392B");
+
+    // Imported again: the accent is no longer the starting value, nothing is proposed for it.
+    const again = await runImport(clientId, [], { visual });
+    expect(
+      (await proposalsOf(again.jobId)).filter((p) =>
+        p.fieldPath.startsWith("/tokens/color/semantic/"),
+      ),
+    ).toEqual([]);
+  });
+
+  it("keeps a value a person corrected with Accept with changes", async () => {
+    const clientId = await mkClient("edited");
+    const first = await runImport(clientId, [ONE_LINER], { autoApply: false });
+    const [p] = await proposalsOf(first.jobId);
+    await acceptProposal(db, anna, {
+      clientId,
+      proposalId: p!.id,
+      editedValue: "Corrected by Anna",
+    });
+    const { result } = await runImport(clientId, [
+      item({ field: "oneLiner", text: "Nata nel Sud Italia" }),
+    ]);
+    expect(result.auto).toMatchObject({ accepted: 0, skippedHandEdited: 1 });
+    const draft = (await versionsOf(clientId)).find((v) => v.status === "draft")!;
+    expect(parseDocument(draft.document).strategy.oneLiner?.value).toBe("Corrected by Anna");
+  });
+
+  it("keeps a brand-book value a person accepted when the site proposes another", async () => {
+    const clientId = await mkClient("book-kept");
+    const book = await addSource(db, anna, { clientId, kind: "document", title: "Brand book" });
+    await updateSourceStatus(db, book.id, { pages: PAGES });
+    const bookRun = crypto.randomUUID();
+    await runSourceImport(
+      {
+        db,
+        storage,
+        ai: fakeAi([item({ field: "positioning", text: "Il deodorante di famiglia" })]),
+      },
+      { jobId: bookRun, attempt: 1, maxAttempts: 1, requestedBy: anna.id },
+      { clientId, sourceId: book.id },
+    );
+    const [fromBook] = await proposalsOf(bookRun);
+    await acceptProposal(db, anna, { clientId, proposalId: fromBook!.id });
+
+    // The site quotes its own words, not the book's.
+    const fromSite = { ...POSITIONING, quote: "Nata nel Sud Italia." } as AnalystItem;
+    const { result, jobId } = await runImport(clientId, [fromSite]);
+    expect(result.auto).toMatchObject({ accepted: 0, skippedHandEdited: 1 });
+    const [site] = await proposalsOf(jobId);
+    expect(site).toMatchObject({ status: "rejected", reviewNote: "hand-edited field kept" });
+    const draft = (await versionsOf(clientId)).find((v) => v.status === "draft")!;
+    expect(parseDocument(draft.document).strategy.positioning?.value).toBe(
+      "Il deodorante di famiglia",
+    );
+  });
+
+  it("keeps a site value a person accepted from the review queue", async () => {
+    const clientId = await mkClient("queue-kept");
+    const first = await runImport(clientId, [POSITIONING], { autoApply: false });
+    const [p] = await proposalsOf(first.jobId);
+    expect(p!.confidence).toBe("medium");
+    await acceptProposal(db, anna, { clientId, proposalId: p!.id });
+
+    const other = item({
+      field: "positioning",
+      text: "Nata nel Sud Italia",
+      quote: "Nata nel Sud Italia.",
+    });
+    const { result } = await runImport(clientId, [other]);
+    expect(result.auto).toMatchObject({ accepted: 0, skippedHandEdited: 1 });
+    const draft = (await versionsOf(clientId)).find((v) => v.status === "draft")!;
+    expect(parseDocument(draft.document).strategy.positioning?.value).toBe(
+      "Il deodorante bifase del Sud Italia",
+    );
+  });
+
+  it("proposes nothing a second run of the site already applied or left waiting", async () => {
+    const clientId = await mkClient("rerun");
+    const tagline = item({ field: "message", kind: "tagline", text: "Solo profumo.", proof: "" });
+    const first = await runImport(clientId, [VALUE, AUDIENCE, tagline, POSITIONING]);
+    expect(first.result.auto).toMatchObject({ published: true });
+    // A tagline left waiting for a person (as a contested or uncertain item would be).
+    const waiting = item({
+      field: "avoidTopic",
+      text: "Prezzi",
+      quote: "Siamo una famiglia che produce",
+      locator: "/about",
+    });
+    await runImport(clientId, [waiting], { autoApply: false });
+    const queue = async () =>
+      (
+        await db
+          .select()
+          .from(brandIdentityProposals)
+          .where(eq(brandIdentityProposals.clientId, clientId))
+      ).filter((p) => p.status === "proposed");
+    expect(await queue()).toHaveLength(1);
+
+    // The same site again, written a little differently by the model.
+    const { result } = await runImport(clientId, [
+      { ...VALUE, name: "famiglia." } as AnalystItem,
+      { ...AUDIENCE, name: "Famiglie del sud" } as AnalystItem,
+      // Other words, same evidence: the tagline the site already gave.
+      { ...tagline, text: "Profumo, e basta" } as AnalystItem,
+      { ...waiting, text: "prezzi!" } as AnalystItem,
+      { ...POSITIONING, text: "Il deodorante bifase del Sud Italia" } as AnalystItem,
+    ]);
+    expect(result.proposals).toBe(0);
+    expect(result.skipped).toBeGreaterThanOrEqual(5);
+    expect(await queue()).toHaveLength(1);
+    const published = (await versionsOf(clientId)).find((v) => v.status === "published")!;
+    const strategy = parseDocument(published.document).strategy;
+    expect(strategy.values).toHaveLength(1);
+    expect(strategy.audience).toHaveLength(1);
+    expect(strategy.messages).toHaveLength(1);
+  });
+
+  it("does not publish a draft that holds a colleague's work", async () => {
+    const inReview = await mkClient("review");
+    const d1 = await ensureDraft(db, bruno, inReview);
+    await submitForReview(db, bruno, { clientId: inReview, versionId: d1.id, rev: d1.rev });
+    const r1 = await runImport(inReview, [POSITIONING]);
+    expect(r1.result.auto).toMatchObject({
+      accepted: 1,
+      published: false,
+      reason: "draft_shared",
+    });
+    expect(r1.source.statusDetailRef?.map((r) => r.key)).toContain(
+      "brand.import.status.autoNotPublished",
+    );
+    expect(r1.source.statusDetail).toContain("the draft holds work by someone else");
+    const [v] = await versionsOf(inReview);
+    expect(v!.status).toBe("in_review");
+    expect(parseDocument(v!.document).strategy.positioning?.value).toBe(
+      "Il deodorante bifase del Sud Italia",
+    );
+
+    const colleague = await mkClient("colleague");
+    await editDraft(bruno, colleague, await ensureDraft(db, bruno, colleague));
+    const r2 = await runImport(colleague, [POSITIONING]);
+    expect(r2.result.auto).toMatchObject({ accepted: 1, published: false, reason: "draft_shared" });
+    expect((await versionsOf(colleague)).every((x) => x.status === "draft")).toBe(true);
+  });
+
+  it("publishes a draft only the requester worked on", async () => {
+    const own = await mkClient("own");
+    await editDraft(anna, own, await ensureDraft(db, anna, own));
+    const { result } = await runImport(own, [POSITIONING]);
+    expect(result.auto).toMatchObject({ accepted: 1, published: true });
+  });
+});

@@ -59,7 +59,13 @@ export const brandHandlers: JobHandlers = {
         requestedBy: payload.requestedBy ?? null,
         progress: ctx.progress,
       },
-      { clientId: payload.clientId, sourceId: payload.sourceId, language: payload.language },
+      {
+        clientId: payload.clientId,
+        sourceId: payload.sourceId,
+        language: payload.language,
+        // Only website and social sources apply themselves; documents keep the review queue.
+        autoApply: true,
+      },
     );
     return { ...result };
   }),
