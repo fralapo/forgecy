@@ -165,6 +165,20 @@ async function fetchText(
   }
 }
 
+/**
+ * Whether the ForgecyAudit agent may fetch `url` under its host's robots.txt, for callers that
+ * read a single page outside crawlSite. A missing or unreadable robots.txt allows, as in the crawl.
+ */
+export async function robotsAllows(
+  url: string,
+  options: Pick<CrawlOptions, "userAgent" | "fetchImpl" | "hostCheck">,
+): Promise<boolean> {
+  const robotsUrl = `${new URL(url).origin}/robots.txt`;
+  const res = await fetchText(robotsUrl, options);
+  const parser = robotsParser(robotsUrl, res?.status === 200 ? res.text : "");
+  return parser.isAllowed(url, AUDIT_USER_AGENT_TOKEN) !== false;
+}
+
 /** User agents of the AI answer engines' crawlers, checked against robots.txt. */
 export const AI_CRAWLERS = [
   "GPTBot",
