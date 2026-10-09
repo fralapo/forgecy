@@ -772,7 +772,10 @@
       "aiNotRun": "AI interpretation not run: {message}",
       "aiFailed": "AI interpretation failed",
       "crawlPages": "{count, plural, one {# page read} other {# pages read}} from the site",
-      "crawlSkipped": "{count, plural, one {# page skipped} other {# pages skipped}}"
+      "crawlSkipped": "{count, plural, one {# page skipped} other {# pages skipped}}",
+      "socialLoginWall": "The profile is not public without logging in: nothing was read",
+      "socialRobots": "The profile's site does not allow automatic reading: nothing was read",
+      "socialUnreachable": "The profile could not be reached or has nothing public to read"
     },
     "warnings": {
       "firstPages": "Only the first {max} pages were read",
@@ -810,7 +813,8 @@
       "siteStyles": "Site styles",
       "siteFonts": "Site fonts",
       "siteButtons": "Buttons and links",
-      "siteThemeColor": "Site theme color"
+      "siteThemeColor": "Site theme color",
+      "socialProfile": "Profile"
     },
     "quotes": {
       "themeColor": "Theme color {slot}",

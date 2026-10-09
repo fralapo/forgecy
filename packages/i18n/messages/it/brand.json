@@ -772,7 +772,10 @@
       "aiNotRun": "Interpretazione AI non eseguita: {message}",
       "aiFailed": "Interpretazione AI non riuscita",
       "crawlPages": "{count, plural, one {# pagina letta} other {# pagine lette}} dal sito",
-      "crawlSkipped": "{count, plural, one {# pagina saltata} other {# pagine saltate}}"
+      "crawlSkipped": "{count, plural, one {# pagina saltata} other {# pagine saltate}}",
+      "socialLoginWall": "Il profilo non è pubblico senza accedere: non è stato letto nulla",
+      "socialRobots": "Il sito del profilo non consente la lettura automatica: non è stato letto nulla",
+      "socialUnreachable": "Il profilo non è raggiungibile o non ha nulla di pubblico da leggere"
     },
     "warnings": {
       "firstPages": "Sono state lette solo le prime {max} pagine",
@@ -810,7 +813,8 @@
       "siteStyles": "Stili del sito",
       "siteFonts": "Font del sito",
       "siteButtons": "Pulsanti e link",
-      "siteThemeColor": "Colore del tema del sito"
+      "siteThemeColor": "Colore del tema del sito",
+      "socialProfile": "Profilo"
     },
     "quotes": {
       "themeColor": "Colore del tema {slot}",

@@ -17,6 +17,7 @@ const written = [
   "Site fonts",
   "Buttons and links",
   "Site theme color",
+  "Profile",
   "Theme color accent1",
   "Color used in the slides",
   "Color used in the drawing",

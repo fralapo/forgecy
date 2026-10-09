@@ -17,6 +17,7 @@ const fixed: Record<string, MessageRef> = {
   "Site fonts": ref("locators.siteFonts"),
   "Buttons and links": ref("locators.siteButtons"),
   "Site theme color": ref("locators.siteThemeColor"),
+  Profile: ref("locators.socialProfile"),
   "Color used in the slides": ref("quotes.slideColor"),
   "Color used in the drawing": ref("quotes.drawingColor"),
   "Imported font: confirm role and license.": ref("rationale.fontImported"),
