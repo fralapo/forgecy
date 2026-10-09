@@ -314,6 +314,64 @@ describe.skipIf(!dbUrl)("runSourceImport on a website (integration)", () => {
       });
       expect(result.ai).toBe("failed");
     });
+
+    describe("a request that times out", () => {
+      const timeout = () => new AiProviderError("timeout", "Request timed out.");
+      const pagesOf = (r: { input: string }) => (r.input.match(/<page /g) ?? []).length;
+      const ok = { data: { items: [] }, provider: "openrouter", model: "fake/model" };
+
+      it("asks the same pages once more and goes on", async () => {
+        const asked: number[] = [];
+        const { result } = await longRun(async (req) => {
+          asked.push(pagesOf(req as { input: string }));
+          if (asked.length === 1) throw timeout();
+          return ok;
+        });
+        // Request 1 (2 pages) timed out and was repeated; request 2 (1 page) went through.
+        expect(asked).toEqual([2, 2, 1]);
+        expect(result.ai).toBe("done");
+      });
+
+      it("splits a chunk of two pages in halves when it times out twice", async () => {
+        const asked: number[] = [];
+        const { result } = await longRun(async (req) => {
+          asked.push(pagesOf(req as { input: string }));
+          if (asked.length <= 2) throw timeout();
+          return ok;
+        });
+        expect(asked).toEqual([2, 2, 1, 1, 1]);
+        expect(result.ai).toBe("done");
+      });
+
+      it("gives each request more time than the gateway default", async () => {
+        const timeouts: unknown[] = [];
+        await longRun(async (req) => {
+          timeouts.push((req as { timeoutMs?: number }).timeoutMs);
+          return ok;
+        });
+        expect(timeouts.every((t) => t === 180_000)).toBe(true);
+      });
+
+      it("does not retry an error that is not a timeout", async () => {
+        let calls = 0;
+        const { result } = await longRun(async () => {
+          calls++;
+          throw new AiProviderError("auth", "bad key");
+        });
+        expect(calls).toBe(1);
+        expect(result.ai).toBe("failed");
+      });
+
+      it("stops within four requests for a chunk that always times out", async () => {
+        let calls = 0;
+        const { result } = await longRun(async () => {
+          calls++;
+          throw timeout();
+        });
+        expect(calls).toBeLessThanOrEqual(4);
+        expect(result.ai).toBe("failed");
+      });
+    });
   });
 
   it("leaves document sources as they were: old prompt, colors and quotes not gated", async () => {

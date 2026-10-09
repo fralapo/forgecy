@@ -68,10 +68,15 @@ function detail(refs: MessageRef[]) {
 const MAX_KNOWN_COLORS = 24;
 /** A dozen pages can yield over a hundred items: above the gateway's default output cap. */
 const ANALYST_MAX_OUTPUT_TOKENS = 24_000;
+/** A big structured answer (10-16k tokens) can take longer than the gateway's 120 s default. */
+const ANALYST_TIMEOUT_MS = 180_000;
 
 /** The provider stopped at the output cap (AiProviderError kind "max_tokens"). */
 const isTruncation = (err: unknown) =>
   err instanceof ForgecyError && err.details?.kind === "max_tokens";
+
+/** The provider did not answer in time (AiProviderError kind "timeout"). */
+const isTimeout = (err: unknown) => err instanceof ForgecyError && err.details?.kind === "timeout";
 
 export interface ImportDeps {
   db: Database;
@@ -452,6 +457,7 @@ export async function runSourceImport(
           authorizedBy: ctx.requestedBy ?? null,
           jobId: ctx.jobId,
           maxOutputTokens: ANALYST_MAX_OUTPUT_TOKENS,
+          timeoutMs: ANALYST_TIMEOUT_MS,
           inputSummary: {
             fields: { document: chunk.map((p) => p.text).join("\n") },
             meta: {
@@ -468,13 +474,26 @@ export async function runSourceImport(
         let answers: Array<{ chunk: ExtractedPage[]; res: Awaited<ReturnType<typeof ask>> }>;
         try {
           answers = [{ chunk, res: await ask(chunk) }];
-        } catch (err) {
-          // A long answer cut at the output cap: the same pages once more, as two halves.
-          if (!isTruncation(err) || chunk.length < 2) throw err;
-          const half = Math.ceil(chunk.length / 2);
-          answers = [];
-          for (const part of [chunk.slice(0, half), chunk.slice(half)])
-            answers.push({ chunk: part, res: await ask(part) });
+        } catch (first) {
+          let err = first;
+          // No answer in time: the same pages once more (a slow call is often a one-off).
+          let retried: typeof answers | null = null;
+          if (isTimeout(err))
+            try {
+              retried = [{ chunk, res: await ask(chunk) }];
+            } catch (second) {
+              err = second;
+            }
+          if (retried) answers = retried;
+          else {
+            // A long answer cut at the output cap, or a second timeout: the same pages as two
+            // halves. At most four requests per chunk; every other error ends the analyst.
+            if (!(isTruncation(err) || isTimeout(err)) || chunk.length < 2) throw err;
+            const half = Math.ceil(chunk.length / 2);
+            answers = [];
+            for (const part of [chunk.slice(0, half), chunk.slice(half)])
+              answers.push({ chunk: part, res: await ask(part) });
+          }
         }
         for (const { chunk: pagesAsked, res } of answers) {
           const locators = new Set(pagesAsked.map((p) => p.locator));
