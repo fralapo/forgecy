@@ -55,6 +55,24 @@ describe("collectSocialProfiles", () => {
   });
 });
 
+describe("collectSocialProfiles and people", () => {
+  it("collects company, school and showcase pages but never a person's /in/ profile", () => {
+    expect(
+      collectSocialProfiles([
+        "https://www.linkedin.com/in/jane-doe",
+        "https://it.linkedin.com/in/john",
+        "https://www.linkedin.com/company/deodue",
+        "https://www.linkedin.com/school/uni",
+        "https://www.linkedin.com/showcase/line",
+      ]).map((p) => p.url),
+    ).toEqual([
+      "https://www.linkedin.com/company/deodue",
+      "https://www.linkedin.com/school/uni",
+      "https://www.linkedin.com/showcase/line",
+    ]);
+  });
+});
+
 describe("parseSocialMeta", () => {
   it("reads the open graph tags, decoding entities", () => {
     const meta = parseSocialMeta(

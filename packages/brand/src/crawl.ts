@@ -215,11 +215,13 @@ export async function runWebsiteCrawl(
 /** A site rarely lists more than a handful of real profiles; the rest is noise. */
 const MAX_SOCIAL_PROFILES = 4;
 
-/** Profile links among the given addresses, canonical, without duplicates; share and post links drop out. */
+/** Profile links among the given addresses, canonical, without duplicates; share and post links and people's LinkedIn pages drop out. */
 export function collectSocialProfiles(urls: string[]): Array<{ kind: SocialKind; url: string }> {
   const seen = new Map<string, { kind: SocialKind; url: string }>();
   for (const raw of urls) {
     const profile = socialProfileOf(raw);
+    // A person's LinkedIn page found on an arbitrary site is that person's data, not the brand's.
+    if (profile?.kind === "linkedin" && new URL(profile.url).pathname.startsWith("/in/")) continue;
     if (profile && !seen.has(profile.url)) seen.set(profile.url, profile);
   }
   return [...seen.values()].slice(0, MAX_SOCIAL_PROFILES);

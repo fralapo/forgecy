@@ -272,6 +272,26 @@ describe.skipIf(!dbUrl)("social profiles (integration)", () => {
     expect(jane!.pages).toHaveLength(1);
   });
 
+  it("reads a person's /in/ link added by hand (text only, no picture)", async () => {
+    vi.stubEnv("FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS", "true");
+    const clientId = await newClient();
+    const s = await addSource(db, agent, {
+      clientId,
+      kind: "linkedin",
+      title: "li",
+      url: `${base}/in/jane-doe`,
+      status: "extracted",
+    });
+    const { ai } = fakeAi([item({ field: "positioning", text: "Il pane di Napoli" })]);
+    const result = await runSourceImport(
+      { db, storage: memoryStorage(), ai, socialNet },
+      { ...ctx(), requestedBy: userId },
+      { clientId, sourceId: s.id },
+    );
+    expect(result).toMatchObject({ pages: 1, proposals: 1 });
+    expect(await db.select().from(assets).where(eq(assets.clientId, clientId))).toEqual([]);
+  });
+
   it("tries a profile again when its import failed, without reading the page a second time", async () => {
     const clientId = await newClient();
     const input = {
