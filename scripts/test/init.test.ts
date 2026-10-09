@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { parseDotenv } from "../lib/dotenv";
-import { initEnv, writeFileAtomic } from "../lib/init";
+import { databaseExists, initEnv, writeFileAtomic } from "../lib/init";
 import { checkSecrets } from "../lib/secrets";
 import { read } from "./helpers";
 
@@ -74,6 +74,30 @@ describe("initEnv: new file", () => {
       expect(envOf(dir).POSTGRES_PASSWORD).toBe("");
     },
   );
+});
+
+describe("databaseExists", () => {
+  const failing = (code: string) => () => {
+    throw Object.assign(new Error(code), { code });
+  };
+
+  it("is false only when the marker is not there", () => {
+    expect(databaseExists("data/db/PG_VERSION", failing("ENOENT"))).toBe(false);
+  });
+
+  // The postgres entrypoint makes data/db mode 0700 owned by another uid: a normal user gets EACCES
+  // for the marker, and the database very much exists.
+  it.each(["EACCES", "EPERM", "ELOOP"])("is true when stat fails with %s", (code) => {
+    expect(databaseExists("data/db/PG_VERSION", failing(code))).toBe(true);
+  });
+
+  it("is true when the marker is there, and works on a real path", () => {
+    const dir = sandbox();
+    expect(databaseExists(join(dir, "data/db/PG_VERSION"))).toBe(false);
+    mkdirSync(join(dir, "data/db"), { recursive: true });
+    writeFileSync(join(dir, "data/db/PG_VERSION"), "17\n");
+    expect(databaseExists(join(dir, "data/db/PG_VERSION"))).toBe(true);
+  });
 });
 
 describe("initEnv --fill", () => {

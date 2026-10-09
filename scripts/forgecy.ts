@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { backup, restore } from "./lib/backup";
 import { parseDotenv } from "./lib/dotenv";
 import { checkHealth, healthTargets } from "./lib/health";
-import { initEnv, MAIN_DB_MARKER } from "./lib/init";
+import { databaseExists, initEnv, MAIN_DB_MARKER } from "./lib/init";
 import { checkSecrets } from "./lib/secrets";
 import { compose, readOnlyComposeEnv, run } from "./lib/shell";
 
@@ -33,7 +33,7 @@ function preflight(): void {
     POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD ?? file.POSTGRES_PASSWORD,
   };
   const { errors, warnings } = checkSecrets(env, {
-    existingDatabase: existsSync(MAIN_DB_MARKER),
+    existingDatabase: databaseExists(MAIN_DB_MARKER),
     rawText,
   });
   for (const warning of warnings) console.warn(`warning: ${warning}`);
@@ -50,7 +50,7 @@ function init(): void {
   else if (!passwordSkipped) console.log("Nothing to fill: every secret already has a value.");
   if (passwordSkipped)
     console.log(
-      "POSTGRES_PASSWORD was left empty: a database already exists in data/db or data/dev-db. Set it to that database's current password (`forgecy` on installs from before this check), see README, Upgrading.",
+      "POSTGRES_PASSWORD was left empty: a database already exists in data/db or data/dev-db. Set it to that database's current password (`forgecy` if the old .env left it empty, `change-me` if it kept the example value), see README, Upgrading.",
     );
   if (filled.includes("FORGECY_ENCRYPTION_KEY"))
     console.log(

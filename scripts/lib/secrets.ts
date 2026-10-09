@@ -55,7 +55,7 @@ export function checkSecrets(
   if (!password) {
     errors.push(
       options.existingDatabase
-        ? "POSTGRES_PASSWORD is empty, but a database already exists in data/db. Installs from before this check had no password in .env and used the default `forgecy`: add POSTGRES_PASSWORD=forgecy to .env to keep the current database, then rotate it (README, Upgrading)."
+        ? "POSTGRES_PASSWORD is empty, but a database already exists in data/db. An install whose .env left the password empty or unset used the default `forgecy`: add POSTGRES_PASSWORD=forgecy to .env to keep the current database, then rotate it (README, Upgrading). If you remember another value, use that one."
         : "POSTGRES_PASSWORD is empty. Run `pnpm forgecy init --fill` to generate it, or set it in .env.",
     );
   } else if (BREAKS_PASSWORD.test(password)) {
@@ -65,11 +65,11 @@ export function checkSecrets(
   } else if (GUESSABLE.has(password.toLowerCase())) {
     if (options.existingDatabase)
       warnings.push(
-        "POSTGRES_PASSWORD is guessable. The password inside the existing database does not change when you edit .env: change it with ALTER USER first, then update .env (README, Upgrading).",
+        "POSTGRES_PASSWORD is guessable, and this value is the password your existing database was created with: KEEP it for now so the app can still connect, then rotate it (README, Upgrading). Editing .env alone does not change the password inside the database.",
       );
     else
       errors.push(
-        "POSTGRES_PASSWORD is guessable. Replace it in .env by hand (for example with `openssl rand -hex 24`) and use the same value in DATABASE_URL. If a database already exists in data/db, add POSTGRES_PASSWORD=forgecy to keep it, then rotate it (README, Upgrading).",
+        "POSTGRES_PASSWORD is guessable. Replace it in .env by hand (for example with `openssl rand -hex 24`) and use the same value in DATABASE_URL.",
       );
   }
   const authSecret = env.BETTER_AUTH_SECRET ?? "";

@@ -33,16 +33,23 @@ describe("checkSecrets", () => {
       expect(r.errors.join()).toMatch(/guessable/);
       // init --fill never replaces a set value: the message must say to edit by hand.
       expect(r.errors.join()).toMatch(/by hand.*openssl rand -hex 24.*DATABASE_URL/s);
-      expect(r.errors.join()).toContain("POSTGRES_PASSWORD=forgecy");
+      expect(r.errors.join()).not.toContain("POSTGRES_PASSWORD=forgecy");
       expect(r.errors.join()).not.toContain("init --fill");
     },
   );
 
-  it("only warns when a database already exists", () => {
-    const r = checkSecrets({ ...good, POSTGRES_PASSWORD: "forgecy" }, { existingDatabase: true });
-    expect(r.errors).toEqual([]);
-    expect(r.warnings.join()).toMatch(/guessable/);
-  });
+  // Main shipped POSTGRES_PASSWORD=change-me in .env.example, so most existing databases were created
+  // with it: the app must keep starting, and the message must not tell them to switch to `forgecy`.
+  it.each(["change-me", "forgecy"])(
+    "only warns about %j when a database already exists, and says to keep it then rotate",
+    (password) => {
+      const r = checkSecrets({ ...good, POSTGRES_PASSWORD: password }, { existingDatabase: true });
+      expect(r.errors).toEqual([]);
+      expect(r.warnings.join()).toMatch(/guessable/);
+      expect(r.warnings.join()).toMatch(/KEEP it for now.*rotate it.*Upgrading/);
+      expect(r.warnings.join()).not.toContain("POSTGRES_PASSWORD=forgecy");
+    },
+  );
 
   it.each([
     "p@ss",

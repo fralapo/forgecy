@@ -3,6 +3,7 @@ import {
   existsSync,
   readFileSync,
   renameSync,
+  statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -14,6 +15,23 @@ import type { GeneratedSecrets, SecretKey } from "./secrets";
 export const MAIN_DB_MARKER = "data/db/PG_VERSION";
 /** A database exists for the main stack or for docker-compose.dev.yml: its password cannot be changed from .env. */
 const DB_MARKERS = [MAIN_DB_MARKER, "data/dev-db/PG_VERSION"];
+
+/**
+ * True unless the marker is plainly absent (ENOENT). The postgres entrypoint makes data/db mode
+ * 0700 owned by another uid, so a normal user gets EACCES for the marker inside it: existsSync would
+ * say false there (it hides every error) and the CLI would believe no database exists.
+ */
+export function databaseExists(
+  marker: string,
+  stat: (path: string) => unknown = statSync,
+): boolean {
+  try {
+    stat(marker);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== "ENOENT";
+  }
+}
 
 /**
  * Replaces `path` with `content` without ever leaving it half written: the new text goes to a
@@ -59,11 +77,11 @@ export function initEnv(dir: string, options: { fill: boolean }): InitResult {
       ".env already exists: not touching it. To generate only the secrets that are empty in it, run `pnpm forgecy init --fill`.",
     );
   const text = readFileSync(created ? join(dir, ".env.example") : file, "utf8");
-  const databaseExists = DB_MARKERS.some((marker) => existsSync(join(dir, marker)));
+  const hasDatabase = DB_MARKERS.some((marker) => databaseExists(join(dir, marker)));
   const generated = generateSecrets();
   const secrets: Partial<GeneratedSecrets> = {};
   for (const key of emptyKeys(text))
-    if (!(databaseExists && key === "POSTGRES_PASSWORD")) secrets[key] = generated[key];
+    if (!(hasDatabase && key === "POSTGRES_PASSWORD")) secrets[key] = generated[key];
   // fillEnv throws if the result would not read back as intended; "filled" is what the parse confirms.
   const out = fillEnv(text, secrets);
   const filled = confirmedKeys(text, out);
@@ -73,6 +91,6 @@ export function initEnv(dir: string, options: { fill: boolean }): InitResult {
   return {
     created,
     filled,
-    passwordSkipped: databaseExists && emptyKeys(out).includes("POSTGRES_PASSWORD"),
+    passwordSkipped: hasDatabase && emptyKeys(out).includes("POSTGRES_PASSWORD"),
   };
 }
