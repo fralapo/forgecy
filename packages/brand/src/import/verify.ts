@@ -14,15 +14,23 @@ export function normalizeText(s: string): string {
     .toLowerCase();
 }
 
-/** True when the quote, or every segment of it split on "…" / "...", is in the page text. */
-export function quoteInPage(quote: string, pageText: string): boolean {
+/**
+ * True when the quote, or every segment of it split on "…" / "...", is in the page text.
+ * `minSegment` rejects segments shorter than that (a 2-letter piece matches any page).
+ */
+export function quoteInPage(
+  quote: string,
+  pageText: string,
+  options: { minSegment?: number } = {},
+): boolean {
   const page = normalizeText(pageText);
+  const min = options.minSegment ?? 1;
   const parts = quote
     .split(/…|\.\.\./)
     .map(normalizeText)
     .filter((p) => p.length > 0);
   if (!parts.length) return false;
-  return parts.every((p) => page.includes(p));
+  return parts.every((p) => p.length >= min && page.includes(p));
 }
 
 /** Palettes shipped by CSS frameworks and page builders: the framework, not the brand. */
