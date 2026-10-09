@@ -1,6 +1,8 @@
 import {
+  canAccessClient,
   comparisonCriteria,
   USABLE_FINDING_STATUSES,
+  type Actor,
   type AuditChannel,
   type AuditStatus,
   type MessageRef,
@@ -18,6 +20,7 @@ import {
   auditSocialPosts,
   auditSources,
   clients,
+  clientScopeWhere,
   desc,
   eq,
   inArray,
@@ -59,6 +62,7 @@ export interface ProspectListItem {
 /** Page 4: prospects with their latest audit and how many findings wait for review. */
 export async function listProspects(
   db: Database,
+  actor: Actor,
   filter: { q?: string; archived?: boolean; status?: AuditStatus | "none" } = {},
 ): Promise<ProspectListItem[]> {
   const q = filter.q?.trim();
@@ -94,6 +98,7 @@ export async function listProspects(
     .where(
       and(
         eq(clients.status, "prospect"),
+        clientScopeWhere(actor, clients.id),
         filter.archived ? isNotNull(clients.archivedAt) : isNull(clients.archivedAt),
         q
           ? or(
@@ -144,9 +149,10 @@ export async function listProspects(
  * A prospect and its current audit. A prospect converted to client keeps its audit pages as
  * history (the client page links to them); a client that never had an audit has none.
  */
-export async function getProspectBySlug(db: Database, slug: string) {
+export async function getProspectBySlug(db: Database, actor: Actor, slug: string) {
   const client = await db.query.clients.findFirst({ where: eq(clients.slug, slug) });
-  if (!client) return null;
+  // A client the actor may not open is reported like one that does not exist (ADR 0020).
+  if (!client || !canAccessClient(actor, client.id)) return null;
   const audit = await currentAudit(db, client.id);
   if (client.status !== "prospect" && !audit) return null;
   const profile = await db.query.prospectProfiles.findFirst({

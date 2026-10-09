@@ -172,7 +172,7 @@ describe.skipIf(!dbUrl)("catalog import (integration)", () => {
     user = {
       id: u!.id,
       name: "Laura",
-      actor: { type: "user", id: u!.id, isAdmin: false, active: true },
+      actor: { type: "user", id: u!.id, isAdmin: false, active: true, clients: "all" as const },
     };
     const [c] = await db
       .insert(clients)

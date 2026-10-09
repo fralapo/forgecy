@@ -71,6 +71,8 @@ export const EXCLUDED_TABLES = new Set([
   "notifications",
   "client_exports",
   "client_imports",
+  // Who may open a client is about this installation's people (ADR 0020).
+  "client_access",
 ]);
 
 /** Area of every client table (spec page 68: what the package contains). */

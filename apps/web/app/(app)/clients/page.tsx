@@ -1,6 +1,6 @@
 import { getDefaultAiPolicy } from "@forgecy/ai";
 import { Badge, Card } from "@forgecy/ui";
-import { asc, clients, getDb, isNull } from "@forgecy/db";
+import { and, asc, clients, clientScopeWhere, getDb, isNull } from "@forgecy/db";
 import type { Route } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
@@ -26,14 +26,14 @@ function areaLinks(c: { slug: string; status: string }) {
 }
 
 export default async function ClientsPage() {
-  await requireUser();
+  const user = await requireUser();
   const { policy: defaultPolicy } = await getDefaultAiPolicy(getDb());
   const t = await getTranslations("clients");
   const te = await getTranslations("enums");
   const rows = await getDb()
     .select()
     .from(clients)
-    .where(isNull(clients.archivedAt))
+    .where(and(isNull(clients.archivedAt), clientScopeWhere(user.actor, clients.id)))
     .orderBy(asc(clients.name));
   return (
     <>

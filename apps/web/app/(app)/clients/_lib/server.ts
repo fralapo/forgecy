@@ -22,6 +22,7 @@ import {
   sql,
   users,
 } from "@forgecy/db";
+import { canAccessClient } from "@forgecy/core";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/session";
 import { entitiesOf, periodStart, type ActivityFilters } from "./activity";
@@ -33,7 +34,8 @@ export async function loadClientPage(slug: string) {
   const user = await requireUser();
   const db = getDb();
   const [client] = await db.select().from(clients).where(eq(clients.slug, slug));
-  if (!client) notFound();
+  // A client the person may not open looks like one that does not exist (ADR 0020).
+  if (!client || !canAccessClient(user.actor, client.id)) notFound();
   return { db, user, client };
 }
 

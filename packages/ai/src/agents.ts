@@ -8,6 +8,7 @@ import {
   agentRoles,
   agentTaskRouteSchema,
   assertCan,
+  canAccessClient,
   PermissionDeniedError,
   type Actor,
   type AgentRole,
@@ -18,10 +19,13 @@ import {
   agentSettings,
   and,
   clients,
+  clientScopeWhere,
   desc,
   eq,
+  isNull,
   jobs,
   jobsLog,
+  or,
   recordAuditEvent,
   sql,
   users,
@@ -311,9 +315,10 @@ export interface AgentRunRow {
   instructionsVersion: number | null;
 }
 
-/** The latest runs of one agent (spec page 55, tab Runs). */
+/** The latest runs of one agent (spec page 55, tab Runs): agency runs and the actor's clients. */
 export async function listAgentRuns(
   db: Pick<Database, "select">,
+  actor: Actor,
   agent: AgentRole,
   limit = 50,
 ): Promise<AgentRunRow[]> {
@@ -336,7 +341,14 @@ export async function listAgentRuns(
     .from(jobsLog)
     .leftJoin(clients, eq(clients.id, jobsLog.clientId))
     .leftJoin(users, eq(users.id, jobsLog.authorizedBy))
-    .where(sql`${runAgentSql()} = ${agent}`)
+    .where(
+      and(
+        sql`${runAgentSql()} = ${agent}`,
+        clientScopeWhere(actor, jobsLog.clientId)
+          ? or(isNull(jobsLog.clientId), clientScopeWhere(actor, jobsLog.clientId))
+          : undefined,
+      ),
+    )
     .orderBy(desc(jobsLog.startedAt))
     .limit(limit);
   return rows;
@@ -358,9 +370,10 @@ export interface AgentRunDetail {
   >;
 }
 
-/** One run, for its details page (spec page 57); every user can read it. */
+/** One run, for its details page (spec page 57); a client's run needs access to it. */
 export async function getAgentRun(
   db: Pick<Database, "select">,
+  actor: Actor,
   id: string,
 ): Promise<AgentRunDetail | null> {
   const [row] = await db
@@ -380,7 +393,7 @@ export async function getAgentRun(
     .leftJoin(jobs, eq(jobs.id, jobsLog.jobId))
     .where(eq(jobsLog.id, id))
     .limit(1);
-  if (!row) return null;
+  if (!row || (row.run.clientId && !canAccessClient(actor, row.run.clientId))) return null;
   const attempts = row.run.jobId
     ? await db
         .select({

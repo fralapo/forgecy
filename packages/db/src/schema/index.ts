@@ -17,3 +17,4 @@ export * from "./notifications";
 export * from "./agents";
 export * from "./client-transfer";
 export * from "./memory";
+export * from "./client-access";

@@ -61,7 +61,15 @@ describe.skipIf(!dbUrl)("hostile client package (integration)", () => {
     );
     return file;
   };
-  const clientCount = async () => (await db.select({ id: clients.id }).from(clients)).length;
+  // Only the client a refused import would create: other test files share this database and add
+  // their own clients while this one runs (CI runs the packages in parallel).
+  const clientCount = async () =>
+    (
+      await db
+        .select({ id: clients.id })
+        .from(clients)
+        .where(eq(clients.slug, `evil-${suffix}`))
+    ).length;
 
   beforeAll(async () => {
     db = createDb(dbUrl!);

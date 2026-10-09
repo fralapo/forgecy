@@ -48,7 +48,7 @@ export default async function ProspectOverviewPage({
   const user = await requireUser();
   const { slug } = await params;
   const { db } = readDeps();
-  const prospect = await getProspectBySlug(db, slug);
+  const prospect = await getProspectBySlug(db, user.actor, slug);
   if (!prospect) notFound();
   const { client, profile, audit } = prospect;
   const t = await getTranslations("audit");

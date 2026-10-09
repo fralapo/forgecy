@@ -99,6 +99,11 @@
       "title": "Recent activity",
       "empty": "No activity recorded.",
       "all": "See all activity"
+    },
+    "access": {
+      "title": "Who has access",
+      "description": "People who can see and work on this client.",
+      "admin": "{name} (Admin)"
     }
   },
   "activity": {

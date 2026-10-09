@@ -1,4 +1,5 @@
 import type { AuditStatus, ContentStatus, ReportStatus } from "@forgecy/core";
+import { clientMembers } from "@forgecy/db";
 import { Badge, Button, Card, type BadgeProps } from "@forgecy/ui";
 import { ArrowRight, Plus } from "lucide-react";
 import type { Route } from "next";
@@ -101,7 +102,7 @@ export default async function ClientOverviewPage({
 }) {
   const { clientSlug } = await params;
   const { db, user, client } = await loadClientPage(clientSlug);
-  const [t, te, ta, tb, tc, tt, format, o] = await Promise.all([
+  const [t, te, ta, tb, tc, tt, format, o, members] = await Promise.all([
     getTranslations("clients.overview"),
     getTranslations("enums"),
     getTranslations("audit"),
@@ -110,6 +111,7 @@ export default async function ClientOverviewPage({
     getTranslations("templates"),
     getFormat(),
     loadClientOverview(db, client.id),
+    clientMembers(db, user.actor, client.id),
   ]);
   const slug = client.slug;
   const archived = client.status === "archived" || client.archivedAt !== null;
@@ -472,6 +474,30 @@ export default async function ClientOverviewPage({
             </Link>
           </Section>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <Section
+          id="access"
+          title={
+            user.isAdmin ? (
+              <Link href={"/settings/client-access" as Route} className="hover:underline">
+                {t("access.title")}
+              </Link>
+            ) : (
+              t("access.title")
+            )
+          }
+        >
+          <p className="text-body-sm text-fg-muted">{t("access.description")}</p>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {members.map((m) => (
+              <li key={m.id}>
+                <Badge>{m.isAdmin ? t("access.admin", { name: m.name }) : m.name}</Badge>
+              </li>
+            ))}
+          </ul>
+        </Section>
       </div>
     </>
   );

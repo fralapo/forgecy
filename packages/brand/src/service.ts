@@ -1105,6 +1105,8 @@ export async function findOrCreateWebsiteSource(
   actor: Actor,
   input: { clientId: string; websiteUrl: string },
 ): Promise<SourceRow> {
+  // The existing row is returned too, so access is checked before looking (ADR 0020).
+  assertCan(actor, "view", input.clientId);
   const [existing] = await db
     .select()
     .from(brandSources)

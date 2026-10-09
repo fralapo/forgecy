@@ -32,6 +32,7 @@ describe.skipIf(!dbUrl)("AI settings (integration)", () => {
     id: "00000000-0000-4000-8000-000000000001",
     isAdmin: false,
     active: true,
+    clients: "all",
   };
   const agent: Actor = { type: "agent", role: "strategist" };
   const suffix = Math.random().toString(36).slice(2, 8);
@@ -43,7 +44,7 @@ describe.skipIf(!dbUrl)("AI settings (integration)", () => {
       .insert(users)
       .values({ name: "Admin", email: `ai-settings-${suffix}@example.test`, isAdmin: true })
       .returning({ id: users.id });
-    admin = { type: "user", id: u!.id, isAdmin: true, active: true };
+    admin = { type: "user", id: u!.id, isAdmin: true, active: true, clients: "all" as const };
     const [c] = await db
       .insert(clients)
       .values({ name: `Budget ${suffix}`, slug: `budget-${suffix}` })

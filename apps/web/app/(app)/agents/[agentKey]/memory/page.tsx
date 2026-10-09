@@ -22,7 +22,7 @@ import {
   type AgentRole,
   type MemoryStatus,
 } from "@forgecy/core";
-import { asc, clients, getDb, isNull } from "@forgecy/db";
+import { and, asc, clients, clientScopeWhere, getDb, isNull } from "@forgecy/db";
 import { Badge, Card, cn } from "@forgecy/ui";
 import { ArrowLeft, ShieldAlert } from "lucide-react";
 import type { Route } from "next";
@@ -75,7 +75,7 @@ export default async function AgentMemoryPage({
   params: Promise<{ agentKey: string }>;
   searchParams: Promise<{ client?: string; status?: string; m?: string }>;
 }) {
-  await requireUser();
+  const user = await requireUser();
   const raw = (await params).agentKey;
   const parsedKey = agentKeySchema.safeParse(raw);
   if (raw !== "all" && !parsedKey.success) notFound();
@@ -91,15 +91,15 @@ export default async function AgentMemoryPage({
   const clientList = await db
     .select({ id: clients.id, name: clients.name, slug: clients.slug })
     .from(clients)
-    .where(isNull(clients.archivedAt))
+    .where(and(isNull(clients.archivedAt), clientScopeWhere(user.actor, clients.id)))
     .orderBy(asc(clients.name));
   const client = clientList.find((c) => c.slug === sp.client);
   const selectedId = z.uuid().safeParse(sp.m);
 
   const [rows, counts, detail, settings] = await Promise.all([
-    listMemories(db, { agent, clientId: client?.id, status }),
-    memoryCounts(db, { agent, clientId: client?.id }),
-    selectedId.success ? getMemory(db, selectedId.data) : null,
+    listMemories(db, user.actor, { agent, clientId: client?.id, status }),
+    memoryCounts(db, user.actor, { agent, clientId: client?.id }),
+    selectedId.success ? getMemory(db, user.actor, selectedId.data) : null,
     client ? loadClientMemorySettings(db, client.id) : null,
   ]);
 

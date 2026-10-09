@@ -1,5 +1,6 @@
 import "server-only";
 import "./ports";
+import { canAccessClient } from "@forgecy/core";
 import { clients, eq, getDb } from "@forgecy/db";
 import { notFound } from "next/navigation";
 import { getStorage } from "@/app/render/_lib/templates";
@@ -10,7 +11,8 @@ export async function loadClient(slug: string) {
   const user = await requireUser();
   const db = getDb();
   const client = await db.query.clients.findFirst({ where: eq(clients.slug, slug) });
-  if (!client) notFound();
+  // A client the person may not open looks like one that does not exist (ADR 0020).
+  if (!client || !canAccessClient(user.actor, client.id)) notFound();
   return { db, user, client };
 }
 

@@ -99,6 +99,11 @@
       "title": "Attività recente",
       "empty": "Nessuna attività registrata.",
       "all": "Vedi tutta l’attività"
+    },
+    "access": {
+      "title": "Chi ha accesso",
+      "description": "Le persone che possono vedere questo cliente e lavorarci.",
+      "admin": "{name} (Admin)"
     }
   },
   "activity": {

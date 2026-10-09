@@ -2,6 +2,7 @@
   "nav": {
     "label": "Settings sections",
     "general": "General",
+    "clientAccess": "Client access",
     "aiProviders": "AI providers",
     "aiPolicies": "AI policies and budgets",
     "smtp": "Email (SMTP)",
@@ -397,5 +398,21 @@
       "failed": "The upload did not succeed. Try again.",
       "cancelled": "Upload cancelled."
     }
+  },
+  "clientAccess": {
+    "title": "Client access",
+    "description": "Choose which clients each person can see and work on.",
+    "adminNote": "Admins see every client and are not listed. A person with no clients assigned sees none. Whoever creates a client gets access to it.",
+    "people": "People",
+    "noPeople": "There is nobody to assign yet: every account is an Admin.",
+    "noClients": "There are no clients yet.",
+    "inactive": "Deactivated",
+    "clientCount": "{count, plural, =0 {No clients} one {# client} other {# clients}}",
+    "clientsFor": "Clients {name} can open",
+    "archivedClient": "{name} (archived)",
+    "prospectClient": "{name} (prospect)",
+    "granted": "Access granted.",
+    "revoked": "Access removed.",
+    "invalid": "The request is not valid. Reload the page and try again."
   }
 }

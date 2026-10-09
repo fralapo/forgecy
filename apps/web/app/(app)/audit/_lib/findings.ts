@@ -5,13 +5,15 @@ import { englishMessage, type MessageKey } from "@forgecy/i18n";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getRefText } from "@/lib/i18n";
+import { requireUser } from "@/lib/session";
 import type { FindingView, SourceLinks } from "../_components/finding-card";
 import { fileUrl, readDeps } from "./server";
 
 /** Prospect and its current audit for a section page; no audit → back to the overview. */
 export async function sectionContext(slug: string) {
+  const user = await requireUser();
   const { db } = readDeps();
-  const prospect = await getProspectBySlug(db, slug);
+  const prospect = await getProspectBySlug(db, user.actor, slug);
   if (!prospect) notFound();
   if (!prospect.audit) redirect(`/audit/${slug}`);
   const { audit, client } = prospect;

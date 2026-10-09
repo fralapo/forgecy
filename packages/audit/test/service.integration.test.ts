@@ -1,5 +1,5 @@
 import type { Actor } from "@forgecy/core";
-import { auditEvents, createDb, eq, users, type Database } from "@forgecy/db";
+import { auditEvents, createDb, eq, templates, users, type Database } from "@forgecy/db";
 import { createQueues, type JobQueues } from "@forgecy/jobs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -32,7 +32,7 @@ describe.skipIf(!dbUrl || !redisUrl)("audit services (integration)", () => {
       .insert(users)
       .values({ name: "Test", email: `audit-${suffix}@example.test`, isAdmin: true })
       .returning({ id: users.id });
-    human = { type: "user", id: u!.id, isAdmin: true, active: true };
+    human = { type: "user", id: u!.id, isAdmin: true, active: true, clients: "all" as const };
   });
 
   afterAll(async () => {
@@ -52,7 +52,7 @@ describe.skipIf(!dbUrl || !redisUrl)("audit services (integration)", () => {
     });
     clientId = created.id;
     expect(created.slug).toBe(`forno-test-${suffix}`);
-    const dupes = await findDuplicates(db, {
+    const dupes = await findDuplicates(db, human, {
       name: "Other",
       websiteUrl: `https://www.forno-${suffix}.example/`,
     });
@@ -141,9 +141,28 @@ describe.skipIf(!dbUrl || !redisUrl)("audit services (integration)", () => {
     await expect(deleteProspect({ db }, human, clientId, "forno")).rejects.toMatchObject({
       code: "validation",
     });
+    // A private template (an imported prospect can carry one) must not become an agency template.
+    const [tpl] = await db
+      .insert(templates)
+      .values({
+        key: `prospect-${suffix}`,
+        version: "1.0.0",
+        name: "Private",
+        kind: "carousel",
+        format: "ig_4x5",
+        clientId,
+        manifest: {},
+        packageKey: "templates/none.zip",
+        packageSha256: "0".repeat(64),
+        packageSize: 1,
+      })
+      .returning({ id: templates.id });
     await deleteProspect({ db }, human, clientId, name);
     expect(
       await db.query.clients.findFirst({ where: (c, { eq }) => eq(c.id, clientId) }),
+    ).toBeUndefined();
+    expect(
+      await db.query.templates.findFirst({ where: eq(templates.id, tpl!.id) }),
     ).toBeUndefined();
   });
 });

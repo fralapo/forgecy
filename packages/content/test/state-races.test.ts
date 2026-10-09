@@ -13,7 +13,13 @@ import {
 const ID = "00000000-0000-4000-8000-0000000000c1";
 const CLIENT = "00000000-0000-4000-8000-0000000000c2";
 const USER = "00000000-0000-4000-8000-0000000000c3";
-const user = { type: "user" as const, id: USER, isAdmin: false, active: true };
+const user = {
+  type: "user" as const,
+  id: USER,
+  isAdmin: false,
+  active: true,
+  clients: "all" as const,
+};
 
 const row = (over: Record<string, unknown> = {}) => ({
   id: ID,

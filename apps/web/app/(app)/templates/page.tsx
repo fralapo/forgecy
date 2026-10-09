@@ -6,7 +6,7 @@ import {
   type TemplateRow,
 } from "@forgecy/carousel/catalog";
 import { scanTemplateDir } from "@forgecy/carousel/node";
-import { can } from "@forgecy/core";
+import { can, canAccessClient } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
 import { Badge, Button, Card, Input, Label } from "@forgecy/ui";
 import Link from "next/link";
@@ -44,7 +44,10 @@ export default async function TemplatesPage({
   const t = await getTranslations("templates");
   const { error } = await searchParams;
   const manage = can(user.actor, "templates.manage");
-  const rows = await listTemplates(getDb());
+  // A client's private template only for people who may open that client (ADR 0020).
+  const rows = (await listTemplates(getDb())).filter(
+    (r) => !r.clientId || canAccessClient(user.actor, r.clientId),
+  );
   const byKey = new Map<string, TemplateRow[]>();
   for (const row of rows) byKey.set(row.key, [...(byKey.get(row.key) ?? []), row]);
   const known = new Set(rows.map((r) => `${r.key}@${r.version}`));

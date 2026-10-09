@@ -83,7 +83,7 @@ describe.skipIf(!dbUrl)("full client export (integration)", () => {
       .values({ name: "Ada Export", email: `ada-${suffix}@example.com`, isAdmin: true })
       .returning();
     ids.user = u!.id;
-    admin = { type: "user", id: u!.id, isAdmin: true, active: true };
+    admin = { type: "user", id: u!.id, isAdmin: true, active: true, clients: "all" as const };
     const [c, o] = await db
       .insert(clients)
       .values([

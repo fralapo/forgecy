@@ -60,7 +60,7 @@ export async function createPasswordUser(input: {
     });
     await recordAuditEvent(tx, {
       actor: input.createdBy
-        ? { type: "user", id: input.createdBy, isAdmin: true, active: true }
+        ? { type: "user", id: input.createdBy, isAdmin: true, active: true, clients: "all" }
         : "system",
       action: "user.create",
       entity: "user",

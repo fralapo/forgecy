@@ -44,7 +44,7 @@ describe.skipIf(!dbUrl)("commercial use of image providers (integration)", () =>
         .insert(users)
         .values({ name, email: `${name}-${suffix}@example.test`, isAdmin })
         .returning();
-      return { type: "user" as const, id: u!.id, isAdmin, active: true };
+      return { type: "user" as const, id: u!.id, isAdmin, active: true, clients: "all" as const };
     };
     admin = await mk("carla", true);
     member = await mk("dario", false);

@@ -11,6 +11,7 @@ import {
   automations,
   brandIdentities,
   brandIdentityVersions,
+  clientAccess,
   clients,
   contents,
   createDb,
@@ -127,7 +128,9 @@ describe.skipIf(!dbUrl)("batch automations (integration)", () => {
       .insert(users)
       .values({ name: "anna", email: `anna-${suffix}@example.test` })
       .returning();
-    anna = { type: "user", id: u!.id, isAdmin: false, active: true };
+    // The worker reads the starter's clients from the database (ADR 0020).
+    await db.insert(clientAccess).values({ userId: u!.id, clientId });
+    anna = { type: "user", id: u!.id, isAdmin: false, active: true, clients: [clientId] };
     const [bi] = await db.insert(brandIdentities).values({ clientId }).returning();
     const document = parseBrandDocument({
       strategy: {

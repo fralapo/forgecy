@@ -75,7 +75,7 @@ describe.skipIf(!dbUrl)("agent memory (integration)", () => {
       .insert(users)
       .values({ name: "Laura", email: `memory-${suffix}@example.test` })
       .returning({ id: users.id });
-    person = { type: "user", id: u!.id, isAdmin: false, active: true };
+    person = { type: "user", id: u!.id, isAdmin: false, active: true, clients: "all" as const };
     const [c] = await db
       .insert(clients)
       .values({ name: "Rossi", slug: `rossi-${suffix}` })
@@ -120,7 +120,7 @@ describe.skipIf(!dbUrl)("agent memory (integration)", () => {
       content: "Titles never use rhetorical questions.",
     });
     expect(edited).toMatchObject({ version: 2, status: "approved" });
-    const detail = await getMemory(db, proposed.id);
+    const detail = await getMemory(db, person, proposed.id);
     expect(detail?.versions.map((v) => v.version)).toEqual([2, 1]);
 
     await db.insert(jobsLog).values({
@@ -130,7 +130,7 @@ describe.skipIf(!dbUrl)("agent memory (integration)", () => {
       inputSummary: { memory: [{ id: proposed.id, version: 2 }] },
       startedAt: new Date(),
     });
-    expect((await getMemory(db, proposed.id))?.usedIn).toHaveLength(1);
+    expect((await getMemory(db, person, proposed.id))?.usedIn).toHaveLength(1);
 
     await archiveMemory(db, person, proposed.id);
     expect(await approvedMemoriesFor(db, clientId, "copywriter")).toHaveLength(0);
@@ -166,13 +166,15 @@ describe.skipIf(!dbUrl)("agent memory (integration)", () => {
       confidence: "high",
       status: "observed",
     });
-    expect((await listMemories(db, { clientId })).some((m) => m.id === note.id)).toBe(false);
+    expect((await listMemories(db, person, { clientId })).some((m) => m.id === note.id)).toBe(
+      false,
+    );
     expect(
-      (await listMemories(db, { clientId, status: "all" })).some((m) => m.id === note.id),
+      (await listMemories(db, person, { clientId, status: "all" })).some((m) => m.id === note.id),
     ).toBe(true);
     await promoteMemory(db, person, note.id);
     expect(await approveMemories(db, person, [note.id])).toBe(1);
-    expect(await memoryCounts(db, { clientId })).toEqual({ candidate: 1, approved: 1 });
+    expect(await memoryCounts(db, person, { clientId })).toEqual({ candidate: 1, approved: 1 });
   });
 
   it("stores typed settings and refuses invalid ones", async () => {

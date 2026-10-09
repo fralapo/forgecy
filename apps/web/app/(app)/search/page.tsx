@@ -44,7 +44,7 @@ export default async function SearchPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireUser();
+  const user = await requireUser();
   const p = parseSearchParams(await searchParams);
   const [t, te, tc, tp, tb, ta, tt] = await Promise.all([
     getTranslations("search"),
@@ -56,7 +56,10 @@ export default async function SearchPage({
     getTranslations("templates"),
   ]);
   const ready = p.q.length >= MIN_QUERY;
-  const [result, clientList] = await Promise.all([ready ? runSearch(p) : null, clientOptions()]);
+  const [result, clientList] = await Promise.all([
+    ready ? runSearch(user.actor, p) : null,
+    clientOptions(user.actor),
+  ]);
   const filtered = p.types.length > 0 || p.client !== null || p.archived;
 
   // Status labels already live in each module's namespace.

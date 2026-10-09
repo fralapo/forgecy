@@ -6,6 +6,7 @@ import {
   MAX_UPLOAD_BYTES,
   spoolToTemp,
 } from "@forgecy/catalog";
+import { canAccessClient } from "@forgecy/core";
 import { clients, eq, getDb } from "@forgecy/db";
 import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
@@ -29,7 +30,8 @@ export const POST = withUser(
     const { clientSlug, importId } = await params;
     const db = getDb();
     const client = await db.query.clients.findFirst({ where: eq(clients.slug, clientSlug) });
-    if (!client || !request.body) return NextResponse.json({ error: "not_found" }, { status: 404 });
+    if (!client || !canAccessClient(user.actor, client.id) || !request.body)
+      return NextResponse.json({ error: "not_found" }, { status: 404 });
     const catalogClient = await loadCatalogClient(db, client.id);
     const declared = Number(request.headers.get("content-length") ?? "0");
     if (declared > MAX_UPLOAD_BYTES)

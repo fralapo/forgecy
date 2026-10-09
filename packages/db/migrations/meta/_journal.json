@@ -211,6 +211,13 @@
       "when": 1791503865677,
       "tag": "0031_drop_jobs_depends_on",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1791543894994,
+      "tag": "0032_client_access",
+      "breakpoints": true
     }
   ]
 }

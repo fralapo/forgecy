@@ -7,6 +7,7 @@ import { ForgecyError, PermissionDeniedError, type Actor } from "@forgecy/core";
 import {
   brandIdentities,
   brandIdentityVersions,
+  clientAccess,
   clients,
   contentPlanItems,
   contentVersions,
@@ -123,7 +124,15 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
         .insert(users)
         .values({ name, email: `${name}-${suffix}@example.test` })
         .returning();
-      return { type: "user" as const, id: u!.id, isAdmin: false, active: true };
+      // Notifications reach only people assigned to the client (ADR 0020).
+      await db.insert(clientAccess).values({ userId: u!.id, clientId });
+      return {
+        type: "user" as const,
+        id: u!.id,
+        isAdmin: false,
+        active: true,
+        clients: [clientId],
+      };
     };
     anna = await mk("anna");
     bruno = await mk("bruno");

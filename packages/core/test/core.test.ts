@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertClientAccess,
   can,
+  canAccessClient,
   canViewJob,
+  PermissionDeniedError,
   checkAiPolicy,
   loadEnv,
   resolveDefaultAiPolicy,
@@ -9,7 +12,13 @@ import {
 } from "../src";
 
 describe("permissions", () => {
-  const user = { type: "user" as const, id: "u1", isAdmin: false, active: true };
+  const user = {
+    type: "user" as const,
+    id: "u1",
+    isAdmin: false,
+    active: true,
+    clients: "all" as const,
+  };
   const admin = { ...user, isAdmin: true };
 
   it("grants every content permission to an active user", () => {
@@ -39,6 +48,27 @@ describe("permissions", () => {
     ] as const) {
       expect(can(agent, p)).toBe(false);
     }
+  });
+
+  it("limits a person to the clients assigned to them (ADR 0020)", () => {
+    const x = "11111111-1111-1111-1111-111111111111";
+    const y = "22222222-2222-2222-2222-222222222222";
+    const member = { ...user, clients: [x] };
+    expect(canAccessClient(member, x)).toBe(true);
+    expect(canAccessClient(member, y)).toBe(false);
+    expect(can(member, "approve", x)).toBe(true);
+    expect(can(member, "view", y)).toBe(false);
+    // Without a clientId the answer is about the action only; lists filter by scope.
+    expect(can(member, "view")).toBe(true);
+    expect(() => assertClientAccess(member, y)).toThrow(PermissionDeniedError);
+    const nobody = { ...user, clients: [] };
+    expect(can(nobody, "view", x)).toBe(false);
+    // Admins reach every client whatever their list says; inactive people none.
+    expect(can({ ...admin, clients: [] }, "view", y)).toBe(true);
+    expect(canAccessClient({ ...admin, active: false }, x)).toBe(false);
+    // Agents act inside a job a person started: the person's access was checked there.
+    const agent = { type: "agent" as const, role: "reviewer" as const };
+    expect(can(agent, "propose", y)).toBe(true);
   });
 
   it("a clientId never widens what an actor may do", () => {
@@ -105,7 +135,13 @@ describe("env", () => {
 });
 
 describe("job visibility", () => {
-  const user = { type: "user" as const, id: "u1", isAdmin: false, active: true };
+  const user = {
+    type: "user" as const,
+    id: "u1",
+    isAdmin: false,
+    active: true,
+    clients: "all" as const,
+  };
   const admin = { ...user, isAdmin: true };
 
   it("lets any active person watch an ordinary job", () => {
@@ -131,5 +167,11 @@ describe("job visibility", () => {
       false,
     );
     expect(canViewJob(user, { kind: "constructor", clientId: null })).toBe(true);
+  });
+
+  it("hides the jobs of a client the person cannot access", () => {
+    const member = { ...user, clients: ["c1"] };
+    expect(canViewJob(member, { kind: "content.generate_outline", clientId: "c1" })).toBe(true);
+    expect(canViewJob(member, { kind: "content.generate_outline", clientId: "c2" })).toBe(false);
   });
 });

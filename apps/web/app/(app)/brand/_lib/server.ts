@@ -9,6 +9,7 @@ import {
   type TokenTree,
   type VersionRow,
 } from "@forgecy/brand";
+import { canAccessClient } from "@forgecy/core";
 import { clients, eq, getDb, inArray, users } from "@forgecy/db";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/session";
@@ -20,7 +21,8 @@ export async function loadBrand(slug: string) {
   const user = await requireUser();
   const db = getDb();
   const client = await db.query.clients.findFirst({ where: eq(clients.slug, slug) });
-  if (!client) notFound();
+  // A client the person may not open looks like one that does not exist (ADR 0020).
+  if (!client || !canAccessClient(user.actor, client.id)) notFound();
   const ws = await getBrandWorkspace(db, user.actor, client.id);
   return { db, user, client, ws };
 }

@@ -64,6 +64,8 @@ Optional profiles: `--profile dev` (Mailpit on `:8025` for emails), `--profile s
 
 The web port now listens on 127.0.0.1 only (`FORGECY_BIND_ADDRESS`, default `127.0.0.1`). To reach it from other machines, either use `--profile https` (Caddy) or set `FORGECY_BIND_ADDRESS=0.0.0.0` in `.env` and run `docker compose up -d`.
 
+People now see only the clients assigned to them ([ADR 0020](docs/adr/0020-per-client-access.md)); Admins see every client. The upgrade keeps today's behavior: a migration assigns every existing client to every person who is not an Admin. Afterwards Admins can restrict access in Settings → Client access, a new person sees no client until assigned, and a new client is assigned to whoever creates it.
+
 The other changes to check before upgrading are in [section 7 of the security checklist](docs/SECURITY_CHECKLIST.md#7-upgrading-and-follow-ups-left-open-by-the-hardening-work): the strict `FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS`, backups without a checksum, the new backup format, sign-in by username, the optional setup token, unlocking a locked account, a short window during the migration and the dev database password.
 
 ### Backups
