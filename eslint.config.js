@@ -4,6 +4,7 @@ import nextPlugin from "@next/eslint-plugin-next";
 import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 import tseslint from "typescript-eslint";
+import brandGuard from "./scripts/eslint/brand-guard.js";
 import forgecy from "./scripts/eslint/no-hardcoded-text.js";
 
 export default tseslint.config(
@@ -47,21 +48,15 @@ export default tseslint.config(
     settings: { next: { rootDir: "apps/web" } },
   },
   {
-    // Brand Guard: no hardcoded colors in app and UI code; use the design tokens.
-    files: ["apps/web/**/*.tsx", "packages/ui/src/**/*.tsx"],
-    rules: {
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "Literal[value=/#[0-9a-fA-F]{3,8}\\b|\\brgba?\\(|\\bhsla?\\(/]",
-          message: "Brand Guard: use @forgecy/ui tokens instead of hand-written colors.",
-        },
-        {
-          selector: "Literal[value=/\\b(bg|text|border|ring|fill|stroke)-\\[#/]",
-          message: "Brand Guard: no arbitrary colors in Tailwind, use the tokens.",
-        },
-      ],
-    },
+    // Brand Guard: no hand-written colors or pixel sizes in app and UI code; use the design tokens.
+    files: ["apps/web/**/*.{ts,tsx}", "packages/ui/src/**/*.{ts,tsx}"],
+    ignores: [
+      "**/*.test.{ts,tsx}",
+      "packages/ui/src/tokens.ts", // builds rgb() from the tokens
+      "packages/ui/src/generated/**",
+    ],
+    plugins: { "brand-guard": brandGuard },
+    rules: { "brand-guard/no-hand-written-design-values": "error" },
   },
   { files: ["apps/web/**/*.tsx"], plugins: { forgecy } },
   {
