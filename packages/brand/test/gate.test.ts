@@ -295,6 +295,44 @@ describe("known colors and fonts", () => {
     expect(knownColors(site, 24).filter((c) => isNeutral(c.hex))).toHaveLength(2);
   });
 
+  it("reads the real deodue probe: brand blue, teal, button teal, one shade, two neutrals", () => {
+    const v = (name: string, hex: string) => ({ name, hex });
+    const site = probe({
+      cssVars: [
+        v("--text-strong", "#26262a"),
+        v("--text-body", "#3a3a3a"),
+        v("--text-muted", "#6b6d74"),
+        v("--text-on-dark", "#ffffff"),
+        v("--text-brand", "#2b2e83"),
+        v("--accent", "#00c1cf"),
+        v("--accent-hover", "#00a9b6"),
+        v("--accent-soft", "#e0f7f9"),
+        v("--cmplz_button_accept_background_color", "#00707a"),
+        v("--e-global-color-navy_900", "#1e2062"),
+        v("--e-global-color-navy_500", "#4a4da0"),
+        v("--e-global-color-neutral_50", "#f7f7f7"),
+        v("--e-global-color-fragrance_oriental", "#690f75"),
+        v("--wp-admin-theme-color", "#007cba"),
+      ],
+      buttonColors: [
+        { hex: "#333333", role: "text", weight: 3151090 },
+        { hex: "#ffffff", role: "bg", weight: 2200149 },
+        { hex: "#2b2e83", role: "text", weight: 837328 },
+        { hex: "#00707a", role: "bg", weight: 640816 },
+        { hex: "#c6c7e4", role: "text", weight: 6368 },
+        { hex: "#cc3366", role: "text", weight: 280 },
+      ],
+    });
+    expect(knownColors(site, 6).map((c) => [c.hex, c.name])).toEqual([
+      ["#00c1cf", "accent"],
+      ["#2b2e83", "text-brand"],
+      ["#00707a", "button"],
+      ["#00a9b6", "accent-hover"],
+      ["#ffffff", "button"],
+      ["#26262a", "text-strong"],
+    ]);
+  });
+
   it("gives each family its role from where the page uses it", () => {
     const f = (roles: string[], loaded = true) => ({ roles, loaded });
     // deodue: Montserrat on headings, Lato on body, buttons and one heading.

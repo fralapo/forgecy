@@ -52,6 +52,11 @@ export function isFrameworkColor(hex: string, visual: SiteProbe | undefined): bo
 const ROLE_WORDS = ["primary", "secondary", "accent", "brand", "main", "text", "background"];
 /** Page-builder globals (Elementor's kit): what the site's owner picked, even under a code name. */
 const BUILDER_GLOBAL = /^--e-global-color-/i;
+/** A state or shade of a color: derived from the role, not the role itself. */
+const SHADE =
+  /[-_](?:hover|active|focus|visited|pressed|soft|light|lighter|lightest|tint|muted|subtle|pale|dark|darker|darkest)$/i;
+/** Button colors on less than this share of the heaviest one's area count as noise. */
+const MIN_BUTTON_SHARE = 0.05;
 
 /** Nearly no hue (grays, off-whites): chroma guards the near-white/near-black where HSL saturation jumps. */
 export function isNeutral(hex: string): boolean {
@@ -74,13 +79,19 @@ const lightness = (hex: string) => {
 
 /**
  * Every color the site declares, best first: `theme-color`, variables named for a role
- * (primary, secondary, accent... in that order), button colors by weight, the page builder's
- * other globals, then the remaining variables. Exact duplicates and framework defaults are out.
+ * (primary, secondary, accent... in that order), button colors by weight, shades of a role
+ * (accent-hover), the page builder's other globals, then the remaining variables and the
+ * buttons' slivers. Exact duplicates and framework defaults are out.
  */
 function rankedColors(visual: SiteProbe): KnownColor[] {
   const ranked: Array<KnownColor & { rank: number }> = [];
+  // "text" and "background" name a role only at the start (--text-body), not inside a plugin's
+  // variable (--cmplz_button_accept_background_color).
   const roleOf = (name: string) => {
-    const i = ROLE_WORDS.findIndex((w) => name.toLowerCase().includes(w));
+    const n = name.toLowerCase().replace(/^--(?:e-global-color-|color-)?/, "");
+    const i = ROLE_WORDS.findIndex((w) =>
+      w === "text" || w === "background" ? n.startsWith(w) : n.includes(w),
+    );
     return i < 0 ? ROLE_WORDS.length : i;
   };
   if (visual.themeColor)
@@ -100,20 +111,27 @@ function rankedColors(visual: SiteProbe): KnownColor[] {
       hex: v.hex,
       name,
       locator: v.name,
-      rank: role < ROLE_WORDS.length ? 1 + role / 10 : BUILDER_GLOBAL.test(v.name) ? 3 : 4,
+      // A state or shade of a role (accent-hover, primary-soft) comes after the buttons.
+      rank:
+        role < ROLE_WORDS.length
+          ? (SHADE.test(v.name) ? 2.5 : 1) + role / 10
+          : BUILDER_GLOBAL.test(v.name)
+            ? 3
+            : 4,
     });
   }
-  // Already sorted by weight (buildSiteProbe), but a stored probe is not trusted to be.
-  [...visual.buttonColors]
-    .sort((a, c) => c.weight - a.weight)
-    .forEach((b, i) =>
-      ranked.push({
-        hex: b.hex,
-        name: b.role === "bg" ? "button" : "button-text",
-        locator: SITE_LOCATORS.buttons,
-        rank: 2 + i / 1000,
-      }),
-    );
+  // Already sorted by weight (buildSiteProbe), but a stored probe is not trusted to be. A color
+  // on a sliver of the page (a footer link) is noise: it waits with the other variables.
+  const buttons = [...visual.buttonColors].sort((a, c) => c.weight - a.weight);
+  const heaviest = buttons[0]?.weight ?? 0;
+  buttons.forEach((b, i) =>
+    ranked.push({
+      hex: b.hex,
+      name: b.role === "bg" ? "button" : "button-text",
+      locator: SITE_LOCATORS.buttons,
+      rank: (b.weight >= heaviest * MIN_BUTTON_SHARE ? 2 : 4) + i / 1000,
+    }),
+  );
   const out: KnownColor[] = [];
   const seen = new Set<string>();
   for (const { hex, name, locator } of ranked.sort((a, b) => a.rank - b.rank)) {
