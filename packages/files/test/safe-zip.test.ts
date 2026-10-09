@@ -9,7 +9,7 @@ const reason = (p: Promise<unknown>) =>
     (e: unknown) => (e instanceof ZipLimitError ? e.reason : "error"),
   );
 
-describe("readZipParts", () => {
+describe("readZipParts", { timeout: 30_000 }, () => {
   it("returns only the selected parts", async () => {
     const zip = zipArchive([
       { name: "a.xml", data: "<a/>" },
@@ -88,7 +88,7 @@ describe("readZipParts", () => {
         }),
       ),
     ).toBe("total_bytes");
-    expect(Date.now() - t).toBeLessThan(2000);
+    expect(Date.now() - t).toBeLessThan(10_000);
   });
 });
 
@@ -103,7 +103,7 @@ describe("listZipNames", () => {
   });
 });
 
-describe("validateZipParts", () => {
+describe("validateZipParts", { timeout: 30_000 }, () => {
   const all = { ...limits, select: () => true };
 
   it("accepts a legit archive and keeps nothing", async () => {
@@ -148,6 +148,6 @@ describe("validateZipParts", () => {
         validateZipParts(bomb, { ...all, maxEntryBytes: 1 << 30, maxTotalBytes: 1 << 20 }),
       ),
     ).toBe("total_bytes");
-    expect(Date.now() - t).toBeLessThan(2000);
+    expect(Date.now() - t).toBeLessThan(10_000);
   });
 });

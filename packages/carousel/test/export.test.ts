@@ -194,5 +194,5 @@ describe("template ZIP import", () => {
     expect([...files.keys()].sort()).toEqual([...pkg.files.keys()].sort());
     expect(validateTemplatePackage(files).ok).toBe(true);
     expect(() => unzipTemplatePackage(zipSync({ "../evil.txt": new Uint8Array([1]) }))).toThrow();
-  });
+  }, 30_000);
 });

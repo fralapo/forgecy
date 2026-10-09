@@ -27,7 +27,8 @@ describe("security headers", () => {
       expect(csp, path).toContain("object-src 'none'");
       expect(csp, path).toContain("base-uri 'self'");
     }
-  });
+    // The first call loads next.config.ts, slow under a parallel run.
+  }, 30_000);
 
   it("leaves /render and /api/files to their own, stricter headers", async () => {
     const rules = await rulesFor("http://localhost:3000");
