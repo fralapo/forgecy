@@ -94,8 +94,10 @@ services:
     image: forgecy-web:local
     restart: unless-stopped
     <<: [*app-env, *hardened]
+    # Loopback by default: Caddy (--profile https) reaches web over the internal network. Set
+    # FORGECY_BIND_ADDRESS=0.0.0.0 to expose http://host:3000 on the LAN without Caddy.
     ports:
-      - "${FORGECY_PORT:-3000}:3000"
+      - "${FORGECY_BIND_ADDRESS:-127.0.0.1}:${FORGECY_PORT:-3000}:3000"
     volumes:
       - ./data:/data
     depends_on:

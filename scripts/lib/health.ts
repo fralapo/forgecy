@@ -19,6 +19,16 @@ const printable = (text: string, max = 200) =>
   text.replace(/[\u0000-\u001f\u007f-\u009f]+/g, " ").slice(0, max);
 
 /**
+ * Host of the web port. Compose binds it to FORGECY_BIND_ADDRESS (default 127.0.0.1), so a
+ * specific address is the only place it answers; a wildcard or nothing is reachable on loopback.
+ */
+function webHost(env: Env): string {
+  const bind = env.FORGECY_BIND_ADDRESS?.trim().replace(/^[|]$/g, "");
+  if (!bind || bind === "0.0.0.0" || bind === "::") return "127.0.0.1";
+  return bind.includes(":") ? `[${bind}]` : bind;
+}
+
+/**
  * Where `pnpm forgecy health` looks. Compose publishes the web port and, on loopback only,
  * the worker's health port (FORGECY_WORKER_HEALTH_PORT, default 3001; inside the container the
  * worker is pinned to 3001, whatever WORKER_HEALTH_PORT says). `pnpm dev` runs the worker on the
@@ -32,7 +42,8 @@ export function healthTargets(env: Env): HealthTarget[] {
     {
       name: "web",
       url:
-        env.FORGECY_WEB_HEALTH_URL ?? `http://127.0.0.1:${env.FORGECY_PORT ?? "3000"}/api/health`,
+        env.FORGECY_WEB_HEALTH_URL ??
+        `http://${webHost(env)}:${env.FORGECY_PORT ?? "3000"}/api/health`,
     },
     workerUrl
       ? { name: "worker", url: workerUrl }

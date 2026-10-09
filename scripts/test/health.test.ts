@@ -39,6 +39,20 @@ describe("healthTargets", () => {
     );
   });
 
+  it("probes the address the web port is bound to when it is a specific one", () => {
+    const web = (env: Record<string, string>) => healthTargets(env)[0]?.url;
+    // loopback default, wildcards and empty keep 127.0.0.1
+    expect(web({ FORGECY_BIND_ADDRESS: "127.0.0.1" })).toBe("http://127.0.0.1:3000/api/health");
+    expect(web({ FORGECY_BIND_ADDRESS: "0.0.0.0" })).toBe("http://127.0.0.1:3000/api/health");
+    expect(web({ FORGECY_BIND_ADDRESS: "::" })).toBe("http://127.0.0.1:3000/api/health");
+    expect(web({ FORGECY_BIND_ADDRESS: "" })).toBe("http://127.0.0.1:3000/api/health");
+    // a LAN address is the only place the port listens
+    expect(web({ FORGECY_BIND_ADDRESS: "192.168.1.20", FORGECY_PORT: "8080" })).toBe(
+      "http://192.168.1.20:8080/api/health",
+    );
+    expect(web({ FORGECY_BIND_ADDRESS: "fd00::5" })).toBe("http://[fd00::5]:3000/api/health");
+  });
+
   it("lets a full URL win", () => {
     const targets = healthTargets({
       FORGECY_WEB_HEALTH_URL: "http://web.lan/api/health",
