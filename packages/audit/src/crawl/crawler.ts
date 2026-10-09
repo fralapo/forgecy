@@ -49,6 +49,10 @@ export interface CrawlOptions {
   maxPages: number;
   /** Competitor mode: home, services and contacts only. */
   focus?: "site" | "competitor";
+  /** Ask the browser fetcher for the site's real brand visuals (FetchedPage.brand). Audits leave it off. */
+  brandProbe?: boolean;
+  /** Screenshots cost two page loads each: a crawl that only needs the data turns them off. */
+  screenshots?: boolean;
   fetcher: PageFetcher;
   hostCheck: HostCheck;
   userAgent: string;
@@ -240,7 +244,11 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
   await progress({ step: "discovery", status: "running" });
   const pages: FetchedPage[] = [];
   const skipped: SkippedPage[] = [];
-  const fetchOpts = { timeoutMs: options.pageTimeoutMs, screenshots: true };
+  const fetchOpts = {
+    timeoutMs: options.pageTimeoutMs,
+    screenshots: options.screenshots ?? true,
+    ...(options.brandProbe ? { brandProbe: true } : {}),
+  };
   let homePage: FetchedPage;
   try {
     homePage = await options.fetcher.fetchPage(home, fetchOpts);

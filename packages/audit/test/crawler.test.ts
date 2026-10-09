@@ -73,6 +73,30 @@ function options(allowPrivate: boolean) {
 }
 
 describe("crawlSite", () => {
+  it("passes brandProbe and screenshots to the fetcher only as asked", async () => {
+    const seen: Array<{ screenshots: boolean; brandProbe?: boolean }> = [];
+    const spy = (): typeof opts.fetcher => {
+      const inner = opts.fetcher;
+      return {
+        mode: inner.mode,
+        close: () => inner.close(),
+        fetchPage: (url, o) => {
+          seen.push({ screenshots: o.screenshots, brandProbe: o.brandProbe });
+          return inner.fetchPage(url, o);
+        },
+      };
+    };
+    const opts = options(true);
+    await crawlSite({ ...opts, maxPages: 2, fetcher: spy() });
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((o) => o.screenshots && !o.brandProbe)).toBe(true);
+
+    seen.length = 0;
+    await crawlSite({ ...opts, maxPages: 2, brandProbe: true, screenshots: false, fetcher: spy() });
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((o) => !o.screenshots && o.brandProbe === true)).toBe(true);
+  });
+
   it("refuses local hosts by default", async () => {
     await expect(crawlSite(options(false))).rejects.toMatchObject({ code: "AUD-HOST-BLOCKED" });
   });
