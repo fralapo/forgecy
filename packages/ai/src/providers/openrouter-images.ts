@@ -7,7 +7,7 @@ import {
   type ImageProvider,
   type Usage,
 } from "../types";
-import { createJobStore, nearestAspect } from "./images-common";
+import { createJobStore, failAfterCharge, nearestAspect } from "./images-common";
 import { OPENROUTER_BASE_URL } from "./openai-compatible";
 
 /**
@@ -103,14 +103,6 @@ export function createOpenRouterImageProvider(opts: OpenRouterImageProviderOptio
     }
     const json = (await readJson(res, "openrouter")) as OpenRouterImageResponse;
     const choice = json.choices?.[0];
-    if (choice?.message?.refusal)
-      throw new AiProviderError("refusal", `OpenRouter refused: ${choice.message.refusal}`, {
-        provider: "openrouter",
-      });
-    if (choice?.finish_reason === "content_filter")
-      throw new AiProviderError("content_filter", "OpenRouter blocked the prompt", {
-        provider: "openrouter",
-      });
     const images = (choice?.message?.images ?? [])
       .map((i) => (i.image_url?.url ? decodeDataUrl(i.image_url.url) : undefined))
       .filter((i): i is GeneratedImage => !!i);
@@ -122,6 +114,17 @@ export function createOpenRouterImageProvider(opts: OpenRouterImageProviderOptio
       images: images.length,
     };
     if (typeof json.usage?.cost === "number") usage.providerCostUsd = json.usage.cost;
+    // Refused after generation: the provider may still bill, so the failure carries the usage.
+    if (choice?.message?.refusal)
+      throw new AiProviderError("refusal", `OpenRouter refused: ${choice.message.refusal}`, {
+        provider: "openrouter",
+        usage,
+      });
+    if (choice?.finish_reason === "content_filter")
+      throw new AiProviderError("content_filter", "OpenRouter blocked the prompt", {
+        provider: "openrouter",
+        usage,
+      });
     return { images, usage, model: json.model || input.model };
   }
 
@@ -133,7 +136,7 @@ export function createOpenRouterImageProvider(opts: OpenRouterImageProviderOptio
       let usage: Usage | undefined;
       let model = input.model;
       for (let i = 0; i < input.variants; i++) {
-        const r = await once(input);
+        const r = await once(input).catch((e) => failAfterCharge(e, usage));
         all.push(...r.images);
         model = r.model;
         usage = usage ? addUsage(usage, r.usage) : r.usage;
@@ -141,6 +144,7 @@ export function createOpenRouterImageProvider(opts: OpenRouterImageProviderOptio
       if (all.length === 0 || !usage)
         throw new AiProviderError("invalid_output", "OpenRouter returned no image data", {
           provider: "openrouter",
+          ...(usage ? { usage } : {}),
         });
       return store.put({ state: "succeeded", images: all, usage, model });
     },

@@ -9,10 +9,15 @@ import {
   createMemoryLedger,
   monthKey,
   type AiLedger,
+  type ImageProvider,
   type Routing,
 } from "../src/index";
 
 const NOW = new Date("2026-10-05T10:00:00Z");
+const setupRouting: Routing = {
+  default: { primary: { provider: "anthropic", model: "claude-opus-5-5" } },
+  image: { primary: { provider: "openai", model: "gpt-image-2" } },
+};
 const schema = z.object({ title: z.string().min(3), slides: z.number().int().min(1) });
 const SECRET = "Rossi client: secret launch of product X";
 
@@ -474,6 +479,81 @@ describe("images", () => {
         clientPolicy: "local_only",
       }),
     ).rejects.toMatchObject({ code: "policy_blocked" });
+  });
+
+  describe("a run that fails after the provider already charged", () => {
+    const charged = {
+      inputTokens: 100,
+      outputTokens: 1000,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      images: 1,
+    };
+    const req = {
+      prompt: "x",
+      size: { w: 1080, h: 1350 },
+      variants: 1 as const,
+      clientId: baseReq.clientId,
+      clientPolicy: "external_allowed" as const,
+    };
+    const providerWith = (generate: ImageProvider["generate"]): ImageProvider => ({
+      id: "openai",
+      generate,
+      getStatus: async (jobId) => ({ jobId, state: "failed" }),
+    });
+    const run = (generate: ImageProvider["generate"]) => {
+      const ledger = createMemoryLedger();
+      const gateway = createAiGateway({
+        ledger,
+        providers: { text: {}, image: { openai: providerWith(generate) } },
+        routing: { default: setupRouting.default, image: setupRouting.image },
+        now: () => NOW,
+      });
+      return { ledger, gateway };
+    };
+    const spend = (ledger: ReturnType<typeof createMemoryLedger>) =>
+      ledger.monthSpendMicroUsd({ scope: "agency" }, monthKey(NOW));
+    // gpt-image-2: 100 input tokens at 2.5 plus 1000 output tokens at 15 USD per million.
+    const COST = 100 * 2.5 + 1000 * 15;
+
+    it("logs the cost of an error that carries the usage", async () => {
+      const { ledger, gateway } = run(async () => {
+        throw new AiProviderError("invalid_output", "no image data", {
+          provider: "openai",
+          usage: charged,
+        });
+      });
+      await expect(gateway.generateImage(req)).rejects.toMatchObject({ kind: "invalid_output" });
+      expect(ledger.entries[0]).toMatchObject({
+        kind: "image",
+        status: "error",
+        costMicroUsd: COST,
+        tokensIn: 100,
+        tokensOut: 1000,
+        error: expect.stringContaining("invalid_output"),
+      });
+      expect(await spend(ledger)).toBe(COST);
+    });
+
+    it("logs the cost of a job that ends failed with usage", async () => {
+      const { ledger, gateway } = run(async () => ({
+        jobId: "j1",
+        state: "failed" as const,
+        error: "refused after generation",
+        usage: charged,
+      }));
+      await expect(gateway.generateImage(req)).rejects.toBeInstanceOf(AiProviderError);
+      expect(ledger.entries[0]).toMatchObject({ status: "error", costMicroUsd: COST });
+      expect(await spend(ledger)).toBe(COST);
+    });
+
+    it("still logs zero when the provider reported nothing", async () => {
+      const { ledger, gateway } = run(async () => {
+        throw new AiProviderError("server", "boom", { provider: "openai" });
+      });
+      await expect(gateway.generateImage(req)).rejects.toMatchObject({ kind: "server" });
+      expect(ledger.entries[0]).toMatchObject({ status: "error", costMicroUsd: 0 });
+    });
   });
 });
 

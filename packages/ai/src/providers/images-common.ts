@@ -1,5 +1,19 @@
 import { randomUUID } from "node:crypto";
-import type { ImageGenerationJob, ImageGenerationStatus, ImageSize } from "../types";
+import { AiProviderError } from "../errors";
+import {
+  addUsage,
+  type ImageGenerationJob,
+  type ImageGenerationStatus,
+  type ImageSize,
+  type Usage,
+} from "../types";
+
+/** Rethrows `err`, adding what earlier variants of the same request already billed. */
+export function failAfterCharge(err: unknown, spent: Usage | undefined): never {
+  if (err instanceof AiProviderError && spent)
+    err.usage = err.usage ? addUsage(spent, err.usage) : spent;
+  throw err;
+}
 
 /** Keeps finished jobs of synchronous image providers so getStatus() can answer. Bounded. */
 export function createJobStore(max = 100) {

@@ -54,22 +54,19 @@ export function createOpenAIImageProvider(opts: OpenAIImageProviderOptions): Ima
           data: new Uint8Array(Buffer.from(d.b64_json!, "base64")),
           mimeType: "image/png",
         }));
+      const usage = {
+        inputTokens: res.usage?.input_tokens ?? 0,
+        outputTokens: res.usage?.output_tokens ?? 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        images: images.length,
+      };
       if (images.length === 0)
         throw new AiProviderError("invalid_output", "OpenAI returned no image data", {
           provider: "openai",
+          usage,
         });
-      return store.put({
-        state: "succeeded",
-        images,
-        model: input.model,
-        usage: {
-          inputTokens: res.usage?.input_tokens ?? 0,
-          outputTokens: res.usage?.output_tokens ?? 0,
-          cacheReadTokens: 0,
-          cacheWriteTokens: 0,
-          images: images.length,
-        },
-      });
+      return store.put({ state: "succeeded", images, model: input.model, usage });
     },
     async getStatus(jobId) {
       return store.get(jobId);

@@ -1,5 +1,6 @@
 import { ForgecyError } from "@forgecy/core";
 import type { ProviderId } from "@forgecy/core";
+import type { Usage } from "./types";
 
 export type AiErrorKind =
   | "rate_limit"
@@ -27,6 +28,8 @@ export class AiProviderError extends ForgecyError {
   readonly fallbackEligible: boolean;
   readonly status: number | undefined;
   readonly provider: ProviderId | undefined;
+  /** What the provider had already billed when it failed; the gateway logs its cost. */
+  usage: Usage | undefined;
 
   constructor(
     kind: AiErrorKind,
@@ -34,6 +37,7 @@ export class AiProviderError extends ForgecyError {
     opts: {
       status?: number;
       provider?: ProviderId;
+      usage?: Usage;
       cause?: unknown;
       details?: Record<string, unknown>;
     } = {},
@@ -50,6 +54,7 @@ export class AiProviderError extends ForgecyError {
     this.fallbackEligible = fallbackKinds.has(kind);
     this.status = opts.status;
     this.provider = opts.provider;
+    this.usage = opts.usage;
     if (opts.cause !== undefined) (this as { cause?: unknown }).cause = opts.cause;
   }
 }

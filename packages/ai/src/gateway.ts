@@ -746,14 +746,24 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
           };
         } catch (e) {
           const err = classifyError(e, cand.provider);
-          // Known under-count: no cost is logged on an error, even when the provider already
-          // charged (results refused after generation, over the size cap). SECURITY_CHECKLIST §7.
+          // A failure after the provider already charged keeps its cost in the log and the budget.
+          const charged = err.usage
+            ? computeCost(cand.provider, cand.model, err.usage)
+            : { costMicroUsd: 0, priced: true };
           await ledger.record({
             ...baseEntry(kind, req),
             provider: cand.provider,
             model: cand.model,
             status: "error",
-            inputSummary: { ...summary, attempt: ci + 1, fallback: ci > 0 },
+            inputSummary: {
+              ...summary,
+              attempt: ci + 1,
+              fallback: ci > 0,
+              ...(charged.priced ? {} : { unpriced: true }),
+            },
+            tokensIn: err.usage?.inputTokens ?? 0,
+            tokensOut: err.usage?.outputTokens ?? 0,
+            costMicroUsd: charged.costMicroUsd,
             error: `${err.kind}: ${err.message}`,
             startedAt,
             endedAt: now(),
@@ -803,7 +813,7 @@ export function createAiGateway(opts: GatewayOptions): AiGateway {
       throw new AiProviderError(
         "unknown",
         `Image job ${status.state}: ${status.error ?? "no details"}`,
-        { provider: cand.provider },
+        { provider: cand.provider, ...(status.usage ? { usage: status.usage } : {}) },
       );
     }
     return status;
