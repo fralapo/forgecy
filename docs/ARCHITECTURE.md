@@ -69,3 +69,13 @@ Each row is a thread that can start in parallel with the others. Shared files ar
 | Advanced settings                    | M1–M6     | `apps/web/app/(app)/settings/` (budget, BYOK keys, policy, System page, backups from the interface)                                                                                        | foundations                                                         |
 
 The first four can start right away; Content and Brand Guard start once the renderer and Brand Identity have their public interfaces.
+
+### Brand package: import, automatic apply, images
+
+`packages/brand/src/import/` turns a source into verified proposals, and `auto-import.ts` applies them ([ADR 0022](adr/0022-automatic-brand-import.md)):
+
+- **Import gate** (`gate.ts`, `verify.ts`): a quote must be in the cited page, a hex in the data the browser extracted, the proposal must still apply and pass its checks; framework-default palettes and generic fonts are discarded. Pure and unit-tested.
+- **Automatic apply** (`applyImport`, `undoImport`, `latestAutoImport`): for website and social-profile sources only, as the person who started the run (their access and permissions are re-checked), once per run, in one transaction. Hand-edited fields are never overwritten (`isHandEdited`); contested or uncertain items stay pending; a shared draft is not published. Documents keep the review queue.
+- **Images** (`images.ts`): pictures from the site and one profile picture per social profile go to the `assets` table with source `site`, tags `[class, "site"]` or `["social"]`; the logo is also a `brand_sources` row. `listBrandImages` reads them for the brand page; rights are confirmed in the content library (`confirmAssetRights` accepts `upload` and `site`).
+- **Completeness** (`completeness.ts`): `brandCompleteness` counts nine sections for the brand page.
+- **Entry** (`apps/web`): `createClientFor` (`apps/web/lib/create-client.ts`) is the one client-creation path, used by the Clients form and by "Add a brand" (`addBrandFromUrlAction`), and queues the first crawl as the person.

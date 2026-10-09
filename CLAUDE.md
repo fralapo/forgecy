@@ -16,7 +16,7 @@ Forgecy is an internal agency tool, open source and self-hosted: prospect audits
 - Shared Zod schemas and enums live in `packages/core`; database enums import them from there.
 - No part calls an AI provider directly: everything goes through `packages/ai` (client policy, budget, `jobs_log`).
 - The AI never writes HTML: it picks layouts and fills slots that the renderer inserts as text.
-- AI agents propose and do not approve: `can()` in `packages/core` enforces this server-side.
+- AI agents propose and do not approve: `can()` in `packages/core` enforces this server-side. An import run acts on behalf of the person who started it (ADR 0022).
 - Every query filters by permissions; no resource can be read just by knowing its id.
 - Interface: only `@forgecy/ui` tokens, no hand-written colors or sizes (lint blocks them), Lucide icons.
 - No interface text in the code: every string comes from `packages/i18n/messages/<locale>/*.json` through next-intl (`t("...")`), with ICU variables and plurals; dates and numbers through `getFormat()`/`useFormat()`. English is the source and fallback language; every key exists in `en` and `it` (tests and the `forgecy/no-hardcoded-text` lint rule fail otherwise). See `docs/I18N.md`, including how to add a language.

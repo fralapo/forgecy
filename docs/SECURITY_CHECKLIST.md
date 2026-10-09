@@ -448,9 +448,48 @@ remove the Admin-created assignments you do not want in Settings → Client acce
    `brand-book`, `brand-guard`, `catalog` and `content`, with
    `FORGECY_TEST_DATABASE_URL` (and `FORGECY_TEST_REDIS_URL` for `audit`) set.
 
+## 9. Automatic brand import (see `docs/adr/0022-automatic-brand-import.md`)
+
+Use an Admin, a person assigned to client X, and a person with no access to X
+(or a person without the publish permissions). Use a site you control for the
+pages, and a second one for the attacker's page.
+
+1. Add a website to X as the Admin, then remove the person's access (or the
+   publish permissions) from X while the crawl they started is still queued,
+   so the import runs as a requester without access: it reads the site, but
+   nothing is written to X's draft or published versions, no proposal is
+   accepted, and the source status says the import was not applied
+   automatically. X's pages answer 404 for that person.
+2. As the person assigned to X, add the same website: the proposals are
+   accepted and a new version is published with that person as `reviewed_by`
+   and `approved_by` (Versions tab), and the activity log shows
+   `brand.version.publish` with `auto: true`. "Undo import" restores the
+   previous version.
+3. Edit a field by hand (for example the one-liner), then press Re-analyze:
+   the field keeps your text and the card says that a field you wrote was kept.
+4. Make a draft as a colleague (leave it open), then run an import as another
+   person: the items are accepted into the draft but not published, and the
+   source says the draft holds someone else's work.
+5. Add a brand-book PDF: its proposals wait in the queue; nothing is applied
+   automatically.
+6. On the attacker's page, link to a social profile on another host, to
+   `http://127.0.0.1/` and to a LinkedIn `/in/` person profile: the crawl
+   never requests the off-platform or internal address (check the access log
+   of the second site and of an internal listener) and the person profile
+   adds no text and no picture.
+7. Add a social profile whose `robots.txt` disallows it, and one behind a
+   login wall: nothing is imported and the source says why.
+8. Images: the ones found on the site appear on the brand page and in the
+   content library (source "site"); confirm the rights of one in the library.
+   A profile picture stays a draft until its rights are confirmed.
+9. Automated: `pnpm --filter @forgecy/brand exec vitest run` (the
+   `auto-import`, `social` and `images` suites) and
+   `pnpm --filter @forgecy/content exec vitest run asset-rights`, with
+   `FORGECY_TEST_DATABASE_URL` set.
+
 ## Sign-off
 
-Record the date, the person who ran it, and which of the eight sections
+Record the date, the person who ran it, and which of the nine sections
 passed in the PR or ticket that references this checklist. A failing item
 blocks go-live until fixed or explicitly accepted as a known limitation
 (e.g. the documented residual gaps: when a page is opened in Chromium, a
