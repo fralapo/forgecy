@@ -150,12 +150,18 @@ recommended follow-up, not built yet.
       writes a fresh sidecar) and restore it from there, or delete the
       sidecar `<archive>.json` next to it. A checksum error means the drill
       was run incorrectly, not that it passed.
-- [ ] False refusals fail closed, and the scanner was not validated against a
-      real pg_dump on the Windows dev host. On a populated install take a
-      backup (`pnpm forgecy backup`), restore it onto an empty database and
-      confirm it restores. If a genuine backup is refused as an unsafe dump,
-      treat it as a bug in the scanner and report the offending line; do not
-      edit the dump to get past it.
+- [ ] False refusals fail closed. The scanner was run against a real
+      `pg_dump` 17 (`pgvector/pgvector:pg17`, 17.11, with `--clean`,
+      `--if-exists`, `--no-owner` and the `\restrict`/`\unrestrict` lines) of
+      every migration plus seeded awkward data, through `assertSafeDumpFile` at
+      several chunk sizes (accepted), and that dump was restored with
+      `psql -X --single-transaction -v ON_ERROR_STOP=1` into an empty and into
+      an existing database (exit 0, data round-tripped). On any other Postgres
+      major (`pg_dump` 18 may change the header, and the scanner then refuses
+      the dump) take a backup (`pnpm forgecy backup`), restore it onto an empty
+      database and confirm it restores. If a genuine backup is refused as an
+      unsafe dump, treat it as a bug in the scanner and report the offending
+      line; do not edit the dump to get past it.
 - [ ] Restore a backup whose sidecar `.json` checksum was edited: refused
       (`restoreArchive` verifies it itself, not only `inspectBackup`). A
       sidecar that is unreadable or has no `sha256` is refused as well; only
@@ -172,6 +178,10 @@ recommended follow-up, not built yet.
       `-X --single-transaction -v ON_ERROR_STOP=1`, so the restore stops at
       the error and the database is exactly as it was before, not half
       loaded.
+- [ ] Stop the worker before restoring a live install (stop the `worker`
+      service). A single-transaction restore holds its locks until commit, so
+      running jobs and web requests wait for it; a deadlock aborts the whole
+      restore, which rolls back cleanly and can be run again.
 
 ### Client import (Import/export in Settings)
 
@@ -212,21 +222,39 @@ recommended follow-up, not built yet.
       second run refuses to overwrite it.
 - [ ] `pnpm forgecy start` with `POSTGRES_PASSWORD=forgecy` (or `change-me`) on a
       fresh install stops with the "guessable" message.
-- [ ] An install made before this check (database in `data/db`, no
-      `POSTGRES_PASSWORD` in `.env`) is told to add `POSTGRES_PASSWORD=forgecy` to
-      keep its database; rotate it with `ALTER USER` (README, Upgrading).
+- [ ] An install made before this check (database in `data/db`) keeps its
+      database: with `POSTGRES_PASSWORD=change-me` (or another value) in `.env`,
+      `start` only warns and says to keep the value, then rotate it; with the
+      line absent or empty it stops and says to add `POSTGRES_PASSWORD=forgecy`
+      (README, Upgrading). Run this as a normal user on Linux, where `data/db` is
+      unreadable to you: the database must still be detected.
 
 ## 7. Upgrading, and follow-ups left open by the hardening work
 
-Upgrading from a version before this work needs three things, none of them
-automatic:
+Upgrading from a version before this work needs these, none of them
+automatic (README, Upgrading, covers the first):
 
-- `POSTGRES_PASSWORD` must be set in `.env` before the stack starts (README,
-  "Upgrading from an install without POSTGRES_PASSWORD").
+- `POSTGRES_PASSWORD` must be set in `.env` before the stack starts. An
+  existing database keeps the password it was created with: `change-me` (the old
+  `.env.example` value) or another value that is present stays as it is, then
+  rotate it; an absent or empty line means `forgecy`.
 - `FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS` must be exactly `true` or `false` (or
   empty): `1`, `yes` or `TRUE` stop startup and name the variable.
 - A backup whose sidecar has no `sha256` cannot be restored until you delete
-  that sidecar (section 5).
+  that sidecar (section 5). The error in Settings and in the CLI says the
+  archive "may be corrupted or changed" and now adds that hint.
+- The login screen asks for a username. Existing accounts that signed in with
+  an email still sign in with the full email.
+- `FORGECY_SETUP_TOKEN` is optional.
+- To unlock a locked account, delete the `forgecy:login:*` keys in Redis
+  (`docs/adr/0014-auth-hardening.md`).
+- `pnpm forgecy upgrade` runs the migration that drops `jobs.depends_on_job_id`
+  while the old web and worker containers still run, until `up -d` recreates
+  them. Jobs created in that short window can fail; recovery re-enqueues them
+  after the restart. Upgrade when the queue is quiet.
+- `docker-compose.dev.yml` now takes the database password from
+  `POSTGRES_PASSWORD` in `.env` (default `forgecy`). If `data/dev-db` was created
+  with another password, recreate `data/dev-db` or set the old value in `.env`.
 
 Decisions and checks nobody has made yet; each is a known limitation until it is:
 
@@ -234,8 +262,9 @@ Decisions and checks nobody has made yet; each is a known limitation until it is
       `DATABASE_URL` (section 5 calls the dump scanner a barrier, not a sandbox).
 - [ ] Restore through `pg_dump -Fc` and `pg_restore` instead of scanning plain
       SQL.
-- [ ] Run the dump scanner (`packages/backup/src/safe-dump.ts`) against a real
-      `pg_dump` of a populated install: it was only tested on hand-written dumps.
+- [ ] Re-run the dump scanner (`packages/backup/src/safe-dump.ts`) drill of
+      section 5 on any Postgres major other than 17: it was validated against
+      `pg_dump` 17 only, and a changed header makes it refuse the dump.
 - [ ] Per-client access control: any active human can read any client by id
       (ADR 0014). It needs a grants table, a resolver in `can()` and a filter in
       every query.
@@ -247,6 +276,21 @@ Decisions and checks nobody has made yet; each is a known limitation until it is
 - [ ] `packages/client-transfer/src/export.ts` does not enforce the import's JSON
       caps (64 MiB per entry, 256 MiB per package): a very large client exports
       fine and then fails import as unsafe.
+- [ ] A brand proposal authored by a person who does not exist on the target
+      installation fails the whole client import on the `brand_proposals_author`
+      CHECK.
+- [ ] The catalog Office guard (`packages/catalog/src/parsers/zip.ts`) counts every
+      `.xml` and `.rels` part against a 50 MB bound, so it may refuse a huge
+      spreadsheet with pivot caches.
+- [ ] Client import remaps the `uuid[]` columns (`product_ids`, `audience_ids`,
+      `parent_ids`, `excluded_finding_ids`) but does not check that the ids
+      belong to the same client.
+- [ ] `pnpm forgecy health` checks `WORKER_HEALTH_PORT` when only that is set in
+      `.env`, while Docker publishes the worker on `FORGECY_WORKER_HEALTH_PORT`
+      (default 3001): set the second one too.
+- [ ] The web port is published on all interfaces (`FORGECY_PORT`), so plain
+      http on `:3000` reaches the app without going through Caddy. Firewall it
+      or bind it to `127.0.0.1` when using `--profile https`.
 - [ ] The Docker choices (`cap_drop`, `no-new-privileges`, Caddy's
       `NET_BIND_SERVICE`) and Compose parity of the `.env` parser were never run on
       the Windows dev host. On Linux run `docker compose config`, then a fresh

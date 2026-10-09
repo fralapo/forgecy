@@ -31,7 +31,7 @@ AI agents analyze and propose; a person always approves and publishes. No video,
 
 ## Installation (Docker)
 
-You need Docker with Compose.
+You need Docker with Compose, plus Node.js 22 (>= 22.18) and pnpm 10 for the `pnpm` commands below (without them, copy `.env.example` to `.env`, fill the secrets by hand and use `docker compose` only).
 
 ```bash
 pnpm install && pnpm forgecy init   # writes .env with generated secrets (or: cp .env.example .env and fill POSTGRES_PASSWORD and BETTER_AUTH_SECRET)
@@ -51,14 +51,18 @@ Optional profiles: `--profile dev` (Mailpit on `:8025` for emails), `--profile s
 | `pnpm forgecy upgrade`                 | Backup, new build, migrations, restart                      |
 | `pnpm forgecy health`                  | Checks web and worker                                       |
 
-`start`, `migrate` and `upgrade` stop with a clear message if `POSTGRES_PASSWORD` or `BETTER_AUTH_SECRET` is empty or guessable. `pnpm forgecy init --fill` fills only the secrets that are empty in an existing `.env`, never changes a value that is set, and never generates a database password when `data/db` or `data/dev-db` already exists (that password lives inside the database). A guessable value such as `change-me` is not "empty": replace it by hand, for example with `openssl rand -hex 24`, and use the same value in `DATABASE_URL`.
+`start`, `migrate` and `upgrade` stop with a clear message if `POSTGRES_PASSWORD` or `BETTER_AUTH_SECRET` is empty or guessable. `pnpm forgecy init --fill` fills only the secrets that are empty in an existing `.env`, never changes a value that is set, and never generates a database password when `data/db` or `data/dev-db` already exists (that password lives inside the database). A guessable value such as `change-me` is not "empty": on a fresh install it stops `start`, so replace it by hand (for example with `openssl rand -hex 24`) and use the same value in `DATABASE_URL`; on an existing database it only warns, because that value is the password the database was created with (see Upgrading).
 
-### Upgrading from an install without POSTGRES_PASSWORD
+### Upgrading
 
-Earlier versions fell back to the password `forgecy` when `.env` had no `POSTGRES_PASSWORD`. Compose no longer does, so the stack will not start until it is set. The password inside an existing database (`data/db`) does not change when you edit `.env`, so:
+`pnpm forgecy upgrade` takes a backup first. Compose no longer falls back to the password `forgecy`, so the stack will not start until `POSTGRES_PASSWORD` is set in `.env`. The password inside an existing database (`data/db`) does not change when you edit `.env`, so do this before anything else (every `docker compose` command, `exec` included, stops while the variable is missing):
 
-1. First, to keep the current database, add `POSTGRES_PASSWORD=forgecy` to `.env` (or the value you had set). Do this before anything else: every `docker compose` command, `exec` included, stops while the variable is missing. `pnpm forgecy start` and `upgrade` then work, with a warning.
-2. Then rotate it (recommended). With the stack running, run `docker compose exec postgres psql -U forgecy`, type `\password forgecy` and enter the new password at the prompt, then `\q`. Typing it at the prompt keeps it out of the shell history. Use a long random one such as the output of `openssl rand -hex 24` (no spaces and none of `/ @ : % ? # [ ] $ ' " \`). Put the same value in `POSTGRES_PASSWORD` in `.env` and run `docker compose up -d` so web and worker restart with it.
+1. Keep the password the database was created with.
+   - `.env` has `POSTGRES_PASSWORD=change-me` (the old `.env.example` value) or another value: leave it as it is. `pnpm forgecy start` and `upgrade` work, with a warning.
+   - The line is absent or empty: the database used the old default, so add `POSTGRES_PASSWORD=forgecy`.
+2. Then rotate it (recommended). With the stack running, run `docker compose exec postgres psql -U forgecy`, type `\password forgecy` and enter the new password at the prompt, then `\q`. Typing it at the prompt keeps it out of the shell history. Use a long random one such as the output of `openssl rand -hex 24` (no spaces and none of `/ @ : % ? # [ ] $ ' " \`). Put the same value in `POSTGRES_PASSWORD` in `.env` (and in `DATABASE_URL` if you run `pnpm dev` against it) and run `docker compose up -d` so web and worker restart with it.
+
+The other changes to check before upgrading are in [section 7 of the security checklist](docs/SECURITY_CHECKLIST.md#7-upgrading-and-follow-ups-left-open-by-the-hardening-work): the strict `FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS`, backups without a checksum, sign-in by username, the optional setup token, unlocking a locked account, a short window during the migration and the dev database password.
 
 ## Development
 

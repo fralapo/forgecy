@@ -22,4 +22,4 @@ Three things drifted from the ADRs as written:
 
 Status lines of 0006 and 0008 point here; their bodies are untouched. The ADR test fails on a new duplicate number, a gap, a missing status, or a "superseded by" pointing at nothing.
 
-The hardening work left decisions for the owner; they are listed, with how to check each, in section 7 of `docs/SECURITY_CHECKLIST.md` ("Follow-ups left open"): a least-privilege restore role, a `pg_dump -Fc` / `pg_restore` restore route, per-client access control (ADR 0014), the template zip importer, the client-package export caps, the untested Docker choices, and a scanner run against a real `pg_dump`.
+The hardening work left decisions for the owner; they are listed, with how to check each, in section 7 of `docs/SECURITY_CHECKLIST.md` ("Follow-ups left open"): a least-privilege restore role, a `pg_dump -Fc` / `pg_restore` restore route, per-client access control (ADR 0014), the template zip importer, the client-package export caps and the other import limits, the untested Docker choices, and the scanner drill on Postgres majors other than 17 (it passed on a real `pg_dump` 17).
