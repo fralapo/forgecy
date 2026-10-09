@@ -480,7 +480,7 @@ export function assetCommercialUse(a: {
   return null;
 }
 
-/** A person confirms they may use an uploaded image commercially (and says on what basis). */
+/** A person confirms they may use an uploaded image or one taken from a website (and says on what basis). */
 export async function confirmAssetRights(db: Database, actor: Actor, input: unknown) {
   const i = parseOrThrow(rightsInput, input);
   humanOnly(actor, "assets.upload", i.clientId);
@@ -494,7 +494,13 @@ export async function confirmAssetRights(db: Database, actor: Actor, input: unkn
   const [row] = await db
     .update(assets)
     .set({ rights })
-    .where(and(eq(assets.id, i.id), eq(assets.clientId, i.clientId), eq(assets.source, "upload")))
+    .where(
+      and(
+        eq(assets.id, i.id),
+        eq(assets.clientId, i.clientId),
+        inArray(assets.source, ["upload", "site"]),
+      ),
+    )
     .returning({ id: assets.id });
   if (!row) notFound("content.errors.imageNotFound");
   await recordAuditEvent(db, {

@@ -194,8 +194,9 @@ export default async function LibraryPage({
             const use = gen?.provider
               ? (commercial.get(gen.provider) ?? gen.commercialUse)
               : gen?.commercialUse;
-            const rights = a.source === "upload" ? readAssetRights(a.rights) : null;
-            const uploadUse = a.source === "upload" ? assetCommercialUse(a) : null;
+            const needsRights = a.source === "upload" || a.source === "site";
+            const rights = needsRights ? readAssetRights(a.rights) : null;
+            const uploadUse = needsRights ? assetCommercialUse(a) : null;
             const ref = { slug: client.slug, clientId: client.id, id: a.id };
             return (
               <li key={a.id}>
@@ -253,7 +254,7 @@ export default async function LibraryPage({
                       {rights.note ? ` · ${rights.note}` : ""}
                     </p>
                   ) : null}
-                  {a.source === "upload" && canUpload ? (
+                  {needsRights && canUpload ? (
                     <LibraryRightsForm
                       {...ref}
                       initial={rights ? { basis: rights.basis, note: rights.note } : null}
