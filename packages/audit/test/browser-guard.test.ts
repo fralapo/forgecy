@@ -23,12 +23,16 @@ beforeEach(() => lookupMock.mockReset());
 describe("pinRootHost fails closed", () => {
   it("pins a public root host", async () => {
     lookupMock.mockResolvedValueOnce([{ address: "93.184.216.34", family: 4 }]);
-    expect(await pinRootHost("https://example.com/", false)).toEqual(["MAP example.com 93.184.216.34"]);
+    expect(await pinRootHost("https://example.com/", false)).toEqual([
+      "MAP example.com 93.184.216.34",
+    ]);
   });
 
   it("brackets an IPv6 answer", async () => {
     lookupMock.mockResolvedValueOnce([{ address: "2606:4700::1111", family: 6 }]);
-    expect(await pinRootHost("https://example.com/", false)).toEqual(["MAP example.com [2606:4700::1111]"]);
+    expect(await pinRootHost("https://example.com/", false)).toEqual([
+      "MAP example.com [2606:4700::1111]",
+    ]);
   });
 
   it("refuses to launch unpinned when the root host resolves to a private address", async () => {
@@ -39,8 +43,12 @@ describe("pinRootHost fails closed", () => {
   });
 
   it("refuses a private or hex-mapped IP literal root", async () => {
-    await expect(pinRootHost("http://[::ffff:a9fe:a9fe]/", false)).rejects.toMatchObject({ code: "AUD-HOST-BLOCKED" });
-    await expect(pinRootHost("http://10.0.0.1/", false)).rejects.toMatchObject({ code: "AUD-HOST-BLOCKED" });
+    await expect(pinRootHost("http://[::ffff:a9fe:a9fe]/", false)).rejects.toMatchObject({
+      code: "AUD-HOST-BLOCKED",
+    });
+    await expect(pinRootHost("http://10.0.0.1/", false)).rejects.toMatchObject({
+      code: "AUD-HOST-BLOCKED",
+    });
   });
 
   it("reports an unresolvable root as browser-unavailable (so the HTML path reports it)", async () => {
@@ -71,7 +79,12 @@ describe("allowBrowserRequest gates subresources and XHR, not only navigations",
       expect(await allowBrowserRequest(url, hostCheck), url).toBe(false);
   });
   it("allows public hosts and inline schemes", async () => {
-    for (const url of ["https://93.184.216.34/app.js", "data:image/png;base64,AAAA", "blob:https://x/1", "about:blank"])
+    for (const url of [
+      "https://93.184.216.34/app.js",
+      "data:image/png;base64,AAAA",
+      "blob:https://x/1",
+      "about:blank",
+    ])
       expect(await allowBrowserRequest(url, hostCheck), url).toBe(true);
   });
 });
@@ -91,7 +104,11 @@ describe("openFetcher", () => {
   it("falls back to the HTML fetcher when Chromium cannot be pinned, so the scan fails with its recorded error", async () => {
     const blocked = crawlError("AUD-HOST-BLOCKED", "audit.stored.crawl.hostLocal", { host: "x" });
     expect((await openFetcher(deps(blocked), ctx, "https://x/")).mode).toBe("html");
-    const unavailable = crawlError("AUD-BROWSER-UNAVAILABLE", "audit.stored.crawl.browserUnavailable", { detail: "d" });
+    const unavailable = crawlError(
+      "AUD-BROWSER-UNAVAILABLE",
+      "audit.stored.crawl.browserUnavailable",
+      { detail: "d" },
+    );
     expect((await openFetcher(deps(unavailable), ctx, "https://x/")).mode).toBe("html");
   });
 

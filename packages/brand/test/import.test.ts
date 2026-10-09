@@ -89,7 +89,11 @@ describe("detectImportFile", () => {
 
   it("accepts PDF, text and WOFF and refuses empty or unknown files", async () => {
     expect(
-      await detectImportFile({ name: "b.pdf", mime: "application/pdf", bytes: strToU8("%PDF-1.7\n...") }),
+      await detectImportFile({
+        name: "b.pdf",
+        mime: "application/pdf",
+        bytes: strToU8("%PDF-1.7\n..."),
+      }),
     ).toMatchObject({
       ok: true,
       type: "pdf",
@@ -193,12 +197,22 @@ describe("hostile imports", () => {
     expect(key(err)).toBe("brand.import.errors.archiveTooLarge");
   });
   it("refuses an Office file whose parts add up past the total limit", async () => {
-    const part = (n: number) => ({ name: `ppt/slides/slide${n}.xml`, data: Buffer.alloc(40 * 1024 * 1024) });
-    const err = await extractFile("pptx", zipArchive([part(1), part(2), part(3)]), "sum.pptx").catch((e) => e);
+    const part = (n: number) => ({
+      name: `ppt/slides/slide${n}.xml`,
+      data: Buffer.alloc(40 * 1024 * 1024),
+    });
+    const err = await extractFile(
+      "pptx",
+      zipArchive([part(1), part(2), part(3)]),
+      "sum.pptx",
+    ).catch((e) => e);
     expect(key(err)).toBe("brand.import.errors.archiveTooLarge");
   });
   it("refuses an Office file with thousands of entries", async () => {
-    const entries = Array.from({ length: 10_001 }, (_, i) => ({ name: `junk/${i}.txt`, data: "x" }));
+    const entries = Array.from({ length: 10_001 }, (_, i) => ({
+      name: `junk/${i}.txt`,
+      data: "x",
+    }));
     const zip = zipArchive([{ name: "word/document.xml", data: "<w:document/>" }, ...entries]);
     const err = await extractFile("docx", zip, "many.docx").catch((e) => e);
     expect(key(err)).toBe("brand.import.errors.archiveTooLarge");
@@ -276,7 +290,10 @@ describe("hostile imports", () => {
   });
   it("never inflates parts it does not read, however big (a media-heavy deck stays legit)", async () => {
     const deck = zipArchive([
-      { name: "ppt/slides/slide1.xml", data: "<p:sld><a:p><a:r><a:t>Brand book</a:t></a:r></a:p></p:sld>" },
+      {
+        name: "ppt/slides/slide1.xml",
+        data: "<p:sld><a:p><a:r><a:t>Brand book</a:t></a:r></a:p></p:sld>",
+      },
       { name: "ppt/media/huge.bin", data: Buffer.alloc(120 * 1024 * 1024) },
     ]);
     const out = await extractFile("pptx", deck, "media.pptx");
@@ -290,7 +307,10 @@ describe("hostile imports", () => {
     }));
     const deck = zipArchive([
       { name: "ppt/presentation.xml", data: "<p:presentation/>" },
-      { name: "ppt/slides/slide1.xml", data: "<p:sld><a:p><a:r><a:t>Brand book</a:t></a:r></a:p></p:sld>" },
+      {
+        name: "ppt/slides/slide1.xml",
+        data: "<p:sld><a:p><a:r><a:t>Brand book</a:t></a:r></a:p></p:sld>",
+      },
       ...media,
     ]);
     expect(deck.length).toBeGreaterThan(45 * 1024 * 1024);

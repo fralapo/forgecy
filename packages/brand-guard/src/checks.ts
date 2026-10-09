@@ -169,7 +169,9 @@ interface Ctx {
   doc: BrandIdentityDocument;
   render: GuardRender | undefined;
   out: Findings;
-  options: Required<Pick<CheckOptions, "thumbnailWidth" | "thumbnailMinPx" | "defaultHookMaxWords">>;
+  options: Required<
+    Pick<CheckOptions, "thumbnailWidth" | "thumbnailMinPx" | "defaultHookMaxWords">
+  >;
   notRun: BrandCheckReport["notRun"];
 }
 

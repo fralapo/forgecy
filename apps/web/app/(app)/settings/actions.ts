@@ -146,7 +146,9 @@ export async function changePasswordAction(
   const parsed = changePasswordSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: await firstIssue(parsed.error) };
   const result = await changeOwnPassword(parsed.data.currentPassword, parsed.data.newPassword);
-  return "error" in result ? { error: await refText(result.error, "Invalid password.") } : { ok: true };
+  return "error" in result
+    ? { error: await refText(result.error, "Invalid password.") }
+    : { ok: true };
 }
 
 export type McpConnectState = { error?: string };

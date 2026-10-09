@@ -63,7 +63,9 @@ describe("export job re-checks the approval gate when it runs", () => {
   it("refuses a final export of content that was reopened after it was requested", async () => {
     const err = await run("draft").catch((e: unknown) => e);
     expect(err).toBeInstanceOf(NeedsAttentionError);
-    expect((err as NeedsAttentionError).ref).toMatchObject({ key: "content.jobErrors.notApproved" });
+    expect((err as NeedsAttentionError).ref).toMatchObject({
+      key: "content.jobErrors.notApproved",
+    });
     expect(renderer).not.toHaveBeenCalled();
     expect(recordExport).not.toHaveBeenCalled();
   });

@@ -297,16 +297,15 @@ async function extractPdf(bytes: Uint8Array): Promise<Extraction> {
   try {
     const totalPages = pdf.numPages;
     // Checked before any page is touched: unpdf's extractText would start all of them at once.
-    if (totalPages > MAX_PDF_PAGES) throw new ExtractionError("brand.import.errors.pdfTooManyPages");
+    if (totalPages > MAX_PDF_PAGES)
+      throw new ExtractionError("brand.import.errors.pdfTooManyPages");
     const pages: ExtractedPage[] = [];
     try {
       for (let n = 1; n <= Math.min(totalPages, MAX_PAGES); n++) {
         const content = await (await pdf.getPage(n)).getTextContent();
         // Trimmed per page as it is read, so the text kept never exceeds MAX_PAGES * MAX_PAGE_CHARS.
         const text = clean(
-          content.items
-            .map((it) => ("str" in it ? it.str + (it.hasEOL ? "\n" : "") : ""))
-            .join(""),
+          content.items.map((it) => ("str" in it ? it.str + (it.hasEOL ? "\n" : "") : "")).join(""),
         ).slice(0, MAX_PAGE_CHARS);
         if (text) pages.push({ locator: `p. ${n}`, text });
       }

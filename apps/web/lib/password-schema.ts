@@ -9,5 +9,9 @@ export function refinePassword(data: { password: string }, ctx: z.RefinementCtx)
   const issue = checkPassword(data.password);
   if (!issue) return;
   const ref = passwordIssueRef(issue);
-  ctx.addIssue({ code: "custom", path: ["password"], message: vmsg(ref.key as MessageKey, ref.values) });
+  ctx.addIssue({
+    code: "custom",
+    path: ["password"],
+    message: vmsg(ref.key as MessageKey, ref.values),
+  });
 }

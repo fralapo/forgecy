@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createLoginThrottle, lockSeconds, type RedisLike, redisThrottleStore, type ThrottleStore } from "./login-throttle";
+import {
+  createLoginThrottle,
+  lockSeconds,
+  type RedisLike,
+  redisThrottleStore,
+  type ThrottleStore,
+} from "./login-throttle";
 
 function memoryStore(clock: { now: number }): ThrottleStore {
   const counters = new Map<string, { n: number; exp: number }>();
@@ -43,7 +49,9 @@ function setup() {
 describe("lockSeconds", () => {
   it("is free for 5 failures, then doubles from 30 s up to 15 minutes", () => {
     expect([1, 5].map((n) => lockSeconds(n))).toEqual([0, 0]);
-    expect([6, 7, 8, 9, 10, 11, 50].map((n) => lockSeconds(n))).toEqual([30, 60, 120, 240, 480, 900, 900]);
+    expect([6, 7, 8, 9, 10, 11, 50].map((n) => lockSeconds(n))).toEqual([
+      30, 60, 120, 240, 480, 900, 900,
+    ]);
     expect(lockSeconds(10_000)).toBe(900);
   });
 });
@@ -126,7 +134,8 @@ describe("createLoginThrottle", () => {
 
   it("treats Admin, admin and admin@forgecy.local as one identity but isolates other people", async () => {
     const { throttle } = setup();
-    for (const id of ["Admin", " admin ", "admin@forgecy.local", "ADMIN", "admin"]) await throttle.attempt(id);
+    for (const id of ["Admin", " admin ", "admin@forgecy.local", "ADMIN", "admin"])
+      await throttle.attempt(id);
     expect(await throttle.retryAfter("admin")).toBe(30);
     expect(await throttle.retryAfter("mario")).toBe(0);
   });
@@ -135,7 +144,14 @@ describe("createLoginThrottle", () => {
     // Better Auth looks the account up by email.toLowerCase(); the key must collapse at least that much.
     const kelvin = `${String.fromCodePoint(0x212a)}ate`; // lowercases to "kate"
     const { throttle } = setup();
-    for (const id of [kelvin, "Kate", "kate", "KATE@Forgecy.Local", `${String.fromCharCode(9)}kate `]) await throttle.attempt(id);
+    for (const id of [
+      kelvin,
+      "Kate",
+      "kate",
+      "KATE@Forgecy.Local",
+      `${String.fromCharCode(9)}kate `,
+    ])
+      await throttle.attempt(id);
     expect(await throttle.retryAfter("kate")).toBe(30);
     expect(await throttle.retryAfter(kelvin)).toBe(30);
   });
@@ -156,11 +172,20 @@ describe("redisThrottleStore", () => {
           incr: (k: string) => (queued.push(["incr", k]), chain),
           decr: (k: string) => (queued.push(["decr", k]), chain),
           expire: (k: string, s: number) => (queued.push(["expire", k, s]), chain),
-          exec: async () => (calls.push(["multi", ...queued]), [[null, 3], [null, 1]] as [Error | null, unknown][]),
+          exec: async () => (
+            calls.push(["multi", ...queued]),
+            [
+              [null, 3],
+              [null, 1],
+            ] as [Error | null, unknown][]
+          ),
         };
         return chain;
       },
-      set: async (k, v, m, s, nx) => (calls.push(["set", k, v, m, s, nx]), k === "taken" ? null : "OK"),
+      set: async (k, v, m, s, nx) => (
+        calls.push(["set", k, v, m, s, nx]),
+        k === "taken" ? null : "OK"
+      ),
       ttl: async (k) => (k === "gone" ? -2 : k === "forever" ? -1 : 42),
       del: async (...k) => (calls.push(["del", ...k]), k.length),
     };
@@ -183,7 +208,12 @@ describe("redisThrottleStore", () => {
   });
 
   it("throws when the transaction fails, so the guard can fail open", async () => {
-    const chain = { incr: () => chain, decr: () => chain, expire: () => chain, exec: async () => null };
+    const chain = {
+      incr: () => chain,
+      decr: () => chain,
+      expire: () => chain,
+      exec: async () => null,
+    };
     const store = redisThrottleStore({ multi: () => chain } as unknown as RedisLike);
     await expect(store.incr("c", 1)).rejects.toThrow();
   });

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { crawlSite } from "../src/crawl/crawler";
-import { createHtmlFetcher, MAX_HTML_BYTES, type FetchedPage, type PageFetcher } from "../src/crawl/fetcher";
+import {
+  createHtmlFetcher,
+  MAX_HTML_BYTES,
+  type FetchedPage,
+  type PageFetcher,
+} from "../src/crawl/fetcher";
 import { createHostCheck } from "../src/url";
 
 const ROOT = "https://93.184.216.34"; // IP literal: the host check needs no DNS
@@ -10,11 +15,23 @@ const text = (body: string, type = "text/plain") =>
 
 function page(url: string): FetchedPage {
   return {
-    url, finalUrl: url, status: 200, title: "t", data: {} as FetchedPage["data"],
-    links: [], navLinks: [], colors: [], fonts: [], requiresLogin: false,
+    url,
+    finalUrl: url,
+    status: 200,
+    title: "t",
+    data: {} as FetchedPage["data"],
+    links: [],
+    navLinks: [],
+    colors: [],
+    fonts: [],
+    requiresLogin: false,
   };
 }
-const fetcher: PageFetcher = { mode: "html", fetchPage: async (u) => page(u), close: async () => undefined };
+const fetcher: PageFetcher = {
+  mode: "html",
+  fetchPage: async (u) => page(u),
+  close: async () => undefined,
+};
 
 function crawlWith(routes: (url: string) => Response) {
   const seen: string[] = [];
@@ -25,8 +42,14 @@ function crawlWith(routes: (url: string) => Response) {
   const hostCheck = createHostCheck();
   const run = () =>
     crawlSite({
-      rootUrl: `${ROOT}/`, maxPages: 3, fetcher, hostCheck, fetchImpl,
-      userAgent: "ForgecyAudit/test", pageTimeoutMs: 5000, totalTimeoutMs: 20_000,
+      rootUrl: `${ROOT}/`,
+      maxPages: 3,
+      fetcher,
+      hostCheck,
+      fetchImpl,
+      userAgent: "ForgecyAudit/test",
+      pageTimeoutMs: 5000,
+      totalTimeoutMs: 20_000,
     });
   return { seen, run };
 }
@@ -34,7 +57,9 @@ function crawlWith(routes: (url: string) => Response) {
 describe("robots.txt and sitemap fetches validate every redirect hop", () => {
   it("does not follow a robots.txt redirect to a hex-mapped metadata address", async () => {
     const { seen, run } = crawlWith((u) =>
-      u.endsWith("/robots.txt") ? redirect("http://[::ffff:a9fe:a9fe]/latest/meta-data") : text("", "text/html"),
+      u.endsWith("/robots.txt")
+        ? redirect("http://[::ffff:a9fe:a9fe]/latest/meta-data")
+        : text("", "text/html"),
     );
     const result = await run();
     expect(result.robots.found).toBe(false);
@@ -43,7 +68,9 @@ describe("robots.txt and sitemap fetches validate every redirect hop", () => {
 
   it("does not follow a sitemap.xml redirect to the local network", async () => {
     const { seen, run } = crawlWith((u) =>
-      u.endsWith("/sitemap.xml") ? redirect("http://10.0.0.1/admin") : text("User-agent: *\nAllow: /\n"),
+      u.endsWith("/sitemap.xml")
+        ? redirect("http://10.0.0.1/admin")
+        : text("User-agent: *\nAllow: /\n"),
     );
     await run();
     expect(seen.some((u) => u.includes("10.0.0.1"))).toBe(false);
@@ -58,15 +85,22 @@ describe("robots.txt and sitemap fetches validate every redirect hop", () => {
         : text("", "text/html"),
     );
     await run();
-    expect(seen.some((u) => u.includes("169.254.169.254") || u.includes("elsewhere.example.net"))).toBe(false);
+    expect(
+      seen.some((u) => u.includes("169.254.169.254") || u.includes("elsewhere.example.net")),
+    ).toBe(false);
   });
 
   it("still reads a same-site sitemap and its index children", async () => {
     const { seen, run } = crawlWith((u) => {
-      if (u.endsWith("/robots.txt")) return text(`User-agent: *\nAllow: /\nSitemap: ${ROOT}/sitemap.xml\n`);
+      if (u.endsWith("/robots.txt"))
+        return text(`User-agent: *\nAllow: /\nSitemap: ${ROOT}/sitemap.xml\n`);
       if (u.endsWith("/sitemap.xml"))
-        return text(`<sitemapindex><sitemap><loc>${ROOT}/sm-1.xml</loc></sitemap></sitemapindex>`, "application/xml");
-      if (u.endsWith("/sm-1.xml")) return text(`<urlset><url><loc>${ROOT}/servizi</loc></url></urlset>`, "application/xml");
+        return text(
+          `<sitemapindex><sitemap><loc>${ROOT}/sm-1.xml</loc></sitemap></sitemapindex>`,
+          "application/xml",
+        );
+      if (u.endsWith("/sm-1.xml"))
+        return text(`<urlset><url><loc>${ROOT}/servizi</loc></url></urlset>`, "application/xml");
       return text("", "text/html");
     });
     await run();
@@ -102,7 +136,10 @@ describe("createHtmlFetcher", () => {
       },
     });
     const fetchImpl = (async () =>
-      new Response(endless, { status: 200, headers: { "content-type": "text/html" } })) as unknown as typeof fetch;
+      new Response(endless, {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      })) as unknown as typeof fetch;
     const f = createHtmlFetcher({ userAgent: "t", hostCheck, fetchImpl });
     const p = await f.fetchPage(`${ROOT}/`, { timeoutMs: 5000, screenshots: false });
     expect(p.status).toBe(200);
@@ -113,13 +150,15 @@ describe("createHtmlFetcher", () => {
     const toPrivate = (async () => redirect("http://[::ffff:7f00:1]/")) as unknown as typeof fetch;
     await expect(
       createHtmlFetcher({ userAgent: "t", hostCheck, fetchImpl: toPrivate }).fetchPage(`${ROOT}/`, {
-        timeoutMs: 5000, screenshots: false,
+        timeoutMs: 5000,
+        screenshots: false,
       }),
     ).rejects.toMatchObject({ code: "AUD-HOST-BLOCKED" });
     const loop = (async () => redirect("/again")) as unknown as typeof fetch;
     await expect(
       createHtmlFetcher({ userAgent: "t", hostCheck, fetchImpl: loop }).fetchPage(`${ROOT}/`, {
-        timeoutMs: 5000, screenshots: false,
+        timeoutMs: 5000,
+        screenshots: false,
       }),
     ).rejects.toMatchObject({ code: "SOURCE-UNAVAILABLE" });
   });

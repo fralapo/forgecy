@@ -26,9 +26,13 @@ const PUBLIC = "https://93.184.216.34";
 describe("guardedFetch", () => {
   it("refuses a redirect to a hex-mapped metadata address on the hop that points at it", async () => {
     const { seen, fetchImpl } = scripted((u) =>
-      u.startsWith(PUBLIC) ? redirect("http://[::ffff:a9fe:a9fe]/latest/meta-data") : new Response("secret"),
+      u.startsWith(PUBLIC)
+        ? redirect("http://[::ffff:a9fe:a9fe]/latest/meta-data")
+        : new Response("secret"),
     );
-    await expect(guardedFetch(`${PUBLIC}/robots.txt`, { hostCheck, fetchImpl })).rejects.toMatchObject({
+    await expect(
+      guardedFetch(`${PUBLIC}/robots.txt`, { hostCheck, fetchImpl }),
+    ).rejects.toMatchObject({
       name: "GuardedFetchError",
       reason: "blocked",
     });
@@ -37,14 +41,22 @@ describe("guardedFetch", () => {
 
   it("refuses a first URL that is private, and non-http(s) Location targets", async () => {
     const { seen, fetchImpl } = scripted(() => redirect("file:///etc/passwd"));
-    await expect(guardedFetch("http://127.0.0.1/", { hostCheck, fetchImpl })).rejects.toBeInstanceOf(GuardedFetchError);
-    await expect(guardedFetch(`${PUBLIC}/x`, { hostCheck, fetchImpl })).rejects.toMatchObject({ reason: "blocked" });
+    await expect(
+      guardedFetch("http://127.0.0.1/", { hostCheck, fetchImpl }),
+    ).rejects.toBeInstanceOf(GuardedFetchError);
+    await expect(guardedFetch(`${PUBLIC}/x`, { hostCheck, fetchImpl })).rejects.toMatchObject({
+      reason: "blocked",
+    });
     expect(seen.map((s) => s.url)).toEqual([`${PUBLIC}/x`]);
   });
 
   it("follows safe redirects, resolves relative Location, reports the final URL", async () => {
     const { seen, fetchImpl } = scripted((u) =>
-      u.endsWith("/a") ? redirect("/b") : u.endsWith("/b") ? redirect(`${PUBLIC}/c`, 301) : new Response("ok"),
+      u.endsWith("/a")
+        ? redirect("/b")
+        : u.endsWith("/b")
+          ? redirect(`${PUBLIC}/c`, 301)
+          : new Response("ok"),
     );
     const out = await guardedFetch(`${PUBLIC}/a`, { hostCheck, fetchImpl });
     expect(await out.res.text()).toBe("ok");
@@ -62,7 +74,9 @@ describe("guardedFetch", () => {
   });
 
   it("passes headers through and one abort signal for every hop", async () => {
-    const { seen, fetchImpl } = scripted((u) => (u.endsWith("/a") ? redirect("/b") : new Response("ok")));
+    const { seen, fetchImpl } = scripted((u) =>
+      u.endsWith("/a") ? redirect("/b") : new Response("ok"),
+    );
     await guardedFetch(`${PUBLIC}/a`, { hostCheck, fetchImpl, headers: { "user-agent": "t" } });
     expect(seen[0]!.init?.headers).toEqual({ "user-agent": "t" });
     expect(seen[1]!.init?.signal).toBe(seen[0]!.init?.signal);
@@ -72,7 +86,9 @@ describe("guardedFetch", () => {
     const fetchImpl = (async () => {
       throw new TypeError("fetch failed");
     }) as unknown as typeof fetch;
-    await expect(guardedFetch(`${PUBLIC}/`, { hostCheck, fetchImpl })).rejects.toThrow("fetch failed");
+    await expect(guardedFetch(`${PUBLIC}/`, { hostCheck, fetchImpl })).rejects.toThrow(
+      "fetch failed",
+    );
   });
 });
 
@@ -104,6 +120,8 @@ describe("readCapped", () => {
   });
 
   it("handles a response without a body", async () => {
-    expect(await readCapped(new Response(null, { status: 204 }), 10)).toMatchObject({ truncated: false });
+    expect(await readCapped(new Response(null, { status: 204 }), 10)).toMatchObject({
+      truncated: false,
+    });
   });
 });

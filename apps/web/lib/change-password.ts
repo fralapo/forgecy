@@ -43,7 +43,8 @@ export async function changeOwnPassword(
     if (err instanceof APIError) {
       const code = err.body?.code;
       if (code === "INVALID_PASSWORD") return { error: { key: "settings.password.wrongCurrent" } };
-      if (code === "CREDENTIAL_ACCOUNT_NOT_FOUND") return { error: { key: "settings.password.noPassword" } };
+      if (code === "CREDENTIAL_ACCOUNT_NOT_FOUND")
+        return { error: { key: "settings.password.noPassword" } };
     }
     throw err;
   }

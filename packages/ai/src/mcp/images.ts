@@ -178,7 +178,9 @@ export function createHiggsfieldImageProvider(opts: HiggsfieldImageOptions): Ima
       const runs: Run[] = [];
       for (let i = 0; i < input.variants; i++) {
         const result = await opts.caller.callTool(tool.name, args);
-        runs.push(await settle("higgsfield", result, input.timeoutMs, opts.fetch, opts.hostCheck, poll));
+        runs.push(
+          await settle("higgsfield", result, input.timeoutMs, opts.fetch, opts.hostCheck, poll),
+        );
       }
       return jobs.start(runs, input.model || "default");
     },

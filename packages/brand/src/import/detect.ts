@@ -21,8 +21,7 @@ export type DetectResult =
 
 const refused = (
   key: (MessageKey & `brand.errors.${string}`) | "brand.import.errors.archiveTooLarge",
-) =>
-  ({ ok: false, message: englishMessage(key), ref: messageRef(key) }) as const;
+) => ({ ok: false, message: englishMessage(key), ref: messageRef(key) }) as const;
 
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation";

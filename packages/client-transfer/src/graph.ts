@@ -191,7 +191,9 @@ export function clientTables(): ClientTable[] {
           .map((col): SoftRef => {
             const soft = SOFT_REFS[`${c.name}.${col.name}`];
             if (!soft)
-              throw new Error(`Column ${c.name}.${col.name} has no entry in client-transfer SOFT_REFS`);
+              throw new Error(
+                `Column ${c.name}.${col.name} has no entry in client-transfer SOFT_REFS`,
+              );
             return { column: col.name, notNull: col.notNull, ...soft };
           }),
       };

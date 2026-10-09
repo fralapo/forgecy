@@ -12,7 +12,10 @@ async function get() {
 }
 
 /** Fail open: if Redis is unreachable the per-IP limiter still applies, and sign-in is not taken down with it. */
-async function open<T>(fallback: T, run: (t: ReturnType<typeof createLoginThrottle>) => Promise<T>): Promise<T> {
+async function open<T>(
+  fallback: T,
+  run: (t: ReturnType<typeof createLoginThrottle>) => Promise<T>,
+): Promise<T> {
   try {
     return await run(await get());
   } catch {

@@ -49,7 +49,10 @@ export const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => v?.trim() || undefined)
-    .refine((v) => v === undefined || v.length >= 16, "FORGECY_SETUP_TOKEN must be at least 16 characters"),
+    .refine(
+      (v) => v === undefined || v.length >= 16,
+      "FORGECY_SETUP_TOKEN must be at least 16 characters",
+    ),
   FORGECY_AUTH_MODE: z.enum(authModes).default("local"),
   FORGECY_ALLOWED_EMAIL_DOMAINS: z
     .string()

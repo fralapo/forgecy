@@ -17,5 +17,8 @@ export function escapeDelimiters(text: string, tags: readonly string[] = DELIMIT
 /** A value for a quoted attribute or a one-line field: no quotes, angle brackets or line breaks. */
 export function inlineValue(value: string, max = 200): string {
   // eslint-disable-next-line no-control-regex
-  return value.replace(/[\u0000-\u001f"<>]/g, " ").trim().slice(0, max);
+  return value
+    .replace(/[\u0000-\u001f"<>]/g, " ")
+    .trim()
+    .slice(0, max);
 }

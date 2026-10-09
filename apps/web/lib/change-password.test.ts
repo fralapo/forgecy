@@ -66,7 +66,10 @@ describe("changeOwnPassword", () => {
 
   it("maps a person without a credential account to a translated message instead of throwing", async () => {
     changePassword.mockRejectedValue(
-      new APIError("BAD_REQUEST", { code: "CREDENTIAL_ACCOUNT_NOT_FOUND", message: "Credential account not found" }),
+      new APIError("BAD_REQUEST", {
+        code: "CREDENTIAL_ACCOUNT_NOT_FOUND",
+        message: "Credential account not found",
+      }),
     );
     expect(await changeOwnPassword("old", "new")).toEqual({
       error: { key: "settings.password.noPassword" },

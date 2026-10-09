@@ -31,12 +31,23 @@ describe("security headers", () => {
 
   it("leaves /render and /api/files to their own, stricter headers", async () => {
     const rules = await rulesFor("http://localhost:3000");
-    for (const path of ["/render/slide", "/render/templates/t1/l1", "/api/files/clients/c/brand/x.svg"])
+    for (const path of [
+      "/render/slide",
+      "/render/templates/t1/l1",
+      "/api/files/clients/c/brand/x.svg",
+    ])
       expect(matching(rules, path), path).toEqual([]);
   });
 
   it("adds HSTS only on an https base URL", async () => {
-    expect(value(matching(await rulesFor("http://localhost:3000"), "/"), "Strict-Transport-Security")).toBeUndefined();
-    expect(value(matching(await rulesFor("https://forgecy.example.com"), "/"), "Strict-Transport-Security")).toMatch(/^max-age=\d+$/);
+    expect(
+      value(matching(await rulesFor("http://localhost:3000"), "/"), "Strict-Transport-Security"),
+    ).toBeUndefined();
+    expect(
+      value(
+        matching(await rulesFor("https://forgecy.example.com"), "/"),
+        "Strict-Transport-Security",
+      ),
+    ).toMatch(/^max-age=\d+$/);
   });
 });

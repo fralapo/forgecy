@@ -184,7 +184,9 @@ export function createHtmlFetcher(options: {
       } catch (err) {
         if (err instanceof GuardedFetchError) {
           if (err.reason === "blocked")
-            throw crawlError("AUD-HOST-BLOCKED", "audit.stored.crawl.addressLocal", { url: err.url });
+            throw crawlError("AUD-HOST-BLOCKED", "audit.stored.crawl.addressLocal", {
+              url: err.url,
+            });
           throw crawlError("SOURCE-UNAVAILABLE", "audit.stored.crawl.noResponse", { url });
         }
         throw err;

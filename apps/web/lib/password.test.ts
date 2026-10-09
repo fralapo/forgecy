@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { checkPassword, checkPasswordChange, PASSWORD_MAX, PASSWORD_MIN, passwordIssueRef } from "./password";
+import {
+  checkPassword,
+  checkPasswordChange,
+  PASSWORD_MAX,
+  PASSWORD_MIN,
+  passwordIssueRef,
+} from "./password";
 
 describe("checkPassword", () => {
   it("keeps the maintainer's minimum of 1 and caps at 128", () => {
@@ -29,8 +35,14 @@ describe("checkPassword", () => {
 
 describe("passwordIssueRef", () => {
   it("maps every issue to a message key", () => {
-    expect(passwordIssueRef("tooShort")).toEqual({ key: "validation.passwordTooShort", values: { min: 1 } });
-    expect(passwordIssueRef("tooLong")).toEqual({ key: "validation.passwordTooLong", values: { max: 128 } });
+    expect(passwordIssueRef("tooShort")).toEqual({
+      key: "validation.passwordTooShort",
+      values: { min: 1 },
+    });
+    expect(passwordIssueRef("tooLong")).toEqual({
+      key: "validation.passwordTooLong",
+      values: { max: 128 },
+    });
   });
 });
 
