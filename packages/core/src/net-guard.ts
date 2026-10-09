@@ -72,9 +72,19 @@ const isLocalName = (host: string) =>
  * itself. FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS=true lifts it (e.g. intranet sites).
  * Answers are cached for `ttlMs` (a long-lived worker would otherwise trust a DNS
  * answer forever); a failed lookup is never cached.
+ *
+ * A host Node cannot resolve passes by default: the pinned fetch's own lookup then fails
+ * closed. `failClosed` refuses it instead, for callers whose client resolves the name
+ * itself (Chromium): a DNS server that fails Node's query but answers 192.168.1.1 to
+ * Chromium's would otherwise get through.
  */
 export function createHostCheck(
-  options: { allowPrivate?: boolean; ttlMs?: number; now?: () => number } = {},
+  options: {
+    allowPrivate?: boolean;
+    failClosed?: boolean;
+    ttlMs?: number;
+    now?: () => number;
+  } = {},
 ): HostCheck {
   const ttl = options.ttlMs ?? HOST_CHECK_TTL_MS;
   const now = options.now ?? Date.now;
@@ -99,8 +109,9 @@ export function createHostCheck(
         const addresses = await lookup(host, { all: true });
         ok = addresses.length > 0 && addresses.every((a) => !isPrivateAddress(a.address));
       } catch {
-        // Unresolvable: let the fetch fail with a clear "unreachable" instead (not cached).
-        return true;
+        // Unresolvable: let the fetch fail with a clear "unreachable" instead (not cached),
+        // unless the caller's client does its own resolution.
+        return !options.failClosed;
       }
     }
     if (cache.size >= HOST_CHECK_MAX_ENTRIES) cache.clear();

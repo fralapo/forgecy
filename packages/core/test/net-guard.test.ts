@@ -144,6 +144,30 @@ describe("createHostCheck cache", () => {
   });
 });
 
+describe("createHostCheck failClosed (Chromium resolves names itself)", () => {
+  const url = "http://split-horizon.example.com/";
+  const nx = () => Object.assign(new Error("nx"), { code: "ENOTFOUND" });
+
+  it("an unresolvable host passes by default and is refused with failClosed", async () => {
+    lookupMock.mockRejectedValueOnce(nx());
+    expect(await createHostCheck()(url)).toBe(true);
+    lookupMock.mockRejectedValueOnce(nx());
+    expect(await createHostCheck({ failClosed: true })(url)).toBe(false);
+  });
+
+  it("an empty answer is refused with failClosed", async () => {
+    lookupMock.mockResolvedValueOnce([]);
+    expect(await createHostCheck({ failClosed: true })(url)).toBe(false);
+  });
+
+  it("still allows a public host, and allowPrivate still bypasses", async () => {
+    lookupMock.mockResolvedValueOnce([{ address: "93.184.216.34", family: 4 }]);
+    expect(await createHostCheck({ failClosed: true })(url)).toBe(true);
+    expect(await createHostCheck({ allowPrivate: true, failClosed: true })(url)).toBe(true);
+    expect(lookupMock).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("createPinnedFetch", () => {
   let server: Server;
   let port: number;
