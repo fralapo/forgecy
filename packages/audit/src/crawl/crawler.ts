@@ -230,6 +230,14 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
       detail: (err instanceof Error ? err.message : String(err)).split("\n")[0]!.slice(0, 160),
     });
   }
+  // A redirect to another site is followed only if where it landed passes the host check
+  // too (the browser fetcher already discards inward hops; this holds for any fetcher).
+  if (!(await options.hostCheck(homePage.finalUrl))) {
+    await progress({ step: "discovery", status: "failed" });
+    throw crawlError("AUD-HOST-BLOCKED", "audit.stored.crawl.addressLocal", {
+      url: homePage.finalUrl,
+    });
+  }
   if (homePage.status >= 400 || homePage.status === 0) {
     await progress({ step: "discovery", status: "failed" });
     throw crawlError("SOURCE-UNAVAILABLE", "audit.stored.crawl.httpError", {
@@ -237,25 +245,27 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
       status: homePage.status,
     });
   }
+  // The site is where the home page landed (oldbrand.it may 301 to newbrand.com).
+  const site = canonicalUrl(homePage.finalUrl);
   const sitemapUrls: string[] = [];
   const sitemapCandidates = robots.getSitemaps().length
     ? robots.getSitemaps().slice(0, 2)
     : [`${root.origin}/sitemap.xml`];
   for (const sm of sitemapCandidates) {
-    if (!sameSite(sm, home)) continue;
+    if (!sameSite(sm, site)) continue;
     const res = await fetchText(sm, options);
     if (!res || res.status !== 200) continue;
     const parsed = parseSitemap(res.text);
     sitemapUrls.push(...parsed.urls.slice(0, 200));
     for (const child of parsed.sitemaps.slice(0, 2)) {
-      if (!sameSite(child, home)) continue;
+      if (!sameSite(child, site)) continue;
       const c = await fetchText(child, options);
       if (c?.status === 200) sitemapUrls.push(...parseSitemap(c.text).urls.slice(0, 200));
     }
     if (sitemapUrls.length) break;
   }
   const targets = pickPages({
-    home: canonicalUrl(homePage.finalUrl),
+    home: site,
     navLinks: homePage.navLinks,
     links: homePage.links,
     sitemapUrls,
@@ -292,7 +302,9 @@ export async function crawlSite(options: CrawlOptions): Promise<CrawlResult> {
         ...fetchOpts,
         timeoutMs: Math.min(options.pageTimeoutMs, Math.max(1000, deadline - now())),
       });
-      if (!sameSite(page.finalUrl, home)) {
+      if (!(await options.hostCheck(page.finalUrl))) {
+        skipped.push({ url, ...skip("unreachable"), code: "AUD-HOST-BLOCKED" });
+      } else if (!sameSite(page.finalUrl, site)) {
         skipped.push({ url, ...skip("redirect"), code: "HTTP" });
       } else if (page.requiresLogin || LOGIN_PATH.test(new URL(page.finalUrl).pathname)) {
         skipped.push({ url, ...skip("login"), code: "LOGIN" });

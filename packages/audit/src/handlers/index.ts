@@ -65,7 +65,6 @@ export async function auditDepsFromEnv(): Promise<AuditHandlerDeps> {
     createFetcher: (rootUrl) =>
       createBrowserFetcher({
         userAgent,
-        hostCheck,
         rootUrl,
         allowPrivate,
         ...(executablePath ? { executablePath } : {}),

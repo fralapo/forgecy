@@ -22,11 +22,21 @@ confirm by hand against a real target, not just the unit tests in
       must be refused with a "local network" message (`audit.stored.crawl.hostLocal`,
       "points to the local network", or `audit.stored.crawl.addressLocal`, "Address on
       the local network"), not hang or succeed.
-- [ ] Submit a URL that 302-redirects to one of the addresses above. The
-      redirect must be refused on the hop that resolves to it, not followed, for
-      pages, `robots.txt` and sitemaps alike (`guardedFetch` in
+- [ ] Submit a URL that 302-redirects to one of the addresses above. For
+      `robots.txt`, sitemaps and pages read without Chromium the redirect is
+      refused on the hop that resolves to it, never requested (`guardedFetch` in
       `packages/core/src/net-guard.ts` follows redirects by hand and runs the host
-      check on every hop).
+      check on every hop). In Chromium it is NOT prevented: Playwright's route
+      handler only sees the first URL of a redirect chain, so Chromium follows the
+      hop and the internal request is sent. Forgecy detects it after the fact
+      (`redirectChain` and the `request` listener in
+      `packages/audit/src/crawl/browser.ts`, plus the `finalUrl` check in
+      `crawler.ts`) and discards the whole page: no text, title, links or
+      screenshot is stored, the home page fails with AUD-HOST-BLOCKED and a later
+      page is skipped. The same applies to an `<img>`/`<iframe>` whose URL
+      redirects inward. Check that the audit holds nothing from the internal
+      host. Only a worker on a network that cannot reach internal services stops
+      the request itself: that remains the strongest control.
 - [ ] Point a domain you control at a short-TTL DNS record, start a scan,
       then repoint the record to `127.0.0.1` before the scan's second
       request. The scan must still fail safely (this is what the pinned
@@ -246,10 +256,13 @@ Decisions and checks nobody has made yet; each is a known limitation until it is
 Record the date, the person who ran it, and which of the seven sections
 passed in the PR or ticket that references this checklist. A failing item
 blocks go-live until fixed or explicitly accepted as a known limitation
-(e.g. the documented residual gap: when a page is opened in Chromium, a
-redirect to a _different_ domain is checked by the per-request host check
-(`allowBrowserRequest`) but not by a second DNS pin, since Chromium is only
-pinned for the crawl's starting host).
+(e.g. the documented residual gaps: when a page is opened in Chromium, a
+redirect hop is not seen by the per-request host check (`allowBrowserRequest`
+only runs on the first URL of a chain), so the request to the hop is sent and
+only its result is discarded; and hosts other than the crawl's starting one are
+not DNS-pinned, so they are looked up by Forgecy (failing closed) and again by
+Chromium. Running the worker where it cannot reach internal services closes
+both).
 
 This list is only as strong as its last full run: re-run section 1 whenever
 `packages/core/src/net-guard.ts`, `packages/audit/src/url.ts` or

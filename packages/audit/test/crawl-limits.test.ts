@@ -163,3 +163,59 @@ describe("createHtmlFetcher", () => {
     ).rejects.toMatchObject({ code: "SOURCE-UNAVAILABLE" });
   });
 });
+
+describe("where the browser landed is checked, not only where it started", () => {
+  const MOVED = "https://93.184.216.35"; // the brand's new domain, another public host
+  function crawlLanding(landing: (url: string) => string, robots = "User-agent: *\nAllow: /\n") {
+    const seen: string[] = [];
+    const fetchImpl = (async (u: string) => {
+      seen.push(u);
+      return u.endsWith("/robots.txt") ? text(robots) : text("", "text/html");
+    }) as unknown as typeof fetch;
+    const landingFetcher: PageFetcher = {
+      mode: "browser",
+      fetchPage: async (u) => ({
+        ...page(u),
+        finalUrl: landing(u),
+        navLinks: [`${MOVED}/servizi`],
+      }),
+      close: async () => undefined,
+    };
+    const run = () =>
+      crawlSite({
+        rootUrl: `${ROOT}/`,
+        maxPages: 3,
+        fetcher: landingFetcher,
+        hostCheck: createHostCheck(),
+        fetchImpl,
+        userAgent: "ForgecyAudit/test",
+        pageTimeoutMs: 5000,
+        totalTimeoutMs: 20_000,
+      });
+    return { seen, run };
+  }
+
+  it("refuses a home page that landed on the local network", async () => {
+    const { run } = crawlLanding(() => "http://169.254.169.254/latest/meta-data/");
+    await expect(run()).rejects.toMatchObject({ code: "AUD-HOST-BLOCKED" });
+  });
+
+  it("skips a later page that landed on the local network", async () => {
+    const { run } = crawlLanding((u) =>
+      u.includes("/servizi") ? "http://192.168.1.1/servizi" : `${MOVED}/`,
+    );
+    const result = await run();
+    expect(result.pages.map((p) => p.finalUrl)).toEqual([`${MOVED}/`]);
+    expect(result.skipped).toMatchObject([{ code: "AUD-HOST-BLOCKED" }]);
+  });
+
+  it("follows a root that moved to a public domain: its pages and robots Sitemap are read", async () => {
+    const { seen, run } = crawlLanding(
+      (u) => (u.startsWith(ROOT) ? `${MOVED}/` : u),
+      `User-agent: *\nAllow: /\nSitemap: ${MOVED}/sitemap.xml\n`,
+    );
+    const result = await run();
+    expect(seen).toContain(`${MOVED}/sitemap.xml`);
+    expect(result.pages.map((p) => p.finalUrl)).toEqual([`${MOVED}/`, `${MOVED}/servizi`]);
+  });
+});
