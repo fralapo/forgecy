@@ -138,7 +138,9 @@ export async function restore(archive: string): Promise<void> {
     const file = resolve(archive);
     // Same checks as the web restore: checksum, no links in the archive, no owners restored.
     if (!(await checksumMatches(file)))
-      throw new Error("The backup does not match its recorded checksum: it may be corrupted");
+      throw new Error(
+        "The backup does not match its recorded checksum: it may be corrupted or changed. If this backup was made before checksums were recorded, delete its .json sidecar file",
+      );
     await extractBackupArchive(file, work);
     const manifest = JSON.parse(readFileSync(join(work, "manifest.json"), "utf8")) as {
       format: number;

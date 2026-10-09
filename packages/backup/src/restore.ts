@@ -27,7 +27,9 @@ export type RestoreProblem =
 
 export class BackupChecksumError extends Error {
   constructor() {
-    super("The backup does not match its recorded checksum: it may be corrupted or changed");
+    super(
+      "The backup does not match its recorded checksum: it may be corrupted or changed. If this backup was made before checksums were recorded, delete its .json sidecar file",
+    );
     this.name = "BackupChecksumError";
   }
 }
