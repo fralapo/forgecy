@@ -10,6 +10,7 @@ import { brandBookHandlers } from "@forgecy/brand-book/handlers";
 import { contentHandlers } from "@forgecy/content/handlers";
 import { catalogHandlers } from "@forgecy/catalog/handlers";
 import { handle, systemPingJob, type JobHandlers } from "@forgecy/jobs";
+import { createSocialHandlers } from "@forgecy/social/handlers";
 import pkg from "../package.json" with { type: "json" };
 
 /**
@@ -38,5 +39,6 @@ export const handlers: JobHandlers = {
   ...automationHandlers(),
   ...clientTransferHandlers(backupEnv),
   ...catalogHandlers,
+  ...createSocialHandlers(),
   ...backupHandlers(backupEnv),
 };

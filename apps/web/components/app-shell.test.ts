@@ -16,6 +16,7 @@ const NAV_HREFS = [
   "/templates",
   "/brand",
   "/content",
+  "/social",
   "/agents",
   "/automations",
   "/settings",

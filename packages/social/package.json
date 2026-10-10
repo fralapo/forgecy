@@ -1,0 +1,28 @@
+{
+  "name": "@forgecy/social",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@forgecy/core": "workspace:*",
+    "@forgecy/db": "workspace:*",
+    "@forgecy/i18n": "workspace:*",
+    "@forgecy/jobs": "workspace:*",
+    "drizzle-orm": "^0.45.3",
+    "playwright-core": "^1.63.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "typescript": "6.0.3",
+    "vitest": "^4.1.11"
+  }
+}

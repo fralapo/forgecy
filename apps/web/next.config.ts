@@ -48,6 +48,7 @@ const nextConfig: NextConfig = {
     "@forgecy/i18n",
     "@forgecy/jobs",
     "@forgecy/mail",
+    "@forgecy/social",
     "@forgecy/ui",
   ],
   serverExternalPackages: ["pg", "bullmq", "nodemailer", "read-excel-file"],

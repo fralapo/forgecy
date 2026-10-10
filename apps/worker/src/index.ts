@@ -3,6 +3,7 @@ import { getDb } from "@forgecy/db";
 import { maybeEnqueueNightlyBackup } from "@forgecy/backup";
 import { createJobWorker, createQueues, recoverStaleJobs } from "@forgecy/jobs";
 import { createMailer } from "@forgecy/mail";
+import { createSocialRuntime, enqueueDueSnapshots } from "@forgecy/social";
 import pino from "pino";
 import { handlers } from "./handlers";
 import { startHealthServer } from "./health";
@@ -58,6 +59,19 @@ async function notificationEmails() {
 }
 const emailTimer = mailer.configured ? setInterval(notificationEmails, 60_000) : null;
 
+// Monitored Instagram profiles that are due: checked every 5 minutes, each read staggered.
+const social = createSocialRuntime(env);
+async function socialTick() {
+  try {
+    const queued = await enqueueDueSnapshots(db, producer, social);
+    if (queued) logger.info({ queued }, "social snapshots enqueued");
+  } catch (err) {
+    logger.error({ err }, "social snapshot scheduling failed");
+  }
+}
+await socialTick();
+const socialTimer = setInterval(socialTick, 5 * 60_000);
+
 const health = startHealthServer(env.WORKER_HEALTH_PORT, db, () => running);
 logger.info({ queues: worker.queues }, "worker ready");
 
@@ -67,6 +81,7 @@ async function shutdown(signal: string) {
   logger.info({ signal }, "shutting down");
   clearInterval(recoveryTimer);
   clearInterval(nightlyTimer);
+  clearInterval(socialTimer);
   if (emailTimer) clearInterval(emailTimer);
   mailer.close();
   health.close();

@@ -66,8 +66,9 @@ import {
   type ReportVariant,
   type SocialChannel,
 } from "@forgecy/core";
-import { clients, eq, getDb } from "@forgecy/db";
+import { and, auditChannelStates, clients, eq, getDb } from "@forgecy/db";
 import { enqueueJob } from "@forgecy/jobs";
+import { startAuditRead } from "@forgecy/social";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
@@ -377,6 +378,19 @@ export async function deleteMetricAction(id: string) {
 
 export async function removeSourceAction(id: string) {
   return act((u, d) => removeSource(d, u.actor, id), { queues: false });
+}
+
+/** "Read the profile": follows the saved Instagram link once and queues the reading (ADR 0023). */
+export async function readProfileAction(auditId: string) {
+  return act(async (u, d) => {
+    const state = await d.db.query.auditChannelStates.findFirst({
+      where: and(
+        eq(auditChannelStates.auditId, auditId),
+        eq(auditChannelStates.channel, "instagram"),
+      ),
+    });
+    await startAuditRead(d, u.actor, { auditId, profileUrl: state?.profileUrl ?? "" });
+  });
 }
 
 export async function requestSocialAnalysisAction(auditId: string, channel: SocialChannel) {

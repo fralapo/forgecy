@@ -87,7 +87,10 @@ async function upsertChannel(
     });
 }
 
-/** Add a social channel or change its profile link (never opened by Forgecy). */
+/**
+ * Add a social channel or change its profile link. Saving the link opens nothing: Forgecy reads
+ * a public profile only through the Instagram profile reading of ADR 0023 (`@forgecy/social`).
+ */
 export async function setChannelProfile(
   deps: AuditDeps,
   actor: Actor,

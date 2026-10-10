@@ -23,6 +23,7 @@ import review from "./review.json";
 import search from "./search.json";
 import settings from "./settings.json";
 import shell from "./shell.json";
+import social from "./social.json";
 import templates from "./templates.json";
 import validation from "./validation.json";
 
@@ -51,6 +52,7 @@ export default {
   search,
   settings,
   shell,
+  social,
   templates,
   validation,
 };

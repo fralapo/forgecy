@@ -1,8 +1,14 @@
 import "server-only";
 import { auditErrorCode, type AuditDeps } from "@forgecy/audit";
 import { ForgecyError, PermissionDeniedError } from "@forgecy/core";
-import { getDb } from "@forgecy/db";
+import { and, desc, eq, getDb, inArray, jobs, socialProfiles, type Database } from "@forgecy/db";
 import { createStorageFromEnv, type StorageDriver } from "@forgecy/files";
+import {
+  createSocialRuntime,
+  normalizeHandle,
+  SOCIAL_JOB_ENTITY,
+  socialSnapshotJob,
+} from "@forgecy/social";
 import type { ZodError } from "zod";
 import { env } from "@/lib/env";
 import { errorMessage, firstIssue } from "@/lib/i18n";
@@ -31,6 +37,41 @@ export async function fileUrl(key: string | null | undefined, download?: string)
     expiresInSeconds: 15 * 60,
     ...(download ? { disposition: "attachment" as const, filename: download } : {}),
   });
+}
+
+/** Whether at least one source that reads Instagram profiles is set up in this installation. */
+export function profileReadingAvailable(): boolean {
+  return createSocialRuntime(env).available().length > 0;
+}
+
+/**
+ * The profile reading behind an audit's Instagram link (ADR 0023): the reading in flight, if
+ * any, and the stored reason of the last failure. The job belongs to the profile, not to the
+ * audit, so the audit's own job list does not show it.
+ */
+export async function profileReadingState(db: Database, clientId: string, profileUrl: string) {
+  const handle = normalizeHandle(profileUrl);
+  const none = { job: null, reason: null } as const;
+  if (!handle) return none;
+  const [profile] = await db
+    .select({ id: socialProfiles.id, reason: socialProfiles.statusReason })
+    .from(socialProfiles)
+    .where(and(eq(socialProfiles.clientId, clientId), eq(socialProfiles.handle, handle)));
+  if (!profile) return none;
+  const [job] = await db
+    .select({ id: jobs.id, kind: jobs.kind, status: jobs.status, progress: jobs.progress })
+    .from(jobs)
+    .where(
+      and(
+        eq(jobs.entity, SOCIAL_JOB_ENTITY),
+        eq(jobs.entityId, profile.id),
+        eq(jobs.kind, socialSnapshotJob.kind),
+        inArray(jobs.status, ["queued", "retrying", "running"]),
+      ),
+    )
+    .orderBy(desc(jobs.createdAt))
+    .limit(1);
+  return { job: job ?? null, reason: profile.reason };
 }
 
 export type ActionResult<T = undefined> =

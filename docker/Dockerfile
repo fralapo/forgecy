@@ -28,6 +28,7 @@ COPY packages/files/package.json packages/files/
 COPY packages/i18n/package.json packages/i18n/
 COPY packages/jobs/package.json packages/jobs/
 COPY packages/mail/package.json packages/mail/
+COPY packages/social/package.json packages/social/
 COPY packages/ui/package.json packages/ui/
 COPY scripts/package.json scripts/
 # Optional extra CA bundle for networks behind a TLS-inspecting proxy:

@@ -1,0 +1,248 @@
+{
+  "title": "Social",
+  "unavailable": "Unavailable",
+  "sources": {
+    "graph_api": "Graph API",
+    "public_web": "Public page",
+    "file_import": "Imported file"
+  },
+  "roles": {
+    "self": "Our client",
+    "competitor": "Competitor",
+    "prospect": "Prospect"
+  },
+  "picker": {
+    "description": "Follow the public Instagram profiles of a client, its competitors and prospects, and see how they post.",
+    "empty": "There are no clients yet. <link>Add one</link> first.",
+    "profiles": "{count, plural, =0 {No profiles yet} one {# profile} other {# profiles}}"
+  },
+  "home": {
+    "heading": "Instagram profiles of {client}",
+    "description": "Add the profiles to follow. Forgecy reads them and shows how often they post, what they post and what changes."
+  },
+  "add": {
+    "title": "Add a profile",
+    "description": "Paste the link or the @name of a public Instagram business profile. It is read right away.",
+    "handleLabel": "Profile link or @name",
+    "handlePlaceholder": "@name or instagram.com/name",
+    "roleLabel": "This profile is",
+    "submit": "Add and read",
+    "adding": "Adding…"
+  },
+  "list": {
+    "title": "Followed profiles",
+    "empty": "No profiles yet. Add the first one above.",
+    "neverRead": "Not read yet",
+    "followers": "{count, plural, one {# follower} other {# followers}}",
+    "posts": "{count, plural, one {# post stored} other {# posts stored}}",
+    "readAgo": "Read {when}",
+    "reading": "Reading…",
+    "readNow": "Read now",
+    "tryAgain": "Try again",
+    "remove": "Remove",
+    "removeConfirm": "Stop following @{handle}? What was read from it is deleted.",
+    "monitor": "Check automatically",
+    "monitorHint": "Once a day"
+  },
+  "state": {
+    "pending": "Waiting",
+    "ok": "Read",
+    "error": "Problem",
+    "blocked": "Stopped",
+    "paused": "Paused"
+  },
+  "source": {
+    "none": "Reading Instagram profiles is switched off on this installation (FORGECY_SOCIAL_PUBLIC_WEB=false in the .env file) and no Graph API token is set.",
+    "blocked": "Instagram asked for a login or a check on the source “{source}”, so reading from it is stopped.",
+    "resume": "Resume reading",
+    "adminOnly": "An Admin can resume it."
+  },
+  "benchmark": {
+    "title": "Side by side",
+    "description": "The same measures for every profile that was read. The best value in each column is marked.",
+    "profile": "Profile",
+    "vsUsNote": "The smaller figure under a value is the difference from our client.",
+    "best": "Best in this column",
+    "warning": "These profiles were read from different sources or at different times, so the comparison is only approximate.",
+    "noSelf": "Mark one profile as “Our client” to see how the others differ from it.",
+    "points": "{value} pt",
+    "metrics": {
+      "followers": "Followers",
+      "postsPerWeek": "Posts per week",
+      "engagementRatePct": "Engagement rate",
+      "avgHashtagsPerPost": "Hashtags per post",
+      "ctaShare": "With a call to action",
+      "reelShare": "Reels",
+      "carouselShare": "Carousels",
+      "sponsoredShare": "Paid partnerships",
+      "daysSinceLastPost": "Days since last post"
+    }
+  },
+  "profile": {
+    "back": "All profiles",
+    "followers": "Followers",
+    "following": "Following",
+    "posts": "Posts",
+    "readFrom": "Read from {source}, {date}",
+    "neverRead": "Not read yet. Use “Read now” to get the first numbers.",
+    "link": "Link in bio",
+    "verified": "Verified",
+    "private": "Private profile",
+    "readNow": "Read now",
+    "reading": "Reading…",
+    "openOnInstagram": "Open on Instagram"
+  },
+  "cards": {
+    "basis": "{count, plural, one {Based on # post} other {Based on # posts}}, from {from} to {to}",
+    "basisNone": "No posts stored yet.",
+    "basisMetrics": "{count, plural, =0 {No post has both likes and comments} one {Based on # post with likes and comments} other {Based on # posts with likes and comments}}",
+    "mix": {
+      "title": "Content mix",
+      "kinds": {
+        "image": "Photos",
+        "video": "Videos",
+        "carousel": "Carousels",
+        "reel": "Reels"
+      },
+      "average": "{value} interactions on average",
+      "sponsored": "Paid partnerships: {share}",
+      "collab": "Posts with a collaborator: {share}",
+      "slides": "Carousels have {value} slides on average"
+    },
+    "cadence": {
+      "title": "When they post",
+      "perWeek": "{value} posts per week",
+      "gap": "Usually {value} hours between posts",
+      "lastPost": "Last post {when}",
+      "heatmap": "Posts by weekday and hour, {timeZone} time",
+      "weekdays": {
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      },
+      "cell": "{weekday} {hour}: {count, plural, =0 {no posts} one {# post} other {# posts}}",
+      "best": "Best times: {slots}",
+      "slot": "{weekday} {hour} ({count, plural, one {# post} other {# posts}})",
+      "noBest": "There are not enough posts to find the best times.",
+      "less": "Fewer",
+      "more": "More"
+    },
+    "hashtags": {
+      "title": "Hashtags",
+      "summary": "{withTags, plural, one {# post uses hashtags} other {# posts use hashtags}}, {avg} per post on average, {distinct} different ones.",
+      "uses": "{count, plural, one {# post} other {# posts}}",
+      "average": "{value} interactions on average",
+      "none": "No hashtags in the posts read."
+    },
+    "engagement": {
+      "title": "Engagement",
+      "interactions": "Interactions per post",
+      "likes": "Likes",
+      "comments": "Comments",
+      "min": "Lowest",
+      "median": "Median",
+      "mean": "Average",
+      "max": "Highest",
+      "rate": "Engagement rate",
+      "rateValue": "{value}% of followers",
+      "medianRate": "Median rate",
+      "top": "Best posts",
+      "bottom": "Weakest posts",
+      "count": "{count, plural, one {# interaction} other {# interactions}}",
+      "noCaption": "No caption",
+      "none": "No post has both likes and comments."
+    },
+    "captions": {
+      "title": "Captions",
+      "length": "Average length",
+      "lengthValue": "{value} characters",
+      "median": "Median length",
+      "cta": "With a call to action",
+      "question": "With a question",
+      "emoji": "With emoji",
+      "avgEmojis": "Emoji per caption",
+      "language": "Language",
+      "languages": {
+        "it": "Italian",
+        "en": "English",
+        "mixed": "Mixed",
+        "unknown": "Unknown"
+      },
+      "none": "No captions in the posts read."
+    },
+    "relations": {
+      "title": "Who they work with",
+      "kinds": {
+        "tags": "Tagged",
+        "mentions": "Mentioned",
+        "collab": "Collaborators"
+      },
+      "times": "{count, plural, one {# time} other {# times}}",
+      "last": "last {date}",
+      "ended": "no longer, since {date}",
+      "none": "No relationships found in the posts read."
+    },
+    "events": {
+      "title": "What changed",
+      "empty": "No changes yet. The first reading is the starting point.",
+      "followers": "Followers: {old} → {new}",
+      "following": "Following: {old} → {new}",
+      "posts_total": "Total posts: {old} → {new}",
+      "biography": {
+        "changed": "The bio changed",
+        "added": "A bio was added",
+        "removed": "The bio was removed"
+      },
+      "external_url": {
+        "changed": "The link in the bio changed",
+        "added": "A link was added to the bio",
+        "removed": "The link was removed from the bio"
+      },
+      "full_name": {
+        "changed": "The name changed",
+        "added": "A name was added",
+        "removed": "The name was removed"
+      },
+      "category": {
+        "changed": "The category changed",
+        "added": "A category was added",
+        "removed": "The category was removed"
+      },
+      "visibility": {
+        "private": "The profile became private",
+        "public": "The profile became public"
+      },
+      "picture": "The profile picture changed",
+      "new_post": "New post {shortcode}",
+      "source": "Source changed: {old} → {new}",
+      "other": "Something changed"
+    }
+  },
+  "errors": {
+    "invalidHandle": "That is not an Instagram profile. Paste the link or the @name.",
+    "duplicateProfile": "@{handle} is already followed for this client.",
+    "tooManyProfiles": "A client can follow at most {max} profiles.",
+    "profileNotFound": "Profile not found.",
+    "noSource": "No reading source is available: reading Instagram profiles is switched off in this installation.",
+    "snapshotInProgress": "This profile is already being read.",
+    "sourceBlocked": "Instagram asked for a login or a check, so reading is stopped until an Admin resumes it.",
+    "queueUnavailable": "The job queue is not available right now. Try again in a minute.",
+    "intervalTooShort": "Check at most every {hours} hours.",
+    "notAnInstagramChannel": "Only Instagram channels can be read this way."
+  },
+  "status": {
+    "blocked": "Instagram asked for a login or a check. Reading is stopped until an Admin resumes it.",
+    "apiDrift": "Instagram changed its response. The reader needs an update.",
+    "transport": "Instagram could not be reached. It will be tried again.",
+    "rateLimited": "Too many requests. It will be tried again later.",
+    "private": "This profile is private, so nothing can be read.",
+    "notFound": "No public profile with this name.",
+    "unauthorized": "The Graph API token is missing or was refused.",
+    "noSource": "No reading source is available: reading Instagram profiles is switched off in this installation.",
+    "notBusiness": "This account is not a business or creator account, so the Graph API cannot read it."
+  }
+}

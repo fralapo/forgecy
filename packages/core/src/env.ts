@@ -37,6 +37,25 @@ export const envSchema = z.object({
     .optional()
     .transform((v) => v === "true"),
 
+  /**
+   * Instagram profile analysis, official source: Graph API Business Discovery with the agency's
+   * own Meta app token and professional account id. Secrets, so .env only.
+   */
+  INSTAGRAM_GRAPH_TOKEN: z.string().optional(),
+  INSTAGRAM_GRAPH_USER_ID: z.string().optional(),
+  INSTAGRAM_GRAPH_VERSION: z.string().default("v23.0"),
+  /**
+   * Reading public Instagram profiles in a browser without any login (ADR 0023). On unless set
+   * to `false`: it goes against Instagram's terms of use, so an agency can switch it off.
+   * Exactly `true`, `false` or empty (empty means on).
+   */
+  FORGECY_SOCIAL_PUBLIC_WEB: z
+    .enum(["true", "false", ""], {
+      error: 'FORGECY_SOCIAL_PUBLIC_WEB must be exactly "true" or "false" (or empty)',
+    })
+    .optional()
+    .transform((v) => v !== "false"),
+
   DATABASE_URL: z.string().min(1),
   /**
    * Optional: restores load the dump as this role instead of DATABASE_URL's (ADR 0018).

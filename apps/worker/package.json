@@ -27,6 +27,7 @@
     "@forgecy/files": "workspace:*",
     "@forgecy/jobs": "workspace:*",
     "@forgecy/mail": "workspace:*",
+    "@forgecy/social": "workspace:*",
     "bullmq": "^6.3.11",
     "ioredis": "^5.11.1",
     "pino": "^10.4.0",

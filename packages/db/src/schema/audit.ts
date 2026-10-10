@@ -275,7 +275,10 @@ export const auditSources = pgTable(
   ],
 );
 
-/** Social channels of an audit and the state of their data (no automatic reading, ever). */
+/**
+ * Social channels of an audit and the state of their data. Forgecy reads a public profile only
+ * through the Instagram profile reading of ADR 0023; every other channel is filled by hand.
+ */
 export const auditChannelStates = pgTable(
   "audit_channels",
   {

@@ -132,6 +132,24 @@ describe("env", () => {
     );
     expect(() => loadEnv({ ...base, FORGECY_SETUP_TOKEN: "short" })).toThrow(/FORGECY_SETUP_TOKEN/);
   });
+  it("reads public Instagram profiles unless it is switched off with exactly false", () => {
+    const base = { DATABASE_URL: "x", BETTER_AUTH_SECRET: "x".repeat(32) };
+    expect(loadEnv({ ...base }).FORGECY_SOCIAL_PUBLIC_WEB).toBe(true);
+    expect(loadEnv({ ...base, FORGECY_SOCIAL_PUBLIC_WEB: "" }).FORGECY_SOCIAL_PUBLIC_WEB).toBe(
+      true,
+    );
+    expect(loadEnv({ ...base, FORGECY_SOCIAL_PUBLIC_WEB: "true" }).FORGECY_SOCIAL_PUBLIC_WEB).toBe(
+      true,
+    );
+    expect(loadEnv({ ...base, FORGECY_SOCIAL_PUBLIC_WEB: "false" }).FORGECY_SOCIAL_PUBLIC_WEB).toBe(
+      false,
+    );
+    for (const v of ["1", "TRUE", "yes"])
+      expect(() => loadEnv({ ...base, FORGECY_SOCIAL_PUBLIC_WEB: v })).toThrow(
+        /FORGECY_SOCIAL_PUBLIC_WEB/,
+      );
+    expect(loadEnv({ ...base }).INSTAGRAM_GRAPH_VERSION).toBe("v23.0");
+  });
 });
 
 describe("job visibility", () => {

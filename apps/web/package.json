@@ -31,6 +31,7 @@
     "@forgecy/files": "workspace:*",
     "@forgecy/i18n": "workspace:*",
     "@forgecy/jobs": "workspace:*",
+    "@forgecy/social": "workspace:*",
     "@forgecy/mail": "workspace:*",
     "@forgecy/ui": "workspace:*",
     "better-auth": "^1.7.7",

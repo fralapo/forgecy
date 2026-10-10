@@ -10,7 +10,7 @@ import {
   type SocialChannel,
 } from "@forgecy/core";
 import { Button, Input, Label } from "@forgecy/ui";
-import { FileSpreadsheet, ImageUp, Plus, Upload } from "lucide-react";
+import { FileSpreadsheet, ImageUp, Plus, RefreshCw, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
@@ -19,6 +19,7 @@ import {
   addMetricAction,
   importTableAction,
   previewTableAction,
+  readProfileAction,
   reopenChannelAction,
   setChannelProfileAction,
   setChannelUnavailableAction,
@@ -59,6 +60,55 @@ async function upload(
   const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok) return { ok: false, error: String(body.message ?? body.error ?? failed) };
   return { ok: true, data: body };
+}
+
+/** One primary action: read the public profile once (queued; the page follows the job). */
+export function ReadProfile({
+  auditId,
+  busy,
+  failure,
+}: {
+  auditId: string;
+  /** A reading is already queued or running. */
+  busy: boolean;
+  /** Translated reason of the last failed reading. */
+  failure?: string | null;
+}) {
+  const router = useRouter();
+  const t = useTranslations("audit.socialTools");
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div className="flex flex-col gap-2">
+      <div>
+        <Button
+          size="sm"
+          disabled={pending || busy}
+          onClick={() =>
+            start(async () => {
+              setError(null);
+              const res = await readProfileAction(auditId);
+              if (!res.ok) return setError(res.error);
+              router.refresh();
+            })
+          }
+        >
+          <RefreshCw aria-hidden />
+          {t("readProfile")}
+        </Button>
+      </div>
+      <p className="text-body-sm text-fg-muted">{t("readProfileHint")}</p>
+      {error ? (
+        <p role="alert" className="text-body-sm text-error">
+          {error}
+        </p>
+      ) : failure && !busy ? (
+        <p role="status" className="text-body-sm text-error">
+          {failure}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 /** Screenshots of the profile: stored as evidence, never read automatically. */

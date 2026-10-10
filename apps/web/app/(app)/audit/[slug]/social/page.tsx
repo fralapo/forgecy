@@ -10,15 +10,17 @@ import { deleteMetricAction, removeSourceAction, requestSocialAnalysisAction } f
 import { ActionButton } from "../../_components/action-button";
 import { AddFinding } from "../../_components/add-finding";
 import { FindingCard } from "../../_components/finding-card";
+import { JobWatch } from "../../_components/job-watch";
 import {
   ChannelSettings,
   MetricForm,
+  ReadProfile,
   ScreenshotUpload,
   TableImport,
 } from "../../_components/social-tools";
 import { sectionContext, sourceLinks, toView } from "../../_lib/findings";
 import { metricLabelId, sourceStatusVariant } from "../../_lib/labels";
-import { fileUrl } from "../../_lib/server";
+import { fileUrl, profileReadingAvailable, profileReadingState } from "../../_lib/server";
 
 const cardKeys = [
   "followers",
@@ -74,6 +76,19 @@ export default async function SocialPage({
     ),
   ]);
   const pendingFile = view.files.find((f) => f.status === "pending");
+  // Reading the public profile (ADR 0023): Instagram only, with a saved link, on an open channel.
+  const profileUrl = view.state?.profileUrl ?? null;
+  const canRead =
+    channel === "instagram" &&
+    !readOnly &&
+    Boolean(profileUrl) &&
+    view.state?.status !== "skipped" &&
+    view.state?.status !== "unavailable";
+  const readingAvailable = canRead && profileReadingAvailable();
+  const reading =
+    canRead && readingAvailable && profileUrl
+      ? await profileReadingState(db, audit.clientId, profileUrl)
+      : null;
   const hasData = view.postsCount > 0 || view.metrics.length > 0 || view.screenshots.length > 0;
   const areas = (SOCIAL_AREAS as FindingArea[]).filter(
     (a) => a !== "linkedin_leads" || channel === "linkedin",
@@ -165,6 +180,33 @@ export default async function SocialPage({
               profileUrl={view.state?.profileUrl ?? null}
               status={view.state?.status ?? null}
             />
+          ) : null}
+          {canRead ? (
+            readingAvailable ? (
+              <div className="flex flex-col gap-3">
+                {reading?.job ? (
+                  <JobWatch
+                    jobs={[
+                      {
+                        id: reading.job.id,
+                        kind: reading.job.kind,
+                        label: t("socialTools.readingJob"),
+                        status: reading.job.status,
+                        progress: reading.job.progress,
+                        error: null,
+                      },
+                    ]}
+                  />
+                ) : null}
+                <ReadProfile
+                  auditId={audit.id}
+                  busy={Boolean(reading?.job)}
+                  failure={reading?.reason ? rt(reading.reason, t("socialTools.readFailed")) : null}
+                />
+              </div>
+            ) : (
+              <p className="text-body-sm text-fg-muted">{t("socialTools.readUnavailable")}</p>
+            )
           ) : null}
         </Card>
         <Card>
@@ -273,12 +315,14 @@ export default async function SocialPage({
                       ·{" "}
                       {f.status === "pending"
                         ? t("social.toImport")
-                        : f.data.rowsSkipped
-                          ? t("social.rowsImportedSkipped", {
-                              count: f.data.rowsImported ?? 0,
-                              skipped: f.data.rowsSkipped,
-                            })
-                          : t("social.rowsImported", { count: f.data.rowsImported ?? 0 })}
+                        : f.method === "public_page"
+                          ? t("social.postsRead", { count: f.data.rowsImported ?? 0 })
+                          : f.data.rowsSkipped
+                            ? t("social.rowsImportedSkipped", {
+                                count: f.data.rowsImported ?? 0,
+                                skipped: f.data.rowsSkipped,
+                              })
+                            : t("social.rowsImported", { count: f.data.rowsImported ?? 0 })}
                     </span>
                   </span>
                   {!readOnly ? (
@@ -287,7 +331,11 @@ export default async function SocialPage({
                       icon={<Trash2 aria-hidden />}
                       variant="ghost"
                       size="sm"
-                      confirm={t("social.removeFileConfirm")}
+                      confirm={
+                        f.method === "public_page"
+                          ? t("social.removeReadingConfirm")
+                          : t("social.removeFileConfirm")
+                      }
                     >
                       {t("social.remove")}
                     </ActionButton>
