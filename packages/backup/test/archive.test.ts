@@ -147,7 +147,7 @@ describe("backup archives", () => {
     });
     const file = backupPath(dataDir, created.name);
     const entries = execFileSync("tar", tarArgs(["-tzf", file]), { encoding: "utf8" });
-    expect(entries.split("\n").filter(Boolean).sort()).toEqual(["db.dump", "manifest.json"]);
+    expect(entries.split(/\r?\n/).filter(Boolean).sort()).toEqual(["db.dump", "manifest.json"]);
     const manifest = JSON.parse(
       execFileSync("tar", tarArgs(["-xzOf", file, "manifest.json"]), { encoding: "utf8" }),
     ) as Record<string, unknown>;

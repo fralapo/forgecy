@@ -454,7 +454,7 @@
         "kicker": "In the app",
         "title": "Receipts at a ==glance==",
         "screen": {
-          "asset": "assets/example-photo.svg",
+          "asset": "assets/example-screen.svg",
           "alt": "Screenshot of the receipts screen"
         }
       }
