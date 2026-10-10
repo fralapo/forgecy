@@ -20,7 +20,7 @@ import { contentChannels, type Brief, type Outline } from "../document";
 import type { ProductSummary } from "../products";
 import { directionBlock, type CreativeDirection } from "../carousels/direction";
 
-export const CONTENT_PROMPT_VERSION = "content-2026-10-06g";
+export const CONTENT_PROMPT_VERSION = "content-2026-10-10b";
 
 const SHARED_RULES = `- Write in the indicated language (English when no language is indicated), with the tone and rules of the Brand Identity below. The writing rules and forbidden words are binding.
 - Use only facts found in the brief, the Brand Identity or the product sheet. Never invent data, numbers, prices, testimonials or claims.
@@ -165,6 +165,7 @@ ${SHARED_RULES}
 export const outlineOutputSchema = z.object({
   title: z.string().max(160),
   hook: z.string().max(200),
+  hookAlternatives: z.array(z.string().max(200)).max(2),
   rows: z
     .array(
       z.object({
@@ -188,7 +189,10 @@ ${SHARED_RULES}
 - Exactly the requested number of slides. The first is the cover with the hook, the last is the call to action when the template has a CTA layout.
 - For each row choose a layout among the template's, suited to the role and the position.
 - One concept per slide, said in one sentence. No final copy here: only the point.
-- If the brief follows a rubric, respect its structure and its hook formula.`,
+- If the brief follows a rubric, respect its structure and its hook formula.
+- The hook is one of three kinds: a question the audience asks itself, a figure taken from the brief, or a bold claim the next slides back up. Pick the kind that fits the objective; never a figure the brief does not contain.
+- "hookAlternatives": up to two other hooks for the cover, each of a different kind from the hook and from each other, same rule: a figure only if the brief contains it. Empty when no good alternative exists.
+- With no rubric, follow a narrative arc: hook, problem, what it costs to ignore it, the way out, the proof the brief gives, the call to action. Drop steps the slide count cannot hold, never reorder them.`,
   "copywriting",
   "slide-design",
 );
@@ -228,7 +232,7 @@ export const SLIDES_SYSTEM = withPlaybooks(
 
 Rules:
 ${SHARED_RULES}
-- Every slot has a character limit: stay within it with a margin. "list" slots want short items.
+- Every slot has a character limit: aim for at most 70% of it, so the text fits after the template's line breaks. "list" slots want short items.
 - Fill only the layout's text and list slots; for image slots write a visual brief in imageBriefs.
 - Highlight a keyword with ==word== only in the slots that allow it.
 - Caption: the first line hooks, then develops the promise and closes with the CTA, within the channel's limit.

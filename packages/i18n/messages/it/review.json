@@ -8,6 +8,7 @@
     "hashtags": "{count} hashtag: la Brand Identity ne consente al massimo {max}",
     "forbiddenWord": "Parola vietata dalla Brand Identity: “{word}”",
     "price": "Il testo cita un prezzo ma il brief non lo consente",
+    "unsourcedNumber": "Una cifra nel testo non è nel brief né nella scheda prodotto: “{number}”",
     "assetMissing": "Slide {slide}: immagine non presente nella libreria del cliente",
     "aiAssetUnapproved": "Slide {slide}: immagine AI da approvare prima di approvare il carosello",
     "assetUnapproved": "Slide {slide}: immagine non approvata",

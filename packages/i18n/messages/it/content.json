@@ -518,7 +518,7 @@
     "fromPlan": "Dal piano: giorno {day}, {channel}. I campi sono precompilati e si possono cambiare.",
     "brandRequired": "Per creare un carosello serve una Brand Identity pubblicata.",
     "openBrand": "Apri la Brand Identity",
-    "noTemplates": "Nessun template utilizzabile: pubblicane uno nel catalogo dei template.",
+    "noTemplates": "Nessun template utilizzabile: <link>installa i template di base</link>.",
     "form": {
       "chooseTemplate": "Scegli un template",
       "chooseAudience": "Scegli almeno un pubblico",
@@ -634,6 +634,8 @@
   "outline": {
     "metaTitle": "Scaletta · Carosello",
     "stale": "Il brief è cambiato dopo questa scaletta: rigenerala o rivedila prima di approvarla.",
+    "approveAndGenerate": "Approva e crea le slide",
+    "optional": "facoltativo",
     "title": "Scaletta",
     "titleNumber": "Scaletta n. {number}",
     "approvedOn": "Approvata il {date}",
@@ -680,7 +682,23 @@
       "hashtags": "Hashtag",
       "hashtagsPlaceholder": "#esempio #altro",
       "save": "Salva scaletta",
-      "unsaved": "Modifiche non salvate"
+      "unsaved": "Modifiche non salvate",
+      "hookAlternatives": "Altri hook",
+      "useHook": "Usa questo hook",
+      "useHookLabel": "Usa questo hook: {hook}",
+      "copyMarkdown": "Copia come Markdown",
+      "copied": "Copiato",
+      "pasteMarkdown": "Incolla Markdown",
+      "markdownLabel": "Scaletta in Markdown",
+      "applyMarkdown": "Sostituisci la scaletta",
+      "markdownErrors": {
+        "noSlides": "Nessuna slide trovata: ogni slide inizia con una riga come «## 1. text | id-layout».",
+        "unexpectedLine": "Riga {line}: questo testo è fuori da una slide.",
+        "unknownRole": "Riga {line}: «{value}» non è un ruolo di slide.",
+        "unknownLayout": "Riga {line}: questo template non ha il layout «{value}».",
+        "tooManyAltHooks": "Sono ammesse al massimo due righe «Alt hook:».",
+        "invalid": "Un campo è troppo lungo o non valido: {value}."
+      }
     }
   },
   "versions": {

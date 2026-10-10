@@ -1,5 +1,10 @@
 import { getPublishedBrandIdentity } from "@forgecy/brand";
-import { assetCommercialUse, briefSchema, type ContentChannel } from "@forgecy/content";
+import {
+  assetCommercialUse,
+  briefSchema,
+  sourceTextOf,
+  type ContentChannel,
+} from "@forgecy/content";
 import { eq, users } from "@forgecy/db";
 import { getTranslations } from "next-intl/server";
 import { getRefText } from "@/lib/i18n";
@@ -81,6 +86,7 @@ export default async function EditorPage({
         ...(maxHashtags !== undefined ? { maxHashtags } : {}),
         usePrice: brief.usePrice,
         wantsAltText: brief.outputs.altText,
+        sourceText: sourceTextOf(brief, ws.product),
         productRevision: c.productId
           ? { used: c.productRevision, current: ws.product?.revision ?? null }
           : null,

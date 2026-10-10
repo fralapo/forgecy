@@ -54,7 +54,11 @@ export const carouselExportJob = defineJob({
 export const templateValidateJob = defineJob({
   kind: "carousel.validate_template",
   queue: "export",
-  payload: z.object({ templateRowId: z.uuid() }),
+  payload: z.object({
+    templateRowId: z.uuid(),
+    /** Publish the draft as this person once the checks pass (the one-click starter install). */
+    publish: z.object({ by: z.uuid(), notes: z.string().min(3).max(500) }).optional(),
+  }),
 });
 
 export interface ExportedFile {

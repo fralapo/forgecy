@@ -68,7 +68,9 @@ export default async function NewCarouselPage({
         </p>
       ) : options.templates.length === 0 ? (
         <p role="alert" className="mb-4 text-body-sm text-fg">
-          {t("noTemplates")}
+          {t.rich("noTemplates", {
+            link: (chunks) => <Link href="/templates">{chunks}</Link>,
+          })}
         </p>
       ) : null}
       <CarouselNewForm slug={client.slug} clientId={client.id} options={options} plan={plan} />

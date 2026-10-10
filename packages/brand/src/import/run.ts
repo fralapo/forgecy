@@ -526,7 +526,7 @@ export async function runSourceImport(
         ai = "failed";
         aiNote =
           err instanceof ForgecyError
-            ? (err.ref ?? msg("brand.import.status.aiNotRun", { message: err.message }))
+            ? (err.ref ?? msg("brand.import.status.aiNotRun"))
             : msg("brand.import.status.aiFailed");
       } else throw err;
     }

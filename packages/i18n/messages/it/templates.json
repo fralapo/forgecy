@@ -64,7 +64,12 @@
     "folderName": "{name} · v{version}",
     "folderErrors": "{count, plural, one {# errore di validazione} other {# errori di validazione}}",
     "folderSubmit": "Importa",
-    "invalidManifest": "Manifest non valido"
+    "invalidManifest": "Manifest non valido",
+    "installTitle": "Template di base",
+    "installHint": "Installa in un colpo tutti i template pronti: vengono importati, controllati e pubblicati, senza passaggi intermedi.",
+    "installing": "Installazione in corso: ogni template viene controllato e pubblicato, la pagina si aggiorna da sola.",
+    "installAll": "Installa tutti i template di base",
+    "starterNotes": "Template di base installato"
   },
   "detail": {
     "title": "{name} · v{version}",

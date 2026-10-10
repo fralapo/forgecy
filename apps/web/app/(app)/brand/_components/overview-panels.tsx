@@ -181,9 +181,11 @@ export async function WebsiteCard({
             <span className="text-fg-muted">
               {running
                 ? t("overview.analysisRunning")
-                : source.statusDetailRef?.length
-                  ? source.statusDetailRef.map((r) => rt(r, "")).join(" · ")
-                  : source.statusDetail}
+                : source.status === "extracted"
+                  ? "" // all went well: the counters are in the import log, not worth reading here
+                  : source.statusDetailRef?.length
+                    ? source.statusDetailRef.map((r) => rt(r, "")).join(" · ")
+                    : source.statusDetail}
             </span>
           </p>
         ) : (

@@ -1,7 +1,7 @@
 import "server-only";
 import { auditErrorCode, type AuditDeps } from "@forgecy/audit";
 import { ForgecyError, PermissionDeniedError } from "@forgecy/core";
-import { and, desc, eq, getDb, inArray, jobs, socialProfiles, type Database } from "@forgecy/db";
+import { and, desc, eq, getDb, jobs, socialProfiles, type Database } from "@forgecy/db";
 import { createStorageFromEnv, type StorageDriver } from "@forgecy/files";
 import {
   createSocialRuntime,
@@ -51,28 +51,43 @@ export function profileReadingAvailable(): boolean {
  */
 export async function profileReadingState(db: Database, clientId: string, profileUrl: string) {
   const handle = normalizeHandle(profileUrl);
-  const none = { job: null, reason: null } as const;
+  const none = { job: null, reason: null, jobFailure: null } as const;
   if (!handle) return none;
   const [profile] = await db
     .select({ id: socialProfiles.id, reason: socialProfiles.statusReason })
     .from(socialProfiles)
     .where(and(eq(socialProfiles.clientId, clientId), eq(socialProfiles.handle, handle)));
   if (!profile) return none;
-  const [job] = await db
-    .select({ id: jobs.id, kind: jobs.kind, status: jobs.status, progress: jobs.progress })
+  // The latest reading job, whatever its state: a job that failed at queue level (no handler,
+  // worker down) never reaches the profile's own reason, so its error is read from the job.
+  const [latest] = await db
+    .select({
+      id: jobs.id,
+      kind: jobs.kind,
+      status: jobs.status,
+      progress: jobs.progress,
+      error: jobs.error,
+      errorRef: jobs.errorRef,
+    })
     .from(jobs)
     .where(
       and(
         eq(jobs.entity, SOCIAL_JOB_ENTITY),
         eq(jobs.entityId, profile.id),
         eq(jobs.kind, socialSnapshotJob.kind),
-        inArray(jobs.status, ["queued", "retrying", "running"]),
       ),
     )
     .orderBy(desc(jobs.createdAt))
     .limit(1);
-  return { job: job ?? null, reason: profile.reason };
+  const job = latest && ACTIVE_JOB.includes(latest.status) ? latest : null;
+  const jobFailure =
+    latest?.status === "failed"
+      ? { error: latest.error ?? "", errorRef: latest.errorRef ?? null }
+      : null;
+  return { job, reason: profile.reason, jobFailure };
 }
+
+const ACTIVE_JOB: readonly string[] = ["queued", "retrying", "running"];
 
 export type ActionResult<T = undefined> =
   { ok: true; data?: T; message?: string } | { ok: false; error: string; code?: string };

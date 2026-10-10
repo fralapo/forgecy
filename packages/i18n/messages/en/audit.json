@@ -816,6 +816,7 @@
         "postsWithText": "{count, plural, one {# post} other {# posts}} with text"
       },
       "file": "File: {name}",
+      "profile": "Public profile: {name}",
       "imported": "imported",
       "sourceWithNote": "{source} · {note}"
     },
@@ -896,6 +897,7 @@
     "readProfileHint": "Forgecy reads the public profile once and fills in followers, post count and recent posts, with the date and source. You can still enter or upload data by hand below.",
     "readingJob": "Reading the Instagram profile",
     "readFailed": "The profile could not be read. Enter the numbers by hand or try again later.",
+    "readJobFailed": "The profile reading failed: {error}",
     "readUnavailable": "Reading the profile needs a source set up in Settings or in the .env file. Until then, enter the numbers by hand or upload an export.",
     "saveLink": "Save link",
     "reopen": "Reopen channel",

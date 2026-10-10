@@ -3,7 +3,24 @@ import type { MetricSource, SocialChannel } from "@forgecy/core";
 /** Where a value comes from, as data the interface words in the user's language. */
 export type MetricOrigin =
   | { kind: "file"; fileName: string | null }
+  /** A public-profile reading copied into the audit: stored like a file, but not one. */
+  | { kind: "profile"; name: string | null }
   | { kind: "source"; source: MetricSource; note?: string | null };
+
+/** Origin of rows that belong to an audit source: a profile reading (`public_page`) or a file. */
+export function sourceOrigin(s: { method?: string | null; fileName: string | null }): MetricOrigin {
+  return s.method === "public_page"
+    ? { kind: "profile", name: s.fileName }
+    : { kind: "file", fileName: s.fileName };
+}
+
+/** English form of `sourceOrigin` for prompts and logs. */
+export function sourceOriginLabel(
+  s: { method?: string | null; fileName: string | null },
+  fallback: string,
+): string {
+  return `${s.method === "public_page" ? "Public profile" : "File"}: ${s.fileName ?? fallback}`;
+}
 
 export interface MetricRow {
   metric: string;

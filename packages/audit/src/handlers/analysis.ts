@@ -64,7 +64,7 @@ import {
 import { buildIndex, confidenceOf, verifyEvidence, type RefTarget } from "../ai/evidence";
 import { loadAudit, type AuditRow, type ClientRow } from "../service/common";
 import { channelLabel } from "../service/prospects";
-import { computeChannelMetrics } from "../social/metrics";
+import { computeChannelMetrics, sourceOriginLabel } from "../social/metrics";
 import { domainOf, normalizeSiteUrl } from "../url";
 import { needsAttention, oneLine, runAgent, unrecoverable, type AuditHandlerDeps } from "./context";
 import { stored } from "../stored";
@@ -446,11 +446,11 @@ async function socialData(db: Database, auditId: string, channel: SocialChannel)
       .where(and(eq(auditMetrics.auditId, auditId), eq(auditMetrics.channel, channel)))
       .orderBy(desc(auditMetrics.observedOn)),
     db
-      .select({ id: auditSources.id, fileName: auditSources.fileName })
+      .select({ id: auditSources.id, fileName: auditSources.fileName, method: auditSources.method })
       .from(auditSources)
       .where(and(eq(auditSources.auditId, auditId), eq(auditSources.channel, channel))),
   ]);
-  const fileName = new Map(files.map((f) => [f.id, f.fileName ?? "Imported file"]));
+  const fileById = new Map(files.map((f) => [f.id, f]));
   const cards = computeChannelMetrics({
     channel,
     metrics: metrics.map((m) => ({
@@ -466,7 +466,7 @@ async function socialData(db: Database, auditId: string, channel: SocialChannel)
       postType: p.postType,
       text: p.text,
       metrics: p.metrics,
-      sourceLabel: `File: ${fileName.get(p.sourceId) ?? "imported"}`,
+      sourceLabel: sourceOriginLabel(fileById.get(p.sourceId) ?? { fileName: null }, "imported"),
     })),
   });
   return { posts, metrics, cards };

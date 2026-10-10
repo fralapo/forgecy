@@ -35,7 +35,13 @@ import {
 } from "@forgecy/db";
 import { ilike, isNotNull } from "drizzle-orm";
 import { AUDIT_JOB_ENTITY, auditDiagnoseJob } from "../jobs";
-import { computeChannelMetrics, metricSourceLabels, type MetricCard } from "../social/metrics";
+import {
+  computeChannelMetrics,
+  metricSourceLabels,
+  sourceOrigin,
+  sourceOriginLabel,
+  type MetricCard,
+} from "../social/metrics";
 import { currentAudit } from "./audits";
 import { loadAudit } from "./common";
 
@@ -333,8 +339,10 @@ export async function getSocialView(
       .limit(500),
     findingsOf(db, auditId, { kind: "observation", channel }),
   ]);
-  const fileNames = new Map(sources.map((s) => [s.id, s.fileName ?? "Imported file"]));
-  const sourceNames = new Map(sources.map((s) => [s.id, s.fileName]));
+  const byId = new Map(sources.map((s) => [s.id, s]));
+  const labelOf = (id: string, fallback: string) =>
+    sourceOriginLabel(byId.get(id) ?? { fileName: null }, fallback);
+  const originOf = (id: string) => sourceOrigin(byId.get(id) ?? { fileName: null });
   const cards = computeChannelMetrics({
     channel,
     metrics: metrics.map((m) => ({
@@ -344,10 +352,10 @@ export async function getSocialView(
       source: m.source,
       sourceNote: m.sourceNote,
       sourceLabel: m.sourceId
-        ? `File: ${fileNames.get(m.sourceId) ?? "imported"}`
+        ? labelOf(m.sourceId, "imported")
         : `${metricSourceLabels[m.source]}${m.sourceNote ? ` · ${m.sourceNote}` : ""}`,
       origin: m.sourceId
-        ? { kind: "file" as const, fileName: sourceNames.get(m.sourceId) ?? null }
+        ? originOf(m.sourceId)
         : { kind: "source" as const, source: m.source, note: m.sourceNote },
     })),
     posts: posts.map((p) => ({
@@ -356,8 +364,8 @@ export async function getSocialView(
       postType: p.postType,
       text: p.text,
       metrics: p.metrics,
-      sourceLabel: `File: ${fileNames.get(p.sourceId) ?? "importato"}`,
-      origin: { kind: "file" as const, fileName: sourceNames.get(p.sourceId) ?? null },
+      sourceLabel: labelOf(p.sourceId, "importato"),
+      origin: originOf(p.sourceId),
     })),
   });
   return {

@@ -38,14 +38,21 @@ export default async function BrandLayout({
       label: t("tabs.sources"),
       count: Object.values(ws.sourceCounts).reduce((a, b) => a + (b ?? 0), 0),
     },
-    {
-      href: `${base}/proposals`,
-      label: t("tabs.proposals"),
-      count: ws.proposalCounts.proposed ?? 0,
-    },
+    // Proposals only matter when something waits for a decision: the import applies the rest itself.
+    ...((ws.proposalCounts.proposed ?? 0) || conflicts.length
+      ? [
+          {
+            href: `${base}/proposals`,
+            label: t("tabs.proposals"),
+            count: ws.proposalCounts.proposed ?? 0,
+          },
+        ]
+      : []),
     { href: `${base}/versions`, label: t("tabs.versions") },
     { href: `${base}/book`, label: t("tabs.book") },
   ];
+  // Published and nothing open: one "edit" button, no version bookkeeping to read.
+  const quiet = !draft && (firstImport || Boolean(published));
   const editor = draft ? names.get(draft.lastEditedBy ?? draft.createdBy ?? "") : undefined;
 
   return (
@@ -66,72 +73,83 @@ export default async function BrandLayout({
         </div>
       </header>
       <BrandTabs tabs={tabs} />
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-subtle bg-surface px-4 py-3">
-        <div className="flex flex-wrap items-center gap-3 text-body-sm">
-          {draft ? (
-            <>
-              <Badge variant={versionStatusVariant[draft.status]}>
-                {t("layout.draftBadge", {
-                  number: draft.number,
-                  status: t(`versionStatus.${draft.status}`),
-                })}
-              </Badge>
-              <span className="text-fg-muted">
-                {t("layout.lastEdited", {
-                  editor: editor ?? "—",
-                  date: format.date(draft.updatedAt, "dateTime"),
-                })}
-              </span>
-            </>
-          ) : (
-            <span className="text-fg-muted">
-              {published
-                ? t("layout.noDraftPublished", { number: published.number })
-                : firstImport
-                  ? t("overview.importRunningTitle")
-                  : t("layout.noDraft")}
-            </span>
-          )}
-          {conflicts.length ? (
-            <Badge variant="warning">
-              {t("layout.openConflicts", { count: conflicts.length })}
-            </Badge>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {!draft && !firstImport ? (
+      {quiet ? (
+        firstImport ? null : (
+          <div className="mb-6 flex justify-end">
             <ActionButton
               action={startDraftAction.bind(null, client.slug, client.id)}
               variant="secondary"
             >
-              {published
-                ? t("layout.openDraft", { number: published.number + 1 })
-                : t("layout.startDraft")}
+              {t("layout.openDraft")}
             </ActionButton>
-          ) : null}
-          {draft?.status === "draft" ? (
-            <ActionButton
-              action={submitAction.bind(null, {
-                slug: client.slug,
-                clientId: client.id,
-                versionId: draft.id,
-                rev: draft.rev,
-              })}
-              variant="secondary"
-            >
-              {t("layout.submit")}
-            </ActionButton>
-          ) : null}
-          {draft ? (
-            <Link
-              href={`${base}/versions/${draft.number}/approve` as Route}
-              className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-body-sm font-medium text-primary-foreground"
-            >
-              {t("layout.openApproval")}
-            </Link>
-          ) : null}
+          </div>
+        )
+      ) : (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-subtle bg-surface px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3 text-body-sm">
+            {draft ? (
+              <>
+                <Badge variant={versionStatusVariant[draft.status]}>
+                  {t("layout.draftBadge", {
+                    number: draft.number,
+                    status: t(`versionStatus.${draft.status}`),
+                  })}
+                </Badge>
+                <span className="text-fg-muted">
+                  {t("layout.lastEdited", {
+                    editor: editor ?? "—",
+                    date: format.date(draft.updatedAt, "dateTime"),
+                  })}
+                </span>
+              </>
+            ) : (
+              <span className="text-fg-muted">
+                {published
+                  ? t("layout.noDraftPublished", { number: published.number })
+                  : firstImport
+                    ? t("overview.importRunningTitle")
+                    : t("layout.noDraft")}
+              </span>
+            )}
+            {conflicts.length ? (
+              <Badge variant="warning">
+                {t("layout.openConflicts", { count: conflicts.length })}
+              </Badge>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {!draft && !firstImport ? (
+              <ActionButton
+                action={startDraftAction.bind(null, client.slug, client.id)}
+                variant="secondary"
+              >
+                {published ? t("layout.openDraft") : t("layout.startDraft")}
+              </ActionButton>
+            ) : null}
+            {draft?.status === "draft" ? (
+              <ActionButton
+                action={submitAction.bind(null, {
+                  slug: client.slug,
+                  clientId: client.id,
+                  versionId: draft.id,
+                  rev: draft.rev,
+                })}
+                variant="secondary"
+              >
+                {t("layout.submit")}
+              </ActionButton>
+            ) : null}
+            {draft ? (
+              <Link
+                href={`${base}/versions/${draft.number}/approve` as Route}
+                className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-body-sm font-medium text-primary-foreground"
+              >
+                {t("layout.openApproval")}
+              </Link>
+            ) : null}
+          </div>
         </div>
-      </div>
+      )}
       {draft?.status === "in_review" ? (
         <p
           role="status"

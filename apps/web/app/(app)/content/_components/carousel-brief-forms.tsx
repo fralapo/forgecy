@@ -10,6 +10,7 @@ import {
 import { contentObjectives } from "@forgecy/core";
 import { Badge, Button, Input, Label } from "@forgecy/ui";
 import { useRouter } from "next/navigation";
+import type { ToneAxisKey } from "@forgecy/brand";
 import { useTranslations } from "next-intl";
 import { useState, useTransition, type ReactNode } from "react";
 import { saveBriefAction, updateParamsAction } from "../actions";
@@ -374,6 +375,7 @@ function BriefForm({
   const [b, setB] = useState<Brief>(brief);
   const [constraints, setConstraints] = useState(brief.constraints.join("\n"));
   const t = useTranslations("content.brief.form");
+  const ta = useTranslations("deliverable.brandBook.axes");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -533,7 +535,7 @@ function BriefForm({
           {toneAxes.map((a) => (
             <div key={a.key} className="flex flex-wrap items-center gap-3 text-body-sm text-fg">
               <span className="min-w-48">
-                {a.left} · {a.right}
+                {ta(`${a.key as ToneAxisKey}.left`)} · {ta(`${a.key as ToneAxisKey}.right`)}
               </span>
               {([-1, 0, 1] as const).map((d) => (
                 <label key={d} className="flex items-center gap-1">
@@ -544,9 +546,11 @@ function BriefForm({
                     onChange={() => setTone(a.key, d)}
                   />
                   {d === -1
-                    ? t("toneMore", { quality: a.left.toLowerCase() })
+                    ? t("toneMore", { quality: ta(`${a.key as ToneAxisKey}.left`).toLowerCase() })
                     : d === 1
-                      ? t("toneMore", { quality: a.right.toLowerCase() })
+                      ? t("toneMore", {
+                          quality: ta(`${a.key as ToneAxisKey}.right`).toLowerCase(),
+                        })
                       : t("toneSame")}
                 </label>
               ))}

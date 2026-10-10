@@ -447,6 +447,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
       json: {
         title: "Cool water for 24 hours",
         hook: "Is your water warm after an hour?",
+        hookAlternatives: ["Water that stays cold for 24 hours"],
         rows: roles.map((role, i) => ({ role, layout: role, point: `Point ${i + 1}`, note: "" })),
         cta: "Discover the bottle",
       },

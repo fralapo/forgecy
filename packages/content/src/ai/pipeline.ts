@@ -581,6 +581,15 @@ async function locked<T>(
   }
 }
 
+/** Alternatives worth showing: trimmed, not empty, not the hook itself, no repeats, at most two. */
+export function hookAlternativesOf(hook: string, alternatives: readonly string[]): string[] {
+  const seen = new Set([hook.trim()]);
+  return alternatives
+    .map((a) => a.trim())
+    .filter((a) => a && !seen.has(a) && Boolean(seen.add(a)))
+    .slice(0, 2);
+}
+
 export async function runGenerateOutline(
   deps: PipelineDeps,
   ctx: PipelineContext,
@@ -630,6 +639,7 @@ export async function runGenerateOutline(
     const outline: Outline = {
       title: res.data.title.trim(),
       hook: res.data.hook.trim(),
+      hookAlternatives: hookAlternativesOf(res.data.hook, res.data.hookAlternatives),
       rows,
       cta: res.data.cta.trim(),
       caption: previous?.caption ?? "",

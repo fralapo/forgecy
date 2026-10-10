@@ -50,6 +50,7 @@ describe.skipIf(!dbUrl)("template catalog (integration)", () => {
   let root: string;
   const key = `test-catalog-${Date.now().toString(36)}`;
   let actor: Actor;
+  let userId: string;
   const agent: Actor = { type: "agent", role: "art_director" };
 
   beforeAll(async () => {
@@ -64,6 +65,7 @@ describe.skipIf(!dbUrl)("template catalog (integration)", () => {
       .insert(users)
       .values({ name: "Catalog test", email: `${key}@example.test` })
       .returning();
+    userId = user!.id;
     actor = { type: "user", id: user!.id, isAdmin: false, active: true, clients: "all" as const };
   });
 
@@ -273,6 +275,25 @@ describe.skipIf(!dbUrl)("template catalog (integration)", () => {
       for await (const _ of subscribeJobEvents(db, row.id, { intervalMs: 200 })) void _;
       return (await db.query.jobs.findFirst({ where: eq(jobs.id, row.id) }))!;
     }
+
+    it("publishes the draft as the requester once the checks pass (one-click starter install)", async () => {
+      const v = await importTemplate({
+        db,
+        storage,
+        actor,
+        files: await testPackage(key, "1.2.0"),
+      });
+      const done = await run({
+        kind: templateValidateJob,
+        payload: {
+          templateRowId: v.row.id,
+          publish: { by: userId, notes: "Starter template installed" },
+        },
+      });
+      expect(done.status, done.error ?? "").toBe("completed");
+      const row = await db.query.templates.findFirst({ where: eq(templates.id, v.row.id) });
+      expect(row).toMatchObject({ status: "published", publishedBy: userId });
+    }, 120_000);
 
     it("validates a new version with the render checks, then exports with the published version", async () => {
       const v2 = await importTemplate({

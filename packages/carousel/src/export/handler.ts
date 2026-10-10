@@ -3,11 +3,13 @@ import { type StorageDriver, contentKey, createStorageFromEnv, sha256 } from "@f
 import { type JobContext, NeedsAttentionError, UnrecoverableError, handle } from "@forgecy/jobs";
 import { englishMessage, messageRef } from "@forgecy/i18n";
 import type { Browser } from "playwright-core";
+import { userActor } from "@forgecy/db";
 import {
   dbTemplateSource,
   getTemplateRow,
   loadTemplatePackage,
   saveTemplateValidation,
+  transitionTemplate,
 } from "../catalog";
 import type { TemplateSource } from "../node";
 import {
@@ -130,6 +132,21 @@ export function carouselHandlers(deps: CarouselHandlerDeps) {
         ? await renderCheckTemplate(await deps.browser(), pkg, report)
         : report;
       await saveTemplateValidation(ctx.db, row.id, full);
+      // The person who asked for it publishes it: same permission, same audit trail as the button.
+      if (payload.publish && full.ok && row.status === "draft") {
+        const actor = await userActor(ctx.db, payload.publish.by);
+        if (actor)
+          await transitionTemplate({
+            db: ctx.db,
+            actor,
+            id: row.id,
+            to: "published",
+            notes: payload.publish.notes,
+          }).catch((err: unknown) => {
+            // Not allowed any more or not publishable: it stays a draft for a person to look at.
+            if (!(err instanceof ForgecyError)) throw err;
+          });
+      }
       return { ok: full.ok, checks: full.checks, issues: full.issues.length };
     }),
   };

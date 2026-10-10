@@ -114,9 +114,11 @@ export default async function SocialPage({
   const originText = (o: MetricOrigin) =>
     o.kind === "file"
       ? t("social.card.file", { name: o.fileName ?? t("social.card.imported") })
-      : o.note
-        ? t("social.card.sourceWithNote", { source: t(`metricSource.${o.source}`), note: o.note })
-        : t(`metricSource.${o.source}`);
+      : o.kind === "profile"
+        ? t("social.card.profile", { name: o.name ?? t("social.card.imported") })
+        : o.note
+          ? t("social.card.sourceWithNote", { source: t(`metricSource.${o.source}`), note: o.note })
+          : t(`metricSource.${o.source}`);
   const cardDetail = (c: MetricCard) =>
     c.value === null
       ? c.reasonId
@@ -201,7 +203,18 @@ export default async function SocialPage({
                 <ReadProfile
                   auditId={audit.id}
                   busy={Boolean(reading?.job)}
-                  failure={reading?.reason ? rt(reading.reason, t("socialTools.readFailed")) : null}
+                  failure={
+                    reading?.reason
+                      ? rt(reading.reason, t("socialTools.readFailed"))
+                      : reading?.jobFailure
+                        ? t("socialTools.readJobFailed", {
+                            error: rt(
+                              reading.jobFailure.errorRef,
+                              reading.jobFailure.error || t("socialTools.readFailed"),
+                            ),
+                          })
+                        : null
+                  }
                 />
               </div>
             ) : (

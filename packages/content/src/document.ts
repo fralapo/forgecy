@@ -219,6 +219,8 @@ export type OutlineRow = z.output<typeof outlineRowSchema>;
 export const outlineSchema = z.object({
   title: text(160).default(""),
   hook: text(200).default(""),
+  /** Up to two other hooks the Copywriter proposed; a person may swap one in. */
+  hookAlternatives: list(required(200), 2),
   rows: z.array(outlineRowSchema).min(1).max(20),
   cta: text(200).default(""),
   caption: text(3000).default(""),

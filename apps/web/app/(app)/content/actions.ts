@@ -473,6 +473,21 @@ export async function approveOutlineAction(input: ContentRef & { outlineNumber: 
   });
 }
 
+/** The outline is fine as it is: approve it and start the slides in one step. */
+export async function approveAndGenerateAction(input: ContentRef & { outlineNumber: number }) {
+  return run(input.slug, async (ctx) => {
+    const r = ref(input);
+    humanOnly(ctx.actor, "edit_draft", r.clientId);
+    await approveOutline(ctx.db, ctx.actor, { ...r, outlineNumber: input.outlineNumber });
+    return enqueue(
+      ctx,
+      generateSlidesJob,
+      { clientId: r.clientId, contentId: r.id, requestedBy: ctx.userId },
+      { clientId: r.clientId, entity: "content", entityId: r.id },
+    );
+  });
+}
+
 export async function generateSlidesAction(input: ContentRef) {
   return run(input.slug, async (ctx) => {
     const r = ref(input);

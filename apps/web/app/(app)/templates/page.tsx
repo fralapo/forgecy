@@ -13,7 +13,8 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/session";
-import { importFolderAction } from "./actions";
+import { RefreshWhile } from "../content/_components/refresh-while";
+import { importFolderAction, installStartersAction } from "./actions";
 import { SlideFrame } from "./slide-frame";
 import { ErrorNotice, StatusBadge, ValidationBadge } from "./status";
 import { getManifestLocalizer } from "@/lib/template-labels";
@@ -38,11 +39,11 @@ function headline(rows: TemplateRow[]): TemplateRow {
 export default async function TemplatesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; installing?: string }>;
 }) {
   const user = await requireUser();
   const t = await getTranslations("templates");
-  const { error } = await searchParams;
+  const { error, installing } = await searchParams;
   const manage = can(user.actor, "templates.manage");
   // A client's private template only for people who may open that client (ADR 0020).
   const rows = (await listTemplates(getDb())).filter(
@@ -62,6 +63,20 @@ export default async function TemplatesPage({
     <>
       <PageHeader title={t("title")} description={t("description")} />
       {error ? <ErrorNotice message={error} /> : null}
+      <RefreshWhile active={Boolean(installing) && rows.some((r) => r.status === "draft")} />
+      {manage && folders.some((f) => f.pkg) ? (
+        <Card className="mb-8 flex flex-wrap items-center justify-between gap-4 p-5">
+          <div className="space-y-1">
+            <h2 className="text-heading-sm text-fg">{t("import.installTitle")}</h2>
+            <p className="text-body-sm text-fg-muted">
+              {installing ? t("import.installing") : t("import.installHint")}
+            </p>
+          </div>
+          <form action={installStartersAction}>
+            <Button type="submit">{t("import.installAll")}</Button>
+          </form>
+        </Card>
+      ) : null}
       {byKey.size === 0 ? (
         <Card className="mb-8 p-6 text-body-md text-fg-muted">{t("empty")}</Card>
       ) : (

@@ -12,7 +12,7 @@ import { Button, Input, Label } from "@forgecy/ui";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { createCarouselAction } from "../actions";
 import { carouselPath } from "../_lib/paths";
@@ -48,19 +48,22 @@ export function CarouselNewForm({
   const router = useRouter();
   const t = useTranslations("content.newCarousel.form");
   const tl = useTranslations("content.labels");
+  const locale = useLocale();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const templates = options.templates.filter((t) => t.channel in channelLabels);
   const channels = [...new Set(templates.map((t) => t.channel as ContentChannel))];
+  // Instagram first: the channel most carousels are made for.
+  const firstChannel = channels.includes("instagram" as ContentChannel) ? "instagram" : channels[0];
   const firstTemplate = (ch: string, format?: string) =>
     templates.find((t) => t.channel === ch && (!format || t.format === format)) ??
     templates.find((t) => t.channel === ch);
 
   const [title, setTitle] = useState(plan?.title ?? "");
-  const [channel, setChannel] = useState<string>(plan?.channel ?? channels[0] ?? "instagram");
+  const [channel, setChannel] = useState<string>(plan?.channel ?? firstChannel ?? "instagram");
   const defaults = options.defaults;
   const [templateKey, setTemplateKey] = useState(
-    firstTemplate(plan?.channel ?? channels[0] ?? "", plan?.format ?? defaults.format ?? undefined)
+    firstTemplate(plan?.channel ?? firstChannel ?? "", plan?.format ?? defaults.format ?? undefined)
       ?.key ?? "",
   );
   const template = templates.find((t) => t.key === templateKey);
@@ -73,13 +76,11 @@ export function CarouselNewForm({
       : (defaults.slideCount ?? 7);
   const [slideCount, setSlideCount] = useState(startCount(template));
   const [objective, setObjective] = useState<Objective>("awareness");
-  const [audienceIds, setAudienceIds] = useState<string[]>(
-    options.audience.length === 1 ? [options.audience[0]!.id] : [],
-  );
+  const [audienceIds, setAudienceIds] = useState<string[]>(options.audience.map((a) => a.id));
   const [pillarId, setPillarId] = useState(plan?.pillarId ?? "");
   const [rubricId, setRubricId] = useState(plan?.rubricId ?? "");
   const [productId, setProductId] = useState(plan?.productId ?? "");
-  const [language, setLanguage] = useState<Language>(defaults.language ?? "en");
+  const [language, setLanguage] = useState<Language>(defaults.language ?? (locale as Language));
   const [briefText, setBriefText] = useState(plan?.briefText ?? "");
 
   const rubrics = options.rubrics.filter((r) => !pillarId || r.pillarId === pillarId);
@@ -120,7 +121,11 @@ export function CarouselNewForm({
         brief: { text: plan && briefText === plan.briefText ? "" : briefText },
       });
       if (!r.ok) setError(r.error);
-      else router.push(carouselPath(slug, r.id) as never);
+      // Brief written already: straight to the outline, the next thing a person wants to do.
+      else
+        router.push(
+          `${carouselPath(slug, r.id)}${briefText.trim() || plan ? "/outline" : ""}` as never,
+        );
     });
   }
 

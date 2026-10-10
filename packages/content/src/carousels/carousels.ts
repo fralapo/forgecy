@@ -49,6 +49,7 @@ import {
 import {
   blockingChecks,
   computeChecks,
+  sourceTextOf,
   warningChecks,
   type AssetInfo,
   type ContentCheck,
@@ -814,6 +815,7 @@ export async function checkDocument(
     assets: library.map,
     usePrice: brief.usePrice,
     wantsAltText: brief.outputs.altText,
+    sourceText: sourceTextOf(brief, product),
     productRevision: c.productId
       ? { used: c.productRevision, current: product?.revision ?? null }
       : null,

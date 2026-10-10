@@ -8,6 +8,7 @@
     "hashtags": "{count, plural, one {# hashtag} other {# hashtags}}: the Brand Identity allows at most {max}",
     "forbiddenWord": "Word forbidden by the Brand Identity: “{word}”",
     "price": "The copy mentions a price but the brief does not allow it",
+    "unsourcedNumber": "A figure in the copy is not in the brief or the product sheet: “{number}”",
     "assetMissing": "Slide {slide}: image not in the client's library",
     "aiAssetUnapproved": "Slide {slide}: AI image to approve before the carousel is approved",
     "assetUnapproved": "Slide {slide}: image not approved",

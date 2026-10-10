@@ -518,7 +518,7 @@
     "fromPlan": "From the plan: day {day}, {channel}. The fields are prefilled and can be changed.",
     "brandRequired": "A published Brand Identity is required to create a carousel.",
     "openBrand": "Open the Brand Identity",
-    "noTemplates": "No usable templates: publish one in the template catalog.",
+    "noTemplates": "No usable template: <link>install the starter templates</link>.",
     "form": {
       "chooseTemplate": "Choose a template",
       "chooseAudience": "Choose at least one audience",
@@ -634,6 +634,8 @@
   "outline": {
     "metaTitle": "Outline · Carousel",
     "stale": "The brief changed after this outline: regenerate or review it before approving it.",
+    "approveAndGenerate": "Approve and create the slides",
+    "optional": "optional",
     "title": "Outline",
     "titleNumber": "Outline no. {number}",
     "approvedOn": "Approved on {date}",
@@ -680,7 +682,23 @@
       "hashtags": "Hashtags",
       "hashtagsPlaceholder": "#example #another",
       "save": "Save outline",
-      "unsaved": "Unsaved changes"
+      "unsaved": "Unsaved changes",
+      "hookAlternatives": "Other hooks",
+      "useHook": "Use this hook",
+      "useHookLabel": "Use this hook: {hook}",
+      "copyMarkdown": "Copy as Markdown",
+      "copied": "Copied",
+      "pasteMarkdown": "Paste Markdown",
+      "markdownLabel": "Outline in Markdown",
+      "applyMarkdown": "Replace the outline",
+      "markdownErrors": {
+        "noSlides": "No slides found: start each slide with a line like “## 1. text | layout-id”.",
+        "unexpectedLine": "Line {line}: this text is outside a slide.",
+        "unknownRole": "Line {line}: “{value}” is not a slide role.",
+        "unknownLayout": "Line {line}: this template has no layout “{value}”.",
+        "tooManyAltHooks": "At most two “Alt hook:” lines are allowed.",
+        "invalid": "A field is too long or not valid: {value}."
+      }
     }
   },
   "versions": {

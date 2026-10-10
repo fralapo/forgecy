@@ -1,6 +1,11 @@
 "use server";
 
-import { importTemplate, type TemplateStatus, transitionTemplate } from "@forgecy/carousel/catalog";
+import {
+  importTemplate,
+  listTemplates,
+  type TemplateStatus,
+  transitionTemplate,
+} from "@forgecy/carousel/catalog";
 import { scanTemplateDir } from "@forgecy/carousel/node";
 import { ForgecyError, assertCan } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
@@ -44,6 +49,29 @@ export async function importFolderAction(form: FormData) {
   await enqueueTemplateValidation(user, id);
   revalidatePath("/templates");
   redirect(`/templates/${id}`);
+}
+
+/** One click: every valid starter template is imported, checked by the worker and published. */
+export async function installStartersAction() {
+  const user = await requireUser();
+  const t = await getTranslations("templates");
+  const known = new Set((await listTemplates(getDb())).map((r) => `${r.key}@${r.version}`));
+  try {
+    for (const { pkg } of await scanTemplateDir()) {
+      if (!pkg || known.has(`${pkg.manifest.id}@${pkg.manifest.version}`)) continue;
+      const { row } = await importTemplate({
+        db: getDb(),
+        storage: getStorage(),
+        actor: user.actor,
+        files: pkg.files,
+      });
+      await enqueueTemplateValidation(user, row.id, t("import.starterNotes"));
+    }
+  } catch (err) {
+    return fail("/templates", err);
+  }
+  revalidatePath("/templates");
+  redirect("/templates?installing=1");
 }
 
 export async function transitionAction(form: FormData) {

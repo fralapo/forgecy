@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { OPENROUTER_DEFAULT_MODEL } from "../src/providers/openai-compatible";
 import {
   clearOpenRouterCatalogCache,
   fetchOpenRouterCatalog,
@@ -34,6 +35,10 @@ describe("openrouter-catalog", () => {
   it("picks the newest canonical DeepSeek Flash id, ignoring aliases and batch variants", () => {
     const models = catalog as OpenRouterModelInfo[];
     expect(latestDeepSeekFlashChat(models)).toBe("deepseek/deepseek-v4-flash");
+  });
+
+  it("the offline fallback is a real catalog id (OpenRouter aliases start with ~)", () => {
+    expect(catalog.map((m) => m.id)).toContain(OPENROUTER_DEFAULT_MODEL);
   });
 
   it("picks the newest OpenAI image-generation id", () => {

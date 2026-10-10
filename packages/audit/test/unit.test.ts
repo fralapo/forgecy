@@ -4,7 +4,12 @@ import { buildIndex, confidenceOf, verifyEvidence } from "../src/ai/evidence";
 import { canonicalUrl, parseSitemap, pickPages } from "../src/crawl/crawler";
 import { isBusinessType, technicalChecks } from "../src/crawl/extract";
 import { extractFromHtml, structuredDataTypes, type FetchedPage } from "../src/crawl/fetcher";
-import { computeChannelMetrics, type PostRow } from "../src/social/metrics";
+import {
+  computeChannelMetrics,
+  sourceOrigin,
+  sourceOriginLabel,
+  type PostRow,
+} from "../src/social/metrics";
 import {
   detectDelimiter,
   interpretRows,
@@ -343,5 +348,20 @@ describe("evidence", () => {
     const one = verifyEvidence([{ ref: "P1" }, { ref: "P1", quote: "since 1950" }], index);
     expect(one.distinct).toBe(1);
     expect(confidenceOf(one).confidence).toBe("low");
+  });
+});
+
+describe("origin of imported rows", () => {
+  it("a public-profile reading is not worded as a file", () => {
+    const profile = { method: "public_page", fileName: "@acme · Instagram" };
+    expect(sourceOrigin(profile)).toEqual({ kind: "profile", name: "@acme · Instagram" });
+    expect(sourceOriginLabel(profile, "imported")).toBe("Public profile: @acme · Instagram");
+  });
+
+  it("a real file import stays a file", () => {
+    const file = { method: "upload", fileName: "export.csv" };
+    expect(sourceOrigin(file)).toEqual({ kind: "file", fileName: "export.csv" });
+    expect(sourceOriginLabel(file, "imported")).toBe("File: export.csv");
+    expect(sourceOriginLabel({ fileName: null }, "imported")).toBe("File: imported");
   });
 });

@@ -816,6 +816,7 @@
         "postsWithText": "{count} post con testo"
       },
       "file": "File: {name}",
+      "profile": "Profilo pubblico: {name}",
       "imported": "importato",
       "sourceWithNote": "{source} · {note}"
     },
@@ -896,6 +897,7 @@
     "readProfileHint": "Forgecy legge una volta il profilo pubblico e compila follower, numero di post e post recenti, con data e fonte. Sotto puoi comunque inserire o caricare i dati a mano.",
     "readingJob": "Lettura del profilo Instagram",
     "readFailed": "Non è stato possibile leggere il profilo. Inserisci i numeri a mano o riprova più tardi.",
+    "readJobFailed": "La lettura del profilo non è riuscita: {error}",
     "readUnavailable": "Per leggere il profilo serve una fonte configurata nelle Impostazioni o nel file .env. Nel frattempo inserisci i numeri a mano o carica un export.",
     "saveLink": "Salva link",
     "reopen": "Riapri il canale",

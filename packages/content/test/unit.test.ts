@@ -93,6 +93,26 @@ describe("checks", () => {
     expect(li.some((c) => c.id === "caption:length")).toBe(false);
   });
 
+  it("flags a figure the brief does not contain, and only then", () => {
+    const withFigure = (caption: string, sourceText?: string) =>
+      computeChecks({
+        document: doc([cover, ...body, cta], { caption }),
+        manifest,
+        channel: "instagram",
+        ...(sourceText !== undefined ? { sourceText } : {}),
+      }).filter((c) => c.id.startsWith("numbers:unsourced:"));
+    // Not given a source: no judgement.
+    expect(withFigure("Up 40% in 2025")).toEqual([]);
+    // In the source, however it is written.
+    expect(withFigure("Sales of 1.200 units", '{"text":"we sold 1,200 units"}')).toEqual([]);
+    // Not in the source: a warning per figure, never an error.
+    const found = withFigure("Up 40% in 2025", '{"text":"up 40%"}');
+    expect(found.map((c) => c.id)).toEqual(["numbers:unsourced:caption:2025"]);
+    expect(found[0]?.severity).toBe("warning");
+    // A lone digit is a list count, not a claim.
+    expect(withFigure("3 tips", '{"text":""}')).toEqual([]);
+  });
+
   it("trims a caption to the limit at a word break", () => {
     expect(trimCaptionToLimit("short", 10)).toBe("short");
     const text = `${"word ".repeat(50)}tail`;

@@ -16,7 +16,7 @@ export const OPENAI_DEFAULT_MODEL = "gpt-6.1-sol";
  * (openrouter-catalog.ts) cannot be reached. DeepSeek's "Flash" chat model, picked
  * live by id otherwise so it always tracks whichever version is newest.
  */
-export const OPENROUTER_DEFAULT_MODEL = "deepseek/deepseek-flash-latest";
+export const OPENROUTER_DEFAULT_MODEL = "~deepseek/deepseek-flash-latest";
 export const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 export const LOCAL_DEFAULT_MODEL = "llama3.1:8b";
 export const DEEPSEEK_DEFAULT_MODEL = "deepseek-flash";

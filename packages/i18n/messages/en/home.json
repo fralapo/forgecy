@@ -1,6 +1,6 @@
 {
   "greeting": "Hi {name}",
-  "flow": "Prospect, Audit, Diagnosis, Brand identity, Content strategy, Carousel, Review, Export.",
+  "flow": "Start from a client’s website: Forgecy builds the brand from it, then you create the content.",
   "step": "{number}. {title}",
   "steps": {
     "audit": {
@@ -13,7 +13,7 @@
     },
     "brand": {
       "title": "Brand Identity",
-      "text": "The client's strategy, voice and visual identity, approved by a person."
+      "text": "The client's strategy, voice and visual identity, taken from the website and profiles."
     },
     "products": {
       "title": "Products",

@@ -1,9 +1,24 @@
 "use client";
 
 import { slideRoles, type SlideRole } from "@forgecy/carousel";
-import { newSlideId, type Outline, type OutlineRow } from "@forgecy/content/client";
+import {
+  newSlideId,
+  outlineFromMarkdown,
+  outlineToMarkdown,
+  type Outline,
+  type OutlineMarkdownError,
+  type OutlineRow,
+} from "@forgecy/content/client";
 import { Button, Input, Label } from "@forgecy/ui";
-import { ArrowDown, ArrowUp, Plus, Sparkles, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ClipboardCopy,
+  ClipboardPaste,
+  Plus,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
@@ -120,6 +135,7 @@ export function CarouselOutlineGenerate({
 const emptyOutline = (count: number, layouts: LayoutOption[]): Outline => ({
   title: "",
   hook: "",
+  hookAlternatives: [],
   cta: "",
   caption: "",
   hashtags: [],
@@ -159,6 +175,9 @@ export function CarouselOutlineEditor({
   const [o, setO] = useState<Outline | null>(outline);
   const [hashtags, setHashtags] = useState((outline?.hashtags ?? []).join(" "));
   const [dirty, setDirty] = useState(false);
+  const [md, setMd] = useState<string | null>(null);
+  const [mdErrors, setMdErrors] = useState<OutlineMarkdownError[]>([]);
+  const [copied, setCopied] = useState(false);
 
   if (!o)
     return (
@@ -192,6 +211,38 @@ export function CarouselOutlineEditor({
   // the row's current role stays listed so the select never shows a value it lacks.
   const rolesFor = (current: SlideRole) =>
     slideRoles.filter((x) => x === current || layouts.some((l) => l.role === x));
+
+  // Swap: the chosen alternative becomes the hook and the old hook takes its place.
+  const chooseHook = (i: number) => {
+    const alt = o.hookAlternatives[i];
+    if (!alt) return;
+    const rest = o.hookAlternatives.filter((_, j) => j !== i);
+    patch({ hook: alt, hookAlternatives: o.hook.trim() ? [o.hook, ...rest].slice(0, 2) : rest });
+  };
+  const copyMarkdown = async () => {
+    try {
+      await navigator.clipboard.writeText(outlineToMarkdown(o));
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
+  const applyMarkdown = () => {
+    const r = outlineFromMarkdown(
+      md ?? "",
+      layouts.map((l) => l.id),
+      slideRoles,
+    );
+    if (!r.ok) {
+      setMdErrors(r.errors);
+      return;
+    }
+    // Caption and hashtags are not in the text: keep the current ones. Saving validates again.
+    setO({ ...r.outline, caption: o.caption, hashtags: o.hashtags });
+    setDirty(true);
+    setMd(null);
+    setMdErrors([]);
+  };
 
   return (
     <form
@@ -236,7 +287,82 @@ export function CarouselOutlineEditor({
               value={o.hook}
               onChange={(e) => patch({ hook: e.target.value })}
             />
+            {o.hookAlternatives.length ? (
+              <div className="grid gap-1">
+                <span className="text-body-sm text-fg-muted">{t("hookAlternatives")}</span>
+                <ul className="grid gap-1">
+                  {o.hookAlternatives.map((a, i) => (
+                    <li key={a} className="flex flex-wrap items-center gap-2 text-body-sm text-fg">
+                      <span className="min-w-0 flex-1">{a}</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        aria-label={t("useHookLabel", { hook: a })}
+                        onClick={() => chooseHook(i)}
+                      >
+                        {t("useHook")}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
+        </div>
+        <div className="grid gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" size="sm" variant="secondary" onClick={copyMarkdown}>
+              <ClipboardCopy aria-hidden />
+              {t("copyMarkdown")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setMd(md === null ? "" : null);
+                setMdErrors([]);
+              }}
+            >
+              <ClipboardPaste aria-hidden />
+              {t("pasteMarkdown")}
+            </Button>
+            {copied ? (
+              <span role="status" className="text-body-sm text-fg-muted">
+                {t("copied")}
+              </span>
+            ) : null}
+          </div>
+          {md !== null ? (
+            <div className="grid gap-2">
+              <Label htmlFor="ol-markdown">{t("markdownLabel")}</Label>
+              <textarea
+                id="ol-markdown"
+                rows={8}
+                className={controlClass}
+                value={md}
+                onChange={(e) => setMd(e.target.value)}
+              />
+              {mdErrors.length ? (
+                <ul role="alert" className="grid gap-1 text-body-sm text-error">
+                  {mdErrors.map((er, i) => (
+                    <li key={i}>
+                      {t(`markdownErrors.${er.code}`, {
+                        line: er.line ?? 0,
+                        value: er.value ?? "",
+                      })}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <div>
+                <Button type="button" size="sm" disabled={!md.trim()} onClick={applyMarkdown}>
+                  {t("applyMarkdown")}
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
         <ol className="grid gap-3">
           {o.rows.map((r, i) => (

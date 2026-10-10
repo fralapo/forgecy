@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { useId, useState, useTransition } from "react";
 import { saveSectionAction } from "../actions";
 import type { Ctl, FieldUi, SectionUi } from "../_lib/editor-config";
+import { entrySummary } from "../_lib/entry-summary";
 
 type Obj = Record<string, unknown>;
 type SourceOption = { id: string; title: string };
@@ -233,6 +234,32 @@ function ObjectFields({
   );
 }
 
+/**
+ * One list entry folded to its first line of text, open only when it is still empty: a long
+ * list (audience, messages, values) reads as a list instead of a wall of fields.
+ */
+function CollapsibleItem({
+  obj,
+  fields,
+  fallback,
+  children,
+}: {
+  obj: Obj;
+  fields: Ctl[];
+  fallback: string;
+  children: React.ReactNode;
+}) {
+  const first = entrySummary(obj, fields);
+  // Decided once, at mount: typing into a new entry must not fold it under the cursor.
+  const [startsOpen] = useState(!first);
+  return (
+    <details open={startsOpen}>
+      <summary className="cursor-pointer text-body-md text-fg">{first ?? fallback}</summary>
+      <div className="mt-3">{children}</div>
+    </details>
+  );
+}
+
 function ObjectList({
   items,
   item,
@@ -269,7 +296,7 @@ function ObjectList({
           replace(i, sourced ? { ...it, value: next } : (next as Obj));
         return (
           <div key={keyOf(it, i)} className="rounded-md border border-subtle bg-app p-3">
-            {sourced ? <Provenance item={it} /> : null}
+            {sourced && item === "text" ? <Provenance item={it} /> : null}
             {item === "text" ? (
               <Input
                 aria-label={addLabel}
@@ -278,13 +305,20 @@ function ObjectList({
                 onChange={(e) => setInner(e.target.value)}
               />
             ) : (
-              <ObjectFields
-                item={item}
+              <CollapsibleItem
                 obj={isObj(inner) ? inner : {}}
-                set={setInner}
-                sources={sources}
-                disabled={disabled}
-              />
+                fields={item}
+                fallback={t("newItem")}
+              >
+                {sourced ? <Provenance item={it} /> : null}
+                <ObjectFields
+                  item={item}
+                  obj={isObj(inner) ? inner : {}}
+                  set={setInner}
+                  sources={sources}
+                  disabled={disabled}
+                />
+              </CollapsibleItem>
             )}
             {!disabled ? (
               <Button

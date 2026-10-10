@@ -85,9 +85,28 @@ export interface CheckInput {
   assets?: ReadonlyMap<string, AssetInfo>;
   usePrice?: boolean;
   wantsAltText?: boolean;
+  /**
+   * Everything the copy may draw numbers from (brief, product sheet). When given, a figure in
+   * the slides or caption that is not in it is flagged: the writer never invents data.
+   */
+  sourceText?: string;
   /** Product revision the copy was written with, and the catalog's current one. */
   productRevision?: { used: number | null; current: number | null } | null;
   brandVersion?: { used: string | null; current: string | null } | null;
+}
+
+/** Figures that read as data: two or more digits, or any amount with %, a currency or a unit sign. */
+const FIGURE = /\d[\d.,]*\d|\d(?=\s?[%€$£])/g;
+const digitsOf = (figure: string) => figure.replace(/\D/g, "");
+
+/** Digit runs of a text with separators removed, so “1.200” and “1,200” match “1200”. */
+function figuresIn(text: string): Set<string> {
+  return new Set((text.match(FIGURE) ?? []).map(digitsOf).filter(Boolean));
+}
+
+/** The text the copy may take figures from: the brief and, when there is one, the product sheet. */
+export function sourceTextOf(brief: unknown, product?: unknown): string {
+  return JSON.stringify([brief, product ?? null]);
 }
 
 const PRICE = /(€\s?\d|\d[\d.,]*\s?(€|eur\b|euro\b))/i;
@@ -195,6 +214,21 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
           ...say("review.checks.price"),
           ...(t.slideId ? { slideId: t.slideId } : {}),
         });
+
+  if (input.sourceText !== undefined) {
+    const known = figuresIn(input.sourceText);
+    for (const t of texts)
+      for (const figure of t.text.match(FIGURE) ?? []) {
+        const digits = digitsOf(figure);
+        if (known.has(digits)) continue;
+        add({
+          id: `numbers:unsourced:${t.slideId ?? "caption"}:${digits}`,
+          severity: "warning",
+          ...say("review.checks.unsourcedNumber", { number: figure }),
+          ...(t.slideId ? { slideId: t.slideId } : {}),
+        });
+      }
+  }
 
   const assets = input.assets ?? new Map<string, AssetInfo>();
   doc.slides.forEach((s, i) => {

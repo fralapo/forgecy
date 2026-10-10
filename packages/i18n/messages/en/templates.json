@@ -64,7 +64,12 @@
     "folderName": "{name} · v{version}",
     "folderErrors": "{count, plural, one {# validation error} other {# validation errors}}",
     "folderSubmit": "Import",
-    "invalidManifest": "Invalid manifest"
+    "invalidManifest": "Invalid manifest",
+    "installTitle": "Starter templates",
+    "installHint": "Installs every ready-made template at once: it is imported, checked and published, no steps in between.",
+    "installing": "Installing: each template is checked and published, this page updates by itself.",
+    "installAll": "Install all starter templates",
+    "starterNotes": "Starter template installed"
   },
   "detail": {
     "title": "{name} · v{version}",

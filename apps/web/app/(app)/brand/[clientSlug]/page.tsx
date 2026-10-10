@@ -202,57 +202,15 @@ export default async function BrandOverviewPage({
           canUndo={canUndo}
         />
       ) : null}
-      <WebsiteCard
-        slug={client.slug}
-        clientId={client.id}
-        websiteUrl={client.websiteUrl}
-        source={website}
-        canEdit={canEdit}
-      />
-
-      <section aria-labelledby="pipeline" className="grid gap-3 md:grid-cols-4">
-        <h2 id="pipeline" className="sr-only">
-          {t("overview.statusHeading")}
-        </h2>
-        {[
-          {
-            label: t("overview.sources"),
-            value: format.number(sources),
-            detail: ws.sourceCounts.failed
-              ? t("overview.sourcesFailed", { count: ws.sourceCounts.failed })
-              : "",
-            href: "sources",
-          },
-          {
-            label: t("overview.pendingProposals"),
-            value: format.number(pending),
-            detail: t("overview.accepted", { count: ws.proposalCounts.accepted ?? 0 }),
-            href: "proposals",
-          },
-          {
-            label: t("overview.draft"),
-            value: ws.draft ? t("overview.version", { number: ws.draft.number }) : "—",
-            detail: ws.draft ? t("overview.draftChanges", { count: draftChanges.length }) : "",
-            href: "versions",
-          },
-          {
-            label: t("overview.published"),
-            value: ws.published ? t("overview.version", { number: ws.published.number }) : "—",
-            detail: ws.published ? publishedOn(ws.published.publishedAt) : "",
-            href: "versions",
-          },
-        ].map((n) => (
-          <Link
-            key={n.label}
-            href={`${base}/${n.href}` as Route}
-            className="rounded-lg border border-subtle bg-surface p-4 text-fg hover:border-control"
-          >
-            <span className="block text-label text-fg-muted">{n.label}</span>
-            <span className="block text-heading-md">{n.value}</span>
-            {n.detail ? <span className="block text-body-sm text-fg-muted">{n.detail}</span> : null}
-          </Link>
-        ))}
-      </section>
+      {importing ? null : (
+        <WebsiteCard
+          slug={client.slug}
+          clientId={client.id}
+          websiteUrl={client.websiteUrl}
+          source={website}
+          canEdit={canEdit}
+        />
+      )}
 
       {firstImport ? null : (
         <section aria-labelledby="blocks" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -309,7 +267,7 @@ export default async function BrandOverviewPage({
         filter={imageFilter}
       />
 
-      {firstImport ? null : (
+      {ws.draft && !importing ? (
         <Card className="p-5">
           <h2 className="text-heading-sm text-fg">{t("overview.readyTitle")}</h2>
           {checks.length ? (
@@ -327,7 +285,7 @@ export default async function BrandOverviewPage({
             <p className="mt-3 text-body-sm text-success">{t("overview.noChecks")}</p>
           )}
         </Card>
-      )}
+      ) : null}
     </div>
   );
 }
