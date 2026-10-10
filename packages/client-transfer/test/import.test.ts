@@ -18,6 +18,11 @@ import {
   createDb,
   eq,
   inArray,
+  socialEdges,
+  socialEvents,
+  socialPosts,
+  socialProfiles,
+  socialSnapshots,
   templates,
   users,
   type Database,
@@ -53,6 +58,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
     imported3?: string;
     imported4?: string;
     imported5?: string;
+    imported6?: string;
   } = {};
   const importIds: string[] = [];
 
@@ -158,6 +164,48 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       { contentId: content!.id, versionId: v1!.id, decision: "approved", decidedBy: gone!.id },
     ]);
 
+    // A followed profile that is monitored, due and blocked, with its public data.
+    const [profile] = await db
+      .insert(socialProfiles)
+      .values({
+        clientId: c!.id,
+        handle: `rossi_${suffix}`,
+        role: "self",
+        monitored: true,
+        status: "blocked",
+        statusReason: { key: "social.blocked" },
+        nextRunAt: new Date(),
+        createdBy: here!.id,
+      })
+      .returning();
+    const seen = new Date("2026-01-02T00:00:00Z");
+    await db.insert(socialSnapshots).values({
+      profileId: profile!.id,
+      source: "public_web",
+      observedAt: seen,
+      profile: { followers: 10 },
+      postCount: 1,
+    });
+    await db.insert(socialPosts).values({
+      profileId: profile!.id,
+      postId: "p1",
+      postedAt: seen,
+      kind: "image",
+      hashtags: ["a"],
+      source: "public_web",
+    });
+    await db.insert(socialEdges).values({
+      profileId: profile!.id,
+      dst: "other",
+      kind: "tags",
+      firstSeen: seen,
+      lastSeen: seen,
+      postIds: ["p1"],
+    });
+    await db
+      .insert(socialEvents)
+      .values({ profileId: profile!.id, at: seen, type: "bio_changed", old: "a", new: "b" });
+
     pkgFile = join(dir, "pkg.zip");
     await writeClientPackage(
       { db, storage },
@@ -188,6 +236,7 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
       ids.imported3,
       ids.imported4,
       ids.imported5,
+      ids.imported6,
     ].filter((x): x is string => !!x);
     await db.delete(templates).where(eq(templates.key, tplKey));
     if (own.length) await db.delete(clients).where(inArray(clients.id, own));
@@ -535,5 +584,39 @@ describe.skipIf(!dbUrl)("full client import (integration)", () => {
     ).rejects.toThrow(/clients\.transfer/);
     const [still] = await db.select().from(clientImports).where(eq(clientImports.id, row!.id));
     expect(still!.status).toBe("ready");
+  });
+
+  it("brings a followed profile in with its data, unmonitored and not blocked", async () => {
+    const out = await importClientPackage({ db, storage }, pkgFile, {
+      choices: { client: { mode: "new", slug: `rossi-${suffix}-social` }, templates: {} },
+    });
+    ids.imported6 = out.clientId;
+    const [p] = await db
+      .select()
+      .from(socialProfiles)
+      .where(eq(socialProfiles.clientId, out.clientId));
+    // New ids, the author matched by email, and the monitor does not resume on its own: a person switches it on again.
+    expect(p).toMatchObject({
+      handle: `rossi_${suffix}`,
+      role: "self",
+      monitored: false,
+      status: "pending",
+      statusReason: null,
+      nextRunAt: null,
+      createdBy: ids.here,
+    });
+    const own = eq(socialSnapshots.profileId, p!.id);
+    expect(await db.select().from(socialSnapshots).where(own)).toEqual([
+      expect.objectContaining({ profile: { followers: 10 }, postCount: 1 }),
+    ]);
+    expect(await db.select().from(socialPosts).where(eq(socialPosts.profileId, p!.id))).toEqual([
+      expect.objectContaining({ postId: "p1", hashtags: ["a"] }),
+    ]);
+    expect(await db.select().from(socialEdges).where(eq(socialEdges.profileId, p!.id))).toEqual([
+      expect.objectContaining({ dst: "other", postIds: ["p1"] }),
+    ]);
+    expect(await db.select().from(socialEvents).where(eq(socialEvents.profileId, p!.id))).toEqual([
+      expect.objectContaining({ type: "bio_changed", old: "a", new: "b" }),
+    ]);
   });
 });

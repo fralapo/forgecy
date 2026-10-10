@@ -165,3 +165,27 @@ export function describeFormat(id: FormatId): string {
   const f = FORMATS[id];
   return `${f.label} · ${f.width}×${f.height}`;
 }
+
+/** Shapes Instagram crops a post to on the profile grid: today 3:4, the older grid 1:1. */
+export const PROFILE_GRID_RATIOS = { "3:4": [3, 4], "1:1": [1, 1] } as const;
+export type ProfileGridRatio = keyof typeof PROFILE_GRID_RATIOS;
+
+export interface CropRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * The centered crop (px, in the slide's own coordinates) the profile grid shows of a slide, so
+ * the editor can draw guides over the preview. Never part of an export. A slide already narrower
+ * than the ratio keeps its full width and loses height instead.
+ */
+export function profileGridCrop(id: FormatId, ratio: ProfileGridRatio): CropRect {
+  const { width: w, height: h } = FORMATS[id];
+  const [rw, rh] = PROFILE_GRID_RATIOS[ratio];
+  const width = Math.min(w, Math.round((h * rw) / rh));
+  const height = Math.min(h, Math.round((width * rh) / rw));
+  return { x: Math.round((w - width) / 2), y: Math.round((h - height) / 2), width, height };
+}

@@ -16,11 +16,22 @@ import { frequencyUnits } from "@forgecy/core";
 import { withPlaybooks } from "@forgecy/ai/playbooks";
 import { z } from "zod";
 import { funnelLabels, objectiveLabels } from "../labels";
-import { contentChannels, type Brief, type Outline } from "../document";
+import {
+  captionBudget,
+  captionLimits,
+  claimKinds,
+  claimRisks,
+  contentChannels,
+  type Brief,
+  type CarouselDocument,
+  type ContentChannel,
+  type Outline,
+} from "../document";
+import { slotTexts } from "../carousels/checks";
 import type { ProductSummary } from "../products";
 import { directionBlock, type CreativeDirection } from "../carousels/direction";
 
-export const CONTENT_PROMPT_VERSION = "content-2026-10-10b";
+export const CONTENT_PROMPT_VERSION = "content-2026-10-10c";
 
 const SHARED_RULES = `- Write in the indicated language (English when no language is indicated), with the tone and rules of the Brand Identity below. The writing rules and forbidden words are binding.
 - Use only facts found in the brief, the Brand Identity or the product sheet. Never invent data, numbers, prices, testimonials or claims.
@@ -235,7 +246,7 @@ ${SHARED_RULES}
 - Every slot has a character limit: aim for at most 70% of it, so the text fits after the template's line breaks. "list" slots want short items.
 - Fill only the layout's text and list slots; for image slots write a visual brief in imageBriefs.
 - Highlight a keyword with ==word== only in the slots that allow it.
-- Caption: the first line hooks, then develops the promise and closes with the CTA, within the channel's limit.
+- Caption: the first line hooks, then develops the promise and closes with the CTA. Follow the caption length tier given with the brief: it is a character budget, always within the channel's limit.
 - Hashtags without spaces, relevant, in the requested number.`,
   "copywriting",
 );
@@ -256,6 +267,60 @@ export const editSlideOutputSchema = z.object({
   note: z.string().max(300),
 });
 export type EditSlideOutput = z.infer<typeof editSlideOutputSchema>;
+
+// ---- Claim critic: advisory review of the copy ----
+
+export const claimsOutputSchema = z.object({
+  claims: z
+    .array(
+      z.object({
+        /** 1-based slide position; 0 is the caption. */
+        slide: z.number().int().min(0).max(20),
+        kind: z.enum(claimKinds),
+        risk: z.enum(claimRisks),
+        /** Exact words of the copy, copied as written. */
+        quote: z.string().max(300),
+        /** Why it may be unsupported, in one sentence. */
+        reason: z.string().max(300),
+      }),
+    )
+    .max(30),
+});
+export type ClaimsOutput = z.infer<typeof claimsOutputSchema>;
+
+export const CLAIMS_SYSTEM = withPlaybooks(
+  `You are the Reviewer of Forgecy. You read the copy of a carousel and flag claims at risk of being unsupported. You do not rewrite anything and you cannot check the web: judge only against the brief and the product sheet given.
+
+Flag, with one of these kinds:
+- figure: a number, percentage, price, date or statistic that is not in the brief or the product sheet;
+- superlative: "best", "first", "only", "number one", "guaranteed" or similar, with nothing in the brief or product sheet to support it;
+- health_legal: a health, medical, safety, financial or legal promise or implication;
+- time_bound: a promise tied to a time ("in 7 days", "by summer", "limited offer") that the brief does not state.
+
+Rules:
+${SHARED_RULES}
+- Quote the exact words from the copy, as written, in "quote". Use slide 0 for the caption and the slide's position (starting at 1) otherwise.
+- Risk: high when a reader could be misled or harmed or the claim is checkable and likely false, medium when it is plausible but unsupported, low when it is a mild exaggeration.
+- Do not flag what the brief or the product sheet supports. Return an empty list when nothing is at risk.
+- "reason" is one short sentence in the language of the copy.`,
+  "copywriting",
+);
+
+export function claimsUserPrompt(input: {
+  brief: string;
+  document: CarouselDocument;
+  language: string;
+}): string {
+  const copy = input.document.slides.map((s, i) => ({ slide: i + 1, texts: slotTexts(s.slots) }));
+  return [
+    `Language of the copy: ${input.language}`,
+    "# Carousel brief and product sheet",
+    input.brief,
+    "## Copy",
+    json(copy),
+    `Caption (slide 0): ${input.document.caption || "—"}`,
+  ].join("\n\n");
+}
 
 // ---- Art Director: image prompt ----
 
@@ -391,7 +456,7 @@ export interface CarouselPromptInput {
   direction?: CreativeDirection | null;
 }
 
-function briefBlock(i: CarouselPromptInput): string {
+export function briefBlock(i: CarouselPromptInput): string {
   const b = i.brief;
   const lines = [
     `Working title: ${i.title}`,
@@ -449,13 +514,22 @@ export function outlineUserPrompt(
     .join("\n\n");
 }
 
+/** The caption tier as a character budget within the channel's limit. */
+function captionTierLine(i: CarouselPromptInput): string {
+  const channel = (contentChannels as readonly string[]).includes(i.channel)
+    ? (i.channel as ContentChannel)
+    : "instagram";
+  const tier = i.brief.outputs.captionLength;
+  return `${tier} length: at most ${captionBudget(channel, tier)} characters (the ${channel} limit is ${captionLimits[channel]})`;
+}
+
 export function slidesUserPrompt(i: CarouselPromptInput, outline: Outline): string {
   return [
     `# Carousel brief\n${briefBlock(i)}`,
     `## Layouts of the template “${i.manifest.name}”\n${layoutGuide(i.manifest)}`,
     `## Approved outline (one slide per row, in order)\n${json(outline.rows.map((r) => ({ rowId: r.id, role: r.role, layout: r.layout, point: r.point, note: r.note })))}`,
     `Hook: ${outline.hook}\nCTA: ${outline.cta}`,
-    `Requested hashtags: ${i.brief.outputs.hashtags}. Caption: ${i.brief.outputs.caption ? "yes" : "no (leave empty)"}.`,
+    `Requested hashtags: ${i.brief.outputs.hashtags}. Caption: ${i.brief.outputs.caption ? `yes, ${captionTierLine(i)}` : "no (leave empty)"}.`,
     directionBlock(i.direction),
   ]
     .filter(Boolean)

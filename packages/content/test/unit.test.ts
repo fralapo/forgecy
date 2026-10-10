@@ -16,7 +16,8 @@ import {
   perWeek,
   planItemInputSchema,
 } from "../src/document";
-import { slotsFromOutput } from "../src/ai/pipeline";
+import { claimFindingsOf, slotsFromOutput } from "../src/ai/pipeline";
+import { briefSchema, captionBudget, claimFindingSchema } from "../src/document";
 import { clampSlideCount, defaultRoles, pickLayout } from "../src/carousels/templates";
 import { brandThemeFromIdentity } from "../src/carousels/theme";
 
@@ -111,6 +112,60 @@ describe("checks", () => {
     expect(found[0]?.severity).toBe("warning");
     // A lone digit is a list count, not a claim.
     expect(withFigure("3 tips", '{"text":""}')).toEqual([]);
+  });
+
+  it("warns when a caption is well over its tier, and only then", () => {
+    const run = (len: number, captionLength?: "short" | "standard" | "long") =>
+      computeChecks({
+        document: doc([cover, ...body, cta], { caption: "a".repeat(len) }),
+        manifest,
+        channel: "instagram",
+        ...(captionLength ? { captionLength } : {}),
+      }).filter((c) => c.id === "caption:tier");
+    expect(run(2000)).toEqual([]); // no tier given: no judgement
+    expect(run(360, "short")).toEqual([]); // 20% slack over 300
+    expect(run(361, "short")[0]?.severity).toBe("warning");
+    expect(run(1000, "standard")).toEqual([]);
+    expect(run(1500, "long")).toEqual([]);
+    expect(captionBudget("instagram", "long")).toBe(2000);
+    expect(captionBudget("linkedin", "short")).toBe(300);
+    // Briefs saved before tiers existed read as "standard".
+    expect(briefSchema.parse({}).outputs.captionLength).toBe("standard");
+  });
+
+  it("shows claim findings as warnings while their words are still in the copy", () => {
+    const document = doc([cover, ...body, cta], { caption: "Guaranteed results in 7 days" });
+    const claim = (slideId: string | null, quote: string) =>
+      claimFindingSchema.parse({ slideId, kind: "superlative", risk: "high", quote, reason: "r" });
+    const claims = [
+      claim(null, "guaranteed  RESULTS"),
+      claim(null, "gone words"),
+      claim("missing-slide", "x"),
+    ];
+    const found = computeChecks({ document, manifest, channel: "instagram", claims }).filter((c) =>
+      c.id.startsWith("claim:"),
+    );
+    expect(found.map((c) => [c.id, c.severity])).toEqual([["claim:caption:1", "warning"]]);
+  });
+
+  it("keeps only claims whose words are in the slide or caption", () => {
+    const document = doc([cover, ...body, cta], { caption: "Best caption" });
+    const row = (slide: number, quote: string) => ({
+      slide,
+      kind: "figure" as const,
+      risk: "low" as const,
+      quote,
+      reason: " why ",
+    });
+    const out = claimFindingsOf(document, [
+      row(0, "best caption"),
+      row(0, "Best  caption"), // same words again: one finding
+      row(0, "not there"),
+      row(99, "x"),
+    ]);
+    expect(out).toEqual([
+      { slideId: null, kind: "figure", risk: "low", quote: "best caption", reason: "why" },
+    ]);
   });
 
   it("trims a caption to the limit at a word break", () => {

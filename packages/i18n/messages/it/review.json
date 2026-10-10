@@ -5,6 +5,8 @@
     "slideIssue": "Slide {slide}: {issue}",
     "lastNotCta": "L’ultima slide non è una CTA",
     "captionLength": "Didascalia di {count} caratteri: oltre il limite di {max} di {channel}, la piattaforma potrebbe rifiutarla o tagliarla",
+    "captionTier": "Didascalia di {count} caratteri: ben oltre la lunghezza {tier, select, short {breve} long {lunga} other {standard}} scelta nel brief (circa {max})",
+    "claim": "{slide, select, caption {Didascalia} other {Slide {slide}}}: affermazione a rischio ({kind, select, figure {cifra} superlative {superlativo} health_legal {promessa su salute o legge} time_bound {promessa a tempo} other {affermazione}}, rischio {risk, select, high {alto} medium {medio} other {basso}}), “{quote}”. {reason}",
     "hashtags": "{count} hashtag: la Brand Identity ne consente al massimo {max}",
     "forbiddenWord": "Parola vietata dalla Brand Identity: “{word}”",
     "price": "Il testo cita un prezzo ma il brief non lo consente",

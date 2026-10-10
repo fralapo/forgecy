@@ -74,6 +74,7 @@ import {
   normalizeHashtag,
   parseDocument,
   type CarouselDocument,
+  type ClaimFinding,
   type ContentChannel,
   type ContentSlide,
   type Outline,
@@ -82,6 +83,7 @@ import {
 import { productSource, type ProductSummary } from "../products";
 import {
   CONTENT_PROMPT_VERSION,
+  CLAIMS_SYSTEM,
   CREATIVE_DIRECTION_SYSTEM,
   EDIT_SLIDE_SYSTEM,
   IMAGE_PROMPT_SYSTEM,
@@ -90,6 +92,9 @@ import {
   PLAN_SYSTEM,
   PLANNER_SYSTEM,
   SLIDES_SYSTEM,
+  briefBlock,
+  claimsOutputSchema,
+  claimsUserPrompt,
   creativeDirectionOutputSchema,
   creativeDirectionUserPrompt,
   editSlideOutputSchema,
@@ -105,12 +110,14 @@ import {
   strategyOutputSchema,
   strategyUserPrompt,
   type CarouselPromptInput,
+  type ClaimsOutput,
   type SlidesOutput,
 } from "./prompts";
 import { saveProposedPlan, saveStrategyProposals, type ProposedRubric } from "../strategy";
 import { clampSlideCount, getTemplate, pickLayout } from "../carousels/templates";
 import { acceptedDirection, directionBlock, recordDirection } from "../carousels/direction";
 import { frequencyLabel } from "../labels";
+import { slotTexts, squash } from "../carousels/checks";
 
 export interface PipelineDeps {
   db: Database;
@@ -1224,5 +1231,79 @@ export async function runGenerateImage(
     provider: res.provider,
     commercialUse,
     costMicroUsd: res.costMicroUsd + prompt.costMicroUsd,
+  };
+}
+
+/**
+ * The model's claims as findings of this draft: a claim whose slide does not exist or whose
+ * quote is not in that slide's copy is dropped (the model may not invent text to flag).
+ */
+export function claimFindingsOf(
+  doc: CarouselDocument,
+  claims: ClaimsOutput["claims"],
+): ClaimFinding[] {
+  const out: ClaimFinding[] = [];
+  const seen = new Set<string>();
+  for (const c of claims) {
+    const slide = c.slide > 0 ? doc.slides[c.slide - 1] : undefined;
+    if (c.slide > 0 && !slide) continue;
+    const quote = c.quote.trim();
+    const copy = slide ? slotTexts(slide.slots) : [doc.caption];
+    if (!quote || !copy.some((t) => squash(t).includes(squash(quote)))) continue;
+    const key = `${slide?.id ?? "caption"}|${squash(quote)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      slideId: slide?.id ?? null,
+      kind: c.kind,
+      risk: c.risk,
+      quote,
+      reason: c.reason.trim(),
+    });
+  }
+  return out;
+}
+
+/**
+ * Claim critic: reads the current draft and flags claims at risk. Advisory only: the findings
+ * are the job's result (shown as warnings in the checks); the copy is never touched, and the
+ * web is not consulted.
+ */
+export async function runCritiqueClaims(
+  deps: PipelineDeps,
+  ctx: PipelineContext,
+  input: { clientId: string; contentId: string },
+) {
+  const ai = requireAi(deps);
+  const s = await carouselSetup(deps, ctx, input.clientId, input.contentId, "reviewer");
+  const doc = parseDocument(s.c.draft);
+  if (!doc.slides.length) return { findings: [] as ClaimFinding[], draftRev: s.c.draftRev };
+  await ctx.progress(10);
+  const { system, prefix } = withBrand(CLAIMS_SYSTEM, s.brandCtx);
+  const res = await guarded(() =>
+    ai.generateObject({
+      task: "critique_claims",
+      schema: claimsOutputSchema,
+      schemaName: "claim_critique",
+      system,
+      input:
+        prefix +
+        claimsUserPrompt({
+          brief: briefBlock(s.promptInput),
+          document: doc,
+          language: s.promptInput.language,
+        }),
+      ...s.common,
+      inputSummary: {
+        fields: {},
+        meta: { promptVersion: CONTENT_PROMPT_VERSION, slides: doc.slides.length },
+      },
+    }),
+  );
+  await ctx.progress(100);
+  return {
+    findings: claimFindingsOf(doc, res.data.claims),
+    draftRev: s.c.draftRev,
+    costMicroUsd: res.costMicroUsd,
   };
 }

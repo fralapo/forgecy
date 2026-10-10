@@ -1,6 +1,6 @@
 {
   "name": "Editoriale · Documento LinkedIn",
-  "description": "Documento PDF LinkedIn con 8 layout, la stessa struttura del carosello Instagram con un’impaginazione da report.",
+  "description": "Documento PDF LinkedIn con 10 layout, la stessa struttura del carosello Instagram con un’impaginazione da report.",
   "notes": "Un documento da sfogliare: una pagina per idea, titoli che funzionano anche senza il testo.",
   "layouts": {
     "cover": {
@@ -67,6 +67,24 @@
         "title": "Titolo",
         "body": "Testo",
         "action": "Azione"
+      }
+    },
+    "code": {
+      "name": "Codice",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "language": "Linguaggio",
+        "code": "Codice",
+        "caption": "Didascalia"
+      }
+    },
+    "mockup": {
+      "name": "Mockup telefono",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "screen": "Schermata"
       }
     }
   }

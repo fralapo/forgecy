@@ -4,8 +4,8 @@ Starter templates in Forgecy's canonical format: grouped by kind (`carousels/`, 
 
 | Folder                             | Format                    | Layouts |
 | ---------------------------------- | ------------------------- | ------- |
-| `carousels/editorial-ig-4x5`       | Instagram 4:5 · 1080×1350 | 8       |
-| `carousels/editorial-linkedin`     | LinkedIn document · PDF   | 8       |
+| `carousels/editorial-ig-4x5`       | Instagram 4:5 · 1080×1350 | 10      |
+| `carousels/editorial-linkedin`     | LinkedIn document · PDF   | 10      |
 | `carousels/editorial-ig-1x1`       | Instagram 1:1 · 1080×1080 | 8       |
 | `carousels/editorial-stories-9x16` | Stories 9:16 · 1080×1920  | 8       |
 | `carousels/editorial-fb-4x5`       | Facebook 4:5 · 1080×1350  | 8       |

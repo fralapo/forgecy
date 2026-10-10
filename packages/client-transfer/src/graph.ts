@@ -98,6 +98,13 @@ export const TABLE_AREAS: Record<string, ClientTransferArea | "client"> = {
   audit_social_posts: "audit",
   audit_sources: "audit",
   site_scans: "audit",
+  // Followed Instagram profiles of a client (ADR 0023) travel with its audit area: a profile may
+  // come from an audit (audit_id), and the area is where the agency's market analysis lives.
+  social_profiles: "audit",
+  social_snapshots: "audit",
+  social_posts: "audit",
+  social_edges: "audit",
+  social_events: "audit",
   audit_report_exports: "reports",
   assets: "content",
   contents: "content",

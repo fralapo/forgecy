@@ -80,6 +80,7 @@ const outlineJson = {
   json: {
     title: "Cool water for 24 hours",
     hook: "Is your water warm after an hour?",
+    hookAlternatives: [],
     rows: roles.map((role, i) => ({ role, layout: role, point: `Point ${i + 1}`, note: "" })),
     cta: "Discover the bottle",
   },

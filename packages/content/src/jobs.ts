@@ -74,6 +74,13 @@ export const editSlideJob = defineJob({
   }),
 });
 
+/** Reviewer: advisory pass over the draft for claims at risk; never edits the copy. */
+export const critiqueClaimsJob = defineJob({
+  kind: "content.critique_claims",
+  queue: "ai",
+  payload: z.object({ ...base, contentId: z.uuid() }),
+});
+
 /** Art Director + image provider: draft images for an image slot. */
 export const generateImageJob = defineJob({
   kind: "content.generate_image",
@@ -108,6 +115,7 @@ export const contentJobs = [
   generateOutlineJob,
   generateSlidesJob,
   editSlideJob,
+  critiqueClaimsJob,
   generateImageJob,
   exportContentJob,
 ] as const;

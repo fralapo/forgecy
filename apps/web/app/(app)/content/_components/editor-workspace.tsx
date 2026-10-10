@@ -12,10 +12,25 @@ import {
   type GuardReport,
 } from "@forgecy/content/client";
 import { GUARDED_CHECK_PREFIXES, trimCaptionToLimit } from "@forgecy/content/client";
-import { visibleLength, type TemplateManifest } from "@forgecy/carousel";
+import {
+  profileGridCrop,
+  visibleLength,
+  type ProfileGridRatio,
+  type TemplateManifest,
+} from "@forgecy/carousel";
 import type { AssetSource, ContentStatus } from "@forgecy/core";
 import { Badge, Button, Input, Label } from "@forgecy/ui";
-import { AlertTriangle, History, Lock, RefreshCw, Save, Send } from "lucide-react";
+import {
+  AlertTriangle,
+  History,
+  Lock,
+  Crop,
+  Redo2,
+  RefreshCw,
+  Save,
+  Send,
+  Undo2,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { Route } from "next";
@@ -36,6 +51,13 @@ import {
   withdrawAction,
   type ActionResult,
 } from "../actions";
+import {
+  emptyHistory,
+  record,
+  redo,
+  undo,
+  type History as DocHistory,
+} from "../_lib/editor-history";
 import { ActionButton, controlClass } from "./action-button";
 import { SlideAiPanel } from "./editor-ai";
 import { SlideList, SlidePanel } from "./editor-slides";
@@ -159,11 +181,14 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   const [hashtagText, setHashtagText] = useState(props.document.hashtags.join(" "));
   // Slides in the draft stored on the server: the preview route renders only those.
   const [savedIds, setSavedIds] = useState(() => slideIds(props.document));
+  // Undo/redo snapshots: local to this editor, dropped whenever the draft is reloaded from the server.
+  const [history, setHistory] = useState<DocHistory<CarouselDocument>>(emptyHistory);
 
   // A newer draft from the server (AI edit, revert, another tab): take it when nothing is pending here.
   if (props.draftRev !== seenRev) {
     setSeenRev(props.draftRev);
     if (saveState === "saved" && props.draftRev > rev) {
+      setHistory(emptyHistory());
       setDoc(props.document);
       setRev(props.draftRev);
       setSavedIds(slideIds(props.document));
@@ -242,12 +267,59 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   const update = useCallback(
     (fn: (d: CarouselDocument) => CarouselDocument) => {
       if (readOnly) return;
+      // docRef is moved on at once so two edits in one event chain, and the history sees the true "before".
+      const before = docRef.current;
+      const next = fn(before);
+      if (next === before) return;
       dirtyRef.current = true;
-      setDoc((d) => fn(d));
+      docRef.current = next;
+      const now = Date.now();
+      setHistory((h) => record(h, before, now));
+      setDoc(next);
       setSaveState((s) => (s === "conflict" ? s : "dirty"));
     },
     [readOnly],
   );
+
+  /** Puts a snapshot of the history on screen as an ordinary edit: the autosave sends it. */
+  function applySnapshot(step: {
+    history: DocHistory<CarouselDocument>;
+    present: CarouselDocument;
+  }) {
+    dirtyRef.current = true;
+    docRef.current = step.present;
+    setHistory(step.history);
+    setDoc(step.present);
+    setHashtagText(step.present.hashtags.join(" "));
+    if (!step.present.slides.some((s) => s.id === selectedId))
+      setSelectedId(step.present.slides[0]?.id ?? null);
+    setSaveState((s) => (s === "conflict" ? s : "dirty"));
+  }
+  const canEdit = !readOnly && saveState !== "conflict";
+  const canUndo = canEdit && history.past.length > 0;
+  const canRedo = canEdit && history.future.length > 0;
+  const doUndo = () => {
+    const step = canUndo ? undo(history, docRef.current) : null;
+    if (step) applySnapshot(step);
+  };
+  const doRedo = () => {
+    const step = canRedo ? redo(history, docRef.current) : null;
+    if (step) applySnapshot(step);
+  };
+  const shortcut = useEffectEvent((e: KeyboardEvent) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.key.toLowerCase() !== "z") return;
+    // Text fields keep the browser's own undo of what is being typed.
+    const target = e.target as HTMLElement | null;
+    if (target?.closest("input, textarea, select, [contenteditable]")) return;
+    e.preventDefault();
+    if (e.shiftKey) doRedo();
+    else doUndo();
+  });
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => shortcut(e);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   /** Saves pending changes before an action that reads the draft on the server. */
   const flush = useCallback(async () => {
@@ -257,6 +329,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
 
   function reloadFromServer() {
     dirtyRef.current = false;
+    setHistory(emptyHistory());
     setDoc(props.document);
     setRev(props.draftRev);
     setSavedIds(slideIds(props.document));
@@ -321,6 +394,30 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               update((d) => ({ ...d, title }));
             }}
           />
+        </div>
+        <div className="flex gap-1" role="group" aria-label={t("history.group")}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={!canUndo}
+            title={t("history.undoHint")}
+            onClick={doUndo}
+          >
+            <Undo2 aria-hidden />
+            {t("history.undo")}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={!canRedo}
+            title={t("history.redoHint")}
+            onClick={doRedo}
+          >
+            <Redo2 aria-hidden />
+            {t("history.redo")}
+          </Button>
         </div>
         <SaveIndicator state={saveState} readOnly={readOnly} />
         <VersionAndSubmit
@@ -733,10 +830,35 @@ function SlidePreview({
   }, []);
   const width = Math.min(384, room);
   const scale = width / manifest.width;
+  // Editor aid only: the preview route and every export never draw the profile-grid guides.
+  const [grid, setGrid] = useState<ProfileGridRatio | null>(null);
+  const crop = grid ? profileGridCrop(manifest.format, grid) : null;
   return (
     <figure ref={figure} className="space-y-2">
+      {manifest.channel === "instagram" ? (
+        <div
+          className="flex flex-wrap items-center gap-1"
+          role="group"
+          aria-label={t("grid.group")}
+        >
+          <Crop aria-hidden className="size-4 text-fg-muted" />
+          {(["3:4", "1:1"] as const).map((ratio) => (
+            <Button
+              key={ratio}
+              type="button"
+              size="sm"
+              variant={grid === ratio ? "primary" : "secondary"}
+              aria-pressed={grid === ratio}
+              title={t("grid.hint", { ratio })}
+              onClick={() => setGrid(grid === ratio ? null : ratio)}
+            >
+              {t("grid.option", { ratio })}
+            </Button>
+          ))}
+        </div>
+      ) : null}
       <div
-        className="overflow-hidden rounded-md border border-subtle bg-app"
+        className="relative overflow-hidden rounded-md border border-subtle bg-app"
         style={{ width: manifest.width * scale, height: manifest.height * scale }}
       >
         <iframe
@@ -749,11 +871,53 @@ function SlidePreview({
           className="origin-top-left border-0"
           style={{ transform: `scale(${scale})` }}
         />
+        {crop ? <CropGuides crop={crop} scale={scale} manifest={manifest} /> : null}
       </div>
       <figcaption className="text-body-sm text-fg-muted">
         {stale ? t("stale") : t("caption", { number: index + 1 })}
+        {grid ? <span className="block">{t("grid.caption", { ratio: grid })}</span> : null}
       </figcaption>
     </figure>
+  );
+}
+
+/** Dims what the profile grid cuts off and outlines the part it keeps; pure CSS, ignores the pointer. */
+function CropGuides({
+  crop,
+  scale,
+  manifest,
+}: {
+  crop: { x: number; y: number; width: number; height: number };
+  scale: number;
+  manifest: TemplateManifest;
+}) {
+  const left = crop.x * scale;
+  const top = crop.y * scale;
+  const width = crop.width * scale;
+  const height = crop.height * scale;
+  const dim = "absolute bg-fg/40";
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0">
+      <div className={dim} style={{ left: 0, top: 0, width: "100%", height: top }} />
+      <div
+        className={dim}
+        style={{
+          left: 0,
+          top: top + height,
+          width: "100%",
+          height: manifest.height * scale - top - height,
+        }}
+      />
+      <div className={dim} style={{ left: 0, top, width: left, height }} />
+      <div
+        className={dim}
+        style={{ left: left + width, top, width: manifest.width * scale - left - width, height }}
+      />
+      <div
+        className="absolute border border-dashed border-primary"
+        style={{ left, top, width, height }}
+      />
+    </div>
   );
 }
 

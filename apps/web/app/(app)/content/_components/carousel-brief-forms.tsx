@@ -2,6 +2,7 @@
 
 import {
   BRIEF_MIN_CHARS,
+  captionLengths,
   contentLanguages,
   type Brief,
   type CarouselParamsInput,
@@ -592,6 +593,26 @@ function BriefForm({
               onChange={(e) => set("outputs", { ...b.outputs, designerNotes: e.target.checked })}
             />
             {t("designerNotes")}
+          </label>
+          <label className="flex items-center gap-2 text-body-sm text-fg">
+            {t("captionLength")}
+            <select
+              className={controlClass}
+              value={b.outputs.captionLength}
+              disabled={!b.outputs.caption}
+              onChange={(e) =>
+                set("outputs", {
+                  ...b.outputs,
+                  captionLength: e.target.value as Brief["outputs"]["captionLength"],
+                })
+              }
+            >
+              {captionLengths.map((l) => (
+                <option key={l} value={l}>
+                  {t(`captionLengths.${l}`)}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="flex items-center gap-2 text-body-sm text-fg">
             {t("hashtags")}

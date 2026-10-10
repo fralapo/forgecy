@@ -1,6 +1,6 @@
 {
   "name": "Editoriale · Instagram 4:5",
-  "description": "Carosello educativo con 8 layout: copertina, testo, elenco, citazione, dato, problema e soluzione, confronto e CTA.",
+  "description": "Carosello educativo con 10 layout: copertina, testo, elenco, citazione, dato, problema e soluzione, confronto, codice, mockup telefono e CTA.",
   "notes": "Un’idea per slide. Il titolo della copertina è l’hook: breve, concreto, leggibile come miniatura.",
   "layouts": {
     "cover": {
@@ -67,6 +67,24 @@
         "title": "Titolo",
         "body": "Testo",
         "action": "Azione"
+      }
+    },
+    "code": {
+      "name": "Codice",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "language": "Linguaggio",
+        "code": "Codice",
+        "caption": "Didascalia"
+      }
+    },
+    "mockup": {
+      "name": "Mockup telefono",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "screen": "Schermata"
       }
     }
   }

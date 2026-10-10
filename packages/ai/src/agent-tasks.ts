@@ -12,7 +12,7 @@ export const AGENT_TASKS: Record<AgentRole, readonly AiTask[]> = {
   strategist: ["audit_diagnose", "audit_plan", "audit_report", "content_strategy"],
   copywriter: ["outline", "slides", "edit_slide"],
   art_director: ["image_prompt"],
-  reviewer: [],
+  reviewer: ["critique_claims"],
   creative_director: ["creative_direction"],
 };
 

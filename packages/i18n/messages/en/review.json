@@ -5,6 +5,8 @@
     "slideIssue": "Slide {slide}: {issue}",
     "lastNotCta": "The last slide is not a call to action",
     "captionLength": "Caption of {count} characters: over the {channel} limit of {max}, the platform may reject or cut it",
+    "captionTier": "Caption of {count} characters: well over the {tier, select, short {short} long {long} other {standard}} length chosen in the brief (about {max})",
+    "claim": "{slide, select, caption {Caption} other {Slide {slide}}}: claim at risk ({kind, select, figure {figure} superlative {superlative} health_legal {health or legal promise} time_bound {time-bound promise} other {claim}}, {risk, select, high {high} medium {medium} other {low}} risk), “{quote}”. {reason}",
     "hashtags": "{count, plural, one {# hashtag} other {# hashtags}}: the Brand Identity allows at most {max}",
     "forbiddenWord": "Word forbidden by the Brand Identity: “{word}”",
     "price": "The copy mentions a price but the brief does not allow it",

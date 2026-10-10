@@ -302,6 +302,15 @@ export const TRUST_RULES: Record<string, TrustRule> = {
     // "Edited by a person" is a claim about who wrote it.
     set: { edited_by_human: false },
   },
+  // A followed profile arrives unmonitored and with no scheduled run: the monitor runs on its own
+  // (autonomous reads of a public site), so a person here switches it on again. "blocked" is a
+  // wall met from the other installation's network: here the profile starts over as pending.
+  // Snapshots, posts, edges and events are public data of the profile and need no rule.
+  social_profiles: {
+    status: demote(["pending", "ok", "error", "blocked", "paused"], "pending", "blocked"),
+    clear: ["next_run_at", "status_reason"],
+    set: { monitored: false },
+  },
   audit_plans: { status: same("observed", "accepted", "edited", "rejected"), why: WORKING },
   templates: {
     status: demote(
@@ -714,6 +723,13 @@ export const REVIEWED_JSON_COLUMNS: ReadonlySet<string> = new Set([
   "automation_run_items.input",
   "automation_run_items.error_ref",
   "client_memory_settings.value",
+  "social_profiles.status_reason",
+  "social_snapshots.profile",
+  "social_posts.hashtags",
+  "social_posts.mentions",
+  "social_posts.tagged_accounts",
+  "social_posts.collaborators",
+  "social_edges.post_ids",
 ]);
 
 /** Partial unique indexes and constraints that the status mappings cannot affect. */

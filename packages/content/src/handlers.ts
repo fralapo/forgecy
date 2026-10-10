@@ -23,6 +23,7 @@ import { getContentRow, isFinalExportable, recordExport } from "./carousels/caro
 import { parseDocument, toRenderSlide } from "./document";
 import {
   creativeDirectionJob,
+  critiqueClaimsJob,
   editSlideJob,
   exportContentJob,
   generateImageJob,
@@ -33,6 +34,7 @@ import {
 } from "./jobs";
 import {
   runCreativeDirection,
+  runCritiqueClaims,
   runEditSlide,
   runGenerateImage,
   runGenerateOutline,
@@ -193,6 +195,9 @@ export const contentHandlers: JobHandlers = {
   ),
   ...handle(editSlideJob, async (p, ctx) =>
     runEditSlide(await pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+  ),
+  ...handle(critiqueClaimsJob, async (p, ctx) =>
+    runCritiqueClaims(await pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
   ...handle(generateImageJob, async (p, ctx) =>
     runGenerateImage(await pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),

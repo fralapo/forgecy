@@ -117,7 +117,7 @@ describe.skipIf(!dbUrl)("template catalog (integration)", () => {
 
     const pkg = await dbTemplateSource({ db, storage, clientId: null }).get(key);
     expect(pkg?.manifest.id).toBe(key);
-    expect(pkg?.manifest.layouts).toHaveLength(8);
+    expect(pkg?.manifest.layouts).toHaveLength(10);
     expect(
       await dbTemplateSource({ db, storage, clientId: null }).get(key, "9.9.9"),
     ).toBeUndefined();

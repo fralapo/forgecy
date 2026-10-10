@@ -15,8 +15,11 @@ import {
 import type { AssetSource, MessageRef } from "@forgecy/core";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import {
+  captionBudget,
   captionLimits,
   toRenderSlide,
+  type CaptionLength,
+  type ClaimFinding,
   type CarouselDocument,
   type ContentChannel,
 } from "../document";
@@ -93,6 +96,10 @@ export interface CheckInput {
   /** Product revision the copy was written with, and the catalog's current one. */
   productRevision?: { used: number | null; current: number | null } | null;
   brandVersion?: { used: string | null; current: string | null } | null;
+  /** Caption tier of the brief; when given, a caption well over its budget is flagged. */
+  captionLength?: CaptionLength;
+  /** Claims the AI critic flagged, shown as warnings while their words are still in the copy. */
+  claims?: readonly ClaimFinding[];
 }
 
 /** Figures that read as data: two or more digits, or any amount with %, a currency or a unit sign. */
@@ -111,7 +118,7 @@ export function sourceTextOf(brief: unknown, product?: unknown): string {
 
 const PRICE = /(€\s?\d|\d[\d.,]*\s?(€|eur\b|euro\b))/i;
 
-function slotTexts(slots: Record<string, unknown>): string[] {
+export function slotTexts(slots: Record<string, unknown>): string[] {
   const out: string[] = [];
   for (const v of Object.values(slots)) {
     if (typeof v === "string") out.push(v);
@@ -124,6 +131,9 @@ function wordRegex(word: string): RegExp {
   const esc = word.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`(^|[^\\p{L}\\p{N}])${esc}($|[^\\p{L}\\p{N}])`, "iu");
 }
+
+/** Whitespace and case folded, so a quote still matches after a line break or capital changes. */
+export const squash = (text: string) => text.replace(/\s+/g, " ").trim().toLowerCase();
 
 export function computeChecks(input: CheckInput): ContentCheck[] {
   const { document: doc, manifest } = input;
@@ -177,6 +187,20 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
         max: String(limit),
       }),
     });
+  if (input.captionLength && captionLen <= limit) {
+    const budget = captionBudget(input.channel, input.captionLength);
+    // 20% of slack: the tier is a target for the writer, not a limit.
+    if (captionLen > budget * 1.2)
+      add({
+        id: "caption:tier",
+        severity: "warning",
+        ...say("review.checks.captionTier", {
+          count: String(captionLen),
+          tier: input.captionLength,
+          max: String(budget),
+        }),
+      });
+  }
   if (input.maxHashtags !== undefined && doc.hashtags.length > input.maxHashtags)
     add({
       id: "hashtags:max",
@@ -228,6 +252,29 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
           ...(t.slideId ? { slideId: t.slideId } : {}),
         });
       }
+  }
+
+  const perSlide = new Map<string, number>();
+  for (const f of input.claims ?? []) {
+    const index = f.slideId ? doc.slides.findIndex((s) => s.id === f.slideId) : -1;
+    if (f.slideId && index < 0) continue;
+    const copy = f.slideId ? slotTexts(doc.slides[index]!.slots) : [doc.caption];
+    if (!copy.some((t) => squash(t).includes(squash(f.quote)))) continue;
+    const key = f.slideId ?? "caption";
+    const n = (perSlide.get(key) ?? 0) + 1;
+    perSlide.set(key, n);
+    add({
+      id: `claim:${key}:${n}`,
+      severity: "warning",
+      ...say("review.checks.claim", {
+        slide: f.slideId ? String(index + 1) : "caption",
+        kind: f.kind,
+        risk: f.risk,
+        quote: f.quote,
+        reason: f.reason,
+      }),
+      ...(f.slideId ? { slideId: f.slideId } : {}),
+    });
   }
 
   const assets = input.assets ?? new Map<string, AssetInfo>();

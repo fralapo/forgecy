@@ -30,6 +30,7 @@ import {
   createCarousel,
   decideReview,
   getContentRow,
+  latestClaimFindings,
   prepareExport,
   recordExport,
   saveBrief,
@@ -44,6 +45,7 @@ import {
 } from "../src/carousels/direction";
 import {
   runCreativeDirection,
+  runCritiqueClaims,
   runGenerateOutline,
   runGenerateSlides,
   runProposePlan,
@@ -510,6 +512,37 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
     expect(ws.document.hashtags).toEqual(["#hiking", "#waterbottle"]);
     expect(ws.checks?.errors).toEqual([]);
     expect(ws.content.templateVersion).toBe(manifest.version);
+
+    // Claim critic: advisory findings from the job result; invented quotes are dropped and the
+    // copy is never touched.
+    fake.push({
+      json: {
+        claims: [
+          { slide: 1, kind: "superlative", risk: "high", quote: "COOL water", reason: "No proof." },
+          { slide: 0, kind: "time_bound", risk: "low", quote: "stays cool", reason: "Unstated." },
+          { slide: 2, kind: "figure", risk: "medium", quote: "never in the copy", reason: "x" },
+        ],
+      },
+    });
+    const critiqueJob = await job("content.critique_claims");
+    const critique = await runCritiqueClaims(deps, critiqueJob, { clientId, contentId: c.id });
+    expect(critique.findings.map((f) => [f.slideId, f.kind])).toEqual([
+      [ws.document.slides[0]!.id, "superlative"],
+      [null, "time_bound"],
+    ]);
+    expect(JSON.stringify(fake.calls.at(-1))).toContain("Cool water for 24 hours");
+    expect((await getContentRow(db, clientId, c.id)).draftRev).toBe(ws.content.draftRev);
+    await db
+      .update(jobs)
+      .set({ status: "completed", entity: "content", entityId: c.id, result: critique })
+      .where(eq(jobs.id, critiqueJob.jobId));
+    expect(await latestClaimFindings(db, c.id)).toHaveLength(2);
+    const flagged = await getCarouselWorkspace(db, anna, clientId, c.id);
+    expect(
+      flagged.checks?.warnings.filter((x) => x.id.startsWith("claim:")).map((x) => x.id),
+    ).toEqual([`claim:${ws.document.slides[0]!.id}:1`, "claim:caption:1"]);
+    expect(flagged.checks?.errors).toEqual([]);
+    await db.delete(jobs).where(eq(jobs.id, critiqueJob.jobId));
 
     // Stale autosave.
     expect(

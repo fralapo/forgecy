@@ -39,6 +39,13 @@ export const captionLimits: Record<ContentChannel, number> = {
   tiktok: 4000,
 };
 
+/** Caption tiers a brief can ask for, and their character budgets (always within the channel's limit). */
+export const captionLengths = ["short", "standard", "long"] as const;
+export type CaptionLength = (typeof captionLengths)[number];
+const captionTierChars: Record<CaptionLength, number> = { short: 300, standard: 900, long: 2000 };
+export const captionBudget = (channel: ContentChannel, tier: CaptionLength) =>
+  Math.min(captionLimits[channel], captionTierChars[tier]);
+
 /** Default format of each channel, used when the Planner proposes a plan item. */
 export const channelFormat: Record<ContentChannel, FormatId> = {
   instagram: "ig_4x5",
@@ -192,6 +199,8 @@ export const briefSchema = z.object({
   outputs: z
     .object({
       caption: z.boolean().default(true),
+      /** Caption tier; briefs saved before tiers existed read as "standard". */
+      captionLength: z.enum(captionLengths).default("standard"),
       hashtags: z.number().int().min(0).max(10).default(5),
       altText: z.boolean().default(true),
       designerNotes: z.boolean().default(false),
@@ -248,6 +257,22 @@ export const carouselDocumentSchema = z.object({
 });
 export type CarouselDocument = z.output<typeof carouselDocumentSchema>;
 export type CarouselDocumentInput = z.input<typeof carouselDocumentSchema>;
+
+// ---- Claim critic findings (advisory, stored in the result of the critique job) ----
+
+export const claimKinds = ["figure", "superlative", "health_legal", "time_bound"] as const;
+export const claimRisks = ["low", "medium", "high"] as const;
+
+export const claimFindingSchema = z.object({
+  /** Slide id, or null for the caption. */
+  slideId: z.string().max(64).nullable(),
+  kind: z.enum(claimKinds),
+  risk: z.enum(claimRisks),
+  /** Exact words of the copy the finding is about; the finding is dropped once they are gone. */
+  quote: z.string().min(1).max(300),
+  reason: z.string().max(300),
+});
+export type ClaimFinding = z.output<typeof claimFindingSchema>;
 
 /** The renderer only knows plain slides: editor metadata stays out of the HTML. */
 export function toRenderSlide(s: ContentSlide): Slide {

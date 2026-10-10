@@ -2,8 +2,8 @@
   "$schema": "../../template.schema.json",
   "id": "editorial-linkedin",
   "name": "Editorial · LinkedIn document",
-  "description": "LinkedIn PDF document with 8 layouts, the same structure as the Instagram carousel with a report-style layout.",
-  "version": "1.2.1",
+  "description": "LinkedIn PDF document with 10 layouts, the same structure as the Instagram carousel with a report-style layout.",
+  "version": "1.3.0",
   "kind": "carousel",
   "channel": "linkedin",
   "format": "linkedin_doc",
@@ -364,6 +364,99 @@
         "left": ["Details copied from emails", "Checks from memory", "Rejections found late"],
         "right_title": "With a checklist",
         "right": ["Details from customer records", "Four fixed checks", "Receipts read every day"]
+      }
+    },
+    {
+      "id": "code",
+      "name": "Code",
+      "role": "text",
+      "file": "layouts/code.html",
+      "slots": [
+        {
+          "name": "kicker",
+          "type": "text",
+          "label": "Kicker",
+          "maxChars": 28,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 56,
+          "maxLines": 2,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "language",
+          "type": "text",
+          "label": "Language",
+          "maxChars": 16,
+          "maxLines": 1
+        },
+        {
+          "name": "code",
+          "type": "text",
+          "label": "Code",
+          "maxChars": 360,
+          "maxLines": 8,
+          "required": true
+        },
+        {
+          "name": "caption",
+          "type": "text",
+          "label": "Caption",
+          "maxChars": 110,
+          "maxLines": 3
+        }
+      ],
+      "sample": {
+        "kicker": "Quick tip",
+        "title": "Check the ==VAT number== before you send",
+        "language": "TypeScript",
+        "code": "const ok = /^ITd{11}$/.test(vat);\nif (!ok) {\n  throw new Error(\"Invalid VAT\");\n}",
+        "caption": "Eleven digits after the country code: reject anything else."
+      }
+    },
+    {
+      "id": "mockup",
+      "name": "Phone mockup",
+      "role": "text",
+      "file": "layouts/mockup.html",
+      "slots": [
+        {
+          "name": "kicker",
+          "type": "text",
+          "label": "Kicker",
+          "maxChars": 28,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 56,
+          "maxLines": 2,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "screen",
+          "type": "image",
+          "label": "Screen",
+          "minWidth": 600,
+          "minHeight": 1200,
+          "required": true
+        }
+      ],
+      "sample": {
+        "kicker": "In the app",
+        "title": "Receipts at a ==glance==",
+        "screen": {
+          "asset": "assets/example-photo.svg",
+          "alt": "Screenshot of the receipts screen"
+        }
       }
     },
     {

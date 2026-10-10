@@ -296,6 +296,7 @@
       "generateOutline": "Generating the outline",
       "generateSlides": "Generating the slides",
       "editSlide": "Editing a slide",
+      "critiqueClaims": "Checking claims",
       "generateImage": "Generating the images",
       "export": "Export",
       "other": "Job in progress"
@@ -591,6 +592,12 @@
       "caption": "Caption",
       "altText": "Image alt text",
       "designerNotes": "Notes for the designer",
+      "captionLength": "Caption length",
+      "captionLengths": {
+        "short": "Short (about 300 characters)",
+        "standard": "Standard (about 900 characters)",
+        "long": "Long (about 2000 characters)"
+      },
       "hashtags": "Hashtags",
       "save": "Save brief"
     }
@@ -755,6 +762,12 @@
   },
   "editor": {
     "metaTitle": "Carousel editor",
+    "claims": {
+      "button": "Check claims",
+      "checking": "Checking claims…",
+      "hint": "The AI reads the copy for claims that may be unsupported: figures, superlatives, health or legal promises, time-bound promises. It does not check the web, never edits the copy, and its findings are warnings.",
+      "last": "{count, plural, =0 {Last check: no claims at risk.} one {Last check: # claim at risk, listed in the checks.} other {Last check: # claims at risk, listed in the checks.}}"
+    },
     "actionErrors": {
       "conflict": "Someone else edited the carousel while you were editing it too.",
       "inReview": "The carousel is in review: withdraw it from review to edit it.",
@@ -812,7 +825,20 @@
       "newSlide": "New slide: the preview appears after the autosave.",
       "frameTitle": "Preview of slide {number}",
       "stale": "Preview of the last save: it updates after the autosave.",
-      "caption": "Slide {number}, as it will be exported."
+      "caption": "Slide {number}, as it will be exported.",
+      "grid": {
+        "group": "Profile grid guides",
+        "option": "Grid {ratio}",
+        "hint": "Show the centered {ratio} crop Instagram uses on the profile grid",
+        "caption": "Dashed area: what the {ratio} profile grid shows. Guide only, never exported."
+      }
+    },
+    "history": {
+      "group": "History",
+      "undo": "Undo",
+      "redo": "Redo",
+      "undoHint": "Undo the last change (Ctrl/Cmd+Z)",
+      "redoHint": "Redo (Ctrl/Cmd+Shift+Z)"
     },
     "checks": {
       "title": "Checks",

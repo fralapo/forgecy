@@ -31,6 +31,7 @@ import {
   eq,
   inArray,
   isNull,
+  jobs,
   notify,
   recordAuditEvent,
   sql,
@@ -59,6 +60,7 @@ import {
   briefSchema,
   carouselDocumentSchema,
   carouselParamsSchema,
+  claimFindingSchema,
   contentSlideSchema,
   newSlideId,
   normalizeHashtag,
@@ -68,6 +70,7 @@ import {
   type CarouselDocument,
   type CarouselDocumentInput,
   type CarouselParamsInput,
+  type ClaimFinding,
   type ContentChannel,
   type Outline,
   type OutlineInput,
@@ -785,6 +788,31 @@ export function imageKeys(doc: CarouselDocument): string[] {
 }
 
 /**
+ * Findings of the latest finished claim check of a content (advisory; see `critiqueClaimsJob`).
+ * `computeChecks` shows only those whose words are still in the copy.
+ */
+export async function latestClaimFindings(
+  db: Database,
+  contentId: string,
+): Promise<ClaimFinding[]> {
+  const [row] = await db
+    .select({ result: jobs.result })
+    .from(jobs)
+    .where(
+      and(
+        eq(jobs.entity, "content"),
+        eq(jobs.entityId, contentId),
+        eq(jobs.kind, "content.critique_claims"),
+        eq(jobs.status, "completed"),
+      ),
+    )
+    .orderBy(desc(jobs.createdAt))
+    .limit(1);
+  const parsed = claimFindingSchema.array().safeParse(row?.result?.findings);
+  return parsed.success ? parsed.data : [];
+}
+
+/**
  * Checks of a document of this carousel, with the brand and library data they need.
  * With the Brand Guard registered, `guard: "run"` checks the document again (on save
  * and on submit) and `"read"` returns its latest report; the brand rules it owns are
@@ -797,11 +825,12 @@ export async function checkDocument(
   doc: CarouselDocument,
   options: { guard?: "run" | "read" | "none"; version?: number | null } = {},
 ): Promise<ContentChecks> {
-  const [template, brand, library, product] = await Promise.all([
+  const [template, brand, library, product, claims] = await Promise.all([
     getTemplate(db, c.clientId, c.templateKey, c.templateVersion).catch(() => null),
     getPublishedBrandIdentity(db, actor, c.clientId),
     libraryInfo(db, c.clientId, imageKeys(doc)),
     c.productId ? productSource().get(db, c.clientId, c.productId) : Promise.resolve(null),
+    latestClaimFindings(db, c.id),
   ]);
   const brief = briefSchema.parse(c.brief ?? {});
   let checks = computeChecks({
@@ -820,6 +849,8 @@ export async function checkDocument(
       ? { used: c.productRevision, current: product?.revision ?? null }
       : null,
     brandVersion: { used: c.brandVersionId, current: brand?.versionId ?? null },
+    captionLength: brief.outputs.captionLength,
+    claims,
   });
 
   const port = brandGuard();
