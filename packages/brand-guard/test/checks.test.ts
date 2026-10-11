@@ -275,6 +275,46 @@ describe("render measures", () => {
   });
 });
 
+describe("face overlap", () => {
+  const slot = (name: string) => ({
+    name,
+    kind: "text" as const,
+    overflow: false,
+    outsideSlide: false,
+    outsideSafe: false,
+    lines: 1,
+    naturalWidth: 0,
+    naturalHeight: 0,
+    rect: { x: 80, y: 400, width: 900, height: 100 },
+  });
+  const face = { slot: "title", photo: "photo", percent: 40 };
+  const render = (slide: number, faceOverlaps?: (typeof face)[]): GuardRender => ({
+    slides: [{ slide, slots: [slot("title")], ...(faceOverlaps ? { faceOverlaps } : {}) }],
+  });
+
+  it("is an error on the cover and a warning elsewhere", () => {
+    expect(checks(content(), render(0, [face]))).toContain("face_overlap:error");
+    expect(checks(content(), render(1, [face]))).toContain("face_overlap:warning");
+  });
+  it("translates the message and suggestion, once per slide and photo", () => {
+    const f = run(content(), render(1, [face, face])).findings.filter(
+      (x) => x.check === "face_overlap",
+    );
+    expect(f).toHaveLength(1);
+    expect(f[0]).toMatchObject({
+      category: "layout",
+      origin: "render",
+      slide: 1,
+      ref: { key: "review.guard.finding.faceOverlap" },
+      suggestionRef: { key: "review.guard.suggestion.moveFromFace" },
+    });
+  });
+  it("raises nothing without face data", () => {
+    expect(checks(content(), render(0))).not.toContain("face_overlap:error");
+    expect(checks(content(), render(0, []))).toEqual([]);
+  });
+});
+
 describe("coherence", () => {
   it("scores from the findings, with evidence per category", () => {
     const r = run(withText("Prodotto economico e low cost"));

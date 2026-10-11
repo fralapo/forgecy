@@ -1265,6 +1265,18 @@ function checkRender(ctx: Ctx, pal: Palette) {
             { discriminator: texts[b]!.name },
             { other: label(texts[b]!.name) },
           );
+    for (const f of rs.faceOverlaps ?? []) {
+      const m = rs.slots.find((x) => x.name === f.slot);
+      if (m)
+        add(
+          m,
+          "face_overlap",
+          i === 0 ? "error" : "warning",
+          "review.guard.finding.faceOverlap",
+          { measured: f.percent, discriminator: f.photo, ...suggest("review.guard.suggestion.moveFromFace") },
+          { photo: f.photo, percent: String(f.percent) },
+        );
+    }
     for (const c of rs.contrast ?? []) {
       const s = bySlot.get(c.slot);
       if (!s || s.kind === "image") continue;

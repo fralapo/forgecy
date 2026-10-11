@@ -162,6 +162,10 @@ export const guardRenderSchema = z.object({
         slide: z.number().int().nonnegative(),
         slots: z.array(renderSlotSchema),
         contrast: z.array(contrastSampleSchema).optional(),
+        /** Text over a declared face (render issue `text_over_face`); absent when no face box exists. */
+        faceOverlaps: z
+          .array(z.object({ slot: z.string(), photo: z.string(), percent: z.number() }))
+          .optional(),
       }),
     )
     .max(30),

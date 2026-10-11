@@ -1239,6 +1239,12 @@
     "slide": "Slide {number}",
     "general": "Generale",
     "suggestion": "Suggerimento: {suggestion}",
+    "renderIssues": {
+      "title": "Problemi di render",
+      "none": "Nessun problema di render",
+      "error": "Errore",
+      "warning": "Avviso"
+    },
     "list": "Esportazioni",
     "empty": "Ancora nessuna esportazione.",
     "draft": "Bozza",

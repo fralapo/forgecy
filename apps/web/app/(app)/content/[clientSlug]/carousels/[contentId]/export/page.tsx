@@ -1,10 +1,10 @@
-import { labelSlotRef } from "@forgecy/carousel";
+import { groupRenderIssues, labelSlotRef } from "@forgecy/carousel";
 import { clientVersionSlides, readClientVersion } from "@forgecy/content";
 import { can } from "@forgecy/core";
 import { Badge, Card } from "@forgecy/ui";
 import { FileDown } from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import { getFormat, refText } from "@/lib/i18n";
+import { getFormat, getRefText, refText } from "@/lib/i18n";
 import { ClientVersionPanel } from "../../../../_components/client-version-panel";
 import { CarouselDeliveryForm } from "../../../../_components/carousel-delivery-form";
 import { CarouselExportForm } from "../../../../_components/carousel-export-form";
@@ -73,6 +73,25 @@ export default async function ExportPage({
           })),
       ),
     })),
+  );
+  const issueText = await getRefText();
+  const issuesByExport = new Map(
+    ws.exports.flatMap((e) => {
+      const job = ws.jobs.find((j) => j.id === e.jobId && j.status === "completed");
+      if (!job) return [];
+      const raw = (job.result as { issues?: unknown } | null)?.issues;
+      return [
+        [
+          e.id,
+          groupRenderIssues(
+            raw,
+            ws.template?.manifest,
+            (n) => ws.document.slides[n]?.layout,
+            ws.sourceManifest,
+          ),
+        ] as const,
+      ];
+    }),
   );
   const cv = c.publishedAt ? readClientVersion(c.clientVersion) : null;
   const cvSlides = cv
@@ -247,6 +266,32 @@ export default async function ExportPage({
                       .join(", ")}
                   </span>
                 </div>
+                {issuesByExport.has(e.id) ? (
+                  <div className="grid gap-1">
+                    <h4 className="text-body-sm text-fg">{t("renderIssues.title")}</h4>
+                    {issuesByExport.get(e.id)!.length === 0 ? (
+                      <p className="text-body-sm text-fg-muted">{t("renderIssues.none")}</p>
+                    ) : (
+                      issuesByExport.get(e.id)!.map((g) => (
+                        <div key={g.slide} className="grid gap-1">
+                          <span className="text-body-sm text-fg-muted">
+                            {t("slide", { number: g.slide + 1 })}
+                          </span>
+                          <ul className="grid gap-1">
+                            {g.issues.map((i, n) => (
+                              <li key={n} className="text-body-sm text-fg">
+                                <Badge variant={i.severity === "error" ? "error" : "warning"}>
+                                  {t(`renderIssues.${i.severity}`)}
+                                </Badge>{" "}
+                                {issueText(i.ref, i.message)}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ) : null}
                 {e.files.length ? (
                   <ul className="grid gap-1">
                     {e.files.map((f) => (

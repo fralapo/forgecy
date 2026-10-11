@@ -88,6 +88,7 @@
       "imageMissing": "Slide {slide} · {slot}: the image did not load.",
       "logoOutsideSafe": "Slide {slide} · {slot}: the logo is outside the format safe zone.",
       "overlap": "Slide {slide} · {slot}: overlaps “{other}”.",
+      "faceOverlap": "Slide {slide} · {slot}: covers {percent}% of the face in “{photo}”.",
       "coverCorner": "Slide {slide} · {slot}: text in the top-right corner of the cover, where Instagram shows its carousel icon.",
       "bottomZone": "Slide {slide} · {slot}: text in the bottom {px} px, which is kept for the page number.",
       "edgeMargin": "Slide {slide} · {slot}: closer than {px} px to the edge of the slide.",
@@ -114,7 +115,8 @@
       "approveOrReplace": "Approve the image or replace it.",
       "shortenText": "Shorten the text or choose a layout with more space.",
       "useRoleOverlay": "Use the “{role}” role{onImage, select, yes { or add the layout overlay} other {}}.",
-      "addOverlay": "Add the layout overlay or change the image."
+      "addOverlay": "Add the layout overlay or change the image.",
+      "moveFromFace": "Move the text away from the face or move the photo."
     },
     "notRun": {
       "noProduct": "No linked product.",

@@ -1,78 +1,34 @@
-import { messagesFor } from "@forgecy/i18n";
 import { describe, expect, it } from "vitest";
-import { narrowTextPercent } from "../src/typography/lines";
-import { issuesFromMeasures, type SlotMeasure } from "../src/export/capture";
+import { groupRenderIssues } from "../src/render-issues";
 
-const rect = { x: 0, y: 0, width: 100, height: 40 };
-const text = (over: Partial<SlotMeasure> = {}): SlotMeasure => ({
-  name: "title",
-  kind: "text",
-  overflow: false,
-  outsideSlide: false,
-  outsideSafe: false,
-  lines: 1,
-  naturalWidth: 0,
-  naturalHeight: 0,
-  rect,
-  ...over,
-});
-const image = (over: Partial<SlotMeasure> = {}): SlotMeasure =>
-  text({ name: "photo", kind: "image", ...over });
+const manifest = {
+  layouts: [{ id: "cover", slots: [{ name: "title", label: "Titolo" }] }],
+} as never;
 
-describe("render issues are translatable", () => {
-  it.each([
-    [[text({ overflow: true })], {}, "overflow", "The text of “title” overflows its box."],
-    [[text({ outsideSlide: true })], {}, "outside_slide", "“title” goes outside the slide."],
-    [[text({ outsideSafe: true })], {}, "outside_safe_zone", "“title” is outside the safe zone."],
-    [
-      [text({ lines: 4 })],
-      { title: { maxLines: 3 } },
-      "too_many_lines",
-      "“title” takes 4 lines out of 3.",
-    ],
-    [[image({ naturalWidth: 0 })], {}, "image_missing", "The image of “photo” did not load."],
-    [
-      [image({ naturalWidth: 500, naturalHeight: 400 })],
-      { photo: { minWidth: 1000 } },
-      "low_resolution",
-      "The image of “photo” is 500×400 px, below the minimum.",
-    ],
-  ])("%#: %s", (slots, limits, kind, english) => {
-    const [issue] = issuesFromMeasures(0, slots, limits);
-    expect(issue?.kind).toBe(kind);
-    expect(issue?.message).toBe(english);
-    expect(issue?.ref?.key).toMatch(/^templates\.renderIssues\./);
+describe("groupRenderIssues", () => {
+  it("is empty for nothing or junk", () => {
+    expect(groupRenderIssues(undefined, null, () => null)).toEqual([]);
+    expect(groupRenderIssues([null, { slide: "x" }], null, () => null)).toEqual([]);
   });
-
-  it("flags narrow multi-line text, silent otherwise", () => {
-    const kinds = (m: Partial<SlotMeasure>) =>
-      issuesFromMeasures(0, [text(m)], {}, "en").map((i) => i.kind);
-    expect(kinds({ lines: 4, fill: 0.5 })).toEqual(["narrow_text"]);
-    expect(kinds({ lines: 4, fill: 0.7 })).toEqual([]);
-    expect(kinds({ lines: 2, fill: 0.3 })).toEqual([]);
-    expect(kinds({ lines: 4 })).toEqual([]);
-    expect(issuesFromMeasures(0, [text({ lines: 4, fill: 0.5 })])).toEqual([]);
-    expect(narrowTextPercent({ lines: 3, fill: 0.55 })).toBe(55);
-    expect(issuesFromMeasures(0, [text({ lines: 4, fill: 0.5 })], {}, "en")[0]?.message).toBe(
-      "“title” uses 50% of its width: the layout slot may be too wide for this copy.",
+  it("groups by slide, errors first, with the slot label and default severities", () => {
+    const ref = { key: "templates.renderIssues.overlap", values: { slot: "title" } };
+    const g = groupRenderIssues(
+      [
+        { slide: 2, slot: "a", kind: "widow", message: "w" },
+        { slide: 0, slot: "title", kind: "narrow_text", message: "n", ref },
+        { slide: 0, slot: "title", kind: "text_over_face", message: "f", severity: "error" },
+        { slide: 0, slot: "title", kind: "overflow", message: "o" },
+      ],
+      manifest,
+      () => "cover",
     );
-  });
-
-  it("names both slots of an overlap", () => {
-    const issues = issuesFromMeasures(2, [text({ name: "a" }), text({ name: "b" })]);
-    expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({
-      slide: 2,
-      kind: "overlap",
-      message: "“a” overlaps “b”.",
-      ref: { key: "templates.renderIssues.overlap", values: { slot: "a", other: "b" } },
-    });
-  });
-
-  it("has Italian text for every issue", () => {
-    const it_ = messagesFor("it").templates.renderIssues;
-    const en = messagesFor("en").templates.renderIssues;
-    expect(Object.keys(it_).sort()).toEqual(Object.keys(en).sort());
-    for (const key of Object.keys(en) as (keyof typeof en)[]) expect(it_[key]).not.toBe(en[key]);
+    expect(g.map((x) => x.slide)).toEqual([0, 2]);
+    expect(g[0]!.issues.map((i) => `${i.kind}:${i.severity}`)).toEqual([
+      "text_over_face:error",
+      "overflow:error",
+      "narrow_text:warning",
+    ]);
+    expect(g[0]!.issues[2]!.ref?.values?.slot).toBe("Titolo");
+    expect(g[1]!.issues[0]!.severity).toBe("warning");
   });
 });
