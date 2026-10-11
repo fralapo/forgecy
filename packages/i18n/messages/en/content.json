@@ -1137,7 +1137,10 @@
         "cy": "Centre Y",
         "w": "Width",
         "h": "Height",
-        "remove": "No face in this photo"
+        "remove": "No face in this photo",
+        "place": "Draw the face box on the photo",
+        "placeHint": "Drag on the photo, or click the top-left corner and then the bottom-right one. With the keyboard: arrows move the cursor (Shift for bigger steps), Enter marks a corner, Escape cancels. The number fields below do the same.",
+        "cornerSet": "Top-left corner set: now mark the bottom-right corner."
       }
     }
   },

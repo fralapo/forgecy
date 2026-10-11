@@ -23,6 +23,7 @@ import { useState } from "react";
 import { updateAltAction } from "../actions";
 import { ActionButton, controlClass } from "./action-button";
 import { AiImageDrafts, ImageGenerator, Thumb } from "./editor-ai";
+import { FacePlacer } from "./face-placer";
 import { StockSearch } from "./stock-search";
 import type { EditorAsset, EditorRef } from "./editor-workspace";
 
@@ -678,6 +679,11 @@ function ImageSlot({
               value={value}
               onChange={onChange}
               readOnly={readOnly}
+              photo={
+                current?.thumb && current.width && current.height
+                  ? { url: current.thumb, width: current.width, height: current.height }
+                  : null
+              }
             />
           ) : null}
           {!readOnly ? (
@@ -760,14 +766,26 @@ function FaceBoxFields({
   value,
   onChange,
   readOnly,
+  photo,
 }: {
   id: string;
   value: ImageRef;
   onChange: (v: SlotValue | undefined) => void;
   readOnly: boolean;
+  /** The photo to draw on, when its size is known. */
+  photo: { url: string; width: number; height: number } | null;
 }) {
   const t = useTranslations("content.editor.imageSlot.face");
   const face = value.face;
+  const placer =
+    photo && !readOnly ? (
+      <FacePlacer
+        {...photo}
+        alt={value.alt}
+        face={face}
+        onChange={(f) => onChange({ ...value, face: f })}
+      />
+    ) : null;
   if (!face)
     return readOnly ? null : (
       <div className="space-y-1">
@@ -779,11 +797,13 @@ function FaceBoxFields({
           {t("add")}
         </Button>
         <p className="text-body-sm text-fg-muted">{t("hint")}</p>
+        {placer}
       </div>
     );
   return (
     <fieldset className="space-y-2">
       <legend className="text-label text-fg-muted">{t("title")}</legend>
+      {placer}
       <div className="grid grid-cols-4 gap-2">
         {FACE_FIELDS.map((k) => (
           <div key={k} className="space-y-1">

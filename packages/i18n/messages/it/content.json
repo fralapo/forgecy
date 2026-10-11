@@ -1137,7 +1137,10 @@
         "cy": "Centro Y",
         "w": "Larghezza",
         "h": "Altezza",
-        "remove": "Nessun volto in questa foto"
+        "remove": "Nessun volto in questa foto",
+        "place": "Disegna il riquadro del volto sulla foto",
+        "placeHint": "Trascina sulla foto, oppure clicca l'angolo in alto a sinistra e poi quello in basso a destra. Da tastiera: le frecce muovono il cursore (Maiusc per passi più grandi), Invio segna un angolo, Esc annulla. I campi numerici qui sotto fanno lo stesso.",
+        "cornerSet": "Angolo in alto a sinistra segnato: ora segna quello in basso a destra."
       }
     }
   },

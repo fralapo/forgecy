@@ -233,10 +233,14 @@ export function ClientVersionPanel({
                       onClick={() => {
                         setMessage(null);
                         start(async () => {
-                          done(
-                            await proposeLessonFromChangeAction({ ...ref, noteId: n.id }),
-                            t("lessonDone"),
-                          );
+                          const r = await proposeLessonFromChangeAction({ ...ref, noteId: n.id });
+                          // The refresh does not reset local state: mark the note now (the server
+                          // refuses a second lesson for the same note).
+                          if (r.ok)
+                            setNotes((all) =>
+                              all.map((x) => (x.id === n.id ? { ...x, lessonId: "proposed" } : x)),
+                            );
+                          done(r, t("lessonDone"));
                         });
                       }}
                     >
