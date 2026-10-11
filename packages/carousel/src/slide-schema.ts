@@ -40,8 +40,8 @@ export const slideSchema = z.object({
   /** Stable id inside the carousel (editor, comments); optional for previews. */
   id: z.string().max(64).optional(),
   layout: z.string().min(1).max(40),
-  /** Color variant the template may style with `[data-tone="inverse"]`. */
-  tone: z.enum(["default", "inverse"]).default("default"),
+  /** Color variant the template may style with `[data-tone="inverse"]` (ink) or `[data-tone="accent"]`. */
+  tone: z.enum(["default", "inverse", "accent"]).default("default"),
   slots: z.record(z.string(), slotValueSchema).default({}),
 });
 export type Slide = z.infer<typeof slideSchema>;
@@ -115,7 +115,11 @@ function checkText(
         values: { label: slot.label ?? slot.name, length: len, max: slot.maxChars },
       },
     });
-  if (slot.type === "text" && slot.maxLines && text.split("\n").length > slot.maxLines)
+  if (
+    slot.type === "text" &&
+    slot.maxLines &&
+    text.split(slot.highlight ? /\n|\|\|/ : "\n").length > slot.maxLines
+  )
     ctx.addIssue({
       code: "custom",
       path,

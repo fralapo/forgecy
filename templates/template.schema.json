@@ -26,11 +26,19 @@
     "kind": {
       "default": "carousel",
       "type": "string",
-      "enum": ["carousel", "report"]
+      "enum": [
+        "carousel",
+        "report"
+      ]
     },
     "channel": {
       "type": "string",
-      "enum": ["instagram", "linkedin", "facebook", "tiktok"]
+      "enum": [
+        "instagram",
+        "linkedin",
+        "facebook",
+        "tiktok"
+      ]
     },
     "format": {
       "type": "string",
@@ -74,7 +82,11 @@
           "maximum": 40
         }
       },
-      "required": ["min", "max", "default"]
+      "required": [
+        "min",
+        "max",
+        "default"
+      ]
     },
     "safeZone": {
       "type": "object",
@@ -100,7 +112,12 @@
           "maximum": 600
         }
       },
-      "required": ["top", "right", "bottom", "left"]
+      "required": [
+        "top",
+        "right",
+        "bottom",
+        "left"
+      ]
     },
     "styles": {
       "minItems": 1,
@@ -135,14 +152,20 @@
           "style": {
             "default": "normal",
             "type": "string",
-            "enum": ["normal", "italic"]
+            "enum": [
+              "normal",
+              "italic"
+            ]
           },
           "license": {
             "type": "string",
             "maxLength": 40
           }
         },
-        "required": ["family", "file"]
+        "required": [
+          "family",
+          "file"
+        ]
       }
     },
     "colorRoles": {
@@ -171,7 +194,10 @@
             "pattern": "^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
           }
         },
-        "required": ["role", "fallback"]
+        "required": [
+          "role",
+          "fallback"
+        ]
       }
     },
     "fontRoles": {
@@ -186,7 +212,10 @@
         "properties": {
           "role": {
             "type": "string",
-            "enum": ["heading", "body"]
+            "enum": [
+              "heading",
+              "body"
+            ]
           },
           "fallback": {
             "type": "string",
@@ -194,7 +223,10 @@
             "maxLength": 80
           }
         },
-        "required": ["role", "fallback"]
+        "required": [
+          "role",
+          "fallback"
+        ]
       }
     },
     "typeScale": {
@@ -237,17 +269,30 @@
               "finding",
               "problem",
               "next_steps",
-              "method"
+              "method",
+              "contents",
+              "palette",
+              "typography",
+              "logo",
+              "signature"
             ]
           },
           "position": {
             "default": "any",
             "type": "string",
-            "enum": ["first", "last", "any"]
+            "enum": [
+              "first",
+              "last",
+              "any"
+            ]
           },
           "file": {
             "type": "string",
             "pattern": "^[a-z0-9][a-z0-9._-]*(\\/[a-z0-9][a-z0-9._-]*)*$"
+          },
+          "useWhen": {
+            "type": "string",
+            "maxLength": 200
           },
           "safeZone": {
             "type": "object",
@@ -273,7 +318,12 @@
                 "maximum": 600
               }
             },
-            "required": ["top", "right", "bottom", "left"]
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ]
           },
           "slots": {
             "maxItems": 16,
@@ -314,7 +364,11 @@
                       "type": "boolean"
                     }
                   },
-                  "required": ["name", "type", "maxChars"]
+                  "required": [
+                    "name",
+                    "type",
+                    "maxChars"
+                  ]
                 },
                 {
                   "type": "object",
@@ -356,7 +410,12 @@
                       "type": "boolean"
                     }
                   },
-                  "required": ["name", "type", "maxChars", "maxItems"]
+                  "required": [
+                    "name",
+                    "type",
+                    "maxChars",
+                    "maxItems"
+                  ]
                 },
                 {
                   "type": "object",
@@ -388,7 +447,10 @@
                       "type": "boolean"
                     }
                   },
-                  "required": ["name", "type"]
+                  "required": [
+                    "name",
+                    "type"
+                  ]
                 }
               ]
             }
@@ -425,13 +487,72 @@
                       "maxLength": 300
                     }
                   },
-                  "required": ["asset"]
+                  "required": [
+                    "asset"
+                  ]
                 }
               ]
             }
           }
         },
-        "required": ["id", "name", "role", "file", "slots"]
+        "required": [
+          "id",
+          "name",
+          "role",
+          "file",
+          "slots"
+        ]
+      }
+    },
+    "translations": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "layouts": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 60
+                },
+                "slots": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "rules": {

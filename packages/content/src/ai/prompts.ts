@@ -364,7 +364,7 @@ export function layoutGuide(m: TemplateManifest): string {
     l.slots
       .map((s) =>
         s.type === "text"
-          ? `${s.name} (text, max ${s.maxChars} characters${s.maxLines ? `, ${s.maxLines} lines` : ""}${s.required ? ", required" : ""}${s.highlight ? ", ==highlight== allowed" : ""})`
+          ? `${s.name} (text, max ${s.maxChars} characters${s.maxLines ? `, ${s.maxLines} lines` : ""}${s.required ? ", required" : ""}${s.highlight ? ", ==highlight== and || line break allowed" : ""})`
           : s.type === "list"
             ? `${s.name} (list, ${s.minItems}–${s.maxItems} items of max ${s.maxChars} characters)`
             : `${s.name} (image${s.required ? ", required" : ""})`,
@@ -373,7 +373,7 @@ export function layoutGuide(m: TemplateManifest): string {
   return m.layouts
     .map(
       (l) =>
-        `- layout "${l.id}" — ${slideRoleLabels[l.role]}${l.position !== "any" ? `, ${l.position === "first" ? "first" : "last"} slide only` : ""}: ${slot(l)}`,
+        `- layout "${l.id}" — ${slideRoleLabels[l.role]}${l.position !== "any" ? `, ${l.position === "first" ? "first" : "last"} slide only` : ""}: ${slot(l)}${l.useWhen ? `. Use when: ${l.useWhen}` : ""}`,
     )
     .join("\n");
 }

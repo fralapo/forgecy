@@ -329,12 +329,16 @@ export function SlidePanel({
             value={slide.tone}
             disabled={readOnly}
             onChange={(e) => {
-              const tone = e.target.value === "inverse" ? "inverse" : "default";
+              const tone =
+                e.target.value === "inverse" || e.target.value === "accent"
+                  ? e.target.value
+                  : "default";
               patch((s) => ({ ...s, tone }));
             }}
           >
             <option value="default">{t("toneDefault")}</option>
             <option value="inverse">{t("toneInverse")}</option>
+            <option value="accent">{t("toneAccent")}</option>
           </select>
         </div>
       </div>

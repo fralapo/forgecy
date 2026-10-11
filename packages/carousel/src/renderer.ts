@@ -65,21 +65,27 @@ const OVERLAY_CSS = `.fc-safe{position:absolute;pointer-events:none;inset:var(--
 type Doc = ReturnType<typeof parseHTML>["document"];
 type El = ReturnType<Doc["createElement"]>;
 
-/** Insert `text` as text nodes; `==x==` becomes `<mark class="fc-hl">x</mark>` when allowed. */
+/**
+ * Insert `text` as text nodes; `==x==` becomes `<mark class="fc-hl">x</mark>` and `||` a `<br>`
+ * when the slot allows highlights (titles). Only these two elements are ever created.
+ */
 function setText(doc: Doc, el: El, text: string, highlight: boolean): void {
   el.textContent = "";
-  if (!highlight || !text.includes("==")) {
+  if (!highlight || !(text.includes("==") || text.includes("||"))) {
     el.textContent = text;
     return;
   }
-  text.split("==").forEach((part, i) => {
-    if (!part) return;
-    if (i % 2 === 1) {
-      const mark = doc.createElement("mark");
-      mark.setAttribute("class", "fc-hl");
-      mark.textContent = part;
-      el.appendChild(mark);
-    } else el.appendChild(doc.createTextNode(part));
+  text.split("||").forEach((line, n) => {
+    if (n > 0) el.appendChild(doc.createElement("br"));
+    line.split("==").forEach((part, i) => {
+      if (!part) return;
+      if (i % 2 === 1) {
+        const mark = doc.createElement("mark");
+        mark.setAttribute("class", "fc-hl");
+        mark.textContent = part;
+        el.appendChild(mark);
+      } else el.appendChild(doc.createTextNode(part));
+    });
   });
 }
 

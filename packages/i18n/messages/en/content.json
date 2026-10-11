@@ -924,6 +924,7 @@
       "tone": "Color variant",
       "toneDefault": "Standard",
       "toneInverse": "Inverted",
+      "toneAccent": "Accent",
       "layoutMissing": "The layout “{layout}” is not in the template: choose another one.",
       "note": "Note for the reviewer"
     },

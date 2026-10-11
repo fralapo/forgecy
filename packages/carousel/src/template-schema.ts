@@ -184,6 +184,8 @@ export const layoutSchema = z.object({
   /** Where the layout may appear in a carousel. */
   position: z.enum(["first", "last", "any"]).default("any"),
   file: relPath,
+  /** When to pick this layout (English), shown to the AI in the layout guide. */
+  useWhen: z.string().max(200).optional(),
   safeZone: safeZoneSchema.optional(),
   slots: z.array(slotSchema).max(16),
   sample: z.record(z.string(), sampleValueSchema).default({}),
