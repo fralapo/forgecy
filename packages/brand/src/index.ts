@@ -11,6 +11,7 @@ export * from "./diff";
 export * from "./context";
 export * from "./read";
 export * from "./completeness";
+export * from "./lessons";
 // Not here: reference-images.ts and import/images.ts load sharp (native); the worker side
 // imports them by subpath, so this entry stays safe for the web app (like @forgecy/audit's).
 // Explicit list: service.ts also holds transaction-level internals (openDraft, lockOpenDraft,

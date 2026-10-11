@@ -130,6 +130,7 @@ export function buildBrandContext(
   const w = v.writingRules?.value;
   if (w) {
     if (w.person) rules.push(`Address the reader as: ${w.person}`);
+    if (w.speakerPov) rules.push(`Who speaks (point of view): ${w.speakerPov}`);
     if (w.emoji)
       rules.push(`Emoji: ${{ no: "never", limited: "sparingly", yes: "allowed" }[w.emoji]}`);
     if (w.maxSentenceWords) rules.push(`Sentences of at most ${w.maxSentenceWords} words`);
@@ -154,11 +155,25 @@ export function buildBrandContext(
   }
   if (v.forbiddenWords.length)
     rules.push(`Forbidden words (never use them): ${v.forbiddenWords.join(", ")}`);
+  if (v.forbiddenUnlessExplained.length)
+    rules.push(
+      `Words to use only when explained in the same text: ${v.forbiddenUnlessExplained.join(", ")}`,
+    );
+  if (v.audienceVocabulary.length)
+    rules.push(
+      `The audience's own words (prefer them to technical terms): ${v.audienceVocabulary.join(", ")}`,
+    );
   if (v.preferredWords.length) rules.push(`Preferred words: ${v.preferredWords.join(", ")}`);
   if (v.spellings.length)
     rules.push(`Correct spelling: ${v.spellings.map((x) => x.term).join(", ")}`);
   const avoid = live(s.avoidTopics);
   if (avoid.length) rules.push(`Topics to avoid: ${avoid.map((t) => t.value).join("; ")}`);
+  if (s.forbiddenTopics.length)
+    rules.push(
+      `Forbidden topics: ${s.forbiddenTopics.map((x) => `${x.topic}${x.reason ? ` (${x.reason})` : ""}`).join("; ")}`,
+    );
+  if (s.antagonist && !s.antagonist.deprecated)
+    rules.push(`The brand stands against: ${s.antagonist.value}`);
   const values = live(s.values);
   if (values.length) rules.push(`Values: ${values.map((x) => x.value.name).join(", ")}`);
 

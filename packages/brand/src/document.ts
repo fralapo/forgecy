@@ -4,7 +4,7 @@
  * value plus the sources it cites and a confidence computed by the server.
  * Word lists are plain strings, approved as a block with the version.
  */
-import { confidenceLevels } from "@forgecy/core";
+import { brandCheckSeverities, confidenceLevels } from "@forgecy/core";
 import { z } from "zod";
 
 const text = (max = 2000) => z.string().trim().min(1).max(max);
@@ -78,6 +78,19 @@ export const messageSchema = z.object({
   answer: optText(1000),
 });
 
+/**
+ * A topic the brand does not touch, with why and how hard the brand check reacts:
+ * `error` blocks, `warning` needs a "Seen", `note` only informs. `keywords` are the words
+ * that reveal the topic in the copy besides its name.
+ */
+export const forbiddenTopicSchema = z.object({
+  topic: text(120),
+  reason: optText(400),
+  severity: z.enum(brandCheckSeverities).prefault("warning"),
+  keywords: list(text(80), 20),
+});
+export type ForbiddenTopic = z.output<typeof forbiddenTopicSchema>;
+
 export const strategySchema = z.object({
   oneLiner: sourced(text(300)).optional(),
   insight: sourced(text(600)).optional(),
@@ -94,6 +107,10 @@ export const strategySchema = z.object({
   messages: list(sourced(messageSchema), 100),
   /** Topics to avoid become binding rules of the brand check. */
   avoidTopics: list(sourced(text(300)), 50),
+  /** What the brand stands against: the enemy the audience shares. */
+  antagonist: sourced(text(600)).optional(),
+  /** Structured forbidden topics: reason and severity feed the brand check. */
+  forbiddenTopics: list(forbiddenTopicSchema, 50),
 });
 
 // ---- Verbal identity ----
@@ -120,6 +137,8 @@ export const weAreSchema = z.object({ weAre: text(200), weAreNot: text(200) });
 
 export const writingRulesSchema = z.object({
   person: z.enum(["tu", "lei", "voi", "noi", "impersonale"]).optional(),
+  /** Who speaks and from where ("the owner, at the counter, 20 years in the trade"). */
+  speakerPov: optText(600),
   emoji: z.enum(["no", "limited", "yes"]).optional(),
   maxSentenceWords: z.number().int().min(3).max(80).optional(),
   maxHashtags: z.number().int().min(0).max(30).optional(),
@@ -140,6 +159,10 @@ export const verbalSchema = z.object({
   writingRules: sourced(writingRulesSchema).optional(),
   preferredWords: list(text(80), 300),
   forbiddenWords: list(text(80), 300),
+  /** Words allowed only when the copy explains them (jargon): the brand check warns otherwise. */
+  forbiddenUnlessExplained: list(text(80), 300),
+  /** Words the audience itself uses, to be preferred over technical terms. */
+  audienceVocabulary: list(text(80), 300),
   /** Terms with their correct spelling (product names, trademarks). */
   spellings: list(z.object({ term: text(120), note: optText(300) }), 200),
 });
