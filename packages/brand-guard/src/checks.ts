@@ -1140,11 +1140,22 @@ function intersects(a: RenderSlot["rect"], b: RenderSlot["rect"]) {
   return w > 2 && h > 2;
 }
 
+/** True for a render with measures; false when absent or made only of face overlaps from an earlier export. */
+const hasMeasures = (render?: GuardRender) =>
+  !!render &&
+  !(
+    render.slides.length > 0 &&
+    render.slides.every((s) => s.slots.length === 0 && s.faceOverlaps?.length)
+  );
+
 function checkRender(ctx: Ctx, pal: Palette) {
   if (!ctx.render) {
     ctx.notRun.push(notRunReason("render", "review.guard.notRun.render"));
     return;
   }
+  // A render that only carries face overlaps (no slot measures) did not verify the layout.
+  if (!hasMeasures(ctx.render))
+    ctx.notRun.push(notRunReason("render", "review.guard.notRun.render"));
   for (const rs of ctx.render.slides) {
     const slide = ctx.content.slides[rs.slide];
     if (!slide) continue;
@@ -1155,7 +1166,7 @@ function checkRender(ctx: Ctx, pal: Palette) {
       return s ? slotLabel(s) : name;
     };
     const add = (
-      m: RenderSlot,
+      m: Pick<RenderSlot, "name" | "rect">,
       check: string,
       severity: BrandCheckSeverity,
       key: FindingKey,
@@ -1266,16 +1277,23 @@ function checkRender(ctx: Ctx, pal: Palette) {
             { other: label(texts[b]!.name) },
           );
     for (const f of rs.faceOverlaps ?? []) {
-      const m = rs.slots.find((x) => x.name === f.slot);
-      if (m)
-        add(
-          m,
-          "face_overlap",
-          i === 0 ? "error" : "warning",
-          "review.guard.finding.faceOverlap",
-          { measured: f.percent, discriminator: f.photo, ...suggest("review.guard.suggestion.moveFromFace") },
-          { photo: f.photo, percent: String(f.percent) },
-        );
+      // The slot may be missing from `slots` when the overlap comes from an earlier export.
+      const m = rs.slots.find((x) => x.name === f.slot) ?? {
+        name: f.slot,
+        rect: { x: 0, y: 0, width: 0, height: 0 },
+      };
+      add(
+        m,
+        "face_overlap",
+        i === 0 ? "error" : "warning",
+        "review.guard.finding.faceOverlap",
+        {
+          measured: f.percent,
+          discriminator: f.photo,
+          ...suggest("review.guard.suggestion.moveFromFace"),
+        },
+        { photo: f.photo, percent: String(f.percent) },
+      );
     }
     for (const c of rs.contrast ?? []) {
       const s = bySlot.get(c.slot);
@@ -1370,7 +1388,7 @@ export function checkContent(
   checkThumbnail(ctx);
   checkImages(ctx);
   checkRender(ctx, pal);
-  if (!render && options.flagUnverifiedRender)
+  if (!hasMeasures(render) && options.flagUnverifiedRender)
     ctx.out.add({
       check: RENDER_UNVERIFIED,
       category: "layout",
@@ -1395,7 +1413,7 @@ export function checkContent(
     brandIdentityVersionId: brand.versionId,
     brandIdentityVersionNumber: brand.number,
     checkedAt: (options.now ?? new Date()).toISOString(),
-    hasRender: !!render,
+    hasRender: hasMeasures(render),
     findings,
     counts: countBySeverity(findings),
     coherence: coherenceScore(findings),

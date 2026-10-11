@@ -309,6 +309,13 @@ describe("face overlap", () => {
       suggestionRef: { key: "review.guard.suggestion.moveFromFace" },
     });
   });
+  it("fires from a render made only of face overlaps, without claiming a measured render", () => {
+    const r = run(content(), {
+      slides: [{ slide: 0, slots: [], faceOverlaps: [face] }],
+    });
+    expect(r.findings.map((f) => `${f.check}:${f.severity}`)).toContain("face_overlap:error");
+    expect(r.hasRender).toBe(false);
+  });
   it("raises nothing without face data", () => {
     expect(checks(content(), render(0))).not.toContain("face_overlap:error");
     expect(checks(content(), render(0, []))).toEqual([]);

@@ -82,6 +82,7 @@ import {
 import {
   brandGuard,
   carouselSubject,
+  faceRenderFromJobs,
   GUARDED_CHECK_PREFIXES,
   toGuardContent,
   type GuardAssetInfo,
@@ -964,11 +965,29 @@ export async function checkDocument(
           product,
           asksPrice: brief.usePrice,
         });
+        // Face overlaps come from the latest export or visual-review render, if it is not stale.
+        const render = faceRenderFromJobs(
+          await db
+            .select({ createdAt: jobs.createdAt, result: jobs.result })
+            .from(jobs)
+            .where(
+              and(
+                eq(jobs.entity, "content"),
+                eq(jobs.entityId, c.id),
+                inArray(jobs.kind, ["content.export", "content.review_visual"]),
+                eq(jobs.status, "completed"),
+              ),
+            )
+            .orderBy(desc(jobs.createdAt))
+            .limit(5),
+          c.draftUpdatedAt,
+        );
         guard = (
           await port.run(db, actor, {
             clientId: c.clientId,
             subject,
             content,
+            ...(render ? { render } : {}),
             ...(c.brandVersionId ? { brandVersionId: c.brandVersionId } : {}),
           })
         ).report;

@@ -94,6 +94,55 @@ export interface GuardReport {
   notRun: Array<{ check: string; reason: string; reasonRef?: MessageRef }>;
 }
 
+/** The part of the guard's render input this module can fill without Chromium: face overlaps of an earlier render. */
+export interface GuardRenderInput {
+  slides: Array<{
+    slide: number;
+    slots: [];
+    faceOverlaps: Array<{ slot: string; photo: string; percent: number }>;
+  }>;
+}
+
+/** A finished export or visual-review job, as much of it as the guard needs. */
+export interface RenderJobRow {
+  createdAt: Date;
+  result: unknown;
+}
+
+/**
+ * Face overlaps for the guard from the most recent render job of a content (rows newest first).
+ * A result counts only when its job started after the last draft update (otherwise the render
+ * shows an older draft) and when it stores `issues`. Only `text_over_face` issues are mapped.
+ */
+export function faceRenderFromJobs(
+  rows: readonly RenderJobRow[],
+  draftUpdatedAt: Date | null,
+): GuardRenderInput | undefined {
+  const row = rows.find((r) => Array.isArray((r.result as { issues?: unknown } | null)?.issues));
+  if (!row || (draftUpdatedAt && row.createdAt <= draftUpdatedAt)) return undefined;
+  const bySlide = new Map<number, GuardRenderInput["slides"][number]["faceOverlaps"]>();
+  for (const i of (row.result as { issues: unknown[] }).issues) {
+    const o = i as {
+      slide?: unknown;
+      slot?: unknown;
+      kind?: unknown;
+      ref?: { values?: Record<string, unknown> };
+    };
+    const v = o?.ref?.values;
+    if (o?.kind !== "text_over_face" || typeof o.slide !== "number" || typeof o.slot !== "string")
+      continue;
+    if (typeof v?.photo !== "string" || typeof v.percent !== "number") continue;
+    bySlide.set(o.slide, [
+      ...(bySlide.get(o.slide) ?? []),
+      { slot: o.slot, photo: v.photo, percent: v.percent },
+    ]);
+  }
+  if (!bySlide.size) return undefined;
+  return {
+    slides: [...bySlide].map(([slide, faceOverlaps]) => ({ slide, slots: [], faceOverlaps })),
+  };
+}
+
 export interface GuardSubject {
   type: string;
   id: string;
@@ -108,6 +157,7 @@ export interface BrandGuardPort {
       clientId: string;
       subject: GuardSubject;
       content: GuardContentInput;
+      render?: GuardRenderInput;
       brandVersionId?: string;
     },
   ): Promise<{ report: GuardReport }>;
