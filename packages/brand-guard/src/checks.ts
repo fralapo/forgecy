@@ -467,6 +467,63 @@ function checkAvoidTopics(ctx: Ctx, blocks: Block[]) {
   }
 }
 
+/** Marks that a word is glossed in the same text: a parenthesis, a colon, a dash or "that is". */
+const GLOSS = /[(:—–]|\b(?:cioè|ovvero|ossia|ovverosia|i\.e\.|that is|meaning|means)\b/iu;
+
+function checkForbiddenUnlessExplained(ctx: Ctx, blocks: Block[]) {
+  // ponytail: "explained" = any gloss marker in the same block; a real gloss check needs the Reviewer agent.
+  for (const [wi, word] of ctx.doc.verbal.forbiddenUnlessExplained.entries())
+    for (const b of blocks) {
+      const hits = findPhrase(b.text, word);
+      if (!hits.length || GLOSS.test(plainText(b.text))) continue;
+      ctx.out.add({
+        check: "unexplained_word",
+        category: "vocabulary",
+        severity: "warning",
+        origin: "json",
+        slide: b.slide,
+        slot: b.slot,
+        discriminator: word.toLowerCase(),
+        ...say("review.guard.finding.unexplainedWord", { ...at(b.slide, b.label), word: hits[0]! }),
+        measured: hits[0],
+        rule: { path: `/document/verbal/forbiddenUnlessExplained/${wi}`, text: word },
+        blockHash: b.hash,
+      });
+    }
+}
+
+function checkForbiddenTopics(ctx: Ctx, blocks: Block[]) {
+  // Keywords are deterministic; the topic as a theme needs the Reviewer agent.
+  for (const [ti, topic] of ctx.doc.strategy.forbiddenTopics.entries())
+    for (const b of blocks)
+      for (const needle of [topic.topic, ...topic.keywords]) {
+        const hits = findPhrase(b.text, needle);
+        if (!hits.length) continue;
+        ctx.out.add({
+          check: "forbidden_topic",
+          category: "vocabulary",
+          severity: topic.severity,
+          origin: "json",
+          slide: b.slide,
+          slot: b.slot,
+          discriminator: topic.topic.toLowerCase(),
+          ...say("review.guard.finding.forbiddenTopic", {
+            ...at(b.slide, b.label),
+            topic: topic.topic,
+            found: hits[0]!,
+            reason: topic.reason ?? "",
+          }),
+          measured: hits[0],
+          rule: {
+            path: `/document/strategy/forbiddenTopics/${ti}`,
+            text: topic.reason ? `${topic.topic}: ${topic.reason}` : topic.topic,
+          },
+          blockHash: b.hash,
+        });
+        break;
+      }
+}
+
 function checkWritingRules(ctx: Ctx, blocks: Block[]) {
   const wr = ctx.doc.verbal.writingRules?.value;
   if (!wr) return;
@@ -1290,6 +1347,8 @@ export function checkContent(
   checkForbiddenWords(ctx, blocks);
   checkSpellings(ctx, blocks);
   checkAvoidTopics(ctx, blocks);
+  checkForbiddenTopics(ctx, blocks);
+  checkForbiddenUnlessExplained(ctx, blocks);
   checkWritingRules(ctx, blocks);
   checkClaims(ctx, blocks);
   checkProductFacts(ctx, blocks);
