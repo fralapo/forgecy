@@ -96,7 +96,8 @@ describe("copy checks", () => {
 
   it("warns once on five slides in a row with the same tone, only when tone varies", () => {
     const toned = (id: string, tone: string) => ({ ...text(id), tone });
-    const toneIds = (slides: unknown[]) => ids(run(slides)).filter((i) => i.startsWith("rhythm:tone"));
+    const toneIds = (slides: unknown[]) =>
+      ids(run(slides)).filter((i) => i.startsWith("rhythm:tone"));
     const same = ["a", "b", "c", "d", "e"].map((id) => toned(id, "default"));
     expect(toneIds(deck(...same))).toEqual([]);
     const mixed = [...same, toned("f", "inverse")];

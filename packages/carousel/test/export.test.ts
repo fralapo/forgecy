@@ -171,15 +171,19 @@ describe.skipIf(!enabled)("export with Chromium", () => {
     expect(kinds).toContain("title:overlap");
   }, 60_000);
 
-  it("runs the template editor render checks", async () => {
-    const pkg = await loadRepoTemplate("carousels/editorial-ig-4x5");
-    const report = await renderCheckTemplate(browser, pkg, validateTemplatePackage(pkg.files));
-    expect(
-      report.checks.filter((c) => c.id === "render" || c.id === "overflow").map((c) => c.label),
-    ).toEqual([
-      `Test render: ${pkg.manifest.layouts.length} layouts without errors`,
-      "Long text: no overflow",
-    ]);
-    expect(report.ok).toBe(true);
-  }, 120_000);
+  it.each(["carousels/editorial-ig-4x5", "carousels/editorial-fb-4x5"])(
+    "runs the template editor render checks on %s",
+    async (folder) => {
+      const pkg = await loadRepoTemplate(folder);
+      const report = await renderCheckTemplate(browser, pkg, validateTemplatePackage(pkg.files));
+      expect(
+        report.checks.filter((c) => c.id === "render" || c.id === "overflow").map((c) => c.label),
+      ).toEqual([
+        `Test render: ${pkg.manifest.layouts.length} layouts without errors`,
+        "Long text: no overflow",
+      ]);
+      expect(report.ok).toBe(true);
+    },
+    120_000,
+  );
 });

@@ -7,7 +7,11 @@ import { buildSlideSchema, sampleSlide, slideSchema } from "../src/slide-schema"
 import { findLayout } from "../src/template-schema";
 import { loadRepoTemplate } from "./helpers";
 
-const FOLDERS = ["carousels/editorial-ig-4x5", "carousels/editorial-linkedin"];
+const FOLDERS = [
+  "carousels/editorial-ig-4x5",
+  "carousels/editorial-linkedin",
+  "carousels/editorial-fb-4x5",
+];
 const NEW_LAYOUTS = {
   breather: "text",
   evidence: "text",
@@ -26,7 +30,7 @@ const enabled = Boolean(
 describe.each(FOLDERS)("factory layouts of %s", (folder) => {
   it("declares the eight layouts with their roles, useWhen and default role layouts intact", async () => {
     const { manifest } = await loadRepoTemplate(folder);
-    expect(manifest.version).toBe("1.4.0");
+    expect(manifest.version).toBe(folder.endsWith("fb-4x5") ? "1.1.0" : "1.4.0");
     expect(manifest.layouts).toHaveLength(18);
     for (const [id, role] of Object.entries(NEW_LAYOUTS)) {
       const layout = findLayout(manifest, id)!;

@@ -25,7 +25,8 @@ Constraints that did not move: the AI never writes HTML, agents propose and peop
 
 ### Taken as templates
 
-- **Eight layouts** in `editorial-ig-4x5` and `editorial-linkedin` (version 1.4.0, en and it samples, validated): `breather`, `evidence` (chat or mail card with a detail circle), `takeaway` ("Tradotto:" box), `steps` (numbered), `cover-photo` (with scrim), `cover-statement` (typographic), `cta-single` and `cta-conclusion` (no action).
+- **Eight layouts** in `editorial-ig-4x5`, `editorial-linkedin` (version 1.4.0) and `editorial-fb-4x5` (version 1.1.0, same 1080x1350 canvas and safe zone as Instagram, so the layouts and CSS are identical; en and it samples, validated): `breather`, `evidence` (chat or mail card with a detail circle), `takeaway` ("Tradotto:" box), `steps` (numbered), `cover-photo` (with scrim), `cover-statement` (typographic), `cta-single` and `cta-conclusion` (no action).
+- **Templates without the new layouts, on purpose:** `editorial-ig-1x1` (1080x1080), `editorial-stories-9x16` and `editorial-tiktok-photo` (1080x1920) keep their 8 layouts (version 1.0.1). Their canvas differs, so porting is more than a copy: each layout needs its own CSS pass (1:1 has 270px less height; 9:16 has 570px more and its own safe zones for the platform UI) and new samples checked for overflow. Not done in this slice.
 - **`useWhen`** on a layout: one sentence injected into the layout guide so the AI picks by purpose.
 - **`||` line break** marker in a title slot: the renderer turns it into a break; it is text, never HTML.
 - **`accent` tone** next to `default` and `inverse`.

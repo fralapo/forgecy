@@ -400,7 +400,7 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
 
   // Only a deck that varies tone somewhere is pacing with it; all-default stays silent.
   if (new Set(doc.slides.map((s) => s.tone)).size >= 2) {
-    for (let i = 0; i < doc.slides.length; ) {
+    for (let i = 0; i < doc.slides.length;) {
       let j = i;
       while (j + 1 < doc.slides.length && doc.slides[j + 1]!.tone === doc.slides[i]!.tone) j++;
       if (j - i + 1 >= TONE_RUN)
