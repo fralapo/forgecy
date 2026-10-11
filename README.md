@@ -107,6 +107,7 @@ The MVP milestones are all on `main`. The repository, code, docs and agent promp
 - [x] **Product catalog**: mixed import (CSV, PDF, images), AI extraction with human review, product sheets
 - [x] **M5 Content and carousels**: strategy and plan, structured briefs, outline, slide editor, static AI images
 - [x] **M6 Brand Guard**: brand consistency checks, internal review and the export gate
+- [x] **M8 Instagram profile analysis and carousel quality**: public profile reading without login, per-figure source labels, claim check, caption tiers, profile-grid preview, undo and redo, code and mockup layouts ([ADR 0024](docs/adr/0024-carousel-ideas-from-open-source.md))
 - [ ] **M7 (v1)**: client-facing Brand Book, more formats (Instagram 1:1, Stories 9:16, Facebook 4:5, TikTok photo), agent settings, batch automations, full client import/export, dark theme
 
 ### Languages
