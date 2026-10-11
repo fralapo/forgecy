@@ -16,7 +16,7 @@
     "hashtagsExact": "{count, plural, one {# hashtag} other {# hashtag}} su Instagram: usane esattamente {target}",
     "captionCredit": "Nella didascalia manca, prima degli hashtag, il credito dell’immagine “{credit}”",
     "rhythm": "Slide da {from} a {to}: {count} slide dense di fila, aggiungi una pausa",
-    "toneRhythm": "Slide da {from} a {to}: {count} slide di fila con lo stesso tono “{tone}”, alterna il tono per dare ritmo al carosello",
+    "toneRhythm": "Slide da {from} a {to}: {count} slide di fila con la stessa variante di colore, alternala per dare ritmo al carosello",
     "person": "{slide, select, caption {Didascalia} other {Slide {slide}}}: il testo mescola le forme di cortesia, la Brand Identity usa “{expected}”",
     "voice": "{slide, select, caption {Didascalia} other {Slide {slide}}}: il testo usa solo “{found}”, la Brand Identity scrive con “{expected}”",
     "assetMissing": "Slide {slide}: immagine non presente nella libreria del cliente",

@@ -16,7 +16,7 @@
     "hashtagsExact": "{count, plural, one {# hashtag} other {# hashtags}} on Instagram: use exactly {target}",
     "captionCredit": "The image credit “{credit}” is missing before the hashtags in the caption",
     "rhythm": "Slides {from} to {to}: {count} dense slides in a row, add a breather",
-    "toneRhythm": "Slides {from} to {to}: {count} slides in a row with the same tone “{tone}”, alternate it to pace the deck",
+    "toneRhythm": "Slides {from} to {to}: {count} slides in a row with the same color variant, alternate it to pace the deck",
     "person": "{slide, select, caption {Caption} other {Slide {slide}}}: the copy mixes forms of address, the Brand Identity uses “{expected}”",
     "voice": "{slide, select, caption {Caption} other {Slide {slide}}}: the copy speaks with “{found}” only, the Brand Identity writes with “{expected}”",
     "assetMissing": "Slide {slide}: image not in the client's library",
