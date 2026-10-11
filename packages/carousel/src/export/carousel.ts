@@ -13,6 +13,7 @@ import {
   type CarouselTexts,
   type ExportMetadata,
   captionText,
+  manifestText,
   slidesJson,
   slidesMarkdown,
 } from "../texts";
@@ -163,6 +164,12 @@ export async function exportCarousel(
       { name: "texts.md", data: enc.encode(slidesMarkdown(pkg, slides, meta, texts, language)) },
       { name: "slides.json", data: enc.encode(slidesJson(pkg, slides, meta, texts, brand)) },
     ];
+    entries.push({
+      name: "manifest.txt",
+      data: enc.encode(
+        manifestText([...entries.map((e) => e.name), "manifest.txt"], meta, texts, language),
+      ),
+    });
     files.push({
       name: names.zip,
       kind: "zip",

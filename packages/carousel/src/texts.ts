@@ -20,6 +20,10 @@ export interface ExportMetadata {
 export interface CarouselTexts {
   caption?: string;
   hashtags?: string[];
+  /** Channel the caption is written for (instagram, linkedin...), named in the manifest. */
+  channel?: string;
+  /** Stock image credit lines, listed in the manifest. */
+  credits?: string[];
 }
 
 function hashtagLine(tags: string[] = []): string {
@@ -29,6 +33,44 @@ function hashtagLine(tags: string[] = []): string {
 /** `caption.txt`: caption, a blank line, the hashtags. */
 export function captionText(t: CarouselTexts): string {
   return [t.caption?.trim() ?? "", hashtagLine(t.hashtags)].filter(Boolean).join("\n\n") + "\n";
+}
+
+/**
+ * `manifest.txt`: what the ZIP holds, the caption of each channel, the image credits and
+ * when to repost, judge and recycle. Plain text in the deliverable's language.
+ */
+export function manifestText(
+  files: readonly string[],
+  meta: ExportMetadata,
+  texts: CarouselTexts,
+  language: Locale = DEFAULT_LOCALE,
+): string {
+  const t = getTranslator(language, "deliverable");
+  const out = [
+    `${meta.content} · ${t("carousel.manifest.version", { version: meta.version })}`,
+    "",
+    t("carousel.manifest.files"),
+    ...files.map((f) => `- ${f}`),
+    "",
+    t("carousel.manifest.captions"),
+  ];
+  const caption = captionText(texts).trimEnd();
+  out.push(
+    caption
+      ? `[${texts.channel ?? t("carousel.manifest.anyChannel")}]\n${caption}`
+      : t("carousel.manifest.noCaption"),
+    "",
+    t("carousel.manifest.credits"),
+    ...(texts.credits?.length
+      ? texts.credits.map((c) => `- ${c}`)
+      : [t("carousel.manifest.noCredits")]),
+    "",
+    t("carousel.manifest.tips"),
+    `- ${t("carousel.manifest.tipRepost")}`,
+    `- ${t("carousel.manifest.tipJudge")}`,
+    `- ${t("carousel.manifest.tipRecycle")}`,
+  );
+  return out.join("\n") + "\n";
 }
 
 function slotText(v: unknown, imageAlt: (alt: string) => string): string[] {
