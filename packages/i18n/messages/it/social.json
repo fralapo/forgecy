@@ -227,6 +227,7 @@
     "duplicateProfile": "@{handle} è già seguito per questo cliente.",
     "tooManyProfiles": "Un cliente può seguire al massimo {max} profili.",
     "profileNotFound": "Profilo non trovato.",
+    "signalNotFound": "Segnale non trovato.",
     "noSource": "Nessuna fonte di lettura disponibile: la lettura dei profili Instagram è spenta su questa installazione.",
     "snapshotInProgress": "Questo profilo è già in lettura.",
     "sourceBlocked": "Instagram ha chiesto un accesso o una verifica, quindi la lettura è ferma finché un Admin non la riprende.",

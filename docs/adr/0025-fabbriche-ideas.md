@@ -52,6 +52,13 @@ Constraints that did not move: the AI never writes HTML, agents propose and peop
 - **Planner proposals**: the strategy proposal may carry a territory per pillar, and the plan proposal a critical node and client needs. They are stored on the proposed rows; when a person uses the plan, notes already written on the plan in use win, otherwise the proposed ones apply.
 - **No migration** in this slice. The factory work used 0035 (`product_facts`, `brand_lessons`, strategy columns, delivery record); the next free number is 0036.
 
+### Taken as a listening grid (migration 0036)
+
+- **Listening** (`listening_signals`, client page `/clients/<slug>/listening`, "Ascolto" in Italian): the agency logs verbatim signals from the audience by hand, a comment, message, question or mention, with platform, optional link, date and a theme tag. A status marks it `new`, `recurring` (a question that keeps coming back, the content candidate), `used` or `dismissed`. It stays empty until real data exists.
+- **No scraping and no AI.** Nothing reads a platform; the service lives in `packages/social` (`listening.ts`). Reads need `view` on the client, writes `project.edit`, so people see only their clients and agents cannot write.
+- **"Turn into content idea"** opens the existing new-carousel form with `?signal=<id>`: the signal text fills the brief and the first 200 characters (cut at a word) the brief `trigger`. Nothing is created until the person saves the form; `linked_content_id` is reserved for linking a content back and is not written yet.
+- **Client transfer**: area `content`; a package cannot assert `used`, so it arrives as `recurring`.
+
 ### Left out, on purpose
 
 - **Raw HTML** in build scripts: the AI picks layouts and fills slots; the renderer inserts text.

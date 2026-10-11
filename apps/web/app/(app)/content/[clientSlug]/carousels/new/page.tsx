@@ -1,8 +1,10 @@
 import { channelLabels, getNewCarouselOptions, getPlanItem } from "@forgecy/content";
+import { getSignal, signalTrigger } from "@forgecy/social";
 import { Card } from "@forgecy/ui";
 import Link from "next/link";
 import type { Route } from "next";
 import { getTranslations } from "next-intl/server";
+import { z } from "zod";
 import { CarouselNewForm, type PlanSeed } from "../../../_components/carousel-new-form";
 import { carouselPath, carouselsPath } from "../../../_lib/paths";
 import { loadClient } from "../../../_lib/server";
@@ -24,10 +26,17 @@ export default async function NewCarouselPage({
   const { db, user, client } = await loadClient(clientSlug);
   const t = await getTranslations("content.newCarousel");
   const planId = typeof sp.plan === "string" ? sp.plan : null;
-  const [options, item] = await Promise.all([
+  const signalId =
+    typeof sp.signal === "string" && z.uuid().safeParse(sp.signal).success ? sp.signal : null;
+  const [options, item, signalRow] = await Promise.all([
     getNewCarouselOptions(db, user.actor, client.id, await interfaceLocale()),
     planId ? getPlanItem(db, user.actor, client.id, planId) : null,
+    signalId ? getSignal(db, user.actor, client.id, signalId) : null,
   ]);
+  // A listening signal only prefills the form: nothing is created until the person saves.
+  const signal = signalRow
+    ? { text: signalRow.text.slice(0, 2000), trigger: signalTrigger(signalRow.text) }
+    : null;
   const plan: PlanSeed | null =
     item && item.status === "accepted" && !item.contentId
       ? {
@@ -73,7 +82,13 @@ export default async function NewCarouselPage({
           })}
         </p>
       ) : null}
-      <CarouselNewForm slug={client.slug} clientId={client.id} options={options} plan={plan} />
+      <CarouselNewForm
+        slug={client.slug}
+        clientId={client.id}
+        options={options}
+        plan={plan}
+        signal={signal}
+      />
     </Card>
   );
 }

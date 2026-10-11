@@ -33,17 +33,25 @@ export interface PlanSeed {
   briefText: string;
 }
 
+/** A listening signal the form starts from: its words fill the brief and the trigger. */
+export interface SignalSeed {
+  text: string;
+  trigger: string;
+}
+
 /** “New carousel”: parameters and the first lines of the brief. */
 export function CarouselNewForm({
   slug,
   clientId,
   options,
   plan,
+  signal = null,
 }: {
   slug: string;
   clientId: string;
   options: NewCarouselOptions;
   plan: PlanSeed | null;
+  signal?: SignalSeed | null;
 }) {
   const router = useRouter();
   const t = useTranslations("content.newCarousel.form");
@@ -81,7 +89,7 @@ export function CarouselNewForm({
   const [rubricId, setRubricId] = useState(plan?.rubricId ?? "");
   const [productId, setProductId] = useState(plan?.productId ?? "");
   const [language, setLanguage] = useState<Language>(defaults.language ?? (locale as Language));
-  const [briefText, setBriefText] = useState(plan?.briefText ?? "");
+  const [briefText, setBriefText] = useState(plan?.briefText ?? signal?.text ?? "");
 
   const rubrics = options.rubrics.filter((r) => !pillarId || r.pillarId === pillarId);
   // Every carousel speaks to at least one audience segment of the published Brand Identity.
@@ -118,7 +126,10 @@ export function CarouselNewForm({
           planItemId: plan?.id ?? null,
         },
         // Untouched plan text goes empty: the server copies it and marks it as coming from the plan.
-        brief: { text: plan && briefText === plan.briefText ? "" : briefText },
+        brief: {
+          text: plan && briefText === plan.briefText ? "" : briefText,
+          ...(signal ? { trigger: signal.trigger } : {}),
+        },
       });
       if (!r.ok) setError(r.error);
       // Brief written already: straight to the outline, the next thing a person wants to do.

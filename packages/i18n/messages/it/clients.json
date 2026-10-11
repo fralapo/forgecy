@@ -100,10 +100,70 @@
       "empty": "Nessuna attività registrata.",
       "all": "Vedi tutta l’attività"
     },
+    "listening": {
+      "title": "Ascolto",
+      "description": "Cosa dice il pubblico: commenti, messaggi e domande che ritornano.",
+      "open": "Apri la griglia di ascolto"
+    },
     "access": {
       "title": "Chi ha accesso",
       "description": "Le persone che possono vedere questo cliente e lavorarci.",
       "admin": "{name} (Admin)"
+    }
+  },
+  "listening": {
+    "metaTitle": "Ascolto",
+    "title": "Ascolto di {client}",
+    "description": "Cosa dice il pubblico, parola per parola. Registra un commento, un messaggio, una domanda o una menzione con la fonte. Segna la domanda che ritorna: è un candidato per un contenuto.",
+    "back": "Torna a {client}",
+    "link": "Ascolto",
+    "linkHint": "Segnali dal pubblico e domande ricorrenti",
+    "empty": "Ancora niente. Resta vuoto finché non senti qualcosa di vero dal pubblico.",
+    "emptyFiltered": "Nessun segnale corrisponde ai filtri.",
+    "invalid": "Controlla i campi: il testo è obbligatorio e il link deve iniziare con http.",
+    "shown": "{count, plural, one {# segnale} other {# segnali}}",
+    "form": {
+      "add": "Registra un segnale",
+      "text": "Cosa hanno detto (testuale)",
+      "platform": "Dove",
+      "url": "Link (facoltativo)",
+      "date": "Data",
+      "tag": "Tema (facoltativo)",
+      "tagPlaceholder": "es. cura, spedizione, taglie",
+      "save": "Salva",
+      "saving": "Salvataggio...",
+      "cancel": "Annulla"
+    },
+    "filters": {
+      "tag": "Tema",
+      "status": "Stato",
+      "all": "Tutti",
+      "apply": "Filtra",
+      "reset": "Azzera i filtri"
+    },
+    "platform": {
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "linkedin": "LinkedIn",
+      "tiktok": "TikTok",
+      "other": "Altro"
+    },
+    "status": {
+      "new": "Nuovo",
+      "recurring": "Ricorrente",
+      "used": "Usato",
+      "dismissed": "Scartato"
+    },
+    "actions": {
+      "recurring": "Segna come ricorrente",
+      "used": "Segna come usato",
+      "dismissed": "Scarta",
+      "new": "Torna a nuovo",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "deleteConfirm": "Eliminare questo segnale? L'operazione non si può annullare.",
+      "toIdea": "Trasforma in idea di contenuto",
+      "openLink": "Apri la fonte"
     }
   },
   "activity": {

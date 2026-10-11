@@ -478,6 +478,25 @@ export default async function ClientOverviewPage({
 
       <div className="mt-6">
         <Section
+          id="listening"
+          title={
+            <Link href={`/clients/${slug}/listening` as Route} className="hover:underline">
+              {t("listening.title")}
+            </Link>
+          }
+        >
+          <p className="text-body-sm text-fg-muted">{t("listening.description")}</p>
+          <Link
+            href={`/clients/${slug}/listening` as Route}
+            className={`text-body-sm ${linkClass}`}
+          >
+            {t("listening.open")}
+          </Link>
+        </Section>
+      </div>
+
+      <div className="mt-6">
+        <Section
           id="access"
           title={
             user.isAdmin ? (

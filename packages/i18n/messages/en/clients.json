@@ -100,10 +100,70 @@
       "empty": "No activity recorded.",
       "all": "See all activity"
     },
+    "listening": {
+      "title": "Listening",
+      "description": "What the audience says: comments, messages and questions that keep coming back.",
+      "open": "Open the listening grid"
+    },
     "access": {
       "title": "Who has access",
       "description": "People who can see and work on this client.",
       "admin": "{name} (Admin)"
+    }
+  },
+  "listening": {
+    "metaTitle": "Listening",
+    "title": "Listening for {client}",
+    "description": "What the audience says, word for word. Log a comment, message, question or mention with where it came from. Mark a question that comes back: that is a content candidate.",
+    "back": "Back to {client}",
+    "link": "Listening",
+    "linkHint": "Audience signals and recurring questions",
+    "empty": "Nothing logged yet. This stays empty until you hear something real from the audience.",
+    "emptyFiltered": "No signals match these filters.",
+    "invalid": "Check the fields: the text is required and the link must start with http.",
+    "shown": "{count, plural, one {# signal} other {# signals}}",
+    "form": {
+      "add": "Log a signal",
+      "text": "What they said (verbatim)",
+      "platform": "Where",
+      "url": "Link (optional)",
+      "date": "Date",
+      "tag": "Theme (optional)",
+      "tagPlaceholder": "e.g. care, shipping, sizing",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel"
+    },
+    "filters": {
+      "tag": "Theme",
+      "status": "Status",
+      "all": "All",
+      "apply": "Filter",
+      "reset": "Clear filters"
+    },
+    "platform": {
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "linkedin": "LinkedIn",
+      "tiktok": "TikTok",
+      "other": "Other"
+    },
+    "status": {
+      "new": "New",
+      "recurring": "Recurring",
+      "used": "Used",
+      "dismissed": "Dismissed"
+    },
+    "actions": {
+      "recurring": "Mark as recurring",
+      "used": "Mark as used",
+      "dismissed": "Dismiss",
+      "new": "Back to new",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this signal? This cannot be undone.",
+      "toIdea": "Turn into content idea",
+      "openLink": "Open source"
     }
   },
   "activity": {
