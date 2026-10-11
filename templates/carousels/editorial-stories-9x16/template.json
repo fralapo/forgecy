@@ -2,8 +2,8 @@
   "$schema": "../../template.schema.json",
   "id": "editorial-stories-9x16",
   "name": "Editorial · Stories 9:16",
-  "description": "Instagram Stories sequence with 8 layouts: one idea per frame, texts kept clear of the profile header and the reply bar.",
-  "version": "1.0.1",
+  "description": "Instagram Stories sequence with 18 layouts: one idea per frame, texts kept clear of the profile header and the reply bar.",
+  "version": "1.1.0",
   "kind": "carousel",
   "channel": "instagram",
   "format": "stories_9x16",
@@ -173,7 +173,7 @@
           "name": "title",
           "type": "text",
           "label": "Title",
-          "maxChars": 56,
+          "maxChars": 44,
           "maxLines": 2,
           "required": true,
           "highlight": true
@@ -367,6 +367,350 @@
       }
     },
     {
+      "id": "code",
+      "name": "Code",
+      "role": "text",
+      "file": "layouts/code.html",
+      "slots": [
+        {
+          "name": "kicker",
+          "type": "text",
+          "label": "Kicker",
+          "maxChars": 28,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 44,
+          "maxLines": 2,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "language",
+          "type": "text",
+          "label": "Language",
+          "maxChars": 16,
+          "maxLines": 1
+        },
+        {
+          "name": "code",
+          "type": "text",
+          "label": "Code",
+          "maxChars": 360,
+          "maxLines": 8,
+          "required": true
+        },
+        {
+          "name": "caption",
+          "type": "text",
+          "label": "Caption",
+          "maxChars": 110,
+          "maxLines": 3
+        }
+      ],
+      "sample": {
+        "kicker": "Quick tip",
+        "title": "Check the ==VAT number== before you send",
+        "language": "TypeScript",
+        "code": "const ok = /^ITd{11}$/.test(vat);\nif (!ok) {\n  throw new Error(\"Invalid VAT\");\n}",
+        "caption": "Eleven digits after the country code: reject anything else."
+      }
+    },
+    {
+      "id": "mockup",
+      "name": "Phone mockup",
+      "role": "text",
+      "file": "layouts/mockup.html",
+      "slots": [
+        {
+          "name": "kicker",
+          "type": "text",
+          "label": "Kicker",
+          "maxChars": 28,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 44,
+          "maxLines": 2,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "screen",
+          "type": "image",
+          "label": "Screen",
+          "minWidth": 600,
+          "minHeight": 1200,
+          "required": true
+        }
+      ],
+      "sample": {
+        "kicker": "In the app",
+        "title": "Receipts at a ==glance==",
+        "screen": {
+          "asset": "assets/example-screen.svg",
+          "alt": "Screenshot of the receipts screen"
+        }
+      }
+    },
+    {
+      "id": "breather",
+      "name": "Breather",
+      "role": "text",
+      "file": "layouts/breather.html",
+      "useWhen": "a pause between two dense slides: one statement of up to two sentences, no list, no data.",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Statement",
+          "maxChars": 90,
+          "maxLines": 5,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "label": "Text",
+          "maxChars": 140,
+          "maxLines": 4
+        }
+      ],
+      "sample": {
+        "title": "Rejection is rarely the ==system's fault==",
+        "body": "It is a detail that was typed once and never checked."
+      }
+    },
+    {
+      "id": "evidence",
+      "name": "Evidence",
+      "role": "text",
+      "file": "layouts/evidence.html",
+      "useWhen": "proof that a problem is real: a customer message, a chat or an email quoted as it was written; use detail for a count or a mark.",
+      "slots": [
+        {
+          "name": "top",
+          "type": "text",
+          "label": "Top line",
+          "maxChars": 60,
+          "maxLines": 2
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "label": "Message",
+          "maxChars": 220,
+          "maxLines": 7,
+          "required": true
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "label": "Note",
+          "maxChars": 90,
+          "maxLines": 2
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "label": "Source",
+          "maxChars": 60,
+          "maxLines": 1
+        },
+        {
+          "name": "detail",
+          "type": "text",
+          "label": "Detail circle",
+          "maxChars": 12,
+          "maxLines": 1
+        }
+      ],
+      "sample": {
+        "top": "From: Rossi S.r.l. · Subject: invoice 118",
+        "body": "The e-invoicing system rejected the invoice again. Can you check the customer details?",
+        "note": "Third rejection this quarter.",
+        "source": "Real message, names changed",
+        "detail": "x3"
+      }
+    },
+    {
+      "id": "takeaway",
+      "name": "Takeaway",
+      "role": "text",
+      "file": "layouts/takeaway.html",
+      "useWhen": "a technical or dense point that needs a one-sentence translation at the bottom, after the explanation.",
+      "slots": [
+        {
+          "name": "kicker",
+          "type": "text",
+          "label": "Kicker",
+          "maxChars": 28,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 56,
+          "maxLines": 3,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "label": "Text",
+          "maxChars": 240,
+          "maxLines": 7
+        },
+        {
+          "name": "takeaway",
+          "type": "text",
+          "label": "In plain words",
+          "maxChars": 140,
+          "maxLines": 4,
+          "required": true
+        }
+      ],
+      "sample": {
+        "kicker": "Rule of thumb",
+        "title": "Two ==checks== catch most errors",
+        "body": "The recipient code and the VAT number cause most rejections. Everything else can wait until the receipt arrives.",
+        "takeaway": "Check the code and the VAT number, then send."
+      }
+    },
+    {
+      "id": "steps",
+      "name": "Steps",
+      "role": "list",
+      "file": "layouts/steps.html",
+      "useWhen": "a sequence where order matters (a procedure); use list instead for items that are not ordered.",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 44,
+          "maxLines": 2,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "items",
+          "type": "list",
+          "label": "Steps",
+          "minItems": 2,
+          "maxItems": 5,
+          "maxChars": 64,
+          "required": true
+        }
+      ],
+      "sample": {
+        "title": "Four steps, in order",
+        "items": [
+          "Open the customer record",
+          "Copy the VAT number",
+          "Check the recipient code",
+          "Send and read the receipt"
+        ]
+      }
+    },
+    {
+      "id": "cover-photo",
+      "name": "Cover with photo",
+      "role": "cover",
+      "position": "first",
+      "file": "layouts/cover-photo.html",
+      "useWhen": "the first slide when there is a strong full-page photo; text sits on top of it, so the photo must be calm at the top and bottom.",
+      "slots": [
+        {
+          "name": "kicker",
+          "type": "text",
+          "label": "Kicker",
+          "maxChars": 32,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 70,
+          "maxLines": 4,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "subtitle",
+          "type": "text",
+          "label": "Subtitle",
+          "maxChars": 110,
+          "maxLines": 3
+        },
+        {
+          "name": "image",
+          "type": "image",
+          "label": "Photo",
+          "minWidth": 1080,
+          "minHeight": 1920,
+          "required": true
+        }
+      ],
+      "sample": {
+        "kicker": "Practical guide",
+        "title": "E-invoicing: 5 mistakes that ==cost you dearly==",
+        "subtitle": "What to check before sending, in under a minute.",
+        "image": {
+          "asset": "assets/example-cover.svg",
+          "alt": "Abstract illustration of a document"
+        }
+      }
+    },
+    {
+      "id": "cover-statement",
+      "name": "Cover statement",
+      "role": "cover",
+      "position": "first",
+      "file": "layouts/cover-statement.html",
+      "useWhen": "the first slide when there is no image: the hook alone, in large type.",
+      "slots": [
+        {
+          "name": "kicker",
+          "type": "text",
+          "label": "Kicker",
+          "maxChars": 32,
+          "maxLines": 1
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 80,
+          "maxLines": 5,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "subtitle",
+          "type": "text",
+          "label": "Subtitle",
+          "maxChars": 110,
+          "maxLines": 3
+        }
+      ],
+      "sample": {
+        "kicker": "Practical guide",
+        "title": "Most rejected invoices have ==one cause==",
+        "subtitle": "And it takes a minute to remove."
+      }
+    },
+    {
       "id": "cta",
       "name": "Call to action",
       "role": "cta",
@@ -402,6 +746,75 @@
         "title": "Want the full ==checklist==?",
         "body": "Send us the word INVOICE in a DM and we will send it as a PDF.",
         "action": "DM us INVOICE"
+      }
+    },
+    {
+      "id": "cta-single",
+      "name": "Single action",
+      "role": "cta",
+      "position": "last",
+      "file": "layouts/cta-single.html",
+      "useWhen": "the last slide when exactly one thing is asked of the reader, shown as a single large button.",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 56,
+          "maxLines": 3,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "action",
+          "type": "text",
+          "label": "Action",
+          "maxChars": 28,
+          "maxLines": 1,
+          "required": true
+        },
+        {
+          "name": "hint",
+          "type": "text",
+          "label": "Hint",
+          "maxChars": 60,
+          "maxLines": 1
+        }
+      ],
+      "sample": {
+        "title": "Want the full ==checklist==?",
+        "action": "DM us INVOICE",
+        "hint": "We reply within a day"
+      }
+    },
+    {
+      "id": "cta-conclusion",
+      "name": "Conclusion",
+      "role": "cta",
+      "position": "last",
+      "file": "layouts/cta-conclusion.html",
+      "useWhen": "the last slide when nothing is asked and the carousel ends on its main idea; no button.",
+      "slots": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "maxChars": 70,
+          "maxLines": 4,
+          "required": true,
+          "highlight": true
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "label": "Text",
+          "maxChars": 160,
+          "maxLines": 5
+        }
+      ],
+      "sample": {
+        "title": "Check twice, send ==once==",
+        "body": "A minute of checking saves days of waiting."
       }
     }
   ]

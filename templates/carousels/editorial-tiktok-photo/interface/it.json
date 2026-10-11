@@ -1,6 +1,6 @@
 {
   "name": "Editoriale · TikTok photo",
-  "description": "Carosello di foto TikTok con 8 layout: testi lontani dalla didascalia e dai pulsanti delle azioni.",
+  "description": "Carosello di foto TikTok con 18 layout: testi lontani dalla didascalia e dai pulsanti delle azioni.",
   "notes": "Un’idea per schermata, leggibile in due secondi. Tieni il testo dentro l’area sicura: l’app copre i bordi.",
   "layouts": {
     "cover": {
@@ -61,12 +61,95 @@
         "right": "Voci colonna B"
       }
     },
+    "code": {
+      "name": "Codice",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "language": "Linguaggio",
+        "code": "Codice",
+        "caption": "Didascalia"
+      }
+    },
+    "mockup": {
+      "name": "Mockup telefono",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "screen": "Schermata"
+      }
+    },
+    "breather": {
+      "name": "Pausa",
+      "slots": {
+        "title": "Frase",
+        "body": "Testo"
+      }
+    },
+    "evidence": {
+      "name": "Prova",
+      "slots": {
+        "top": "Riga in alto",
+        "body": "Messaggio",
+        "note": "Nota",
+        "source": "Fonte",
+        "detail": "Cerchio dettaglio"
+      }
+    },
+    "takeaway": {
+      "name": "Tradotto",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "body": "Testo",
+        "takeaway": "In parole semplici"
+      }
+    },
+    "steps": {
+      "name": "Passaggi",
+      "slots": {
+        "title": "Titolo",
+        "items": "Passaggi"
+      }
+    },
+    "cover-photo": {
+      "name": "Copertina con foto",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "subtitle": "Sottotitolo",
+        "image": "Foto"
+      }
+    },
+    "cover-statement": {
+      "name": "Copertina frase",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "subtitle": "Sottotitolo"
+      }
+    },
     "cta": {
       "name": "CTA",
       "slots": {
         "title": "Titolo",
         "body": "Testo",
         "action": "Azione"
+      }
+    },
+    "cta-single": {
+      "name": "Azione unica",
+      "slots": {
+        "title": "Titolo",
+        "action": "Azione",
+        "hint": "Nota"
+      }
+    },
+    "cta-conclusion": {
+      "name": "Conclusione",
+      "slots": {
+        "title": "Titolo",
+        "body": "Testo"
       }
     }
   }

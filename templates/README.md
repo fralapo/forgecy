@@ -5,11 +5,11 @@ Starter templates in Forgecy's canonical format: grouped by kind (`carousels/`, 
 | Folder                             | Format                    | Layouts |
 | ---------------------------------- | ------------------------- | ------- |
 | `carousels/editorial-ig-4x5`       | Instagram 4:5 · 1080×1350 | 18      |
-| `carousels/editorial-linkedin`     | LinkedIn document · PDF   | 10      |
-| `carousels/editorial-ig-1x1`       | Instagram 1:1 · 1080×1080 | 8       |
-| `carousels/editorial-stories-9x16` | Stories 9:16 · 1080×1920  | 8       |
+| `carousels/editorial-linkedin`     | LinkedIn document · PDF   | 18      |
+| `carousels/editorial-ig-1x1`       | Instagram 1:1 · 1080×1080 | 18      |
+| `carousels/editorial-stories-9x16` | Stories 9:16 · 1080×1920  | 18      |
 | `carousels/editorial-fb-4x5`       | Facebook 4:5 · 1080×1350  | 18      |
-| `carousels/editorial-tiktok-photo` | TikTok photo · 1080×1920  | 8       |
+| `carousels/editorial-tiktok-photo` | TikTok photo · 1080×1920  | 18      |
 | `reports/report-audit-a4`          | A4 report · PDF 150 dpi   | 6       |
 | `reports/brand-book-a4`            | A4 report · PDF 150 dpi   | 10      |
 

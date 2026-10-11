@@ -11,7 +11,18 @@ const FOLDERS = [
   "carousels/editorial-ig-4x5",
   "carousels/editorial-linkedin",
   "carousels/editorial-fb-4x5",
+  "carousels/editorial-ig-1x1",
+  "carousels/editorial-stories-9x16",
+  "carousels/editorial-tiktok-photo",
 ];
+const VERSIONS: Record<string, string> = {
+  "carousels/editorial-fb-4x5": "1.1.0",
+  "carousels/editorial-ig-1x1": "1.1.0",
+  "carousels/editorial-stories-9x16": "1.1.0",
+  "carousels/editorial-tiktok-photo": "1.1.0",
+};
+// Present since before the factory set; the canvases that were ported get them with it.
+const OLDER_LAYOUTS = ["code", "mockup"];
 const NEW_LAYOUTS = {
   breather: "text",
   evidence: "text",
@@ -30,8 +41,9 @@ const enabled = Boolean(
 describe.each(FOLDERS)("factory layouts of %s", (folder) => {
   it("declares the eight layouts with their roles, useWhen and default role layouts intact", async () => {
     const { manifest } = await loadRepoTemplate(folder);
-    expect(manifest.version).toBe(folder.endsWith("fb-4x5") ? "1.1.0" : "1.4.0");
+    expect(manifest.version).toBe(VERSIONS[folder] ?? "1.4.0");
     expect(manifest.layouts).toHaveLength(18);
+    for (const id of OLDER_LAYOUTS) expect(findLayout(manifest, id), id).toBeDefined();
     for (const [id, role] of Object.entries(NEW_LAYOUTS)) {
       const layout = findLayout(manifest, id)!;
       expect(layout.role, id).toBe(role);
@@ -49,7 +61,7 @@ describe.each(FOLDERS)("factory layouts of %s", (folder) => {
 
   it("renders every new layout from its sample without warnings", async () => {
     const pkg = await loadRepoTemplate(folder);
-    for (const id of Object.keys(NEW_LAYOUTS)) {
+    for (const id of [...Object.keys(NEW_LAYOUTS), ...OLDER_LAYOUTS]) {
       const slide = sampleSlide(findLayout(pkg.manifest, id)!);
       const r = renderSlideHtml({ pkg, slide, index: 1, total: 6 });
       expect(r.warnings, id).toEqual([]);
@@ -138,7 +150,7 @@ describe.skipIf(!enabled)("factory layouts in Chromium", () => {
     "captures every new layout of %s at the template size",
     async (folder) => {
       const pkg = await loadRepoTemplate(folder);
-      const ids = Object.keys(NEW_LAYOUTS);
+      const ids = [...Object.keys(NEW_LAYOUTS), ...OLDER_LAYOUTS];
       const caps = await captureSlides(
         browser,
         ids.map((id) => ({

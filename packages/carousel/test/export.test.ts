@@ -171,7 +171,13 @@ describe.skipIf(!enabled)("export with Chromium", () => {
     expect(kinds).toContain("title:overlap");
   }, 60_000);
 
-  it.each(["carousels/editorial-ig-4x5", "carousels/editorial-fb-4x5"])(
+  it.each([
+    "carousels/editorial-ig-4x5",
+    "carousels/editorial-fb-4x5",
+    "carousels/editorial-ig-1x1",
+    "carousels/editorial-stories-9x16",
+    "carousels/editorial-tiktok-photo",
+  ])(
     "runs the template editor render checks on %s",
     async (folder) => {
       const pkg = await loadRepoTemplate(folder);
