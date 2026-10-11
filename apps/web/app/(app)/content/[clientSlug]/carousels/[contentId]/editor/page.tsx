@@ -5,6 +5,7 @@ import {
   latestClaimFindings,
   sourceTextOf,
   type ContentChannel,
+  factBankOf,
 } from "@forgecy/content";
 import { eq, users } from "@forgecy/db";
 import { getTranslations } from "next-intl/server";
@@ -76,7 +77,12 @@ export default async function EditorPage({
         clientId={client.id}
         contentId={c.id}
         running={claimJobs.some((j) => isActiveJob(j.status))}
-        disabled={!ws.document.slides.length || c.status === "in_review" || c.status === "archived"}
+        disabled={
+          !ws.document.slides.length ||
+          c.status === "in_review" ||
+          c.status === "archived" ||
+          c.publishedAt !== null
+        }
         lastCount={
           claimJobs.some((j) => j.status === "completed")
             ? (ws.checks?.checks.filter((x) => x.id.startsWith("claim:")).length ?? 0)
@@ -90,6 +96,7 @@ export default async function EditorPage({
         contentId={c.id}
         basePath={base}
         status={c.status}
+        published={Boolean(c.publishedAt)}
         locked={ws.locked}
         busy={ws.locked || ws.jobs.some((j) => isActiveJob(j.status))}
         reviewNote={c.status === "changes_requested" ? c.reviewNote : null}
@@ -110,6 +117,8 @@ export default async function EditorPage({
           wantsAltText: brief.outputs.altText,
           captionLength: brief.outputs.captionLength,
           claims,
+          facts: factBankOf(ws.product),
+          credits: c.stockCredits,
           brief: { openQuestions: brief.openQuestions, cannotSay: brief.cannotSay },
           sourceText: sourceTextOf(brief, ws.product),
           productRevision: c.productId

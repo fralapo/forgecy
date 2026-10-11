@@ -7,7 +7,9 @@ import {
   approveAndPublish,
   brandCrawlWebsiteJob,
   brandImportSourceJob,
+  decideLesson,
   ensureDraft,
+  proposeLesson,
   findOrCreateSocialSource,
   findOrCreateWebsiteSource,
   linkSourceReader,
@@ -579,6 +581,41 @@ export async function exportClientBookAction(input: {
     await exportClientBook({ db: getDb(), queues: await getQueues() }, actor, {
       clientId: uuid.parse(input.clientId),
       exportId: uuid.parse(input.exportId),
+    });
+    return {};
+  });
+}
+
+// ---- Lessons log ----
+
+export async function proposeLessonAction(input: {
+  slug: string;
+  clientId: string;
+  correction: string;
+  rule?: string;
+}) {
+  slugSchema.parse(input.slug);
+  return run(input.slug, async ({ actor }) => {
+    const row = await proposeLesson(getDb(), actor, {
+      clientId: uuid.parse(input.clientId),
+      lesson: { correction: input.correction, rule: input.rule ?? "" },
+    });
+    return { id: row.id };
+  });
+}
+
+export async function decideLessonAction(input: {
+  slug: string;
+  clientId: string;
+  id: string;
+  decision: "accepted" | "rejected";
+}) {
+  slugSchema.parse(input.slug);
+  return run(input.slug, async ({ actor }) => {
+    await decideLesson(getDb(), actor, {
+      clientId: uuid.parse(input.clientId),
+      id: uuid.parse(input.id),
+      decision: z.enum(["accepted", "rejected"]).parse(input.decision),
     });
     return {};
   });

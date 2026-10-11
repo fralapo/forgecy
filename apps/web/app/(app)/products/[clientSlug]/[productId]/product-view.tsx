@@ -31,6 +31,7 @@ import { Banner, Thumb, textareaClass } from "../../_components/ui";
 import { fromText, toText } from "../../_lib/field-text";
 import { fieldLabel } from "../../_lib/labels";
 import { transitionAction } from "../actions";
+import { FactsPanel, type FactView } from "./facts-panel";
 import {
   acceptSensitiveAction,
   decideProposalAction,
@@ -62,6 +63,7 @@ export interface ProductViewData {
   byAgent: boolean;
   fields: ProductFields;
   meta: Partial<Record<string, FieldMetaView | undefined>>;
+  facts: FactView[];
   blockers: string[];
   pendingSensitive: FieldKey[];
   images: Array<{
@@ -305,6 +307,7 @@ export function ProductView({ data }: { data: ProductViewData }) {
           {sections.map((section) => (
             <Section key={section} section={section} data={data} />
           ))}
+          <FactsPanel clientId={data.clientId} productId={data.id} facts={data.facts} />
         </div>
         <aside aria-label={t("product.details")} className="space-y-3">
           <div role="tablist" aria-label={t("product.panel")} className="flex flex-wrap gap-1">

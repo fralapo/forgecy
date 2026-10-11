@@ -150,6 +150,8 @@ export function detailChecks(r: Extract<ActionResult, { ok: false }>): ContentCh
 export interface EditorWorkspaceProps extends EditorRef {
   basePath: string;
   status: ContentStatus;
+  /** Marked as published: the delivery record freezes the copy. */
+  published: boolean;
   locked: boolean;
   busy: boolean;
   reviewNote: string | null;
@@ -196,7 +198,8 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
     }
   }
 
-  const readOnly = props.status === "in_review" || props.status === "archived" || props.locked;
+  const readOnly =
+    props.status === "in_review" || props.status === "archived" || props.published || props.locked;
 
   const docRef = useRef(doc);
   const revRef = useRef(rev);
@@ -668,7 +671,11 @@ function StatusBanners(props: EditorWorkspaceProps & { editorRef: EditorRef }) {
           <p className="mt-1 whitespace-pre-line">{props.reviewNote}</p>
         </div>
       ) : null}
-      {props.status === "approved" || props.status === "exported" ? (
+      {props.published ? (
+        <p role="status" className="text-body-sm text-fg-muted">
+          {t("published")}
+        </p>
+      ) : props.status === "approved" || props.status === "exported" ? (
         <p role="status" className="text-body-sm text-fg-muted">
           {t("approved")}
         </p>

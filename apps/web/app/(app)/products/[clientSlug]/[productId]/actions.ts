@@ -4,13 +4,17 @@ import {
   acceptSensitiveField,
   decideFieldProposal,
   deleteProduct,
+  deleteProductFact,
   duplicateProduct,
   fieldKeys,
   productFieldsSchema,
+  saveProductFact,
+  splitKeywords,
   updateProductFields,
   updateProductImage,
   type FieldKey,
 } from "@forgecy/catalog";
+import { productFactStatuses } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -139,4 +143,47 @@ export async function deleteAction(input: {
   });
   if (r.error) return r;
   redirect(paths.catalog(input.clientSlug));
+}
+
+/** Adds a fact to the product's fact bank, or changes one. */
+export async function saveFactAction(input: {
+  clientId: string;
+  productId: string;
+  factId?: string;
+  text: string;
+  keywords: string;
+  status: string;
+  source: string;
+}): Promise<ActionResult> {
+  const user = await requireUser();
+  const t = await getTranslations("products");
+  return attempt(async () => {
+    await saveProductFact(getDb(), actingUser(user), {
+      clientId: z.uuid().parse(input.clientId),
+      productId: z.uuid().parse(input.productId),
+      ...(input.factId ? { factId: z.uuid().parse(input.factId) } : {}),
+      fact: {
+        text: input.text,
+        keywords: splitKeywords(String(input.keywords)),
+        status: z.enum(productFactStatuses).parse(input.status),
+        source: input.source,
+      },
+    });
+    return t("facts.saved");
+  });
+}
+
+export async function deleteFactAction(input: {
+  clientId: string;
+  productId: string;
+  factId: string;
+}): Promise<ActionResult> {
+  const user = await requireUser();
+  return attempt(async () => {
+    await deleteProductFact(getDb(), actingUser(user), {
+      clientId: z.uuid().parse(input.clientId),
+      productId: z.uuid().parse(input.productId),
+      factId: z.uuid().parse(input.factId),
+    });
+  });
 }

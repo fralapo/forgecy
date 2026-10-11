@@ -1,6 +1,7 @@
 import {
   approvalBlockerList,
   fieldDefs,
+  listProductFacts,
   formatValue,
   pendingSensitive,
   productDetail,
@@ -43,6 +44,9 @@ const historyActions = [
   "image_unlink",
   "image_approve",
   "image_alt",
+  "fact_add",
+  "fact_update",
+  "fact_delete",
 ] as const;
 type HistoryAction = (typeof historyActions)[number];
 
@@ -61,6 +65,7 @@ export default async function ProductPage({
   const detail = await productDetail(getDb(), client.id, productId);
   if (!detail) notFound();
   const { product, fields } = detail;
+  const facts = await listProductFacts(getDb(), client.id, product.id);
   const meta = (product.fieldMeta ?? {}) as FieldMetaMap;
   const storage = getStorage();
   const t = await getTranslations("products");
@@ -98,6 +103,13 @@ export default async function ProductPage({
         },
       ]),
     ),
+    facts: facts.map((f) => ({
+      id: f.id,
+      text: f.text,
+      keywords: f.keywords.join(", "),
+      status: f.status,
+      source: f.source,
+    })),
     blockers: approvalBlockerList(fields, meta).map((b) => blockerText(t, b)),
     pendingSensitive: pendingSensitive(fields, meta),
     images: await Promise.all(

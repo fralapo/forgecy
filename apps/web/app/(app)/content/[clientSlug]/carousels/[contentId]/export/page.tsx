@@ -2,6 +2,7 @@ import { Badge, Card } from "@forgecy/ui";
 import { FileDown } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getFormat, refText } from "@/lib/i18n";
+import { CarouselDeliveryForm } from "../../../../_components/carousel-delivery-form";
 import { CarouselExportForm } from "../../../../_components/carousel-export-form";
 import { getStorage } from "../../../../_lib/server";
 import { outputLabels } from "../../_lib/labels";
@@ -96,6 +97,32 @@ export default async function ExportPage({
           {ws.document.slides.length === 0 ? (
             <p className="text-body-sm text-fg-muted">{t("noSlides")}</p>
           ) : null}
+        </Card>
+        <Card className="grid gap-3 p-5">
+          <h3 className="text-heading-sm text-fg">{t("delivery.title")}</h3>
+          <CarouselDeliveryForm
+            slug={client.slug}
+            clientId={client.id}
+            contentId={c.id}
+            canPublish={canFinal && !c.publishedAt}
+            stockCredits={c.stockCredits}
+            published={
+              c.publishedAt
+                ? {
+                    at: format.date(c.publishedAt, "dateTime"),
+                    externalId: c.externalId,
+                    externalUrl: c.externalUrl,
+                    version: c.deliveredVersionId
+                      ? (versionNumber.get(c.deliveredVersionId) ?? null)
+                      : null,
+                    errors: Number((c.gatesPassed as { errors?: number } | null)?.errors ?? 0),
+                    warnings: Number(
+                      (c.gatesPassed as { warnings?: number } | null)?.warnings ?? 0,
+                    ),
+                  }
+                : null
+            }
+          />
         </Card>
         {guard ? (
           <Card className="grid gap-3 p-5">

@@ -24,6 +24,8 @@ import {
   discardProposedPlan,
   editSlideJob,
   ensureActivePlan,
+  updatePlanNotes,
+  type PlanNotesRaw,
   exportContentJob,
   generateImageJob,
   generateOutlineJob,
@@ -31,12 +33,14 @@ import {
   getContentRow,
   humanOnly,
   outlineOf,
+  markPublished,
   prepareExport,
   proposePlanJob,
   proposeStrategyJob,
   rejectDirection,
   requestSlideEdit,
   resolveComment,
+  setStockCredits,
   restoreOutline,
   restoreStrategyItem,
   restoreVersion,
@@ -160,6 +164,17 @@ export async function savePillarAction(input: {
         })
       : await createPillar(db, actor, clientId, input.values);
     return { id: row.id };
+  });
+}
+
+export async function savePlanNotesAction(input: {
+  slug: string;
+  clientId: string;
+  notes: PlanNotesRaw;
+}) {
+  return run(input.slug, async ({ db, actor }) => {
+    await updatePlanNotes(db, actor, { clientId: uuid.parse(input.clientId), notes: input.notes });
+    return {};
   });
 }
 
@@ -676,6 +691,32 @@ export async function exportAction(
       },
       { clientId: r.clientId, entity: "content", entityId: r.id },
     );
+  });
+}
+
+// ---- Delivery record ----
+
+export async function setStockCreditsAction(input: ContentRef & { stockCredits: string[] }) {
+  return run(input.slug, async ({ db, actor }) => {
+    await setStockCredits(db, actor, {
+      ...ref(input),
+      stockCredits: z.array(z.string().max(300)).max(20).parse(input.stockCredits),
+    });
+    return {};
+  });
+}
+
+export async function markPublishedAction(
+  input: ContentRef & { externalId?: string; externalUrl?: string; stockCredits: string[] },
+) {
+  return run(input.slug, async ({ db, actor }) => {
+    await markPublished(db, actor, {
+      ...ref(input),
+      ...(input.externalId ? { externalId: z.string().max(200).parse(input.externalId) } : {}),
+      ...(input.externalUrl ? { externalUrl: z.string().max(1000).parse(input.externalUrl) } : {}),
+      stockCredits: z.array(z.string().max(300)).max(20).parse(input.stockCredits),
+    });
+    return {};
   });
 }
 

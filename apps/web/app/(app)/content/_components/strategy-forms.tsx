@@ -7,6 +7,7 @@ import {
   type ContentChannel,
   type Frequency,
   type PillarInputRaw,
+  type PlanNotesRaw,
   type RubricInputRaw,
 } from "@forgecy/content/client";
 import { funnelStages } from "@forgecy/core";
@@ -15,7 +16,12 @@ import { Pencil, Plus, Save, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useId, useState, useTransition, type ReactNode } from "react";
-import { savePillarAction, saveRubricAction, type ActionResult } from "../actions";
+import {
+  savePillarAction,
+  savePlanNotesAction,
+  saveRubricAction,
+  type ActionResult,
+} from "../actions";
 import { controlClass } from "./action-button";
 
 export interface StrategyOptions {
@@ -310,6 +316,26 @@ function PillarFields({
             />
           )}
         </Field>
+        <Field label={t("territory")} hint={t("territoryHint")}>
+          {(fid) => (
+            <Input
+              id={fid}
+              maxLength={160}
+              value={v.territory ?? ""}
+              onChange={(e) => set({ territory: e.target.value })}
+            />
+          )}
+        </Field>
+        <Field label={t("metric")}>
+          {(fid) => (
+            <Input
+              id={fid}
+              maxLength={160}
+              value={v.metric ?? ""}
+              onChange={(e) => set({ metric: e.target.value })}
+            />
+          )}
+        </Field>
         <Field label={t("themes")} hint={t("onePerLine")}>
           {(fid) => (
             <textarea
@@ -389,7 +415,7 @@ function RubricFields({
   const t = useTranslations("content.strategy.rubricForm");
   const { pending, error, run } = useSave();
   const set = (patch: Partial<RubricInputRaw>) => setV((cur) => ({ ...cur, ...patch }));
-  const text = (key: "hookFormula" | "hookExample" | "cta", label: string) => (
+  const text = (key: "hookFormula" | "hookExample" | "cta" | "cost" | "metric", label: string) => (
     <Field label={label}>
       {(fid) => (
         <Input
@@ -459,6 +485,8 @@ function RubricFields({
         {text("hookFormula", t("hookFormula"))}
         {text("hookExample", t("hookExample"))}
         {text("cta", t("cta"))}
+        {text("cost", t("cost"))}
+        {text("metric", t("metric"))}
       </div>
       <Checks
         legend={t("channels")}
@@ -474,6 +502,74 @@ function RubricFields({
       />
       <FormError error={error} />
       <Actions pending={pending} onCancel={onClose} />
+    </form>
+  );
+}
+
+// ---- Plan notes ----
+
+/** Critical node, client needs and count rationale of the plan in use. */
+export function PlanNotesForm({
+  slug,
+  clientId,
+  initial,
+}: {
+  slug: string;
+  clientId: string;
+  initial: PlanNotesRaw;
+}) {
+  const t = useTranslations("content.strategy.notes");
+  const [v, setV] = useState(initial.criticalNode ?? "");
+  const [needs, setNeeds] = useState((initial.clientNeeds ?? []).join("\n"));
+  const [why, setWhy] = useState(initial.countRationale ?? "");
+  const { pending, error, run } = useSave();
+  return (
+    <form
+      aria-label={t("title")}
+      className={formClass}
+      onSubmit={(e) => {
+        e.preventDefault();
+        run(() =>
+          savePlanNotesAction({
+            slug,
+            clientId,
+            notes: { criticalNode: v, clientNeeds: lines(needs), countRationale: why },
+          }),
+        );
+      }}
+    >
+      <h2 className="text-heading-sm text-fg">{t("title")}</h2>
+      <p className="text-body-sm text-fg-muted">{t("hint")}</p>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field label={t("criticalNode")}>
+          {(fid) => (
+            <Input id={fid} maxLength={300} value={v} onChange={(e) => setV(e.target.value)} />
+          )}
+        </Field>
+        <Field label={t("countRationale")}>
+          {(fid) => (
+            <Input id={fid} maxLength={600} value={why} onChange={(e) => setWhy(e.target.value)} />
+          )}
+        </Field>
+        <Field label={t("clientNeeds")} hint={t("onePerLine")}>
+          {(fid) => (
+            <textarea
+              id={fid}
+              rows={3}
+              className={controlClass}
+              value={needs}
+              onChange={(e) => setNeeds(e.target.value)}
+            />
+          )}
+        </Field>
+      </div>
+      <FormError error={error} />
+      <div>
+        <Button type="submit" disabled={pending}>
+          <Save aria-hidden />
+          {t("save")}
+        </Button>
+      </div>
     </form>
   );
 }

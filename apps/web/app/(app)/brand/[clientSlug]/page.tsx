@@ -4,6 +4,7 @@ import {
   completeness,
   diffVersions,
   latestAutoImport,
+  listLessons,
   listBrandImages,
   parseDocument,
   publishChecks,
@@ -22,6 +23,7 @@ import {
   ImportCard,
   WebsiteCard,
 } from "../_components/overview-panels";
+import { LessonsCard } from "../_components/lessons-card";
 import { brandPath } from "../_lib/labels";
 import {
   imageUrls,
@@ -152,9 +154,10 @@ export default async function BrandOverviewPage({
 
   const palette = referenceColors(shown.tokens).slice(0, 6);
 
-  const [latest, images] = await Promise.all([
+  const [latest, images, lessonRows] = await Promise.all([
     latestAutoImport(db, user.actor, client.id),
     listBrandImages(db, user.actor, client.id),
+    listLessons(db, user.actor, client.id),
   ]);
   const imageFilter = brandImageClasses.find((c) => c === sp.images);
   const urls = await imageUrls(
@@ -258,6 +261,21 @@ export default async function BrandOverviewPage({
           })}
         </section>
       )}
+
+      <LessonsCard
+        slug={client.slug}
+        clientId={client.id}
+        canPropose={can(user.actor, "propose", client.id)}
+        canDecide={can(user.actor, "brand_identity.approve", client.id)}
+        lessons={lessonRows.map((l) => ({
+          id: l.id,
+          correction: l.correction,
+          rule: l.rule,
+          status: l.status,
+          by: l.proposedBy.startsWith("agent:") ? t("lessons.byAgent") : t("lessons.byPerson"),
+          when: format.date(l.createdAt, "dateTime"),
+        }))}
+      />
 
       <ImagesCard
         base={base}

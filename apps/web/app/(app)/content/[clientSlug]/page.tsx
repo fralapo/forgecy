@@ -19,7 +19,12 @@ import { getFormat, getRefText, refText } from "@/lib/i18n";
 import { archiveItemAction } from "../actions";
 import { ActionButton } from "../_components/action-button";
 import { RefreshWhile } from "../_components/refresh-while";
-import { PillarForm, RubricForm, type StrategyOptions } from "../_components/strategy-forms";
+import {
+  PillarForm,
+  PlanNotesForm,
+  RubricForm,
+  type StrategyOptions,
+} from "../_components/strategy-forms";
 import { AskPlannerForm } from "../_components/strategy-planner";
 import { StrategyProposalCard } from "../_components/strategy-proposal";
 import { loadClient } from "../_lib/server";
@@ -141,6 +146,8 @@ export default async function StrategyPage({
     [t("facts.audience"), names(p.audienceIds, audienceName)],
     [t("facts.themes"), p.themes.join(", ") || null],
     [t("facts.cta"), p.cta],
+    [t("facts.territory"), p.territory],
+    [t("facts.metric"), p.metric],
     [t("facts.products"), o.hasCatalog ? names(p.productIds, productName) : null],
   ];
   const rubricFacts = (r: Rubric): [string, ReactNode][] => [
@@ -155,6 +162,8 @@ export default async function StrategyPage({
     ],
     [t("facts.hookFormula"), r.hookFormula],
     [t("facts.cta"), r.cta],
+    [t("facts.cost"), r.cost],
+    [t("facts.metric"), r.metric],
     [t("facts.products"), o.hasCatalog ? names(r.productIds, productName) : null],
   ];
 
@@ -278,6 +287,17 @@ export default async function StrategyPage({
           {proposedPillars.map((p) => proposalCard("pillar", p, pillarFacts(p)))}
           {proposedRubrics.map((r) => proposalCard("rubric", r, rubricFacts(r)))}
         </section>
+      ) : null}
+
+      {canEdit ? (
+        <PlanNotesForm
+          {...base}
+          initial={{
+            criticalNode: o.activePlan?.criticalNode ?? "",
+            clientNeeds: o.activePlan?.clientNeeds ?? [],
+            countRationale: o.activePlan?.countRationale ?? "",
+          }}
+        />
       ) : null}
 
       <section aria-labelledby="pillars" className="space-y-4">

@@ -12,6 +12,7 @@ import {
   typographyRoles,
   type DocumentSectionKey,
 } from "@forgecy/brand/client";
+import { brandCheckSeverities } from "@forgecy/core";
 import type { MessageKey } from "@forgecy/i18n";
 
 /** A message key under `brand.editor` (packages/i18n/messages/<locale>/brand.json). */
@@ -165,6 +166,30 @@ export const strategyUi: SectionUi = {
       addLabel: "strategy.addTopic",
       item: "text",
     },
+    { kind: "sourced", key: "antagonist", label: "strategy.antagonist", multiline: true },
+    {
+      kind: "list",
+      key: "forbiddenTopics",
+      label: "strategy.forbiddenTopics",
+      addLabel: "strategy.addForbiddenTopic",
+      item: [
+        { kind: "text", key: "topic", label: "strategy.forbiddenTopic" },
+        { kind: "textarea", key: "reason", label: "strategy.forbiddenReason" },
+        {
+          kind: "select",
+          key: "severity",
+          label: "strategy.forbiddenSeverity",
+          options: opts(brandCheckSeverities, "severity"),
+          required: true,
+        },
+        {
+          kind: "lines",
+          key: "keywords",
+          label: "strategy.forbiddenKeywords",
+          hint: "verbal.onePerLine",
+        },
+      ],
+    },
   ],
 };
 
@@ -256,6 +281,7 @@ export const verbalUi: SectionUi = {
           label: "verbal.person",
           options: opts(persons, "person"),
         },
+        { kind: "textarea", key: "speakerPov", label: "verbal.speakerPov" },
         {
           kind: "select",
           key: "emoji",
@@ -300,6 +326,18 @@ export const verbalUi: SectionUi = {
       kind: "lines",
       key: "forbiddenWords",
       label: "verbal.forbiddenWords",
+      hint: "verbal.onePerLine",
+    },
+    {
+      kind: "lines",
+      key: "forbiddenUnlessExplained",
+      label: "verbal.forbiddenUnlessExplained",
+      hint: "verbal.forbiddenUnlessExplainedHint",
+    },
+    {
+      kind: "lines",
+      key: "audienceVocabulary",
+      label: "verbal.audienceVocabulary",
       hint: "verbal.onePerLine",
     },
     {
