@@ -120,6 +120,11 @@ export interface CheckInput {
   person?: "tu" | "lei" | "voi" | "noi" | "impersonale";
   /** Stock image credit lines that the caption must carry before its hashtags. */
   credits?: readonly string[];
+  /** Brief parts that gate the export: open client questions and phrases the copy must not use. */
+  brief?: {
+    openQuestions?: readonly { text: string; resolved: boolean }[];
+    cannotSay?: readonly { text: string; reason?: string }[];
+  };
 }
 
 /** Figures that read as data: two or more digits, or any amount with %, a currency or a unit sign. */
@@ -245,6 +250,31 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
           id: `forbidden:${t.slideId ?? "caption"}:${w.toLowerCase()}`,
           severity: "warning",
           ...say("review.checks.forbiddenWord", { word: w }),
+          ...(t.slideId ? { slideId: t.slideId } : {}),
+        });
+  }
+
+  const openQuestions = (input.brief?.openQuestions ?? []).filter((q) => !q.resolved);
+  if (openQuestions.length)
+    add({
+      id: "brief:open-questions",
+      severity: "error",
+      ...say("review.checks.openQuestions", { count: String(openQuestions.length) }),
+    });
+  for (const phrase of input.brief?.cannotSay ?? []) {
+    const needle = squash(phrase.text);
+    if (!needle) continue;
+    for (const t of texts)
+      if (squash(t.text).includes(needle))
+        add({
+          id: `brief:cannot-say:${needle}:${t.slideId ?? "caption"}`,
+          severity: "error",
+          ...say("review.checks.cannotSay", {
+            phrase: phrase.text,
+            slide: t.slideId
+              ? String(doc.slides.findIndex((s) => s.id === t.slideId) + 1)
+              : "caption",
+          }),
           ...(t.slideId ? { slideId: t.slideId } : {}),
         });
   }

@@ -20,6 +20,8 @@ import {
   captionBudget,
   captionLimits,
   claimKinds,
+  hookArchetypes,
+  slideCountPresets,
   claimRisks,
   contentChannels,
   type Brief,
@@ -31,7 +33,10 @@ import { slotTexts } from "../carousels/checks";
 import type { ProductSummary } from "../products";
 import { directionBlock, type CreativeDirection } from "../carousels/direction";
 
-export const CONTENT_PROMPT_VERSION = "content-2026-10-10c";
+export const CONTENT_PROMPT_VERSION = "content-2026-10-11a";
+
+/** What decides whether a channel is working; the Planner judges each rubric by it. */
+export const CHANNEL_METRICS = `- Channel gate metric: judge a rubric by the metric of its channel, and name it in the pillar goal: Instagram = saves and shares; Facebook = shares in groups and comments; LinkedIn = dwell time and comments. Likes and reach alone are not a goal.`;
 
 const SHARED_RULES = `- Write in the indicated language (English when no language is indicated), with the tone and rules of the Brand Identity below. The writing rules and forbidden words are binding.
 - Use only facts found in the brief, the Brand Identity or the product sheet. Never invent data, numbers, prices, testimonials or claims.
@@ -100,6 +105,7 @@ ${SHARED_RULES}
 - The sum of the rubrics' frequencies does not exceed that of their pillar.
 - If pillars already exist, propose only what truly improves them: to change an existing pillar put its id in "updates", otherwise leave "updates" empty.
 - productIds: only ids from the list of approved products, never others.
+${CHANNEL_METRICS}
 - In "rationale" explain why in one or two sentences, citing the element of the Brand Identity or of the existing strategy you rely on.`,
   "positioning",
   "social-content",
@@ -176,7 +182,10 @@ ${SHARED_RULES}
 export const outlineOutputSchema = z.object({
   title: z.string().max(160),
   hook: z.string().max(200),
-  hookAlternatives: z.array(z.string().max(200)).max(2),
+  hookArchetype: z.enum(["", ...hookArchetypes]),
+  hookAlternatives: z
+    .array(z.object({ text: z.string().max(200), archetype: z.enum(["", ...hookArchetypes]) }))
+    .max(2),
   rows: z
     .array(
       z.object({
@@ -189,8 +198,28 @@ export const outlineOutputSchema = z.object({
     .min(1)
     .max(20),
   cta: z.string().max(200),
+  /** "payoff" when the source has no concrete gesture to do today; "" otherwise. */
+  needsInput: z.enum(["", "payoff"]),
 });
 export type OutlineOutput = z.infer<typeof outlineOutputSchema>;
+
+const archetypeLabels: Record<(typeof hookArchetypes)[number], string> = {
+  dry_statement: "dry_statement (a dry statement instead of an instruction)",
+  habitual_gesture: "habitual_gesture (the habitual gesture, named)",
+  bare_number: "bare_number (the number with no explanation)",
+  spoken_sentence: "spoken_sentence (the sentence you would say out loud)",
+  common_belief: "common_belief (challenge a common belief)",
+  nobody_explains: "nobody_explains (everyone tells you X, nobody explains HOW)",
+};
+
+const HOOK_RULES = `- The hook gives recognition plus an open loop: it names the concrete case, not the generic topic, in 8 words or fewer when possible. Never "N tips for X", never "How to do X", never a yes/no question, never "today we look at", never insider jargon, never a spoiler of what the slides show.
+- Hook archetypes (use these exact ids for "hookArchetype" and each alternative's "archetype"; leave "" if none fits): ${hookArchetypes.map((a) => archetypeLabels[a]).join("; ")}. Pick the archetype that fits the objective; never a figure the brief does not contain.`;
+
+const THREE_YES_RULES = `- 3-yes gate, check before writing the rows: (1) a pain the target recognises plus an open loop, (2) at least one verifiable proof taken from the brief, (3) a payoff: a concrete gesture the reader can do today. If the brief and sources hold no actionable payoff, set "needsInput" to "payoff" and keep the payoff row generic: never invent a payoff. Otherwise "needsInput" is "".`;
+
+const SHAREABILITY_RULES = `- Shareability test (advisory): is it actionable today and repeatable? Does one specific person come to mind? Does whoever forwards it look good? Pure education does not get shared: add a story, a myth busted, or "the part everyone thinks and nobody says". Say in a row's "note" when the test fails and how to fix it.`;
+
+const ARC_RULES = `- Arc rules: slide 2 is a second hook and must stand alone as a screenshot; slide 3 or 4 brings something unexpected; the payoff is the penultimate slide; the strongest number goes penultimate (numbers escalate); a breather slide (statement only) every 3 to 4 dense slides; the last slide is the call to action.`;
 
 export const OUTLINE_SYSTEM = withPlaybooks(
   `You are the Copywriter of Forgecy. You prepare the outline of a carousel: one row per slide with the point to communicate.
@@ -201,8 +230,11 @@ ${SHARED_RULES}
 - For each row choose a layout among the template's, suited to the role and the position.
 - One concept per slide, said in one sentence. No final copy here: only the point.
 - If the brief follows a rubric, respect its structure and its hook formula.
-- The hook is one of three kinds: a question the audience asks itself, a figure taken from the brief, or a bold claim the next slides back up. Pick the kind that fits the objective; never a figure the brief does not contain.
-- "hookAlternatives": up to two other hooks for the cover, each of a different kind from the hook and from each other, same rule: a figure only if the brief contains it. Empty when no good alternative exists.
+${HOOK_RULES}
+- "hookArchetype" labels the hook; "hookAlternatives": up to two other hooks for the cover, each with its own "archetype", each of a different archetype from the hook and from each other. Same rules: a figure only if the brief contains it. Empty when no good alternative exists.
+${THREE_YES_RULES}
+${SHAREABILITY_RULES}
+${ARC_RULES}
 - With no rubric, follow a narrative arc: hook, problem, what it costs to ignore it, the way out, the proof the brief gives, the call to action. Drop steps the slide count cannot hold, never reorder them.`,
   "copywriting",
   "slide-design",
@@ -238,6 +270,10 @@ export const slidesOutputSchema = z.object({
 });
 export type SlidesOutput = z.infer<typeof slidesOutputSchema>;
 
+export const SLIDE_COPY_RULES = `- Slide copy: the title has at most 10 words and the body at most 30 (about 80 words per slide at most). Interior titles are questions the reader would ask. End a slide with a bridge phrase to the next ("but", "so"), never "and then". Turn a technical step into a personal benefit with a takeaway line starting "Tradotto:" (in the language of the copy, the equivalent of "In plain words:" when it is not Italian). Put a source line under every figure. One thought per paragraph and one emotion for the whole content. Use the audience's own words before technical terms. Grandma rule: a person outside the field understands it on one read; be specific (the named case and number from the brief), never generic. Read it aloud: if you would not say it, rewrite it.`;
+
+export const CAPTION_RULES = `- Caption: line 1 is the cover hook. Ask for the save (or the one action of the brief) before the middle of the caption. Instagram: exactly 3 discovery hashtags, each on a different angle. When the brief lists photo credits, put the credit line before the hashtags. Facebook: one 4:5 frame with a long caption, never an album. LinkedIn: the hook in the first 210 characters and 3 to 5 sector hashtags. The caption of each channel has its own angle; skip a channel with no credible angle.`;
+
 export const SLIDES_SYSTEM = withPlaybooks(
   `You are the Copywriter of Forgecy. You write the slide copy of a carousel following the approved outline, one slide per row, in the same order.
 
@@ -246,7 +282,9 @@ ${SHARED_RULES}
 - Every slot has a character limit: aim for at most 70% of it, so the text fits after the template's line breaks. "list" slots want short items.
 - Fill only the layout's text and list slots; for image slots write a visual brief in imageBriefs.
 - Highlight a keyword with ==word== only in the slots that allow it.
-- Caption: the first line hooks, then develops the promise and closes with the CTA. Follow the caption length tier given with the brief: it is a character budget, always within the channel's limit.
+${SLIDE_COPY_RULES}
+${CAPTION_RULES}
+- Follow the caption length tier given with the brief: it is a character budget, always within the channel's limit.
 - Hashtags without spaces, relevant, in the requested number.`,
   "copywriting",
 );
@@ -456,6 +494,36 @@ export interface CarouselPromptInput {
   direction?: CreativeDirection | null;
 }
 
+/** Slide count range the kind of content suggests, as a hint (the requested count still wins). */
+export function slideCountHint(objective: Brief["objective"]): string | null {
+  if (!objective) return null;
+  const [min, max] = slideCountPresets[objective];
+  return `Typical length for this kind of content (${objective}): ${min} to ${max} slides. Treat it as a hint; the requested number of slides wins.`;
+}
+
+/** The structured parts of the brief, written for the Copywriter. */
+function briefStrategyLines(b: Brief): string[] {
+  const open = b.openQuestions.filter((q) => !q.resolved);
+  return [
+    b.thesis && `Thesis (the one sentence the reader leaves with): ${b.thesis}`,
+    b.emotion && `Emotion (the only one for the whole content): ${b.emotion.replaceAll("_", " ")}`,
+    b.action && `Action asked of the reader: ${b.action}`,
+    b.trigger && `Trigger (why now): ${b.trigger}`,
+    b.closing &&
+      `Closing: ${b.closing === "cta" ? "call to action" : "conclusion, no action asked"}`,
+    b.canSay.length &&
+      `Can say:\n${b.canSay.map((c) => `- ${c.text}${c.source ? ` (source: ${c.source})` : ""}`).join("\n")}`,
+    b.cannotSay.length &&
+      `Must not say (the checks reject these phrases):\n${b.cannotSay.map((c) => `- ${c.text}${c.reason ? ` (${c.reason})` : ""}`).join("\n")}`,
+    b.risk && `Risk to avoid: ${b.risk}`,
+    open.length &&
+      `Open questions still unconfirmed with the client (do not state them as fact):\n${open.map((q) => `- ${q.text}`).join("\n")}`,
+    b.hookArchetype &&
+      `Preferred hook archetype: ${b.hookArchetype}${b.hookRationale ? ` (${b.hookRationale})` : ""}`,
+    slideCountHint(b.objective),
+  ].filter((x): x is string => typeof x === "string" && x !== "");
+}
+
 export function briefBlock(i: CarouselPromptInput): string {
   const b = i.brief;
   const lines = [
@@ -468,6 +536,7 @@ export function briefBlock(i: CarouselPromptInput): string {
     b.audienceNote && `Audience note: ${b.audienceNote}`,
     b.promise && `Promise: ${b.promise}`,
     b.cta ? `CTA: ${b.cta}` : i.defaultCta && `CTA (client default): ${i.defaultCta}`,
+    ...briefStrategyLines(b),
     b.constraints.length && `Constraints:\n${b.constraints.map((c) => `- ${c}`).join("\n")}`,
     b.toneShift.length &&
       `Tone shifts (at most one step from the Brand Identity): ${b.toneShift.map((t) => `${t.axis} ${t.delta > 0 ? "+1" : t.delta < 0 ? "-1" : "0"}`).join(", ")}`,

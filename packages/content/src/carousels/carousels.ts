@@ -855,6 +855,7 @@ export async function checkDocument(
     brandVersion: { used: c.brandVersionId, current: brand?.versionId ?? null },
     captionLength: brief.outputs.captionLength,
     claims,
+    brief: { openQuestions: brief.openQuestions, cannotSay: brief.cannotSay },
   });
 
   const port = brandGuard();

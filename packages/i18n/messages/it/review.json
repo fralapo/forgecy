@@ -41,7 +41,9 @@
       "onlyLast": "Slide {slide}: questo layout può essere solo l’ultima slide",
       "ctaOnlyLast": "Slide {slide}: la CTA va solo sull’ultima slide",
       "maxImages": "Slide {slide}: al massimo {max} immagini per slide"
-    }
+    },
+    "openQuestions": "{count, plural, one {# domanda} other {# domande}} ancora {count, plural, one {aperta} other {aperte}} con il cliente: {count, plural, one {risolvila} other {risolvile}} nel Brief prima di esportare",
+    "cannotSay": "{slide, select, caption {Didascalia} other {Slide {slide}}}: contiene “{phrase}”, che il brief vieta di dire"
   },
   "guard": {
     "finding": {

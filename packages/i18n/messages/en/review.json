@@ -41,7 +41,9 @@
       "onlyLast": "Slide {slide}: this layout can only be the last slide",
       "ctaOnlyLast": "Slide {slide}: the call to action goes only on the last slide",
       "maxImages": "Slide {slide}: at most {max} images per slide"
-    }
+    },
+    "openQuestions": "{count, plural, one {# question} other {# questions}} still open with the client: answer {count, plural, one {it} other {them}} in the Brief before exporting",
+    "cannotSay": "{slide, select, caption {Caption} other {Slide {slide}}}: contains “{phrase}”, which the brief says must not be said"
   },
   "guard": {
     "finding": {

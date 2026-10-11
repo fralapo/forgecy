@@ -77,6 +77,8 @@ import {
   type ClaimFinding,
   type ContentChannel,
   type ContentSlide,
+  type HookAlternative,
+  type HookArchetype,
   type Outline,
   type Provenance,
 } from "../document";
@@ -589,12 +591,16 @@ async function locked<T>(
 }
 
 /** Alternatives worth showing: trimmed, not empty, not the hook itself, no repeats, at most two. */
-export function hookAlternativesOf(hook: string, alternatives: readonly string[]): string[] {
+export function hookAlternativesOf(
+  hook: string,
+  alternatives: readonly { text: string; archetype?: HookArchetype | undefined }[],
+): HookAlternative[] {
   const seen = new Set([hook.trim()]);
   return alternatives
-    .map((a) => a.trim())
-    .filter((a) => a && !seen.has(a) && Boolean(seen.add(a)))
-    .slice(0, 2);
+    .map((a) => ({ ...a, text: a.text.trim() }))
+    .filter((a) => a.text && !seen.has(a.text) && Boolean(seen.add(a.text)))
+    .slice(0, 2)
+    .map((a) => (a.archetype ? { text: a.text, archetype: a.archetype } : { text: a.text }));
 }
 
 export async function runGenerateOutline(
@@ -646,7 +652,15 @@ export async function runGenerateOutline(
     const outline: Outline = {
       title: res.data.title.trim(),
       hook: res.data.hook.trim(),
-      hookAlternatives: hookAlternativesOf(res.data.hook, res.data.hookAlternatives),
+      hookAlternatives: hookAlternativesOf(
+        res.data.hook,
+        res.data.hookAlternatives.map((a) => ({
+          text: a.text,
+          ...(a.archetype ? { archetype: a.archetype } : {}),
+        })),
+      ),
+      ...(res.data.hookArchetype ? { hookArchetype: res.data.hookArchetype } : {}),
+      ...(res.data.needsInput === "payoff" ? { needsInput: "payoff" as const } : {}),
       rows,
       cta: res.data.cta.trim(),
       caption: previous?.caption ?? "",
@@ -662,7 +676,12 @@ export async function runGenerateOutline(
       jobId: ctx.jobId,
     });
     await ctx.progress(100);
-    return { outlineNumber: row.outlineNumber, rows: rows.length, costMicroUsd: res.costMicroUsd };
+    return {
+      outlineNumber: row.outlineNumber,
+      rows: rows.length,
+      costMicroUsd: res.costMicroUsd,
+      ...(outline.needsInput ? { needsInput: outline.needsInput } : {}),
+    };
   });
 }
 

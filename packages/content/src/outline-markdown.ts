@@ -33,7 +33,7 @@ export function outlineToMarkdown(
   o: Pick<Outline, "title" | "hook" | "hookAlternatives" | "rows" | "cta">,
 ): string {
   const out = [`# ${o.title}`, `Hook: ${o.hook}`];
-  for (const a of o.hookAlternatives) out.push(`Alt hook: ${a}`);
+  for (const a of o.hookAlternatives) out.push(`Alt hook: ${a.text}`);
   o.rows.forEach((r, i) => {
     out.push("", `## ${i + 1}. ${r.role} | ${r.layout}`, r.point);
     if (r.note) out.push(`Note: ${r.note}`);
@@ -111,7 +111,7 @@ export function outlineFromMarkdown(
   const parsed = outlineSchema.safeParse({
     title,
     hook,
-    hookAlternatives: alts.filter(Boolean),
+    hookAlternatives: alts.filter(Boolean).map((text) => ({ text })),
     cta,
     rows: rows.map((r) => ({
       id: newSlideId(),

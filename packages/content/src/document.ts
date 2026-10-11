@@ -186,6 +186,39 @@ export const toneShiftSchema = z.object({
   delta: z.union([z.literal(-1), z.literal(0), z.literal(1)]),
 });
 
+/** Feeling the whole content is built around; one per content. */
+export const briefEmotions = [
+  "frustration",
+  "empathy",
+  "relief",
+  "fear_of_missing_out",
+  "curiosity",
+  "pride",
+] as const;
+/** The one action the content asks the reader for. */
+export const briefActions = ["save", "send", "comment", "link", "none"] as const;
+export const briefClosings = ["cta", "conclusion"] as const;
+/** Kind of content, which drives the slide count hint. */
+export const briefObjectives = ["alert", "explainer", "tool", "document"] as const;
+/** Slide count range suggested for each kind of content. */
+export const slideCountPresets: Record<(typeof briefObjectives)[number], [number, number]> = {
+  alert: [3, 5],
+  explainer: [6, 8],
+  tool: [8, 10],
+  document: [8, 12],
+};
+/** Ways a cover hook can work; labelled on each hook the Copywriter proposes. */
+export const hookArchetypes = [
+  "dry_statement",
+  "habitual_gesture",
+  "bare_number",
+  "spoken_sentence",
+  "common_belief",
+  "nobody_explains",
+] as const;
+export type HookArchetype = (typeof hookArchetypes)[number];
+export const hookArchetypeSchema = z.enum(hookArchetypes);
+
 export const briefSchema = z.object({
   text: text(2000).default(""),
   problem: text(300).default(""),
@@ -206,6 +239,25 @@ export const briefSchema = z.object({
       designerNotes: z.boolean().default(false),
     })
     .prefault({}),
+  /** The one sentence the reader should leave with. */
+  thesis: text(300).default(""),
+  emotion: z.enum(briefEmotions).nullable().default(null),
+  action: z.enum(briefActions).nullable().default(null),
+  /** What makes the reader care today. */
+  trigger: text(200).default(""),
+  closing: z.enum(briefClosings).nullable().default(null),
+  /** Statements the content may make, with where they come from. */
+  canSay: list(z.object({ text: required(300), source: text(200).default("") }), 20),
+  /** Phrases the content must not contain (checked on the slides and the caption). */
+  cannotSay: list(z.object({ text: required(200), reason: text(200).default("") }), 30),
+  risk: text(300).default(""),
+  /** Points to confirm with the client; the export stays blocked while one is open. */
+  openQuestions: list(z.object({ text: required(300), resolved: z.boolean().default(false) }), 20),
+  /** First comment to post under the content (links and extras kept out of the caption). */
+  firstComment: text(500).default(""),
+  hookArchetype: hookArchetypeSchema.nullable().default(null),
+  hookRationale: text(300).default(""),
+  objective: z.enum(briefObjectives).nullable().default(null),
   /** Fields still holding the value copied from the plan item (“From the plan”). */
   fromPlan: list(z.enum(["text", "problem", "promise", "cta", "constraints"]), 5),
 });
@@ -225,11 +277,21 @@ export const outlineRowSchema = z.object({
 });
 export type OutlineRow = z.output<typeof outlineRowSchema>;
 
+/** Older outlines stored plain strings; they read as a hook with no archetype. */
+export type HookAlternative = { text: string; archetype?: HookArchetype };
+export const hookAlternativeSchema = z.union([
+  required(200).transform((t): HookAlternative => ({ text: t })),
+  z.object({ text: required(200), archetype: hookArchetypeSchema.optional() }),
+]);
+
 export const outlineSchema = z.object({
   title: text(160).default(""),
   hook: text(200).default(""),
   /** Up to two other hooks the Copywriter proposed; a person may swap one in. */
-  hookAlternatives: list(required(200), 2),
+  hookAlternatives: list(hookAlternativeSchema, 2),
+  hookArchetype: hookArchetypeSchema.optional(),
+  /** Set by the Copywriter instead of inventing a payoff; the person supplies it in the brief. */
+  needsInput: z.literal("payoff").optional(),
   rows: z.array(outlineRowSchema).min(1).max(20),
   cta: text(200).default(""),
   caption: text(3000).default(""),
