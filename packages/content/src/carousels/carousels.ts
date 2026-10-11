@@ -841,6 +841,10 @@ export async function checkDocument(
     ...(brand?.document.verbal.writingRules?.value.maxHashtags !== undefined
       ? { maxHashtags: brand.document.verbal.writingRules.value.maxHashtags }
       : {}),
+    language: c.language,
+    ...(brand?.document.verbal.writingRules?.value.person
+      ? { person: brand.document.verbal.writingRules.value.person }
+      : {}),
     assets: library.map,
     usePrice: brief.usePrice,
     wantsAltText: brief.outputs.altText,

@@ -24,6 +24,20 @@ import {
   type ContentChannel,
 } from "../document";
 import { channelLabels } from "../labels";
+import {
+  addressForm,
+  creditBeforeHashtags,
+  denseRuns,
+  findAiTells,
+  findPlaceholder,
+  hashtagSet,
+  wordCount,
+} from "./copy-lint";
+
+/** A body slide with at least this many words in its text counts as dense for the rhythm check. */
+const DENSE_WORDS = 35;
+/** Instagram carousels perform best with exactly this many discovery hashtags. */
+const INSTAGRAM_HASHTAGS = 3;
 
 /**
  * A caption cut to `limit` visible characters, at the last word break when one falls
@@ -100,6 +114,12 @@ export interface CheckInput {
   captionLength?: CaptionLength;
   /** Claims the AI critic flagged, shown as warnings while their words are still in the copy. */
   claims?: readonly ClaimFinding[];
+  /** Language of the deliverable; the copy lint runs for the languages it has patterns for. */
+  language?: string;
+  /** Form of address of the Brand Identity writing rules; “tu” and “voi” are checked. */
+  person?: "tu" | "lei" | "voi" | "noi" | "impersonale";
+  /** Stock image credit lines that the caption must carry before its hashtags. */
+  credits?: readonly string[];
 }
 
 /** Figures that read as data: two or more digits, or any amount with %, a currency or a unit sign. */
@@ -227,6 +247,83 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
           ...say("review.checks.forbiddenWord", { word: w }),
           ...(t.slideId ? { slideId: t.slideId } : {}),
         });
+  }
+
+  const where = (t: { slideId?: string }) => ({
+    slide: t.slideId ? String(doc.slides.findIndex((s) => s.id === t.slideId) + 1) : "caption",
+  });
+  for (const t of texts) {
+    if (!t.slideId && t.text === doc.title) continue;
+    const key = t.slideId ?? "caption";
+    const marker = findPlaceholder(t.text);
+    if (marker)
+      add({
+        id: `placeholder:${key}`,
+        severity: "error",
+        ...say("review.checks.placeholder", { ...where(t), match: marker }),
+        ...(t.slideId ? { slideId: t.slideId } : {}),
+      });
+    for (const tell of findAiTells(t.text, input.language ?? ""))
+      add({
+        id: `aitell:${tell.kind}:${key}`,
+        severity: "warning",
+        ...say("review.checks.aiTell", { ...where(t), kind: tell.kind, match: tell.match }),
+        ...(t.slideId ? { slideId: t.slideId } : {}),
+      });
+    const form =
+      input.person === "tu" || input.person === "voi"
+        ? addressForm(t.text, input.language ?? "")
+        : null;
+    if (form && form !== input.person)
+      add({
+        id: `person:${key}`,
+        severity: "warning",
+        ...say("review.checks.person", { ...where(t), expected: input.person! }),
+        ...(t.slideId ? { slideId: t.slideId } : {}),
+      });
+  }
+
+  if (input.channel === "instagram") {
+    const count = hashtagSet(doc.hashtags, doc.caption).size;
+    if (count !== INSTAGRAM_HASHTAGS)
+      add({
+        id: "caption:hashtags",
+        severity: "warning",
+        ...say("review.checks.hashtagsExact", {
+          count: String(count),
+          target: String(INSTAGRAM_HASHTAGS),
+        }),
+      });
+  }
+  for (const credit of input.credits ?? [])
+    if (!creditBeforeHashtags(doc.caption, credit))
+      add({
+        id: `caption:credit:${credit.toLowerCase()}`,
+        severity: "warning",
+        ...say("review.checks.captionCredit", { credit }),
+      });
+
+  if (manifest) {
+    const dense = doc.slides.map((s) => {
+      const role = findLayout(manifest, s.layout)?.role;
+      return (
+        role !== undefined &&
+        role !== "cover" &&
+        role !== "cta" &&
+        slotTexts(s.slots).reduce((n, t) => n + wordCount(t), 0) >= DENSE_WORDS
+      );
+    });
+    for (const [from, to] of denseRuns(dense))
+      add({
+        id: `rhythm:${doc.slides[from]!.id}`,
+        severity: "warning",
+        ...say("review.checks.rhythm", {
+          from: String(from + 1),
+          to: String(to + 1),
+          count: String(to - from + 1),
+        }),
+        slideId: doc.slides[from]!.id,
+      });
   }
 
   if (!input.usePrice)

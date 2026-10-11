@@ -102,6 +102,10 @@ export default async function EditorPage({
         checkContext={{
           forbiddenWords: brand?.document.verbal.forbiddenWords ?? [],
           ...(maxHashtags !== undefined ? { maxHashtags } : {}),
+          language: c.language,
+          ...(brand?.document.verbal.writingRules?.value.person
+            ? { person: brand.document.verbal.writingRules.value.person }
+            : {}),
           usePrice: brief.usePrice,
           wantsAltText: brief.outputs.altText,
           captionLength: brief.outputs.captionLength,

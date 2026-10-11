@@ -66,7 +66,7 @@ describe("templates", () => {
 describe("checks", () => {
   it("passes a valid carousel", () => {
     const checks = computeChecks({
-      document: doc([cover, ...body, cta]),
+      document: doc([cover, ...body, cta], { hashtags: ["one", "two", "three"] }),
       manifest,
       channel: "instagram",
     });
