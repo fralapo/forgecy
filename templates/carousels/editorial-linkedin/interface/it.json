@@ -1,6 +1,6 @@
 {
   "name": "Editoriale · Documento LinkedIn",
-  "description": "Documento PDF LinkedIn con 10 layout, la stessa struttura del carosello Instagram con un’impaginazione da report.",
+  "description": "Documento PDF LinkedIn con 18 layout, la stessa struttura del carosello Instagram con un’impaginazione da report.",
   "notes": "Un documento da sfogliare: una pagina per idea, titoli che funzionano anche senza il testo.",
   "layouts": {
     "cover": {
@@ -85,6 +85,71 @@
         "kicker": "Occhiello",
         "title": "Titolo",
         "screen": "Schermata"
+      }
+    },
+    "breather": {
+      "name": "Pausa",
+      "slots": {
+        "title": "Frase",
+        "body": "Testo"
+      }
+    },
+    "evidence": {
+      "name": "Prova",
+      "slots": {
+        "top": "Riga in alto",
+        "body": "Messaggio",
+        "note": "Nota",
+        "source": "Fonte",
+        "detail": "Cerchio dettaglio"
+      }
+    },
+    "takeaway": {
+      "name": "Tradotto",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "body": "Testo",
+        "takeaway": "In parole semplici"
+      }
+    },
+    "steps": {
+      "name": "Passaggi",
+      "slots": {
+        "title": "Titolo",
+        "items": "Passaggi"
+      }
+    },
+    "cover-photo": {
+      "name": "Copertina con foto",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "subtitle": "Sottotitolo",
+        "image": "Foto"
+      }
+    },
+    "cover-statement": {
+      "name": "Copertina frase",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "subtitle": "Sottotitolo"
+      }
+    },
+    "cta-single": {
+      "name": "Azione unica",
+      "slots": {
+        "title": "Titolo",
+        "action": "Azione",
+        "hint": "Nota"
+      }
+    },
+    "cta-conclusion": {
+      "name": "Conclusione",
+      "slots": {
+        "title": "Titolo",
+        "body": "Testo"
       }
     }
   }

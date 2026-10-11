@@ -1,6 +1,6 @@
 {
   "name": "Editoriale · Instagram 4:5",
-  "description": "Carosello educativo con 10 layout: copertina, testo, elenco, citazione, dato, problema e soluzione, confronto, codice, mockup telefono e CTA.",
+  "description": "Carosello educativo con 18 layout: copertine, testo, elenchi, citazione, dato, problema e soluzione, confronto, codice, mockup telefono, prova, tradotto e CTA.",
   "notes": "Un’idea per slide. Il titolo della copertina è l’hook: breve, concreto, leggibile come miniatura.",
   "layouts": {
     "cover": {
@@ -85,6 +85,71 @@
         "kicker": "Occhiello",
         "title": "Titolo",
         "screen": "Schermata"
+      }
+    },
+    "breather": {
+      "name": "Pausa",
+      "slots": {
+        "title": "Frase",
+        "body": "Testo"
+      }
+    },
+    "evidence": {
+      "name": "Prova",
+      "slots": {
+        "top": "Riga in alto",
+        "body": "Messaggio",
+        "note": "Nota",
+        "source": "Fonte",
+        "detail": "Cerchio dettaglio"
+      }
+    },
+    "takeaway": {
+      "name": "Tradotto",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "body": "Testo",
+        "takeaway": "In parole semplici"
+      }
+    },
+    "steps": {
+      "name": "Passaggi",
+      "slots": {
+        "title": "Titolo",
+        "items": "Passaggi"
+      }
+    },
+    "cover-photo": {
+      "name": "Copertina con foto",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "subtitle": "Sottotitolo",
+        "image": "Foto"
+      }
+    },
+    "cover-statement": {
+      "name": "Copertina frase",
+      "slots": {
+        "kicker": "Occhiello",
+        "title": "Titolo",
+        "subtitle": "Sottotitolo"
+      }
+    },
+    "cta-single": {
+      "name": "Azione unica",
+      "slots": {
+        "title": "Titolo",
+        "action": "Azione",
+        "hint": "Nota"
+      }
+    },
+    "cta-conclusion": {
+      "name": "Conclusione",
+      "slots": {
+        "title": "Titolo",
+        "body": "Testo"
       }
     }
   }

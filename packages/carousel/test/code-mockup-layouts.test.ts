@@ -10,7 +10,7 @@ const FOLDERS = ["carousels/editorial-ig-4x5", "carousels/editorial-linkedin"];
 describe.each(FOLDERS)("code and mockup layouts of %s", (folder) => {
   it("ships both layouts as text-role layouts in a bumped version", async () => {
     const { manifest } = await loadRepoTemplate(folder);
-    expect(manifest.version).toBe("1.3.0");
+    expect(manifest.version).toBe("1.4.0");
     for (const id of ["code", "mockup"]) expect(findLayout(manifest, id)?.role).toBe("text");
     // The text role still resolves to the plain text layout first.
     expect(manifest.layouts.find((l) => l.role === "text")?.id).toBe("text");

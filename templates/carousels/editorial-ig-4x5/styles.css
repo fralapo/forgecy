@@ -379,3 +379,204 @@
   width: 100%;
   height: 100%;
 }
+
+/* Tone "accent": the accent color as the page background. */
+[data-tone="accent"] .frame {
+  background: var(--fc-accent);
+  color: var(--fc-cta-text);
+}
+[data-tone="accent"] .kicker,
+[data-tone="accent"] .pager,
+[data-tone="accent"] .foot,
+[data-tone="accent"] .swipe,
+[data-tone="accent"] .lead,
+[data-tone="accent"] .source,
+[data-tone="accent"] .code-note {
+  color: var(--fc-cta-text);
+}
+[data-tone="accent"] .fc-hl {
+  color: var(--fc-text);
+}
+[data-tone="accent"] .button {
+  background: var(--fc-cta-text);
+  color: var(--fc-accent);
+}
+
+/* Breather: a statement alone, large and centered vertically. */
+.breather .display {
+  font-size: 88px;
+}
+
+/* Evidence: a chat or mail card, with an optional detail circle on its corner. */
+.evidence-card {
+  position: relative;
+  margin-top: 72px;
+  padding: 40px 44px;
+  border-radius: 28px;
+  background: var(--fc-surface);
+  color: var(--fc-text);
+}
+.evidence-top {
+  margin: 0 0 20px;
+  font-family: var(--fc-font-heading);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--fc-muted);
+}
+.evidence-body {
+  margin: 0;
+  font-size: 36px;
+  line-height: 1.4;
+}
+.evidence-note {
+  margin: 28px 0 0;
+  padding-top: 20px;
+  border-top: 2px solid var(--fc-muted);
+  font-size: 28px;
+  color: var(--fc-muted);
+}
+.evidence-circle {
+  position: absolute;
+  top: -72px;
+  right: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  height: 96px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--fc-accent);
+  color: var(--fc-cta-text);
+  font-family: var(--fc-font-heading);
+  font-size: 32px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Takeaway: the plain-words box, anchored to the bottom of the page. */
+.takeaway .body {
+  justify-content: flex-start;
+  padding-top: 24px;
+}
+.takeaway-box {
+  margin-top: auto;
+  padding: 32px 36px;
+  border-radius: 20px;
+  background: var(--fc-accent);
+  color: var(--fc-cta-text);
+}
+.takeaway-label {
+  margin: 0 0 12px;
+  font-family: var(--fc-font-heading);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.takeaway-text {
+  margin: 0;
+  font-family: var(--fc-font-heading);
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* Steps: the list with numbered circles. */
+.steps li {
+  align-items: center;
+  gap: 32px;
+  padding: 20px 0;
+  border-top: 0;
+}
+.steps li::before {
+  content: counter(item);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  background: var(--fc-accent);
+  color: var(--fc-cta-text);
+  font-size: 36px;
+}
+
+/* Cover with the photo over the whole page; a scrim at the top and the bottom keeps the text legible. */
+.cover-photo {
+  background: var(--fc-text);
+  color: var(--fc-bg);
+}
+.cover-photo .photo-full {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.scrim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  opacity: 0.85;
+  pointer-events: none;
+}
+.scrim-top {
+  top: 0;
+  height: 28%;
+  background: linear-gradient(to bottom, var(--fc-text), transparent);
+}
+.scrim-bottom {
+  bottom: 0;
+  height: 62%;
+  background: linear-gradient(to top, var(--fc-text), transparent);
+}
+.cover-photo .chrome,
+.cover-photo .body,
+.cover-photo .foot {
+  position: relative;
+  color: var(--fc-bg);
+}
+.cover-photo .pager,
+.cover-photo .lead {
+  color: var(--fc-bg);
+}
+.cover-photo .body {
+  justify-content: flex-end;
+}
+
+/* Cover with type only. */
+.cover-statement .body {
+  justify-content: flex-end;
+}
+.cover-statement .body::before {
+  content: "";
+  width: 160px;
+  height: 16px;
+  margin-bottom: 48px;
+  background: var(--fc-accent);
+}
+.cover-statement .display {
+  font-size: 88px;
+}
+
+/* CTA with one action, and the conclusion without one. */
+.cta-single .button {
+  align-self: stretch;
+  margin-top: 64px;
+  padding: 36px 40px;
+  text-align: center;
+  font-size: 48px;
+}
+.hint {
+  margin: 28px 0 0;
+  font-size: 28px;
+  text-align: center;
+  color: var(--fc-muted);
+}
+.cta-conclusion .body::before {
+  content: "";
+  width: 160px;
+  height: 16px;
+  margin-bottom: 48px;
+  background: var(--fc-accent);
+}
