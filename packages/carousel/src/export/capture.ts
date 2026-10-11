@@ -1,10 +1,11 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
-import type { MessageRef } from "@forgecy/core";
+import type { Locale, MessageRef } from "@forgecy/core";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import type { Browser, Page } from "playwright-core";
 import type { RenderedSlide } from "../renderer";
 import type { SafeZone } from "../formats";
+import { MAX_BLOCK_LINES, MIN_FONT_PX, typographyProblems } from "../typography/lines";
 
 /** Problems seen on the rendered page (spec: Brand Guard checks on the render, not only the JSON). */
 export type RenderIssueKind =
@@ -14,7 +15,11 @@ export type RenderIssueKind =
   | "overlap"
   | "too_many_lines"
   | "low_resolution"
-  | "image_missing";
+  | "image_missing"
+  | "widow"
+  | "bad_line_end"
+  | "small_font"
+  | "dense_block";
 
 export interface RenderIssue {
   /** 0-based slide index. */
@@ -36,6 +41,12 @@ export interface SlotMeasure {
   naturalWidth: number;
   naturalHeight: number;
   rect: { x: number; y: number; width: number; height: number };
+  /** Text of each rendered line (text slots), for widow and line-end checks. */
+  lineTexts?: string[];
+  /** Computed font size in px (text slots). */
+  fontSize?: number;
+  /** Box around the glyphs actually drawn, tighter than `rect` (text slots). */
+  ink?: { x: number; y: number; width: number; height: number };
 }
 
 export interface CaptureInput {
@@ -43,6 +54,8 @@ export interface CaptureInput {
   safeZone: SafeZone;
   /** Slot limits used to turn measures into issues. */
   limits?: Record<string, { maxLines?: number; minWidth?: number; minHeight?: number }>;
+  /** Language of the copy; when set, the slide is also checked for typography. */
+  language?: Locale;
 }
 
 export interface Capture {
@@ -63,13 +76,39 @@ function measureInPage(safe: SafeZone): SlotMeasure[] {
     const r = el.getBoundingClientRect();
     const isImg = el.tagName === "IMG";
     let lines = 0;
+    let lineTexts: string[] | undefined;
+    let ink: SlotMeasure["ink"];
+    let fontSize: number | undefined;
     if (!isImg) {
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      const tops = new Set<number>();
-      for (const rect of Array.from(range.getClientRects()))
-        if (rect.width > 0 && rect.height > 0) tops.add(Math.round(rect.top));
-      lines = tops.size;
+      // One range per character: its line is its top, its ink the union of the boxes.
+      const byTop = new Map<number, string>();
+      let x0 = Infinity;
+      let y0 = Infinity;
+      let x1 = -Infinity;
+      let y1 = -Infinity;
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        const data = n.textContent ?? "";
+        fontSize ??= parseFloat(getComputedStyle(n.parentElement ?? el).fontSize);
+        for (let i = 0; i < data.length; i++) {
+          const cr = document.createRange();
+          cr.setStart(n, i);
+          cr.setEnd(n, i + 1);
+          const b = cr.getBoundingClientRect();
+          if (b.width <= 0 || b.height <= 0) continue;
+          const top = Math.round(b.top);
+          byTop.set(top, (byTop.get(top) ?? "") + data[i]);
+          if (data[i]!.trim()) {
+            x0 = Math.min(x0, b.left);
+            y0 = Math.min(y0, b.top);
+            x1 = Math.max(x1, b.right);
+            y1 = Math.max(y1, b.bottom);
+          }
+        }
+      }
+      lines = byTop.size;
+      lineTexts = [...byTop.entries()].sort((a, b) => a[0] - b[0]).map(([, t]) => t.trim());
+      if (x1 > x0) ink = { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
     }
     // Clipped: the slot hides its own overflow, or spills past an ancestor that does.
     // (Glyph ink beyond a tight line-height grows scrollHeight but is not a clip.)
@@ -99,6 +138,9 @@ function measureInPage(safe: SafeZone): SlotMeasure[] {
         r.right > W - safe.right + e ||
         r.bottom > H - safe.bottom + e,
       lines,
+      ...(lineTexts ? { lineTexts } : {}),
+      ...(fontSize !== undefined ? { fontSize } : {}),
+      ...(ink ? { ink } : {}),
       naturalWidth: isImg ? (el as HTMLImageElement).naturalWidth : 0,
       naturalHeight: isImg ? (el as HTMLImageElement).naturalHeight : 0,
       rect: { x: r.x, y: r.y, width: r.width, height: r.height },
@@ -117,6 +159,8 @@ export function issuesFromMeasures(
   slide: number,
   slots: SlotMeasure[],
   limits: CaptureInput["limits"] = {},
+  /** Language of the copy; typography is checked only when given. */
+  language?: Locale,
 ): RenderIssue[] {
   const issues: RenderIssue[] = [];
   const add = (
@@ -147,6 +191,29 @@ export function issuesFromMeasures(
           lines: s.lines,
           max: lim.maxLines,
         });
+      if (language)
+        for (const p of typographyProblems(s, language)) {
+          if (p.kind === "widow")
+            add(slot, "widow", "templates.renderIssues.widow", { slot, line: p.line });
+          else if (p.kind === "bad_line_end")
+            add(slot, "bad_line_end", "templates.renderIssues.badLineEnd", {
+              slot,
+              line: p.line,
+              word: p.word,
+            });
+          else if (p.kind === "small_font")
+            add(slot, "small_font", "templates.renderIssues.smallFont", {
+              slot,
+              px: p.px,
+              min: MIN_FONT_PX,
+            });
+          else
+            add(slot, "dense_block", "templates.renderIssues.denseBlock", {
+              slot,
+              lines: p.lines,
+              max: MAX_BLOCK_LINES,
+            });
+        }
     } else {
       if (!s.naturalWidth)
         add(slot, "image_missing", "templates.renderIssues.imageMissing", { slot });
@@ -224,7 +291,7 @@ export async function captureSlides(
       out.push({
         png: new Uint8Array(png),
         slots,
-        issues: issuesFromMeasures(i, slots, input.limits),
+        issues: issuesFromMeasures(i, slots, input.limits, input.language),
       });
       await onSlide?.(i);
     }

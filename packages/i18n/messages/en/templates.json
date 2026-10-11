@@ -198,7 +198,11 @@
     "tooManyLines": "“{slot}” takes {lines, plural, one {# line} other {# lines}} out of {max}.",
     "imageMissing": "The image of “{slot}” did not load.",
     "lowResolution": "The image of “{slot}” is {width}×{height} px, below the minimum.",
-    "overlap": "“{slot}” overlaps “{other}”."
+    "overlap": "“{slot}” overlaps “{other}”.",
+    "widow": "“{slot}” ends with a lone short word on line {line}.",
+    "badLineEnd": "“{slot}”: line {line} ends on “{word}”, which belongs with the next word.",
+    "smallFont": "“{slot}” is set at {px} px, below the {min} px minimum.",
+    "denseBlock": "“{slot}” takes {lines} lines, more than the {max} of a readable block."
   },
   "errors": {
     "invalidFolder": "Invalid folder",

@@ -198,7 +198,11 @@
     "tooManyLines": "“{slot}” occupa {lines, plural, one {# riga} other {# righe}} su {max}.",
     "imageMissing": "L’immagine di “{slot}” non si è caricata.",
     "lowResolution": "L’immagine di “{slot}” è {width}×{height} px, sotto il minimo.",
-    "overlap": "“{slot}” si sovrappone a “{other}”."
+    "overlap": "“{slot}” si sovrappone a “{other}”.",
+    "widow": "“{slot}” termina con una sola parola corta alla riga {line}.",
+    "badLineEnd": "“{slot}”: la riga {line} finisce su “{word}”, che va con la parola dopo.",
+    "smallFont": "“{slot}” è a {px} px, sotto il minimo di {min} px.",
+    "denseBlock": "“{slot}” occupa {lines} righe, più delle {max} di un blocco leggibile."
   },
   "errors": {
     "invalidFolder": "Cartella non valida",

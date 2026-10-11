@@ -98,7 +98,12 @@ export async function exportCarousel(
       language,
     });
     warnings.push(...rendered.warnings.map((w) => `Slide ${index + 1}: ${w}`));
-    return { rendered, safeZone: effectiveSafeZone(m, layout), limits: slotLimits(layout) };
+    return {
+      rendered,
+      safeZone: effectiveSafeZone(m, layout),
+      limits: slotLimits(layout),
+      language,
+    };
   });
 
   const captures = await captureSlides(

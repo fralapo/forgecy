@@ -4,6 +4,7 @@ import { type BrandTheme, NEUTRAL_BRAND } from "./brand";
 import { fontFaceRule, fontStack, inlineCss, resolvePackagePath } from "./css";
 import { FORMATS } from "./formats";
 import { templateTexts, type TemplateTexts } from "./labels";
+import { bindFunctionWords } from "./typography/bind";
 import { type TemplatePackage, packageFileDataUrl, readText } from "./package";
 import { ALLOWED_ELEMENTS, isAllowedAttribute, isDangerousValue } from "./sanitize";
 import type { ImageRef, Slide, SlotValue } from "./slide-schema";
@@ -134,9 +135,10 @@ function fillSlots(
     const name = el.getAttribute("data-slot") ?? "";
     const def = defs.get(name);
     const value: SlotValue | undefined = slide.slots[name];
+  language: Locale,
     let filled = false;
     if (def?.type === "text" && typeof value === "string" && value.trim()) {
-      setText(doc, el, value, def.highlight);
+      setText(doc, el, bindFunctionWords(value, language), def.highlight);
       el.setAttribute("data-slot-label", `${name} · ${def.maxChars}`);
       filled = true;
     } else if (def?.type === "list" && Array.isArray(value) && value.length) {
@@ -145,7 +147,7 @@ function fillSlots(
       for (const item of value) {
         const li = (proto ? proto.cloneNode(true) : doc.createElement("li")) as El;
         const target = (li.querySelector("[data-item]") ?? li) as El;
-        setText(doc, target, item, def.highlight);
+        setText(doc, target, bindFunctionWords(item, language), def.highlight);
         el.appendChild(li);
       }
       el.setAttribute("data-slot-label", `${name} · ${def.maxItems}×${def.maxChars}`);
@@ -267,7 +269,7 @@ export function renderSlideHtml(input: RenderSlideInput): RenderedSlide {
   );
   const root = document.querySelector(".fc-slide") as El;
   sanitize(root, pkg, layout.file);
-  fillSlots(document, root, layout, slide, pkg, assets, warnings);
+  fillSlots(document, root, layout, slide, pkg, assets, warnings, language);
   fillAuto(root, pkg, brand, assets, index, total);
   fillLabels(root, templateTexts(pkg, language));
 
