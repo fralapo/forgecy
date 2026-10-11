@@ -32,7 +32,7 @@ Constraints that did not move: the AI never writes HTML, agents propose and peop
 
 ### Taken as prompt rules and brief fields
 
-- Prompt rules (`packages/content/src/ai/prompts.ts`, version `content-2026-10-11c`): hook as recognition plus an open loop with named archetypes, the three-yes gate (a pain, a proof, a payoff doable today) with a request for the missing payoff instead of an invented one, the shareability test as an advisory note, the arc (slide 2 stands alone, payoff and strongest number penultimate, a breather every three or four dense slides, the last slide fixed), copy budgets, slide count by objective, caption rules per channel and the channel gate metric for the Planner.
+- Prompt rules (`packages/content/src/ai/prompts.ts`, version `content-2026-10-11d`): hook as recognition plus an open loop with named archetypes, the three-yes gate (a pain, a proof, a payoff doable today) with a request for the missing payoff instead of an invented one, the shareability test as an advisory note, the arc (slide 2 stands alone, payoff and strongest number penultimate, a breather every three or four dense slides, the last slide fixed), copy budgets, slide count by objective, caption rules per channel and the channel gate metric for the Planner.
 - **Brief fields**: thesis, emotion, action, trigger, closing, risk, first comment, hook archetype and rationale, objective.
 - **Open questions** are blockers to confirm with the client; while any is open the content is not ready to export. **Cannot say** entries (with a reason) feed Brand Guard for that content; **can say** entries carry a source.
 
@@ -58,6 +58,15 @@ Constraints that did not move: the AI never writes HTML, agents propose and peop
 - **No scraping and no AI.** Nothing reads a platform; the service lives in `packages/social` (`listening.ts`). Reads need `view` on the client, writes `project.edit`, so people see only their clients and agents cannot write.
 - **"Turn into content idea"** opens the existing new-carousel form with `?signal=<id>`: the signal text fills the brief and the first 200 characters (cut at a word) the brief `trigger`. Nothing is created until the person saves the form; `linked_content_id` is reserved for linking a content back and is not written yet.
 - **Client transfer**: area `content`; a package cannot assert `used`, so it arrives as `recurring`.
+
+### Taken as a per-channel adaptation (no migration)
+
+- **Adapt to another channel** (Copywriter, task `adapt_channel`, job `content.adapt_channel`, through `packages/ai` and logged in `jobs_log`; prompt version `content-2026-10-11d`). From an Instagram carousel that is in review, approved or exported, a person asks for a LinkedIn document or a Facebook post. The model rewrites the angle for that audience (the payoff turns into a company procedure on LinkedIn) on the layouts of a published template of the target channel, and writes the caption by the channel's rules: LinkedIn has the hook in the first 210 characters and 3 to 5 sector hashtags; Facebook is one 4:5 frame, a long caption, 0 to 3 hashtags, no @mentions, a link allowed.
+- **Skipping is an answer.** When the channel has no credible equivalent angle the model returns `creditableAngle: false`, a reason and no slides, and the panel proposes to skip that channel. A "credible" answer with no usable slide is turned into a skip too.
+- **A proposal, never a change.** The proposal lives in the job result (no table): channel, angle, reason, slides (layout and plain-text slots, cut to the layout), caption, hashtags, template and the revision of the source it was made on. The gate metric (Instagram saves and shares, Facebook shares in groups and comments, LinkedIn dwell time and comments) is set by the pipeline, not by the model, and shown with the proposal. Slots are text; the renderer inserts them as text.
+- **Accept creates a NEW draft.** `acceptAdaptation` (`edit_draft`, people only) creates a content for the channel with the client, pillar, rubric, product, audience and language of the source and the client's published Brand Identity at that moment, the brief of the source with the new angle as its text, and the proposed slides cut again to the layouts. It starts as `draft` and goes through the checks, the review and the approval like any other; the source is not touched. **Dismiss** answers the proposal and creates nothing. The single answer is claimed with a conditional update, so two clicks create one draft.
+- **UI.** The panel "Other channels" sits next to the claim check and the visual review in the editor; it is enabled only for an Instagram carousel in review or approved and warns when the source changed after the proposal.
+- **Not built, still:** the text-fill and the tone-alternation warnings (below). Facebook needs a published template for its format; without one the job says so.
 
 ### Left out, on purpose
 
