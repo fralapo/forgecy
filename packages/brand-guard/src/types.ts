@@ -138,6 +138,10 @@ export const renderSlotSchema = z.object({
   naturalWidth: z.number().nonnegative(),
   naturalHeight: z.number().nonnegative(),
   rect: z.object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() }),
+  /** Box around the glyphs actually drawn; tighter than `rect`. */
+  ink: z
+    .object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() })
+    .optional(),
 });
 export type RenderSlot = z.infer<typeof renderSlotSchema>;
 

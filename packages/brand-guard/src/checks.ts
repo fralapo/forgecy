@@ -17,6 +17,7 @@ import {
 import type { BrandCheckSeverity } from "@forgecy/core";
 import { englishMessage, messageRef, type MessageKey, type MessageValues } from "@forgecy/i18n";
 import { checkContrast, colorToHex, formatRatio, WCAG } from "@forgecy/ui/tokens";
+import { BOTTOM_ZONE_PX, geometryProblems, MIN_MARGIN_PX } from "./geometry";
 import { coherenceScore, RENDER_UNVERIFIED } from "./score";
 import type {
   BrandCheckFinding,
@@ -1144,6 +1145,31 @@ function checkRender(ctx: Ctx, pal: Palette) {
             { measured: m.lines, threshold: maxLines },
             { count: String(m.lines), max: String(maxLines) },
           );
+        if (!m.outsideSlide)
+          for (const g of geometryProblems(m.ink ?? m.rect, ctx.content.size, i === 0))
+            if (g === "cover_corner") add(m, g, "warning", "review.guard.finding.coverCorner");
+            else if (g === "bottom_zone")
+              add(
+                m,
+                g,
+                "warning",
+                "review.guard.finding.bottomZone",
+                {},
+                {
+                  px: String(BOTTOM_ZONE_PX),
+                },
+              );
+            else
+              add(
+                m,
+                g,
+                "warning",
+                "review.guard.finding.edgeMargin",
+                {},
+                {
+                  px: String(MIN_MARGIN_PX),
+                },
+              );
         continue;
       }
       if (!m.naturalWidth) {

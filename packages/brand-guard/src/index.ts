@@ -14,6 +14,7 @@ export {
   type CheckOptions,
   type GuardBrand,
 } from "./checks";
+export * from "./geometry";
 export * from "./score";
 export * from "./review";
 export * from "./service";
