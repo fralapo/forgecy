@@ -1,8 +1,8 @@
 import type { Locale } from "@forgecy/core";
 import { FUNCTION_WORDS } from "./function-words";
 
-/** Smallest text on a slide, in px, readable in a feed thumbnail. */
-export const MIN_FONT_PX = 26;
+/** Smallest text on a slide, in px, readable in a feed thumbnail (the smallest step of the type scale). */
+export const MIN_FONT_PX = 24;
 /** More lines than this in one block reads as a wall of text. */
 export const MAX_BLOCK_LINES = 7;
 /** A last line this short (one word, at most this many letters) is a widow. */

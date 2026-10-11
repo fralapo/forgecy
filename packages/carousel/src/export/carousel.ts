@@ -102,7 +102,8 @@ export async function exportCarousel(
       rendered,
       safeZone: effectiveSafeZone(m, layout),
       limits: slotLimits(layout),
-      language,
+      // Feed typography rules (widows, 24px floor) are for carousels; report pages are dense on purpose.
+      ...(pkg.manifest.kind === "carousel" ? { language } : {}),
     };
   });
 

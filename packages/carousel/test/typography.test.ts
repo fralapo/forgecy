@@ -55,9 +55,9 @@ describe("typographyProblems", () => {
       "bad_line_end",
     ]);
   });
-  it("flags fonts under 26px and blocks over 7 lines", () => {
-    expect(kinds({ lines: 2, fontSize: 25 })).toEqual(["small_font"]);
-    expect(kinds({ lines: 2, fontSize: 26 })).toEqual([]);
+  it("flags fonts under 24px and blocks over 7 lines", () => {
+    expect(kinds({ lines: 2, fontSize: 23 })).toEqual(["small_font"]);
+    expect(kinds({ lines: 2, fontSize: 24 })).toEqual([]);
     expect(kinds({ lines: 8 })).toEqual(["dense_block"]);
     expect(kinds({ lines: 7 })).toEqual([]);
   });
@@ -72,7 +72,7 @@ describe("typography in render issues", () => {
     outsideSafe: false,
     lines: 2,
     lineTexts: ["The cat of", "dog"],
-    fontSize: 24,
+    fontSize: 20,
     naturalWidth: 0,
     naturalHeight: 0,
     rect: { x: 0, y: 0, width: 100, height: 40 },
@@ -82,7 +82,7 @@ describe("typography in render issues", () => {
     const issues = issuesFromMeasures(0, [slot], {}, "en");
     expect(issues.map((i) => i.kind).sort()).toEqual(["bad_line_end", "small_font", "widow"]);
     expect(issues.find((i) => i.kind === "small_font")?.message).toBe(
-      "“body” is set at 24 px, below the 26 px minimum.",
+      "“body” is set at 20 px, below the 24 px minimum.",
     );
   });
 });
