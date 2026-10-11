@@ -231,12 +231,13 @@ async function renderDraftSlides(
     issues: RenderedSlides["issues"];
   };
   const png: Uint8Array[] = [];
-  for (const f of result.files.filter((x) => x.kind === "png")) {
+  const pngs = result.files.filter((x) => x.kind === "png");
+  for (const f of pngs) {
     const chunks: Buffer[] = [];
     for await (const chunk of await deps.storage.get(f.key)) chunks.push(Buffer.from(chunk));
     png.push(new Uint8Array(Buffer.concat(chunks)));
   }
-  return { png, issues: result.issues };
+  return { png, keys: pngs.map((f) => f.key), issues: result.issues };
 }
 
 export const contentHandlers: JobHandlers = {

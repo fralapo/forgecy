@@ -68,6 +68,7 @@ import {
   getContentRow,
   isLocked,
   isPublished,
+  latestVisualReview,
   outlineOf,
   recordOutline,
 } from "../carousels/carousels";
@@ -91,6 +92,7 @@ import {
   type Provenance,
   type VisualNote,
 } from "../document";
+import { nextVisualRound, orderVisualNotes } from "../visual-rounds";
 import { factBankOf, factBankPrompt } from "../carousels/facts";
 import { productSource, type ProductSummary } from "../products";
 import {
@@ -168,6 +170,8 @@ export interface PipelineDeps {
 /** What the visual reviewer gets from a render: one PNG per slide and the issues measured on it. */
 export interface RenderedSlides {
   png: Uint8Array[];
+  /** Storage keys of the same PNGs (content-addressed exports), so the editor can show the contact sheet. */
+  keys?: string[];
   /** 0-based slide index, as the renderer reports it. */
   issues: { slide: number; slot: string; kind: string; message: string }[];
 }
@@ -1426,13 +1430,25 @@ export function visualNotesOf(
 export async function runReviewVisual(
   deps: PipelineDeps,
   ctx: PipelineContext,
-  input: { clientId: string; contentId: string },
+  input: { clientId: string; contentId: string; restart?: boolean | undefined },
 ) {
   const ai = requireAi(deps);
   const s = await carouselSetup(deps, ctx, input.clientId, input.contentId, "reviewer");
   const doc = parseDocument(s.c.draft);
+  const before = await latestVisualReview(deps.db, input.contentId);
+  const round = nextVisualRound(
+    before ? { round: before.round, notes: before.notes.length } : null,
+    input.restart,
+  );
+  if (round === null) throw attention("content.jobErrors.visualRoundsDone");
   if (!doc.slides.length)
-    return { notes: [] as VisualNote[], draftRev: s.c.draftRev, mode: "text" as const };
+    return {
+      notes: [] as VisualNote[],
+      draftRev: s.c.draftRev,
+      mode: "text" as const,
+      round,
+      frames: [] as string[],
+    };
   await ctx.progress(10);
   let frames: RenderedSlides | null = null;
   try {
@@ -1494,9 +1510,12 @@ export async function runReviewVisual(
   }
   await ctx.progress(100);
   return {
-    notes: visualNotesOf(doc, res.data.notes),
+    notes: orderVisualNotes(visualNotesOf(doc, res.data.notes)),
     draftRev: s.c.draftRev,
     mode,
+    round,
+    // The slides the reviewer looked at, for the contact sheet (empty without a render).
+    frames: frames?.keys?.length === doc.slides.length ? frames.keys : ([] as string[]),
     costMicroUsd: res.costMicroUsd,
   };
 }

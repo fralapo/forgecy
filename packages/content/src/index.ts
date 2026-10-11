@@ -15,6 +15,7 @@ export * from "./strategy";
 export * from "./carousels/carousels";
 export * from "./assets";
 export * from "./jobs";
+export * from "./visual-rounds";
 export * from "./ai/prompts";
 export * from "./ai/pipeline";
 export * from "./queries";

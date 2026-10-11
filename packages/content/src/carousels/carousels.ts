@@ -863,6 +863,10 @@ export async function latestVisualReview(
   draftRev: number | null;
   mode: "images" | "text";
   notes: VisualNote[];
+  /** Round of the one-fix-at-a-time series, 1-based. */
+  round: number;
+  /** Storage keys of the reviewed slides' PNGs, in slide order (empty when there was no render). */
+  frames: string[];
 } | null> {
   const [row] = await db
     .select({ id: jobs.id, result: jobs.result })
@@ -885,6 +889,10 @@ export async function latestVisualReview(
     draftRev: typeof rev === "number" ? rev : null,
     mode: row.result?.mode === "images" ? "images" : "text",
     notes: notes.success ? notes.data : [],
+    round: typeof row.result?.round === "number" ? row.result.round : 1,
+    frames: Array.isArray(row.result?.frames)
+      ? row.result.frames.filter((k): k is string => typeof k === "string")
+      : [],
   };
 }
 

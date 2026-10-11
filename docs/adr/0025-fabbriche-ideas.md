@@ -84,6 +84,20 @@ Constraints that did not move: the AI never writes HTML, agents propose and peop
 - **Rights stay pending.** The Pexels licence allows free commercial use, but the rights model has no "confirmed by licence" state and an import never approves rights: a person confirms them with the basis "licensed", like an upload.
 - **Credit.** Using the photo in a slide adds "Photo: <Name> / Pexels" to the content's `stockCredits` (`addStockCredit`), which feeds the caption credit check and `manifest.txt`. Results in the interface link to Pexels and to the photographer, as the API terms ask.
 
+### Built: text over a face
+
+- **A declared face, not a guess.** An image slot value may carry an optional `face` box (`cx`, `cy`, `w`, `h`, fractions of the photo). Old data validates unchanged. In the editor, under the photo, "Mark a face in the photo" opens four percent fields; "No face in this photo" removes it. A photo with no box is never checked: there is no detection and no guess.
+- **Measurement.** The renderer writes the box and the focal point as `data-face` and `data-focal` on the image (text only). The page measurement reads them into `SlotMeasure.face`; the mapping onto the slide is done outside the page by the pure `faceRectOnSlide` (`typography/face.ts`), which accounts for `object-fit: cover` (the larger scale wins, the focal point decides how the overflow is cropped, as in the renderer).
+- **Decision.** `faceCoveredPercent` takes the intersection of a text slot (its ink box, else its rect) with the face and divides it by the face area; above 12% (`FACE_MAX_COVERED`) the render issue `text_over_face` is raised: severity `error` on the cover (slide 0) and `warning` on the others, so `RenderIssue` gained an optional `severity`. It runs for carousels only (the check is tied to the deliverable `language`, which reports do not pass). Messages are in `templates.renderIssues.textOverFace`, en and it.
+- **Not done.** Click-to-place on the preview (the percent fields are the minimum), and a Brand Guard finding for it: the issue lives in the render issues of the export, as the other typography checks do.
+
+### Built: contact sheet and one fix per round (visual review)
+
+- **Contact sheet.** The review job stores nothing new: the PNGs of the render are the content-addressed exports the carousel module already writes, so the result now carries `frames` (their storage keys, in slide order; empty without a render). The editor page signs them (600 s, only keys under the client's own prefix, behind the same page permission as the editor) and the panel shows them in a 4-column grid with the slide number and the template's safe box drawn as a dashed outline from the effective safe zone (layout, else template, else format), in percent. Clicking a note scrolls to its slide and highlights it.
+- **One atomic fix per round.** Notes are ordered by slide (`orderVisualNotes`) and the first one is badged "Next fix". "Done, review again" reruns the same job. The job records `round` in its result: `nextVisualRound` gives 1 for the first review, after a pass (no notes) or with `restart`, otherwise the previous round plus one, and `null` after round 3 (`MAX_VISUAL_ROUNDS`). At the cap with notes left the panel says to stop here and decide and offers "Start a new review series"; the server action and the job both refuse a fourth round without `restart` (`content.jobErrors.visualRoundsDone`). Dismissals are unchanged.
+- **Never a score.** The result is `{ notes, draftRev, mode, round, frames }`, covered by the scripted-AI integration test.
+- **Retention.** The frames are ordinary exports and are kept like them; there is no separate short-lived store or sweep.
+
 ### Left out, on purpose
 
 - **Raw HTML** in build scripts: the AI picks layouts and fills slots; the renderer inserts text.

@@ -85,7 +85,8 @@ export const critiqueClaimsJob = defineJob({
 export const reviewVisualJob = defineJob({
   kind: "content.review_visual",
   queue: "ai",
-  payload: z.object({ ...base, contentId: z.uuid() }),
+  /** `restart` opens a new series of rounds after the cap (see `visual-rounds`). */
+  payload: z.object({ ...base, contentId: z.uuid(), restart: z.boolean().optional() }),
 });
 
 /** Copywriter: an Instagram carousel in review or approved, proposed for LinkedIn or Facebook. A proposal only. */

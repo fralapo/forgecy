@@ -1,10 +1,17 @@
 "use server";
 
-import { getContentRow, humanOnly, reviewVisualJob } from "@forgecy/content";
+import {
+  getContentRow,
+  humanOnly,
+  latestVisualReview,
+  nextVisualRound,
+  reviewVisualJob,
+} from "@forgecy/content";
 import { ForgecyError, PermissionDeniedError } from "@forgecy/core";
 import { getDb } from "@forgecy/db";
 import { enqueueJob } from "@forgecy/jobs";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { errorMessage } from "@/lib/i18n";
 import { getQueues } from "@/lib/queues";
@@ -15,6 +22,8 @@ const input = z.object({
   slug: z.string().regex(/^[a-z0-9-]{1,80}$/),
   clientId: z.uuid(),
   contentId: z.uuid(),
+  /** Start a new series of rounds after the cap. */
+  restart: z.boolean().optional(),
 });
 
 /** “Review the slides”: queues the advisory visual review on the current draft. People only. */
@@ -25,9 +34,20 @@ export async function reviewSlidesAction(raw: z.input<typeof input>): Promise<Ac
   try {
     humanOnly(user.actor, "edit_draft", i.clientId);
     await getContentRow(db, i.clientId, i.contentId);
+    const last = await latestVisualReview(db, i.contentId);
+    if (
+      nextVisualRound(last ? { round: last.round, notes: last.notes.length } : null, i.restart) ===
+      null
+    )
+      return { ok: false, error: (await getTranslations("content.jobErrors"))("visualRoundsDone") };
     await enqueueJob(db, await getQueues(), {
       kind: reviewVisualJob,
-      payload: { clientId: i.clientId, contentId: i.contentId, requestedBy: user.id },
+      payload: {
+        clientId: i.clientId,
+        contentId: i.contentId,
+        requestedBy: user.id,
+        ...(i.restart ? { restart: true } : {}),
+      },
       clientId: i.clientId,
       entity: "content",
       entityId: i.contentId,

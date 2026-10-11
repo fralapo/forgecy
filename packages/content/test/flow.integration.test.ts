@@ -598,13 +598,22 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
         ...deps,
         renderSlides: async (_row, doc) => ({
           png: doc.slides.map(() => png),
+          keys: doc.slides.map((_, i) => `clients/${clientId}/exports/slide-${i}.png`),
           issues: [{ slide: 0, slot: "title", kind: "widow", message: "Last line is one word" }],
         }),
       },
       await job("content.review_visual"),
       { clientId, contentId: c.id },
     );
-    expect(imageReview).toMatchObject({ mode: "images", notes: [] });
+    // The result carries the round and the storage keys of the reviewed slides, never a score.
+    expect(imageReview).toMatchObject({
+      mode: "images",
+      notes: [],
+      round: 1,
+      frames: ws.document.slides.map((_, i) => `clients/${clientId}/exports/slide-${i}.png`),
+    });
+    expect(imageReview).not.toHaveProperty("score");
+    expect(textReview).toMatchObject({ round: 1, frames: [] });
     const sent = fake.calls.at(-1)!;
     expect(sent.messages.flatMap((m) => m.images ?? [])).toHaveLength(ws.document.slides.length);
     expect(JSON.stringify(sent)).toContain("Last line is one word");

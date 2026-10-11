@@ -10,6 +10,7 @@ import {
   type ContentChannel,
   factBankOf,
 } from "@forgecy/content";
+import { effectiveSafeZone, findLayout } from "@forgecy/carousel";
 import { eq, users } from "@forgecy/db";
 import { isPexelsConfigured } from "@forgecy/files";
 import { getTranslations } from "next-intl/server";
@@ -55,6 +56,33 @@ export default async function EditorPage({
     client.id,
     ws.library.map((a) => a.storageKey),
   );
+  // Contact sheet of the review: the reviewed slides' PNGs with the template's safe zone, in percent.
+  const manifest = ws.template?.manifest ?? null;
+  const sheetUrls = await thumbnailUrls(client.id, visual?.frames ?? []);
+  const sheet =
+    visual && manifest
+      ? visual.frames.flatMap((key, i) => {
+          const url = sheetUrls.get(key);
+          if (!url) return [];
+          const z = effectiveSafeZone(
+            manifest,
+            findLayout(manifest, ws.document.slides[i]?.layout ?? ""),
+          );
+          return [
+            {
+              slide: i + 1,
+              url,
+              safe: {
+                top: (z.top / manifest.height) * 100,
+                right: (z.right / manifest.width) * 100,
+                bottom: (z.bottom / manifest.height) * 100,
+                left: (z.left / manifest.width) * 100,
+              },
+              ratio: `${manifest.width} / ${manifest.height}`,
+            },
+          ];
+        })
+      : [];
   const library: EditorAsset[] = ws.library.map((a) => {
     const g = (a.generation ?? {}) as Generation;
     return {
@@ -115,6 +143,8 @@ export default async function EditorPage({
             ? {
                 jobId: visual.jobId,
                 mode: visual.mode,
+                round: visual.round,
+                sheet,
                 notes: visual.notes.map((n) => ({
                   slide: n.slide,
                   problem: n.problem,

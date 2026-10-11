@@ -5,6 +5,7 @@
 export * from "./document";
 export * from "./labels";
 export * from "./outline-markdown";
+export * from "./visual-rounds";
 export * from "./carousels/checks";
 export * from "./carousels/compare";
 export { GUARDED_CHECK_PREFIXES, findingsToAcknowledge } from "./carousels/brand-guard";
