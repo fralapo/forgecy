@@ -1,5 +1,6 @@
 import { messagesFor } from "@forgecy/i18n";
 import { describe, expect, it } from "vitest";
+import { narrowTextPercent } from "../src/typography/lines";
 import { issuesFromMeasures, type SlotMeasure } from "../src/export/capture";
 
 const rect = { x: 0, y: 0, width: 100, height: 40 };
@@ -41,6 +42,20 @@ describe("render issues are translatable", () => {
     expect(issue?.kind).toBe(kind);
     expect(issue?.message).toBe(english);
     expect(issue?.ref?.key).toMatch(/^templates\.renderIssues\./);
+  });
+
+  it("flags narrow multi-line text, silent otherwise", () => {
+    const kinds = (m: Partial<SlotMeasure>) =>
+      issuesFromMeasures(0, [text(m)], {}, "en").map((i) => i.kind);
+    expect(kinds({ lines: 4, fill: 0.5 })).toEqual(["narrow_text"]);
+    expect(kinds({ lines: 4, fill: 0.7 })).toEqual([]);
+    expect(kinds({ lines: 2, fill: 0.3 })).toEqual([]);
+    expect(kinds({ lines: 4 })).toEqual([]);
+    expect(issuesFromMeasures(0, [text({ lines: 4, fill: 0.5 })])).toEqual([]);
+    expect(narrowTextPercent({ lines: 3, fill: 0.55 })).toBe(55);
+    expect(issuesFromMeasures(0, [text({ lines: 4, fill: 0.5 })], {}, "en")[0]?.message).toBe(
+      "“title” uses 50% of its width: the layout slot may be too wide for this copy.",
+    );
   });
 
   it("names both slots of an overlap", () => {

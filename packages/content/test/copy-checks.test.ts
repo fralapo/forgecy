@@ -94,6 +94,17 @@ describe("copy checks", () => {
     expect(c.find((x) => x.id === "rhythm:a")?.severity).toBe("warning");
   });
 
+  it("warns once on five slides in a row with the same tone, only when tone varies", () => {
+    const toned = (id: string, tone: string) => ({ ...text(id), tone });
+    const toneIds = (slides: unknown[]) => ids(run(slides)).filter((i) => i.startsWith("rhythm:tone"));
+    const same = ["a", "b", "c", "d", "e"].map((id) => toned(id, "default"));
+    expect(toneIds(deck(...same))).toEqual([]);
+    const mixed = [...same, toned("f", "inverse")];
+    expect(toneIds(deck(...mixed))).toEqual(["rhythm:tone:s1"]);
+    const paced = ["a", "b", "c", "d"].map((id, n) => toned(id, n === 2 ? "accent" : "default"));
+    expect(toneIds(deck(...paced))).toEqual([]);
+  });
+
   it("checks tu/voi against the brand writing rules", () => {
     const slides = deck(text("s2", "Se volete, potete provare."));
     expect(ids(run(slides, {}, { language: "it", person: "tu" }))).toContain("person:s2");

@@ -5,7 +5,12 @@ import { englishMessage, messageRef, type MessageKey, type MessageValues } from 
 import type { Browser, Page } from "playwright-core";
 import type { RenderedSlide } from "../renderer";
 import type { SafeZone } from "../formats";
-import { MAX_BLOCK_LINES, MIN_FONT_PX, typographyProblems } from "../typography/lines";
+import {
+  MAX_BLOCK_LINES,
+  MIN_FONT_PX,
+  narrowTextPercent,
+  typographyProblems,
+} from "../typography/lines";
 
 /** Problems seen on the rendered page (spec: Brand Guard checks on the render, not only the JSON). */
 export type RenderIssueKind =
@@ -19,7 +24,8 @@ export type RenderIssueKind =
   | "widow"
   | "bad_line_end"
   | "small_font"
-  | "dense_block";
+  | "dense_block"
+  | "narrow_text";
 
 export interface RenderIssue {
   /** 0-based slide index. */
@@ -47,6 +53,11 @@ export interface SlotMeasure {
   fontSize?: number;
   /** Box around the glyphs actually drawn, tighter than `rect` (text slots). */
   ink?: { x: number; y: number; width: number; height: number };
+  /**
+   * Widest rendered line as a fraction of the box's content width (text slots). Absent for
+   * slots with highlight or break markers or list items, where short lines are intentional.
+   */
+  fill?: number;
 }
 
 export interface CaptureInput {
@@ -79,9 +90,11 @@ function measureInPage(safe: SafeZone): SlotMeasure[] {
     let lineTexts: string[] | undefined;
     let ink: SlotMeasure["ink"];
     let fontSize: number | undefined;
+    let fill: number | undefined;
     if (!isImg) {
       // One range per character: its line is its top, its ink the union of the boxes.
       const byTop = new Map<number, string>();
+      const widths = new Map<number, [number, number]>();
       let x0 = Infinity;
       let y0 = Infinity;
       let x1 = -Infinity;
@@ -99,6 +112,8 @@ function measureInPage(safe: SafeZone): SlotMeasure[] {
           const top = Math.round(b.top);
           byTop.set(top, (byTop.get(top) ?? "") + data[i]);
           if (data[i]!.trim()) {
+            const w = widths.get(top) ?? [Infinity, -Infinity];
+            widths.set(top, [Math.min(w[0], b.left), Math.max(w[1], b.right)]);
             x0 = Math.min(x0, b.left);
             y0 = Math.min(y0, b.top);
             x1 = Math.max(x1, b.right);
@@ -108,6 +123,10 @@ function measureInPage(safe: SafeZone): SlotMeasure[] {
       }
       lines = byTop.size;
       lineTexts = [...byTop.entries()].sort((a, b) => a[0] - b[0]).map(([, t]) => t.trim());
+      const cs = getComputedStyle(el);
+      const box = r.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      if (box > 0 && !el.querySelector("br, mark, li"))
+        fill = Math.max(0, ...[...widths.values()].map(([a, b]) => b - a)) / box;
       if (x1 > x0) ink = { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
     }
     // Clipped: the slot hides its own overflow, or spills past an ancestor that does.
@@ -141,6 +160,7 @@ function measureInPage(safe: SafeZone): SlotMeasure[] {
       ...(lineTexts ? { lineTexts } : {}),
       ...(fontSize !== undefined ? { fontSize } : {}),
       ...(ink ? { ink } : {}),
+      ...(fill !== undefined ? { fill } : {}),
       naturalWidth: isImg ? (el as HTMLImageElement).naturalWidth : 0,
       naturalHeight: isImg ? (el as HTMLImageElement).naturalHeight : 0,
       rect: { x: r.x, y: r.y, width: r.width, height: r.height },
@@ -191,6 +211,11 @@ export function issuesFromMeasures(
           lines: s.lines,
           max: lim.maxLines,
         });
+      if (language) {
+        const pct = narrowTextPercent(s);
+        if (pct !== null)
+          add(slot, "narrow_text", "templates.renderIssues.narrowText", { slot, percent: pct });
+      }
       if (language)
         for (const p of typographyProblems(s, language)) {
           if (p.kind === "widow")

@@ -39,6 +39,8 @@ import type { ProductFactRef } from "../products";
 
 /** A body slide with at least this many words in its text counts as dense for the rhythm check. */
 const DENSE_WORDS = 35;
+/** Same tone on this many slides in a row, in a deck that does vary tone, reads as a missed alternation. */
+const TONE_RUN = 5;
 /** Instagram carousels perform best with exactly this many discovery hashtags. */
 const INSTAGRAM_HASHTAGS = 3;
 
@@ -394,6 +396,27 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
         }),
         slideId: doc.slides[from]!.id,
       });
+  }
+
+  // Only a deck that varies tone somewhere is pacing with it; all-default stays silent.
+  if (new Set(doc.slides.map((s) => s.tone)).size >= 2) {
+    for (let i = 0; i < doc.slides.length; ) {
+      let j = i;
+      while (j + 1 < doc.slides.length && doc.slides[j + 1]!.tone === doc.slides[i]!.tone) j++;
+      if (j - i + 1 >= TONE_RUN)
+        add({
+          id: `rhythm:tone:${doc.slides[i]!.id}`,
+          severity: "warning",
+          ...say("review.checks.toneRhythm", {
+            from: String(i + 1),
+            to: String(j + 1),
+            count: String(j - i + 1),
+            tone: doc.slides[i]!.tone,
+          }),
+          slideId: doc.slides[i]!.id,
+        });
+      i = j + 1;
+    }
   }
 
   if (!input.usePrice)

@@ -8,6 +8,23 @@ export const MAX_BLOCK_LINES = 7;
 /** A last line this short (one word, at most this many letters) is a widow. */
 const WIDOW_MAX_LETTERS = 6;
 
+/** Blocks of fewer lines than this are not checked for fill: a short block ends where it ends. */
+export const NARROW_MIN_LINES = 3;
+/**
+ * The widest line of a block should reach this share of the box width. 70% and not 80%:
+ * ragged-right text legitimately ends short, so only a clearly oversized box is flagged.
+ */
+export const NARROW_FILL = 0.7;
+
+/**
+ * Percent of the box width the widest line uses, when the block is long enough to judge and
+ * under the threshold; `null` otherwise. `fill` is absent for titles with highlight or break markers.
+ */
+export function narrowTextPercent(m: { lines: number; fill?: number }): number | null {
+  if (m.fill === undefined || m.lines < NARROW_MIN_LINES || m.fill >= NARROW_FILL) return null;
+  return Math.round(m.fill * 100);
+}
+
 export type TypographyProblem =
   | { kind: "widow"; line: number }
   | { kind: "bad_line_end"; line: number; word: string }

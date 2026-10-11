@@ -202,7 +202,8 @@
     "widow": "“{slot}” ends with a lone short word on line {line}.",
     "badLineEnd": "“{slot}”: line {line} ends on “{word}”, which belongs with the next word.",
     "smallFont": "“{slot}” is set at {px} px, below the {min} px minimum.",
-    "denseBlock": "“{slot}” takes {lines} lines, more than the {max} of a readable block."
+    "denseBlock": "“{slot}” takes {lines} lines, more than the {max} of a readable block.",
+    "narrowText": "“{slot}” uses {percent}% of its width: the layout slot may be too wide for this copy."
   },
   "errors": {
     "invalidFolder": "Invalid folder",

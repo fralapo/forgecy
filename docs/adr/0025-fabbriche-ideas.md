@@ -66,7 +66,12 @@ Constraints that did not move: the AI never writes HTML, agents propose and peop
 - **A proposal, never a change.** The proposal lives in the job result (no table): channel, angle, reason, slides (layout and plain-text slots, cut to the layout), caption, hashtags, template and the revision of the source it was made on. The gate metric (Instagram saves and shares, Facebook shares in groups and comments, LinkedIn dwell time and comments) is set by the pipeline, not by the model, and shown with the proposal. Slots are text; the renderer inserts them as text.
 - **Accept creates a NEW draft.** `acceptAdaptation` (`edit_draft`, people only) creates a content for the channel with the client, pillar, rubric, product, audience and language of the source and the client's published Brand Identity at that moment, the brief of the source with the new angle as its text, and the proposed slides cut again to the layouts. It starts as `draft` and goes through the checks, the review and the approval like any other; the source is not touched. **Dismiss** answers the proposal and creates nothing. The single answer is claimed with a conditional update, so two clicks create one draft.
 - **UI.** The panel "Other channels" sits next to the claim check and the visual review in the editor; it is enabled only for an Instagram carousel in review or approved and warns when the source changed after the proposal.
-- **Not built, still:** the text-fill and the tone-alternation warnings (below). Facebook needs a published template for its format; without one the job says so.
+- **Facebook** needs a published template for its format; without one the job says so.
+
+### Built as advisory checks
+
+- **Text-fill** (render issue `narrow_text`, warning, carousels only): during the page measurement the widest rendered line is divided by the content width of the slot (`SlotMeasure.fill`). A text slot with 3 or more lines whose widest line is under 70% of that width is flagged ("uses X% of its width, the layout slot may be too wide for this copy"). The decision is the pure `narrowTextPercent` in `typography/lines.ts` (`NARROW_MIN_LINES = 3`, `NARROW_FILL = 0.7`). Slots with highlight or `||` break markers and list slots are not measured. Reports are not checked.
+- **Tone alternation** (`rhythm:tone:<slideId>`, warning): 5 or more consecutive slides with the same tone, only when the deck uses at least two different tones. A deck that is all `default` is silent.
 
 ### Left out, on purpose
 
@@ -78,8 +83,8 @@ Constraints that did not move: the AI never writes HTML, agents propose and peop
 - **One brand's taste as a global rule**: no numbering, the yellow-on-paper ban, an anti-scam vocabulary, one client's content. Where a rule is a house voice (the em dash) it is a per-brand severity.
 - **Metric claims**: statements such as "repost within 3 hours" or "recycle after 60 days" are shown only as plain-text tips in the manifest, never as numbers the tool scores or enforces.
 - **A numeric score** from the model, anywhere.
-- **Text-fill warning** (less than 80% of the usable width on multi-line blocks): the measurements give the ink box per line but not a per-layout usable width, so it would need new template data. Not built.
-- **Tone alternation warning**: a slide's tone defaults to `default`, so "four in a row" does not mean the same thing as a declared alternation. Not built until layouts declare a tone cadence.
+- **Text-fill at 80%**: ragged-right text legitimately ends short, so the built check uses 70% (see below).
+- **Tone alternation on all-default decks**: a slide's tone defaults to `default`, so a run there means nothing; the built check stays silent unless the deck uses two or more tones.
 
 ## Consequences
 
