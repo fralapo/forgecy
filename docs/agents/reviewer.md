@@ -2,8 +2,8 @@
 
 Forgecy AI agent. Not a role for people: it proposes, it does not approve.
 
-- **Responsibility:** Checks consistency, errors, contrast and rules; it can block an export, not change the rules.
-- **Input:** Slide document, renders, Brand Guard rules.
+- **Responsibility:** Checks consistency, errors, contrast and rules; it can block an export, not change the rules. Two advisory passes use a model: the claim check (`critique_claims`) and the visual review (`review_visual`, ADR 0025), a stranger scrolling Instagram who looks at the rendered slides and returns notes `{slide, problem, fix}` with no score and no praise. Advisory notes never block and are never applied.
+- **Input:** Slide document, renders (slide PNGs for the visual review, with a text-only fallback), Brand Guard rules.
 - **Output:** Brand check result with warnings and errors.
 - **Phase:** Rule-based MVP (M6), v1 with a model
 
