@@ -5,6 +5,7 @@ import { englishMessage, messageRef, type MessageKey, type MessageValues } from 
 import type { Browser, Page } from "playwright-core";
 import type { RenderedSlide } from "../renderer";
 import type { SafeZone } from "../formats";
+import { faceCoveredPercent, faceRectOnSlide, type FaceFractions } from "../typography/face";
 import {
   MAX_BLOCK_LINES,
   MIN_FONT_PX,
@@ -25,7 +26,8 @@ export type RenderIssueKind =
   | "bad_line_end"
   | "small_font"
   | "dense_block"
-  | "narrow_text";
+  | "narrow_text"
+  | "text_over_face";
 
 export interface RenderIssue {
   /** 0-based slide index. */
@@ -35,6 +37,8 @@ export interface RenderIssue {
   message: string;
   /** The message in the reader's language; `message` stays English for logs and fallbacks. */
   ref?: MessageRef;
+  /** Set when the check has a severity of its own (text over a face: error on the cover). */
+  severity?: "error" | "warning";
 }
 
 export interface SlotMeasure {
@@ -58,6 +62,9 @@ export interface SlotMeasure {
    * slots with highlight or break markers or list items, where short lines are intentional.
    */
   fill?: number;
+  /** Face declared on the photo (image slots) and the photo's focal point, both as fractions. */
+  face?: FaceFractions;
+  focal?: { x: number; y: number };
 }
 
 export interface CaptureInput {
@@ -91,6 +98,14 @@ function measureInPage(safe: SafeZone): SlotMeasure[] {
     let ink: SlotMeasure["ink"];
     let fontSize: number | undefined;
     let fill: number | undefined;
+    let face: SlotMeasure["face"];
+    let focal: SlotMeasure["focal"];
+    if (isImg && el.dataset.face) {
+      const [cx = 0, cy = 0, w = 0, h = 0] = el.dataset.face.split(",").map(Number);
+      const [fx = 0.5, fy = 0.5] = (el.dataset.focal ?? "").split(",").map(Number);
+      face = { cx, cy, w, h };
+      focal = { x: fx, y: fy };
+    }
     if (!isImg) {
       // One range per character: its line is its top, its ink the union of the boxes.
       const byTop = new Map<number, string>();
@@ -161,6 +176,7 @@ function measureInPage(safe: SafeZone): SlotMeasure[] {
       ...(fontSize !== undefined ? { fontSize } : {}),
       ...(ink ? { ink } : {}),
       ...(fill !== undefined ? { fill } : {}),
+      ...(face ? { face, focal } : {}),
       naturalWidth: isImg ? (el as HTMLImageElement).naturalWidth : 0,
       naturalHeight: isImg ? (el as HTMLImageElement).naturalHeight : 0,
       rect: { x: r.x, y: r.y, width: r.width, height: r.height },
@@ -188,6 +204,7 @@ export function issuesFromMeasures(
     kind: RenderIssueKind,
     key: MessageKey & `templates.renderIssues.${string}`,
     values: MessageValues,
+    severity?: RenderIssue["severity"],
   ) =>
     issues.push({
       slide,
@@ -195,6 +212,7 @@ export function issuesFromMeasures(
       kind,
       message: englishMessage(key, values),
       ref: messageRef(key, values),
+      ...(severity ? { severity } : {}),
     });
   for (const s of slots) {
     const lim = limits[s.name] ?? {};
@@ -254,6 +272,29 @@ export function issuesFromMeasures(
     }
   }
   const texts = slots.filter((s) => s.kind === "text");
+  // Text over a declared face: carousels only, and silent for a photo without a face box.
+  if (language)
+    for (const photo of slots) {
+      if (photo.kind !== "image" || !photo.face) continue;
+      const face = faceRectOnSlide(
+        photo.face,
+        { width: photo.naturalWidth, height: photo.naturalHeight },
+        photo.rect,
+        photo.focal,
+      );
+      if (!face) continue;
+      for (const t of texts) {
+        const percent = faceCoveredPercent(t.ink ?? t.rect, face);
+        if (percent !== null)
+          add(
+            t.name,
+            "text_over_face",
+            "templates.renderIssues.textOverFace",
+            { slot: t.name, photo: photo.name, percent },
+            slide === 0 ? "error" : "warning",
+          );
+      }
+    }
   for (let i = 0; i < texts.length; i++)
     for (let j = i + 1; j < texts.length; j++)
       if (intersects(texts[i]!.rect, texts[j]!.rect))

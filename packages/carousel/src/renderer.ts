@@ -124,6 +124,12 @@ function setImage(el: El, ref: ImageRef, src: string | undefined): boolean {
   el.setAttribute("alt", ref.alt);
   const pos = `${Math.round(ref.focalX * 100)}% ${Math.round(ref.focalY * 100)}%`;
   el.setAttribute("style", `${el.getAttribute("style") ?? ""};object-position:${pos}`);
+  // Read by the export measurement (text-over-face check); text, never markup.
+  if (ref.face) {
+    const { cx, cy, w, h } = ref.face;
+    el.setAttribute("data-face", [cx, cy, w, h].join(","));
+    el.setAttribute("data-focal", `${ref.focalX},${ref.focalY}`);
+  }
   return true;
 }
 

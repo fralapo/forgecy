@@ -1112,7 +1112,17 @@
       "chooseLibrary": "Scegli dalla libreria",
       "remove": "Rimuovi immagine",
       "noAlt": "Nessun testo alternativo",
-      "noApproved": "Nessuna immagine approvata nella libreria del cliente."
+      "noApproved": "Nessuna immagine approvata nella libreria del cliente.",
+      "face": {
+        "add": "Segna un volto nella foto",
+        "hint": "Facoltativo. Permette al controllo di avvisare quando il testo copre il volto.",
+        "title": "Riquadro del volto (% della foto)",
+        "cx": "Centro X",
+        "cy": "Centro Y",
+        "w": "Larghezza",
+        "h": "Altezza",
+        "remove": "Nessun volto in questa foto"
+      }
     }
   },
   "review": {

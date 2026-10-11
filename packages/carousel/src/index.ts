@@ -10,6 +10,7 @@ export * from "./renderer";
 export * from "./slide-schema";
 export * from "./template-schema";
 export * from "./typography/bind";
+export * from "./typography/face";
 export * from "./typography/function-words";
 export * from "./typography/lines";
 export * from "./texts";

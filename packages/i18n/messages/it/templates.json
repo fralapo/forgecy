@@ -203,7 +203,8 @@
     "badLineEnd": "“{slot}”: la riga {line} finisce su “{word}”, che va con la parola dopo.",
     "smallFont": "“{slot}” è a {px} px, sotto il minimo di {min} px.",
     "denseBlock": "“{slot}” occupa {lines} righe, più delle {max} di un blocco leggibile.",
-    "narrowText": "“{slot}” usa il {percent}% della sua larghezza: lo spazio del layout potrebbe essere troppo largo per questo testo."
+    "narrowText": "“{slot}” usa il {percent}% della sua larghezza: lo spazio del layout potrebbe essere troppo largo per questo testo.",
+    "textOverFace": "“{slot}” copre il {percent}% del volto in “{photo}”: sposta il testo o la foto."
   },
   "errors": {
     "invalidFolder": "Cartella non valida",

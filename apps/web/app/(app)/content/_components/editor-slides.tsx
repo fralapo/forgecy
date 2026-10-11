@@ -672,6 +672,14 @@ function ImageSlot({
               ) : null}
             </div>
           ) : null}
+          {value ? (
+            <FaceBoxFields
+              id={`${slideId}-${slot}`}
+              value={value}
+              onChange={onChange}
+              readOnly={readOnly}
+            />
+          ) : null}
           {!readOnly ? (
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" size="sm" onClick={() => setPicking((p) => !p)}>
@@ -740,5 +748,76 @@ function ImageSlot({
         <ImageGenerator editorRef={editorRef} slideId={slideId} slot={slot} flush={flush} />
       ) : null}
     </div>
+  );
+}
+
+const FACE_FIELDS = ["cx", "cy", "w", "h"] as const;
+const FACE_DEFAULT = { cx: 0.5, cy: 0.3, w: 0.2, h: 0.25 };
+
+/** Optional face box of the photo, in percent of the image: the text-over-face check reads it. */
+function FaceBoxFields({
+  id,
+  value,
+  onChange,
+  readOnly,
+}: {
+  id: string;
+  value: ImageRef;
+  onChange: (v: SlotValue | undefined) => void;
+  readOnly: boolean;
+}) {
+  const t = useTranslations("content.editor.imageSlot.face");
+  const face = value.face;
+  if (!face)
+    return readOnly ? null : (
+      <div className="space-y-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onChange({ ...value, face: FACE_DEFAULT })}
+        >
+          {t("add")}
+        </Button>
+        <p className="text-body-sm text-fg-muted">{t("hint")}</p>
+      </div>
+    );
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-label text-fg-muted">{t("title")}</legend>
+      <div className="grid grid-cols-4 gap-2">
+        {FACE_FIELDS.map((k) => (
+          <div key={k} className="space-y-1">
+            <Label htmlFor={`face-${id}-${k}`}>{t(k)}</Label>
+            <Input
+              id={`face-${id}-${k}`}
+              type="number"
+              min={k === "w" || k === "h" ? 1 : 0}
+              max={100}
+              disabled={readOnly}
+              value={Math.round(face[k] * 100)}
+              onChange={(e) => {
+                const n = Math.min(
+                  100,
+                  Math.max(k === "w" || k === "h" ? 1 : 0, Number(e.target.value)),
+                );
+                if (Number.isFinite(n)) onChange({ ...value, face: { ...face, [k]: n / 100 } });
+              }}
+            />
+          </div>
+        ))}
+      </div>
+      {!readOnly ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            const { face: _face, ...rest } = value;
+            onChange(rest);
+          }}
+        >
+          {t("remove")}
+        </Button>
+      ) : null}
+    </fieldset>
   );
 }

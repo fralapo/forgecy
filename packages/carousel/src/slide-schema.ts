@@ -12,6 +12,14 @@ import {
  * A slide is data, never markup: a layout id plus one value per slot. The AI and the
  * editor only ever produce this JSON; the renderer inserts every value as text.
  */
+export const faceBoxSchema = z.object({
+  cx: z.number().min(0).max(1),
+  cy: z.number().min(0).max(1),
+  w: z.number().min(0.01).max(1),
+  h: z.number().min(0.01).max(1),
+});
+export type FaceBox = z.infer<typeof faceBoxSchema>;
+
 export const imageRefSchema = z
   .object({
     /** Storage key of an approved asset (`clients/<id>/assets/<sha>.png`). */
@@ -22,6 +30,8 @@ export const imageRefSchema = z
     /** Focal point 0–1, used as `object-position`. */
     focalX: z.number().min(0).max(1).default(0.5),
     focalY: z.number().min(0).max(1).default(0.5),
+    /** Where a person's face is in the photo: centre and size as fractions of the image (the text-over-face check). */
+    face: faceBoxSchema.optional(),
   })
   .refine(
     (r) => Boolean(r.key) !== Boolean(r.asset),

@@ -203,7 +203,8 @@
     "badLineEnd": "“{slot}”: line {line} ends on “{word}”, which belongs with the next word.",
     "smallFont": "“{slot}” is set at {px} px, below the {min} px minimum.",
     "denseBlock": "“{slot}” takes {lines} lines, more than the {max} of a readable block.",
-    "narrowText": "“{slot}” uses {percent}% of its width: the layout slot may be too wide for this copy."
+    "narrowText": "“{slot}” uses {percent}% of its width: the layout slot may be too wide for this copy.",
+    "textOverFace": "“{slot}” covers {percent}% of the face in “{photo}”: move the text or the photo."
   },
   "errors": {
     "invalidFolder": "Invalid folder",

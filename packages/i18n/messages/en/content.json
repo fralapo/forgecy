@@ -1112,7 +1112,17 @@
       "chooseLibrary": "Choose from the library",
       "remove": "Remove image",
       "noAlt": "No alt text",
-      "noApproved": "No approved images in the client’s library."
+      "noApproved": "No approved images in the client’s library.",
+      "face": {
+        "add": "Mark a face in the photo",
+        "hint": "Optional. Lets the check warn when text covers the face.",
+        "title": "Face box (% of the photo)",
+        "cx": "Centre X",
+        "cy": "Centre Y",
+        "w": "Width",
+        "h": "Height",
+        "remove": "No face in this photo"
+      }
     }
   },
   "review": {
