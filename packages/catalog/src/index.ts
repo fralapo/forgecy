@@ -8,6 +8,7 @@ export * from "./products/csv-export";
 export * from "./db";
 export * from "./parsers/documents";
 export * from "./import/errors";
+export * from "./products/facts";
 export * from "./products/fields";
 export * from "./import/imports";
 export * from "./parsers/inspect";
