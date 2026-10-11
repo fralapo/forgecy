@@ -3,6 +3,7 @@ import { createDb, type Database } from "@forgecy/db";
 import { createAccessFixture, type AccessFixture } from "@forgecy/db/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { decideLesson, listLessons, proposeLesson } from "../src";
+import { confirmedLessonRules } from "../src/read";
 
 const dbUrl = process.env.FORGECY_TEST_DATABASE_URL;
 
@@ -37,6 +38,13 @@ describe.skipIf(!dbUrl)("brand: lessons log (integration)", () => {
       decision: "accepted",
     });
     expect(done).toMatchObject({ status: "accepted", decidedBy: f.member.id });
+    // Only a confirmed lesson shapes later runs (it reaches the prompt through loadBrandContext).
+    expect(await confirmedLessonRules(db, f.x.id)).toEqual(["Say 'accessible'"]);
+    await proposeLesson(db, f.member, {
+      clientId: f.x.id,
+      lesson: { correction: "Still waiting for a decision" },
+    });
+    expect(await confirmedLessonRules(db, f.x.id)).toEqual(["Say 'accessible'"]);
     await expect(
       decideLesson(db, f.member, { clientId: f.x.id, id: lesson.id, decision: "rejected" }),
     ).rejects.toBeInstanceOf(ForgecyError);

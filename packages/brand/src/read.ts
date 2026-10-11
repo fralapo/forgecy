@@ -10,6 +10,7 @@ import {
   brandExamples,
   brandIdentityProposals,
   brandIdentityVersions,
+  brandLessons,
   brandSources,
   desc,
   eq,
@@ -135,7 +136,25 @@ export async function loadBrandContext(
   const identity = await getPublishedBrandIdentity(db, actor, clientId);
   if (!identity) return null;
   const examples = await listBrandExamples(db, actor, clientId);
-  return buildBrandContext(identity, { ...options, examples });
+  const ctx = buildBrandContext(identity, { ...options, examples });
+  const lessons = await confirmedLessonRules(db, clientId);
+  if (!lessons.length) return ctx;
+  const block = [
+    "## Confirmed lessons (corrections a person made and confirmed as rules; follow them)",
+    ...lessons.map((r) => `- ${r}`),
+  ].join("\n");
+  return { ...ctx, variable: [ctx.variable, block].filter(Boolean).join("\n\n") };
+}
+
+/** Rules of the lessons a person confirmed (status accepted), newest first; a lesson without a rule gives its correction. */
+export async function confirmedLessonRules(db: Database, clientId: string): Promise<string[]> {
+  const rows = await db
+    .select({ rule: brandLessons.rule, correction: brandLessons.correction })
+    .from(brandLessons)
+    .where(and(eq(brandLessons.clientId, clientId), eq(brandLessons.status, "accepted")))
+    .orderBy(desc(brandLessons.createdAt))
+    .limit(30);
+  return rows.map((r) => (r.rule.trim() || r.correction.trim()).slice(0, 400));
 }
 
 // ---- Workspace queries for the Brand Identity pages ----
