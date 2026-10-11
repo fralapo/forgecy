@@ -31,10 +31,12 @@ import {
   decideReview,
   getContentRow,
   latestClaimFindings,
+  markPublished,
   prepareExport,
   recordExport,
   saveBrief,
   saveDraft,
+  setStockCredits,
   submitForReview,
 } from "../src/carousels/carousels";
 import {
@@ -102,6 +104,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
     price: "€24.90",
     description: "Keeps water cool for 24 hours.",
     highlights: ["Stainless steel", "750 ml"],
+    facts: [],
     revision: 2,
     images: [],
   };
@@ -502,7 +505,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
           imageBriefs: [],
         })),
         caption: "Your water stays cool.",
-        hashtags: ["hiking", "#waterbottle"],
+        hashtags: ["hiking", "#waterbottle", "#outdoor"],
       },
     });
     const slides = await runGenerateSlides(deps, await job("content.generate_slides"), {
@@ -513,7 +516,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
 
     let ws = await getCarouselWorkspace(db, anna, clientId, c.id);
     expect(ws.document.slides).toHaveLength(7);
-    expect(ws.document.hashtags).toEqual(["#hiking", "#waterbottle"]);
+    expect(ws.document.hashtags).toEqual(["#hiking", "#waterbottle", "#outdoor"]);
     expect(ws.checks?.errors).toEqual([]);
     expect(ws.content.templateVersion).toBe(manifest.version);
 
@@ -663,6 +666,48 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
     });
     const final = await getContentRow(db, clientId, c.id);
     expect(final.status).toBe("exported");
+
+    // Delivery record: credits feed the caption check, a person marks it published, then it is frozen.
+    expect(await codeOf(markPublished(db, agent, { clientId, id: c.id }))).toBe(
+      "permission_denied",
+    );
+    await setStockCredits(db, anna, {
+      clientId,
+      id: c.id,
+      stockCredits: [" Foto: Mario / Unsplash ", ""],
+    });
+    expect((await getContentRow(db, clientId, c.id)).stockCredits).toEqual([
+      "Foto: Mario / Unsplash",
+    ]);
+    // The caption lacks the credit line: a warning, not an error, so publishing goes through.
+    const published = await markPublished(db, anna, {
+      clientId,
+      id: c.id,
+      externalUrl: "https://instagram.com/p/abc",
+      externalId: "abc",
+    });
+    expect(published).toMatchObject({
+      externalId: "abc",
+      externalUrl: "https://instagram.com/p/abc",
+      deliveredVersionId: version.id,
+      stockCredits: ["Foto: Mario / Unsplash"],
+      gatesPassed: { errors: 0 },
+    });
+    expect(published.publishedAt).toBeInstanceOf(Date);
+    expect(await codeOf(markPublished(db, anna, { clientId, id: c.id }))).toBe("conflict");
+    expect(
+      await codeOf(setStockCredits(db, anna, { clientId, id: c.id, stockCredits: ["x"] })),
+    ).toBe("conflict");
+    expect(
+      await codeOf(
+        saveDraft(db, anna, {
+          clientId,
+          id: c.id,
+          draftRev: published.draftRev,
+          document: published.draft as never,
+        }),
+      ),
+    ).toBe("conflict");
 
     ws = await getCarouselWorkspace(db, anna, clientId, c.id);
     expect(ws.versions.map((v) => v.createdFrom)).toEqual(["submit", "ai"]);

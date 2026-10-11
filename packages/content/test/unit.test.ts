@@ -398,6 +398,7 @@ describe("brand guard mapping", () => {
         price: "€19.90",
         description: "Stainless steel, 750 ml",
         highlights: ["Keeps drinks cold for 24 hours"],
+        facts: [],
         revision: 1,
         images: [],
       },
