@@ -127,16 +127,18 @@ export function ReviewForm({
     });
 
   const seenBox = (k: string, children: ReactNode) => (
-    <li key={k} className="flex items-start gap-3 text-body-sm">
-      <input
-        id={`seen-${k}`}
-        type="checkbox"
-        className="mt-1 size-4"
-        checked={seen.has(k)}
-        onChange={(e) => toggle(k, e.target.checked)}
-      />
-      <label htmlFor={`seen-${k}`} className="text-fg">
-        <span className="text-warning">{t("seen")}</span> {children}
+    <li key={k} className="text-body-sm">
+      {/* The input sits inside its label: check ids hold ":" and spaces, so a for/id pair can miss. */}
+      <label className="flex items-start gap-3 text-fg">
+        <input
+          type="checkbox"
+          className="mt-1 size-4"
+          checked={seen.has(k)}
+          onChange={(e) => toggle(k, e.target.checked)}
+        />
+        <span>
+          <span className="text-warning">{t("seen")}</span> {children}
+        </span>
       </label>
     </li>
   );

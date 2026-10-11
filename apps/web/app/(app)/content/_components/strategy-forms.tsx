@@ -522,19 +522,23 @@ export function PlanNotesForm({
   const [v, setV] = useState(initial.criticalNode ?? "");
   const [needs, setNeeds] = useState((initial.clientNeeds ?? []).join("\n"));
   const [why, setWhy] = useState(initial.countRationale ?? "");
+  const [saved, setSaved] = useState(false);
   const { pending, error, run } = useSave();
   return (
     <form
       aria-label={t("title")}
       className={formClass}
+      onChange={() => setSaved(false)}
       onSubmit={(e) => {
         e.preventDefault();
-        run(() =>
-          savePlanNotesAction({
-            slug,
-            clientId,
-            notes: { criticalNode: v, clientNeeds: lines(needs), countRationale: why },
-          }),
+        run(
+          () =>
+            savePlanNotesAction({
+              slug,
+              clientId,
+              notes: { criticalNode: v, clientNeeds: lines(needs), countRationale: why },
+            }),
+          () => setSaved(true),
         );
       }}
     >
@@ -564,11 +568,16 @@ export function PlanNotesForm({
         </Field>
       </div>
       <FormError error={error} />
-      <div>
+      <div className="flex items-center gap-3">
         <Button type="submit" disabled={pending}>
           <Save aria-hidden />
           {t("save")}
         </Button>
+        {saved ? (
+          <p role="status" className="text-body-sm text-success">
+            {t("saved")}
+          </p>
+        ) : null}
       </div>
     </form>
   );

@@ -67,6 +67,7 @@ import {
   normalizeHashtag,
   outlineSchema,
   parseDocument,
+  parseDraft,
   type BriefInput,
   type CarouselDocument,
   type CarouselDocumentInput,
@@ -310,6 +311,8 @@ export async function createCarousel(db: Database, actor: Actor, input: CreateCa
         language: params.language,
         brandVersionId: brand.versionId,
         brief: brief as unknown as Record<string, unknown>,
+        // The editor opens with the content title instead of an empty field.
+        ...(title ? { draft: parseDraft(null, title) as unknown as Record<string, unknown> } : {}),
         createdBy: actor.id,
       })
       .returning();

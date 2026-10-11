@@ -458,7 +458,8 @@
       "countRationale": "Perché questo numero di contenuti",
       "clientNeeds": "Di cosa ha bisogno il cliente",
       "onePerLine": "Uno per riga.",
-      "save": "Salva le note"
+      "save": "Salva le note",
+      "saved": "Note salvate"
     }
   },
   "form": {

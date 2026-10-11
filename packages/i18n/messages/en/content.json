@@ -458,7 +458,8 @@
       "countRationale": "Why this many contents",
       "clientNeeds": "What the client needs",
       "onePerLine": "One per line.",
-      "save": "Save notes"
+      "save": "Save notes",
+      "saved": "Notes saved"
     }
   },
   "form": {

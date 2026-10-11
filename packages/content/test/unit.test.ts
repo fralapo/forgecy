@@ -17,7 +17,7 @@ import {
   planItemInputSchema,
 } from "../src/document";
 import { claimFindingsOf, slotsFromOutput } from "../src/ai/pipeline";
-import { briefSchema, captionBudget, claimFindingSchema } from "../src/document";
+import { briefSchema, captionBudget, claimFindingSchema, parseDraft } from "../src/document";
 import { clampSlideCount, defaultRoles, pickLayout } from "../src/carousels/templates";
 import { brandThemeFromIdentity } from "../src/carousels/theme";
 
@@ -469,5 +469,13 @@ describe("carousel version comparison", () => {
   it("finds nothing between identical versions", () => {
     const d = doc([slide("a", "Hook")]);
     expect(compareCarouselVersions(d, d).changedCount).toBe(0);
+  });
+});
+
+describe("draft title", () => {
+  it("defaults to the content title when the draft has none, and keeps its own", () => {
+    expect(parseDraft(null, "UI test carousel").title).toBe("UI test carousel");
+    expect(parseDraft({ title: "" }, "UI test carousel").title).toBe("UI test carousel");
+    expect(parseDraft({ title: "Edited" }, "UI test carousel").title).toBe("Edited");
   });
 });

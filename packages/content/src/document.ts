@@ -420,6 +420,12 @@ export function toRenderSlide(s: ContentSlide): Slide {
   return slideSchema.parse({ id: s.id, layout: s.layout, tone: s.tone, slots: s.slots });
 }
 
+/** A draft whose title is empty (a hand-made carousel) shows the content title. */
+export function parseDraft(raw: unknown, contentTitle: string): CarouselDocument {
+  const doc = parseDocument(raw);
+  return doc.title ? doc : { ...doc, title: contentTitle };
+}
+
 export function parseDocument(raw: unknown): CarouselDocument {
   const r = carouselDocumentSchema.safeParse(raw ?? {});
   return r.success ? r.data : carouselDocumentSchema.parse({});

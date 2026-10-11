@@ -29,7 +29,7 @@ import {
   type Database,
 } from "@forgecy/db";
 import { checkDocument, getContentRow, isLocked, outlineOf } from "./carousels/carousels";
-import { languageSchema, parseDocument, perWeek } from "./document";
+import { languageSchema, parseDraft, perWeek } from "./document";
 import { productSource, hasProductCatalog } from "./products";
 import { getTemplate, listUsableTemplates } from "./carousels/templates";
 
@@ -188,7 +188,7 @@ export async function getCarouselWorkspace(
 ) {
   assertCan(actor, "view", clientId);
   const c = await getContentRow(db, clientId, id);
-  const doc = parseDocument(c.draft);
+  const doc = parseDraft(c.draft, c.title);
   const [
     template,
     pillar,
