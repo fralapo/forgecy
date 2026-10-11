@@ -340,6 +340,14 @@
       "strategy": "Strategia attuale",
       "catalog": "Catalogo prodotti",
       "strategyCounts": "{pillars, plural, one {# pilastro} other {# pilastri}}, {rubrics, plural, one {# rubrica} other {# rubriche}}"
+    },
+    "hookArchetype": {
+      "dry_statement": "Affermazione secca",
+      "habitual_gesture": "Gesto abituale",
+      "bare_number": "Numero nudo",
+      "spoken_sentence": "Frase detta ad alta voce",
+      "common_belief": "Credenza comune sfidata",
+      "nobody_explains": "Nessuno spiega come"
     }
   },
   "strategy": {
@@ -599,7 +607,55 @@
         "long": "Lunga (circa 2000 caratteri)"
       },
       "hashtags": "Hashtag",
-      "save": "Salva brief"
+      "save": "Salva brief",
+      "strategy": "Strategia del contenuto",
+      "thesis": "Tesi",
+      "objective": "Tipo di contenuto",
+      "objectiveHint": "Lunghezza consigliata: da {min} a {max} slide.",
+      "objectives": {
+        "alert": "Allerta",
+        "explainer": "Spiegazione",
+        "tool": "Strumento o elenco",
+        "document": "Documento"
+      },
+      "emotion": "Emozione",
+      "emotions": {
+        "frustration": "Frustrazione",
+        "empathy": "Empatia",
+        "relief": "Sollievo",
+        "fear_of_missing_out": "Paura di restare fuori",
+        "curiosity": "Curiosità",
+        "pride": "Orgoglio"
+      },
+      "action": "Azione chiesta al lettore",
+      "actions": {
+        "save": "Salva",
+        "send": "Invia a qualcuno",
+        "comment": "Commenta",
+        "link": "Segui il link",
+        "none": "Nessuna"
+      },
+      "closing": "Chiusura",
+      "closings": {
+        "cta": "Invito all’azione",
+        "conclusion": "Conclusione (nessuna azione)"
+      },
+      "hookArchetype": "Tipo di hook",
+      "hookRationale": "Perché questo hook",
+      "trigger": "Innesco (perché adesso)",
+      "canSay": "Cosa possiamo dire",
+      "canSayHint": "Uno per riga; aggiungi la fonte dopo il segno |.",
+      "cannotSay": "Cosa non dobbiamo dire",
+      "cannotSayHint": "Una frase per riga; aggiungi il motivo dopo il segno |. L’esportazione si blocca se una compare nel testo.",
+      "risk": "Rischio",
+      "openQuestions": "Domande aperte per il cliente",
+      "openQuestionsHint": "L’esportazione resta bloccata finché ogni domanda non è segnata come risolta.",
+      "questionResolved": "Risolta",
+      "questionText": "Domanda",
+      "removeQuestion": "Rimuovi",
+      "addQuestion": "Aggiungi una domanda",
+      "firstComment": "Primo commento",
+      "unset": "Non impostato"
     }
   },
   "direction": {
@@ -705,7 +761,10 @@
         "unknownLayout": "Riga {line}: questo template non ha il layout «{value}».",
         "tooManyAltHooks": "Sono ammesse al massimo due righe «Alt hook:».",
         "invalid": "Un campo è troppo lungo o non valido: {value}."
-      }
+      },
+      "hookArchetype": "Tipo di hook: {archetype}",
+      "needsPayoff": "Il Copywriter non ha trovato nel brief un risultato concreto (qualcosa che il lettore può fare oggi). Aggiungilo al brief (promessa o cosa possiamo dire) e rigenera, oppure scrivi tu la slide del risultato.",
+      "payoffDone": "Ho aggiunto il risultato"
     }
   },
   "versions": {

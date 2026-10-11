@@ -110,6 +110,7 @@ export default async function EditorPage({
           wantsAltText: brief.outputs.altText,
           captionLength: brief.outputs.captionLength,
           claims,
+          brief: { openQuestions: brief.openQuestions, cannotSay: brief.cannotSay },
           sourceText: sourceTextOf(brief, ws.product),
           productRevision: c.productId
             ? { used: c.productRevision, current: ws.product?.revision ?? null }

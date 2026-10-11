@@ -340,6 +340,14 @@
       "strategy": "Current strategy",
       "catalog": "Product catalog",
       "strategyCounts": "{pillars, plural, one {# pillar} other {# pillars}}, {rubrics, plural, one {# rubric} other {# rubrics}}"
+    },
+    "hookArchetype": {
+      "dry_statement": "Dry statement",
+      "habitual_gesture": "Habitual gesture",
+      "bare_number": "Bare number",
+      "spoken_sentence": "Spoken sentence",
+      "common_belief": "Common belief challenged",
+      "nobody_explains": "Nobody explains how"
     }
   },
   "strategy": {
@@ -599,7 +607,55 @@
         "long": "Long (about 2000 characters)"
       },
       "hashtags": "Hashtags",
-      "save": "Save brief"
+      "save": "Save brief",
+      "strategy": "Strategy of the content",
+      "thesis": "Thesis",
+      "objective": "Kind of content",
+      "objectiveHint": "Suggested length: {min} to {max} slides.",
+      "objectives": {
+        "alert": "Alert",
+        "explainer": "Explainer",
+        "tool": "Tool or list",
+        "document": "Document"
+      },
+      "emotion": "Emotion",
+      "emotions": {
+        "frustration": "Frustration",
+        "empathy": "Empathy",
+        "relief": "Relief",
+        "fear_of_missing_out": "Fear of missing out",
+        "curiosity": "Curiosity",
+        "pride": "Pride"
+      },
+      "action": "Action asked of the reader",
+      "actions": {
+        "save": "Save",
+        "send": "Send to someone",
+        "comment": "Comment",
+        "link": "Follow the link",
+        "none": "None"
+      },
+      "closing": "Closing",
+      "closings": {
+        "cta": "Call to action",
+        "conclusion": "Conclusion (no action)"
+      },
+      "hookArchetype": "Hook archetype",
+      "hookRationale": "Why this hook",
+      "trigger": "Trigger (why now)",
+      "canSay": "What we can say",
+      "canSayHint": "One per line; add the source after a | sign.",
+      "cannotSay": "What we must not say",
+      "cannotSayHint": "One phrase per line; add the reason after a | sign. The export is blocked if one appears in the copy.",
+      "risk": "Risk",
+      "openQuestions": "Open questions for the client",
+      "openQuestionsHint": "The export stays blocked until every question is marked as answered.",
+      "questionResolved": "Answered",
+      "questionText": "Question",
+      "removeQuestion": "Remove",
+      "addQuestion": "Add a question",
+      "firstComment": "First comment",
+      "unset": "Not set"
     }
   },
   "direction": {
@@ -705,7 +761,10 @@
         "unknownLayout": "Line {line}: this template has no layout “{value}”.",
         "tooManyAltHooks": "At most two “Alt hook:” lines are allowed.",
         "invalid": "A field is too long or not valid: {value}."
-      }
+      },
+      "hookArchetype": "Hook type: {archetype}",
+      "needsPayoff": "The Copywriter found no concrete payoff (something the reader can do today) in the brief. Add it to the brief (promise or what we can say) and regenerate, or write the payoff slide yourself.",
+      "payoffDone": "I have added the payoff"
     }
   },
   "versions": {

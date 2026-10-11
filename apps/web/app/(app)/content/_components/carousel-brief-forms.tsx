@@ -2,8 +2,14 @@
 
 import {
   BRIEF_MIN_CHARS,
+  briefActions,
+  briefClosings,
+  briefEmotions,
+  briefObjectives,
   captionLengths,
   contentLanguages,
+  hookArchetypes,
+  slideCountPresets,
   type Brief,
   type CarouselParamsInput,
   type ContentChannel,
@@ -41,6 +47,15 @@ interface Props {
   toneAxes: ToneAxisOption[];
   productPrice: string | null;
 }
+
+/** "text | extra" lines of a textarea, as the pairs the brief stores. */
+const pairsOf = (value: string) =>
+  value
+    .split("\n")
+    .map((line) => line.split("|").map((x) => x.trim()))
+    .filter(([first]) => first);
+const pairsText = (items: { text: string; extra: string }[]) =>
+  items.map((i) => (i.extra ? `${i.text} | ${i.extra}` : i.text)).join("\n");
 
 function Field({
   id,
@@ -375,7 +390,14 @@ function BriefForm({
 }: Inner) {
   const [b, setB] = useState<Brief>(brief);
   const [constraints, setConstraints] = useState(brief.constraints.join("\n"));
+  const [canSay, setCanSay] = useState(
+    pairsText(brief.canSay.map((c) => ({ text: c.text, extra: c.source }))),
+  );
+  const [cannotSay, setCannotSay] = useState(
+    pairsText(brief.cannotSay.map((c) => ({ text: c.text, extra: c.reason }))),
+  );
   const t = useTranslations("content.brief.form");
+  const tl = useTranslations("content.labels");
   const ta = useTranslations("deliverable.brandBook.axes");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -413,6 +435,9 @@ function BriefForm({
         brief: {
           ...b,
           constraints: list,
+          openQuestions: b.openQuestions.filter((q) => q.text.trim()),
+          canSay: pairsOf(canSay).map(([text = "", source = ""]) => ({ text, source })),
+          cannotSay: pairsOf(cannotSay).map(([text = "", reason = ""]) => ({ text, reason })),
           usePrice: productPrice ? b.usePrice : false,
           fromPlan:
             list.join("\n") === brief.constraints.join("\n")
@@ -530,6 +555,217 @@ function BriefForm({
             onChange={(e) => setConstraints(e.target.value)}
           />
         </Field>
+        <fieldset className="grid gap-4 rounded-md border border-subtle p-4">
+          <legend className="px-1 text-label text-fg">{t("strategy")}</legend>
+          <Field id="cb-thesis" label={t("thesis")}>
+            <Input
+              id="cb-thesis"
+              maxLength={300}
+              value={b.thesis}
+              onChange={(e) => set("thesis", e.target.value)}
+            />
+          </Field>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field
+              id="cb-objective"
+              label={t("objective")}
+              hint={
+                b.objective
+                  ? t("objectiveHint", {
+                      min: slideCountPresets[b.objective][0],
+                      max: slideCountPresets[b.objective][1],
+                    })
+                  : undefined
+              }
+            >
+              <select
+                id="cb-objective"
+                className={controlClass}
+                value={b.objective ?? ""}
+                onChange={(e) => set("objective", (e.target.value || null) as Brief["objective"])}
+              >
+                <option value="">{t("unset")}</option>
+                {briefObjectives.map((o) => (
+                  <option key={o} value={o}>
+                    {t(`objectives.${o}`)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field id="cb-emotion" label={t("emotion")}>
+              <select
+                id="cb-emotion"
+                className={controlClass}
+                value={b.emotion ?? ""}
+                onChange={(e) => set("emotion", (e.target.value || null) as Brief["emotion"])}
+              >
+                <option value="">{t("unset")}</option>
+                {briefEmotions.map((o) => (
+                  <option key={o} value={o}>
+                    {t(`emotions.${o}`)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field id="cb-action" label={t("action")}>
+              <select
+                id="cb-action"
+                className={controlClass}
+                value={b.action ?? ""}
+                onChange={(e) => set("action", (e.target.value || null) as Brief["action"])}
+              >
+                <option value="">{t("unset")}</option>
+                {briefActions.map((o) => (
+                  <option key={o} value={o}>
+                    {t(`actions.${o}`)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field id="cb-closing" label={t("closing")}>
+              <select
+                id="cb-closing"
+                className={controlClass}
+                value={b.closing ?? ""}
+                onChange={(e) => set("closing", (e.target.value || null) as Brief["closing"])}
+              >
+                <option value="">{t("unset")}</option>
+                {briefClosings.map((o) => (
+                  <option key={o} value={o}>
+                    {t(`closings.${o}`)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field id="cb-hook-archetype" label={t("hookArchetype")}>
+              <select
+                id="cb-hook-archetype"
+                className={controlClass}
+                value={b.hookArchetype ?? ""}
+                onChange={(e) =>
+                  set("hookArchetype", (e.target.value || null) as Brief["hookArchetype"])
+                }
+              >
+                <option value="">{t("unset")}</option>
+                {hookArchetypes.map((o) => (
+                  <option key={o} value={o}>
+                    {tl(`hookArchetype.${o}`)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field id="cb-trigger" label={t("trigger")}>
+              <Input
+                id="cb-trigger"
+                maxLength={200}
+                value={b.trigger}
+                onChange={(e) => set("trigger", e.target.value)}
+              />
+            </Field>
+          </div>
+          <Field id="cb-hook-rationale" label={t("hookRationale")}>
+            <Input
+              id="cb-hook-rationale"
+              maxLength={300}
+              value={b.hookRationale}
+              onChange={(e) => set("hookRationale", e.target.value)}
+            />
+          </Field>
+          <Field id="cb-can-say" label={t("canSay")} hint={t("canSayHint")}>
+            <textarea
+              id="cb-can-say"
+              rows={3}
+              className={controlClass}
+              value={canSay}
+              onChange={(e) => setCanSay(e.target.value)}
+            />
+          </Field>
+          <Field id="cb-cannot-say" label={t("cannotSay")} hint={t("cannotSayHint")}>
+            <textarea
+              id="cb-cannot-say"
+              rows={3}
+              className={controlClass}
+              value={cannotSay}
+              onChange={(e) => setCannotSay(e.target.value)}
+            />
+          </Field>
+          <Field id="cb-risk" label={t("risk")}>
+            <Input
+              id="cb-risk"
+              maxLength={300}
+              value={b.risk}
+              onChange={(e) => set("risk", e.target.value)}
+            />
+          </Field>
+          <fieldset className="grid gap-2">
+            <legend className="mb-1 text-label text-fg">{t("openQuestions")}</legend>
+            <p className="text-body-sm text-fg-muted">{t("openQuestionsHint")}</p>
+            {b.openQuestions.map((q, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  aria-label={t("questionResolved")}
+                  checked={q.resolved}
+                  onChange={(e) =>
+                    set(
+                      "openQuestions",
+                      b.openQuestions.map((x, j) =>
+                        j === i ? { ...x, resolved: e.target.checked } : x,
+                      ),
+                    )
+                  }
+                />
+                <Input
+                  aria-label={t("questionText")}
+                  maxLength={300}
+                  value={q.text}
+                  onChange={(e) =>
+                    set(
+                      "openQuestions",
+                      b.openQuestions.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)),
+                    )
+                  }
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() =>
+                    set(
+                      "openQuestions",
+                      b.openQuestions.filter((_, j) => j !== i),
+                    )
+                  }
+                >
+                  {t("removeQuestion")}
+                </Button>
+              </div>
+            ))}
+            <div>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={b.openQuestions.length >= 20}
+                onClick={() =>
+                  set("openQuestions", [...b.openQuestions, { text: "", resolved: false }])
+                }
+              >
+                {t("addQuestion")}
+              </Button>
+            </div>
+          </fieldset>
+          <Field id="cb-first-comment" label={t("firstComment")}>
+            <textarea
+              id="cb-first-comment"
+              rows={2}
+              maxLength={500}
+              className={controlClass}
+              value={b.firstComment}
+              onChange={(e) => set("firstComment", e.target.value)}
+            />
+          </Field>
+        </fieldset>
         <fieldset className="grid gap-2">
           <legend className="mb-1 text-label text-fg">{t("tone")}</legend>
           <p className="text-body-sm text-fg-muted">{t("toneHint")}</p>

@@ -9,7 +9,7 @@ import {
   type OutlineMarkdownError,
   type OutlineRow,
 } from "@forgecy/content/client";
-import { Button, Input, Label } from "@forgecy/ui";
+import { Badge, Button, Input, Label } from "@forgecy/ui";
 import {
   ArrowDown,
   ArrowUp,
@@ -217,7 +217,16 @@ export function CarouselOutlineEditor({
     const alt = o.hookAlternatives[i];
     if (!alt) return;
     const rest = o.hookAlternatives.filter((_, j) => j !== i);
-    patch({ hook: alt, hookAlternatives: o.hook.trim() ? [o.hook, ...rest].slice(0, 2) : rest });
+    const old = { text: o.hook, ...(o.hookArchetype ? { archetype: o.hookArchetype } : {}) };
+    const { hookArchetype: _previous, ...withoutArchetype } = o;
+    void _previous;
+    setO({
+      ...withoutArchetype,
+      hook: alt.text,
+      ...(alt.archetype ? { hookArchetype: alt.archetype } : {}),
+      hookAlternatives: o.hook.trim() ? [old, ...rest].slice(0, 2) : rest,
+    });
+    setDirty(true);
   };
   const copyMarkdown = async () => {
     try {
@@ -269,6 +278,27 @@ export function CarouselOutlineEditor({
       }}
     >
       <fieldset disabled={!editable || pending} className="grid gap-4">
+        {o.needsInput === "payoff" ? (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center gap-3 rounded-md border border-warning-fill p-3 text-body-sm text-fg"
+          >
+            <span className="min-w-0 flex-1">{t("needsPayoff")}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                const { needsInput: _asked, ...rest } = o;
+                void _asked;
+                setO(rest);
+                setDirty(true);
+              }}
+            >
+              {t("payoffDone")}
+            </Button>
+          </div>
+        ) : null}
         <div className="grid gap-4 md:grid-cols-2">
           <div className="grid gap-2">
             <Label htmlFor="ol-title">{t("title")}</Label>
@@ -285,20 +315,40 @@ export function CarouselOutlineEditor({
               id="ol-hook"
               maxLength={200}
               value={o.hook}
-              onChange={(e) => patch({ hook: e.target.value })}
+              onChange={(e) => {
+                const { hookArchetype: _previous, ...rest } = o;
+                void _previous;
+                setO({ ...rest, hook: e.target.value });
+                setDirty(true);
+              }}
             />
+            {o.hookArchetype ? (
+              <span className="text-body-sm text-fg-muted">
+                {t("hookArchetype", { archetype: tl(`hookArchetype.${o.hookArchetype}`) })}
+              </span>
+            ) : null}
             {o.hookAlternatives.length ? (
               <div className="grid gap-1">
                 <span className="text-body-sm text-fg-muted">{t("hookAlternatives")}</span>
                 <ul className="grid gap-1">
                   {o.hookAlternatives.map((a, i) => (
-                    <li key={a} className="flex flex-wrap items-center gap-2 text-body-sm text-fg">
-                      <span className="min-w-0 flex-1">{a}</span>
+                    <li
+                      key={a.text}
+                      className="flex flex-wrap items-center gap-2 text-body-sm text-fg"
+                    >
+                      <span className="min-w-0 flex-1">
+                        {a.text}
+                        {a.archetype ? (
+                          <Badge variant="neutral" className="ml-2">
+                            {tl(`hookArchetype.${a.archetype}`)}
+                          </Badge>
+                        ) : null}
+                      </span>
                       <Button
                         type="button"
                         size="sm"
                         variant="secondary"
-                        aria-label={t("useHookLabel", { hook: a })}
+                        aria-label={t("useHookLabel", { hook: a.text })}
                         onClick={() => chooseHook(i)}
                       >
                         {t("useHook")}
