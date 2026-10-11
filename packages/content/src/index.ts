@@ -21,4 +21,5 @@ export * from "./ai/pipeline";
 export * from "./queries";
 export * from "./carousels/direction";
 export * from "./carousels/adapt";
+export * from "./carousels/client-version";
 export * from "./stock";

@@ -110,7 +110,7 @@ The MVP milestones are all on `main`. The repository, code, docs and agent promp
 - [x] **M5 Content and carousels**: strategy and plan, structured briefs, outline, slide editor, static AI images
 - [x] **M6 Brand Guard**: brand consistency checks, internal review and the export gate
 - [x] **M8 Instagram profile analysis and carousel quality**: public profile reading without login, per-figure source labels, claim check, caption tiers, profile-grid preview, undo and redo, code and mockup layouts ([ADR 0024](docs/adr/0024-carousel-ideas-from-open-source.md))
-- [x] **M9 Factory ideas**: typography and copy checks, eight new layouts, a stricter brief with open questions and a fact bank, brand lessons that shape later runs, delivery freeze and export manifest, an advisory visual review and per-channel adaptation proposals ([ADR 0025](docs/adr/0025-fabbriche-ideas.md))
+- [x] **M9 Factory ideas**: typography and copy checks, eight new layouts, a stricter brief with open questions and a fact bank, brand lessons that shape later runs, delivery freeze and export manifest, an advisory visual review, per-channel adaptation proposals, a per-brand severity for the AI-tells lint, video ideas converted to static ones and the client's edited version attached to a delivered carousel ([ADR 0025](docs/adr/0025-fabbriche-ideas.md))
 - [ ] **M7 (v1)**: client-facing Brand Book, more formats (Instagram 1:1, Stories 9:16, Facebook 4:5, TikTok photo), agent settings, batch automations, full client import/export, dark theme
 
 ### Languages

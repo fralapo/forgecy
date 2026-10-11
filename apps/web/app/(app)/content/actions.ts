@@ -35,6 +35,7 @@ import {
   outlineOf,
   markPublished,
   prepareExport,
+  proposeLessonFromChange,
   proposePlanJob,
   proposeStrategyJob,
   rejectDirection,
@@ -45,6 +46,7 @@ import {
   restoreStrategyItem,
   restoreVersion,
   saveBrief,
+  saveClientChanges,
   saveDraft,
   saveOutline,
   saveVersion,
@@ -716,6 +718,24 @@ export async function markPublishedAction(
       ...(input.externalUrl ? { externalUrl: z.string().max(1000).parse(input.externalUrl) } : {}),
       stockCredits: z.array(z.string().max(300)).max(20).parse(input.stockCredits),
     });
+    return {};
+  });
+}
+
+/** What the client changed in their version of a published carousel, per slide. */
+export async function saveClientChangesAction(
+  input: ContentRef & { notes: { id: string; slide: number | null; text: string }[] },
+) {
+  return run(input.slug, async ({ db, actor }) => {
+    await saveClientChanges(db, actor, { ...ref(input), notes: input.notes });
+    return {};
+  });
+}
+
+/** One saved note becomes a PROPOSED brand lesson; a person confirms it in the lessons log. */
+export async function proposeLessonFromChangeAction(input: ContentRef & { noteId: string }) {
+  return run(input.slug, async ({ db, actor }) => {
+    await proposeLessonFromChange(db, actor, { ...ref(input), noteId: uuid.parse(input.noteId) });
     return {};
   });
 }

@@ -151,6 +151,9 @@ export const TRUST_RULES: Record<string, TrustRule> = {
       "published_by",
       "delivered_version_id",
       "gates_passed",
+      // The client's edited version points at assets and a PDF of this installation, with notes
+      // and lesson ids of people here: none of it travels as a statement.
+      "client_version",
     ],
     // The job that held the lock is not in the package: the importer empties the column.
     other: ["locked_by_job_id"],
@@ -702,6 +705,7 @@ export const REVIEWED_JSON_COLUMNS: ReadonlySet<string> = new Set([
   "content_rubrics.provenance",
   "content_plans.provenance",
   "content_plan_items.provenance",
+  "contents.client_version", // asset ids, PDF key and notes; cleared on import with the delivery record
   "contents.gates_passed", // summary of checks at delivery; cleared on import with the delivery record
   "contents.brief",
   "contents.outline",

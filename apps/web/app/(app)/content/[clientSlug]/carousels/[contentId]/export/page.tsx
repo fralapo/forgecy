@@ -1,8 +1,11 @@
 import { labelSlotRef } from "@forgecy/carousel";
+import { clientVersionSlides, readClientVersion } from "@forgecy/content";
+import { can } from "@forgecy/core";
 import { Badge, Card } from "@forgecy/ui";
 import { FileDown } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getFormat, refText } from "@/lib/i18n";
+import { ClientVersionPanel } from "../../../../_components/client-version-panel";
 import { CarouselDeliveryForm } from "../../../../_components/carousel-delivery-form";
 import { CarouselExportForm } from "../../../../_components/carousel-export-form";
 import { getStorage } from "../../../../_lib/server";
@@ -37,7 +40,7 @@ export default async function ExportPage({
   params: Promise<{ clientSlug: string; contentId: string }>;
 }) {
   const { clientSlug, contentId } = await params;
-  const { client, ws } = await loadCarousel(clientSlug, contentId);
+  const { db, user, client, ws } = await loadCarousel(clientSlug, contentId);
   const c = ws.content;
   const t = await getTranslations("content.export");
   const tl = await getTranslations("content.labels");
@@ -71,6 +74,30 @@ export default async function ExportPage({
       ),
     })),
   );
+  const cv = c.publishedAt ? readClientVersion(c.clientVersion) : null;
+  const cvSlides = cv
+    ? await Promise.all(
+        (await clientVersionSlides(db, user.actor, { clientId: client.id, version: cv })).map(
+          async (s) => ({
+            id: s.id,
+            slide: s.slide,
+            alt: s.alt,
+            url: await storage.signedUrl(s.storageKey, { expiresInSeconds: 600 }),
+          }),
+        ),
+      )
+    : [];
+  const cvPdf =
+    cv?.pdf && cv.pdf.key.startsWith(prefix)
+      ? {
+          name: cv.pdf.name,
+          url: await storage.signedUrl(cv.pdf.key, {
+            expiresInSeconds: 600,
+            disposition: "attachment",
+            filename: cv.pdf.name,
+          }),
+        }
+      : null;
   const guard = ws.checks?.guard ?? null;
   const openFindings = await Promise.all(
     (guard?.findings ?? [])
@@ -133,6 +160,29 @@ export default async function ExportPage({
             }
           />
         </Card>
+        {c.publishedAt ? (
+          <Card className="grid gap-3 p-5">
+            <h3 className="text-heading-sm text-fg">{t("clientVersion.title")}</h3>
+            <p className="text-body-sm text-fg-muted">{t("clientVersion.description")}</p>
+            <ClientVersionPanel
+              slug={client.slug}
+              clientId={client.id}
+              contentId={c.id}
+              canAttach={
+                can(user.actor, "assets.upload", client.id) && can(user.actor, "publish", client.id)
+              }
+              canNote={can(user.actor, "edit_draft", client.id)}
+              canPropose={
+                can(user.actor, "propose", client.id) && can(user.actor, "edit_draft", client.id)
+              }
+              slides={cvSlides}
+              pdf={cvPdf}
+              attachedAt={cv ? format.date(new Date(cv.attachedAt), "dateTime") : null}
+              initialNotes={cv?.notes ?? []}
+              slideCount={ws.document.slides.length}
+            />
+          </Card>
+        ) : null}
         {guard ? (
           <Card className="grid gap-3 p-5">
             <div className="flex flex-wrap items-center gap-2">

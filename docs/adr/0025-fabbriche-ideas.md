@@ -98,12 +98,29 @@ Constraints that did not move: the AI never writes HTML, agents propose and peop
 - **Never a score.** The result is `{ notes, draftRev, mode, round, frames }`, covered by the scripted-AI integration test.
 - **Retention.** The frames are ordinary exports and are kept like them; there is no separate short-lived store or sweep.
 
+### Built: severity of the AI-tells lint per brand (no migration)
+
+- The brand writing rules (`verbal.writingRules`, optional, nothing changes when unset) take `aiTellsSeverity` and `dashSeverity`, each `off`, `warning` or `error`. They are edited in the writing-rules form of the Brand Identity editor and travel with the rules, which are diffed and proposed as a whole.
+- `aiTellsSeverity` applies to every tell (fillers, contrasts, press-release words, gerunds, closers) and to the dash too; `dashSeverity` overrides it for the dash alone, because the dash is a house voice. Unset means `warning`, as before. `off` raises no finding; `error` blocks the export like any other error. The content checks read both from the published Brand Identity.
+
+### Built: video ideas become static (migration 0038)
+
+- Clients send video, reel and story-video ideas. The Planner prompt (`VIDEO_TO_STATIC_RULE`, prompt version `content-2026-10-11f`) says there is no video at any stage: such an idea is converted into a static carousel or a single-frame idea that keeps its goal.
+- Each proposed plan item carries `convertedFromVideo` (boolean) and `conversionNote` (one line, at most 200 characters). Both are optional in the model output and in stored data (defaults `false` and empty), so old plans validate. They are stored on `content_plan_items` and shown on the plan page next to the proposal ("Was a video idea, now static" and the note); a person still accepts, edits or rejects the item.
+
+### Built: the client's edited version (migration 0038)
+
+- On a published (frozen) carousel, the export page has a "Client's version" panel. A person with `assets.upload` and `publish` on the client attaches up to 20 slide images (PNG, JPEG or WebP, 15 MB each) and/or a PDF (30 MB, magic bytes checked), through a same-origin route that reuses the library storage. Slides become library assets (source `upload`, tag `client-edit`, `content_id` set; an identical file already in the library is tagged and reused). The PDF is stored content-addressed under `clients/<id>/client-versions/` and linked by signed URL.
+- `contents.client_version` (jsonb) records the files, who and when, and the notes; when it is set, the delivered version is the client's. It is the only thing that changes: the delivery record, the copy and the status stay as they were, so the content stays frozen. No AI call is involved.
+- The panel keeps one note per change ("removed slide 6 because it sounded like an ad", "cover text changed to ..."), per slide or for the whole carousel. A person can turn a saved note into a brand lesson with "Propose as lesson": it is inserted in `brand_lessons` as `proposed`, `proposedBy` that person, once per note, and never confirmed here; confirming stays with `brand_identity.approve` in the lessons log, people only.
+- Client transfer: `client_version` is cleared on import with the rest of the delivery record and listed among the reviewed JSON columns. The new plan-item columns are plain data.
+
 ### Left out, on purpose
 
 - **Raw HTML** in build scripts: the AI picks layouts and fills slots; the renderer inserts text.
 - **Autonomous mode** without approval, and auto-publishing.
 - **GSAP and CDNs**, other services with keys: no new paid or keyed dependency. Pexels was first listed here because of its key; it is now built as an optional, server-side feature (see "Built as advisory checks" below).
-- **Video, reels, TTS**: static only.
+- **Video, reels, TTS**: static only. A video idea from a client is converted into a static one (see above), never planned as video.
 - **Auto-mutating autoresearch loop** that rewrites copy or rules: Forgecy proposes, a person decides.
 - **One brand's taste as a global rule**: no numbering, the yellow-on-paper ban, an anti-scam vocabulary, one client's content. Where a rule is a house voice (the em dash) it is a per-brand severity.
 - **Metric claims**: statements such as "repost within 3 hours" or "recycle after 60 days" are shown only as plain-text tips in the manifest, never as numbers the tool scores or enforces.
