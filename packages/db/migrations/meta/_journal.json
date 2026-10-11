@@ -239,6 +239,13 @@
       "when": 1791691465244,
       "tag": "0035_factory_facts_delivery",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1791694696443,
+      "tag": "0036_listening_signals",
+      "breakpoints": true
     }
   ]
 }

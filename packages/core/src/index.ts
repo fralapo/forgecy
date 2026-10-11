@@ -15,5 +15,6 @@ export * from "./notification";
 export * from "./permissions";
 export * from "./review-status";
 export * from "./social";
+export * from "./listening";
 export * from "./brand-check";
 export * from "./memory";

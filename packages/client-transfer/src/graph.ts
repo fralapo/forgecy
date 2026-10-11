@@ -111,6 +111,7 @@ export const TABLE_AREAS: Record<string, ClientTransferArea | "client"> = {
   contents: "content",
   content_approvals: "content",
   content_comments: "content",
+  listening_signals: "content",
   content_exports: "content",
   content_outlines: "content",
   content_creative_directions: "content",

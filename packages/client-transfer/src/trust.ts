@@ -161,6 +161,10 @@ export const TRUST_RULES: Record<string, TrustRule> = {
     status: { proposed: "proposed", accepted: "proposed", rejected: "stale", stale: "stale" },
     clear: DECISION,
   },
+  listening_signals: {
+    // "used" says a person turned the signal into content; the package cannot say so.
+    status: demote(["new", "recurring", "used", "dismissed"], "recurring", "used"),
+  },
   content_comments: {
     clear: ["resolved_by", "resolved_at"],
   },

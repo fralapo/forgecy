@@ -19,3 +19,4 @@ export * from "./client-transfer";
 export * from "./memory";
 export * from "./client-access";
 export * from "./social";
+export * from "./listening";
