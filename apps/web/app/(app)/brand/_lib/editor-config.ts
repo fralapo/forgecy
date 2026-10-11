@@ -308,6 +308,18 @@ export const verbalUi: SectionUi = {
           label: "verbal.exclamations",
           options: opts(["no", "limited", "yes"], "exclamations"),
         },
+        {
+          kind: "select",
+          key: "aiTellsSeverity",
+          label: "verbal.aiTellsSeverity",
+          options: opts(["off", "warning", "error"], "severity"),
+        },
+        {
+          kind: "select",
+          key: "dashSeverity",
+          label: "verbal.dashSeverity",
+          options: opts(["off", "warning", "error"], "severity"),
+        },
         { kind: "text", key: "capitalization", label: "verbal.capitalization" },
         { kind: "text", key: "numbers", label: "verbal.numbers" },
         { kind: "text", key: "ctaStyle", label: "verbal.ctaStyle" },

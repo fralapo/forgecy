@@ -127,3 +127,29 @@ describe("copy checks", () => {
     expect(ids(run(slides, {}, { language: "it", person: "noi" }))).not.toContain("voice:s2");
   });
 });
+
+describe("AI-tells severity per brand", () => {
+  const slides = deck(text("s2", "Non è solo un tool, è un metodo — davvero."));
+  const sev = (input: Partial<CheckInput>, id: string) =>
+    run(slides, {}, { language: "it", ...input }).find((x) => x.id === id)?.severity;
+
+  it("defaults to warning", () => {
+    expect(sev({}, "aitell:contrast:s2")).toBe("warning");
+  });
+  it("off removes the tells, error raises them", () => {
+    expect(sev({ aiTellsSeverity: "off" }, "aitell:contrast:s2")).toBeUndefined();
+    expect(sev({ aiTellsSeverity: "error" }, "aitell:contrast:s2")).toBe("error");
+  });
+  it("the dash has its own severity, falling back to the general one", () => {
+    expect(sev({ aiTellsSeverity: "error" }, "aitell:dash:s2")).toBe("error");
+    expect(
+      sev({ aiTellsSeverity: "error", dashSeverity: "off" }, "aitell:dash:s2"),
+    ).toBeUndefined();
+    expect(sev({ aiTellsSeverity: "error", dashSeverity: "warning" }, "aitell:dash:s2")).toBe(
+      "warning",
+    );
+    expect(sev({ aiTellsSeverity: "error", dashSeverity: "warning" }, "aitell:contrast:s2")).toBe(
+      "error",
+    );
+  });
+});

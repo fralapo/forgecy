@@ -926,6 +926,12 @@ export async function checkDocument(
       ? { maxHashtags: brand.document.verbal.writingRules.value.maxHashtags }
       : {}),
     language: c.language,
+    ...(brand?.document.verbal.writingRules?.value.aiTellsSeverity
+      ? { aiTellsSeverity: brand.document.verbal.writingRules.value.aiTellsSeverity }
+      : {}),
+    ...(brand?.document.verbal.writingRules?.value.dashSeverity
+      ? { dashSeverity: brand.document.verbal.writingRules.value.dashSeverity }
+      : {}),
     ...(brand?.document.verbal.writingRules?.value.person
       ? { person: brand.document.verbal.writingRules.value.person }
       : {}),

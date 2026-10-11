@@ -393,6 +393,8 @@
       "emoji": "Emoji",
       "maxSentenceWords": "Max words per sentence",
       "maxHashtags": "Max hashtags",
+      "aiTellsSeverity": "AI-tells check",
+      "dashSeverity": "Dash used as a pause",
       "anglicisms": "Anglicisms",
       "exclamations": "Exclamation marks",
       "capitalization": "Capitalization",
@@ -570,6 +572,7 @@
         "loyalty": "Loyalty"
       },
       "severity": {
+        "off": "Off (no check)",
         "error": "Blocks (error)",
         "warning": "Needs a “Seen” (warning)",
         "note": "Only informs (note)"

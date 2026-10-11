@@ -123,6 +123,9 @@ export interface CheckInput {
   language?: string;
   /** Form of address of the Brand Identity writing rules; “tu” and “voi” are checked. */
   person?: "tu" | "lei" | "voi" | "noi" | "impersonale";
+  /** Brand severity of the AI-tells lint (default warning); `dash` falls back to it. */
+  aiTellsSeverity?: "off" | "warning" | "error";
+  dashSeverity?: "off" | "warning" | "error";
   /** Stock image credit lines that the caption must carry before its hashtags. */
   credits?: readonly string[];
   /**
@@ -324,13 +327,19 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
         ...say("review.checks.placeholder", { ...where(t), match: marker }),
         ...(t.slideId ? { slideId: t.slideId } : {}),
       });
-    for (const tell of findAiTells(t.text, input.language ?? ""))
+    for (const tell of findAiTells(t.text, input.language ?? "")) {
+      const level =
+        (tell.kind === "dash" ? input.dashSeverity : undefined) ??
+        input.aiTellsSeverity ??
+        "warning";
+      if (level === "off") continue;
       add({
         id: `aitell:${tell.kind}:${key}`,
-        severity: "warning",
+        severity: level,
         ...say("review.checks.aiTell", { ...where(t), kind: tell.kind, match: tell.match }),
         ...(t.slideId ? { slideId: t.slideId } : {}),
       });
+    }
     const form =
       input.person === "tu" || input.person === "voi"
         ? addressForm(t.text, input.language ?? "")

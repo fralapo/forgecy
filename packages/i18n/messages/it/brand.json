@@ -393,6 +393,8 @@
       "emoji": "Emoji",
       "maxSentenceWords": "Parole massime per frase",
       "maxHashtags": "Hashtag massimi",
+      "aiTellsSeverity": "Controllo frasi da IA",
+      "dashSeverity": "Trattino usato come pausa",
       "anglicisms": "Anglicismi",
       "exclamations": "Punti esclamativi",
       "capitalization": "Maiuscole",
@@ -570,6 +572,7 @@
         "loyalty": "Fidelizzazione"
       },
       "severity": {
+        "off": "Spento (nessun controllo)",
         "error": "Blocca (errore)",
         "warning": "Serve un “Visto” (avviso)",
         "note": "Solo informa (nota)"

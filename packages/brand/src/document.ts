@@ -142,6 +142,10 @@ export const writingRulesSchema = z.object({
   emoji: z.enum(["no", "limited", "yes"]).optional(),
   maxSentenceWords: z.number().int().min(3).max(80).optional(),
   maxHashtags: z.number().int().min(0).max(30).optional(),
+  /** Severity of the AI-tells lint (fillers, contrasts, gerunds...), dash excepted; unset = warning. */
+  aiTellsSeverity: z.enum(["off", "warning", "error"]).optional(),
+  /** Severity of the dash-as-pause tell on its own (a house voice); unset follows aiTellsSeverity. */
+  dashSeverity: z.enum(["off", "warning", "error"]).optional(),
   anglicisms: z.enum(["avoid", "limited", "allowed"]).optional(),
   exclamations: z.enum(["no", "limited", "yes"]).optional(),
   capitalization: optText(400),
