@@ -13,4 +13,5 @@ export * from "./service/profiles";
 export * from "./service/audit-bridge";
 export * from "./service/queries";
 export * from "./service/schedule";
+export * from "./listening";
 export { runSnapshot, type SnapshotOutcome, type StatusReasonKey } from "./service/snapshot";
