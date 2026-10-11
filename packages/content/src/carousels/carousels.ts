@@ -85,11 +85,17 @@ import {
 } from "./brand-guard";
 import { assetCommercialUse } from "../assets";
 import { productSource } from "../products";
+import { factBankOf } from "./facts";
 import { clampSlideCount, getTemplate } from "./templates";
 
 export type ContentRow = typeof contents.$inferSelect;
 
 const EDITABLE: ContentStatus[] = ["draft", "changes_requested", "approved", "exported"];
+
+/** Published contents are frozen: the delivery record says what went out, so the copy stays as it was. */
+export const isPublished = (c: Pick<ContentRow, "publishedAt">) => Boolean(c.publishedAt);
+export const isEditable = (c: Pick<ContentRow, "status" | "publishedAt">) =>
+  EDITABLE.includes(c.status) && !isPublished(c);
 /** Default title, in the carousel's language: it is printed in exports. */
 function untitled(language: string): string {
   return getTranslator(isLocale(language) ? language : "en", "deliverable")("carousel.untitled");
@@ -332,7 +338,7 @@ export async function updateParams(
 ) {
   humanOnly(actor, "edit_draft", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
-  if (!EDITABLE.includes(c.status)) conflict("content.errors.notEditable");
+  if (!isEditable(c)) conflict("content.errors.notEditable");
   assertNotLocked(c);
   const p = parseOrThrow(carouselParamsSchema, input.params);
   const template = await getTemplate(db, input.clientId, p.templateKey);
@@ -389,7 +395,7 @@ export async function saveBrief(
 ) {
   humanOnly(actor, "edit_draft", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
-  if (!EDITABLE.includes(c.status)) conflict("content.errors.notEditable");
+  if (!isEditable(c)) conflict("content.errors.notEditable");
   const brief = parseOrThrow(briefSchema, input.brief);
   const [row] = await db
     .update(contents)
@@ -460,7 +466,7 @@ export async function saveOutline(
 ) {
   humanOnly(actor, "edit_draft", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
-  if (!EDITABLE.includes(c.status)) conflict("content.errors.notEditable");
+  if (!isEditable(c)) conflict("content.errors.notEditable");
   assertNotLocked(c);
   if (c.outlineNumber !== input.outlineNumber) revConflict({ outlineNumber: c.outlineNumber });
   const outline = parseOrThrow(outlineSchema, input.outline);
@@ -571,7 +577,7 @@ export async function saveDraft(
     conflict("content.errors.inReview", {
       code: "CONTENT-IN-REVIEW",
     });
-  if (!EDITABLE.includes(c.status)) conflict("content.errors.notEditable");
+  if (!isEditable(c)) conflict("content.errors.notEditable");
   assertNotLocked(c);
   const doc = normalizeDocument(input.document);
   const status = c.status === "changes_requested" ? c.status : nextStatus(actor, c, "draft");
@@ -635,7 +641,7 @@ export async function restoreVersion(
   humanOnly(actor, "edit_draft", input.clientId);
   const c = await getContentRow(db, input.clientId, input.id);
   if (c.status === "in_review") conflict("content.errors.withdrawBeforeRestore");
-  if (!EDITABLE.includes(c.status)) conflict("content.errors.notEditable");
+  if (!isEditable(c)) conflict("content.errors.notEditable");
   assertNotLocked(c);
   const [old] = await db
     .select()
@@ -855,6 +861,8 @@ export async function checkDocument(
     brandVersion: { used: c.brandVersionId, current: brand?.versionId ?? null },
     captionLength: brief.outputs.captionLength,
     claims,
+    facts: factBankOf(product),
+    credits: c.stockCredits,
     brief: { openQuestions: brief.openQuestions, cannotSay: brief.cannotSay },
   });
 
@@ -1102,6 +1110,83 @@ export async function setContentArchived(
     .where(eq(contents.id, c.id));
   await audit(db, actor, input.archived ? "archived" : "restored", c);
   return { ok: true as const };
+}
+
+// ---- Delivery record ----
+
+export interface DeliveryInput {
+  clientId: string;
+  id: string;
+  /** Post id or link on the channel. */
+  externalId?: string;
+  externalUrl?: string;
+  /** Stock image credit lines. */
+  stockCredits?: string[];
+}
+
+const credits = (lines: readonly string[] | undefined) =>
+  [...new Set((lines ?? []).map((l) => l.trim()).filter(Boolean))].slice(0, 20);
+
+/** The credit lines the caption must carry (feeds the caption credit check and the export manifest). */
+export async function setStockCredits(
+  db: Database,
+  actor: Actor,
+  input: { clientId: string; id: string; stockCredits: string[] },
+) {
+  humanOnly(actor, "edit_draft", input.clientId);
+  const c = await getContentRow(db, input.clientId, input.id);
+  if (isPublished(c)) conflict("content.errors.alreadyPublished");
+  await db
+    .update(contents)
+    .set({ stockCredits: credits(input.stockCredits) })
+    .where(eq(contents.id, c.id));
+  await audit(db, actor, "credits_set", c);
+  return { ok: true as const };
+}
+
+/**
+ * “Mark as published”: a person records that the approved version went out. The delivery
+ * record keeps when, where (id or link), the credits, a summary of the checks and the
+ * version that was delivered; the content is read-only from then on.
+ */
+export async function markPublished(db: Database, actor: Actor, input: DeliveryInput) {
+  humanOnly(actor, "publish", input.clientId);
+  const c = await getContentRow(db, input.clientId, input.id);
+  assertNotLocked(c);
+  if (isPublished(c)) conflict("content.errors.alreadyPublished");
+  if (!isFinalExportable(c) || !c.approvedVersionId)
+    conflict("content.errors.publishNotApproved", { code: "PUBLISH-NOT-APPROVED" });
+  const [version] = await db
+    .select()
+    .from(contentVersions)
+    .where(eq(contentVersions.id, c.approvedVersionId));
+  if (!version) notFound("content.errors.approvedVersionNotFound");
+  const stockCredits = input.stockCredits ? credits(input.stockCredits) : c.stockCredits;
+  const { errors, warnings } = await checkDocument(
+    db,
+    actor,
+    { ...c, stockCredits },
+    parseDocument(version.document),
+    { guard: "read", version: version.number },
+  );
+  if (errors.length) conflict("content.errors.publishBlocked", { count: String(errors.length) });
+  const publishedAt = new Date();
+  const [row] = await db
+    .update(contents)
+    .set({
+      publishedAt,
+      publishedBy: actor.id,
+      externalId: input.externalId?.trim().slice(0, 200) || null,
+      externalUrl: input.externalUrl?.trim().slice(0, 1000) || null,
+      stockCredits,
+      gatesPassed: { errors: errors.length, warnings: warnings.length, version: version.number },
+      deliveredVersionId: version.id,
+    })
+    .where(and(eq(contents.id, c.id), isNull(contents.publishedAt)))
+    .returning();
+  if (!row) conflict("content.errors.alreadyPublished");
+  await audit(db, actor, "published", c, { versionId: version.id, externalUrl: row.externalUrl });
+  return row;
 }
 
 // ---- Comments ----

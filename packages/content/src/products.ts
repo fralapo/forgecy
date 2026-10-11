@@ -4,6 +4,7 @@
  * products, and without one the product pickers stay empty. Links are plain ids
  * (no foreign key), so strategy and carousels work with or without the catalog.
  */
+import type { ProductFactStatus } from "@forgecy/core";
 import {
   and,
   contentPillars,
@@ -16,6 +17,13 @@ import {
   sql,
   type Database,
 } from "@forgecy/db";
+
+/** One entry of a product's fact bank (packages/catalog `product_facts`). */
+export interface ProductFactRef {
+  text: string;
+  keywords: string[];
+  status: ProductFactStatus;
+}
 
 export interface ProductImageRef {
   /** Storage key under `clients/<id>/`, usable as a slide image. */
@@ -34,6 +42,8 @@ export interface ProductSummary {
   description: string;
   /** Benefits, features, use cases, as short lines. */
   highlights: string[];
+  /** Fact bank rows with a trust status; `highlights` count as implicit `catalog_only` facts. */
+  facts: ProductFactRef[];
   /** Bumped by the catalog on every approved change (“The product has changed”). */
   revision: number;
   images: ProductImageRef[];

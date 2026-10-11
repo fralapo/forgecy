@@ -33,7 +33,7 @@ import { slotTexts } from "../carousels/checks";
 import type { ProductSummary } from "../products";
 import { directionBlock, type CreativeDirection } from "../carousels/direction";
 
-export const CONTENT_PROMPT_VERSION = "content-2026-10-11a";
+export const CONTENT_PROMPT_VERSION = "content-2026-10-11b";
 
 /** What decides whether a channel is working; the Planner judges each rubric by it. */
 export const CHANNEL_METRICS = `- Channel gate metric: judge a rubric by the metric of its channel, and name it in the pillar goal: Instagram = saves and shares; Facebook = shares in groups and comments; LinkedIn = dwell time and comments. Likes and reach alone are not a goal.`;
@@ -339,13 +339,15 @@ Rules:
 ${SHARED_RULES}
 - Quote the exact words from the copy, as written, in "quote". Use slide 0 for the caption and the slide's position (starting at 1) otherwise.
 - Risk: high when a reader could be misled or harmed or the claim is checkable and likely false, medium when it is plausible but unsupported, low when it is a mild exaggeration.
-- Do not flag what the brief or the product sheet supports. Return an empty list when nothing is at risk.
+- Do not flag what the brief or the product sheet supports. When a "Verified fact bank" is given, a product claim outside it is unsupported: flag it, and flag anything listed as never to be used. Return an empty list when nothing is at risk.
 - "reason" is one short sentence in the language of the copy.`,
   "copywriting",
 );
 
 export function claimsUserPrompt(input: {
   brief: string;
+  /** The verified fact bank of the product (see `factBankPrompt`); empty when there is none. */
+  factBank?: string;
   document: CarouselDocument;
   language: string;
 }): string {
@@ -354,6 +356,7 @@ export function claimsUserPrompt(input: {
     `Language of the copy: ${input.language}`,
     "# Carousel brief and product sheet",
     input.brief,
+    input.factBank ?? "",
     "## Copy",
     json(copy),
     `Caption (slide 0): ${input.document.caption || "—"}`,
@@ -419,7 +422,13 @@ export function layoutGuide(m: TemplateManifest): string {
 export interface StrategyPromptInput {
   clientName: string;
   audience: { id: string; name: string }[];
-  existingPillars: { id: string; name: string; goal: string }[];
+  existingPillars: {
+    id: string;
+    name: string;
+    goal: string;
+    territory?: string | null;
+    metric?: string | null;
+  }[];
   existingRubrics: { id: string; pillarId: string; name: string }[];
   products: readonly ProductSummary[];
   instruction: string;
@@ -431,7 +440,7 @@ export function strategyUserPrompt(i: StrategyPromptInput): string {
     `# Client: ${i.clientName}`,
     `Language: ${i.language}`,
     `## Audience segments (id: name)\n${i.audience.map((a) => `- ${a.id}: ${a.name}`).join("\n") || "(none)"}`,
-    `## Existing pillars\n${i.existingPillars.map((p) => `- id ${p.id}: ${p.name} — ${p.goal}`).join("\n") || "(none)"}`,
+    `## Existing pillars\n${i.existingPillars.map((p) => `- id ${p.id}: ${p.name} — ${p.goal}${p.territory ? `; territory: ${p.territory}` : ""}${p.metric ? `; metric: ${p.metric}` : ""}`).join("\n") || "(none)"}`,
     `## Existing rubrics\n${i.existingRubrics.map((r) => `- id ${r.id} (pillar ${r.pillarId}): ${r.name}`).join("\n") || "(none)"}`,
     productBlock(i.products),
     i.instruction ? `## The person's directions\n${i.instruction}` : "",
@@ -443,11 +452,43 @@ export function strategyUserPrompt(i: StrategyPromptInput): string {
 export interface PlanPromptInput {
   clientName: string;
   channels: string[];
-  pillars: { id: string; name: string; goal: string; frequency: string }[];
-  rubrics: { id: string; pillarId: string; name: string; frequency: string; hookFormula: string }[];
+  pillars: {
+    id: string;
+    name: string;
+    goal: string;
+    frequency: string;
+    territory?: string | null;
+    metric?: string | null;
+  }[];
+  rubrics: {
+    id: string;
+    pillarId: string;
+    name: string;
+    frequency: string;
+    hookFormula: string;
+    cost?: string | null;
+    metric?: string | null;
+  }[];
+  /** Strategy notes of the plan in use, when a person wrote them. */
+  notes?: {
+    criticalNode?: string | null;
+    clientNeeds?: readonly string[];
+    countRationale?: string | null;
+  };
   products: readonly ProductSummary[];
   instruction: string;
   language: string;
+}
+
+/** The plan's strategy notes as a prompt block; empty when there are none. */
+export function planNotesBlock(notes: PlanPromptInput["notes"]): string {
+  if (!notes) return "";
+  const lines = [
+    notes.criticalNode && `Critical node (the one bottleneck to work on): ${notes.criticalNode}`,
+    notes.clientNeeds?.length && `What the client needs: ${notes.clientNeeds.join("; ")}`,
+    notes.countRationale && `Why this many contents: ${notes.countRationale}`,
+  ].filter((x): x is string => typeof x === "string" && x !== "");
+  return lines.length ? `## Strategy notes\n${lines.join("\n")}` : "";
 }
 
 export function planUserPrompt(i: PlanPromptInput): string {
@@ -455,8 +496,9 @@ export function planUserPrompt(i: PlanPromptInput): string {
     `# Client: ${i.clientName}`,
     `Language: ${i.language}`,
     `Channels: ${i.channels.join(", ")}`,
-    `## Pillars\n${i.pillars.map((p) => `- id ${p.id}: ${p.name} (${p.frequency}) — ${p.goal}`).join("\n")}`,
-    `## Rubrics\n${i.rubrics.map((r) => `- id ${r.id} (pillar ${r.pillarId}): ${r.name} (${r.frequency}); hook: ${r.hookFormula || "—"}`).join("\n") || "(none)"}`,
+    `## Pillars\n${i.pillars.map((p) => `- id ${p.id}: ${p.name} (${p.frequency}) — ${p.goal}${p.territory ? `; territory: ${p.territory}` : ""}${p.metric ? `; metric: ${p.metric}` : ""}`).join("\n")}`,
+    `## Rubrics\n${i.rubrics.map((r) => `- id ${r.id} (pillar ${r.pillarId}): ${r.name} (${r.frequency}); hook: ${r.hookFormula || "—"}${r.cost ? `; cost: ${r.cost}` : ""}${r.metric ? `; metric: ${r.metric}` : ""}`).join("\n") || "(none)"}`,
+    planNotesBlock(i.notes),
     productBlock(i.products),
     i.instruction ? `## The person's directions\n${i.instruction}` : "",
   ]

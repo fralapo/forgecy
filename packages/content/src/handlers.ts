@@ -145,6 +145,8 @@ async function runExport(
     brand: brand.theme,
     caption: doc.caption,
     hashtags: doc.hashtags,
+    channel: c.channel,
+    credits: c.stockCredits,
     outputs: payload.outputs,
     draft: payload.draft,
     language: isLocale(c.language) ? c.language : DEFAULT_LOCALE,

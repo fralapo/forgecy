@@ -33,6 +33,8 @@ import {
   hashtagSet,
   wordCount,
 } from "./copy-lint";
+import { factInCopy } from "./facts";
+import type { ProductFactRef } from "../products";
 
 /** A body slide with at least this many words in its text counts as dense for the rhythm check. */
 const DENSE_WORDS = 35;
@@ -120,6 +122,11 @@ export interface CheckInput {
   person?: "tu" | "lei" | "voi" | "noi" | "impersonale";
   /** Stock image credit lines that the caption must carry before its hashtags. */
   credits?: readonly string[];
+  /**
+   * Fact bank of the product: a `do_not_use` fact in the copy is an error, a `pending_client`
+   * one a warning (use `factBankOf` to split a product's facts).
+   */
+  facts?: { doNotUse: readonly ProductFactRef[]; pending: readonly ProductFactRef[] };
   /** Brief parts that gate the export: open client questions and phrases the copy must not use. */
   brief?: {
     openQuestions?: readonly { text: string; resolved: boolean }[];
@@ -278,6 +285,27 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
           ...(t.slideId ? { slideId: t.slideId } : {}),
         });
   }
+
+  for (const [bucket, severity, key] of [
+    [input.facts?.doNotUse, "error", "doNotUse"],
+    [input.facts?.pending, "warning", "pending"],
+  ] as const)
+    for (const fact of bucket ?? [])
+      for (const t of texts) {
+        if (!t.slideId && t.text === doc.title) continue;
+        if (!factInCopy(t.text, fact)) continue;
+        add({
+          id: `facts:${key === "doNotUse" ? "do-not-use" : "pending"}:${squash(fact.text)}:${t.slideId ?? "caption"}`,
+          severity,
+          ...say(key === "doNotUse" ? "review.checks.factDoNotUse" : "review.checks.factPending", {
+            fact: fact.text,
+            slide: t.slideId
+              ? String(doc.slides.findIndex((s) => s.id === t.slideId) + 1)
+              : "caption",
+          }),
+          ...(t.slideId ? { slideId: t.slideId } : {}),
+        });
+      }
 
   const where = (t: { slideId?: string }) => ({
     slide: t.slideId ? String(doc.slides.findIndex((s) => s.id === t.slideId) + 1) : "caption",

@@ -31,10 +31,12 @@ import {
 import {
   pillarInputSchema,
   planItemInputSchema,
+  planNotesSchema,
   provenanceSchema,
   rubricInputSchema,
   type PillarInput,
   type PillarInputRaw,
+  type PlanNotesRaw,
   type PlanItemInput,
   type PlanItemInputRaw,
   type Provenance,
@@ -86,6 +88,8 @@ function pillarValues(p: PillarInput) {
     emotion: p.emotion || null,
     examples: p.examples as unknown as Record<string, unknown>[],
     forbidden: p.forbidden,
+    territory: p.territory || null,
+    metric: p.metric || null,
     productIds: p.productIds,
   };
 }
@@ -103,6 +107,8 @@ function rubricValues(r: RubricInput) {
     templateKey: r.templateKey,
     channels: r.channels,
     ownerId: r.ownerId,
+    cost: r.cost || null,
+    metric: r.metric || null,
     productIds: r.productIds,
   };
 }
@@ -599,6 +605,8 @@ export function pillarRowToInput(p: PillarRow): PillarInputRaw {
     emotion: p.emotion ?? "",
     examples: p.examples as never,
     forbidden: p.forbidden,
+    territory: p.territory ?? "",
+    metric: p.metric ?? "",
     productIds: p.productIds,
   };
 }
@@ -615,6 +623,8 @@ export function rubricRowToInput(r: RubricRow): RubricInputRaw {
     templateKey: r.templateKey,
     channels: r.channels as never,
     ownerId: r.ownerId,
+    cost: r.cost ?? "",
+    metric: r.metric ?? "",
     productIds: r.productIds,
   };
 }
@@ -666,6 +676,27 @@ export async function ensureActivePlan(db: Database, actor: Actor, clientId: str
     await audit(tx, actor, "plan_created", "plan", row!.id, clientId);
     return row!;
   });
+}
+
+/** Strategy notes of the plan in use (critical node, client needs, count rationale). */
+export async function updatePlanNotes(
+  db: Database,
+  actor: Actor,
+  input: { clientId: string; notes: PlanNotesRaw },
+) {
+  const plan = await ensureActivePlan(db, actor, input.clientId);
+  const notes = parseOrThrow(planNotesSchema, input.notes);
+  const [row] = await db
+    .update(contentPlans)
+    .set({
+      criticalNode: notes.criticalNode || null,
+      clientNeeds: notes.clientNeeds,
+      countRationale: notes.countRationale || null,
+    })
+    .where(eq(contentPlans.id, plan.id))
+    .returning();
+  await audit(db, actor, "plan_notes_updated", "plan", plan.id, input.clientId);
+  return row!;
 }
 
 async function checkPlanItemRefs(

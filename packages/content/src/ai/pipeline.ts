@@ -40,6 +40,7 @@ import {
 import {
   and,
   contentPillars,
+  contentPlans,
   contentRubrics,
   contentSlideEdits,
   contents,
@@ -64,6 +65,7 @@ import {
   createVersion,
   getContentRow,
   isLocked,
+  isPublished,
   outlineOf,
   recordOutline,
 } from "../carousels/carousels";
@@ -82,6 +84,7 @@ import {
   type Outline,
   type Provenance,
 } from "../document";
+import { factBankOf, factBankPrompt } from "../carousels/facts";
 import { productSource, type ProductSummary } from "../products";
 import {
   CONTENT_PROMPT_VERSION,
@@ -249,7 +252,13 @@ export async function runProposeStrategy(
     .map((a) => ({ id: a.id, name: a.value.name }));
   const [pillars, rubrics, products] = await Promise.all([
     deps.db
-      .select({ id: contentPillars.id, name: contentPillars.name, goal: contentPillars.goal })
+      .select({
+        id: contentPillars.id,
+        name: contentPillars.name,
+        goal: contentPillars.goal,
+        territory: contentPillars.territory,
+        metric: contentPillars.metric,
+      })
       .from(contentPillars)
       .where(
         and(eq(contentPillars.clientId, input.clientId), eq(contentPillars.status, "accepted")),
@@ -382,7 +391,7 @@ export async function runProposePlan(
   const actor = agent("strategist", ctx);
   const client = await requireClient(deps.db, input.clientId);
   const brandCtx = await brandContextFor(deps.db, actor, input.clientId);
-  const [pillars, rubrics, products] = await Promise.all([
+  const [pillars, rubrics, products, [planNotes]] = await Promise.all([
     deps.db
       .select()
       .from(contentPillars)
@@ -396,6 +405,15 @@ export async function runProposePlan(
         and(eq(contentRubrics.clientId, input.clientId), eq(contentRubrics.status, "accepted")),
       ),
     productSource().listApproved(deps.db, input.clientId),
+    deps.db
+      .select({
+        criticalNode: contentPlans.criticalNode,
+        clientNeeds: contentPlans.clientNeeds,
+        countRationale: contentPlans.countRationale,
+      })
+      .from(contentPlans)
+      .where(and(eq(contentPlans.clientId, input.clientId), eq(contentPlans.status, "active")))
+      .limit(1),
   ]);
   if (!pillars.length) throw attention("content.jobErrors.acceptPillarFirst");
   await ctx.progress(10);
@@ -419,13 +437,18 @@ export async function runProposePlan(
             name: p.name,
             goal: p.goal,
             frequency: freq(p.frequencyCount, p.frequencyUnit),
+            territory: p.territory,
+            metric: p.metric,
           })),
+          notes: planNotes ?? {},
           rubrics: rubrics.map((r) => ({
             id: r.id,
             pillarId: r.pillarId,
             name: r.name,
             frequency: freq(r.frequencyCount, r.frequencyUnit),
             hookFormula: r.hookFormula ?? "",
+            cost: r.cost,
+            metric: r.metric,
           })),
           products: products.slice(0, 40),
           instruction: input.instruction,
@@ -549,7 +572,7 @@ async function carouselSetup(
   const actor = agent(role, ctx);
   const client = await requireClient(deps.db, clientId);
   const c = await getContentRow(deps.db, clientId, contentId);
-  if (c.status === "in_review" || c.status === "archived")
+  if (c.status === "in_review" || c.status === "archived" || isPublished(c))
     throw attention("content.jobErrors.notEditable");
   const template = await getTemplate(deps.db, clientId, c.templateKey, c.templateVersion);
   const identity = await publishedIdentity(deps.db, actor, clientId);
@@ -1309,6 +1332,7 @@ export async function runCritiqueClaims(
         prefix +
         claimsUserPrompt({
           brief: briefBlock(s.promptInput),
+          factBank: factBankPrompt(factBankOf(s.promptInput.product)),
           document: doc,
           language: s.promptInput.language,
         }),

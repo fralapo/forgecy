@@ -121,6 +121,10 @@ export const pillarInputSchema = z.object({
   emotion: text(60).default(""),
   examples: list(pillarExampleSchema, 10),
   forbidden: list(required(200), 30),
+  /** The ground the pillar owns in the audience's mind. */
+  territory: text(160).default(""),
+  /** How the pillar is judged (e.g. "saves per post"). */
+  metric: text(160).default(""),
   productIds: list(z.uuid(), 20),
 });
 export type PillarInput = z.output<typeof pillarInputSchema>;
@@ -139,10 +143,22 @@ export const rubricInputSchema = z.object({
   templateKey: z.string().max(64).nullable().default(null),
   channels: list(contentChannelSchema, contentChannels.length),
   ownerId: z.uuid().nullable().default(null),
+  /** What one piece of this format costs (free text) and the metric that says it works. */
+  cost: text(160).default(""),
+  metric: text(160).default(""),
   productIds: list(z.uuid(), 20),
 });
 export type RubricInput = z.output<typeof rubricInputSchema>;
 export type RubricInputRaw = z.input<typeof rubricInputSchema>;
+
+/** Strategy notes of the plan in use: the bottleneck, what the client needs and why this many contents. */
+export const planNotesSchema = z.object({
+  criticalNode: text(300).default(""),
+  clientNeeds: list(required(200), 12),
+  countRationale: text(600).default(""),
+});
+export type PlanNotes = z.output<typeof planNotesSchema>;
+export type PlanNotesRaw = z.input<typeof planNotesSchema>;
 
 export const planItemInputSchema = z.object({
   day: z.number().int().min(1).max(30),
