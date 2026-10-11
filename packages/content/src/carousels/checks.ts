@@ -26,6 +26,7 @@ import {
 import { channelLabels } from "../labels";
 import {
   addressForm,
+  voiceOf,
   creditBeforeHashtags,
   denseRuns,
   findAiTells,
@@ -337,6 +338,17 @@ export function computeChecks(input: CheckInput): ContentCheck[] {
         id: `person:${key}`,
         severity: "warning",
         ...say("review.checks.person", { ...where(t), expected: input.person! }),
+        ...(t.slideId ? { slideId: t.slideId } : {}),
+      });
+    // English: “tu”, “voi” and “lei” read as “you”, “noi” as “we”; the impersonal form is not checked.
+    const wanted =
+      input.person === "noi" ? "we" : input.person && input.person !== "impersonale" ? "you" : null;
+    const voice = wanted ? voiceOf(t.text, input.language ?? "") : null;
+    if (voice && wanted && voice !== wanted)
+      add({
+        id: `voice:${key}`,
+        severity: "warning",
+        ...say("review.checks.voice", { ...where(t), expected: wanted, found: voice }),
         ...(t.slideId ? { slideId: t.slideId } : {}),
       });
   }

@@ -17,6 +17,7 @@
     "captionCredit": "Nella didascalia manca, prima degli hashtag, il credito dell’immagine “{credit}”",
     "rhythm": "Slide da {from} a {to}: {count} slide dense di fila, aggiungi una pausa",
     "person": "{slide, select, caption {Didascalia} other {Slide {slide}}}: il testo mescola le forme di cortesia, la Brand Identity usa “{expected}”",
+    "voice": "{slide, select, caption {Didascalia} other {Slide {slide}}}: il testo usa solo “{found}”, la Brand Identity scrive con “{expected}”",
     "assetMissing": "Slide {slide}: immagine non presente nella libreria del cliente",
     "aiAssetUnapproved": "Slide {slide}: immagine AI da approvare prima di approvare il carosello",
     "assetUnapproved": "Slide {slide}: immagine non approvata",

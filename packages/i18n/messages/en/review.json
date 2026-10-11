@@ -17,6 +17,7 @@
     "captionCredit": "The image credit “{credit}” is missing before the hashtags in the caption",
     "rhythm": "Slides {from} to {to}: {count} dense slides in a row, add a breather",
     "person": "{slide, select, caption {Caption} other {Slide {slide}}}: the copy mixes forms of address, the Brand Identity uses “{expected}”",
+    "voice": "{slide, select, caption {Caption} other {Slide {slide}}}: the copy speaks with “{found}” only, the Brand Identity writes with “{expected}”",
     "assetMissing": "Slide {slide}: image not in the client's library",
     "aiAssetUnapproved": "Slide {slide}: AI image to approve before the carousel is approved",
     "assetUnapproved": "Slide {slide}: image not approved",

@@ -54,6 +54,15 @@ export function addressForm(text: string, language: string): "tu" | "voi" | null
   return tu === voi ? null : tu ? "tu" : "voi";
 }
 
+/** Whom an English text speaks as, when it uses exactly one of “you” or “we”. */
+export function voiceOf(text: string, language: string): "you" | "we" | null {
+  const v = COPY_PATTERNS[language]?.voice;
+  if (!v) return null;
+  const you = v.you.test(text);
+  const we = v.we.test(text);
+  return you === we ? null : you ? "you" : "we";
+}
+
 export const wordCount = (text: string) => text.split(/\s+/).filter(Boolean).length;
 
 /**

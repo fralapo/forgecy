@@ -101,4 +101,17 @@ describe("copy checks", () => {
     expect(ids(run(slides, {}, { language: "it", person: "noi" }))).not.toContain("person:s2");
     expect(ids(run(slides, {}, { language: "it" }))).not.toContain("person:s2");
   });
+
+  it("checks you/we in English against the brand writing rules", () => {
+    const slides = deck(text("s2", "You can try it today."));
+    expect(ids(run(slides, {}, { language: "en", person: "noi" }))).toContain("voice:s2");
+    expect(ids(run(slides, {}, { language: "en", person: "tu" }))).not.toContain("voice:s2");
+    expect(ids(run(slides, {}, { language: "en", person: "impersonale" }))).not.toContain(
+      "voice:s2",
+    );
+    expect(ids(run(slides, {}, { language: "en" }))).not.toContain("voice:s2");
+    const mixed = deck(text("s2", "We help you try it."));
+    expect(ids(run(mixed, {}, { language: "en", person: "noi" }))).not.toContain("voice:s2");
+    expect(ids(run(slides, {}, { language: "it", person: "noi" }))).not.toContain("voice:s2");
+  });
 });

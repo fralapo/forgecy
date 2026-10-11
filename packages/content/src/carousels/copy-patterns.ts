@@ -8,6 +8,8 @@ export interface CopyPatterns {
   aiTells: Record<AiTellKind, readonly RegExp[]>;
   /** Forms of address that tell “tu” from “voi” (Italian). */
   person?: { tu: RegExp; voi: RegExp };
+  /** Who speaks in English: “you” (the reader) or “we” (the brand). */
+  voice?: { you: RegExp; we: RegExp };
 }
 
 const flags = "iu";
@@ -19,7 +21,9 @@ export const COPY_PATTERNS: Record<string, CopyPatterns> = {
   it: {
     aiTells: {
       dash,
-      contrast: rx(String.raw`non (?:è|sono|si tratta di) solo [^.!?\n]*?,\s*(?:è|sono|ma)(?!\p{L})`),
+      contrast: rx(
+        String.raw`non (?:è|sono|si tratta di) solo [^.!?\n]*?,\s*(?:è|sono|ma)(?!\p{L})`,
+      ),
       filler: rx(
         String.raw`è importante (?:notare|sottolineare|ricordare) che`,
         String.raw`\bal fine di\b`,
@@ -70,6 +74,10 @@ export const COPY_PATTERNS: Record<string, CopyPatterns> = {
         String.raw`\blet['’]s (?:build|shape) the future together\b`,
         String.raw`\bexciting times (?:are )?ahead\b`,
       ),
+    },
+    voice: {
+      you: /\b(?:you|your|yours|yourself)\b/iu,
+      we: /\b(?:we|our|ours|ourselves|let['’]s)\b/iu,
     },
   },
 };

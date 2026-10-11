@@ -6,6 +6,7 @@ import {
   findAiTells,
   findPlaceholder,
   hashtagSet,
+  voiceOf,
 } from "../src/carousels/copy-lint";
 
 const kinds = (text: string, lang: string) => findAiTells(text, lang).map((t) => t.kind);
@@ -74,6 +75,16 @@ describe("addressForm", () => {
     expect(addressForm("Tu e voi insieme", "it")).toBeNull();
     expect(addressForm("Il pane è buono", "it")).toBeNull();
     expect(addressForm("You can try", "en")).toBeNull();
+  });
+});
+
+describe("voiceOf", () => {
+  it("tells you from we in English, and stays silent when mixed or absent", () => {
+    expect(voiceOf("Save your time", "en")).toBe("you");
+    expect(voiceOf("Our recipe, let's start", "en")).toBe("we");
+    expect(voiceOf("We help you", "en")).toBeNull();
+    expect(voiceOf("Bread is good", "en")).toBeNull();
+    expect(voiceOf("Tu puoi", "it")).toBeNull();
   });
 });
 
