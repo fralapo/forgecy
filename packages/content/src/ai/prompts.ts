@@ -34,7 +34,7 @@ import { slotTexts } from "../carousels/checks";
 import type { ProductSummary } from "../products";
 import { directionBlock, type CreativeDirection } from "../carousels/direction";
 
-export const CONTENT_PROMPT_VERSION = "content-2026-10-11d";
+export const CONTENT_PROMPT_VERSION = "content-2026-10-11e";
 
 /** What decides whether a channel is working; the Planner judges each rubric by it. */
 export const CHANNEL_METRICS = `- Channel gate metric: judge a rubric by the metric of its channel, and name it in the pillar goal: Instagram = saves and shares; Facebook = shares in groups and comments; LinkedIn = dwell time and comments. Likes and reach alone are not a goal.`;
@@ -393,9 +393,9 @@ export type VisualNotesOutput = z.infer<typeof visualNotesOutputSchema>;
 /** The checks of the visual reviewer, in the order of the prompt. */
 export const VISUAL_CHECKS = [
   "content outside the safe box",
-  "the top-right 120x120 corner of the cover is not free (Instagram draws the carousel icon there)",
+  "slide 1 only: the top-right 120x120 corner of the cover is not free (Instagram draws the carousel icon there; a small page counter on the other slides is fine)",
   "text contrast against its background",
-  "more than one highlight style in a title",
+  "two or more different highlight treatments in one title (a single highlighted span is fine)",
   "overlaps between text, images and shapes",
   "tap targets and buttons too small to hit",
   "a continuation cue (arrow, swipe hint) where none is meant, or missing where one is meant",
