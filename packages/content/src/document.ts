@@ -170,6 +170,9 @@ export const planItemInputSchema = z.object({
   hook: text(120).default(""),
   notes: text(1000).default(""),
   productIds: list(z.uuid(), 20),
+  /** The idea came as a video/reel and was turned into a static one; old data has neither field. */
+  convertedFromVideo: z.boolean().default(false),
+  conversionNote: text(200).default(""),
 });
 export type PlanItemInput = z.output<typeof planItemInputSchema>;
 export type PlanItemInputRaw = z.input<typeof planItemInputSchema>;

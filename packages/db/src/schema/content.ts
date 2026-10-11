@@ -214,6 +214,9 @@ export const contentPlanItems = pgTable(
     theme: text("theme").notNull(),
     hook: text("hook"),
     notes: text("notes"),
+    /** The client sent this as a video/reel idea; the Planner turned it into a static one. */
+    convertedFromVideo: boolean("converted_from_video").notNull().default(false),
+    conversionNote: text("conversion_note"),
     /** The carousel created from this item ("Generate carousel"). */
     contentId: uuid("content_id").references((): AnyPgColumn => contents.id, {
       onDelete: "set null",
@@ -307,6 +310,11 @@ export const contents = pgTable(
       (): AnyPgColumn => contentVersions.id,
       { onDelete: "set null" },
     ),
+    /**
+     * The client's edited version of the delivered carousel (PNG assets and/or a PDF) and what
+     * changed per slide; when set, the delivered version is the client's. See `clientVersionSchema`.
+     */
+    clientVersion: jsonb("client_version").$type<Json>(),
     lockedByJobId: uuid("locked_by_job_id").references(() => jobs.id, { onDelete: "set null" }),
     lockExpiresAt: timestamp("lock_expires_at", { withTimezone: true }),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),

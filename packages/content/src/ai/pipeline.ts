@@ -547,6 +547,8 @@ export async function runProposePlan(
           hook: i.hook,
           notes: i.notes,
           productIds: i.productIds.filter(isUuid),
+          convertedFromVideo: i.convertedFromVideo,
+          conversionNote: i.conversionNote.trim(),
         })),
     }),
   );

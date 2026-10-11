@@ -124,6 +124,8 @@ function planItemValues(i: PlanItemInput) {
     hook: i.hook || null,
     notes: i.notes || null,
     productIds: i.productIds,
+    convertedFromVideo: i.convertedFromVideo,
+    conversionNote: i.convertedFromVideo ? i.conversionNote || null : null,
   };
 }
 
@@ -640,6 +642,8 @@ export function planItemRowToInput(i: PlanItemRow): PlanItemInputRaw {
     hook: i.hook ?? "",
     notes: i.notes ?? "",
     productIds: i.productIds,
+    convertedFromVideo: i.convertedFromVideo,
+    conversionNote: i.conversionNote ?? "",
   };
 }
 

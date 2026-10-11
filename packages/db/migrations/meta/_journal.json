@@ -253,6 +253,13 @@
       "when": 1791723592859,
       "tag": "0037_stock_photos",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791729594736,
+      "tag": "0038_client_version_video_ideas",
+      "breakpoints": true
     }
   ]
 }

@@ -34,7 +34,7 @@ import { slotTexts } from "../carousels/checks";
 import type { ProductSummary } from "../products";
 import { directionBlock, type CreativeDirection } from "../carousels/direction";
 
-export const CONTENT_PROMPT_VERSION = "content-2026-10-11e";
+export const CONTENT_PROMPT_VERSION = "content-2026-10-11f";
 
 /** What decides whether a channel is working; the Planner judges each rubric by it. */
 export const CHANNEL_METRICS = `- Channel gate metric: judge a rubric by the metric of its channel, and name it in the pillar goal: Instagram = saves and shares; Facebook = shares in groups and comments; LinkedIn = dwell time and comments. Likes and reach alone are not a goal.`;
@@ -127,6 +127,10 @@ export const planOutputSchema = z.object({
         hook: z.string().max(120),
         notes: z.string().max(400),
         productIds: z.array(z.string().max(40)).max(5),
+        /** True when the idea was a video, reel or story video that became a static one. */
+        convertedFromVideo: z.boolean().default(false),
+        /** One line saying what the video was and what the static idea does instead. */
+        conversionNote: z.string().max(200).default(""),
       }),
     )
     .max(60),
@@ -138,6 +142,9 @@ export const planOutputSchema = z.object({
 });
 export type PlanOutput = z.infer<typeof planOutputSchema>;
 
+/** Forgecy is static only: a video idea from the client is converted, never planned as video. */
+export const VIDEO_TO_STATIC_RULE = `- Static only, no video at any stage. If an idea (in the instruction, the notes or the client's material) is a video, reel, story video, motion or "short", convert it into a static carousel or a single-frame idea that keeps its goal, set "convertedFromVideo" to true and write "conversionNote": one line, 200 characters at most, saying what the video was and what the static idea does instead. Never plan a video item. Otherwise "convertedFromVideo" is false and "conversionNote" is empty.`;
+
 export const PLAN_SYSTEM = withPlaybooks(
   `You are the Planner of Forgecy. You propose a 30-day editorial plan for a client's carousels.
 
@@ -147,6 +154,7 @@ ${SHARED_RULES}
 - Respect the frequencies of pillars and rubrics and alternate the pillars: never the same pillar three days in a row.
 - Channels: only the ones indicated. One concrete theme per item (not "post about X"), with a hook of at most 120 characters.
 - productIds: only ids from the list of approved products, and only when the theme is about the product.
+${VIDEO_TO_STATIC_RULE}
 - criticalNode and clientNeeds are proposals a person accepts with the plan: name the one bottleneck only if the Brand Identity, the strategy notes or the directions show it, and list needs only in the client's own terms. Leave them empty rather than guess.`,
   "social-content",
 );

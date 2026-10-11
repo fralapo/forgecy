@@ -14,7 +14,7 @@ import {
 import { can, type ContentObjective, type FunnelStage } from "@forgecy/core";
 import { and, desc, eq, jobs } from "@forgecy/db";
 import { Badge, Card } from "@forgecy/ui";
-import { Check, ExternalLink, LoaderCircle, X } from "lucide-react";
+import { Check, ExternalLink, Image as ImageIcon, LoaderCircle, X } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 import { getTranslations } from "next-intl/server";
@@ -149,6 +149,15 @@ export default async function PlanPage({ params }: { params: Promise<{ clientSlu
           {rubric ? ` › ${rubric}` : ""}
           {products ? ` · ${products}` : ""}
         </p>
+        {item.convertedFromVideo ? (
+          <p className="flex items-start gap-2 text-body-sm text-fg-muted">
+            <ImageIcon aria-hidden className="mt-0.5 size-4 shrink-0" />
+            <span>
+              <span className="font-medium text-fg">{t("convertedFromVideo")}</span>
+              {item.conversionNote ? ` ${item.conversionNote}` : ""}
+            </span>
+          </p>
+        ) : null}
         {item.notes ? <p className="text-body-sm text-fg-muted">{item.notes}</p> : null}
       </div>
     );
