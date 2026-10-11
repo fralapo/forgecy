@@ -43,7 +43,7 @@
       "ctaOnlyLast": "Slide {slide}: la CTA va solo sull’ultima slide",
       "maxImages": "Slide {slide}: al massimo {max} immagini per slide"
     },
-    "openQuestions": "{count, plural, one {# domanda} other {# domande}} ancora {count, plural, one {aperta} other {aperte}} con il cliente: {count, plural, one {risolvila} other {risolvile}} nel Brief prima di esportare",
+    "openQuestions": "{count, plural, one {# domanda} other {# domande}} ancora {count, plural, one {aperta} other {aperte}} con il cliente: {count, plural, one {risolvila} other {risolvile}} nel Brief prima di inviare in revisione o esportare",
     "cannotSay": "{slide, select, caption {Didascalia} other {Slide {slide}}}: contiene “{phrase}”, che il brief vieta di dire",
     "factDoNotUse": "{slide, select, caption {Didascalia} other {Slide {slide}}}: usa un’affermazione segnata “da non usare” nei fatti del prodotto: “{fact}”",
     "factPending": "{slide, select, caption {Didascalia} other {Slide {slide}}}: usa un’affermazione che attende ancora la conferma del cliente: “{fact}”"

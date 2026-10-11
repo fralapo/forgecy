@@ -141,7 +141,9 @@
       "values": "Valori",
       "audience": "Pubblico",
       "messages": "Messaggi e asserzioni",
-      "avoidTopics": "Temi da evitare"
+      "avoidTopics": "Temi da evitare",
+      "antagonist": "Antagonista",
+      "forbiddenTopics": "Temi vietati"
     },
     "verbal": {
       "voice": "Voce",
@@ -149,7 +151,9 @@
       "weAreWeAreNot": "Siamo / Non siamo",
       "writingRules": "Regole di scrittura",
       "preferredWords": "Parole preferite",
-      "forbiddenWords": "Parole vietate"
+      "forbiddenWords": "Parole vietate",
+      "forbiddenUnlessExplained": "Parole da spiegare",
+      "audienceVocabulary": "Vocabolario del pubblico"
     },
     "visual": {
       "logo": {

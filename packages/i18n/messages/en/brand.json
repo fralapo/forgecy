@@ -141,7 +141,9 @@
       "values": "Values",
       "audience": "Audience",
       "messages": "Messages and claims",
-      "avoidTopics": "Topics to avoid"
+      "avoidTopics": "Topics to avoid",
+      "antagonist": "Antagonist",
+      "forbiddenTopics": "Forbidden topics"
     },
     "verbal": {
       "voice": "Voice",
@@ -149,7 +151,9 @@
       "weAreWeAreNot": "We are / We are not",
       "writingRules": "Writing rules",
       "preferredWords": "Preferred words",
-      "forbiddenWords": "Forbidden words"
+      "forbiddenWords": "Forbidden words",
+      "forbiddenUnlessExplained": "Words to explain",
+      "audienceVocabulary": "Audience vocabulary"
     },
     "visual": {
       "logo": {

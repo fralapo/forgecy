@@ -87,8 +87,33 @@ export function diffVersions(
       if (!seen.has(id))
         out.push({ ...base, kind: "removed", before: unwrap(old), after: undefined });
   }
+  out.push(...diffForbiddenTopics(a.document, after.document));
   out.push(...diffTokens(a.tokens as TokenTree, after.tokens));
   return out;
+}
+
+/** Structured topics are not a registry field (a proposal cannot target them): diffed here by topic. */
+function diffForbiddenTopics(
+  before: BrandIdentityDocument | undefined,
+  after: BrandIdentityDocument,
+): FieldChange[] {
+  const key = (t: { topic: string }) => t.topic.trim().toLowerCase();
+  const was = new Map((before?.strategy.forbiddenTopics ?? []).map((t) => [key(t), t]));
+  const now = new Map(after.strategy.forbiddenTopics.map((t) => [key(t), t]));
+  const added = [...now].filter(([k, t]) => !was.has(k) || !deepEqual(was.get(k), t));
+  const removed = [...was.keys()].filter((k) => !now.has(k));
+  if (!added.length && !removed.length) return [];
+  return [
+    {
+      block: "strategy",
+      label: "Forbidden topics",
+      pointer: "/document/strategy/forbiddenTopics",
+      kind: "changed",
+      before: removed.map((k) => was.get(k)!.topic),
+      after: added.map(([, t]) => t.topic),
+      sensitive: false,
+    },
+  ];
 }
 
 function diffTokens(before: TokenTree, after: TokenTree): FieldChange[] {

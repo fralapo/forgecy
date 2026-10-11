@@ -43,3 +43,34 @@ describe("compareVersions", () => {
     expect(diffVersions(left, right)).toEqual([]);
   });
 });
+
+describe("diffVersions: brand fields added for the content factory", () => {
+  it("shows the antagonist, words to explain, audience vocabulary and forbidden topics", () => {
+    const left = state();
+    const right = state();
+    right.document.strategy.antagonist = {
+      id: "a1",
+      value: "The habit of doing it by reflex",
+      sourceIds: [],
+      confidence: "high",
+    };
+    right.document.verbal.forbiddenUnlessExplained = ["probiotic"];
+    right.document.verbal.audienceVocabulary = ["bucato"];
+    right.document.strategy.forbiddenTopics = [
+      { topic: "Medical promises", reason: "Not allowed", severity: "error", keywords: ["cura"] },
+    ];
+    const pointers = diffVersions(left, right).map((c) => c.pointer);
+    expect(pointers).toEqual(
+      expect.arrayContaining([
+        "/document/strategy/antagonist",
+        "/document/verbal/forbiddenUnlessExplained",
+        "/document/verbal/audienceVocabulary",
+        "/document/strategy/forbiddenTopics",
+      ]),
+    );
+    const topics = diffVersions(left, right).find(
+      (c) => c.pointer === "/document/strategy/forbiddenTopics",
+    );
+    expect(topics).toMatchObject({ kind: "changed", before: [], after: ["Medical promises"] });
+  });
+});
