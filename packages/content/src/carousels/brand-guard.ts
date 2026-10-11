@@ -235,7 +235,7 @@ export function toGuardContent(input: {
             ? {
                 asset: {
                   id: info.id,
-                  origin: info.source === "site" ? "photo" : info.source,
+                  origin: info.source === "site" || info.source === "stock" ? "photo" : info.source,
                   ...(info.source === "ai" ? { approval: info.status } : {}),
                   width: info.width ?? 0,
                   height: info.height ?? 0,

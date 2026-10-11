@@ -21,6 +21,7 @@ import { useState } from "react";
 import { updateAltAction } from "../actions";
 import { ActionButton, controlClass } from "./action-button";
 import { AiImageDrafts, ImageGenerator, Thumb } from "./editor-ai";
+import { StockSearch } from "./stock-search";
 import type { EditorAsset, EditorRef } from "./editor-workspace";
 
 type Update = (fn: (d: CarouselDocument) => CarouselDocument) => void;
@@ -704,6 +705,19 @@ function ImageSlot({
         ) : (
           <p className="text-body-sm text-fg-muted">{t("noApproved")}</p>
         )
+      ) : null}
+
+      {!readOnly ? (
+        <StockSearch
+          slug={editorRef.slug}
+          clientId={editorRef.clientId}
+          contentId={editorRef.contentId}
+          enabled={editorRef.pexels}
+          onPicked={(a) => {
+            onChange({ key: a.key, alt: a.alt, focalX: 0.5, focalY: 0.5 });
+            setPicking(false);
+          }}
+        />
       ) : null}
 
       <AiImageDrafts

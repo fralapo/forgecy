@@ -73,6 +73,8 @@ interface StoreInput {
   alt?: string;
   tags?: string[];
   generation?: Record<string, unknown> | null;
+  /** Stock photos: provider, photographer and licence. */
+  stock?: Record<string, unknown> | null;
   productId?: string | null;
   contentId?: string | null;
   jobId?: string | null;
@@ -123,6 +125,7 @@ export async function storeAsset(db: Executor, storage: StorageDriver, input: St
         .filter(Boolean)
         .slice(0, 20),
       generation: input.generation ?? null,
+      stock: input.stock ?? null,
       productId: input.productId ?? null,
       contentId: input.contentId ?? null,
       jobId: input.jobId ?? null,
@@ -461,7 +464,7 @@ export function readAssetRights(value: unknown): AssetRights | null {
 
 /**
  * Commercial-use status of an image: AI images follow the provider review recorded at
- * generation, uploads and images taken from a website need a person to confirm the rights,
+ * generation, uploads, stock photos and images taken from a website need a person to confirm the rights,
  * product photos come from the client's own catalog (null: nothing to verify).
  */
 export function assetCommercialUse(a: {
@@ -475,12 +478,12 @@ export function assetCommercialUse(a: {
       ? g.commercialUse
       : "pending_verification";
   }
-  if (a.source === "upload" || a.source === "site")
+  if (a.source === "upload" || a.source === "site" || a.source === "stock")
     return readAssetRights(a.rights) ? "verified" : "pending_verification";
   return null;
 }
 
-/** A person confirms they may use an uploaded image or one taken from a website (and says on what basis). */
+/** A person confirms they may use an uploaded image, a stock photo or one taken from a website (and says on what basis). */
 export async function confirmAssetRights(db: Database, actor: Actor, input: unknown) {
   const i = parseOrThrow(rightsInput, input);
   humanOnly(actor, "assets.upload", i.clientId);
@@ -498,7 +501,7 @@ export async function confirmAssetRights(db: Database, actor: Actor, input: unkn
       and(
         eq(assets.id, i.id),
         eq(assets.clientId, i.clientId),
-        inArray(assets.source, ["upload", "site"]),
+        inArray(assets.source, ["upload", "site", "stock"]),
       ),
     )
     .returning({ id: assets.id });

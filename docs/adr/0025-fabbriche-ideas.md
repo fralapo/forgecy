@@ -76,11 +76,19 @@ Constraints that did not move: the AI never writes HTML, agents propose and peop
 - **Text-fill** (render issue `narrow_text`, warning, carousels only): during the page measurement the widest rendered line is divided by the content width of the slot (`SlotMeasure.fill`). A text slot with 3 or more lines whose widest line is under 70% of that width is flagged ("uses X% of its width, the layout slot may be too wide for this copy"). The decision is the pure `narrowTextPercent` in `typography/lines.ts` (`NARROW_MIN_LINES = 3`, `NARROW_FILL = 0.7`). Slots with highlight or `||` break markers and list slots are not measured. Reports are not checked.
 - **Tone alternation** (`rhythm:tone:<slideId>`, warning): 5 or more consecutive slides with the same tone, only when the deck uses at least two different tones. A deck that is all `default` is silent.
 
+### Built, optional: Pexels stock photos
+
+- **Optional and free.** `PEXELS_API_KEY` (a free key from pexels.com/api) is an optional string in the env schema; empty or absent turns the feature off and the interface shows a disabled panel with a hint. No SDK, no paid dependency: plain `fetch`.
+- **Server-side only.** `searchPexels` and `getPexelsPhoto` in `packages/files` send the key in the `Authorization` header, with a 10 s timeout, one retry on 5xx, the `X-Ratelimit-*` headers read and a clear "rate limited" error at 429 (the API allows 200 requests per hour). The key never reaches the client, a log, a URL or an error message.
+- **Import.** `importPexelsPhoto` (`packages/content`, `assets.upload` on the client, people only) asks Pexels for the photo by id (the browser sends no URL), downloads the `large2x` size only from `https://images.pexels.com`, caps it at the image limit, checks the type by magic bytes like an upload and stores it under the client. The asset has source `stock` (migration 0037, also adds `assets.stock` with photographer, photographer URL and licence), tags `stock` and `pexels`.
+- **Rights stay pending.** The Pexels licence allows free commercial use, but the rights model has no "confirmed by licence" state and an import never approves rights: a person confirms them with the basis "licensed", like an upload.
+- **Credit.** Using the photo in a slide adds "Photo: <Name> / Pexels" to the content's `stockCredits` (`addStockCredit`), which feeds the caption credit check and `manifest.txt`. Results in the interface link to Pexels and to the photographer, as the API terms ask.
+
 ### Left out, on purpose
 
 - **Raw HTML** in build scripts: the AI picks layouts and fills slots; the renderer inserts text.
 - **Autonomous mode** without approval, and auto-publishing.
-- **GSAP and CDNs**, Pexels, other services with keys: no new paid or keyed dependency.
+- **GSAP and CDNs**, other services with keys: no new paid or keyed dependency. Pexels was first listed here because of its key; it is now built as an optional, server-side feature (see "Built as advisory checks" below).
 - **Video, reels, TTS**: static only.
 - **Auto-mutating autoresearch loop** that rewrites copy or rules: Forgecy proposes, a person decides.
 - **One brand's taste as a global rule**: no numbering, the yellow-on-paper ban, an anti-scam vocabulary, one client's content. Where a rule is a house voice (the em dash) it is a per-brand severity.

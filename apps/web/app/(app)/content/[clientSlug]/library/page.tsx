@@ -10,6 +10,7 @@ import {
 } from "@forgecy/content";
 import { assetSources, assetStatuses, can, providerIds } from "@forgecy/core";
 import { Badge, Card, CardDescription, CardHeader, CardTitle, cn } from "@forgecy/ui";
+import { isPexelsConfigured } from "@forgecy/files";
 import { ImageOff, PackageOpen } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
@@ -22,6 +23,7 @@ import {
   LibraryRightsForm,
 } from "../../_components/library-asset-controls";
 import { LibraryUploadForm } from "../../_components/library-upload";
+import { StockSearch } from "../../_components/stock-search";
 import { libraryPath } from "../../_lib/paths";
 import { loadClient, thumbnailUrls } from "../../_lib/server";
 import { importProductImageAction } from "./actions";
@@ -122,6 +124,12 @@ export default async function LibraryPage({
         </Card>
       ) : null}
 
+      {canUpload ? (
+        <Card>
+          <StockSearch slug={client.slug} clientId={client.id} enabled={isPexelsConfigured()} />
+        </Card>
+      ) : null}
+
       {productImages.length ? (
         <Card>
           <CardHeader>
@@ -194,7 +202,8 @@ export default async function LibraryPage({
             const use = gen?.provider
               ? (commercial.get(gen.provider) ?? gen.commercialUse)
               : gen?.commercialUse;
-            const needsRights = a.source === "upload" || a.source === "site";
+            const needsRights =
+              a.source === "upload" || a.source === "site" || a.source === "stock";
             const rights = needsRights ? readAssetRights(a.rights) : null;
             const uploadUse = needsRights ? assetCommercialUse(a) : null;
             const ref = { slug: client.slug, clientId: client.id, id: a.id };

@@ -11,6 +11,7 @@ import {
   factBankOf,
 } from "@forgecy/content";
 import { eq, users } from "@forgecy/db";
+import { isPexelsConfigured } from "@forgecy/files";
 import { getTranslations } from "next-intl/server";
 import { getRefText } from "@/lib/i18n";
 import { ChannelAdaptation } from "../../../../_components/channel-adaptation";
@@ -158,6 +159,7 @@ export default async function EditorPage({
         slug={client.slug}
         clientId={client.id}
         contentId={c.id}
+        pexels={isPexelsConfigured()}
         basePath={base}
         status={c.status}
         published={Boolean(c.publishedAt)}

@@ -130,6 +130,8 @@ export const envSchema = z.object({
   DEEPSEEK_API_KEY: z.string().optional(),
   /** Image model used through OpenRouter (any model with image output on openrouter.ai/models). */
   OPENROUTER_IMAGE_MODEL: z.string().optional(),
+  /** Optional Pexels stock-photo search (free key from pexels.com/api); server-side only. */
+  PEXELS_API_KEY: z.string().optional(),
   /**
    * Image providers in order of preference, comma separated (the first configured one is
    * primary, the next the fallback). Default: openrouter,openai,google,higgsfield (imageProviderIds in @forgecy/ai).

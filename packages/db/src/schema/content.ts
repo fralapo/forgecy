@@ -521,6 +521,8 @@ export const assets = pgTable(
     generation: jsonb("generation").$type<Json>(),
     /** Who confirmed the right to use the image commercially, and on what basis (uploads). */
     rights: jsonb("rights").$type<Json>(),
+    /** Stock photos: provider, photo page, photographer and licence (credit line, terms). */
+    stock: jsonb("stock").$type<Json>(),
     productId: uuid("product_id"),
     contentId: uuid("content_id").references(() => contents.id, { onDelete: "set null" }),
     jobId: uuid("job_id").references(() => jobs.id, { onDelete: "set null" }),

@@ -40,6 +40,8 @@ docker compose up -d --build           # postgres, redis, migrate, web, worker
 
 Open `http://localhost:3000`: on first start you create the Admin account. Data lives in `./data` (database, files, backups).
 
+Optional: `PEXELS_API_KEY` in `.env` (a free key from pexels.com/api) turns on the stock-photo search in the image library and the carousel editor; without it the panel shows as off. The key stays on the server.
+
 Optional profiles: `--profile dev` (Mailpit on `:8025` for emails), `--profile s3` (S3 storage with SeaweedFS), `--profile https` (Caddy for HTTPS on the internal network).
 
 | Command                                | What it does                                                |

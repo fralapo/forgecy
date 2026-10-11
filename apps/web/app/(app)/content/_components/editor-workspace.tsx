@@ -107,6 +107,8 @@ export interface EditorRef {
   slug: string;
   clientId: string;
   contentId: string;
+  /** PEXELS_API_KEY is set on the server: the stock-photo search is available. */
+  pexels: boolean;
 }
 
 type SaveState = "saved" | "dirty" | "saving" | "error" | "conflict";
@@ -173,7 +175,12 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
   const t = useTranslations("content.editor");
   const format = useFormat();
   const actionMessage = useActionMessage();
-  const ref: EditorRef = { slug: props.slug, clientId: props.clientId, contentId: props.contentId };
+  const ref: EditorRef = {
+    slug: props.slug,
+    clientId: props.clientId,
+    contentId: props.contentId,
+    pexels: props.pexels,
+  };
   const [doc, setDoc] = useState(props.document);
   const [rev, setRev] = useState(props.draftRev);
   const [saveState, setSaveState] = useState<SaveState>("saved");

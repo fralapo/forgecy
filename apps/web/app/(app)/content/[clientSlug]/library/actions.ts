@@ -2,9 +2,16 @@
 
 import "../../_lib/ports";
 
-import { importProductImage, productSource } from "@forgecy/content";
+import {
+  addStockCredit,
+  importPexelsPhoto,
+  importProductImage,
+  productSource,
+  searchStock,
+} from "@forgecy/content";
 import { assertCan, ForgecyError, PermissionDeniedError, type Actor } from "@forgecy/core";
 import { getDb, type Database } from "@forgecy/db";
+import { pexelsOrientations } from "@forgecy/files";
 import { localizedError } from "@forgecy/i18n";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -64,4 +71,71 @@ export async function importProductImageAction(input: {
     });
     return { id: row.id, created };
   });
+}
+
+/** Pexels search; the key is read on the server only and never returned. */
+export async function searchPexelsAction(input: {
+  slug: string;
+  clientId: string;
+  query: string;
+  orientation: string;
+  page?: number;
+}) {
+  return run(input.slug, async ({ actor }) => {
+    const res = await searchStock(actor, {
+      clientId: uuid.parse(input.clientId),
+      query: z.string().max(200).parse(input.query),
+      orientation: z.enum(pexelsOrientations).parse(input.orientation),
+      page: z.number().int().min(1).max(100).default(1).parse(input.page),
+    });
+    if (!res.configured) return { configured: false as const };
+    return {
+      configured: true as const,
+      photos: res.photos.map((p) => ({
+        id: p.id,
+        url: p.url,
+        photographer: p.photographer,
+        photographerUrl: p.photographerUrl,
+        alt: p.alt,
+        avgColor: p.avgColor,
+        srcMedium: p.srcMedium,
+      })),
+      page: res.page,
+      total: res.total,
+      remaining: res.rateLimit.remaining,
+    };
+  });
+}
+
+/** Download one Pexels photo into the library; the browser sends only the photo id. */
+export async function importPexelsPhotoAction(input: {
+  slug: string;
+  clientId: string;
+  photoId: number;
+  contentId?: string;
+}) {
+  return run(input.slug, async ({ db, actor }) => {
+    const { row, created, credit } = await importPexelsPhoto(db, getStorage(), actor, {
+      clientId: uuid.parse(input.clientId),
+      photoId: z.number().int().positive().parse(input.photoId),
+      ...(input.contentId ? { contentId: uuid.parse(input.contentId) } : {}),
+    });
+    return { id: row.id, key: row.storageKey, alt: row.alt, created, credit };
+  });
+}
+
+/** A stock photo went into a slide: add its credit line to the content. */
+export async function addStockCreditAction(input: {
+  slug: string;
+  clientId: string;
+  contentId: string;
+  assetId: string;
+}) {
+  return run(input.slug, async ({ db, actor }) =>
+    addStockCredit(db, actor, {
+      clientId: uuid.parse(input.clientId),
+      id: uuid.parse(input.contentId),
+      assetId: uuid.parse(input.assetId),
+    }),
+  );
 }

@@ -47,6 +47,7 @@ import {
   revConflict,
   type Executor,
 } from "../access";
+import { stockCreditLine } from "../stock";
 import {
   blockingChecks,
   computeChecks,
@@ -1185,6 +1186,32 @@ export async function setStockCredits(
     .where(eq(contents.id, c.id));
   await audit(db, actor, "credits_set", c);
   return { ok: true as const };
+}
+
+/**
+ * A stock photo went into a slide: add its credit line (“Photo: <Name> / Pexels”) to the
+ * delivery record. The line is built from the library row, never from the browser.
+ * Removing the photo from the slide leaves the line; the delivery form edits it.
+ */
+export async function addStockCredit(
+  db: Database,
+  actor: Actor,
+  input: { clientId: string; id: string; assetId: string },
+) {
+  humanOnly(actor, "edit_draft", input.clientId);
+  const c = await getContentRow(db, input.clientId, input.id);
+  if (isPublished(c)) conflict("content.errors.alreadyPublished");
+  const [a] = await db
+    .select({ source: assets.source, stock: assets.stock })
+    .from(assets)
+    .where(and(eq(assets.id, input.assetId), eq(assets.clientId, input.clientId)));
+  const line = a?.source === "stock" ? stockCreditLine(a.stock) : null;
+  if (!line) return { ok: true as const, added: false };
+  const next = credits([...c.stockCredits, line]);
+  if (next.length === c.stockCredits.length) return { ok: true as const, added: false };
+  await db.update(contents).set({ stockCredits: next }).where(eq(contents.id, c.id));
+  await audit(db, actor, "credits_set", c);
+  return { ok: true as const, added: true };
 }
 
 /**

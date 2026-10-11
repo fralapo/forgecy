@@ -718,6 +718,8 @@ export const REVIEWED_JSON_COLUMNS: ReadonlySet<string> = new Set([
   "content_exports.files",
   "assets.generation",
   "assets.rights",
+  // Stock photo provenance (photographer, licence text): data only, the rights live in assets.rights.
+  "assets.stock",
   "product_imports.options",
   "product_imports.summary",
   "product_import_files.meta",

@@ -246,6 +246,13 @@
       "when": 1791694696443,
       "tag": "0036_listening_signals",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1791723592859,
+      "tag": "0037_stock_photos",
+      "breakpoints": true
     }
   ]
 }
