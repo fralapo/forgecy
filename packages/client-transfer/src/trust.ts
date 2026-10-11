@@ -146,6 +146,11 @@ export const TRUST_RULES: Record<string, TrustRule> = {
       "review_note",
       "submitted_by",
       "lock_expires_at",
+      // The delivery record freezes a content item: only a person here marks it published.
+      "published_at",
+      "published_by",
+      "delivered_version_id",
+      "gates_passed",
     ],
     // The job that held the lock is not in the package: the importer empties the column.
     other: ["locked_by_job_id"],
@@ -366,6 +371,11 @@ export const TRUST_RULES: Record<string, TrustRule> = {
     status: same("pending", "extracting", "extracted", "partial", "failed"),
     why: PIPELINE,
   },
+  brand_lessons: {
+    // A confirmed lesson shapes later AI runs: a person confirms it again here.
+    status: { proposed: "proposed", accepted: "proposed", rejected: "rejected", stale: "stale" },
+    clear: DECIDED,
+  },
   brand_examples: {
     other: ["verdict"],
     why: "a curated example only guides wording; it releases nothing",
@@ -410,6 +420,15 @@ export const TRUST_RULES: Record<string, TrustRule> = {
     custom: (r) => ({ ...r, field_meta: stripAcceptance(r.field_meta).meta }),
   },
   product_images: { status: same("draft", "approved"), clear: ["approved_by"] },
+  product_facts: {
+    // "printed on pack" widens what public copy may say: a package cannot assert it.
+    status: {
+      printed_on_pack: "catalog_only",
+      catalog_only: "catalog_only",
+      pending_client: "pending_client",
+      do_not_use: "do_not_use",
+    },
+  },
   product_field_proposals: {
     status: same("proposed", "accepted", "rejected", "stale"),
     clear: DECIDED,
@@ -679,6 +698,7 @@ export const REVIEWED_JSON_COLUMNS: ReadonlySet<string> = new Set([
   "content_rubrics.provenance",
   "content_plans.provenance",
   "content_plan_items.provenance",
+  "contents.gates_passed", // summary of checks at delivery; cleared on import with the delivery record
   "contents.brief",
   "contents.outline",
   "contents.draft",

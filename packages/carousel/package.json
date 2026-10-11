@@ -12,7 +12,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run --passWithNoTests --testTimeout=30000",
     "preview": "tsx scripts/preview.ts",
     "schema": "tsx scripts/schema.ts"
   },

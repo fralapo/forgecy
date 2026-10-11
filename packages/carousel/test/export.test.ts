@@ -90,6 +90,7 @@ describe.skipIf(!enabled)("export with Chromium", () => {
       "caption.txt",
       "texts.md",
       "slides.json",
+      "manifest.txt",
     ]);
     expect(new TextDecoder().decode(zip["caption.txt"])).toBe(
       "Five checks before sending.\n\n#invoice #smb\n",
