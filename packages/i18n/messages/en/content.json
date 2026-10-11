@@ -75,7 +75,10 @@
     "verifiedNeedsTerms": "“Verified” needs the URL of the terms you checked",
     "brandNotPublished": "Publish the client's Brand Identity first",
     "briefTooShort": "Write a brief of at least 20 characters",
-    "approveOutlineFirst": "Approve the outline before generating the slides"
+    "approveOutlineFirst": "Approve the outline before generating the slides",
+    "alreadyPublished": "This carousel is already published and can no longer be changed",
+    "publishNotApproved": "Only an approved carousel can be marked as published",
+    "publishBlocked": "{count, plural, one {# check} other {# checks}} still blocking: fix before marking it as published"
   },
   "jobErrors": {
     "policyBlocked": "The client's AI policy does not allow this generation (client settings)",
@@ -365,7 +368,10 @@
       "products": "Products",
       "channels": "Channels",
       "template": "Template",
-      "hookFormula": "Hook formula"
+      "hookFormula": "Hook formula",
+      "territory": "Territory",
+      "metric": "Metric",
+      "cost": "Cost"
     },
     "proposalPillar": "Pillar: {name}",
     "proposalRubric": "Rubric of “{pillar}”: {name}",
@@ -413,7 +419,10 @@
       "avoid": "To avoid",
       "onePerLine": "One per line.",
       "audience": "Audience",
-      "products": "Linked products"
+      "products": "Linked products",
+      "territory": "Territory",
+      "territoryHint": "The ground this pillar owns in the audience's mind.",
+      "metric": "Metric"
     },
     "rubricForm": {
       "editLabel": "Edit rubric {name}",
@@ -426,10 +435,21 @@
       "hookExample": "Hook example",
       "cta": "Call to action",
       "channels": "Channels",
-      "products": "Linked products"
+      "products": "Linked products",
+      "cost": "Cost per piece",
+      "metric": "Metric"
     },
     "proposal": {
       "note": "Note (optional)"
+    },
+    "notes": {
+      "title": "Strategy notes",
+      "hint": "What the plan in use works on. The Planner reads these notes.",
+      "criticalNode": "Critical node",
+      "countRationale": "Why this many contents",
+      "clientNeeds": "What the client needs",
+      "onePerLine": "One per line.",
+      "save": "Save notes"
     }
   },
   "form": {
@@ -860,7 +880,8 @@
       "locked": "The AI is working on this carousel: editing resumes as soon as it finishes.",
       "archived": "Carousel archived: restore it to edit it.",
       "changesRequested": "Changes requested in review",
-      "approved": "The carousel is approved: if you edit it, it goes back to draft and must be approved again."
+      "approved": "The carousel is approved: if you edit it, it goes back to draft and must be approved again.",
+      "published": "This carousel is published: the copy is frozen. It stays as it was delivered."
     },
     "saveState": {
       "readOnly": "Read-only",
@@ -1126,6 +1147,23 @@
       },
       "submit": "Export"
     },
-    "guardTitle": "Brand Guard"
+    "guardTitle": "Brand Guard",
+    "delivery": {
+      "title": "Delivery record",
+      "credits": "Stock image credits",
+      "creditsHint": "One line per image. The caption must carry them before the hashtags.",
+      "saveCredits": "Save credits",
+      "creditsSaved": "Credits saved",
+      "externalUrl": "Link to the post",
+      "externalId": "Post id",
+      "publish": "Mark as published",
+      "confirm": "Mark this carousel as published? It becomes read-only.",
+      "done": "Marked as published",
+      "needsApproval": "Only an approved carousel can be marked as published.",
+      "publishedOn": "Published on {date}. The carousel is read-only.",
+      "deliveredVersion": "Delivered version: {number}",
+      "gates": "Checks at delivery: {errors, plural, one {# error} other {# errors}}, {warnings, plural, one {# warning} other {# warnings}}",
+      "externalIdValue": "Post id: {id}"
+    }
   }
 }

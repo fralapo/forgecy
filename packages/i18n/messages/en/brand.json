@@ -350,7 +350,14 @@
       "proof": "Proof or source",
       "answer": "Answer (for objections)",
       "avoidTopics": "Topics to avoid",
-      "addTopic": "Add topic"
+      "addTopic": "Add topic",
+      "antagonist": "Antagonist",
+      "forbiddenTopics": "Forbidden topics",
+      "addForbiddenTopic": "Add forbidden topic",
+      "forbiddenTopic": "Topic",
+      "forbiddenReason": "Why it is forbidden",
+      "forbiddenSeverity": "When it shows up in a copy",
+      "forbiddenKeywords": "Words that reveal it"
     },
     "competitors": {
       "list": "Competitors",
@@ -396,7 +403,11 @@
       "spellings": "Correct spellings",
       "addTerm": "Add term",
       "term": "Term",
-      "note": "Note"
+      "note": "Note",
+      "speakerPov": "Who speaks (point of view)",
+      "forbiddenUnlessExplained": "Words to explain",
+      "forbiddenUnlessExplainedHint": "One per line. Allowed only when the same text explains them; otherwise the brand check warns.",
+      "audienceVocabulary": "Audience vocabulary"
     },
     "visual": {
       "logo": "Logo",
@@ -553,6 +564,11 @@
         "consideration": "Consideration",
         "conversion": "Conversion",
         "loyalty": "Loyalty"
+      },
+      "severity": {
+        "error": "Blocks (error)",
+        "warning": "Needs a “Seen” (warning)",
+        "note": "Only informs (note)"
       }
     }
   },
@@ -818,7 +834,8 @@
     "fileTooLarge": "File too large: the maximum is 50 MB.",
     "archiveUnsupported": "Archive not supported: upload PDF, PPTX, DOCX, images, SVG or fonts.",
     "fontTooLarge": "Font too large: the maximum is 10 MB.",
-    "formatNotAllowed": "Format not allowed: upload PDF, PPTX, DOCX, images (PNG, JPEG, WebP, GIF), SVG, fonts (TTF, OTF, WOFF, WOFF2) or text."
+    "formatNotAllowed": "Format not allowed: upload PDF, PPTX, DOCX, images (PNG, JPEG, WebP, GIF), SVG, fonts (TTF, OTF, WOFF, WOFF2) or text.",
+    "lessonNotFound": "Lesson not found or already decided"
   },
   "import": {
     "status": {
@@ -995,5 +1012,25 @@
       "bookUnfit": "The book does not fit the template: {detail}",
       "noPdf": "The renderer produced no PDF."
     }
+  },
+  "lessons": {
+    "title": "Lessons log",
+    "intro": "Corrections turned into rules. A proposal binds nothing until a person confirms it.",
+    "status": {
+      "proposed": "To confirm",
+      "accepted": "Confirmed",
+      "rejected": "Rejected",
+      "stale": "Outdated"
+    },
+    "by": "{who} · {date}",
+    "byAgent": "Proposed by an agent",
+    "byPerson": "Proposed by a person",
+    "rule": "Rule: {rule}",
+    "confirm": "Confirm",
+    "reject": "Reject",
+    "empty": "No lessons yet.",
+    "correction": "Correction",
+    "ruleLabel": "Rule it suggests (optional)",
+    "propose": "Propose lesson"
   }
 }

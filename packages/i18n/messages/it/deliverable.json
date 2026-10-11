@@ -64,6 +64,19 @@
       "slide": "Slide {number} · {role}",
       "imageAlt": "Testo alternativo dell’immagine: {alt}",
       "caption": "Didascalia"
+    },
+    "manifest": {
+      "version": "versione {version}",
+      "files": "File in questo pacchetto",
+      "captions": "Didascalie per canale",
+      "anyChannel": "tutti i canali",
+      "noCaption": "Nessuna didascalia.",
+      "credits": "Crediti delle immagini",
+      "noCredits": "Nessuno.",
+      "tips": "Consigli di pubblicazione",
+      "tipRepost": "Ripubblica entro 3 ore se la prima copertura è bassa.",
+      "tipJudge": "Valuta il risultato dopo 48-72 ore, non prima.",
+      "tipRecycle": "Ricicla dopo 60 giorni o più, fino a 3 volte."
     }
   },
   "brandBook": {

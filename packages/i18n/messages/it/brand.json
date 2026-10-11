@@ -350,7 +350,14 @@
       "proof": "Prova o fonte",
       "answer": "Risposta (per le obiezioni)",
       "avoidTopics": "Temi da evitare",
-      "addTopic": "Aggiungi un tema"
+      "addTopic": "Aggiungi un tema",
+      "antagonist": "Antagonista",
+      "forbiddenTopics": "Temi vietati",
+      "addForbiddenTopic": "Aggiungi tema vietato",
+      "forbiddenTopic": "Tema",
+      "forbiddenReason": "Perché è vietato",
+      "forbiddenSeverity": "Quando compare in un testo",
+      "forbiddenKeywords": "Parole che lo rivelano"
     },
     "competitors": {
       "list": "Concorrenti",
@@ -396,7 +403,11 @@
       "spellings": "Grafie corrette",
       "addTerm": "Aggiungi un termine",
       "term": "Termine",
-      "note": "Nota"
+      "note": "Nota",
+      "speakerPov": "Chi parla (punto di vista)",
+      "forbiddenUnlessExplained": "Parole da spiegare",
+      "forbiddenUnlessExplainedHint": "Una per riga. Ammesse solo se lo stesso testo le spiega; altrimenti il controllo del brand avvisa.",
+      "audienceVocabulary": "Vocabolario del pubblico"
     },
     "visual": {
       "logo": "Logo",
@@ -553,6 +564,11 @@
         "consideration": "Considerazione",
         "conversion": "Conversione",
         "loyalty": "Fidelizzazione"
+      },
+      "severity": {
+        "error": "Blocca (errore)",
+        "warning": "Serve un “Visto” (avviso)",
+        "note": "Solo informa (nota)"
       }
     }
   },
@@ -818,7 +834,8 @@
     "fileTooLarge": "File troppo grande: il massimo è 50 MB.",
     "archiveUnsupported": "Archivio non supportato: carica PDF, PPTX, DOCX, immagini, SVG o font.",
     "fontTooLarge": "Font troppo grande: il massimo è 10 MB.",
-    "formatNotAllowed": "Formato non consentito: carica PDF, PPTX, DOCX, immagini (PNG, JPEG, WebP, GIF), SVG, font (TTF, OTF, WOFF, WOFF2) o testo."
+    "formatNotAllowed": "Formato non consentito: carica PDF, PPTX, DOCX, immagini (PNG, JPEG, WebP, GIF), SVG, font (TTF, OTF, WOFF, WOFF2) o testo.",
+    "lessonNotFound": "Lezione non trovata o già decisa"
   },
   "import": {
     "status": {
@@ -995,5 +1012,25 @@
       "bookUnfit": "Il manuale non rientra nel template: {detail}",
       "noPdf": "Il renderer non ha prodotto il PDF."
     }
+  },
+  "lessons": {
+    "title": "Registro delle lezioni",
+    "intro": "Correzioni trasformate in regole. Una proposta non vincola nulla finché una persona non la conferma.",
+    "status": {
+      "proposed": "Da confermare",
+      "accepted": "Confermata",
+      "rejected": "Rifiutata",
+      "stale": "Superata"
+    },
+    "by": "{who} · {date}",
+    "byAgent": "Proposta da un agente",
+    "byPerson": "Proposta da una persona",
+    "rule": "Regola: {rule}",
+    "confirm": "Conferma",
+    "reject": "Rifiuta",
+    "empty": "Ancora nessuna lezione.",
+    "correction": "Correzione",
+    "ruleLabel": "Regola che suggerisce (facoltativa)",
+    "propose": "Proponi lezione"
   }
 }

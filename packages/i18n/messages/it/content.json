@@ -75,7 +75,10 @@
     "verifiedNeedsTerms": "“Verificato” richiede l’URL dei termini che hai controllato",
     "brandNotPublished": "Pubblica prima la Brand Identity del cliente",
     "briefTooShort": "Scrivi un brief di almeno 20 caratteri",
-    "approveOutlineFirst": "Approva la scaletta prima di generare le slide"
+    "approveOutlineFirst": "Approva la scaletta prima di generare le slide",
+    "alreadyPublished": "Questo carosello è già pubblicato e non si può più modificare",
+    "publishNotApproved": "Solo un carosello approvato può essere segnato come pubblicato",
+    "publishBlocked": "{count, plural, one {# controllo blocca} other {# controlli bloccano}} ancora: correggi prima di segnarlo come pubblicato"
   },
   "jobErrors": {
     "policyBlocked": "La policy AI del cliente non consente questa generazione (impostazioni del cliente)",
@@ -365,7 +368,10 @@
       "products": "Prodotti",
       "channels": "Canali",
       "template": "Template",
-      "hookFormula": "Formula dell’Hook"
+      "hookFormula": "Formula dell’Hook",
+      "territory": "Territorio",
+      "metric": "Metrica",
+      "cost": "Costo"
     },
     "proposalPillar": "Pilastro: {name}",
     "proposalRubric": "Rubrica di “{pillar}”: {name}",
@@ -413,7 +419,10 @@
       "avoid": "Da evitare",
       "onePerLine": "Uno per riga.",
       "audience": "Pubblico",
-      "products": "Prodotti collegati"
+      "products": "Prodotti collegati",
+      "territory": "Territorio",
+      "territoryHint": "Il terreno che questo pilastro presidia nella testa del pubblico.",
+      "metric": "Metrica"
     },
     "rubricForm": {
       "editLabel": "Modifica la rubrica {name}",
@@ -426,10 +435,21 @@
       "hookExample": "Esempio di hook",
       "cta": "CTA",
       "channels": "Canali",
-      "products": "Prodotti collegati"
+      "products": "Prodotti collegati",
+      "cost": "Costo per pezzo",
+      "metric": "Metrica"
     },
     "proposal": {
       "note": "Nota (facoltativa)"
+    },
+    "notes": {
+      "title": "Note di strategia",
+      "hint": "Su cosa lavora il piano in uso. Il Planner legge queste note.",
+      "criticalNode": "Nodo critico",
+      "countRationale": "Perché questo numero di contenuti",
+      "clientNeeds": "Di cosa ha bisogno il cliente",
+      "onePerLine": "Uno per riga.",
+      "save": "Salva le note"
     }
   },
   "form": {
@@ -860,7 +880,8 @@
       "locked": "L’AI sta lavorando su questo carosello: potrai modificarlo appena finisce.",
       "archived": "Carosello archiviato: ripristinalo per modificarlo.",
       "changesRequested": "Modifiche richieste in revisione",
-      "approved": "Il carosello è approvato: se lo modifichi, torna in bozza e va approvato di nuovo."
+      "approved": "Il carosello è approvato: se lo modifichi, torna in bozza e va approvato di nuovo.",
+      "published": "Questo carosello è pubblicato: il testo è congelato e resta com’è stato consegnato."
     },
     "saveState": {
       "readOnly": "Sola lettura",
@@ -1126,6 +1147,23 @@
       },
       "submit": "Esporta"
     },
-    "guardTitle": "Brand Guard"
+    "guardTitle": "Brand Guard",
+    "delivery": {
+      "title": "Scheda di consegna",
+      "credits": "Crediti delle immagini stock",
+      "creditsHint": "Una riga per immagine. La didascalia deve riportarli prima degli hashtag.",
+      "saveCredits": "Salva i crediti",
+      "creditsSaved": "Crediti salvati",
+      "externalUrl": "Link al post",
+      "externalId": "Id del post",
+      "publish": "Segna come pubblicato",
+      "confirm": "Segnare questo carosello come pubblicato? Diventa in sola lettura.",
+      "done": "Segnato come pubblicato",
+      "needsApproval": "Solo un carosello approvato può essere segnato come pubblicato.",
+      "publishedOn": "Pubblicato il {date}. Il carosello è in sola lettura.",
+      "deliveredVersion": "Versione consegnata: {number}",
+      "gates": "Controlli alla consegna: {errors, plural, one {# errore} other {# errori}}, {warnings, plural, one {# avviso} other {# avvisi}}",
+      "externalIdValue": "Id del post: {id}"
+    }
   }
 }

@@ -293,7 +293,8 @@
     "zipTooLargeUncompressed": "{named, select, yes {\"{name}\"} other {The archive}} is too large uncompressed.",
     "zipDamaged": "{named, select, yes {\"{name}\"} other {The archive}} is damaged or unreadable.",
     "fileTooLarge": "The file exceeds the maximum allowed size.",
-    "diskFull": "Disk space is full: the files were not saved. Tell whoever runs the Forgecy server."
+    "diskFull": "Disk space is full: the files were not saved. Tell whoever runs the Forgecy server.",
+    "factNotFound": "Fact not found"
   },
   "ai": {
     "off": "AI is turned off for this client: PDFs and images cannot be analyzed. Images are matched only by file name and SKU.",
@@ -639,7 +640,10 @@
       "image_primary": "Primary image changed",
       "image_unlink": "Image unlinked",
       "image_approve": "Image approved",
-      "image_alt": "Alt text edited"
+      "image_alt": "Alt text edited",
+      "fact_add": "Fact added",
+      "fact_update": "Fact edited",
+      "fact_delete": "Fact deleted"
     },
     "agent": "Brand Analyst",
     "system": "System",
@@ -730,5 +734,28 @@
     "status": "Status",
     "source": "Source",
     "reason": "Reason"
+  },
+  "facts": {
+    "title": "Fact bank",
+    "intro": "Claims about this product and how far they can be trusted. Only facts printed on the pack or in the catalog may be used in public copy; the content checks reject “do not use” facts and warn on the ones waiting for the client. Benefits, features and usage above count as catalog facts.",
+    "empty": "No facts yet.",
+    "addLabel": "Add a fact",
+    "editLabel": "Edit fact: {text}",
+    "text": "Fact or claim",
+    "statusLabel": "Status",
+    "status": {
+      "printed_on_pack": "Printed on the pack",
+      "catalog_only": "In the catalog only",
+      "pending_client": "Waiting for the client",
+      "do_not_use": "Do not use"
+    },
+    "source": "Source (page or document)",
+    "sourcePlaceholder": "E.g. catalog p. 12",
+    "keywords": "Other words that reveal it",
+    "keywordsHint": "Separated by commas. They help the checks find the claim in the copy.",
+    "add": "Add fact",
+    "save": "Save fact",
+    "delete": "Delete",
+    "saved": "Fact saved"
   }
 }

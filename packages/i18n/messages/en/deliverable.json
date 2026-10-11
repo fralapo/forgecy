@@ -64,6 +64,19 @@
       "slide": "Slide {number} · {role}",
       "imageAlt": "Image alt text: {alt}",
       "caption": "Caption"
+    },
+    "manifest": {
+      "version": "version {version}",
+      "files": "Files in this package",
+      "captions": "Captions by channel",
+      "anyChannel": "all channels",
+      "noCaption": "No caption.",
+      "credits": "Image credits",
+      "noCredits": "None.",
+      "tips": "Publishing tips",
+      "tipRepost": "Repost within 3 hours if the first reach is low.",
+      "tipJudge": "Judge the result after 48-72 hours, not before.",
+      "tipRecycle": "Recycle after 60 days or more, up to 3 runs."
     }
   },
   "brandBook": {

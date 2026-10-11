@@ -293,7 +293,8 @@
     "zipTooLargeUncompressed": "{named, select, yes {“{name}”} other {L’archivio}} è troppo grande una volta decompresso.",
     "zipDamaged": "{named, select, yes {“{name}”} other {L’archivio}} è danneggiato o illeggibile.",
     "fileTooLarge": "Il file supera la dimensione massima consentita.",
-    "diskFull": "Lo spazio su disco è esaurito: i file non sono stati salvati. Avvisa chi gestisce il server Forgecy."
+    "diskFull": "Lo spazio su disco è esaurito: i file non sono stati salvati. Avvisa chi gestisce il server Forgecy.",
+    "factNotFound": "Fatto non trovato"
   },
   "ai": {
     "off": "L’AI è disattivata per questo cliente: PDF e immagini non si possono analizzare. Le immagini vengono abbinate solo per nome file e SKU.",
@@ -639,7 +640,10 @@
       "image_primary": "Immagine principale cambiata",
       "image_unlink": "Immagine scollegata",
       "image_approve": "Immagine approvata",
-      "image_alt": "Testo alternativo modificato"
+      "image_alt": "Testo alternativo modificato",
+      "fact_add": "Fatto aggiunto",
+      "fact_update": "Fatto modificato",
+      "fact_delete": "Fatto eliminato"
     },
     "agent": "Brand Analyst",
     "system": "Sistema",
@@ -730,5 +734,28 @@
     "status": "Stato",
     "source": "Fonte",
     "reason": "Motivo"
+  },
+  "facts": {
+    "title": "Banca dei fatti",
+    "intro": "Affermazioni su questo prodotto e quanto ci si può fidare. Nei testi pubblici si usano solo fatti stampati sulla confezione o nel catalogo; i controlli dei contenuti bloccano i fatti “da non usare” e avvisano su quelli in attesa del cliente. Benefici, caratteristiche e uso qui sopra contano come fatti da catalogo.",
+    "empty": "Ancora nessun fatto.",
+    "addLabel": "Aggiungi un fatto",
+    "editLabel": "Modifica fatto: {text}",
+    "text": "Fatto o affermazione",
+    "statusLabel": "Stato",
+    "status": {
+      "printed_on_pack": "Stampato sulla confezione",
+      "catalog_only": "Solo nel catalogo",
+      "pending_client": "In attesa del cliente",
+      "do_not_use": "Da non usare"
+    },
+    "source": "Fonte (pagina o documento)",
+    "sourcePlaceholder": "Es. catalogo p. 12",
+    "keywords": "Altre parole che lo rivelano",
+    "keywordsHint": "Separate da virgole. Aiutano i controlli a trovare l’affermazione nel testo.",
+    "add": "Aggiungi fatto",
+    "save": "Salva fatto",
+    "delete": "Elimina",
+    "saved": "Fatto salvato"
   }
 }

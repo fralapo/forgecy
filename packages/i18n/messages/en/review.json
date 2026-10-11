@@ -43,7 +43,9 @@
       "maxImages": "Slide {slide}: at most {max} images per slide"
     },
     "openQuestions": "{count, plural, one {# question} other {# questions}} still open with the client: answer {count, plural, one {it} other {them}} in the Brief before exporting",
-    "cannotSay": "{slide, select, caption {Caption} other {Slide {slide}}}: contains “{phrase}”, which the brief says must not be said"
+    "cannotSay": "{slide, select, caption {Caption} other {Slide {slide}}}: contains “{phrase}”, which the brief says must not be said",
+    "factDoNotUse": "{slide, select, caption {Caption} other {Slide {slide}}}: uses a claim marked “do not use” in the product facts: “{fact}”",
+    "factPending": "{slide, select, caption {Caption} other {Slide {slide}}}: uses a claim still waiting for the client’s confirmation: “{fact}”"
   },
   "guard": {
     "finding": {
@@ -88,7 +90,9 @@
       "bottomZone": "Slide {slide} · {slot}: text in the bottom {px} px, which is kept for the page number.",
       "edgeMargin": "Slide {slide} · {slot}: closer than {px} px to the edge of the slide.",
       "contrastOnRender": "Slide {slide} · {slot}: contrast {ratio}{onImage, select, yes { over an image} other {}}; minimum {min}.",
-      "renderUnverified": "Layout, safe zone and contrast were not checked on the rendered slides. Check the preview before approving."
+      "renderUnverified": "Layout, safe zone and contrast were not checked on the rendered slides. Check the preview before approving.",
+      "unexplainedWord": "{slide, select, caption {Caption} other {Slide {slide} · {slot}}}: uses “{word}” without explaining it, and this brand wants that word explained.",
+      "forbiddenTopic": "{slide, select, caption {Caption} other {Slide {slide} · {slot}}}: touches a topic this brand does not cover (“{topic}”, found “{found}”). {reason}"
     },
     "suggestion": {
       "moveText": "Move part of the text to another slide or to the caption.",

@@ -43,7 +43,9 @@
       "maxImages": "Slide {slide}: al massimo {max} immagini per slide"
     },
     "openQuestions": "{count, plural, one {# domanda} other {# domande}} ancora {count, plural, one {aperta} other {aperte}} con il cliente: {count, plural, one {risolvila} other {risolvile}} nel Brief prima di esportare",
-    "cannotSay": "{slide, select, caption {Didascalia} other {Slide {slide}}}: contiene “{phrase}”, che il brief vieta di dire"
+    "cannotSay": "{slide, select, caption {Didascalia} other {Slide {slide}}}: contiene “{phrase}”, che il brief vieta di dire",
+    "factDoNotUse": "{slide, select, caption {Didascalia} other {Slide {slide}}}: usa un’affermazione segnata “da non usare” nei fatti del prodotto: “{fact}”",
+    "factPending": "{slide, select, caption {Didascalia} other {Slide {slide}}}: usa un’affermazione che attende ancora la conferma del cliente: “{fact}”"
   },
   "guard": {
     "finding": {
@@ -88,7 +90,9 @@
       "bottomZone": "Slide {slide} · {slot}: testo negli ultimi {px} px in basso, riservati al numero di pagina.",
       "edgeMargin": "Slide {slide} · {slot}: più vicino di {px} px al bordo della slide.",
       "contrastOnRender": "Slide {slide} · {slot}: contrasto {ratio}{onImage, select, yes { su un’immagine} other {}}; minimo {min}.",
-      "renderUnverified": "Layout, area di sicurezza e contrasto non sono stati verificati sul render delle slide. Controlla l’anteprima prima di approvare."
+      "renderUnverified": "Layout, area di sicurezza e contrasto non sono stati verificati sul render delle slide. Controlla l’anteprima prima di approvare.",
+      "unexplainedWord": "{slide, select, caption {Didascalia} other {Slide {slide} · {slot}}}: usa “{word}” senza spiegarla, e questo brand vuole quella parola spiegata.",
+      "forbiddenTopic": "{slide, select, caption {Didascalia} other {Slide {slide} · {slot}}}: tocca un tema che questo brand non tratta (“{topic}”, trovato “{found}”). {reason}"
     },
     "suggestion": {
       "moveText": "Sposta parte del testo in un’altra slide o nella didascalia.",
