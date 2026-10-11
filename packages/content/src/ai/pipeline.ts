@@ -8,8 +8,10 @@
 import {
   AiProviderError,
   loadClientMemorySettings,
+  MAX_INPUT_IMAGE_BYTES,
   type AiGateway,
   type GenerateObjectRequest,
+  type InputImage,
   type ModelRef,
   type TaskRoute,
 } from "@forgecy/ai";
@@ -83,6 +85,7 @@ import {
   type HookArchetype,
   type Outline,
   type Provenance,
+  type VisualNote,
 } from "../document";
 import { factBankOf, factBankPrompt } from "../carousels/facts";
 import { productSource, type ProductSummary } from "../products";
@@ -97,6 +100,7 @@ import {
   PLAN_SYSTEM,
   PLANNER_SYSTEM,
   SLIDES_SYSTEM,
+  VISUAL_SYSTEM,
   briefBlock,
   claimsOutputSchema,
   claimsUserPrompt,
@@ -114,9 +118,12 @@ import {
   slidesUserPrompt,
   strategyOutputSchema,
   strategyUserPrompt,
+  visualNotesOutputSchema,
+  visualUserPrompt,
   type CarouselPromptInput,
   type ClaimsOutput,
   type SlidesOutput,
+  type VisualNotesOutput,
 } from "./prompts";
 import { saveProposedPlan, saveStrategyProposals, type ProposedRubric } from "../strategy";
 import { clampSlideCount, getTemplate, pickLayout } from "../carousels/templates";
@@ -133,6 +140,21 @@ export interface PipelineDeps {
   imageRoute?: ModelRef[];
   /** When set, replaces `imageRoute` per job (MCP providers count only while connected). */
   resolveImageRoute?: (db: Database) => Promise<ModelRef[]>;
+  /**
+   * Renders the draft's slides as PNGs for the visual reviewer (the worker has Chromium).
+   * Absent or failing, the review runs on the copy, the layouts and nothing else.
+   */
+  renderSlides?: (
+    c: typeof contents.$inferSelect,
+    doc: CarouselDocument,
+  ) => Promise<RenderedSlides>;
+}
+
+/** What the visual reviewer gets from a render: one PNG per slide and the issues measured on it. */
+export interface RenderedSlides {
+  png: Uint8Array[];
+  /** 0-based slide index, as the renderer reports it. */
+  issues: { slide: number; slot: string; kind: string; message: string }[];
 }
 
 export interface PipelineContext {
@@ -225,6 +247,8 @@ type CommonAi = Pick<
 
 /** Every content prompt carries texts of the client's Brand Identity (page 61). */
 const SENDS_BRAND_TEXTS = ["brand_texts"] as const;
+/** Rendered slides carry the client's logo and photos besides its texts. */
+const SENDS_SLIDE_IMAGES = ["brand_texts", "brand_assets", "client_photos"] as const;
 
 // ---- Planner ----
 
@@ -341,6 +365,7 @@ export async function runProposeStrategy(
         emotion: p.emotion,
         examples: p.examples.filter((e) => e.title.trim()),
         forbidden: p.forbidden.filter(Boolean),
+        territory: p.territory.trim(),
         productIds: p.productIds.filter(isUuid),
       },
     })),
@@ -471,6 +496,10 @@ export async function runProposePlan(
     saveProposedPlan(deps.db, actor, {
       clientId: input.clientId,
       brandVersionId: brandCtx.versionId,
+      notes: {
+        criticalNode: res.data.criticalNode.trim(),
+        clientNeeds: res.data.clientNeeds.map((n) => n.trim()).filter(Boolean),
+      },
       provenance: {
         agent: "planner",
         jobId: ctx.jobId,
@@ -1347,6 +1376,110 @@ export async function runCritiqueClaims(
   return {
     findings: claimFindingsOf(doc, res.data.claims),
     draftRev: s.c.draftRev,
+    costMicroUsd: res.costMicroUsd,
+  };
+}
+
+/** The reviewer's notes as notes of this draft: a slide that does not exist is dropped, repeats too. */
+export function visualNotesOf(
+  doc: CarouselDocument,
+  notes: VisualNotesOutput["notes"],
+): VisualNote[] {
+  const seen = new Set<string>();
+  const out: VisualNote[] = [];
+  for (const n of notes) {
+    const slide = doc.slides[n.slide - 1];
+    const problem = n.problem.trim();
+    const fix = n.fix.trim();
+    if (!slide || !problem) continue;
+    const key = `${n.slide}|${squash(problem)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ slide: n.slide, slideId: slide.id, problem, fix });
+  }
+  return out;
+}
+
+/**
+ * Visual reviewer: a stranger scrolling Instagram looks at the draft's slides and says what
+ * would lose them. With a renderer the model sees the slide PNGs; without one, or when the
+ * render or the image call fails, it works from the copy, the layouts and the measured issues.
+ * Advisory only: it returns notes (no score, no praise), changes nothing and blocks nothing.
+ */
+export async function runReviewVisual(
+  deps: PipelineDeps,
+  ctx: PipelineContext,
+  input: { clientId: string; contentId: string },
+) {
+  const ai = requireAi(deps);
+  const s = await carouselSetup(deps, ctx, input.clientId, input.contentId, "reviewer");
+  const doc = parseDocument(s.c.draft);
+  if (!doc.slides.length)
+    return { notes: [] as VisualNote[], draftRev: s.c.draftRev, mode: "text" as const };
+  await ctx.progress(10);
+  let frames: RenderedSlides | null = null;
+  try {
+    frames = (await deps.renderSlides?.(s.c, doc)) ?? null;
+  } catch {
+    frames = null; // no browser or a broken render: the text review still helps
+  }
+  const images: InputImage[] =
+    frames &&
+    frames.png.length === doc.slides.length &&
+    frames.png.every((p) => p.byteLength > 0 && p.byteLength <= MAX_INPUT_IMAGE_BYTES)
+      ? frames.png.map((data, i) => ({
+          data,
+          mimeType: "image/png" as const,
+          id: doc.slides[i]!.id,
+        }))
+      : [];
+  await ctx.progress(40);
+  const { system, prefix } = withBrand(VISUAL_SYSTEM, s.brandCtx);
+  const layouts = doc.slides.map((sl) => {
+    const l = findLayout(s.template.manifest, sl.layout);
+    return { layout: sl.layout, role: l?.role ?? "" };
+  });
+  const call = (withImages: boolean) =>
+    ai.generateObject({
+      task: "review_visual",
+      schema: visualNotesOutputSchema,
+      schemaName: "visual_review",
+      system,
+      input:
+        prefix +
+        visualUserPrompt({
+          document: doc,
+          layouts,
+          measured: frames?.issues ?? [],
+          withImages,
+          language: s.promptInput.language,
+        }),
+      ...s.common,
+      ...(withImages ? { images, sends: SENDS_SLIDE_IMAGES } : {}),
+      inputSummary: {
+        fields: {},
+        meta: {
+          promptVersion: CONTENT_PROMPT_VERSION,
+          slides: doc.slides.length,
+          images: withImages ? images.length : 0,
+        },
+      },
+    });
+  let mode: "images" | "text" = images.length ? "images" : "text";
+  let res;
+  try {
+    res = await guarded(() => call(mode === "images"));
+  } catch (err) {
+    // A model without vision (or an image the provider refuses): the text review still helps.
+    if (mode === "text" || !(err instanceof NeedsAttentionError)) throw err;
+    mode = "text";
+    res = await guarded(() => call(false));
+  }
+  await ctx.progress(100);
+  return {
+    notes: visualNotesOf(doc, res.data.notes),
+    draftRev: s.c.draftRev,
+    mode,
     costMicroUsd: res.costMicroUsd,
   };
 }

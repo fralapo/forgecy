@@ -19,8 +19,13 @@ import { createStorageFromEnv } from "@forgecy/files";
 import { englishMessage, messageRef, type MessageKey } from "@forgecy/i18n";
 import { handle, NeedsAttentionError, type JobContext, type JobHandlers } from "@forgecy/jobs";
 import { requireClient } from "./access";
-import { getContentRow, isFinalExportable, recordExport } from "./carousels/carousels";
-import { parseDocument, toRenderSlide } from "./document";
+import {
+  getContentRow,
+  isFinalExportable,
+  recordExport,
+  type ContentRow,
+} from "./carousels/carousels";
+import { parseDocument, toRenderSlide, type CarouselDocument } from "./document";
 import {
   creativeDirectionJob,
   critiqueClaimsJob,
@@ -31,6 +36,7 @@ import {
   generateSlidesJob,
   proposePlanJob,
   proposeStrategyJob,
+  reviewVisualJob,
 } from "./jobs";
 import {
   runCreativeDirection,
@@ -41,7 +47,9 @@ import {
   runGenerateSlides,
   runProposePlan,
   runProposeStrategy,
+  runReviewVisual,
   type PipelineContext,
+  type RenderedSlides,
   type PipelineDeps,
 } from "./ai/pipeline";
 import { loadBrand } from "./carousels/theme";
@@ -179,6 +187,56 @@ async function runExport(
   };
 }
 
+/**
+ * The draft's slides as PNGs, for the visual reviewer: the carousel module's own export with
+ * only the PNG output, so the review sees what an export would produce (no “Draft” mark).
+ * Nothing here is a deliverable; a failure only means the review runs on text.
+ */
+async function renderDraftSlides(
+  deps: PipelineDeps,
+  ctx: JobContext,
+  c: ContentRow,
+  doc: CarouselDocument,
+): Promise<RenderedSlides> {
+  const system: Actor = { type: "agent", role: "reviewer", runId: ctx.jobId };
+  const client = await requireClient(ctx.db, c.clientId);
+  const brand = await loadBrand(ctx.db, system, {
+    clientId: c.clientId,
+    clientName: client.name,
+    versionId: c.brandVersionId,
+  });
+  if (!brand) throw attention("content.jobErrors.brandVersionUnavailable");
+  const payload = carouselExportPayloadSchema.parse({
+    clientId: c.clientId,
+    client: client.name,
+    content: c.title,
+    version: 1,
+    templateId: c.templateKey,
+    ...(c.templateVersion ? { templateVersion: c.templateVersion } : {}),
+    slides: doc.slides.map(toRenderSlide),
+    brand: brand.theme,
+    caption: doc.caption,
+    hashtags: doc.hashtags,
+    channel: c.channel,
+    credits: c.stockCredits,
+    outputs: ["png"],
+    draft: false,
+    language: isLocale(c.language) ? c.language : DEFAULT_LOCALE,
+  });
+  carouselExport ??= carouselWorkerHandlers()["carousel.export"];
+  const result = (await carouselExport(payload, ctx)) as {
+    files: { key: string; kind: string }[];
+    issues: RenderedSlides["issues"];
+  };
+  const png: Uint8Array[] = [];
+  for (const f of result.files.filter((x) => x.kind === "png")) {
+    const chunks: Buffer[] = [];
+    for await (const chunk of await deps.storage.get(f.key)) chunks.push(Buffer.from(chunk));
+    png.push(new Uint8Array(Buffer.concat(chunks)));
+  }
+  return { png, issues: result.issues };
+}
+
 export const contentHandlers: JobHandlers = {
   ...handle(proposeStrategyJob, async (p, ctx) =>
     runProposeStrategy(await pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
@@ -201,6 +259,14 @@ export const contentHandlers: JobHandlers = {
   ...handle(critiqueClaimsJob, async (p, ctx) =>
     runCritiqueClaims(await pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),
+  ...handle(reviewVisualJob, async (p, ctx) => {
+    const base = await pipelineDepsFor(ctx.db, ctx.logger);
+    return runReviewVisual(
+      { ...base, renderSlides: (c, doc) => renderDraftSlides(base, ctx, c, doc) },
+      pctx(ctx, p.requestedBy),
+      p,
+    );
+  }),
   ...handle(generateImageJob, async (p, ctx) =>
     runGenerateImage(await pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),

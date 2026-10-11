@@ -782,6 +782,8 @@ export async function saveProposedPlan(
     brandVersionId: string | null;
     provenance: Provenance;
     items: PlanItemInputRaw[];
+    /** Proposed strategy notes; they apply only when a person uses the plan (see `activatePlan`). */
+    notes?: { criticalNode?: string; clientNeeds?: string[] };
   },
 ) {
   assertCan(actor, "propose", input.clientId);
@@ -811,6 +813,8 @@ export async function saveProposedPlan(
         number: await nextPlanNumber(tx, input.clientId),
         status: "proposed",
         provenance: prov,
+        criticalNode: input.notes?.criticalNode?.slice(0, 300) || null,
+        clientNeeds: (input.notes?.clientNeeds ?? []).slice(0, 12),
         brandVersionId: input.brandVersionId,
       })
       .returning();
@@ -881,13 +885,25 @@ export async function activatePlan(
     if (!plan) notFound("content.errors.planNotFound");
     if (plan.status !== "proposed") conflict("content.errors.planNotProposed");
     const now = new Date();
+    const [previous] = await tx
+      .select()
+      .from(contentPlans)
+      .where(and(eq(contentPlans.clientId, input.clientId), eq(contentPlans.status, "active")));
     await tx
       .update(contentPlans)
       .set({ status: "superseded" })
       .where(and(eq(contentPlans.clientId, input.clientId), eq(contentPlans.status, "active")));
+    // Notes a person wrote on the plan in use win over the Planner's proposed ones.
     await tx
       .update(contentPlans)
-      .set({ status: "active", acceptedBy: actor.id, acceptedAt: now })
+      .set({
+        status: "active",
+        acceptedBy: actor.id,
+        acceptedAt: now,
+        criticalNode: previous?.criticalNode || plan.criticalNode,
+        clientNeeds: previous?.clientNeeds.length ? previous.clientNeeds : plan.clientNeeds,
+        countRationale: previous?.countRationale || plan.countRationale,
+      })
       .where(eq(contentPlans.id, plan.id));
     await tx.execute(sql`
       update content_plan_items i

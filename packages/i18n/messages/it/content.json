@@ -300,6 +300,7 @@
       "generateSlides": "Generazione delle slide",
       "editSlide": "Modifica di una slide",
       "critiqueClaims": "Verifica delle affermazioni",
+      "reviewVisual": "Revisione delle slide",
       "generateImage": "Generazione delle immagini",
       "export": "Esportazione",
       "other": "Attività in corso"
@@ -846,6 +847,17 @@
       "checking": "Verifica in corso…",
       "hint": "L'AI legge il testo cercando affermazioni forse non supportate: cifre, superlativi, promesse su salute o legge, promesse a tempo. Non controlla il web, non modifica mai il testo e i risultati sono avvisi.",
       "last": "{count, plural, =0 {Ultima verifica: nessuna affermazione a rischio.} one {Ultima verifica: # affermazione a rischio, elencata nei controlli.} other {Ultima verifica: # affermazioni a rischio, elencate nei controlli.}}"
+    },
+    "visual": {
+      "button": "Rivedi le slide",
+      "checking": "Revisione in corso…",
+      "hint": "L'AI guarda le slide come chi scorre Instagram, un secondo sulla copertina: angolo sicuro, contrasto, sovrapposizioni, parole orfane, muri di testo. Dà solo note, mai un punteggio, e non modifica né blocca nulla.",
+      "last": "{count, plural, =0 {Ultima revisione: niente da correggere.} one {Ultima revisione: # nota.} other {Ultima revisione: # note.}}",
+      "mode": "{mode, select, images {Vista dalle slide renderizzate.} other {Giudicata dal testo e dai layout: le immagini delle slide non erano disponibili.}}",
+      "slide": "Slide {slide}",
+      "fix": "Correzione: {fix}",
+      "dismiss": "Ignora",
+      "stale": "La bozza è cambiata dopo questa revisione: i numeri delle slide potrebbero non corrispondere più."
     },
     "actionErrors": {
       "conflict": "Qualcun altro ha modificato il carosello mentre lo stavi modificando anche tu.",

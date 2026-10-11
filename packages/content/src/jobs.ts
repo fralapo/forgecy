@@ -81,6 +81,13 @@ export const critiqueClaimsJob = defineJob({
   payload: z.object({ ...base, contentId: z.uuid() }),
 });
 
+/** Reviewer: advisory look at the rendered slides as a stranger scrolling; notes only, no score. */
+export const reviewVisualJob = defineJob({
+  kind: "content.review_visual",
+  queue: "ai",
+  payload: z.object({ ...base, contentId: z.uuid() }),
+});
+
 /** Art Director + image provider: draft images for an image slot. */
 export const generateImageJob = defineJob({
   kind: "content.generate_image",
@@ -116,6 +123,7 @@ export const contentJobs = [
   generateSlidesJob,
   editSlideJob,
   critiqueClaimsJob,
+  reviewVisualJob,
   generateImageJob,
   exportContentJob,
 ] as const;

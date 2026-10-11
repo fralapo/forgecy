@@ -62,6 +62,7 @@ import {
   carouselParamsSchema,
   claimFindingSchema,
   contentSlideSchema,
+  visualNoteSchema,
   newSlideId,
   normalizeHashtag,
   outlineSchema,
@@ -74,6 +75,7 @@ import {
   type ContentChannel,
   type Outline,
   type OutlineInput,
+  type VisualNote,
 } from "../document";
 import {
   brandGuard,
@@ -816,6 +818,44 @@ export async function latestClaimFindings(
     .limit(1);
   const parsed = claimFindingSchema.array().safeParse(row?.result?.findings);
   return parsed.success ? parsed.data : [];
+}
+
+/**
+ * Notes of the latest finished visual review of a content (advisory, no score; see
+ * `reviewVisualJob`), with the job id so the page can keep a person's dismissals per review
+ * and the draft revision it was made on.
+ */
+export async function latestVisualReview(
+  db: Database,
+  contentId: string,
+): Promise<{
+  jobId: string;
+  draftRev: number | null;
+  mode: "images" | "text";
+  notes: VisualNote[];
+} | null> {
+  const [row] = await db
+    .select({ id: jobs.id, result: jobs.result })
+    .from(jobs)
+    .where(
+      and(
+        eq(jobs.entity, "content"),
+        eq(jobs.entityId, contentId),
+        eq(jobs.kind, "content.review_visual"),
+        eq(jobs.status, "completed"),
+      ),
+    )
+    .orderBy(desc(jobs.createdAt))
+    .limit(1);
+  if (!row) return null;
+  const notes = visualNoteSchema.array().safeParse(row.result?.notes);
+  const rev = row.result?.draftRev;
+  return {
+    jobId: row.id,
+    draftRev: typeof rev === "number" ? rev : null,
+    mode: row.result?.mode === "images" ? "images" : "text",
+    notes: notes.success ? notes.data : [],
+  };
 }
 
 /**

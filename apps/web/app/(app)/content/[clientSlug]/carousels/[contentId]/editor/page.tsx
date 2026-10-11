@@ -3,6 +3,7 @@ import {
   assetCommercialUse,
   briefSchema,
   latestClaimFindings,
+  latestVisualReview,
   sourceTextOf,
   type ContentChannel,
   factBankOf,
@@ -11,6 +12,7 @@ import { eq, users } from "@forgecy/db";
 import { getTranslations } from "next-intl/server";
 import { getRefText } from "@/lib/i18n";
 import { ClaimCheck } from "../../../../_components/claim-check";
+import { VisualReview } from "../../../../_components/visual-review";
 import { EditorWorkspace, type EditorAsset } from "../../../../_components/editor-workspace";
 import { carouselPath } from "../../../../_lib/paths";
 import { thumbnailUrls } from "../../../../_lib/server";
@@ -32,8 +34,9 @@ export default async function EditorPage({
   const { db, user, client, ws } = await loadCarousel(clientSlug, contentId);
   const c = ws.content;
   const rt = await getRefText();
-  const [claims, brand, updatedBy] = await Promise.all([
+  const [claims, visual, brand, updatedBy] = await Promise.all([
     latestClaimFindings(db, c.id),
+    latestVisualReview(db, c.id),
     getPublishedBrandIdentity(db, user.actor, client.id),
     c.draftUpdatedBy
       ? db
@@ -69,6 +72,12 @@ export default async function EditorPage({
   const base = carouselPath(client.slug, c.id);
 
   const claimJobs = ws.jobs.filter((j) => j.kind === "content.critique_claims");
+  const visualJobs = ws.jobs.filter((j) => j.kind === "content.review_visual");
+  const cannotCheck =
+    !ws.document.slides.length ||
+    c.status === "in_review" ||
+    c.status === "archived" ||
+    c.publishedAt !== null;
 
   return (
     <>
@@ -88,6 +97,27 @@ export default async function EditorPage({
             ? (ws.checks?.checks.filter((x) => x.id.startsWith("claim:")).length ?? 0)
             : null
         }
+      />
+      <VisualReview
+        slug={client.slug}
+        clientId={client.id}
+        contentId={c.id}
+        running={visualJobs.some((j) => isActiveJob(j.status))}
+        disabled={cannotCheck}
+        review={
+          visual
+            ? {
+                jobId: visual.jobId,
+                mode: visual.mode,
+                notes: visual.notes.map((n) => ({
+                  slide: n.slide,
+                  problem: n.problem,
+                  fix: n.fix,
+                })),
+              }
+            : null
+        }
+        stale={visual !== null && visual.draftRev !== c.draftRev}
       />
       <EditorWorkspace
         key={c.id}

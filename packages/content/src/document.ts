@@ -352,6 +352,18 @@ export const claimFindingSchema = z.object({
 });
 export type ClaimFinding = z.output<typeof claimFindingSchema>;
 
+// ---- Visual reviewer notes (advisory, stored in the result of the review job) ----
+
+export const visualNoteSchema = z.object({
+  /** 1-based position of the slide when the review ran. */
+  slide: z.number().int().min(1).max(20),
+  slideId: z.string().max(64),
+  problem: z.string().min(1).max(300),
+  /** One atomic fix. */
+  fix: z.string().max(300),
+});
+export type VisualNote = z.output<typeof visualNoteSchema>;
+
 /** The renderer only knows plain slides: editor metadata stays out of the HTML. */
 export function toRenderSlide(s: ContentSlide): Slide {
   return slideSchema.parse({ id: s.id, layout: s.layout, tone: s.tone, slots: s.slots });

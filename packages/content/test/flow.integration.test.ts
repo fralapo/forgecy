@@ -52,6 +52,7 @@ import {
   runGenerateSlides,
   runProposePlan,
   runProposeStrategy,
+  runReviewVisual,
   type PipelineDeps,
 } from "../src/ai/pipeline";
 import {
@@ -238,6 +239,7 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
             emotion: "safety",
             examples: [],
             forbidden: [],
+            territory: "Trails above 2000 m",
             productIds: [],
             rationale: "From the Hikers audience",
           },
@@ -352,6 +354,8 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
             productIds: [],
           },
         ],
+        criticalNode: "Nobody saves the posts",
+        clientNeeds: ["More trail-ready leads"],
         rationale: "Trial plan",
       },
     });
@@ -364,6 +368,11 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
     const active = (await getStrategyOverview(db, anna, clientId)).activePlan!;
     expect(active.items).toHaveLength(1);
     expect(active.items[0]).toMatchObject({ status: "accepted", format: "ig_4x5" });
+    // The Planner's proposed strategy notes become the plan's once a person uses it.
+    expect(active).toMatchObject({
+      criticalNode: "Nobody saves the posts",
+      clientNeeds: ["More trail-ready leads"],
+    });
   });
 
   it("creates, writes, reviews and exports a carousel", async () => {
@@ -550,6 +559,56 @@ describe.skipIf(!dbUrl)("content strategy and carousel flow (integration)", () =
     ).toEqual([`claim:${ws.document.slides[0]!.id}:1`, "claim:caption:1"]);
     expect(flagged.checks?.errors).toEqual([]);
     await db.delete(jobs).where(eq(jobs.id, critiqueJob.jobId));
+
+    // Visual reviewer: notes only (no score), a note on a slide that is not there is dropped, and
+    // the draft is never touched. Without a renderer it works from the copy; with one it sees PNGs.
+    const visualReply = {
+      json: {
+        notes: [
+          { slide: 1, problem: "Title too close to the top-right corner.", fix: "Move it left." },
+          { slide: 1, problem: "Title too close to the top-right corner.", fix: "Again." },
+          { slide: 20, problem: "Not a slide.", fix: "x" },
+        ],
+      },
+    };
+    fake.push(visualReply);
+    const textReview = await runReviewVisual(deps, await job("content.review_visual"), {
+      clientId,
+      contentId: c.id,
+    });
+    expect(textReview.mode).toBe("text");
+    expect(textReview.notes).toEqual([
+      {
+        slide: 1,
+        slideId: ws.document.slides[0]!.id,
+        problem: "Title too close to the top-right corner.",
+        fix: "Move it left.",
+      },
+    ]);
+    expect(JSON.stringify(fake.calls.at(-1))).toContain("No images are attached");
+    const png = Uint8Array.from(
+      Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+        "base64",
+      ),
+    );
+    fake.push({ json: { notes: [] } });
+    const imageReview = await runReviewVisual(
+      {
+        ...deps,
+        renderSlides: async (_row, doc) => ({
+          png: doc.slides.map(() => png),
+          issues: [{ slide: 0, slot: "title", kind: "widow", message: "Last line is one word" }],
+        }),
+      },
+      await job("content.review_visual"),
+      { clientId, contentId: c.id },
+    );
+    expect(imageReview).toMatchObject({ mode: "images", notes: [] });
+    const sent = fake.calls.at(-1)!;
+    expect(sent.messages.flatMap((m) => m.images ?? [])).toHaveLength(ws.document.slides.length);
+    expect(JSON.stringify(sent)).toContain("Last line is one word");
+    expect((await getContentRow(db, clientId, c.id)).draftRev).toBe(ws.content.draftRev);
 
     // Stale autosave.
     expect(

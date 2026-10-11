@@ -33,7 +33,7 @@ import { slotTexts } from "../carousels/checks";
 import type { ProductSummary } from "../products";
 import { directionBlock, type CreativeDirection } from "../carousels/direction";
 
-export const CONTENT_PROMPT_VERSION = "content-2026-10-11b";
+export const CONTENT_PROMPT_VERSION = "content-2026-10-11c";
 
 /** What decides whether a channel is working; the Planner judges each rubric by it. */
 export const CHANNEL_METRICS = `- Channel gate metric: judge a rubric by the metric of its channel, and name it in the pillar goal: Instagram = saves and shares; Facebook = shares in groups and comments; LinkedIn = dwell time and comments. Likes and reach alone are not a goal.`;
@@ -68,6 +68,8 @@ export const strategyOutputSchema = z.object({
           .array(z.object({ title: z.string().max(80), text: z.string().max(400) }))
           .max(3),
         forbidden: z.array(z.string().max(200)).max(10),
+        /** The ground the pillar owns, in a few words; "" when unsure. */
+        territory: z.string().max(160),
         productIds: z.array(z.string().max(40)).max(10),
         rationale: z.string().max(600),
       }),
@@ -105,6 +107,7 @@ ${SHARED_RULES}
 - The sum of the rubrics' frequencies does not exceed that of their pillar.
 - If pillars already exist, propose only what truly improves them: to change an existing pillar put its id in "updates", otherwise leave "updates" empty.
 - productIds: only ids from the list of approved products, never others.
+- territory: the ground the pillar owns, in a few words ("" when the material does not say).
 ${CHANNEL_METRICS}
 - In "rationale" explain why in one or two sentences, citing the element of the Brand Identity or of the existing strategy you rely on.`,
   "positioning",
@@ -126,6 +129,10 @@ export const planOutputSchema = z.object({
       }),
     )
     .max(60),
+  /** The one bottleneck the month works on; "" when the material does not show one. */
+  criticalNode: z.string().max(300),
+  /** What the client needs from the month, in their words; empty when unknown. */
+  clientNeeds: z.array(z.string().max(200)).max(12),
   rationale: z.string().max(1000),
 });
 export type PlanOutput = z.infer<typeof planOutputSchema>;
@@ -138,7 +145,8 @@ ${SHARED_RULES}
 - Use only the listed pillars and rubrics, with their exact ids; leave rubricId empty if the content does not follow a rubric.
 - Respect the frequencies of pillars and rubrics and alternate the pillars: never the same pillar three days in a row.
 - Channels: only the ones indicated. One concrete theme per item (not "post about X"), with a hook of at most 120 characters.
-- productIds: only ids from the list of approved products, and only when the theme is about the product.`,
+- productIds: only ids from the list of approved products, and only when the theme is about the product.
+- criticalNode and clientNeeds are proposals a person accepts with the plan: name the one bottleneck only if the Brand Identity, the strategy notes or the directions show it, and list needs only in the client's own terms. Leave them empty rather than guess.`,
   "social-content",
 );
 
@@ -361,6 +369,87 @@ export function claimsUserPrompt(input: {
     json(copy),
     `Caption (slide 0): ${input.document.caption || "—"}`,
   ].join("\n\n");
+}
+
+// ---- Visual reviewer: advisory notes from a stranger scrolling ----
+
+/** A note is a problem and one atomic fix; there is no score and no praise. */
+export const visualNotesOutputSchema = z.object({
+  notes: z
+    .array(
+      z.object({
+        /** 1-based slide position the note is about. */
+        slide: z.number().int().min(1).max(20),
+        problem: z.string().max(300),
+        /** One atomic change that would solve it. */
+        fix: z.string().max(300),
+      }),
+    )
+    .max(20),
+});
+export type VisualNotesOutput = z.infer<typeof visualNotesOutputSchema>;
+
+/** The checks of the visual reviewer, in the order of the prompt. */
+export const VISUAL_CHECKS = [
+  "content outside the safe box",
+  "the top-right 120x120 corner of the cover is not free (Instagram draws the carousel icon there)",
+  "text contrast against its background",
+  "more than one highlight style in a title",
+  "overlaps between text, images and shapes",
+  "tap targets and buttons too small to hit",
+  "a continuation cue (arrow, swipe hint) where none is meant, or missing where one is meant",
+  "the call to action on the last slide is wrong, unclear or missing",
+  "widows and unbalanced line breaks",
+  "a wall of text",
+  "the cover does not read at 150 px wide, or its crop is broken",
+] as const;
+
+export const VISUAL_SYSTEM = withPlaybooks(
+  `You are the Reviewer of Forgecy. You are a stranger scrolling Instagram: you give the cover about one second and each other slide a glance. You report only what would make you scroll on or lose the thread.
+
+Check, slide by slide:
+${VISUAL_CHECKS.map((c, i) => `${i + 1}. ${c}`).join("\n")}
+
+Rules:
+${SHARED_RULES}
+- Return only notes: the slide's position (starting at 1), the problem in one short sentence and one atomic fix (a single change, not a list). Return an empty list when you find nothing.
+- No score, no grade, no praise, no summary. Do not rewrite the copy and do not judge facts or claims: another pass does that.
+- When slide images are given, judge what you see. When they are not, judge only from the copy, the layouts and the measured issues given, and do not guess at colors or pictures you cannot see.
+- Measured issues come from the renderer and are facts: restate one only if it matters to a reader, once.
+- Write "problem" and "fix" in the language of the copy.`,
+  "copywriting",
+);
+
+export function visualUserPrompt(input: {
+  document: CarouselDocument;
+  /** Role and layout id of each slide, in order. */
+  layouts: { layout: string; role: string }[];
+  /** Issues the renderer measured (0-based slide index). */
+  measured: { slide: number; slot: string; kind: string; message: string }[];
+  /** True when the slide images are attached in order. */
+  withImages: boolean;
+  language: string;
+}): string {
+  const slides = input.document.slides.map((s, i) => ({
+    slide: i + 1,
+    layout: input.layouts[i]?.layout ?? s.layout,
+    role: input.layouts[i]?.role ?? "",
+    tone: s.tone,
+    texts: slotTexts(s.slots),
+  }));
+  return [
+    `Language of the copy: ${input.language}`,
+    input.withImages
+      ? `The ${input.document.slides.length} slide images are attached in order (slide 1 first).`
+      : "No images are attached: judge from the data below.",
+    "## Slides",
+    json(slides),
+    input.measured.length
+      ? `## Measured issues\n${input.measured.map((m) => `- slide ${m.slide + 1}, ${m.slot}: ${m.kind} — ${m.message}`).join("\n")}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 // ---- Art Director: image prompt ----

@@ -300,6 +300,7 @@
       "generateSlides": "Generating the slides",
       "editSlide": "Editing a slide",
       "critiqueClaims": "Checking claims",
+      "reviewVisual": "Reviewing the slides",
       "generateImage": "Generating the images",
       "export": "Export",
       "other": "Job in progress"
@@ -846,6 +847,17 @@
       "checking": "Checking claims…",
       "hint": "The AI reads the copy for claims that may be unsupported: figures, superlatives, health or legal promises, time-bound promises. It does not check the web, never edits the copy, and its findings are warnings.",
       "last": "{count, plural, =0 {Last check: no claims at risk.} one {Last check: # claim at risk, listed in the checks.} other {Last check: # claims at risk, listed in the checks.}}"
+    },
+    "visual": {
+      "button": "Review the slides",
+      "checking": "Reviewing the slides…",
+      "hint": "The AI looks at the slides like a stranger scrolling Instagram, a second on the cover: safe corner, contrast, overlaps, widows, walls of text. It gives notes only, never a score, and never edits or blocks anything.",
+      "last": "{count, plural, =0 {Last review: nothing to fix.} one {Last review: # note.} other {Last review: # notes.}}",
+      "mode": "{mode, select, images {Seen from the rendered slides.} other {Judged from the copy and the layouts: no slide images were available.}}",
+      "slide": "Slide {slide}",
+      "fix": "Fix: {fix}",
+      "dismiss": "Dismiss",
+      "stale": "The draft changed after this review: slide numbers may no longer match."
     },
     "actionErrors": {
       "conflict": "Someone else edited the carousel while you were editing it too.",
