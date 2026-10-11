@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { checkInterfaceLabels, localizeManifest } from "../src/interface-labels";
+import {
+  checkInterfaceLabels,
+  imageSlotOrientation,
+  localizeManifest,
+  slotDisplayName,
+} from "../src/interface-labels";
 import { packageFromFiles } from "../src/package";
 import { templateManifestSchema } from "../src/template-schema";
 import { validateTemplatePackage } from "../src/validate";
@@ -78,5 +83,34 @@ describe("template interface labels", () => {
           `${layout.id}.${slot.name}`,
         ).toBeTruthy();
     }
+  });
+});
+
+describe("slotDisplayName", () => {
+  const pkg = packageFromFiles(
+    withInterface({
+      "interface/it.json": JSON.stringify({
+        layouts: { only: { slots: { title: "Titolo" } } },
+      }),
+    }),
+  );
+  it("uses the localized slot label and falls back to the key", () => {
+    const it = localizeManifest(pkg.manifest, "it");
+    expect(slotDisplayName(it, "only", "title")).toBe("Titolo");
+    expect(slotDisplayName(it, "only", "nope")).toBe("nope");
+    expect(slotDisplayName(it, "gone", "title")).toBe("title");
+    expect(slotDisplayName(null, null, "title")).toBe("title");
+  });
+});
+
+describe("imageSlotOrientation", () => {
+  const canvas = { width: 1080, height: 1350 };
+  it("follows the slot minimum size, then the canvas", () => {
+    expect(imageSlotOrientation({ minWidth: 1200, minHeight: 800 }, canvas)).toBe("landscape");
+    expect(imageSlotOrientation({ minWidth: 800, minHeight: 1200 }, canvas)).toBe("portrait");
+    expect(imageSlotOrientation({ minWidth: 900, minHeight: 900 }, canvas)).toBe("square");
+    expect(imageSlotOrientation({}, canvas)).toBe("portrait");
+    expect(imageSlotOrientation({ minWidth: 500 }, { width: 1080, height: 1080 })).toBe("square");
+    expect(imageSlotOrientation({}, { width: 1920, height: 1080 })).toBe("landscape");
   });
 });

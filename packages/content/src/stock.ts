@@ -34,6 +34,27 @@ export function stockCreditLine(stock: unknown): string | null {
   return typeof name === "string" && name.trim() ? `Photo: ${name.trim()} / Pexels` : null;
 }
 
+/**
+ * Credit lines after a save: the line of a photo that left the carousel goes, unless another
+ * slide still uses that photo. Only lines in the generated format of a stock asset match, so
+ * lines typed by hand stay. `before` and `after` are the image keys of the two drafts.
+ */
+export function pruneStockCredits(
+  current: readonly string[],
+  before: Iterable<string>,
+  after: Iterable<string>,
+  lineOf: (key: string) => string | null,
+): string[] {
+  const kept = new Set(after);
+  const dropped = new Set<string>();
+  for (const key of before) {
+    const line = kept.has(key) ? null : lineOf(key);
+    if (line) dropped.add(line);
+  }
+  for (const key of kept) dropped.delete(lineOf(key) ?? "");
+  return current.filter((l) => !dropped.has(l));
+}
+
 export async function searchStock(
   actor: Actor,
   input: { clientId: string; query: string; orientation?: PexelsOrientation; page?: number },

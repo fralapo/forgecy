@@ -15,7 +15,7 @@ import {
 import { LocalDiskDriver } from "@forgecy/files";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { assetCommercialUse, confirmAssetRights, readAssetRights } from "../src/assets";
-import { addStockCredit } from "../src/carousels/carousels";
+import { addStockCredit, saveDraft } from "../src/carousels/carousels";
 import { importPexelsPhoto, stockCreditLine } from "../src/stock";
 
 const dbUrl = process.env.FORGECY_TEST_DATABASE_URL;
@@ -246,5 +246,39 @@ describe.skipIf(!dbUrl)("Pexels stock photos in the library (integration)", () =
     expect(stockCreditLine({ photographer: " Bo " })).toBe("Photo: Bo / Pexels");
     expect(stockCreditLine(null)).toBeNull();
     expect(stockCreditLine({ photographer: "" })).toBeNull();
+  });
+  it("drops the photo credit when the photo leaves the slides, keeps hand-typed lines", async () => {
+    const p1 = await importPexelsPhoto(db, storage, actor, { clientId, photoId: 1 }, opts);
+    const p2 = await importPexelsPhoto(db, storage, actor, { clientId, photoId: 2 }, opts);
+    const line = "Photo: Ada Rossi / Pexels";
+    await db
+      .update(contents)
+      .set({ stockCredits: [line, "Cover by Studio"] })
+      .where(eq(contents.id, contentId));
+    const img = (key: string) => ({ key, alt: "x", focalX: 0.5, focalY: 0.5 });
+    let rev = (await db.select().from(contents).where(eq(contents.id, contentId)))[0]!.draftRev;
+    const save = async (keys: string[]) => {
+      const saved = await saveDraft(db, actor, {
+        clientId,
+        id: contentId,
+        draftRev: rev,
+        document: {
+          title: "t",
+          slides: keys.map((k, i) => ({ id: `s${i}`, layout: "cover", slots: { image: img(k) } })),
+          caption: "",
+          hashtags: [],
+        },
+      });
+      rev = saved.draftRev;
+      return (await db.select().from(contents).where(eq(contents.id, contentId)))[0]!.stockCredits;
+    };
+    const k1 = p1.row.storageKey;
+    const k2 = p2.row.storageKey;
+    expect(await save([k1, k1])).toEqual([line, "Cover by Studio"]);
+    expect(await save([k1])).toEqual([line, "Cover by Studio"]);
+    // replaced by another photo of the same photographer: the line still applies
+    expect(await save([k2])).toEqual([line, "Cover by Studio"]);
+    expect(await save([])).toEqual(["Cover by Studio"]);
+    expect(await save([])).toEqual(["Cover by Studio"]);
   });
 });

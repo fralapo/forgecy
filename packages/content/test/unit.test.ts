@@ -16,6 +16,7 @@ import {
   perWeek,
   planItemInputSchema,
 } from "../src/document";
+import { pruneStockCredits } from "../src/stock";
 import { claimFindingsOf, slotsFromOutput } from "../src/ai/pipeline";
 import { briefSchema, captionBudget, claimFindingSchema, parseDraft } from "../src/document";
 import { clampSlideCount, defaultRoles, pickLayout } from "../src/carousels/templates";
@@ -477,5 +478,25 @@ describe("draft title", () => {
     expect(parseDraft(null, "UI test carousel").title).toBe("UI test carousel");
     expect(parseDraft({ title: "" }, "UI test carousel").title).toBe("UI test carousel");
     expect(parseDraft({ title: "Edited" }, "UI test carousel").title).toBe("Edited");
+  });
+});
+
+describe("pruneStockCredits", () => {
+  const lines: Record<string, string> = { a: "Photo: Ana / Pexels", b: "Photo: Bo / Pexels" };
+  const lineOf = (k: string) => lines[k] ?? null;
+  const cur = ["Photo: Ana / Pexels", "Photo: Bo / Pexels", "Cover by Studio"];
+  it("keeps the credit while another slide uses the photo", () => {
+    // two slides use a; one is removed: a is still in `after`
+    expect(pruneStockCredits(cur, ["a", "a", "b"], ["a", "b"], lineOf)).toEqual(cur);
+  });
+  it("drops the credit when no slide uses the photo any more", () => {
+    expect(pruneStockCredits(cur, ["a", "b"], ["b"], lineOf)).toEqual([cur[1], cur[2]]);
+    expect(pruneStockCredits(cur, ["a"], ["b"], lineOf)).toEqual([cur[1], cur[2]]);
+  });
+  it("leaves hand-typed lines and is idempotent", () => {
+    const once = pruneStockCredits(cur, ["a", "b"], [], lineOf);
+    expect(once).toEqual(["Cover by Studio"]);
+    expect(pruneStockCredits(once, ["a", "b"], [], lineOf)).toEqual(once);
+    expect(pruneStockCredits(cur, ["x"], [], lineOf)).toEqual(cur);
   });
 });

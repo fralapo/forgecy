@@ -34,19 +34,22 @@ export function StockSearch({
   clientId,
   contentId,
   enabled,
+  defaultOrientation = "portrait",
   onPicked,
 }: {
   slug: string;
   clientId: string;
   contentId?: string;
   enabled: boolean;
+  /** Orientation the slot wants (from its size); the select overrides it. */
+  defaultOrientation?: (typeof orientations)[number];
   onPicked?: (asset: { id: string; key: string; alt: string }) => void;
 }) {
   const t = useTranslations("content.library.pexels");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [orientation, setOrientation] = useState<(typeof orientations)[number]>("portrait");
+  const [orientation, setOrientation] = useState<(typeof orientations)[number]>(defaultOrientation);
   const [photos, setPhotos] = useState<Photo[] | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);

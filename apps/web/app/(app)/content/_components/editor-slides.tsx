@@ -8,10 +8,12 @@ import {
 } from "@forgecy/content/client";
 import {
   findLayout,
+  imageSlotOrientation,
   visibleLength,
   type ImageRef,
   type LayoutDef,
   type SlotDef,
+  type StockOrientation,
   type TemplateManifest,
 } from "@forgecy/carousel";
 import { Badge, Button, Input, Label, cn } from "@forgecy/ui";
@@ -351,6 +353,7 @@ export function SlidePanel({
             editorRef={editorRef}
             slideId={slide.id}
             def={def}
+            orientation={def.type === "image" ? imageSlotOrientation(def, manifest) : undefined}
             value={slide.slots[def.name]}
             isProtected={slide.protectedSlots.includes(def.name)}
             onProtect={(on) => toggleProtected(def.name, on)}
@@ -395,6 +398,7 @@ function SlotField({
   editorRef,
   slideId,
   def,
+  orientation,
   value,
   isProtected,
   onProtect,
@@ -406,6 +410,7 @@ function SlotField({
   editorRef: EditorRef;
   slideId: string;
   def: SlotDef;
+  orientation: StockOrientation | undefined;
   value: SlotValue | undefined;
   isProtected: boolean;
   onProtect: (on: boolean) => void;
@@ -472,6 +477,7 @@ function SlotField({
           editorRef={editorRef}
           slideId={slideId}
           slot={def.name}
+          orientation={orientation}
           value={value && typeof value === "object" && !Array.isArray(value) ? value : undefined}
           onChange={onChange}
           library={library}
@@ -592,6 +598,7 @@ function ImageSlot({
   editorRef,
   slideId,
   slot,
+  orientation,
   value,
   onChange,
   library,
@@ -601,6 +608,7 @@ function ImageSlot({
   editorRef: EditorRef;
   slideId: string;
   slot: string;
+  orientation: StockOrientation | undefined;
   value: ImageRef | undefined;
   onChange: (v: SlotValue | undefined) => void;
   library: EditorAsset[];
@@ -713,6 +721,7 @@ function ImageSlot({
           clientId={editorRef.clientId}
           contentId={editorRef.contentId}
           enabled={editorRef.pexels}
+          {...(orientation ? { defaultOrientation: orientation } : {})}
           onPicked={(a) => {
             onChange({ key: a.key, alt: a.alt, focalX: 0.5, focalY: 0.5 });
             setPicking(false);

@@ -5,7 +5,7 @@ import {
   imageKeys,
   parseDocument,
 } from "@forgecy/content";
-import { findLayout } from "@forgecy/carousel";
+import { findLayout, slotDisplayName } from "@forgecy/carousel";
 import { can } from "@forgecy/core";
 import { and, contentVersions, eq } from "@forgecy/db";
 import { Badge, Card } from "@forgecy/ui";
@@ -74,7 +74,18 @@ export default async function ReviewPage({
   });
 
   const guardReport = result?.guard ?? null;
-  const toSee = findingsToAcknowledge(guardReport);
+  // Findings name a slot by its key; show the template's interface label instead.
+  const slotName = (f: { slide: number | null; slot: string | null }) =>
+    f.slot
+      ? slotDisplayName(
+          ws.template?.manifest,
+          f.slide === null ? null : doc?.slides[f.slide]?.layout,
+          f.slot,
+        )
+      : f.slot;
+  const named = <F extends { slide: number | null; slot: string | null }>(list: F[]): F[] =>
+    list.map((f) => ({ ...f, slot: slotName(f) }));
+  const toSee = named(findingsToAcknowledge(guardReport));
   const selfApproval = c.submittedBy === user.id || (!c.submittedBy && c.createdBy === user.id);
   const versionAuthor = ws.versions.find((v) => v.id === version?.id)?.authorName ?? null;
   const versionNumbers = new Map(ws.versions.map((v) => [v.id, v.number]));
@@ -204,8 +215,10 @@ export default async function ReviewPage({
                 ? {
                     band: guardReport.coherence.band,
                     findings: toSee,
-                    notes: guardReport.findings.filter(
-                      (f) => f.status === "open" && f.severity === "note",
+                    notes: named(
+                      guardReport.findings.filter(
+                        (f) => f.status === "open" && f.severity === "note",
+                      ),
                     ),
                     notRun: guardReport.notRun,
                   }

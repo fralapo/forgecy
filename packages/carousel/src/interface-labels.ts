@@ -86,6 +86,35 @@ export function localizeManifest(manifest: TemplateManifest, locale: Locale): Te
   };
 }
 
+/**
+ * The name a person sees for a slot of a layout: its interface label (the manifest localized
+ * with `localizeManifest`), or the slot key when the template gives none.
+ */
+export function slotDisplayName(
+  manifest: Pick<TemplateManifest, "layouts"> | null | undefined,
+  layoutId: string | null | undefined,
+  slot: string,
+): string {
+  const def = manifest?.layouts.find((l) => l.id === layoutId)?.slots.find((s) => s.name === slot);
+  return def?.label ?? slot;
+}
+
+export type StockOrientation = "portrait" | "landscape" | "square";
+
+/**
+ * Photo orientation an image slot wants: from its minimum size when the template sets both,
+ * otherwise from the slide canvas (a slot without a minimum is taken to fill the slide).
+ */
+export function imageSlotOrientation(
+  slot: { minWidth?: number | undefined; minHeight?: number | undefined },
+  canvas: { width: number; height: number },
+): StockOrientation {
+  const both = slot.minWidth !== undefined && slot.minHeight !== undefined;
+  const w = both ? slot.minWidth! : canvas.width;
+  const h = both ? slot.minHeight! : canvas.height;
+  return w > h ? "landscape" : h > w ? "portrait" : "square";
+}
+
 export interface InterfaceLabelProblem {
   path: string;
   message: string;

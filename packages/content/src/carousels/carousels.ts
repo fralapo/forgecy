@@ -47,7 +47,7 @@ import {
   revConflict,
   type Executor,
 } from "../access";
-import { stockCreditLine } from "../stock";
+import { pruneStockCredits, stockCreditLine } from "../stock";
 import {
   blockingChecks,
   computeChecks,
@@ -606,12 +606,38 @@ export async function saveDraft(
       updatedAt: c.draftUpdatedAt?.toISOString() ?? null,
     });
   if (status !== c.status) await audit(db, actor, "reopened", c, { from: c.status });
+  await dropStockCredits(db, c, doc);
   if (brandGuard())
     await checkDocument(db, actor, { ...c, status: row.status }, doc, {
       guard: "run",
       version: null,
     });
   return row;
+}
+
+/**
+ * A stock photo left the slides (removed or replaced): drop its “Photo: <Name> / Pexels” line
+ * from the delivery record unless another slide still uses the photo. Hand-typed lines stay.
+ */
+async function dropStockCredits(db: Database, c: ContentRow, doc: CarouselDocument) {
+  if (!c.stockCredits.length) return;
+  const before = imageKeys(parseDocument(c.draft));
+  const after = imageKeys(doc);
+  if (!before.some((k) => !after.includes(k))) return;
+  const rows = await db
+    .select({ key: assets.storageKey, stock: assets.stock })
+    .from(assets)
+    .where(
+      and(
+        eq(assets.clientId, c.clientId),
+        eq(assets.source, "stock"),
+        inArray(assets.storageKey, [...new Set([...before, ...after])]),
+      ),
+    );
+  const lines = new Map(rows.map((r) => [r.key, stockCreditLine(r.stock)]));
+  const next = pruneStockCredits(c.stockCredits, before, after, (k) => lines.get(k) ?? null);
+  if (next.length !== c.stockCredits.length)
+    await db.update(contents).set({ stockCredits: next }).where(eq(contents.id, c.id));
 }
 
 /** “Save version”: named checkpoint of the current draft. */
