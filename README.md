@@ -20,11 +20,11 @@ It runs on the agency's machine with Docker Compose, with no mandatory cloud ser
 
 ## How it works
 
-1. **Prospects and Audit**: analysis of website, social channels and competitors, with a diagnosis, a 30-day plan and a PDF report where every observation cites its finding.
+1. **Prospects and Audit**: analysis of website, social channels and competitors, with a diagnosis, a 30-day plan and a PDF report where every observation cites its finding. Instagram profiles are read from the public page, with no login, and the report says where each figure came from.
 2. **Brand Identity**: strategy, voice, visual identity with design tokens, versioned and approved by a person at the agency. Paste a website address (or add social profiles) and the profile fills itself in, images included, and is published as the person who added the link; you can undo it in one click. Documents and anything uncertain still go through the review queue ([ADR 0022](docs/adr/0022-automatic-brand-import.md)).
 3. **Content strategy and briefs**: pillars, rubrics and structured briefs per channel, drawing on the client's product catalog.
-4. **Carousel**: outline and slides generated inside the agency's templates, optional static AI images.
-5. **Review**: slide-by-slide editor, brand check and internal approval.
+4. **Carousel**: outline and slides generated inside the agency's templates, optional static AI images. The outline offers alternative hooks and can be pasted back as Markdown; captions come in three lengths; templates include code and phone-mockup layouts ([ADR 0024](docs/adr/0024-carousel-ideas-from-open-source.md)).
+5. **Review**: slide-by-slide editor with undo and redo, an Instagram profile-grid preview, brand check and internal approval. Deterministic checks flag figures that are not in the source text, and an advisory claim check lists statements worth verifying; neither browses the web, and a person decides.
 6. **Export**: PNG, PDF and ZIP in the exact sizes of each channel (Instagram 4:5 and 1:1, Stories 9:16, Facebook 4:5, TikTok photo and LinkedIn document).
 
 AI agents analyze and propose; a person always approves and publishes. No video, at any stage.
@@ -66,7 +66,7 @@ The web port now listens on 127.0.0.1 only (`FORGECY_BIND_ADDRESS`, default `127
 
 People now see only the clients assigned to them ([ADR 0020](docs/adr/0020-per-client-access.md)); Admins see every client. The upgrade keeps today's behavior: a migration assigns every existing client to every person who is not an Admin. Afterwards Admins can restrict access in Settings → Client access, a new person sees no client until assigned, and a new client is assigned to whoever creates it.
 
-Websites and social profiles added to a client now import and publish automatically, with the person who started the import as approver of record ([ADR 0022](docs/adr/0022-automatic-brand-import.md)); before, every proposal waited in the review queue. Documents, manual proposals and anything the import is unsure about still wait there, and "Undo import" on the brand page restores the previous version. The upgrade runs migration 0033 (`0033_brand_visual`: images taken from a website, and what the browser read on it); the next free number is 0034. Images from a website need their rights confirmed in the content library like uploads.
+Websites and social profiles added to a client now import and publish automatically, with the person who started the import as approver of record ([ADR 0022](docs/adr/0022-automatic-brand-import.md)); before, every proposal waited in the review queue. Documents, manual proposals and anything the import is unsure about still wait there, and "Undo import" on the brand page restores the previous version. The upgrade runs migration 0033 (`0033_brand_visual`: images taken from a website, and what the browser read on it); the next free number is 0035 (0034 adds the Instagram profile tables). Images from a website need their rights confirmed in the content library like uploads.
 
 The other changes to check before upgrading are in [section 7 of the security checklist](docs/SECURITY_CHECKLIST.md#7-upgrading-and-follow-ups-left-open-by-the-hardening-work): the strict `FORGECY_AUDIT_ALLOW_PRIVATE_HOSTS`, backups without a checksum, the new backup format, sign-in by username, the optional setup token, unlocking a locked account, a short window during the migration and the dev database password.
 
