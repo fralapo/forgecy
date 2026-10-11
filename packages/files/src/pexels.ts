@@ -1,6 +1,6 @@
 /**
  * Pexels stock-photo search (https://www.pexels.com/api/). Optional and server-side only:
- * the key comes from `PEXELS_API_KEY` and never reaches the browser, a log or an error
+ * the key comes from `PEXELS_API_KEY` (passed in by the caller) and never reaches the browser, a log or an error
  * message. The Pexels licence allows free commercial use; the API terms ask for a visible
  * link to Pexels and, where possible, to the photographer.
  */
@@ -51,7 +51,7 @@ export type PexelsSearchResult =
     };
 
 export interface PexelsOptions {
-  /** Defaults to `process.env.PEXELS_API_KEY`; empty means "not configured". */
+  /** Pass `loadEnv().PEXELS_API_KEY`; empty or absent means "not configured". */
   apiKey?: string | undefined;
   /** Injected in tests. */
   fetch?: typeof fetch;
@@ -64,8 +64,7 @@ const err = (
   details?: Record<string, unknown>,
 ) => new ForgecyError(code, message, details, { key } satisfies MessageRef);
 
-const keyOf = (o?: PexelsOptions) =>
-  (o && "apiKey" in o ? o.apiKey : process.env.PEXELS_API_KEY)?.trim() || null;
+const keyOf = (o?: PexelsOptions) => o?.apiKey?.trim() || null;
 
 export const isPexelsConfigured = (o?: PexelsOptions) => keyOf(o) !== null;
 

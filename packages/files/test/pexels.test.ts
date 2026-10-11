@@ -101,8 +101,8 @@ describe("searchPexels", () => {
     expect(f).not.toHaveBeenCalled();
   });
 
-  it("reads the key from the environment by default", async () => {
-    vi.stubEnv("PEXELS_API_KEY", "");
+  it("does not read the key from the environment", async () => {
+    vi.stubEnv("PEXELS_API_KEY", FAKE_KEY);
     expect(await searchPexels({ query: "x" })).toEqual({ configured: false });
     vi.unstubAllEnvs();
   });

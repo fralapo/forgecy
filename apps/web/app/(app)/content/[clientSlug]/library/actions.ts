@@ -16,6 +16,7 @@ import { localizedError } from "@forgecy/i18n";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { errorMessage } from "@/lib/i18n";
+import { env } from "@/lib/env";
 import { requireUser } from "@/lib/session";
 import type { ActionResult } from "../../actions";
 import { getStorage } from "../../_lib/server";
@@ -82,12 +83,16 @@ export async function searchPexelsAction(input: {
   page?: number;
 }) {
   return run(input.slug, async ({ actor }) => {
-    const res = await searchStock(actor, {
-      clientId: uuid.parse(input.clientId),
-      query: z.string().max(200).parse(input.query),
-      orientation: z.enum(pexelsOrientations).parse(input.orientation),
-      page: z.number().int().min(1).max(100).default(1).parse(input.page),
-    });
+    const res = await searchStock(
+      actor,
+      {
+        clientId: uuid.parse(input.clientId),
+        query: z.string().max(200).parse(input.query),
+        orientation: z.enum(pexelsOrientations).parse(input.orientation),
+        page: z.number().int().min(1).max(100).default(1).parse(input.page),
+      },
+      { apiKey: env.PEXELS_API_KEY },
+    );
     if (!res.configured) return { configured: false as const };
     return {
       configured: true as const,
@@ -115,11 +120,17 @@ export async function importPexelsPhotoAction(input: {
   contentId?: string;
 }) {
   return run(input.slug, async ({ db, actor }) => {
-    const { row, created, credit } = await importPexelsPhoto(db, getStorage(), actor, {
-      clientId: uuid.parse(input.clientId),
-      photoId: z.number().int().positive().parse(input.photoId),
-      ...(input.contentId ? { contentId: uuid.parse(input.contentId) } : {}),
-    });
+    const { row, created, credit } = await importPexelsPhoto(
+      db,
+      getStorage(),
+      actor,
+      {
+        clientId: uuid.parse(input.clientId),
+        photoId: z.number().int().positive().parse(input.photoId),
+        ...(input.contentId ? { contentId: uuid.parse(input.contentId) } : {}),
+      },
+      { apiKey: env.PEXELS_API_KEY },
+    );
     return { id: row.id, key: row.storageKey, alt: row.alt, created, credit };
   });
 }

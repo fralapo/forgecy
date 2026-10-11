@@ -11,6 +11,7 @@ import {
 import { assetSources, assetStatuses, can, providerIds } from "@forgecy/core";
 import { Badge, Card, CardDescription, CardHeader, CardTitle, cn } from "@forgecy/ui";
 import { isPexelsConfigured } from "@forgecy/files";
+import { env } from "@/lib/env";
 import { ImageOff, PackageOpen } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
@@ -126,7 +127,11 @@ export default async function LibraryPage({
 
       {canUpload ? (
         <Card>
-          <StockSearch slug={client.slug} clientId={client.id} enabled={isPexelsConfigured()} />
+          <StockSearch
+            slug={client.slug}
+            clientId={client.id}
+            enabled={isPexelsConfigured({ apiKey: env.PEXELS_API_KEY })}
+          />
         </Card>
       ) : null}
 

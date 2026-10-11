@@ -13,6 +13,7 @@ import {
 import { effectiveSafeZone, findLayout } from "@forgecy/carousel";
 import { eq, users } from "@forgecy/db";
 import { isPexelsConfigured } from "@forgecy/files";
+import { env } from "@/lib/env";
 import { getTranslations } from "next-intl/server";
 import { getRefText } from "@/lib/i18n";
 import { ChannelAdaptation } from "../../../../_components/channel-adaptation";
@@ -189,7 +190,7 @@ export default async function EditorPage({
         slug={client.slug}
         clientId={client.id}
         contentId={c.id}
-        pexels={isPexelsConfigured()}
+        pexels={isPexelsConfigured({ apiKey: env.PEXELS_API_KEY })}
         basePath={base}
         status={c.status}
         published={Boolean(c.publishedAt)}
