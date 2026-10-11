@@ -110,6 +110,10 @@ export const contentPillars = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    /** The ground the pillar owns in the audience's mind (strategy leftover; null on older rows). */
+    territory: text("territory"),
+    /** How the pillar is judged (e.g. "saves per post"). */
+    metric: text("metric"),
     ...strategyCommon(),
   },
   (t) => [index("content_pillars_client_idx").on(t.clientId, t.status)],
@@ -143,6 +147,10 @@ export const contentRubrics = pgTable(
       .notNull()
       .default(sql`'{}'::text[]`),
     ownerId: uuid("owner_id").references(() => users.id, { onDelete: "set null" }),
+    /** What one piece of this format costs the agency or the client (free text). */
+    cost: text("cost"),
+    /** The metric that tells whether the format works. */
+    metric: text("metric"),
     ...strategyCommon(),
   },
   (t) => [
@@ -162,6 +170,15 @@ export const contentPlans = pgTable(
     number: integer("number").notNull(),
     status: contentPlanStatusEnum("status").notNull().default("proposed"),
     provenance: jsonb("provenance").$type<Json>(),
+    /** The one bottleneck the month works on (strategy leftover; null on older plans). */
+    criticalNode: text("critical_node"),
+    /** What the client needs from the month, in their words. */
+    clientNeeds: text("client_needs")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** Why the month has this many contents. */
+    countRationale: text("count_rationale"),
     brandVersionId: uuid("brand_version_id").references(() => brandIdentityVersions.id, {
       onDelete: "set null",
     }),
@@ -273,6 +290,23 @@ export const contents = pgTable(
     reviewerId: uuid("reviewer_id").references(() => users.id, { onDelete: "set null" }),
     reviewNote: text("review_note"),
     submittedBy: uuid("submitted_by").references(() => users.id, { onDelete: "set null" }),
+    /** Delivery record: set by "Mark as published"; from then on the content is frozen. */
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    publishedBy: uuid("published_by").references(() => users.id, { onDelete: "set null" }),
+    /** Post id or link on the channel. */
+    externalId: text("external_id"),
+    externalUrl: text("external_url"),
+    /** Stock image credit lines (one per line); the caption must carry them. */
+    stockCredits: text("stock_credits")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** Summary of the checks at the time of publishing: { errors, warnings, acknowledged }. */
+    gatesPassed: jsonb("gates_passed").$type<Json>(),
+    deliveredVersionId: uuid("delivered_version_id").references(
+      (): AnyPgColumn => contentVersions.id,
+      { onDelete: "set null" },
+    ),
     lockedByJobId: uuid("locked_by_job_id").references(() => jobs.id, { onDelete: "set null" }),
     lockExpiresAt: timestamp("lock_expires_at", { withTimezone: true }),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),

@@ -259,3 +259,27 @@ export const brandExamples = pgTable(
   },
   (t) => [index("brand_examples_client_idx").on(t.clientId, t.verdict)],
 );
+
+/**
+ * Lessons log of a brand: a correction a person made, written as a rule. Anyone (or an agent)
+ * may propose one; only a person confirms it (`accepted`) or turns it down (`rejected`).
+ */
+export const brandLessons = pgTable(
+  "brand_lessons",
+  {
+    id: id(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    /** The correction, as seen in the copy. */
+    correction: text("correction").notNull(),
+    /** The rule it suggests, once written. */
+    rule: text("rule").notNull().default(""),
+    status: proposalStatusEnum("status").notNull().default("proposed"),
+    proposedBy: text("proposed_by").notNull(),
+    decidedBy: uuid("decided_by").references(() => users.id, { onDelete: "set null" }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("brand_lessons_client_idx").on(t.clientId, t.status)],
+);

@@ -4,6 +4,7 @@ import {
   importFileRoutes,
   importImageStates,
   importItemStatuses,
+  productFactStatuses,
   productImageStatuses,
   productImportStatuses,
   productStatuses,
@@ -41,6 +42,7 @@ export const importFileRouteEnum = pgEnum("import_file_route", importFileRoutes)
 export const importItemStatusEnum = pgEnum("import_item_status", importItemStatuses);
 export const imageMatchMethodEnum = pgEnum("image_match_method", imageMatchMethods);
 export const productImageStatusEnum = pgEnum("product_image_status", productImageStatuses);
+export const productFactStatusEnum = pgEnum("product_fact_status", productFactStatuses);
 export const importImageStateEnum = pgEnum("import_image_state", importImageStates);
 
 /** One import: mixed files uploaded together, analyzed by one job, reviewed once. */
@@ -301,5 +303,40 @@ export const productImportItems = pgTable(
   (t) => [
     index("product_import_items_import_idx").on(t.importId, t.status),
     index("product_import_items_match_idx").on(t.matchProductId),
+  ],
+);
+
+/**
+ * The fact bank of a product: claims with how far they can be trusted and where they come from.
+ * The copy checks reject `do_not_use` facts and warn on `pending_client` ones; fields of the
+ * product itself (benefits, features, usage) count as `catalog_only` without a row here.
+ */
+export const productFacts = pgTable(
+  "product_facts",
+  {
+    id: id(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    text: text("text").notNull(),
+    /** Extra words that identify the fact in copy (spellings, synonyms). */
+    keywords: text("keywords")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    status: productFactStatusEnum("status").notNull().default("catalog_only"),
+    /** Page or document the fact comes from ("catalog p. 12", "pack back"). */
+    source: text("source").notNull().default(""),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("product_facts_product_idx").on(t.productId),
+    index("product_facts_client_idx").on(t.clientId),
   ],
 );

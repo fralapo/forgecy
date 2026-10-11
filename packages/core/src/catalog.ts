@@ -53,3 +53,19 @@ export type ProductImageStatus = (typeof productImageStatuses)[number];
 /** Image files of an import, until they are assigned to a product or ignored. */
 export const importImageStates = ["unassigned", "assigned", "ignored"] as const;
 export type ImportImageState = (typeof importImageStates)[number];
+
+/**
+ * product_facts.status: how far a claim about a product can be trusted in public copy.
+ * Only `printed_on_pack` and `catalog_only` facts are usable; `pending_client` waits for the
+ * client's confirmation and `do_not_use` must never appear (the content checks reject it).
+ */
+export const productFactStatuses = [
+  "printed_on_pack",
+  "catalog_only",
+  "pending_client",
+  "do_not_use",
+] as const;
+export type ProductFactStatus = (typeof productFactStatuses)[number];
+
+/** Facts that may be written in public copy. */
+export const usableFactStatuses: readonly ProductFactStatus[] = ["printed_on_pack", "catalog_only"];
