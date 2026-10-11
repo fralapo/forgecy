@@ -71,6 +71,16 @@ describe("outline markdown", () => {
 
 describe("hookAlternativesOf", () => {
   it("drops blanks, the hook itself and repeats, keeps two", () => {
-    expect(hookAlternativesOf("H", [" H ", "", "A", "A", "B", "C"])).toEqual(["A", "B"]);
+    const alt = (text: string, archetype?: "bare_number") => ({ text, archetype });
+    expect(
+      hookAlternativesOf("H", [
+        alt(" H "),
+        alt(""),
+        alt("A", "bare_number"),
+        alt("A"),
+        alt("B"),
+        alt("C"),
+      ]),
+    ).toEqual([alt("A", "bare_number"), alt("B")]);
   });
 });
