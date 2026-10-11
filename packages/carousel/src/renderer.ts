@@ -135,13 +135,13 @@ function fillSlots(
   pkg: TemplatePackage,
   assets: ResolvedAssets,
   warnings: string[],
+  language: Locale,
 ): void {
   const defs = new Map(layout.slots.map((s) => [s.name, s]));
   for (const el of [...root.querySelectorAll("[data-slot]")] as El[]) {
     const name = el.getAttribute("data-slot") ?? "";
     const def = defs.get(name);
     const value: SlotValue | undefined = slide.slots[name];
-  language: Locale,
     let filled = false;
     if (def?.type === "text" && typeof value === "string" && value.trim()) {
       setText(doc, el, bindFunctionWords(value, language), def.highlight);
