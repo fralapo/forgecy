@@ -1,9 +1,11 @@
 import { getPublishedBrandIdentity } from "@forgecy/brand";
 import {
   assetCommercialUse,
+  latestAdaptations,
   briefSchema,
   latestClaimFindings,
   latestVisualReview,
+  slotTexts,
   sourceTextOf,
   type ContentChannel,
   factBankOf,
@@ -11,6 +13,7 @@ import {
 import { eq, users } from "@forgecy/db";
 import { getTranslations } from "next-intl/server";
 import { getRefText } from "@/lib/i18n";
+import { ChannelAdaptation } from "../../../../_components/channel-adaptation";
 import { ClaimCheck } from "../../../../_components/claim-check";
 import { VisualReview } from "../../../../_components/visual-review";
 import { EditorWorkspace, type EditorAsset } from "../../../../_components/editor-workspace";
@@ -34,9 +37,10 @@ export default async function EditorPage({
   const { db, user, client, ws } = await loadCarousel(clientSlug, contentId);
   const c = ws.content;
   const rt = await getRefText();
-  const [claims, visual, brand, updatedBy] = await Promise.all([
+  const [claims, visual, adaptations, brand, updatedBy] = await Promise.all([
     latestClaimFindings(db, c.id),
     latestVisualReview(db, c.id),
+    latestAdaptations(db, c.id),
     getPublishedBrandIdentity(db, user.actor, client.id),
     c.draftUpdatedBy
       ? db
@@ -73,6 +77,7 @@ export default async function EditorPage({
 
   const claimJobs = ws.jobs.filter((j) => j.kind === "content.critique_claims");
   const visualJobs = ws.jobs.filter((j) => j.kind === "content.review_visual");
+  const adaptJobs = ws.jobs.filter((j) => j.kind === "content.adapt_channel");
   const cannotCheck =
     !ws.document.slides.length ||
     c.status === "in_review" ||
@@ -118,6 +123,35 @@ export default async function EditorPage({
             : null
         }
         stale={visual !== null && visual.draftRev !== c.draftRev}
+      />
+      <ChannelAdaptation
+        slug={client.slug}
+        clientId={client.id}
+        contentId={c.id}
+        running={adaptJobs.some((j) => isActiveJob(j.status))}
+        canAsk={
+          c.channel === "instagram" &&
+          c.publishedAt === null &&
+          (c.status === "in_review" || c.status === "approved" || c.status === "exported")
+        }
+        items={adaptations.map((a) => ({
+          jobId: a.jobId,
+          channel: a.proposal.channel,
+          creditableAngle: a.proposal.creditableAngle,
+          angle: a.proposal.angle,
+          reason: a.proposal.reason,
+          slides: a.proposal.slides.map((sl) => ({
+            layout: sl.layout,
+            texts: slotTexts(sl.slots),
+          })),
+          caption: a.proposal.caption,
+          hashtags: a.proposal.hashtags,
+          gateMetric: a.proposal.gateMetric,
+          stale: a.proposal.draftRev !== c.draftRev,
+          decision: a.decision
+            ? { status: a.decision.status, contentId: a.decision.contentId }
+            : null,
+        }))}
       />
       <EditorWorkspace
         key={c.id}

@@ -18,6 +18,7 @@ const jobKeys = {
   "content.edit_slide": "editSlide",
   "content.critique_claims": "critiqueClaims",
   "content.review_visual": "reviewVisual",
+  "content.adapt_channel": "adaptChannel",
   "content.generate_image": "generateImage",
   "content.export": "export",
 } as const;
