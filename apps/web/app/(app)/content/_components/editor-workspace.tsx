@@ -13,12 +13,13 @@ import {
 } from "@forgecy/content/client";
 import { GUARDED_CHECK_PREFIXES, trimCaptionToLimit } from "@forgecy/content/client";
 import {
+  labelSlotRef,
   profileGridCrop,
   visibleLength,
   type ProfileGridRatio,
   type TemplateManifest,
 } from "@forgecy/carousel";
-import type { AssetSource, ContentStatus } from "@forgecy/core";
+import type { AssetSource, ContentStatus, MessageRef } from "@forgecy/core";
 import { Badge, Button, Input, Label } from "@forgecy/ui";
 import {
   AlertTriangle,
@@ -162,6 +163,8 @@ export interface EditorWorkspaceProps extends EditorRef {
   updatedByName: string | null;
   updatedAt: string | null;
   manifest: TemplateManifest | null;
+  /** The same manifest before `localizeManifest`: guard messages name slots by its labels. */
+  sourceManifest: TemplateManifest | null;
   channel: ContentChannel;
   checkContext: CheckContext;
   guard: GuardReport | null;
@@ -204,6 +207,14 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
       setHashtagText(props.document.hashtags.join(" "));
     }
   }
+
+  const slotRef: SlotRef = (r, slideId) =>
+    labelSlotRef(
+      r,
+      props.manifest,
+      doc.slides.find((s) => s.id === slideId)?.layout,
+      props.sourceManifest,
+    );
 
   const readOnly =
     props.status === "in_review" || props.status === "archived" || props.published || props.locked;
@@ -431,6 +442,7 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
         </div>
         <SaveIndicator state={saveState} readOnly={readOnly} />
         <VersionAndSubmit
+          slotRef={slotRef}
           editorRef={ref}
           basePath={props.basePath}
           disabled={readOnly || saveState === "conflict" || !doc.slides.length}
@@ -529,14 +541,20 @@ export function EditorWorkspace(props: EditorWorkspaceProps) {
               </p>
             ) : null}
             <ChecksBox
+              slotRef={slotRef}
               title={
                 selected ? t("checks.slide", { number: selectedIndex + 1 }) : t("checks.title")
               }
               checks={checks.filter((c) => c.slideId && c.slideId === selected?.id)}
             />
-            <ChecksBox title={t("checks.carousel")} checks={globalChecks} />
+            <ChecksBox slotRef={slotRef} title={t("checks.carousel")} checks={globalChecks} />
             {props.guard ? (
-              <GuardSummary guard={props.guard} slideIndex={selected ? selectedIndex : null} />
+              <GuardSummary
+                slotRef={slotRef}
+                slideId={selected?.id ?? null}
+                guard={props.guard}
+                slideIndex={selected ? selectedIndex : null}
+              />
             ) : null}
             <SlideComments
               editorRef={ref}
@@ -709,6 +727,7 @@ function SaveIndicator({ state, readOnly }: { state: SaveState; readOnly: boolea
 }
 
 function VersionAndSubmit({
+  slotRef,
   editorRef: r,
   basePath,
   disabled,
@@ -716,6 +735,7 @@ function VersionAndSubmit({
   rev,
   blocking,
 }: {
+  slotRef: SlotRef;
   editorRef: EditorRef;
   basePath: string;
   disabled: boolean;
@@ -808,7 +828,7 @@ function VersionAndSubmit({
       {blockers.length ? (
         <ul className="list-disc space-y-1 pl-5 text-body-sm text-error">
           {blockers.map((c) => (
-            <li key={c.id}>{refText(c.ref, c.message)}</li>
+            <li key={c.id}>{refText(slotRef(c.ref, c.slideId), c.message)}</li>
           ))}
         </ul>
       ) : null}
@@ -935,7 +955,21 @@ function CropGuides({
   );
 }
 
-function ChecksBox({ title, checks }: { title: string; checks: ContentCheck[] }) {
+/** A message ref with its slot shown by the interface label of that slide's layout. */
+type SlotRef = (
+  ref: MessageRef | undefined,
+  slideId: string | null | undefined,
+) => MessageRef | undefined;
+
+function ChecksBox({
+  title,
+  checks,
+  slotRef,
+}: {
+  title: string;
+  checks: ContentCheck[];
+  slotRef: SlotRef;
+}) {
   const t = useTranslations("content.editor.checks");
   const refText = useRefText();
   return (
@@ -948,7 +982,7 @@ function ChecksBox({ title, checks }: { title: string; checks: ContentCheck[] })
               <Badge variant={c.severity === "error" ? "error" : "warning"}>
                 {c.severity === "error" ? t("blocking") : t("warning")}
               </Badge>
-              <span>{refText(c.ref, c.message)}</span>
+              <span>{refText(slotRef(c.ref, c.slideId), c.message)}</span>
             </li>
           ))}
         </ul>
@@ -959,7 +993,17 @@ function ChecksBox({ title, checks }: { title: string; checks: ContentCheck[] })
   );
 }
 
-function GuardSummary({ guard, slideIndex }: { guard: GuardReport; slideIndex: number | null }) {
+function GuardSummary({
+  guard,
+  slideIndex,
+  slideId,
+  slotRef,
+}: {
+  guard: GuardReport;
+  slideIndex: number | null;
+  slideId: string | null;
+  slotRef: SlotRef;
+}) {
   const t = useTranslations("content.editor.guard");
   const refText = useRefText();
   const open = guard.findings.filter(
@@ -975,7 +1019,7 @@ function GuardSummary({ guard, slideIndex }: { guard: GuardReport; slideIndex: n
               <Badge variant={f.severity === "error" ? "error" : "warning"}>
                 {f.severity === "error" ? t("error") : t("warning")}
               </Badge>{" "}
-              {refText(f.ref, f.message)}
+              {refText(slotRef(f.ref, slideId), f.message)}
               {f.suggestion ? (
                 <span className="block text-fg-muted">
                   {t("suggestion", { suggestion: refText(f.suggestionRef, f.suggestion) })}

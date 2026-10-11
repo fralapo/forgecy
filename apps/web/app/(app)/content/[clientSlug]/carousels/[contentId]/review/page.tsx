@@ -1,12 +1,13 @@
 import {
+  type ContentCheck,
   assetCommercialUse,
   checkDocument,
   findingsToAcknowledge,
   imageKeys,
   parseDocument,
 } from "@forgecy/content";
-import { findLayout, slotDisplayName } from "@forgecy/carousel";
-import { can } from "@forgecy/core";
+import { findLayout, labelSlotRef, slotDisplayName } from "@forgecy/carousel";
+import { can, type MessageRef } from "@forgecy/core";
 import { and, contentVersions, eq } from "@forgecy/db";
 import { Badge, Card } from "@forgecy/ui";
 import Link from "next/link";
@@ -81,10 +82,27 @@ export default async function ReviewPage({
           ws.template?.manifest,
           f.slide === null ? null : doc?.slides[f.slide]?.layout,
           f.slot,
+          ws.sourceManifest,
         )
       : f.slot;
-  const named = <F extends { slide: number | null; slot: string | null }>(list: F[]): F[] =>
-    list.map((f) => ({ ...f, slot: slotName(f) }));
+  const layoutAt = (slide: number | null) => (slide === null ? null : doc?.slides[slide]?.layout);
+  // The messages carry the slot too: show its label there as well.
+  const named = <
+    F extends { slide: number | null; slot: string | null; ref?: MessageRef | undefined },
+  >(
+    list: F[],
+  ): F[] =>
+    list.map((f) => ({
+      ...f,
+      slot: slotName(f),
+      ref: labelSlotRef(f.ref, ws.template?.manifest, layoutAt(f.slide), ws.sourceManifest),
+    }));
+  const namedChecks = (list: ContentCheck[]): ContentCheck[] =>
+    list.map((c) => {
+      const layout = doc?.slides.find((s) => s.id === c.slideId)?.layout;
+      const ref = labelSlotRef(c.ref, ws.template?.manifest, layout, ws.sourceManifest);
+      return ref ? { ...c, ref } : c;
+    });
   const toSee = named(findingsToAcknowledge(guardReport));
   const selfApproval = c.submittedBy === user.id || (!c.submittedBy && c.createdBy === user.id);
   const versionAuthor = ws.versions.find((v) => v.id === version?.id)?.authorName ?? null;
@@ -208,8 +226,8 @@ export default async function ReviewPage({
             canApprove={can(user.actor, "approve", client.id)}
             canReview={canComment}
             selfApproval={selfApproval}
-            errors={result.errors}
-            warnings={result.warnings}
+            errors={namedChecks(result.errors)}
+            warnings={namedChecks(result.warnings)}
             guard={
               guardReport
                 ? {

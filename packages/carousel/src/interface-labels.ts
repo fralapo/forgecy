@@ -94,9 +94,34 @@ export function slotDisplayName(
   manifest: Pick<TemplateManifest, "layouts"> | null | undefined,
   layoutId: string | null | undefined,
   slot: string,
+  source?: Pick<TemplateManifest, "layouts"> | null,
 ): string {
-  const def = manifest?.layouts.find((l) => l.id === layoutId)?.slots.find((s) => s.name === slot);
-  return def?.label ?? slot;
+  const slots = manifest?.layouts.find((l) => l.id === layoutId)?.slots ?? [];
+  // `source` is the same manifest before `localizeManifest`: the guard messages name a slot by
+  // its template label (English) rather than its key, so match on either, then read the
+  // localized slot at the same position.
+  const from = source?.layouts.find((l) => l.id === layoutId)?.slots ?? slots;
+  const at = from.findIndex((s) => s.name === slot);
+  const i = at >= 0 ? at : from.findIndex((s) => (s.label ?? s.name) === slot);
+  return slots[i]?.label ?? slot;
+}
+
+/**
+ * A message reference whose `slot` value is shown as the slot's interface label, for display.
+ * Refs without a `slot` value come back unchanged; stored data and the English text are not touched.
+ */
+export function labelSlotRef<R extends { values?: Record<string, string | number> | undefined }>(
+  ref: R | null | undefined,
+  manifest: Pick<TemplateManifest, "layouts"> | null | undefined,
+  layoutId: string | null | undefined,
+  source?: Pick<TemplateManifest, "layouts"> | null,
+): R | undefined {
+  const slot = ref?.values?.slot;
+  if (!ref || typeof slot !== "string") return ref ?? undefined;
+  return {
+    ...ref,
+    values: { ...ref.values, slot: slotDisplayName(manifest, layoutId, slot, source) },
+  };
 }
 
 export type StockOrientation = "portrait" | "landscape" | "square";

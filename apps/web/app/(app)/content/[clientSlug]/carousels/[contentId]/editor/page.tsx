@@ -171,6 +171,7 @@ export default async function EditorPage({
         updatedByName={updatedBy}
         updatedAt={c.draftUpdatedAt?.toISOString() ?? null}
         manifest={ws.template?.manifest ?? null}
+        sourceManifest={ws.sourceManifest}
         channel={c.channel as ContentChannel}
         checkContext={{
           forbiddenWords: brand?.document.verbal.forbiddenWords ?? [],

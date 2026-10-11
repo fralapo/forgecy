@@ -167,7 +167,7 @@ export function StockSearch({
 
           {photos?.length === 0 ? <p className="text-body-sm text-fg-muted">{t("none")}</p> : null}
           {photos?.length ? (
-            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <ul className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-3">
               {photos.map((p) => (
                 <li key={p.id} className="min-w-0 space-y-1">
                   {/* eslint-disable-next-line @next/next/no-img-element -- Pexels CDN preview, no key involved */}

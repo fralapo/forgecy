@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   checkInterfaceLabels,
   imageSlotOrientation,
+  labelSlotRef,
   localizeManifest,
   slotDisplayName,
 } from "../src/interface-labels";
@@ -103,6 +104,36 @@ describe("slotDisplayName", () => {
   });
 });
 
+describe("labelSlotRef", () => {
+  const pkg = packageFromFiles(
+    withInterface({
+      "interface/it.json": JSON.stringify({ layouts: { only: { slots: { title: "Titolo" } } } }),
+    }),
+  );
+  const loc = localizeManifest(pkg.manifest, "it");
+  const ref = { key: "review.guard.overflow", values: { slide: 2, slot: "title", max: 10 } };
+  it("maps the slot param to the label and keeps the other values", () => {
+    expect(labelSlotRef(ref, loc, "only")).toEqual({
+      key: ref.key,
+      values: { slide: 2, slot: "Titolo", max: 10 },
+    });
+    expect(ref.values.slot).toBe("title");
+  });
+  it("also matches the English template label the guard puts in messages", () => {
+    const en = pkg.manifest;
+    const label = en.layouts[0]!.slots.find((x) => x.name === "title")?.label ?? "title";
+    const named = { key: ref.key, values: { slot: label } };
+    expect(labelSlotRef(named, loc, "only", en)?.values?.slot).toBe("Titolo");
+  });
+  it("falls back to the key and leaves refs without a slot alone", () => {
+    expect(labelSlotRef(ref, loc, "gone")?.values?.slot).toBe("title");
+    expect(labelSlotRef(ref, null, null)?.values?.slot).toBe("title");
+    const plain = { key: "x", values: { count: 3 } };
+    expect(labelSlotRef(plain, loc, "only")).toBe(plain);
+    expect(labelSlotRef(undefined, loc, "only")).toBeUndefined();
+  });
+});
+
 describe("imageSlotOrientation", () => {
   const canvas = { width: 1080, height: 1350 };
   it("follows the slot minimum size, then the canvas", () => {
@@ -112,5 +143,17 @@ describe("imageSlotOrientation", () => {
     expect(imageSlotOrientation({}, canvas)).toBe("portrait");
     expect(imageSlotOrientation({ minWidth: 500 }, { width: 1080, height: 1080 })).toBe("square");
     expect(imageSlotOrientation({}, { width: 1920, height: 1080 })).toBe("landscape");
+  });
+  it("handles landscape, square and unsized slots on a square and a 16:9 canvas", () => {
+    const square = { width: 1080, height: 1080 };
+    const wide = { width: 1920, height: 1080 };
+    const landscape = { minWidth: 1200, minHeight: 800 };
+    const sq = { minWidth: 900, minHeight: 900 };
+    expect(imageSlotOrientation(landscape, square)).toBe("landscape");
+    expect(imageSlotOrientation(landscape, wide)).toBe("landscape");
+    expect(imageSlotOrientation(sq, square)).toBe("square");
+    expect(imageSlotOrientation(sq, wide)).toBe("square");
+    expect(imageSlotOrientation({}, square)).toBe("square");
+    expect(imageSlotOrientation({}, wide)).toBe("landscape");
   });
 });

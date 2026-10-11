@@ -1,3 +1,4 @@
+import { labelSlotRef } from "@forgecy/carousel";
 import { Badge, Card } from "@forgecy/ui";
 import { FileDown } from "lucide-react";
 import { getTranslations } from "next-intl/server";
@@ -76,7 +77,15 @@ export default async function ExportPage({
       .filter((f) => f.status === "open")
       .map(async (f) => ({
         ...f,
-        text: await refText(f.ref, f.message),
+        text: await refText(
+          labelSlotRef(
+            f.ref,
+            ws.template?.manifest,
+            f.slide === null ? null : ws.document.slides[f.slide]?.layout,
+            ws.sourceManifest,
+          ),
+          f.message,
+        ),
         suggestionText: f.suggestion ? await refText(f.suggestionRef, f.suggestion) : null,
       })),
   );

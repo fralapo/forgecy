@@ -18,7 +18,12 @@ export const loadCarousel = cache(async (slug: string, contentId: string) => {
       ws.template && manifest
         ? { ...ws.template, name: manifest.name, description: manifest.description, manifest }
         : ws.template;
-    return { db, user, client, ws: { ...ws, template } };
+    return {
+      db,
+      user,
+      client,
+      ws: { ...ws, template, sourceManifest: ws.template?.manifest ?? null },
+    };
   } catch (err) {
     if (err instanceof ForgecyError && err.code === "not_found") notFound();
     throw err;
