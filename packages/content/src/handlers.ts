@@ -37,6 +37,7 @@ import {
   proposePlanJob,
   proposeStrategyJob,
   reviewVisualJob,
+  adaptChannelJob,
 } from "./jobs";
 import {
   runCreativeDirection,
@@ -48,6 +49,7 @@ import {
   runProposePlan,
   runProposeStrategy,
   runReviewVisual,
+  runAdaptChannel,
   type PipelineContext,
   type RenderedSlides,
   type PipelineDeps,
@@ -267,6 +269,9 @@ export const contentHandlers: JobHandlers = {
       p,
     );
   }),
+  ...handle(adaptChannelJob, async (p, ctx) =>
+    runAdaptChannel(await pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
+  ),
   ...handle(generateImageJob, async (p, ctx) =>
     runGenerateImage(await pipelineDepsFor(ctx.db, ctx.logger), pctx(ctx, p.requestedBy), p),
   ),

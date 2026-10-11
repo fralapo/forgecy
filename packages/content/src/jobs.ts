@@ -2,7 +2,7 @@
 import { exportOutputs } from "@forgecy/carousel";
 import { defineJob } from "@forgecy/jobs";
 import { z } from "zod";
-import { contentChannels, languageSchema } from "./document";
+import { adaptChannelSchema, contentChannels, languageSchema } from "./document";
 
 const base = {
   clientId: z.uuid(),
@@ -88,6 +88,13 @@ export const reviewVisualJob = defineJob({
   payload: z.object({ ...base, contentId: z.uuid() }),
 });
 
+/** Copywriter: an Instagram carousel in review or approved, proposed for LinkedIn or Facebook. A proposal only. */
+export const adaptChannelJob = defineJob({
+  kind: "content.adapt_channel",
+  queue: "ai",
+  payload: z.object({ ...base, contentId: z.uuid(), channel: adaptChannelSchema }),
+});
+
 /** Art Director + image provider: draft images for an image slot. */
 export const generateImageJob = defineJob({
   kind: "content.generate_image",
@@ -124,6 +131,7 @@ export const contentJobs = [
   editSlideJob,
   critiqueClaimsJob,
   reviewVisualJob,
+  adaptChannelJob,
   generateImageJob,
   exportContentJob,
 ] as const;

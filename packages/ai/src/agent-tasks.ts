@@ -10,7 +10,7 @@ import type { AiTask } from "./types";
 export const AGENT_TASKS: Record<AgentRole, readonly AiTask[]> = {
   brand_analyst: ["scan", "audit_analyze", "brand_propose", "catalog_extract"],
   strategist: ["audit_diagnose", "audit_plan", "audit_report", "content_strategy"],
-  copywriter: ["outline", "slides", "edit_slide"],
+  copywriter: ["outline", "slides", "edit_slide", "adapt_channel"],
   art_director: ["image_prompt"],
   reviewer: ["critique_claims", "review_visual"],
   creative_director: ["creative_direction"],

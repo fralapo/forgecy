@@ -24,6 +24,7 @@ import {
   slideCountPresets,
   claimRisks,
   contentChannels,
+  type AdaptChannel,
   type Brief,
   type CarouselDocument,
   type ContentChannel,
@@ -33,7 +34,7 @@ import { slotTexts } from "../carousels/checks";
 import type { ProductSummary } from "../products";
 import { directionBlock, type CreativeDirection } from "../carousels/direction";
 
-export const CONTENT_PROMPT_VERSION = "content-2026-10-11c";
+export const CONTENT_PROMPT_VERSION = "content-2026-10-11d";
 
 /** What decides whether a channel is working; the Planner judges each rubric by it. */
 export const CHANNEL_METRICS = `- Channel gate metric: judge a rubric by the metric of its channel, and name it in the pillar goal: Instagram = saves and shares; Facebook = shares in groups and comments; LinkedIn = dwell time and comments. Likes and reach alone are not a goal.`;
@@ -447,6 +448,82 @@ export function visualUserPrompt(input: {
     input.measured.length
       ? `## Measured issues\n${input.measured.map((m) => `- slide ${m.slide + 1}, ${m.slot}: ${m.kind} — ${m.message}`).join("\n")}`
       : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+// ---- Channel adaptation: an Instagram carousel rewritten for another channel (a proposal) ----
+
+export const adaptOutputSchema = z.object({
+  /** False when the channel has no credible equivalent angle; then no slides and no caption. */
+  creditableAngle: z.boolean(),
+  /** The angle rewritten for the audience of the channel. */
+  angle: z.string().max(600),
+  /** Why the angle holds, or why the channel should be skipped. */
+  reason: z.string().max(500),
+  slides: z
+    .array(z.object({ layout: z.string().max(40), slots: z.array(slotOut).max(16) }))
+    .max(20),
+  caption: z.string().max(3000),
+  hashtags: z.array(z.string().max(60)).max(15),
+});
+export type AdaptOutput = z.infer<typeof adaptOutputSchema>;
+
+/** What each target channel asks of the copy; the prompt carries only the target's lines. */
+export const ADAPT_CHANNEL_RULES: Record<AdaptChannel, string> = {
+  linkedin: `LinkedIn document: the audience reads at work and judges by dwell time and comments. Turn the payoff into a company procedure, a decision or a lesson a professional can apply on Monday; keep the proof, drop the trend tone. One idea per page, a professional register, no emoji. Caption: the hook inside the first 210 characters (the rest is folded), then the argument, then a question that invites comments; 3 to 5 sector hashtags, no @mentions needed.`,
+  facebook: `Facebook post: ONE 4:5 frame (exactly one slide, the cover or a single strong statement) and a long caption. The audience shares in groups and comments, so write what a person would send to a friend or a group. Caption: long and conversational, the story in full sentences, a question to answer in the comments; 0 to 3 hashtags, no @mentions, a link is allowed when the brief has one.`,
+};
+
+export const ADAPT_SYSTEM = withPlaybooks(
+  `You are the Copywriter of Forgecy. You adapt a published-quality Instagram carousel to ANOTHER channel. Adapting is not copying: you rewrite the angle for the audience and the habits of the target channel, keeping every fact exactly as the source has it.
+
+Rules:
+${SHARED_RULES}
+- Decide first whether the channel has a credible equivalent angle for this content. If the idea only works as an Instagram habit (a trend, a meme format, a save-for-later checklist for people scrolling), return creditableAngle=false, explain the reason in one sentence, and return no slides, an empty caption and no hashtags. Skipping a channel is a good answer; a forced adaptation is not.
+- When the angle holds, return creditableAngle=true, the rewritten angle in one or two sentences, a reason in one sentence, the slides and the caption.
+- Use only the layouts of the target template and fill only their text and list slots (never images); respect each slot's character limit, aiming at 70% of it.
+- Never add a number, source or claim the source carousel does not have. The "Cannot say" and fact bank rules of the brief still apply.
+${SLIDE_COPY_RULES}
+- Plain text only. No HTML, no markdown links.
+- Write in the language of the source copy.`,
+  "copywriting",
+);
+
+export function adaptUserPrompt(input: {
+  channel: AdaptChannel;
+  /** The brief of the source content, written for the Copywriter. */
+  brief: string;
+  factBank?: string;
+  source: CarouselDocument;
+  sourceLayouts: { layout: string; role: string }[];
+  /** Layout guide of the target template (`layoutGuide`). */
+  layouts: string;
+  /** Slides the target should have at most: 1 for Facebook. */
+  maxSlides: number;
+  captionBudget: number;
+  language: string;
+}): string {
+  const slides = input.source.slides.map((s, i) => ({
+    slide: i + 1,
+    role: input.sourceLayouts[i]?.role ?? "",
+    texts: slotTexts(s.slots),
+  }));
+  return [
+    `Language of the copy: ${input.language}`,
+    `Target channel: ${input.channel}`,
+    ADAPT_CHANNEL_RULES[input.channel],
+    `Slides: at most ${input.maxSlides}. Caption: at most ${input.captionBudget} characters.`,
+    "# Source carousel brief and product sheet",
+    input.brief,
+    input.factBank ?? "",
+    "## Source slides (Instagram)",
+    json(slides),
+    `Source caption: ${input.source.caption || "—"}`,
+    `Source hashtags: ${input.source.hashtags.join(" ") || "—"}`,
+    "## Layouts of the target template",
+    input.layouts,
   ]
     .filter(Boolean)
     .join("\n\n");

@@ -1,5 +1,8 @@
 {
   "errors": {
+    "adaptationNotFound": "Adattamento al canale non trovato",
+    "adaptationDecided": "Questo adattamento al canale ha già avuto una risposta",
+    "adaptationNothing": "Questo adattamento al canale non ha slide da accettare",
     "carouselNotFound": "Carosello non trovato",
     "aiWorking": "L’AI sta lavorando su questo carosello: attendi che finisca o annulla l’attività",
     "clientArchived": "Il cliente è archiviato",
@@ -103,7 +106,11 @@
     "versionNotFound": "Versione del carosello non trovata",
     "notApprovedVersion": "Questa non è la versione approvata",
     "notApproved": "Il carosello non è più approvato",
-    "brandVersionUnavailable": "Versione della Brand Identity non disponibile"
+    "brandVersionUnavailable": "Versione della Brand Identity non disponibile",
+    "adaptNotInstagram": "Solo un carosello Instagram può essere adattato a un altro canale",
+    "adaptNotReady": "Chiedi un adattamento quando il carosello è in revisione o approvato",
+    "adaptNoSlides": "Il carosello non ha slide da adattare",
+    "noChannelTemplate": "Non c’è un template pubblicato per quel canale: aggiungine uno nel catalogo dei template"
   },
   "title": "Contenuti",
   "description": "Strategia editoriale, piano a 30 giorni e caroselli per ogni cliente.",
@@ -301,6 +308,7 @@
       "editSlide": "Modifica di una slide",
       "critiqueClaims": "Verifica delle affermazioni",
       "reviewVisual": "Revisione delle slide",
+      "adaptChannel": "Adattamento a un altro canale",
       "generateImage": "Generazione delle immagini",
       "export": "Esportazione",
       "other": "Attività in corso"
@@ -858,6 +866,30 @@
       "fix": "Correzione: {fix}",
       "dismiss": "Ignora",
       "stale": "La bozza è cambiata dopo questa revisione: i numeri delle slide potrebbero non corrispondere più."
+    },
+    "adapt": {
+      "heading": "Altri canali",
+      "hint": "L’AI propone come questo carosello Instagram si direbbe su LinkedIn o Facebook, oppure dice di saltare il canale. È una proposta: non viene creato nulla finché non accetti, e il nuovo elemento parte come bozza e passa comunque da controlli, revisione e approvazione.",
+      "ask": "{channel, select, linkedin {Proponi per LinkedIn} facebook {Proponi per Facebook} other {Proponi}}",
+      "asking": "Sto preparando la proposta…",
+      "needsReview": "Disponibile quando il carosello è in revisione o approvato.",
+      "channel": "{channel, select, linkedin {Documento LinkedIn} facebook {Post Facebook} other {{channel}}}",
+      "angle": "Angolo per questo canale",
+      "reason": "Perché: {reason}",
+      "skip": "Salta questo canale: non c’è un angolo equivalente credibile.",
+      "skipNoReason": "Salta questo canale: non è tornato nulla di utilizzabile.",
+      "slides": "{count, plural, one {# slide} other {# slide}}",
+      "slide": "Slide {slide} · {layout}",
+      "caption": "Didascalia",
+      "hashtags": "Hashtag",
+      "gate": "Come si giudica questo canale",
+      "gateMetric": "{metric, select, saves_shares {Salvataggi e condivisioni.} group_shares_comments {Condivisioni nei gruppi e commenti.} dwell_comments {Tempo di lettura e commenti.} other {{metric}}}",
+      "accept": "Accetta: crea una bozza",
+      "dismiss": "Scarta",
+      "accepted": "Accettata: è stata creata una bozza.",
+      "openDraft": "Apri la bozza",
+      "dismissed": "Scartata.",
+      "stale": "Il carosello è cambiato dopo questa proposta."
     },
     "actionErrors": {
       "conflict": "Qualcun altro ha modificato il carosello mentre lo stavi modificando anche tu.",

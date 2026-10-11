@@ -364,6 +364,57 @@ export const visualNoteSchema = z.object({
 });
 export type VisualNote = z.output<typeof visualNoteSchema>;
 
+// ---- Channel adaptation proposals (stored in the result of the adapt job) ----
+
+/** Channels an Instagram carousel can be adapted to. */
+export const adaptChannels = ["linkedin", "facebook"] as const;
+export type AdaptChannel = (typeof adaptChannels)[number];
+export const adaptChannelSchema = z.enum(adaptChannels);
+
+/** What decides whether each channel works; shown with the proposal, never scored. */
+export const gateMetrics = ["saves_shares", "group_shares_comments", "dwell_comments"] as const;
+export type GateMetric = (typeof gateMetrics)[number];
+export const gateMetricOf: Record<ContentChannel, GateMetric | null> = {
+  instagram: "saves_shares",
+  facebook: "group_shares_comments",
+  linkedin: "dwell_comments",
+  tiktok: null,
+};
+
+/** The person's answer to a proposal; absent while it waits. */
+export const adaptDecisionSchema = z.object({
+  status: z.enum(["accepted", "dismissed"]),
+  contentId: z.uuid().nullable(),
+  by: z.uuid().nullable(),
+  at: z.string(),
+});
+export type AdaptDecision = z.output<typeof adaptDecisionSchema>;
+
+export const adaptProposalSchema = z.object({
+  sourceContentId: z.uuid(),
+  channel: adaptChannelSchema,
+  /** False when the channel has no credible equivalent angle: then there are no slides. */
+  creditableAngle: z.boolean(),
+  /** The angle rewritten for this channel's audience. */
+  angle: z.string().max(600),
+  reason: z.string().max(500),
+  templateKey: z.string().max(64),
+  slides: z
+    .array(
+      z.object({
+        layout: z.string().max(40),
+        slots: z.record(z.string(), z.union([z.string().max(2000), z.array(z.string().max(500))])),
+      }),
+    )
+    .max(20),
+  caption: z.string().max(3000),
+  hashtags: z.array(z.string().max(100)).max(15),
+  gateMetric: z.enum(gateMetrics),
+  /** Draft revision of the source the proposal was made on. */
+  draftRev: z.number().int().nullable(),
+});
+export type AdaptProposal = z.output<typeof adaptProposalSchema>;
+
 /** The renderer only knows plain slides: editor metadata stays out of the HTML. */
 export function toRenderSlide(s: ContentSlide): Slide {
   return slideSchema.parse({ id: s.id, layout: s.layout, tone: s.tone, slots: s.slots });

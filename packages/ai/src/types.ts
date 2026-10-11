@@ -15,6 +15,7 @@ export const aiTasks = [
   "edit_slide",
   "critique_claims",
   "review_visual",
+  "adapt_channel",
   "image_prompt",
   "brand_propose",
   "catalog_extract",

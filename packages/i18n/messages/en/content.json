@@ -1,5 +1,8 @@
 {
   "errors": {
+    "adaptationNotFound": "Channel adaptation not found",
+    "adaptationDecided": "This channel adaptation was already answered",
+    "adaptationNothing": "This channel adaptation has no slides to accept",
     "carouselNotFound": "Carousel not found",
     "aiWorking": "The AI is working on this carousel: wait for it to finish or cancel the job",
     "clientArchived": "The client is archived",
@@ -103,7 +106,11 @@
     "versionNotFound": "Carousel version not found",
     "notApprovedVersion": "This is not the approved version",
     "notApproved": "The carousel is no longer approved",
-    "brandVersionUnavailable": "Brand Identity version not available"
+    "brandVersionUnavailable": "Brand Identity version not available",
+    "adaptNotInstagram": "Only an Instagram carousel can be adapted to another channel",
+    "adaptNotReady": "Ask for an adaptation once the carousel is in review or approved",
+    "adaptNoSlides": "The carousel has no slides to adapt",
+    "noChannelTemplate": "There is no published template for that channel: add one in the template catalog"
   },
   "title": "Content",
   "description": "Editorial strategy, 30-day plan and carousels for every client.",
@@ -301,6 +308,7 @@
       "editSlide": "Editing a slide",
       "critiqueClaims": "Checking claims",
       "reviewVisual": "Reviewing the slides",
+      "adaptChannel": "Adapting to another channel",
       "generateImage": "Generating the images",
       "export": "Export",
       "other": "Job in progress"
@@ -858,6 +866,30 @@
       "fix": "Fix: {fix}",
       "dismiss": "Dismiss",
       "stale": "The draft changed after this review: slide numbers may no longer match."
+    },
+    "adapt": {
+      "heading": "Other channels",
+      "hint": "The AI proposes how this Instagram carousel would be said on LinkedIn or Facebook, or says the channel should be skipped. It is a proposal: nothing is created until you accept, and the new item starts as a draft that still goes through checks, review and approval.",
+      "ask": "{channel, select, linkedin {Propose for LinkedIn} facebook {Propose for Facebook} other {Propose}}",
+      "asking": "Working on the proposal…",
+      "needsReview": "Available once the carousel is in review or approved.",
+      "channel": "{channel, select, linkedin {LinkedIn document} facebook {Facebook post} other {{channel}}}",
+      "angle": "Angle for this channel",
+      "reason": "Why: {reason}",
+      "skip": "Skip this channel: there is no credible equivalent angle.",
+      "skipNoReason": "Skip this channel: nothing usable came back.",
+      "slides": "{count, plural, one {# slide} other {# slides}}",
+      "slide": "Slide {slide} · {layout}",
+      "caption": "Caption",
+      "hashtags": "Hashtags",
+      "gate": "How this channel is judged",
+      "gateMetric": "{metric, select, saves_shares {Saves and shares.} group_shares_comments {Shares in groups and comments.} dwell_comments {Dwell time and comments.} other {{metric}}}",
+      "accept": "Accept: create a draft",
+      "dismiss": "Dismiss",
+      "accepted": "Accepted: a draft was created.",
+      "openDraft": "Open the draft",
+      "dismissed": "Dismissed.",
+      "stale": "The carousel changed after this proposal was made."
     },
     "actionErrors": {
       "conflict": "Someone else edited the carousel while you were editing it too.",

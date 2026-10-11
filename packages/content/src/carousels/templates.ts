@@ -108,6 +108,40 @@ export function clampSlideCount(m: TemplateManifest, n: number | null | undefine
   return Math.min(m.slides.max, Math.max(m.slides.min, v));
 }
 
+/**
+ * Slot values cut to what the layout allows: unknown and image slots dropped, text cut at
+ * `maxChars` (on a word when it can), lists cut to `maxItems` items of `maxChars`.
+ * Plain text only: the renderer inserts it as text.
+ */
+export function clampSlots(
+  layout: LayoutDef,
+  slots: Record<string, unknown>,
+): Record<string, string | string[]> {
+  const cut = (t: string, max: number) => {
+    const v = t.trim();
+    if (v.length <= max) return v;
+    const head = v.slice(0, max);
+    const at = head.lastIndexOf(" ");
+    return (at > max * 0.6 ? head.slice(0, at) : head).trimEnd();
+  };
+  const out: Record<string, string | string[]> = {};
+  for (const def of layout.slots) {
+    const v = slots[def.name];
+    if (def.type === "image" || (typeof v !== "string" && !Array.isArray(v))) continue;
+    if (def.type === "text") {
+      const t = cut(Array.isArray(v) ? v.join("\n") : v, def.maxChars);
+      if (t) out[def.name] = t;
+    } else {
+      const items = (Array.isArray(v) ? v : v.split("\n"))
+        .map((x) => cut(x, def.maxChars))
+        .filter(Boolean)
+        .slice(0, def.maxItems);
+      if (items.length) out[def.name] = items;
+    }
+  }
+  return out;
+}
+
 /** Layouts usable for a role, honoring the first/last position rules. */
 export function layoutsForRole(
   m: TemplateManifest,

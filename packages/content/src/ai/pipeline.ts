@@ -73,10 +73,14 @@ import {
 } from "../carousels/carousels";
 import {
   briefSchema,
+  captionLimits,
   channelFormat,
+  gateMetricOf,
   newSlideId,
   normalizeHashtag,
   parseDocument,
+  type AdaptChannel,
+  type AdaptProposal,
   type CarouselDocument,
   type ClaimFinding,
   type ContentChannel,
@@ -101,6 +105,9 @@ import {
   PLANNER_SYSTEM,
   SLIDES_SYSTEM,
   VISUAL_SYSTEM,
+  ADAPT_SYSTEM,
+  adaptOutputSchema,
+  adaptUserPrompt,
   briefBlock,
   claimsOutputSchema,
   claimsUserPrompt,
@@ -110,6 +117,7 @@ import {
   editSlideUserPrompt,
   imagePromptOutputSchema,
   imagePromptUserPrompt,
+  layoutGuide,
   outlineOutputSchema,
   outlineUserPrompt,
   planOutputSchema,
@@ -121,12 +129,19 @@ import {
   visualNotesOutputSchema,
   visualUserPrompt,
   type CarouselPromptInput,
+  type AdaptOutput,
   type ClaimsOutput,
   type SlidesOutput,
   type VisualNotesOutput,
 } from "./prompts";
 import { saveProposedPlan, saveStrategyProposals, type ProposedRubric } from "../strategy";
-import { clampSlideCount, getTemplate, pickLayout } from "../carousels/templates";
+import {
+  clampSlideCount,
+  clampSlots,
+  getTemplate,
+  listUsableTemplates,
+  pickLayout,
+} from "../carousels/templates";
 import { acceptedDirection, directionBlock, recordDirection } from "../carousels/direction";
 import { frequencyLabel } from "../labels";
 import { slotTexts, squash } from "../carousels/checks";
@@ -597,17 +612,19 @@ async function carouselSetup(
   clientId: string,
   contentId: string,
   role: AgentRole = "copywriter",
+  opts: { readOnly?: boolean; channel?: string; formatKey?: string } = {},
 ) {
   const actor = agent(role, ctx);
   const client = await requireClient(deps.db, clientId);
   const c = await getContentRow(deps.db, clientId, contentId);
-  if (c.status === "in_review" || c.status === "archived" || isPublished(c))
+  // A read-only step (channel adaptation) may look at content in review or published; it writes nothing here.
+  if (!opts.readOnly && (c.status === "in_review" || c.status === "archived" || isPublished(c)))
     throw attention("content.jobErrors.notEditable");
   const template = await getTemplate(deps.db, clientId, c.templateKey, c.templateVersion);
   const identity = await publishedIdentity(deps.db, actor, clientId);
   const brandCtx = await brandContextFor(deps.db, actor, clientId, {
-    channel: c.channel,
-    formatKey: c.format,
+    channel: opts.channel ?? c.channel,
+    formatKey: opts.formatKey ?? c.format,
   });
   const promptInput = await carouselPromptInput(deps.db, actor, c, template.manifest, identity);
   const common: CommonAi = {
@@ -1480,6 +1497,141 @@ export async function runReviewVisual(
     notes: visualNotesOf(doc, res.data.notes),
     draftRev: s.c.draftRev,
     mode,
+    costMicroUsd: res.costMicroUsd,
+  };
+}
+
+const uniqueHashtags = (tags: string[]) => {
+  const seen = new Set<string>();
+  return tags
+    .map(normalizeHashtag)
+    .filter((t) => t && !seen.has(t.toLowerCase()) && Boolean(seen.add(t.toLowerCase())));
+};
+
+/** Hashtags and slides each channel accepts in an adaptation (Facebook: one frame, up to 3 tags). */
+const ADAPT_LIMITS: Record<AdaptChannel, { slides: number; hashtags: number }> = {
+  linkedin: { slides: 20, hashtags: 5 },
+  facebook: { slides: 1, hashtags: 3 },
+};
+
+/**
+ * The model's adaptation as a proposal: slides only on layouts of the target template with their
+ * slots cut to the layout, the channel's limits on slides and hashtags, no @mentions on Facebook.
+ * A channel without a credible angle, or with nothing usable, comes back with no slides.
+ */
+export function adaptProposalOf(
+  out: AdaptOutput,
+  c: {
+    sourceContentId: string;
+    channel: AdaptChannel;
+    templateKey: string;
+    manifest: TemplateManifest;
+    draftRev: number | null;
+  },
+): AdaptProposal {
+  const limits = ADAPT_LIMITS[c.channel];
+  const slides = out.creditableAngle
+    ? out.slides
+        .flatMap((s) => {
+          const layout = findLayout(c.manifest, s.layout);
+          if (!layout) return [];
+          const slots = clampSlots(layout, slotsFromOutput(layout, s.slots));
+          return Object.keys(slots).length ? [{ layout: layout.id, slots }] : [];
+        })
+        .slice(0, limits.slides)
+    : [];
+  const usable = slides.length > 0;
+  const noMentions = (t: string) => t.replace(/(^|\s)@\w+/g, "$1").replace(/ {2,}/g, " ");
+  const caption = usable ? (c.channel === "facebook" ? noMentions(out.caption) : out.caption) : "";
+  return {
+    sourceContentId: c.sourceContentId,
+    channel: c.channel,
+    creditableAngle: usable,
+    angle: usable ? out.angle.trim() : "",
+    reason: out.reason.trim(),
+    templateKey: c.templateKey,
+    slides,
+    caption: caption.trim().slice(0, Math.min(3000, captionLimits[c.channel])),
+    hashtags: usable
+      ? uniqueHashtags(out.hashtags).slice(0, limits.hashtags)
+      : [],
+    gateMetric: gateMetricOf[c.channel] ?? "dwell_comments",
+    draftRev: c.draftRev,
+  };
+}
+
+/**
+ * Channel adaptation: reads an Instagram carousel in review or approved and proposes how it
+ * would be said on LinkedIn or Facebook, or says the channel should be skipped. A proposal only:
+ * it is the job's result, nothing is created or changed until a person accepts it.
+ */
+export async function runAdaptChannel(
+  deps: PipelineDeps,
+  ctx: PipelineContext,
+  input: { clientId: string; contentId: string; channel: AdaptChannel },
+) {
+  const ai = requireAi(deps);
+  const target = channelFormat[input.channel];
+  const s = await carouselSetup(deps, ctx, input.clientId, input.contentId, "copywriter", {
+    readOnly: true,
+    channel: input.channel,
+    formatKey: target,
+  });
+  if (s.c.channel !== "instagram") throw attention("content.jobErrors.adaptNotInstagram");
+  if (!["in_review", "approved", "exported"].includes(s.c.status))
+    throw attention("content.jobErrors.adaptNotReady");
+  const doc = parseDocument(s.c.draft);
+  if (!doc.slides.length) throw attention("content.jobErrors.adaptNoSlides");
+  const template = (await listUsableTemplates(deps.db, input.clientId, { format: target })).find(
+    (t) => t.channel === input.channel,
+  );
+  if (!template) throw attention("content.jobErrors.noChannelTemplate");
+  await ctx.progress(10);
+  const { system, prefix } = withBrand(ADAPT_SYSTEM, s.brandCtx);
+  const maxSlides = ADAPT_LIMITS[input.channel].slides;
+  const res = await guarded(() =>
+    ai.generateObject({
+      task: "adapt_channel",
+      schema: adaptOutputSchema,
+      schemaName: "channel_adaptation",
+      system,
+      input:
+        prefix +
+        adaptUserPrompt({
+          channel: input.channel,
+          brief: briefBlock(s.promptInput),
+          factBank: factBankPrompt(factBankOf(s.promptInput.product)),
+          source: doc,
+          sourceLayouts: doc.slides.map((sl) => ({
+            layout: sl.layout,
+            role: findLayout(s.template.manifest, sl.layout)?.role ?? "",
+          })),
+          layouts: layoutGuide(template.manifest),
+          maxSlides,
+          captionBudget: Math.min(3000, captionLimits[input.channel]),
+          language: s.promptInput.language,
+        }),
+      ...s.common,
+      inputSummary: {
+        fields: {},
+        meta: {
+          promptVersion: CONTENT_PROMPT_VERSION,
+          channel: input.channel,
+          template: template.key,
+          slides: doc.slides.length,
+        },
+      },
+    }),
+  );
+  await ctx.progress(100);
+  return {
+    proposal: adaptProposalOf(res.data, {
+      sourceContentId: s.c.id,
+      channel: input.channel,
+      templateKey: template.key,
+      manifest: template.manifest,
+      draftRev: s.c.draftRev,
+    }),
     costMicroUsd: res.costMicroUsd,
   };
 }
