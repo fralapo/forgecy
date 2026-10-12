@@ -192,3 +192,24 @@ begin
  end if;
 end $cal$;
 reset role;
+
+-- Multilingual client evidence search works only for the authenticated tenant.
+set role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+do $evidence$
+declare total integer;
+begin
+ select count(*) into total from public.forgecy_search_sources(
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Confirmed',8
+ );
+ if total<1 then raise exception 'Authorized evidence search did not return a source'; end if;
+ begin
+  perform public.forgecy_search_sources(
+   'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','Confirmed',8
+  );
+  raise exception 'Foreign client evidence search unexpectedly accepted';
+ exception when others then
+  if SQLERRM='Foreign client evidence search unexpectedly accepted' then raise;end if;
+ end;
+end $evidence$;
+reset role;
