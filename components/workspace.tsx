@@ -4,7 +4,7 @@ import { Activity,BookOpen,BriefcaseBusiness,Check,ChevronDown,ChevronRight,File
 import Views from "./views";
 import type { Client,Offer,Snapshot,View,Mission } from "./types";
 import { initials,requestJson,statusLabel } from "./types";
-import { browserDb } from "@/lib/supabase";
+import { browserDb } from "@/lib/supabase-browser";
 
 type Modal={kind:string;item?:unknown}|null;
 const nav:Array<{key:View;label:string;icon:typeof LayoutDashboard}>=[

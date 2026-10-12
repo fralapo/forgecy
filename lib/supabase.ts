@@ -1,5 +1,4 @@
 import { createServerClient } from "@supabase/ssr";
-import { createBrowserClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { supabaseEnv } from "./env";
 
@@ -15,8 +14,4 @@ export async function serverDb() {
       }
     }
   });
-}
-export function browserDb() {
-  const { url, key } = supabaseEnv();
-  return createBrowserClient(url, key);
 }

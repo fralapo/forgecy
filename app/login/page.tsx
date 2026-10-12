@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { browserDb } from "@/lib/supabase";
+import { browserDb } from "@/lib/supabase-browser";
 import { ArrowRight,Layers3,Mail,ShieldCheck } from "lucide-react";
 export default function LoginPage(){
  const [email,setEmail]=useState("");
