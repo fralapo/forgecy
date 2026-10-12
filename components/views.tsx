@@ -76,7 +76,7 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
  const [tab,setTab]=useState<"dossier"|"strategy"|"sources"|"community"|"profile">("dossier");
  const [sourceQuery,setSourceQuery]=useState("");
  const [foundSources,setFoundSources]=useState<Array<{
-  id:string;title:string;kind:string;url:string|null;excerpt:string;relevance:number
+  source_id:string;source_title:string;source_url:string|null;chunk_ordinal:number;excerpt:string;relevance:number
  }>>([]);
  const [searchStatus,setSearchStatus]=useState<"idle"|"loading"|"ready"|"error">("idle");
  useEffect(()=>{
@@ -84,9 +84,9 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
   let stale=false;
   const timer=window.setTimeout(()=>{
    setSearchStatus("loading");
-   requestJson<{results:typeof foundSources}>(
-    "/api/workspace/clients/"+data.client.id+"/sources/search?q="+encodeURIComponent(sourceQuery.trim())
-   ).then(answer=>{if(!stale){setFoundSources(answer.results);setSearchStatus("ready");}})
+   requestJson<{hits:typeof foundSources}>(
+    "/api/workspace/clients/"+data.client.id+"/knowledge/search?q="+encodeURIComponent(sourceQuery.trim())+"&limit=12"
+   ).then(answer=>{if(!stale){setFoundSources(answer.hits);setSearchStatus("ready");}})
     .catch(()=>{if(!stale){setFoundSources([]);setSearchStatus("error");}});
   },260);
   return()=>{stale=true;window.clearTimeout(timer);};
@@ -146,11 +146,11 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
      <p className="caption" style={{marginTop:7}}>Ricerca nei contenuti indicizzati del cliente attivo. Nessun dato di altri clienti è accessibile.</p>
      {sourceQuery.trim().length>=2&&<div style={{marginTop:14}}>
        {searchStatus==="loading"&&<p className="caption">Ricerca delle fonti in corso…</p>}
-       {searchStatus==="error"&&<p className="caption">Ricerca temporaneamente non disponibile. Controlla che la migrazione 0011 sia stata eseguita.</p>}
-       {searchStatus==="ready"&&(foundSources.length?foundSources.map(s=><div className="list-row" key={s.id}>
-        <div style={{minWidth:0}}><strong>{s.title}</strong><p className="caption" style={{marginTop:6,whiteSpace:"pre-wrap"}}>{s.excerpt}</p>
-         <p className="caption" style={{marginTop:5}}>Fonte: {s.kind}</p></div>
-        {s.url&&/^https?:\/\//i.test(s.url)&&<a href={s.url} target="_blank" rel="noopener noreferrer" className="button small">Apri fonte <ExternalLink size={12}/></a>}
+       {searchStatus==="error"&&<p className="caption">Ricerca temporaneamente non disponibile. Controlla che le migrazioni 0013 e 0014 siano state eseguite.</p>}
+       {searchStatus==="ready"&&(foundSources.length?foundSources.map(s=><div className="list-row" key={s.source_id+":"+s.chunk_ordinal}>
+        <div style={{minWidth:0}}><strong>{s.source_title}</strong><p className="caption" style={{marginTop:6,whiteSpace:"pre-wrap"}}>{s.excerpt}</p>
+         <p className="caption" style={{marginTop:5}}>Estratto {s.chunk_ordinal+1} · Fonte {s.source_id.slice(0,8)}</p></div>
+        {s.source_url&&/^https?:\/\//i.test(s.source_url)&&<a href={s.source_url} target="_blank" rel="noopener noreferrer" className="button small">Apri fonte <ExternalLink size={12}/></a>}
        </div>):<p className="caption">Nessuna corrispondenza nelle fonti disponibili.</p>)}
      </div>}
    </div>
