@@ -4,7 +4,7 @@ create table public.ai_jobs (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references public.clients(id) on delete cascade,
   requested_by uuid not null references auth.users(id),
-  kind text not null check(kind in ('dossier','mission')),
+  kind text not null check(kind in ('dossier','mission','strategy')),
   payload jsonb not null default '{}'::jsonb check (octet_length(payload::text) <= 12000),
   status text not null default 'queued' check(status in ('queued','running','succeeded','failed','cancelled')),
   result jsonb not null default '{}'::jsonb,
@@ -44,12 +44,12 @@ begin
   if client_owner is null or auth.uid() is null or client_owner<>auth.uid() then
     raise exception 'Cliente non autorizzato';
   end if;
-  if p_kind not in ('dossier','mission') or p_payload is null
+  if p_kind not in ('dossier','mission','strategy') or p_payload is null
     or jsonb_typeof(p_payload)<>'object'
     or octet_length(p_payload::text)>12000 then
     raise exception 'Lavoro non valido';
   end if;
-  if p_kind='dossier' and p_payload<>'{}'::jsonb then
+  if p_kind in ('dossier','strategy') and p_payload<>'{}'::jsonb then
     raise exception 'Parametri dossier non validi';
   end if;
   if p_kind='mission' and (
