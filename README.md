@@ -18,6 +18,7 @@ The complete previous repository is preserved under the **old/** folder with its
    - supabase/migrations/0007_source_intelligence.sql
    - supabase/migrations/0008_ai_jobs.sql
    - supabase/migrations/0009_strategic_blueprints.sql
+   - supabase/migrations/0010_editorial_calendar.sql
 4. Copy .env.example to .env.local. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from the Supabase dashboard.
 5. Enable email OTP / magic-link sign-in in Supabase Authentication. Allow http://localhost:3000/auth/callback as a redirect URL.
 6. Run **npm run dev** and open http://localhost:3000.
