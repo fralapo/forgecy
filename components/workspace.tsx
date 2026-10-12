@@ -86,6 +86,7 @@ export default function Workspace(){
   if(!clientId)return;
   const root=endpoint(clientId);
   if(name==="deleteSignal")return mutate(name,()=>requestJson(root+"/signals/"+body.id,{method:"DELETE"}),"Osservazione eliminata");
+  if(name==="reprocessDocument")return mutate(name,()=>requestJson(root+"/sources/"+body.id+"/process",{method:"POST",body:"{}"}),"Estrazione ripetuta");
   if(name==="dossierDraft")return mutate(name,()=>requestJson(root+"/dossier/draft",{method:"POST",body:"{}"}),"Dossier generato: controllalo prima di approvare");
   if(name==="dossierApprove")return mutate(name,()=>requestJson(root+"/dossier/approve",{method:"POST",body:JSON.stringify(body)}),"Dossier approvato");
   if(name==="verifyOffer")return mutate(name,()=>requestJson(root+"/offers/"+body.id,{method:"PATCH",body:JSON.stringify({status:"verified"})}),"Offerta verificata: rivedi il dossier");
@@ -163,7 +164,8 @@ export default function Workspace(){
   }else if(kind==="upload"){
    const file=f.get("file");if(!(file instanceof File)){setError("Seleziona un file");return}
    const form=new FormData();form.set("file",file);
-   const result=await mutate("upload",()=>requestJson(root+"/upload",{method:"POST",body:form}),"Documento caricato");
+   const result=await mutate<{extracted:boolean;message?:string}>("upload",()=>requestJson(root+"/upload",{method:"POST",body:form}),"Documento caricato");
+   if(result&&!result.extracted)flash("Documento archiviato ma non leggibile: "+(result.message||"richiede revisione"));
    if(result)setModal(null);return;
   }else return;
   const result=await mutate(kind,()=>requestJson(url,{method,body:JSON.stringify(payload)}),"Operazione completata");
@@ -228,13 +230,24 @@ export default function Workspace(){
       <div className={"chat-bubble "+(m.role==="user"?"user":"leader")}>{m.body}</div>
       {m.role==="leader"&&m.metadata?.kind==="signal_proposal"&&m.metadata.signal&&<button style={{alignSelf:"flex-start"}} className="button small" onClick={()=>setModal({kind:"signal",item:m.metadata?.signal})}><Check size={14}/> Rivedi e registra il feedback</button>}
      </div>)}
-     {pendingMissions.map(m=><div className="mission-card" key={m.id}>
+     {pendingMissions.map(m=>{const qa=((m.payload?.campaign as Record<string,unknown>|undefined)?.strategy as Record<string,unknown>|undefined)?.qa as Record<string,unknown>|undefined;
+       const blockers=Array.isArray(qa?.blocking_issues)?qa.blocking_issues as string[]:[];
+       const warnings=Array.isArray(qa?.warnings)?qa.warnings as string[]:[];
+       const scores=qa?.scores as Record<string,number>|undefined;
+       return <div className="mission-card" key={m.id}>
       <span className="pill warn" style={{alignSelf:"start"}}>PROPOSTA DEL TEAM</span><strong>{m.request}</strong>
       <p>{((m.payload as Record<string,unknown>).campaign as Record<string,unknown>|undefined)?.title as string||"Piano di campagna pronto"}</p>
       <div className="caption">{data?.agent_events.filter(x=>x.mission_id===m.id).length||0} passaggi tra agenti registrati</div>
+      {scores&&<div className="caption">Valutazione editoriale (AI, non KPI): strategia {scores.strategic_fit}/10 · originalità {scores.originality}/10 · prove {scores.evidence}/10 · leggibilità {scores.readability}/10</div>}
+      {warnings.length>0&&<details><summary className="caption" style={{cursor:"pointer"}}>Osservazioni da verificare ({warnings.length})</summary><div className="stack" style={{marginTop:7}}>{warnings.map((v,i)=><p className="caption" key={i}>• {v}</p>)}</div></details>}
+      {blockers.length>0&&<div className="notice error"><strong>Proposta bloccata: {blockers.length} problemi</strong><div className="stack" style={{marginTop:8}}>{blockers.map((v,i)=><p key={i} className="caption">{v}</p>)}</div><p className="caption" style={{marginTop:8}}>Richiedi una nuova proposta corretta; questa versione non può essere approvata.</p></div>}
       <div className="stack" style={{gap:2}}>{data?.agent_events.filter(x=>x.mission_id===m.id).slice(-4).map(ev=><div className="agent-event" key={ev.id}>{ev.agent} → {ev.recipient}: {ev.summary}</div>)}</div>
-      <div className="flex gap8"><button className="button primary small" disabled={Boolean(busy)} onClick={()=>onAction("approveMission",{id:m.id})}><Check size={14}/> Approva</button><button className="button small" disabled={Boolean(busy)} onClick={()=>onAction("rejectMission",{id:m.id})}>Scarta</button></div>
-     </div>)}
+      <div className="flex gap8 wrap">{blockers.length>0&&<button className="button primary small" disabled={Boolean(busy)} onClick={()=>setModal({kind:"mission",item:{
+       request:(m.request+"\\nCorreggi questi problemi: "+blockers.join("; ")).slice(0,2900),
+       period:String(((m.payload?.campaign as Record<string,unknown>|undefined)?.period)||"Prossimi 30 giorni"),
+       offer_id:((m.payload?.campaign as Record<string,unknown>|undefined)?.offer_id as string|null)||""
+      }})}><Sparkles size={14}/> Rielabora proposta</button>}<button className="button primary small" disabled={Boolean(busy)||blockers.length>0} onClick={()=>onAction("approveMission",{id:m.id})}><Check size={14}/> Approva</button><button className="button small" disabled={Boolean(busy)} onClick={()=>onAction("rejectMission",{id:m.id})}>Scarta</button></div>
+     </div>})}
      <div ref={railEnd}/>
     </div>
     {current&&<div className="chat-prompt"><div className="eyebrow">AZIONI RAPIDE</div>
@@ -271,14 +284,14 @@ export default function Workspace(){
      <div><label>Contesto (facoltativo)</label><textarea name="context" maxLength={1200} defaultValue={String((modal.item as Record<string,unknown>|undefined)?.context||"")} rows={2} placeholder="A quale post, prodotto o discussione si riferisce?"/></div>
     </>}
     {modal.kind==="source"&&<><div><label>Tipo di fonte</label><select name="kind" defaultValue="note"><option value="note">Nota / Brief</option><option value="website">Sito web</option><option value="social">Profilo social (riferimento)</option></select></div><div><label>Titolo</label><input name="title" placeholder="Es. Brief commerciale"/></div><div><label>URL (opzionale)</label><input name="url" type="url" placeholder="https://esempio.it"/></div><div><label>Contenuto / annotazioni</label><textarea name="body" rows={5} placeholder="Informazioni attendibili, prodotti, tone of voice, obiettivi…"/></div><label style={{display:"flex",alignItems:"center",gap:8,fontWeight:500}}><input type="checkbox" name="auto"/> Acquisisci automaticamente da HTTPS (richiede crawler abilitato)</label></>}
-    {modal.kind==="upload"&&<><div><label>Documento del cliente (max 10 MB)</label><input type="file" name="file" required accept=".txt,.md,.csv,.pdf,.png,.jpg,.jpeg,.webp"/></div><div className="notice warn">Testi, Markdown e CSV sono letti subito. PDF e immagini vengono archiviati privatamente ma richiedono estrazione testo aggiuntiva per l'analisi AI.</div></>}
+    {modal.kind==="upload"&&<><div><label>Documento del cliente (max 10 MB)</label><input type="file" name="file" required accept=".txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg,.webp"/></div><div className="notice warn">Testi, Markdown e CSV sono letti subito. PDF e immagini vengono archiviati privatamente ma richiedono estrazione testo aggiuntiva per l'analisi AI.</div></>}
     {modal.kind==="offer"&&(()=>{
       const o=(modal.item||{}) as Partial<Offer>;
       return <><div className="cols"><div><label>Tipologia</label><select name="kind" defaultValue={o.kind||"service"}><option value="product">Prodotto fisico</option><option value="service">Servizio</option></select></div><div><label>Prezzo EUR (vuoto = preventivo)</label><input name="price" inputMode="decimal" defaultValue={o.price??""} placeholder="19.90"/></div></div><div><label>Nome prodotto / servizio *</label><input required name="name" defaultValue={o.name||""}/></div><div><label>Descrizione</label><textarea rows={4} name="description" defaultValue={o.description||""}/></div><div><label>Pubblico</label><input name="audience" defaultValue={o.audience||""}/></div><div><label>Benefici verificabili (uno per riga)</label><textarea name="benefits" rows={4} defaultValue={(o.benefits||[]).join("\n")}/></div><div><label>Call to action</label><input name="cta" defaultValue={o.cta||""} placeholder="Scopri di più"/></div></>;
      })()}
     {modal.kind==="campaign"&&<><div><label>Nome campagna *</label><input required name="title"/></div><div><label>Obiettivo *</label><textarea required name="objective" rows={3}/></div><div><label>Periodo *</label><input required name="period" placeholder="Settembre 2027"/></div><div><label>Prodotto / servizio da promuovere</label><select name="offer_id" defaultValue={String((modal.item as Record<string,unknown>)?.offer_id||"")}><option value="">Campagna istituzionale</option>{data?.offers.filter(o=>o.status==="verified").map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></div></>}
     {modal.kind==="content"&&<><div><label>Titolo *</label><input required name="title"/></div><div className="cols"><div><label>Canale</label><select name="channel"><option value="instagram">Instagram</option><option value="linkedin">LinkedIn</option></select></div><div><label>Formato</label><select name="format"><option value="post">Post statico</option><option value="carousel">Carosello Instagram</option><option value="document">Documento LinkedIn</option></select></div></div><div><label>Didascalia</label><textarea name="caption" rows={4}/></div></>}
-    {modal.kind==="mission"&&<><div className="notice">Il Leader coordinerà Analyst, Strategist, Copywriter, Art Director e Brand Guard. Prima di creare contenuti ti presenterà una proposta da approvare.</div><div><label>Che cosa vuoi ottenere? *</label><textarea required minLength={8} rows={4} name="request" placeholder="Per settembre voglio promuovere gli ammorbidenti: costruisci una campagna Instagram e adatta i post per LinkedIn."/></div><div><label>Periodo</label><input name="period" defaultValue="Prossimi 30 giorni"/></div><div><label>Offerta da promuovere</label><select name="offer_id"><option value="">Nessuna offerta specifica</option>{data?.offers.filter(o=>o.status==="verified").map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></div></>}
+    {modal.kind==="mission"&&<><div className="notice">Il Leader coordinerà Analyst, Strategist, Copywriter, Art Director e Brand Guard. Prima di creare contenuti ti presenterà una proposta da approvare.</div><div><label>Che cosa vuoi ottenere? *</label><textarea required minLength={8} rows={4} name="request" defaultValue={String((modal.item as Record<string,unknown>|undefined)?.request||"")} placeholder="Per settembre voglio promuovere gli ammorbidenti: costruisci una campagna Instagram e adatta i post per LinkedIn."/></div><div><label>Periodo</label><input name="period" defaultValue={String((modal.item as Record<string,unknown>|undefined)?.period||"Prossimi 30 giorni")}/></div><div><label>Offerta da promuovere</label><select name="offer_id" defaultValue={String((modal.item as Record<string,unknown>|undefined)?.offer_id||"")}><option value="">Nessuna offerta specifica</option>{data?.offers.filter(o=>o.status==="verified").map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></div></>}
     <div className="form-footer"><button type="button" className="button" onClick={()=>setModal(null)}>Annulla</button><button disabled={Boolean(busy)} type="submit" className="button primary">{busy?"Elaborazione…":modal.kind==="mission"?"Avvia team AI":"Salva"}</button></div>
    </form>
   </div></div>}

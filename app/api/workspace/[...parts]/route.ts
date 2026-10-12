@@ -5,6 +5,7 @@ import { draftDossier,executeMission,contextForAI } from "@/lib/agent-team";
 import { handleLeaderMessage } from "@/lib/leader-intent";
 import { modelJson,lowTrustRule } from "@/lib/ai";
 import { inspectWebsite } from "@/lib/site-ingest";
+import { extractDocument } from "@/lib/document-extract";
 
 export const runtime="nodejs";
 export const maxDuration=120;
@@ -206,27 +207,44 @@ export async function POST(request:Request,{params}:Params){
    const {data,error}=await ctx.db.from("contents").insert({...input,client_id:id,slides:[],status:"draft"}).select().single();
    dbError(error);return json({content:data},201);
   }
+  if(p.length===5 && p[2]==="sources" && p[4]==="process"){
+   const sourceId=validId(p[3]);
+   const {data:source,error:sourceError}=await ctx.db.from("sources").select("id,title,kind,file_path,status").eq("id",sourceId).eq("client_id",id).maybeSingle();
+   dbError(sourceError);if(!source||source.kind!=="document"||!source.file_path)
+    throw new ApiFailure(404,"Documento non trovato");
+   if(!source.file_path.startsWith(id+"/")||source.file_path.includes(".."))
+    throw new ApiFailure(403,"Percorso documento non valido");
+   const {data:file,error:storageError}=await ctx.db.storage.from("forgecy-sources").download(source.file_path);
+   dbError(storageError,"Non è possibile leggere il documento");
+   if(!file||file.size>10_000_000)throw new ApiFailure(413,"Documento troppo grande");
+   const extraction=await extractDocument(new Uint8Array(await file.arrayBuffer()),file.type||"",source.title);
+   const {data,error}=await ctx.db.from("sources").update({
+    ...extraction,captured_at:extraction.status==="ready"?new Date().toISOString():null
+   }).eq("id",sourceId).eq("client_id",id).select().maybeSingle();
+   dbError(error);if(!data)throw new ApiFailure(404,"Documento non trovato");
+   await audit(ctx,id,"document_reprocessed",sourceId,{status:extraction.status});
+   return json({source:data,extracted:extraction.status==="ready"});
+  }
   if(p.length===3 && p[2]==="upload"){
    if(Number(request.headers.get("content-length")||0)>11_000_000)throw new ApiFailure(413,"File troppo grande");
    const form=await request.formData(),file=form.get("file");
    if(!(file instanceof File))throw new ApiFailure(400,"Seleziona un file");
    if(file.size>10_000_000||file.size===0)throw new ApiFailure(413,"Dimensione non valida");
-   const allowed=["text/plain","text/markdown","text/csv","application/pdf","image/png","image/jpeg","image/webp"];
+   const allowed=["text/plain","text/markdown","text/csv","application/pdf","application/vnd.openxmlformats-officedocument.wordprocessingml.document","image/png","image/jpeg","image/webp"];
    if(!allowed.includes(file.type))throw new ApiFailure(415,"Formato file non supportato");
    const safeName=file.name.replace(/[^a-z0-9._-]/gi,"_").slice(0,90);
    const path=id+"/"+crypto.randomUUID()+"/"+safeName;
    const bytes=new Uint8Array(await file.arrayBuffer());
    const uploaded=await ctx.db.storage.from("forgecy-sources").upload(path,bytes,{contentType:file.type,upsert:false});
    dbError(uploaded.error,"Caricamento non riuscito");
-   const isText=file.type.startsWith("text/");
-   const body=isText?(await file.text()).slice(0,100000):"";
+   const extraction=await extractDocument(bytes,file.type,file.name);
    const {data,error}=await ctx.db.from("sources").insert({
-    client_id:id,kind:"document",title:file.name,file_path:path,body,
-    status:isText?"ready":"pending",captured_at:isText?new Date().toISOString():null
+    client_id:id,kind:"document",title:file.name,file_path:path,...extraction,
+    captured_at:extraction.status==="ready"?new Date().toISOString():null
    }).select().single();
    if(error){await ctx.db.storage.from("forgecy-sources").remove([path]);dbError(error);}
-   await audit(ctx,id,"document_uploaded",data.id);
-   return json({source:data,extracted:isText},201);
+   await audit(ctx,id,"document_uploaded",data.id,{status:extraction.status});
+   return json({source:data,extracted:extraction.status==="ready",message:extraction.error},201);
   }
   throw new ApiFailure(404,"Comando non disponibile");
  }catch(e){return fail(e)}

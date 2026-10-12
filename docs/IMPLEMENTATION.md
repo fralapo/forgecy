@@ -77,3 +77,7 @@ Original application code remains in old/ and the original Git history.
 ## Editorial strategy extension
 
 A client now has a private `community_signals` table and an in-Library feedback workflow. Agent prompts work from audience signals and established product information and return `editorial_brief` metadata for each generated content asset, including audience need, hook, promised value, emotional angle, practical proof, single CTA and attributable community signal IDs. Platform default exports: Instagram 1080×1350 PNG; LinkedIn 1920×1080 PDF. For source-by-source detail, see [EDITORIAL_INTELLIGENCE.md](EDITORIAL_INTELLIGENCE.md). Existing installations must apply migration 0005 before deploying the updated application.
+
+## V13 quality and document extraction
+
+Stage-specific prompts are routed from lib/skills/playbooks.ts. Structural defects trigger at most one corrective generation. Brand Guard quality reports include warnings, blocking issues and editorial scores; the approval RPC checks blocking issues server-side (migration 0006). Original PDFs/DOCX stay private and extracted text is tracked separately. Scanned files still require OCR. See SKILLS_INTEGRATION.md.

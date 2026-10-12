@@ -14,6 +14,7 @@ The complete previous repository is preserved under the **old/** folder with its
    - supabase/migrations/0003_knowledge_versions.sql
    - supabase/migrations/0004_content_approval.sql
    - supabase/migrations/0005_editorial_intelligence.sql
+   - supabase/migrations/0006_quality_gates.sql
 4. Copy .env.example to .env.local. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from the Supabase dashboard.
 5. Enable email OTP / magic-link sign-in in Supabase Authentication. Allow http://localhost:3000/auth/callback as a redirect URL.
 6. Run **npm run dev** and open http://localhost:3000.
@@ -25,6 +26,10 @@ To deploy, connect this repository to Vercel (or a compatible Next.js Node host)
 ## Editorial intelligence from training materials
 
 Library now includes **Voce della community**, where the team can record anonymized questions, objections, reviews and audience feedback. The AI uses observed needs (without treating one comment as a universal trend) to create an inspectable creative brief for static Instagram and LinkedIn content. Per-client brand colors now affect preview and PNG/PDF; a heading font can be documented without automatically installing it. Instagram defaults to 4:5 and LinkedIn documents to 16:9. See [docs/EDITORIAL_INTELLIGENCE.md](docs/EDITORIAL_INTELLIGENCE.md) for source mapping and limitations.
+
+## Skill-guided quality and document intelligence
+
+Forgecy selectively adapts stage-specific playbooks from the [MIT-licensed awesome-agent-skills repository](https://github.com/fralapo/awesome-agent-skills). The Analyst, Strategist, Creative and Brand Guard use different instructions and document concrete quality findings before approval. Text PDFs and DOCX can be extracted into client-scoped evidence (scanned files still require OCR). See [docs/SKILLS_INTEGRATION.md](docs/SKILLS_INTEGRATION.md) for the complete 13-skill inventory and limitations.
 
 ## How work flows
 
