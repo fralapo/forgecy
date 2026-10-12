@@ -5,8 +5,8 @@ insert into auth.users(id) values
 grant select,insert,update,delete on all tables in schema public to authenticated;
 grant usage on all sequences in schema public to authenticated;
 -- The job table is deliberately read-only through PostgREST.
-revoke insert,update,delete on public.ai_jobs from authenticated;
-grant select on public.ai_jobs to authenticated;
+revoke insert,update,delete,select on public.ai_jobs from authenticated;
+grant select (id,client_id,requested_by,kind,payload,status,result,error,attempts,max_attempts,run_after,locked_until,created_at,updated_at,finished_at) on public.ai_jobs to authenticated;
 revoke insert,update,delete on public.strategies from authenticated;
 grant select on public.strategies to authenticated;
 insert into public.clients(id,owner_id,name) values
