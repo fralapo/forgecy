@@ -35,7 +35,8 @@ const contentSchema=z.object({
    slides:z.array(z.object({
      headline:z.string().max(240),
      body:z.string().max(1000),
-     visual_prompt:z.string().max(1000).optional()
+     visual_prompt:z.string().max(1000).optional(),
+     layout:z.enum(["cover","content","quote","closing"]).optional()
    })).max(12)
  }).refine(piece=>piece.channel==="instagram"?(piece.format==="post"||piece.format==="carousel"):(piece.format==="post"||piece.format==="document"),"Canale e formato non coerenti")).min(2).max(12)
 });
