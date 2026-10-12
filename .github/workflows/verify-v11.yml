@@ -58,5 +58,6 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0010_source_chunks.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0011_source_chunks_backfill.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/smoke.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/knowledge.sql
       - name: Build
         run: npm run build
