@@ -46,7 +46,7 @@ begin
   delete from public.source_chunks where source_id=new.id;
 
   if new.status = 'ready' and pg_catalog.length(pg_catalog.btrim(new.body)) > 0 then
-    for slot in 0..pg_catalog.least((pg_catalog.length(new.body)-1)/1500,79) loop
+    for slot in 0..least((pg_catalog.length(new.body)-1)/1500,79) loop
       insert into public.source_chunks(client_id,source_id,ordinal,body)
       values (
         new.client_id,new.id,slot,
