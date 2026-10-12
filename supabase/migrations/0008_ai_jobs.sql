@@ -17,7 +17,7 @@ create table public.ai_jobs (
   updated_at timestamptz not null default now(),
   finished_at timestamptz
 );
-create index ai_jobs_claim_idx on public.ai_jobs(status,run_after,created_at)
+-- Link generated artifacts back to their job so retry after a crash is idempotent.\nalter table public.missions add column ai_job_id uuid unique references public.ai_jobs(id) on delete set null;\nalter table public.dossiers add column ai_job_id uuid unique references public.ai_jobs(id) on delete set null;\n\ngrant select,insert,update,delete on public.ai_jobs to service_role;\n\ncreate index ai_jobs_claim_idx on public.ai_jobs(status,run_after,created_at)
   where status in ('queued','running');
 create index ai_jobs_client_idx on public.ai_jobs(client_id,created_at desc);
 alter table public.ai_jobs enable row level security;
