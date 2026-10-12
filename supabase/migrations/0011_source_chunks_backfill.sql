@@ -6,7 +6,7 @@ select
   pg_catalog.substr(s.body,slot.n*1500+1,1700)
 from public.sources s
 cross join lateral pg_catalog.generate_series(
-  0,pg_catalog.least((pg_catalog.length(s.body)-1)/1500,79)
+  0,least((pg_catalog.length(s.body)-1)/1500,79)
 ) as slot(n)
 where s.status='ready' and pg_catalog.length(pg_catalog.btrim(s.body))>0
 on conflict (source_id,ordinal) do update
