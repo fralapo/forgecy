@@ -56,7 +56,7 @@ export default function EditorialCalendar({data,onAction,busy}:Props){
        <Plus size={16}/>{adding?"Chiudi modulo":"Pianifica contenuto"}
      </button>
    </div>
-   <div className="notice">Le date sono indicative per il team. Pianificare una voce non pubblica nulla sui social: la pubblicazione richiede un'integrazione autorizzata.</div>
+   <div className="notice">Le date sono indicative per il team. Pianificare una voce non pubblica nulla sui social: la pubblicazione richiede un&apos;integrazione autorizzata.</div>
    {adding&&<form className="card stack" onSubmit={create}>
      <h2>Nuova uscita editoriale</h2>
      <label htmlFor="editorial-title">Titolo *</label>
