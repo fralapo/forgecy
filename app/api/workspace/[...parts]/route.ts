@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { auth,requireClient,read,json,fail,ApiFailure,dbError,audit } from "@/lib/http";
 import { clientSchema,sourceSchema,offerSchema,campaignSchema,missionSchema,chatSchema,updateContentSchema } from "@/lib/schemas";
-import { answerLeader,draftDossier,executeMission,contextForAI } from "@/lib/agent-team";
+import { draftDossier,executeMission,contextForAI } from "@/lib/agent-team";
+import { handleLeaderMessage } from "@/lib/leader-intent";
 import { modelJson,lowTrustRule } from "@/lib/ai";
 import { inspectWebsite } from "@/lib/site-ingest";
 
@@ -143,8 +144,8 @@ export async function POST(request:Request,{params}:Params){
    const input=await read(request,chatSchema);
    const {error}=await ctx.db.from("messages").insert({client_id:id,role:"user",body:input.body});
    dbError(error,"Messaggio non inviato");
-   const answer=await answerLeader(ctx,id,input.body);
-   const saved=await ctx.db.from("messages").insert({client_id:id,role:"leader",body:answer}).select().single();
+   const result=await handleLeaderMessage(ctx,id,input.body);
+   const saved=await ctx.db.from("messages").insert({client_id:id,role:"leader",body:result.body,metadata:result.metadata}).select().single();
    dbError(saved.error,"Risposta non salvata");return json({message:saved.data});
   }
   if(p.length===5 && p[2]==="contents" && p[4]==="revalidate"){
