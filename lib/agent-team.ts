@@ -4,6 +4,7 @@ import { ApiFailure, dbError } from "./http";
 import { lowTrustRule,modelJson,modelText,modelStructuredJson } from "./ai";
 import { reconcileDossierEvidence } from "./dossier-evidence";
 import { retrieveClientKnowledge,contextFromKnowledgeHits } from "./knowledge-search";
+import { dossierKnowledgeExcerpts } from "./dossier-retrieval";
 import { editorialBriefSchema } from "./schemas";
 import { audiencePatterns } from "./audience";
 import { EDITORIAL_PLAYBOOK,STATIC_FORMATS } from "./editorial-principles";
@@ -127,12 +128,17 @@ export async function draftDossier(ctx:Context,clientId:string,jobId?:string){
  if(context.sources.length===0 && context.offers.length===0)
    throw new ApiFailure(409,"Aggiungi almeno una fonte o un'offerta prima di creare il dossier");
 
- // Use complete, bounded excerpts rather than truncating a huge serialized JSON object.
- // The source ID stays alongside every excerpt and can be validated afterward.
+ // The dossier samples both initial documents and searchable passages across
+ // four business dimensions; not just the first twenty uploaded sources.
+ const retrieved=await dossierKnowledgeExcerpts(ctx,clientId);
  const material={
    client:context.client,
-   sources:context.sources.slice(0,18).map(s=>({
-     id:s.id,kind:s.kind,title:s.title,url:s.url,body:s.body.slice(0,2100)
+   sources:context.sources.slice(0,8).map(s=>({
+     id:s.id,kind:s.kind,title:s.title,url:s.url,body:s.body.slice(0,1300)
+   })),
+   retrieved_excerpts:retrieved.map(hit=>({
+     source_id:hit.source_id,title:hit.source_title,url:hit.source_url,
+     excerpt:hit.excerpt.slice(0,1350)
    })),
    verified_offers:context.offers.slice(0,18).map(o=>({
      id:o.id,name:o.name,kind:o.kind,description:o.description.slice(0,750),
@@ -167,8 +173,20 @@ export async function draftDossier(ctx:Context,clientId:string,jobId?:string){
    JSON.stringify(material),
    dossierSchema
  );
+ // Verify citations against the authoritative full text for the same client,
+ // including sources that were not among the first pages supplied to the model.
+ const sourceIds=[...new Set(result.findings.flatMap(f=>f.source_ids))]
+   .filter(value=>z.uuid().safeParse(value).success).slice(0,100);
+ let referencedSources:Array<{id:string;body:string;status:string}>=[];
+ if(sourceIds.length){
+   const {data,error}=await ctx.db.from("sources").select("id,body,status")
+     .eq("client_id",clientId).eq("status","ready").in("id",sourceIds);
+   dbError(error,"Impossibile verificare le fonti citate");
+   referencedSources=data||[];
+ }
  const evidence=[
    ...context.sources.map(s=>({id:s.id,body:s.body,status:s.status})),
+   ...referencedSources,
    ...context.community_signals.map(s=>({id:s.id,status:"ready",body:s.excerpt})),
    ...context.social.map(s=>({id:s.id,status:"ready",body:s.data})),
    ...context.offers.map(o=>({
