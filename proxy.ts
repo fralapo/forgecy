@@ -9,7 +9,7 @@ export async function proxy(request: NextRequest) {
   const supabase = createServerClient(url, key, {
     cookies: {
       getAll() { return request.cookies.getAll(); },
-      setAll(cookies) {
+      setAll(cookies: Array<{name:string; value:string; options?:{httpOnly?:boolean; secure?:boolean; domain?:string; path?:string; maxAge?:number; sameSite?:boolean|"lax"|"strict"|"none"}}>) {
         cookies.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
         cookies.forEach(({ name, value, options }) => response.cookies.set(name, value, options));

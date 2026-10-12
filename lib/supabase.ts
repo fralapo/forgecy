@@ -9,7 +9,7 @@ export async function serverDb() {
   return createServerClient(url, key, {
     cookies: {
       getAll() { return store.getAll(); },
-      setAll(entries) {
+      setAll(entries: Array<{name:string; value:string; options?:{httpOnly?:boolean; secure?:boolean; domain?:string; path?:string; maxAge?:number; sameSite?:boolean|"lax"|"strict"|"none"}}>) {
         try { entries.forEach(({ name, value, options }) => store.set(name, value, options)); }
         catch { /* Server Components cannot set cookies; proxy refreshes sessions. */ }
       }
