@@ -4,7 +4,7 @@ export type Client={
 };
 export type Source={id:string;client_id:string;kind:string;title:string;url?:string|null;body:string;status:string;file_path?:string|null;error?:string|null};
 export type Offer={id:string;client_id:string;kind:"product"|"service";name:string;description:string;audience:string;benefits:string[];price:number|null;currency:string;cta:string;status:"draft"|"verified"|"archived";version:number};
-export type Dossier={id:string;version:number;status:"draft"|"stale"|"approved";summary:string;findings:Array<{topic:string;claim:string;source_ids:string[];certainty:string}>;knowledge_revision:number};
+export type Dossier={id:string;version:number;status:"draft"|"stale"|"approved";summary:string;findings:Array<{topic:string;claim:string;source_ids:string[];certainty:string;evidence_quote?:string}>;knowledge_revision:number;evidence_report?:{verified:number;inferred:number;unknown:number;downgraded:number;invalid_source_references:number;unsupported_quotes:number;total:number;checked_at:string}};
 export type Campaign={id:string;title:string;objective:string;period:string;offer_id:string|null;status:string;strategy:Record<string,unknown>;created_at:string};
 export type Slide={headline:string;body:string;visual_prompt?:string;image_path?:string};
 export type EditorialBrief={audience_need:string;hook:string;promise:string;value_delivered:string;emotional_angle:string;rational_proof:string;single_cta:string;community_signal_ids:string[]};
