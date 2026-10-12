@@ -10,7 +10,23 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: example-anon-key-for-build-only
     steps:
@@ -24,5 +40,12 @@ jobs:
         run: npm run typecheck
       - name: Security/invariant tests
         run: npm test
+      - name: SQL migrations and RLS smoke tests
+        run: |
+          psql -v ON_ERROR_STOP=1 -f tests/sql/bootstrap.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0001_init.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0002_invariants.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0003_knowledge_versions.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/smoke.sql
       - name: Build
         run: npm run build
