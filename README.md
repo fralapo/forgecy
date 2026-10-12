@@ -18,6 +18,8 @@ The complete previous repository is preserved under the **old/** folder with its
    - supabase/migrations/0007_source_intelligence.sql
    - supabase/migrations/0008_ai_jobs.sql
    - supabase/migrations/0009_strategic_blueprints.sql
+   - supabase/migrations/0010_source_chunks.sql
+   - supabase/migrations/0011_source_chunks_backfill.sql
 4. Copy .env.example to .env.local. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from the Supabase dashboard.
 5. Enable email OTP / magic-link sign-in in Supabase Authentication. Allow http://localhost:3000/auth/callback as a redirect URL.
 6. Run **npm run dev** and open http://localhost:3000.
@@ -25,6 +27,10 @@ The complete previous repository is preserved under the **old/** folder with its
 8. Optionally set OPENAI_API_KEY for images and META_* for Instagram Professional access. Do not add these secrets to any NEXT_PUBLIC_ variable.
 
 To deploy, connect this repository to Vercel (or a compatible Next.js Node host), configure the same environment variables, run the migrations in the production Supabase project and add the production auth redirect URL. Normal development requires no Docker or self-managed database.
+
+## Source Knowledge Search
+
+The client's **Biblioteca → Fonti e documenti** includes an authenticated, RLS-protected text search across automatically indexed source excerpts. The Leader retrieves relevant citations for its answers instead of only the earliest files. Search is lexical, not vector/semantic, and it cannot independently confirm a source's truth. See [docs/CLIENT_KNOWLEDGE_SEARCH.md](docs/CLIENT_KNOWLEDGE_SEARCH.md) for migration order and security checks.
 
 ## Editorial intelligence from training materials
 
