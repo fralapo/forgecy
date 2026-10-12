@@ -21,7 +21,7 @@ This document tracks **the development branch** `feature/source-intelligence-bac
 ## Production blockers — P0
 
 1. **Staging acceptance**: deploy to an isolated environment and test with real Supabase user accounts, two genuinely separate clients, authorized site content, document uploads and OpenRouter API credentials. CI does not perform external API calls.
-2. **Website networking**: enforce public-only network egress at the infrastructure layer before enabling the crawler; add shared rate limiting, crawl request budgets and DNS/redirect penetration tests.
+2. **Website networking**: enforce public-only network egress at the infrastructure layer before enabling the crawler; verify the new PostgreSQL crawl reservations in staging, keep the egress firewall disabled-by-default, and add DNS/redirect penetration tests. Shared client/owner budgets are implemented in stacked development PR.
 3. **Worker deployment**: configure scheduler credentials and hosted function timeout. Verify lease recovery and duplicate control under two concurrent workers. Split long missions into resumable steps; current queue has coarse job-level checkpoints.
 4. **Security and access**: external security review of SECURITY DEFINER RPCs, RLS and all authenticated mutations; add CSRF/origin policy where appropriate, upload file scanners, audit tamper protection, application rate limits and secret rotation.
 5. **Backup/restore**: scheduled Supabase backup plan, restore drills, retention policy for uploaded documents and customer data deletion.
