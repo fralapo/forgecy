@@ -2,7 +2,7 @@
 import { useEffect,useReducer,useState } from "react";
 import { ArrowRight,Archive,BookOpen,CalendarDays,Check,ChevronLeft,ChevronRight,Clock,FileText,Globe,Instagram,Layers3,Package,Plus,RefreshCw,Sparkles,Target,UploadCloud,AlertTriangle,Image as ImageIcon,ExternalLink } from "lucide-react";
 import type { Snapshot,View,Offer,Content,Slide,EditorialBrief } from "./types";
-import { offerLabel,statusLabel } from "./types";
+import { offerLabel,statusLabel,requestJson } from "./types";
 import { audiencePatterns } from "@/lib/audience";
 import { brandStyle } from "@/lib/brand";
 import { summarizeInstagram } from "@/lib/social-analytics";
@@ -74,6 +74,24 @@ function Today({data,onView,onChat,onModal,onAction}:{data:Snapshot;onView:(v:Vi
 }
 function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["onModal"];onAction:Props["onAction"];busy:string|null}){
  const [tab,setTab]=useState<"dossier"|"strategy"|"sources"|"community"|"profile">("dossier");
+ const [sourceQuery,setSourceQuery]=useState("");
+ const [foundSources,setFoundSources]=useState<Array<{
+  id:string;title:string;kind:string;url:string|null;excerpt:string;relevance:number
+ }>>([]);
+ const [searchStatus,setSearchStatus]=useState<"idle"|"loading"|"ready"|"error">("idle");
+ useEffect(()=>{
+  if(sourceQuery.trim().length<2){setFoundSources([]);setSearchStatus("idle");return;}
+  let stale=false;
+  const timer=window.setTimeout(()=>{
+   setSearchStatus("loading");
+   requestJson<{results:typeof foundSources}>(
+    "/api/workspace/clients/"+data.client.id+"/sources/search?q="+encodeURIComponent(sourceQuery.trim())
+   ).then(answer=>{if(!stale){setFoundSources(answer.results);setSearchStatus("ready");}})
+    .catch(()=>{if(!stale){setFoundSources([]);setSearchStatus("error");}});
+  },260);
+  return()=>{stale=true;window.clearTimeout(timer);};
+ },[sourceQuery,data.client.id]);
+ useEffect(()=>{setSourceQuery("");setFoundSources([]);},[data.client.id]);
  const signals=data.community_signals||[];
  const patterns=audiencePatterns(signals);
  const dossier=data.dossiers[0],approval=dossier?.status==="draft" && dossier.knowledge_revision===data.client.knowledge_revision;
@@ -119,6 +137,22 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
   </div>}
   {tab==="sources"&&<div className="stack-lg">
    <div className="flex between center wrap gap12"><p className="tagline">Siti web, note, file e profili social del cliente.</p><div className="flex gap8 wrap"><button className="button small" onClick={()=>onModal("source")}><Globe size={15}/> Aggiungi fonte</button><button className="button small" onClick={()=>onModal("upload")}><UploadCloud size={15}/> Carica documento</button></div></div>
+   <div className="card">
+     <label htmlFor="forgecy-source-search">Cerca in documenti, note e pagine del sito</label>
+     <input id="forgecy-source-search" value={sourceQuery} maxLength={160}
+      placeholder="Es. servizi, posizionamento, sostenibilità…"
+      onChange={e=>setSourceQuery(e.target.value)} style={{marginTop:8}}/>
+     <p className="caption" style={{marginTop:7}}>Ricerca nei contenuti indicizzati del cliente attivo. Nessun dato di altri clienti è accessibile.</p>
+     {sourceQuery.trim().length>=2&&<div style={{marginTop:14}}>
+       {searchStatus==="loading"&&<p className="caption">Ricerca delle fonti in corso…</p>}
+       {searchStatus==="error"&&<p className="caption">Ricerca temporaneamente non disponibile. Controlla che la migrazione 0011 sia stata eseguita.</p>}
+       {searchStatus==="ready"&&(foundSources.length?foundSources.map(s=><div className="list-row" key={s.id}>
+        <div style={{minWidth:0}}><strong>{s.title}</strong><p className="caption" style={{marginTop:6,whiteSpace:"pre-wrap"}}>{s.excerpt}</p>
+         <p className="caption" style={{marginTop:5}}>Fonte: {s.kind}</p></div>
+        {s.url&&/^https?:\/\//i.test(s.url)&&<a href={s.url} target="_blank" rel="noopener noreferrer" className="button small">Apri fonte <ExternalLink size={12}/></a>}
+       </div>):<p className="caption">Nessuna corrispondenza nelle fonti disponibili.</p>)}
+     </div>}
+   </div>
    <div className="card">{data.sources.length?data.sources.map(s=><div className="list-row" key={s.id}><div className="flex center gap12"><div className="client-avatar">{s.kind==="website"?<Globe size={17}/>:<FileText size={17}/>}</div><div><strong>{s.title}</strong><div className="caption">{s.kind} · {s.body?.length||0} caratteri · {s.url||"Nessun URL"}</div>{s.error&&<div className="caption" style={{color:"var(--danger)"}}>{s.error}</div>}</div></div><div className="flex center gap8 wrap"><Badge value={s.status}/>{s.kind==="document"&&s.file_path&&s.status!=="ready"&&<button className="button small" onClick={()=>onAction("reprocessDocument",{id:s.id})}>Riprova</button>}</div></div>):
     <Empty title="Nessuna fonte" text="Inizia aggiungendo il sito del cliente, un brief o una nota."/>}
    </div>
