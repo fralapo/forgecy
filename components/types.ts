@@ -30,9 +30,15 @@ export type AiJob={
  attempts:number;max_attempts:number;created_at:string;updated_at:string;finished_at?:string|null;
  error?:string|null;result?:Record<string,unknown>
 };
+export type EditorialEntry={
+ id:string;client_id:string;content_id:string|null;
+ channel:"instagram"|"linkedin"|"facebook"|"website"|"email";
+ title:string;notes:string;status:"idea"|"planned"|"ready"|"completed"|"cancelled";
+ planned_at:string;timezone:string;created_at:string;updated_at:string;created_by:string
+};
 export type Snapshot={
  client:Client;sources:Source[];community_signals:CommunitySignal[];offers:Offer[];dossiers:Dossier[];campaigns:Campaign[];
- contents:Content[];messages:Message[];missions:Mission[];agent_events:AgentEvent[];ai_jobs:AiJob[];strategies:StrategyRecord[];
+ contents:Content[];messages:Message[];missions:Mission[];agent_events:AgentEvent[];ai_jobs:AiJob[];strategies:StrategyRecord[];editorial_entries:EditorialEntry[];
  social_accounts:Array<{id:string;username:string;remote_id:string;token_expires_at?:string}>;
  social_snapshots:ObservedSnapshot[];
 };
