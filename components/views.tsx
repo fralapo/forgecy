@@ -30,7 +30,7 @@ export default function Views(props:Props){
  if(view==="projects")return <Projects key={data.client.id} {...props}/>;
  return <Results {...props}/>;
 }
-function Today({data,onView,onChat,onModal}:{data:Snapshot;onView:(v:View)=>void;onChat:()=>void;onModal:(name:string)=>void}){
+function Today({data,onView,onChat,onModal,onAction}:{data:Snapshot;onView:(v:View)=>void;onChat:()=>void;onModal:(name:string)=>void;onAction:Props["onAction"]}){
  const dossier=data.dossiers[0],verified=data.offers.filter(o=>o.status==="verified").length;
  const pending=data.missions.filter(x=>x.status==="proposed").length;
  const step=!data.sources.length&&!data.offers.length?{title:"Costruiamo la conoscenza del cliente",detail:"Aggiungi sito, documenti e informazioni fondamentali per permettere agli agenti di lavorare con dati reali.",action:"Aggiungi informazioni",view:"knowledge" as View}:
@@ -45,6 +45,7 @@ function Today({data,onView,onChat,onModal}:{data:Snapshot;onView:(v:View)=>void
    <div className="card metric-card"><span className="muted">Prodotti e servizi verificati</span><div><strong>{verified}</strong><div className="stat-line"><span>su {data.offers.length} offerte registrate</span></div></div></div>
    <div className="card metric-card"><span className="muted">Progetti e approvazioni</span><div><strong>{data.campaigns.length}</strong><div className="stat-line"><span>{pending} proposte AI in attesa</span></div></div></div>
   </div>
+  {data.ai_jobs?.length>0&&<div className="card" style={{marginTop:18}}><div className="section-title"><h2>Attività del team AI</h2><span className="caption">I lavori continuano senza tenere aperta la chat</span></div>{data.ai_jobs.slice(0,5).map(job=><div className="list-row" key={job.id}><div><strong>{job.kind==="dossier"?"Analisi aziendale":"Missione multi-agente"}</strong><div className="caption">Tentativo {job.attempts}/{job.max_attempts} · {new Date(job.created_at).toLocaleString("it-IT")}</div>{job.error&&<div className="caption" style={{color:"var(--danger)"}}>{job.error}</div>}</div><div className="flex center gap8"><span className={"pill "+(["failed","queued"].includes(job.status)?"warn":"")}>{job.status==="queued"?"In coda":job.status==="running"?"In esecuzione":job.status==="succeeded"?"Completato":job.status==="cancelled"?"Annullato":"Errore"}</span>{job.status==="queued"&&<button className="button small ghost" onClick={()=>onAction("cancelJob",{id:job.id})}>Annulla</button>}</div></div>)}</div>}
   <div className="next-step" style={{marginTop:18}}>
    <div><span className="eyebrow">IL PROSSIMO PASSO</span><h2>{step.title}</h2><p>{step.detail}</p></div>
    <button className="button primary" onClick={()=>step.action==="Parla con il Leader"?onChat():onView(step.view)}>{step.action}<ArrowRight size={16}/></button>
@@ -72,6 +73,7 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
  const signals=data.community_signals||[];
  const patterns=audiencePatterns(signals);
  const dossier=data.dossiers[0],approval=dossier?.status==="draft" && dossier.knowledge_revision===data.client.knowledge_revision;
+ const dossierJob=data.ai_jobs?.find(j=>j.kind==="dossier"&&(j.status==="queued"||j.status==="running"));
  return <>
   <Header k="BIBLIOTECA / CONOSCENZA" title="Conoscere prima di creare." sub={"Le informazioni di "+data.client.name+" alimentano tutto il lavoro del team AI."}
    actions={<button className="button" onClick={()=>onModal("source")}><Plus size={16}/> Aggiungi fonte</button>}/>
@@ -83,7 +85,7 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
     {!dossier?<Empty title="Il dossier non esiste ancora" text="Aggiungi sito, note oppure offerte commerciali e fai analizzare le fonti dagli agenti."/>:
      <><p className="prose">{dossier.summary}</p><div className="caption" style={{marginTop:14}}>Versione {dossier.version} · Revisione della conoscenza {dossier.knowledge_revision}</div>{dossier.evidence_report&&<div className="caption" style={{marginTop:7}}>Verifica citazioni: {dossier.evidence_report.verified} affermazioni con estratto testuale · {dossier.evidence_report.inferred} ipotesi · {dossier.evidence_report.unknown} dati mancanti{dossier.evidence_report.downgraded>0?" · "+dossier.evidence_report.downgraded+" riclassificate dopo il controllo":""}. La corrispondenza con una fonte non è un fact-check indipendente.</div>}</>}
     <div className="flex gap8 wrap" style={{marginTop:20}}>
-     <button disabled={Boolean(busy)||(!data.sources.length&&!data.offers.length)} className="button primary" onClick={()=>onAction("dossierDraft")}><Sparkles size={15}/>{busy==="dossierDraft"?"Analisi in corso…":"Analizza e crea nuova versione"}</button>
+     <button disabled={Boolean(busy)||Boolean(dossierJob)||(!data.sources.length&&!data.offers.length)} className="button primary" onClick={()=>onAction("dossierDraft")}><Sparkles size={15}/>{dossierJob?"Analisi "+(dossierJob.status==="queued"?"in coda":"in corso")+"…":busy==="dossierDraft"?"Accodamento…":"Analizza e crea nuova versione"}</button>
      {approval&&<button className="button" onClick={()=>onAction("dossierApprove",{dossier_id:dossier.id})}><Check size={15}/> Approva dossier</button>}
     </div>
     {dossier?.status==="stale"&&<div className="notice warn" style={{marginTop:13}}>Hai modificato fonti, brand o offerte: questa analisi non è più aggiornata. Genera e approva una nuova versione.</div>}
