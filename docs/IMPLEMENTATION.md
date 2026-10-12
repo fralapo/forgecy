@@ -4,7 +4,7 @@
 
 The active client is chosen with the bottom-left switcher (mobile: account selector). Core views are **Today, Knowledge, Offers, Projects and Results**. A persistent Leader chat recognizes a natural-language request, asks agent specialists for structured results and prepares approval-required proposals.
 
-Flow: client → sources/offers → current-state dossier → human approval → goal → multi-agent strategy → proposed campaign → approval → Instagram static + LinkedIn adaptations → measured results → future learning.
+Flow: client → sources/offers → evidence-backed current-state dossier → human approval → versioned corporate strategic blueprint → human approval → queued specialist mission → reviewable proposed campaign → approval → static production/calendar → measured results → proposed strategy revision.
 
 ## Environment
 
@@ -24,7 +24,7 @@ Optional server-only:
 
 ## Database setup
 
-Run migrations 0001_init.sql, 0002_invariants.sql, 0003_knowledge_versions.sql and 0004_content_approval.sql and 0005_editorial_intelligence.sql, 0006_quality_gates.sql and 0007_source_intelligence.sql **in that order** using the Supabase SQL Editor.
+Run all SQL files in `supabase/migrations/` **in numerical order from 0001 through 0011_client_evidence_search.sql** using Supabase SQL Editor, following the validation instructions in `tests/sql/smoke.sql`. Keep a database backup before production migrations.
 
 Postgres RLS applies to all client-owned records. Every source/profile/offer change bumps the client's knowledge revision and marks its dossier stale. A dossier can only be approved if it matches the current revision. A product edit invalidates linked assets. Editing an approved carousel resets it to draft; editing the Instagram original invalidates LinkedIn variants. Revalidation returns stale content to draft, not to approved.
 
@@ -61,7 +61,7 @@ Website copy, uploaded text and external posts are **untrusted evidence, never i
 
 ## Production work still needed
 
-1. Move long AI jobs to a durable managed queue with retries, concurrency controls, streaming and cost caps.
+1. The initial PostgreSQL queue is implemented, but **production job scheduling, stage-level resumability, streaming, provider cost caps and live worker tests** remain required.
 2. Extract and index text from uploaded PDF/DOCX/images before feeding them to AI; current extraction covers text, Markdown and CSV.
 3. Use network egress isolation, crawl budgets and URL/robots policy before enabling the website import.
 4. Complete and live-test Meta app verification, OAuth, token renewal, account disconnect and permitted Instagram insight fields.
@@ -85,3 +85,18 @@ Stage-specific prompts are routed from lib/skills/playbooks.ts. Structural defec
 ## V14: site crawling and structured grounded company dossiers
 
 The 0007 migration adds source provenance, content hashes and a dossier evidence report. OpenRouter now generates dossier JSON through strict JSON Schema; post-processing refuses foreign source IDs and downgrades claims without a real matching quote. Instagram snapshot IDs and observed community signals may also be cited as evidence, but observational data is not a population-wide trend. Changes to knowledge during inference fail with HTTP 409. Details, tests and network requirements: [SOURCE_INTELLIGENCE_BACKEND.md](SOURCE_INTELLIGENCE_BACKEND.md).
+
+## V15–V18: queued AI, corporate strategy, social, studio and reports
+
+- `0008_ai_jobs.sql`: persistent owner-verified jobs, per-client concurrency limits, capped attempts, cancellation and a protected cron worker. Required server-only variables: `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`. Details: [AI_JOB_RUNNER.md](AI_JOB_RUNNER.md).
+- `0009_strategic_blueprints.sql`: distinct versioned company strategies tied to approved dossier revision, with server-side strategy approval.
+- `0010_editorial_calendar.sql`: client-bound editorial scheduling entries. The calendar records commitments but does not itself publish posts.
+- `0011_client_evidence_search.sql`: RLS-enforced full-text retrieval of document/site sources, used in the Library and as context for the Leader.
+- Bounded sitemap discovery improves website coverage, but the crawler remains disabled until egress restrictions are installed.
+- Instagram dashboard separates accounts; optional media insights are only displayed if Meta returns them. A local disconnect deletes encrypted credentials and linked snapshots; **it does not revoke remote Meta OAuth consent**.
+- Static studio supports semantic slide layouts, duplication, reordering, undo/redo, preflight checks and exports. Visual parity/typography acceptance tests remain pending.
+- Client dossier and strategy export as Markdown; real social observations export as CSV with spreadsheet-formula sanitization.
+- Routes: `/api/workspace/clients/:id/jobs`, `/sources/search`, `/strategy/:strategyId/approve`, `/editorial`, `/reports/{dossier,strategy,instagram}`, `/social/accounts/:accountId`.
+- Full release checklist and known blockers: [CURRENT_ROADMAP.md](CURRENT_ROADMAP.md).
+
+**These capabilities currently live in a draft pull request.** They are not a production deployment, and GitHub CI passing does not establish live Meta, OpenRouter, Supabase or crawler reliability.
