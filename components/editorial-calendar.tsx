@@ -41,7 +41,7 @@ export default function EditorialCalendar({data,onAction,busy}:Props){
    const date=new Date(plannedAt);
    if(!Number.isFinite(date.getTime()))return;
    const result=await onAction("calendarCreate",{
-     title,channel,planned_at:date.toISOString(),timezone:"Europe/Rome",notes,
+     title,channel,planned_at:date.toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC",notes,
      status,content_id:contentId||null
    });
    if(result){setAdding(false);setTitle("");setNotes("");setContentId("");}
@@ -107,6 +107,7 @@ export default function EditorialCalendar({data,onAction,busy}:Props){
         {collides(item)&&<div className="caption" style={{color:"var(--danger)"}}>Possibile sovrapposizione: stesso canale a meno di 30 minuti</div>}
        </div>
        <div className="flex center gap8 wrap">
+        {item.status==="ready"&&<button className="button small" disabled={Boolean(busy)} onClick={()=>onAction("calendarUpdate",{id:item.id,status:"completed"})}><CheckCircle2 size={14}/> Segna completato</button>}
         {item.status!=="ready"&&item.status!=="completed"&&item.status!=="cancelled"&&
          <button className="button small" disabled={Boolean(busy)} onClick={()=>onAction("calendarUpdate",{id:item.id,status:"ready"})}><CheckCircle2 size={14}/> Pronto</button>}
         <button className="button small ghost" aria-label={"Elimina "+item.title} disabled={Boolean(busy)} onClick={()=>{if(window.confirm("Eliminare questa uscita dal calendario?"))onAction("calendarDelete",{id:item.id})}}><Trash2 size={15}/></button>
