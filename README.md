@@ -23,6 +23,7 @@ The complete previous repository is preserved under the **old/** folder with its
    - supabase/migrations/0012_website_crawl_budgets.sql
    - supabase/migrations/0013_source_chunks.sql
    - supabase/migrations/0014_source_chunks_backfill.sql
+   - supabase/migrations/0015_ai_worker_fencing.sql
 4. Copy .env.example to .env.local. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from the Supabase dashboard.
 5. Enable email OTP / magic-link sign-in in Supabase Authentication. Allow http://localhost:3000/auth/callback as a redirect URL.
 6. Run **npm run dev** and open http://localhost:3000.
@@ -32,6 +33,10 @@ The complete previous repository is preserved under the **old/** folder with its
 10. Do not enable `ENABLE_WEBSITE_INGEST=true` until outbound network restrictions are in place. Apply migration 0012 before deploying the shared crawl budgets; see [CRAWL_BUDGETS.md](docs/CRAWL_BUDGETS.md).
 
 To deploy, connect this repository to Vercel (or a compatible Next.js Node host), configure the same environment variables, run the migrations in the production Supabase project and add the production auth redirect URL. Normal development requires no Docker or self-managed database.
+
+## V21 integration: protected AI workers
+
+All client evidence and V20 search changes are retained, while the worker gains per-attempt fencing tokens, heartbeat renewal and rejection of stale worker writes. Apply migration 0015 after the website quota and indexed excerpt migrations (0012–0014). Do not use the service-role key in the browser. See [docs/INTEGRATION_V21.md](docs/INTEGRATION_V21.md) and [docs/AI_JOB_RUNNER.md](docs/AI_JOB_RUNNER.md).
 
 ## Client Knowledge Search (indexed excerpts)
 
