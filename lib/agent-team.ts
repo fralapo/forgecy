@@ -3,6 +3,7 @@ import type { Context } from "./http";
 import { ApiFailure, dbError } from "./http";
 import { lowTrustRule,modelJson,modelText,modelStructuredJson } from "./ai";
 import { reconcileDossierEvidence } from "./dossier-evidence";
+import { JobLeaseLost } from "./job-lease";
 import {findRelevantEvidence} from "./knowledge-retrieval";
 import { editorialBriefSchema } from "./schemas";
 import { audiencePatterns } from "./audience";
@@ -93,7 +94,7 @@ export async function answerLeader(ctx:Context,clientId:string,question:string){
  ]);
  return reply.slice(0,12000);
 }
-export async function draftDossier(ctx:Context,clientId:string,jobId?:string){
+export async function draftDossier(ctx:Context,clientId:string,jobId?:string,assertLease?:()=>Promise<void>){
  if(jobId){
   const {data:existing}=await ctx.db.from("dossiers").select("*").eq("client_id",clientId).eq("ai_job_id",jobId).maybeSingle();
   if(existing)return existing;
@@ -152,6 +153,7 @@ export async function draftDossier(ctx:Context,clientId:string,jobId?:string){
        o.price===null?"":String(o.price),o.currency].join(" ")
    }))
  ];
+ await assertLease?.();
  const checked=reconcileDossierEvidence(result.findings,evidence);
  // An upload or a changed website during model inference invalidates this result.
  const {data:latest,error:readError}=await ctx.db.from("clients")
@@ -159,6 +161,7 @@ export async function draftDossier(ctx:Context,clientId:string,jobId?:string){
  dbError(readError,"Impossibile verificare la revisione del cliente");
  if(!latest || latest.knowledge_revision!==context.client.knowledge_revision)
    throw new ApiFailure(409,"Le fonti del cliente sono cambiate durante l'analisi. Genera nuovamente il dossier.");
+ await assertLease?.();
  const version=(context.dossier?.version||0)+1;
  const {data,error}=await ctx.db.from("dossiers").insert({
    client_id:clientId,version,status:"draft",
@@ -170,7 +173,7 @@ export async function draftDossier(ctx:Context,clientId:string,jobId?:string){
  return data;
 }
 
-export async function executeMission(ctx:Context,clientId:string,missionId:string,request:string,period:string,offerId:string|null){
+export async function executeMission(ctx:Context,clientId:string,missionId:string,request:string,period:string,offerId:string|null,assertLease?:()=>Promise<void>){
  const all=await contextForAI(ctx,clientId);
  if(!all.dossier || all.dossier.status!=="approved") throw new ApiFailure(409,"Approva un dossier aggiornato prima di avviare la campagna");
  if(!all.strategy||all.strategy.status!=="approved"||all.strategy.knowledge_revision!==all.client.knowledge_revision)
@@ -179,12 +182,15 @@ export async function executeMission(ctx:Context,clientId:string,missionId:strin
  if(offerId && !offer) throw new ApiFailure(409,"Seleziona un'offerta verificata per questo cliente");
  const ctxJson=JSON.stringify({client:all.client,dossier:all.dossier,company_strategy:all.strategy,offer:offer||null,community_patterns:all.community_patterns,community_signals:all.community_signals,history:all.history,social:all.social}).slice(0,45000);
  try {
+   await assertLease?.();
    await record(ctx,clientId,missionId,"Leader","Analyst","Brief validato e contesto assegnato",{request,period,offerId});
    const analysis=await modelJson(lowTrustRule+"\nRole: Social & Business Analyst.\n"+playbook("analyst")+"\nStart from community questions, objections and needs. Isolated feedback is hypothetical, corroboration is a possible trend not population proof. Cite available source IDs and never invent metrics.",
      "OBIETTIVO: "+request+"\nPERIODO: "+period+"\nDATI:\n"+ctxJson,analysisSchema);
+   await assertLease?.();
    await record(ctx,clientId,missionId,"Analyst","Strategist","Evidenze e opportunità consegnate",analysis);
    const strategy=await modelJson(lowTrustRule+"\nRole: Agency Strategist.\n"+playbook("strategist")+"\nPlan for the requested goal, approved offer, brand voice and audience needs; balance information, trust and sales. Convert recurring supported objections into possible editorial series; do not build a whole strategy from one isolated comment.",
      "BRIEF: "+request+"\nPERIODO: "+period+"\nCONTESTO: "+ctxJson+"\nANALISI: "+JSON.stringify(analysis),strategySchema);
+   await assertLease?.();
    await record(ctx,clientId,missionId,"Strategist","Copywriter","Strategia e KPI consegnati",strategy);
    let creative=await modelJson(lowTrustRule+"\nRole: Copywriter and Art Director.\n"+playbook("creative")+"\nPropose 2 to 8 high-quality static assets covering Instagram and LinkedIn. Carousel/document has 3-8 pages. For each piece fill editorial_brief: hook, audience_need, promise, value_delivered, emotional_angle, rational_proof, single_cta (empty if not needed), community_signal_ids. Prefer clarity and evidence over sensationalism. Use only confirmed product benefits. Follow:\n"+EDITORIAL_PLAYBOOK+"\nPLATFORM DIMENSIONS:\n"+JSON.stringify(STATIC_FORMATS)+".",
      "STRATEGIA: "+JSON.stringify(strategy)+"\nOFFERTA: "+JSON.stringify(offer)+"\nCONTESTO: "+ctxJson,contentSchema);
@@ -196,6 +202,7 @@ export async function executeMission(ctx:Context,clientId:string,missionId:strin
    }
    const initialIssues=reviewStaticAssets(creative.contents,new Set(all.community_signals.map(v=>v.id)));
    if(initialIssues.some(x=>x.severity==="blocking")){
+     await assertLease?.();
      await record(ctx,clientId,missionId,"Quality Preflight","Copywriter / Art Director","Il controllo strutturale ha richiesto una sola revisione",{
        stage_skills:routedSkills("quality"),issues:initialIssues
      });
@@ -205,6 +212,7 @@ export async function executeMission(ctx:Context,clientId:string,missionId:strin
        "\nSTRUCTURAL ISSUES:\n"+JSON.stringify(initialIssues),contentSchema);
    }
    const finalIssues=reviewStaticAssets(creative.contents,new Set(all.community_signals.map(v=>v.id)));
+   await assertLease?.();
    await record(ctx,clientId,missionId,"Copywriter / Art Director","Brand Guard","Bozze editoriali e razionale creativo per controllo",{
      stage_skills:routedSkills("creative"),contents:creative.contents,preflight:finalIssues
    });
@@ -215,6 +223,7 @@ export async function executeMission(ctx:Context,clientId:string,missionId:strin
     blocking_issues:[...check.blocking_issues,...finalIssues.filter(x=>x.severity==="blocking").map(x=>x.message)],
     warnings:[...check.warnings,...finalIssues.filter(x=>x.severity==="review").map(x=>x.message)]
    };
+   await assertLease?.();
    await record(ctx,clientId,missionId,"Brand Guard","Leader","Controllo critico con punteggi editoriali e blocchi espliciti",{
      stage_skills:routedSkills("quality"),quality,preflight:finalIssues
    });
@@ -223,10 +232,13 @@ export async function executeMission(ctx:Context,clientId:string,missionId:strin
       analyst:routedSkills("analyst"),strategist:routedSkills("strategist"),
       creative:routedSkills("creative"),quality:routedSkills("quality")
     }}},contents:creative.contents};
+   await assertLease?.();
    const {error}=await ctx.db.from("missions").update({status:"proposed",proposed_action:"create_campaign",payload,updated_at:new Date().toISOString()}).eq("id",missionId).eq("client_id",clientId);
    dbError(error,"Salvataggio proposta non riuscito");
    return {payload,qa:quality};
  }catch(error){
+   if(error instanceof JobLeaseLost)throw error;
+   await assertLease?.();
    await ctx.db.from("missions").update({status:"failed",error:error instanceof Error?error.message.slice(0,800):"Errore sconosciuto"}).eq("id",missionId).eq("client_id",clientId);
    throw error;
  }
