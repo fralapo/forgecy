@@ -14,7 +14,7 @@ export type BlueprintReport={
  }
 };
 export type Reference={id:string;title:string;kind?:string;url?:string|null};
-export const md=(value:unknown)=>String(value??"").replace(/[\r\n\t]+/g," ").replace(/[\\*_\[\]`]/g,"\\$&").trim();
+export const md=(value:unknown)=>String(value??"").replace(/[\r\n\t]+/g," ").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/[\\*_\[\]`]/g,"\\export const md=(value:unknown)=>String(value??"").replace(/[\r\n\t]+/g," ").replace(/[\\*_\[\]`]/g,"\\$&").trim();").trim();
 
 export function renderDossierMarkdown(
  clientName:string,dossier:DossierReport,references:Reference[]
@@ -25,7 +25,7 @@ export function renderDossierMarkdown(
   "Versione: "+dossier.version,
   "Revisione conoscenza: "+dossier.knowledge_revision,
   "Stato: "+md(dossier.status),"",
-  "## Stato attuale","",dossier.summary.trim(),"",
+  "## Stato attuale","",md(dossier.summary),"",
   "## Evidenze, ipotesi e informazioni mancanti",""
  ];
  for(const finding of dossier.findings){
@@ -50,8 +50,8 @@ export function renderStrategyMarkdown(clientName:string,strategy:BlueprintRepor
   "Versione: "+strategy.version,
   "Revisione conoscenza: "+strategy.knowledge_revision,
   "Stato: "+md(strategy.status),"",
-  "## "+md(p.title),"",p.diagnosis.trim(),"",
-  "## Posizionamento","",p.positioning.trim(),"",
+  "## "+md(p.title),"",md(p.diagnosis),"",
+  "## Posizionamento","",md(p.positioning),"",
   "## Pubblici prioritari","",...p.audiences.map(x=>"- "+md(x)),"",
   "## Obiettivi e KPI",""
  ];
@@ -63,7 +63,7 @@ export function renderStrategyMarkdown(clientName:string,strategy:BlueprintRepor
  }
  lines.push("## Pilastri editoriali","");
  for(const pillar of p.content_pillars){
-  lines.push("### "+md(pillar.name),"",pillar.purpose.trim(),"",...pillar.examples.map(x=>"- "+md(x)),"");
+  lines.push("### "+md(pillar.name),"",md(pillar.purpose),"",...pillar.examples.map(x=>"- "+md(x)),"");
  }
  lines.push("## Canali","",...p.channels.map(x=>"- "+md(x)),"",
   "## Roadmap 30 / 60 / 90 giorni","");
