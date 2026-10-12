@@ -14,7 +14,12 @@ export type BlueprintReport={
  }
 };
 export type Reference={id:string;title:string;kind?:string;url?:string|null};
-export const md=(value:unknown)=>String(value??"").replace(/[\r\n\t]+/g," ").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/[\\*_\[\]`]/g,"\\export const md=(value:unknown)=>String(value??"").replace(/[\r\n\t]+/g," ").replace(/[\\*_\[\]`]/g,"\\$&").trim();").trim();
+export function md(value:unknown):string{
+ const normalized=String(value??"").replace(/[\r\n\t]+/g," ")
+  .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+ const escaped=new Set(["\\","`","*","_","[","]"]);
+ return [...normalized].map(char=>escaped.has(char)?"\\"+char:char).join("").trim();
+}
 
 export function renderDossierMarkdown(
  clientName:string,dossier:DossierReport,references:Reference[]
