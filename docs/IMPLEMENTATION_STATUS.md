@@ -22,7 +22,7 @@ This is the engineering acceptance checklist for the live Next.js/Supabase app a
 ## Backlog still not implemented
 
 ### P0 — Security and reliability
-- Production egress firewall, crawl budgets at organization scope, stronger RFC 9309 parser, sitemap/JS crawling, controlled attachment quarantine and scanned-PDF OCR.
+- Production egress firewall, **staging validation of shared per-owner crawl budgets (migration 0012)**, stronger RFC 9309 parser, JS crawling, controlled attachment quarantine and scanned-PDF OCR.
 - Worker orchestration per agent step instead of one long job, full idempotent provider billing, per-client currency/token budgets and usage ledger, distributed rate limits, live progress/cancellation for running model calls.
 - Observability, error alerts, backup/restore rehearsals, threat modeling and production penetration tests.
 
