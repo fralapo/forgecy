@@ -1,3 +1,4 @@
+import type {ObservedSnapshot} from "@/lib/social-analytics";
 export type Client={
  id:string;name:string;industry:string;website?:string|null;
  profile:Record<string,unknown>;knowledge_revision:number;created_at?:string;
@@ -22,7 +23,7 @@ export type Snapshot={
  client:Client;sources:Source[];community_signals:CommunitySignal[];offers:Offer[];dossiers:Dossier[];campaigns:Campaign[];
  contents:Content[];messages:Message[];missions:Mission[];agent_events:AgentEvent[];ai_jobs:AiJob[];
  social_accounts:Array<{id:string;username:string;remote_id:string;token_expires_at?:string}>;
- social_snapshots:Array<{id:string;collected_at:string;period:string;data:{account?:{followers_count?:number;media_count?:number};media?:Array<{id:string;like_count?:number;comments_count?:number;caption?:string;permalink?:string}>;source?:string;measured?:boolean}}>;
+ social_snapshots:ObservedSnapshot[];
 };
 export type View="today"|"knowledge"|"offers"|"projects"|"results";
 export async function requestJson<T=Record<string,unknown>>(url:string,init:RequestInit={}):Promise<T>{
