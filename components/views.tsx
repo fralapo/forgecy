@@ -3,6 +3,7 @@ import { useEffect,useState } from "react";
 import { ArrowRight,Archive,BookOpen,CalendarDays,Check,ChevronLeft,ChevronRight,Clock,FileText,Globe,Instagram,Layers3,Package,Plus,RefreshCw,Sparkles,Target,UploadCloud,AlertTriangle,Image as ImageIcon,ExternalLink } from "lucide-react";
 import type { Snapshot,View,Offer,Content,Slide } from "./types";
 import { offerLabel,statusLabel } from "./types";
+import { audiencePatterns } from "@/lib/audience";
 
 type Props={
  data:Snapshot;view:View;
@@ -66,12 +67,14 @@ function Today({data,onView,onChat,onModal}:{data:Snapshot;onView:(v:View)=>void
  </>;
 }
 function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["onModal"];onAction:Props["onAction"];busy:string|null}){
- const [tab,setTab]=useState<"dossier"|"sources"|"profile">("dossier");
+ const [tab,setTab]=useState<"dossier"|"sources"|"community"|"profile">("dossier");
+ const signals=data.community_signals||[];
+ const patterns=audiencePatterns(signals);
  const dossier=data.dossiers[0],approval=dossier?.status==="draft" && dossier.knowledge_revision===data.client.knowledge_revision;
  return <>
   <Header k="BIBLIOTECA / CONOSCENZA" title="Conoscere prima di creare." sub={"Le informazioni di "+data.client.name+" alimentano tutto il lavoro del team AI."}
    actions={<button className="button" onClick={()=>onModal("source")}><Plus size={16}/> Aggiungi fonte</button>}/>
-  <div className="tabs">{[["dossier","Analisi aziendale"],["sources","Fonti e documenti"],["profile","Profilo brand"]].map(([k,t])=><button key={k} onClick={()=>setTab(k as typeof tab)} className={"tab "+(tab===k?"active":"")}>{t}</button>)}</div>
+  <div className="tabs">{[["dossier","Analisi aziendale"],["sources","Fonti e documenti"],["community","Voce della community"],["profile","Profilo brand"]].map(([k,t])=><button key={k} onClick={()=>setTab(k as typeof tab)} className={"tab "+(tab===k?"active":"")}>{t}</button>)}</div>
   {tab==="dossier"&&<div className="stack-lg">
    <div className="card">
     <div className="flex between center gap12 wrap"><div><h2>Dossier aziendale</h2><p className="caption" style={{marginTop:6}}>Fotografia documentata della situazione attuale, non un piano strategico.</p></div>{dossier?<Badge value={dossier.status}/>:<span className="pill muted">Non presente</span>}</div>
@@ -94,6 +97,37 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
     <Empty title="Nessuna fonte" text="Inizia aggiungendo il sito del cliente, un brief o una nota."/>}
    </div>
    {data.sources.some(s=>s.status==="pending")&&<div className="notice warn">Alcuni PDF/immagini sono salvati privatamente ma l'estrazione automatica del testo non è ancora attiva. Usa una nota testuale per renderne il contenuto disponibile agli agenti.</div>}
+  </div>}
+  {tab==="community"&&<div className="stack-lg">
+   <div className="flex between center gap12 wrap">
+    <div><h2>Ascolta, poi crea.</h2><p className="tagline" style={{marginTop:5}}>Domande, commenti, recensioni e obiezioni diventano spunti editoriali collegati al cliente.</p></div>
+    <button className="button primary" onClick={()=>onModal("signal")}><Plus size={15}/> Registra un feedback</button>
+   </div>
+   <div className="notice">Inserisci solo osservazioni anonimizzate: niente nomi, email o dati privati dei clienti finali. Un commento isolato non rappresenta l'intera community.</div>
+   <div className="grid3">
+    <div className="card metric-card"><span className="muted">Osservazioni raccolte</span><strong>{signals.length}</strong><small>Registrate manualmente</small></div>
+    <div className="card metric-card"><span className="muted">Temi emersi</span><strong>{patterns.length}</strong><small>Argomenti raggruppati</small></div>
+    <div className="card metric-card"><span className="muted">Pattern con fonti distinte</span><strong>{patterns.filter(p=>p.kind==="corroborated").length}</strong><small>Candidati da valutare, non trend certi</small></div>
+   </div>
+   {patterns.length>0&&<div className="card">
+     <div className="section-title"><h2>Bisogni e temi ricorrenti</h2></div>
+     <div className="grid2">{patterns.slice(0,12).map(p=><div className="finding" key={p.topic}>
+       <div className="flex between center gap8"><strong>{p.topic}</strong><span className={"pill "+(p.kind==="isolated"?"warn":"")}>{p.kind==="corroborated"?"Fonti distinte":p.kind==="candidate"?"Da corroborare":"Ipotesi"}</span></div>
+       <p>{p.observations} osservazioni · {p.distinct_references} riferimenti documentati</p>
+       {p.needs.length>0&&<div className="caption" style={{marginTop:7}}>Bisogno: {p.needs.slice(0,2).join(" · ")}</div>}
+     </div>)}</div>
+   </div>}
+   <div className="card"><div className="section-title"><h2>Archivio dei segnali</h2></div>
+    {signals.length?signals.map(signal=><div className="list-row" key={signal.id}>
+      <div className="stack" style={{gap:6}}>
+       <div className="flex center gap8 wrap"><strong>{signal.topic}</strong><span className="pill muted">{signal.platform} / {signal.kind}</span><small>{signal.observed_at}</small></div>
+       <p className="tagline">{signal.excerpt}</p>
+       {signal.audience_need&&<p className="caption">Bisogno interpretato: {signal.audience_need}</p>}
+       {signal.source_url&&<a className="caption" href={signal.source_url} target="_blank" rel="noopener noreferrer">Apri riferimento <ExternalLink size={12} style={{display:"inline"}}/></a>}
+      </div>
+      <button className="button small ghost" aria-label={"Elimina osservazione "+signal.topic} onClick={()=>{if(window.confirm("Eliminare questa osservazione?"))onAction("deleteSignal",{id:signal.id})}}>Elimina</button>
+    </div>):<Empty title="Nessuna osservazione ancora" text="Registra una domanda ricorrente, un'obiezione o una recensione rilevante."><button className="button" onClick={()=>onModal("signal")}>Aggiungi il primo feedback</button></Empty>}
+   </div>
   </div>}
   {tab==="profile"&&<div className="grid2">
    <div className="card"><div className="section-title"><h2>Identità cliente</h2><button className="button small" onClick={()=>onModal("profile")}>Modifica</button></div>
