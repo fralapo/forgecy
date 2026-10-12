@@ -90,6 +90,6 @@ test("sitemap discovery never escapes the same HTTPS origin and ranks company pa
 test("sitemap index parsing and robots sitemap hints reject off-origin URLs",()=>{
  const index=`<sitemapindex><sitemap><loc>https://example.com/sitemap-pages.xml</loc></sitemap><sitemap><loc>http://example.com/insecure.xml</loc></sitemap><sitemap><loc>https://other.com/pages.xml</loc></sitemap></sitemapindex>`;
  assert.deepEqual(sitemapUrls(index,"https://example.com").indices,["https://example.com/sitemap-pages.xml"]);
- const hints=robotsSitemapUrls("User-agent: *\\nSitemap: https://example.com/sitemap.xml\\nSitemap: https://evil.example/sitemap.xml","https://example.com");
+ const hints=robotsSitemapUrls("User-agent: *\nSitemap: https://example.com/sitemap.xml\nSitemap: https://evil.example/sitemap.xml","https://example.com");
  assert.deepEqual(hints,["https://example.com/sitemap.xml"]);
 });
