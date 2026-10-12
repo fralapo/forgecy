@@ -5,6 +5,7 @@ on:
       - feat/forgecy-v11-client-first-rebuild
       - feat/forgecy-v13-skills-quality-reliability
       - main
+      - 'feature/**'
   pull_request:
     branches:
       - main
