@@ -19,7 +19,7 @@ function validId(value:string|undefined){
 async function list(ctx:Awaited<ReturnType<typeof auth>>,id:string){
  const selections=[
   ["sources","*"],["community_signals","*"],["offers","*"],["dossiers","*"],["campaigns","*"],
-  ["contents","*"],["messages","*"],["missions","*"],["agent_events","*"],
+  ["contents","*"],["messages","*"],["missions","*"],["agent_events","*"],["ai_jobs","*"],
   ["social_snapshots","*"],["social_accounts","id,client_id,platform,remote_id,username,token_expires_at,created_at"]
  ] as const;
  const results=await Promise.all(selections.map(async ([table,fields])=>{
