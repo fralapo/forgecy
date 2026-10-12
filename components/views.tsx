@@ -32,10 +32,11 @@ export default function Views(props:Props){
  return <Results {...props}/>;
 }
 function Today({data,onView,onChat,onModal,onAction}:{data:Snapshot;onView:(v:View)=>void;onChat:()=>void;onModal:(name:string)=>void;onAction:Props["onAction"]}){
- const dossier=data.dossiers[0],verified=data.offers.filter(o=>o.status==="verified").length;
+ const dossier=data.dossiers[0],strategy=data.strategies?.[0],verified=data.offers.filter(o=>o.status==="verified").length;
  const pending=data.missions.filter(x=>x.status==="proposed").length;
  const step=!data.sources.length&&!data.offers.length?{title:"Costruiamo la conoscenza del cliente",detail:"Aggiungi sito, documenti e informazioni fondamentali per permettere agli agenti di lavorare con dati reali.",action:"Aggiungi informazioni",view:"knowledge" as View}:
    !dossier||dossier.status!=="approved"?{title:"Completa e approva il dossier",detail:"Controlla la fotografia attuale dell'azienda. La strategia sarà costruita solo su informazioni verificate.",action:"Apri il dossier",view:"knowledge" as View}:
+   !strategy||strategy.status!=="approved"?{title:"Completa e approva il piano strategico",detail:"La strategia centrale definisce posizionamento, target, KPI e roadmap. Le campagne future dovranno rispettarla.",action:"Apri la strategia",view:"knowledge" as View}:
    !verified?{title:"Verifica prodotti e servizi",detail:"Registra le offerte da promuovere per collegarle alle campagne senza inventare prezzi o benefici.",action:"Apri il catalogo",view:"offers" as View}:
    {title:"Qual è il prossimo obiettivo?",detail:"Il Leader può coordinare una campagna usando il dossier, le offerte e i risultati disponibili.",action:"Parla con il Leader",view:"projects" as View};
  return <>
@@ -46,7 +47,7 @@ function Today({data,onView,onChat,onModal,onAction}:{data:Snapshot;onView:(v:Vi
    <div className="card metric-card"><span className="muted">Prodotti e servizi verificati</span><div><strong>{verified}</strong><div className="stat-line"><span>su {data.offers.length} offerte registrate</span></div></div></div>
    <div className="card metric-card"><span className="muted">Progetti e approvazioni</span><div><strong>{data.campaigns.length}</strong><div className="stat-line"><span>{pending} proposte AI in attesa</span></div></div></div>
   </div>
-  {data.ai_jobs?.length>0&&<div className="card" style={{marginTop:18}}><div className="section-title"><h2>Attività del team AI</h2><span className="caption">I lavori continuano senza tenere aperta la chat</span></div>{data.ai_jobs.slice(0,5).map(job=><div className="list-row" key={job.id}><div><strong>{job.kind==="dossier"?"Analisi aziendale":"Missione multi-agente"}</strong><div className="caption">Tentativo {job.attempts}/{job.max_attempts} · {new Date(job.created_at).toLocaleString("it-IT")}</div>{job.error&&<div className="caption" style={{color:"var(--danger)"}}>{job.error}</div>}</div><div className="flex center gap8"><span className={"pill "+(["failed","queued"].includes(job.status)?"warn":"")}>{job.status==="queued"?"In coda":job.status==="running"?"In esecuzione":job.status==="succeeded"?"Completato":job.status==="cancelled"?"Annullato":"Errore"}</span>{job.status==="queued"&&<button className="button small ghost" onClick={()=>onAction("cancelJob",{id:job.id})}>Annulla</button>}</div></div>)}</div>}
+  {data.ai_jobs?.length>0&&<div className="card" style={{marginTop:18}}><div className="section-title"><h2>Attività del team AI</h2><span className="caption">I lavori continuano senza tenere aperta la chat</span></div>{data.ai_jobs.slice(0,5).map(job=><div className="list-row" key={job.id}><div><strong>{job.kind==="dossier"?"Analisi aziendale":job.kind==="strategy"?"Piano strategico":"Missione multi-agente"}</strong><div className="caption">Tentativo {job.attempts}/{job.max_attempts} · {new Date(job.created_at).toLocaleString("it-IT")}</div>{job.error&&<div className="caption" style={{color:"var(--danger)"}}>{job.error}</div>}</div><div className="flex center gap8"><span className={"pill "+(["failed","queued"].includes(job.status)?"warn":"")}>{job.status==="queued"?"In coda":job.status==="running"?"In esecuzione":job.status==="succeeded"?"Completato":job.status==="cancelled"?"Annullato":"Errore"}</span>{job.status==="queued"&&<button className="button small ghost" onClick={()=>onAction("cancelJob",{id:job.id})}>Annulla</button>}</div></div>)}</div>}
   <div className="next-step" style={{marginTop:18}}>
    <div><span className="eyebrow">IL PROSSIMO PASSO</span><h2>{step.title}</h2><p>{step.detail}</p></div>
    <button className="button primary" onClick={()=>step.action==="Parla con il Leader"?onChat():onView(step.view)}>{step.action}<ArrowRight size={16}/></button>
@@ -70,15 +71,16 @@ function Today({data,onView,onChat,onModal,onAction}:{data:Snapshot;onView:(v:Vi
  </>;
 }
 function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["onModal"];onAction:Props["onAction"];busy:string|null}){
- const [tab,setTab]=useState<"dossier"|"sources"|"community"|"profile">("dossier");
+ const [tab,setTab]=useState<"dossier"|"strategy"|"sources"|"community"|"profile">("dossier");
  const signals=data.community_signals||[];
  const patterns=audiencePatterns(signals);
  const dossier=data.dossiers[0],approval=dossier?.status==="draft" && dossier.knowledge_revision===data.client.knowledge_revision;
  const dossierJob=data.ai_jobs?.find(j=>j.kind==="dossier"&&(j.status==="queued"||j.status==="running"));
+ const strategy=data.strategies?.[0],strategyJob=data.ai_jobs?.find(j=>j.kind==="strategy"&&(j.status==="queued"||j.status==="running"));
  return <>
   <Header k="BIBLIOTECA / CONOSCENZA" title="Conoscere prima di creare." sub={"Le informazioni di "+data.client.name+" alimentano tutto il lavoro del team AI."}
    actions={<button className="button" onClick={()=>onModal("source")}><Plus size={16}/> Aggiungi fonte</button>}/>
-  <div className="tabs">{[["dossier","Analisi aziendale"],["sources","Fonti e documenti"],["community","Voce della community"],["profile","Profilo brand"]].map(([k,t])=><button key={k} onClick={()=>setTab(k as typeof tab)} className={"tab "+(tab===k?"active":"")}>{t}</button>)}</div>
+  <div className="tabs">{[["dossier","Analisi aziendale"],["strategy","Strategia"],["sources","Fonti e documenti"],["community","Voce della community"],["profile","Profilo brand"]].map(([k,t])=><button key={k} onClick={()=>setTab(k as typeof tab)} className={"tab "+(tab===k?"active":"")}>{t}</button>)}</div>
   {tab==="dossier"&&<div className="stack-lg">
    <div className="card">
     <div className="flex between center gap12 wrap"><div><h2>Dossier aziendale</h2><p className="caption" style={{marginTop:6}}>Fotografia documentata della situazione attuale, non un piano strategico.</p></div>{dossier?<Badge value={dossier.status}/>:<span className="pill muted">Non presente</span>}</div>
