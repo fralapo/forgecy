@@ -7,6 +7,8 @@ import { load } from "cheerio";
 const USER_AGENT = "ForgecyResearch/1.0 (+client-authorized website analysis)";
 const MAX_HTML_BYTES = 1_000_000;
 const MAX_ROBOTS_BYTES = 96_000;
+const MAX_SITEMAP_BYTES = 400_000;
+const MAX_SITEMAP_DISCOVERED = 60;
 const MAX_PAGES = 6;
 const BAD_PATH = /\/(?:admin|wp-admin|login|signin|signup|cart|checkout|account|privacy|cookie|terms|logout|feed)(?:\/|$)/i;
 
@@ -38,7 +40,7 @@ export function publicHttpsUrl(value: string): URL {
 }
 
 /** No redirects; DNS lookups are pinned to the actual TLS connection. */
-async function fetchPublicText(url: URL, maxBytes: number, type: "html"|"robots"):
+async function fetchPublicText(url: URL, maxBytes: number, type: "html"|"robots"|"sitemap"):
   Promise<{status:number; text:string}> {
   const checked = publicHttpsUrl(url.toString());
   const records = await lookup(checked.hostname, { all: true, verbatim: true });
@@ -57,10 +59,10 @@ async function fetchPublicText(url: URL, maxBytes: number, type: "html"|"robots"
       method: "GET",
       redirect: "error",
       dispatcher,
-      headers: { "User-Agent": USER_AGENT, "Accept": type === "html" ? "text/html" : "text/plain,*/*;q=0.5" },
+      headers: { "User-Agent": USER_AGENT, "Accept": type === "html" ? "text/html" : type === "sitemap" ? "application/xml,text/xml;q=0.9" : "text/plain,*/*;q=0.5" },
       signal: AbortSignal.timeout(9_000)
     });
-    if (type === "robots" && response.status === 404) {
+    if ((type === "robots" || type === "sitemap") && response.status === 404) {
       await response.body?.cancel();
       return { status: 404, text: "" };
     }
@@ -72,6 +74,10 @@ async function fetchPublicText(url: URL, maxBytes: number, type: "html"|"robots"
     if (type === "html" && !mime.toLowerCase().includes("text/html")) {
       await response.body?.cancel();
       throw new Error("La pagina non è HTML");
+    }
+    if (type === "sitemap" && !/(?:xml|text\/plain)/i.test(mime)) {
+      await response.body?.cancel();
+      throw new Error("La sitemap non è XML");
     }
     const declared = Number(response.headers.get("content-length") || 0);
     if (declared > maxBytes) {
@@ -140,6 +146,73 @@ function rank(url: URL): number {
   return 10 + path.length / 100;
 }
 
+/** Sitemap XML is discovery data, never a source of instructions. */
+export function sitemapUrls(xml:string,root:string,maxItems=MAX_SITEMAP_DISCOVERED):
+  { pages:string[]; indices:string[] } {
+  const base=publicHttpsUrl(root);
+  const $=load(xml,{xmlMode:true});
+  const pages:string[]=[];
+  const indices:string[]=[];
+  const seen=new Set<string>();
+  const count=Math.max(1,Math.min(MAX_SITEMAP_DISCOVERED,maxItems));
+  const add=(value:string,kind:"pages"|"indices")=>{
+    try {
+      const parsed=publicHttpsUrl(value.trim());
+      if(parsed.origin!==base.origin || BAD_PATH.test(parsed.pathname))return;
+      if(kind==="indices"&&!/\\.xml$/i.test(parsed.pathname))return;
+      if(kind==="pages"&&/\\.(?:pdf|jpg|png|mp4|zip|webp|xml|json)$/i.test(parsed.pathname))return;
+      parsed.search="";
+      const canonical=parsed.toString();
+      if(seen.has(canonical))return;
+      seen.add(canonical);
+      if(kind==="pages")pages.push(canonical);else indices.push(canonical);
+    } catch{/* unsafe sitemap entry, ignore */}
+  };
+  $("urlset > url > loc").slice(0,count*4).each((_,el)=>{if(pages.length<count)add($(el).text(),"pages");});
+  $("sitemapindex > sitemap > loc").slice(0,8).each((_,el)=>{if(indices.length<4)add($(el).text(),"indices");});
+  pages.sort((a,b)=>rank(new URL(a))-rank(new URL(b)));
+  return {pages:pages.slice(0,count),indices:indices.slice(0,4)};
+}
+
+export function robotsSitemapUrls(text:string,root:string):string[]{
+  const base=publicHttpsUrl(root);
+  const choices:string[]=[];
+  for(const line of text.split(/\\r?\\n/)){
+    const match=/^\\s*sitemap\\s*:\\s*(\\S+)/i.exec(line);
+    if(!match)continue;
+    try{
+      const candidate=publicHttpsUrl(match[1]);
+      if(candidate.origin===base.origin&&/\\.xml$/i.test(candidate.pathname)&&
+        !choices.includes(candidate.toString()))choices.push(candidate.toString());
+    }catch{/* unsafe external sitemap */}
+    if(choices.length>=2)break;
+  }
+  return choices;
+}
+
+async function discoverSitemap(base:URL,robotsText:string,rules:RobotRule[]):Promise<string[]>{
+  const urls=robotsSitemapUrls(robotsText,base.toString());
+  const defaultSitemap=new URL("/sitemap.xml",base.origin).toString();
+  if(!urls.includes(defaultSitemap))urls.push(defaultSitemap);
+  for(const address of urls.slice(0,2)){
+    const xmlUrl=publicHttpsUrl(address);
+    if(!robotsPermit(rules,xmlUrl))continue;
+    try{
+      const response=await fetchPublicText(xmlUrl,MAX_SITEMAP_BYTES,"sitemap");
+      if(response.status===404)continue;
+      const first=sitemapUrls(response.text,base.toString());
+      if(first.pages.length)return first.pages;
+      for(const child of first.indices.slice(0,1)){
+        const nested=publicHttpsUrl(child);
+        if(!robotsPermit(rules,nested))continue;
+        const childXml=await fetchPublicText(nested,MAX_SITEMAP_BYTES,"sitemap");
+        if(childXml.status!==404)return sitemapUrls(childXml.text,base.toString()).pages;
+      }
+    }catch{/* sitemap is optional: never block an otherwise permitted homepage */}
+  }
+  return [];
+}
+
 function pageFromHtml(url: URL, html: string): WebsitePage {
   const $ = load(html);
   const links = new Set<string>();
@@ -187,7 +260,8 @@ export async function crawlWebsite(rawUrl:string,maxPages=5):Promise<{
   const robots = await fetchPublicText(new URL("/robots.txt",base.origin),MAX_ROBOTS_BYTES,"robots");
   const rules = robots.status === 404 ? [] : parseRobots(robots.text);
   const cap = Math.min(MAX_PAGES,Math.max(1,Math.floor(maxPages)));
-  const pending = [base.toString()];
+  const sitemapPages=cap>1?await discoverSitemap(base,robots.text,rules):[];
+  const pending = [base.toString(),...sitemapPages.filter(x=>x!==base.toString()).slice(0,MAX_SITEMAP_DISCOVERED)];
   const visited = new Set<string>();
   const pages:WebsitePage[] = [];
   const skipped:Array<{url:string;reason:string}> = [];
