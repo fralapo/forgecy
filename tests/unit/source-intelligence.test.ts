@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {publicHttpsUrl,parseRobots,robotsPermit} from "../../lib/site-ingest";
+import {publicHttpsUrl,parseRobots,robotsPermit,sitemapUrls,robotsSitemapUrls} from "../../lib/site-ingest";
 import {reconcileDossierEvidence} from "../../lib/dossier-evidence";
 
 test("website URLs reject SSRF destinations and unsupported schemes",()=>{
@@ -67,4 +67,29 @@ test("sources pending extraction cannot verify a factual claim",()=>{
   ]);
   assert.equal(output[0].certainty,"inferred");
   assert.equal(report.invalid_source_references,1);
+});
+
+test("sitemap discovery never escapes the same HTTPS origin and ranks company pages",()=>{
+ const xml=`<?xml version="1.0"?><urlset>
+ <url><loc>https://example.com/blog/foo</loc></url>
+ <url><loc>https://example.com/servizi</loc></url>
+ <url><loc>https://example.com/azienda</loc></url>
+ <url><loc>https://localhost/private</loc></url>
+ <url><loc>http://example.com/insecure</loc></url>
+ <url><loc>https://evil.example.com/outside</loc></url>
+ <url><loc>https://example.com/checkout</loc></url>
+ <url><loc>https://example.com/brochure.pdf</loc></url>
+ </urlset>`;
+ const parsed=sitemapUrls(xml,"https://example.com",5);
+ assert.equal(parsed.pages[0],"https://example.com/azienda");
+ assert.ok(parsed.pages.includes("https://example.com/servizi"));
+ assert.ok(!parsed.pages.some(v=>v.includes("evil")||v.includes("checkout")||v.endsWith(".pdf")));
+ assert.equal(parsed.pages.length,3);
+});
+
+test("sitemap index parsing and robots sitemap hints reject off-origin URLs",()=>{
+ const index=`<sitemapindex><sitemap><loc>https://example.com/sitemap-pages.xml</loc></sitemap><sitemap><loc>http://example.com/insecure.xml</loc></sitemap><sitemap><loc>https://other.com/pages.xml</loc></sitemap></sitemapindex>`;
+ assert.deepEqual(sitemapUrls(index,"https://example.com").indices,["https://example.com/sitemap-pages.xml"]);
+ const hints=robotsSitemapUrls("User-agent: *\\nSitemap: https://example.com/sitemap.xml\\nSitemap: https://evil.example/sitemap.xml","https://example.com");
+ assert.deepEqual(hints,["https://example.com/sitemap.xml"]);
 });
