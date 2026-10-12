@@ -50,7 +50,7 @@ begin
       insert into public.source_chunks(client_id,source_id,ordinal,body)
       values (
         new.client_id,new.id,slot,
-        pg_catalog.substring(new.body from slot*1500+1 for 1700)
+        pg_catalog.substr(new.body,slot*1500+1,1700)
       );
     end loop;
   end if;
