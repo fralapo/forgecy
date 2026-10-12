@@ -24,7 +24,7 @@ Optional server-only:
 
 ## Database setup
 
-Run migrations 0001_init.sql, 0002_invariants.sql, 0003_knowledge_versions.sql and 0004_content_approval.sql and 0005_editorial_intelligence.sql **in that order** using the Supabase SQL Editor.
+Run migrations 0001_init.sql, 0002_invariants.sql, 0003_knowledge_versions.sql and 0004_content_approval.sql and 0005_editorial_intelligence.sql, 0006_quality_gates.sql and 0007_source_intelligence.sql **in that order** using the Supabase SQL Editor.
 
 Postgres RLS applies to all client-owned records. Every source/profile/offer change bumps the client's knowledge revision and marks its dossier stale. A dossier can only be approved if it matches the current revision. A product edit invalidates linked assets. Editing an approved carousel resets it to draft; editing the Instagram original invalidates LinkedIn variants. Revalidation returns stale content to draft, not to approved.
 
@@ -36,7 +36,7 @@ The mission approval transaction locks the proposal, checks dossier/offer owners
 - GET/PATCH /api/workspace/clients/:clientId — detail/updates.
 - POST /api/workspace/clients/:clientId/sources — add supplied source notes.
 - POST /api/workspace/clients/:clientId/upload — private file storage.
-- POST /api/workspace/clients/:clientId/website — guarded HTTPS import (disabled by default).
+- POST /api/workspace/clients/:clientId/website — robots-aware, bounded HTTPS crawl (1–6 same-host pages, deduplicated by URL and content hash; disabled by default).
 - POST/PATCH /api/workspace/clients/:clientId/offers — products and services.
 - POST /api/workspace/clients/:clientId/dossier/draft — AI current-state company intelligence.
 - POST /api/workspace/clients/:clientId/dossier/approve — current dossier approval.
@@ -81,3 +81,7 @@ A client now has a private `community_signals` table and an in-Library feedback 
 ## V13 quality and document extraction
 
 Stage-specific prompts are routed from lib/skills/playbooks.ts. Structural defects trigger at most one corrective generation. Brand Guard quality reports include warnings, blocking issues and editorial scores; the approval RPC checks blocking issues server-side (migration 0006). Original PDFs/DOCX stay private and extracted text is tracked separately. Scanned files still require OCR. See SKILLS_INTEGRATION.md.
+
+## V14: site crawling and structured grounded company dossiers
+
+The 0007 migration adds source provenance, content hashes and a dossier evidence report. OpenRouter now generates dossier JSON through strict JSON Schema; post-processing refuses foreign source IDs and downgrades claims without a real matching quote. Instagram snapshot IDs and observed community signals may also be cited as evidence, but observational data is not a population-wide trend. Changes to knowledge during inference fail with HTTP 409. Details, tests and network requirements: [SOURCE_INTELLIGENCE_BACKEND.md](SOURCE_INTELLIGENCE_BACKEND.md).
