@@ -2,6 +2,9 @@ import { z } from "zod";
 import type { Context } from "./http";
 import { ApiFailure, dbError } from "./http";
 import { lowTrustRule,modelJson,modelText } from "./ai";
+import { editorialBriefSchema } from "./schemas";
+import { audiencePatterns } from "./audience";
+import { EDITORIAL_PLAYBOOK,STATIC_FORMATS } from "./editorial-principles";
 
 const safeLine=z.string().min(1).max(1000);
 const analysisSchema=z.object({
@@ -25,6 +28,7 @@ const contentSchema=z.object({
    format:z.enum(["post","carousel","document"]),
    title:z.string().min(1).max(220),
    caption:z.string().max(6000),
+   editorial_brief:editorialBriefSchema,
    slides:z.array(z.object({
      headline:z.string().max(240),
      body:z.string().max(1000),
@@ -39,13 +43,14 @@ async function record(ctx:Context,clientId:string,missionId:string,agent:string,
  dbError(error,"Non è stato possibile salvare il passaggio tra agenti");
 }
 export async function contextForAI(ctx:Context,clientId:string){
- const [cl,d,offers,sources,campaigns,metrics]=await Promise.all([
+ const [cl,d,offers,sources,campaigns,metrics,signals]=await Promise.all([
    ctx.db.from("clients").select("name,industry,website,profile,knowledge_revision").eq("id",clientId).single(),
    ctx.db.from("dossiers").select("id,status,summary,findings,version").eq("client_id",clientId).order("version",{ascending:false}).limit(1).maybeSingle(),
    ctx.db.from("offers").select("id,name,kind,description,benefits,audience,price,currency,cta,status,version").eq("client_id",clientId).eq("status","verified").limit(40),
    ctx.db.from("sources").select("id,kind,title,url,body,status").eq("client_id",clientId).eq("status","ready").limit(20),
    ctx.db.from("campaigns").select("title,objective,period,strategy,status").eq("client_id",clientId).order("created_at",{ascending:false}).limit(6),
-   ctx.db.from("social_snapshots").select("period,data,collected_at").eq("client_id",clientId).order("collected_at",{ascending:false}).limit(3)
+   ctx.db.from("social_snapshots").select("period,data,collected_at").eq("client_id",clientId).order("collected_at",{ascending:false}).limit(3),
+   ctx.db.from("community_signals").select("id,topic,excerpt,audience_need,platform,kind,source_url,context,observed_at").eq("client_id",clientId).order("created_at",{ascending:false}).limit(100)
  ]);
  if(cl.error || !cl.data) throw new ApiFailure(404,"Cliente non disponibile");
  return {
@@ -53,6 +58,8 @@ export async function contextForAI(ctx:Context,clientId:string){
    dossier:d.data||null,
    offers:offers.data||[],
    sources:(sources.data||[]).map(s=>({...s,body:s.body.slice(0,9000)})),
+   community_signals:(signals.data||[]).map(v=>({...v,excerpt:v.excerpt.slice(0,1200),context:v.context.slice(0,500)})),
+   community_patterns:audiencePatterns(signals.data||[]).slice(0,30),
    history:campaigns.data||[],
    social:(metrics.data||[]).map(s=>({...s,data:JSON.stringify(s.data).slice(0,5000)}))
  };
@@ -79,8 +86,8 @@ export async function draftDossier(ctx:Context,clientId:string){
      certainty:z.enum(["verified","inferred","unknown"])
    })).min(1).max(35)
  });
- const result=await modelJson(lowTrustRule+"\nRole: company researcher. Attribute each claim to provided source IDs, otherwise inferred/unknown. This is a current-state assessment, not a future campaign.",
-   "Analizza la situazione attuale, non creare la strategia. Input JSON:\n"+JSON.stringify({client:context.client,offers:context.offers,sources:context.sources}).slice(0,48000),dossierSchema);
+ const result=await modelJson(lowTrustRule+"\nRole: company researcher. Attribute each claim to provided source IDs, otherwise inferred/unknown. Community observations are qualitative hypotheses; never present a single comment as representative. This is a current-state assessment, not a future campaign.",
+   "Analizza la situazione attuale, non creare la strategia. Input JSON:\n"+JSON.stringify({client:context.client,offers:context.offers,sources:context.sources,community_signals:context.community_signals,community_patterns:context.community_patterns}).slice(0,48000),dossierSchema);
  const version=(context.dossier?.version||0)+1;
  const {data,error}=await ctx.db.from("dossiers").insert({client_id:clientId,version,status:"draft",knowledge_revision:context.client.knowledge_revision,...result}).select().single();
  dbError(error,"Salvataggio dossier non riuscito");
@@ -91,19 +98,25 @@ export async function executeMission(ctx:Context,clientId:string,missionId:strin
  if(!all.dossier || all.dossier.status!=="approved") throw new ApiFailure(409,"Approva un dossier aggiornato prima di avviare la campagna");
  const offer=offerId?all.offers.find(o=>o.id===offerId):null;
  if(offerId && !offer) throw new ApiFailure(409,"Seleziona un'offerta verificata per questo cliente");
- const ctxJson=JSON.stringify({client:all.client,dossier:all.dossier,offer:offer||null,history:all.history,social:all.social}).slice(0,42000);
+ const ctxJson=JSON.stringify({client:all.client,dossier:all.dossier,offer:offer||null,community_patterns:all.community_patterns,community_signals:all.community_signals,history:all.history,social:all.social}).slice(0,45000);
  try {
    await record(ctx,clientId,missionId,"Leader","Analyst","Brief validato e contesto assegnato",{request,period,offerId});
-   const analysis=await modelJson(lowTrustRule+"\nRole: Social & Business Analyst. Cite provided source IDs or label unknown. Analyze history without inventing metrics.",
+   const analysis=await modelJson(lowTrustRule+"\nRole: Social & Business Analyst. Start from community questions, objections and needs. Isolated feedback is hypothetical, corroboration is a possible trend not population proof. Cite available source IDs and never invent metrics.",
      "OBIETTIVO: "+request+"\nPERIODO: "+period+"\nDATI:\n"+ctxJson,analysisSchema);
    await record(ctx,clientId,missionId,"Analyst","Strategist","Evidenze e opportunità consegnate",analysis);
-   const strategy=await modelJson(lowTrustRule+"\nRole: Agency Strategist. Plan only for the requested goal and offer; based on approved dossier and Analyst handoff.",
+   const strategy=await modelJson(lowTrustRule+"\nRole: Agency Strategist. Plan for the requested goal, approved offer, brand voice and audience needs; balance information, trust and sales. Convert recurring supported objections into possible editorial series; do not build a whole strategy from one isolated comment.",
      "BRIEF: "+request+"\nPERIODO: "+period+"\nCONTESTO: "+ctxJson+"\nANALISI: "+JSON.stringify(analysis),strategySchema);
    await record(ctx,clientId,missionId,"Strategist","Copywriter","Strategia e KPI consegnati",strategy);
-   const creative=await modelJson(lowTrustRule+"\nRole: Copywriter and Art Director. Propose 2 to 8 quality assets including both Instagram static and LinkedIn adapted content. Carousel/document has 3-8 pages. Use verified claims only.",
+   const creative=await modelJson(lowTrustRule+"\nRole: Copywriter and Art Director. Propose 2 to 8 high-quality static assets covering Instagram and LinkedIn. Carousel/document has 3-8 pages. For each piece fill editorial_brief: hook, audience_need, promise, value_delivered, emotional_angle, rational_proof, single_cta (empty if not needed), community_signal_ids. Prefer clarity and evidence over sensationalism. Use only confirmed product benefits. Follow:\n"+EDITORIAL_PLAYBOOK+"\nPLATFORM DIMENSIONS:\n"+JSON.stringify(STATIC_FORMATS)+".",
      "STRATEGIA: "+JSON.stringify(strategy)+"\nOFFERTA: "+JSON.stringify(offer)+"\nCONTESTO: "+ctxJson,contentSchema);
-   await record(ctx,clientId,missionId,"Copywriter / Art Director","Brand Guard","Bozze editoriali per controllo",creative);
-   const check=await modelJson(lowTrustRule+"\nRole: Brand Guard. Check prices, unsupported claims, guarantees, tone and accessibility. Return warnings, never silently rewrite.",
+   const knownSignals=new Set(all.community_signals.map(v=>v.id));
+   for(const piece of creative.contents){
+     for(const sourceId of piece.editorial_brief.community_signal_ids){
+       if(!knownSignals.has(sourceId))throw new ApiFailure(502,"L'AI ha citato un'osservazione della community non disponibile");
+     }
+   }
+   await record(ctx,clientId,missionId,"Copywriter / Art Director","Brand Guard","Bozze editoriali e razionale creativo per controllo",creative);
+   const check=await modelJson(lowTrustRule+"\nRole: Brand Guard. Verify each hook is fulfilled, the benefit has evidence, the emotion is not manipulative, there is at most one CTA, the content fits its platform and referenced audience signals actually exist. Check price, tone, readability and unsupported claims. Return warnings and never silently rewrite.",
      "OFFERTA: "+JSON.stringify(offer)+"\nDOSSIER: "+JSON.stringify(all.dossier)+"\nBOZZE: "+JSON.stringify(creative),guardSchema);
    await record(ctx,clientId,missionId,"Brand Guard","Leader","Controllo qualità completato",check);
    const payload={campaign:{title:strategy.title,objective:strategy.objective,period,offer_id:offerId,strategy:{...strategy,analysis,qa:check}},contents:creative.contents};
