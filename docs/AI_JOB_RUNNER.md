@@ -14,16 +14,27 @@ Dossier drafting and campaign missions launched from the active workspace or Lea
 
 ## Activation (not automatic)
 
-1. Apply SQL migrations `0001`–`0008_ai_jobs.sql` in order.
+1. Apply SQL migrations `0001` through `0012_ai_worker_fencing.sql` in order (including `0009`–`0011`).
 2. Set `SUPABASE_SERVICE_ROLE_KEY`, `OPENROUTER_API_KEY` and `CRON_SECRET` in the backend environment (the cron secret must have at least 24 characters).
 3. Call `GET /api/jobs/dispatch` with `Authorization: Bearer <CRON_SECRET>` from an authenticated **server-side scheduler**. One invocation processes at most one queued job; the endpoint is unavailable when secrets are missing.
 4. For **Vercel Pro**, configure a schedule such as `*/5 * * * *` in `vercel.json` for path `/api/jobs/dispatch`. Vercel injects the `Authorization` header when `CRON_SECRET` is set. Vercel **Hobby** limits Cron jobs to daily schedules; do not deploy a 5-minute cron configuration on Hobby. Alternatively invoke the endpoint from an external trusted scheduler with the Bearer token.
 5. Use a Node runtime with a maximum function duration of at least 240 seconds, or adapt the runner to shorter task slices. `app/api/jobs/dispatch/route.ts` has `maxDuration=240`; actual limits depend on hosting plan.
 6. Smoke-test in a non-production Supabase project with a real OpenRouter key, one approved dossier and two competing worker requests.
 
+## V19 lease fencing and concurrency guarantees
+
+Apply `0012_ai_worker_fencing.sql` **after** `0011_client_evidence_search.sql`.
+Every worker claim now receives a cryptographically random, server-only `lease_token` and a 150-second lease. While working, `runWithJobLease` renews it about every 30 seconds (and at checkpoints before critical writes). Completion and failure use dedicated PostgreSQL RPCs that succeed only when the job is still running **and** the same unexpired lease token is held.
+
+The previous attempt's token is invalidated when the expired job is requeued. A stale worker cannot renew, complete or fail another worker's attempt, even if it knows the job ID. The lease token is excluded from grants to authenticated app users; only the service-role worker may call heartbeat/complete/fail RPCs.
+
+An interrupted worker may already have sent an OpenRouter request before its lease expires: these guards cannot guarantee exactly-once external API billing or undo partial side effects. Dossier and strategy records have unique `ai_job_id` constraints and critical writes check the active lease. Missions still need finer per-agent transactions for full exactly-once behavior. If heartbeats fail because of network/database issues, the worker fails closed and the next dispatcher invocation recovers the expired job. Server scheduling and secrets are still mandatory.
+
+The SQL smoke suite tests stale-token rejection, lease renewal, recovery, exhaustion and service-only privileges; unit tests test a renewal failure during processing. These do **not** replace a staging test with two independent worker processes and the actual provider.
+
 ## Security and reliability notes
 
-The worker service-role credential bypasses RLS, so its privileges and logs require elevated protections. Jobs only accept known actions, payload sizes are bounded in SQL, and the frontend cannot claim jobs. The lease expires after four minutes. Deployments that cannot guarantee a 4-minute execution budget should increase that lease or refactor long AI work into smaller jobs before enabling the worker.
+The worker service-role credential bypasses RLS, so its privileges and logs require elevated protections. Jobs only accept known actions, payload sizes are bounded in SQL, and the frontend cannot claim jobs. The lease is renewed from a 150-second visibility window while the worker is healthy. Deployments that cannot guarantee a 4-minute execution budget should increase that lease or refactor long AI work into smaller jobs before enabling the worker.
 
 This is a basic durable queue, not a full distributed execution engine with per-stage resumability, exactly-once model billing, streaming, automatic cron deployment, realtime push or token-based spending budgets. Long-term production recommendations: use Supabase Queues (pgmq), isolated workers, a cost ledger, and dead-letter monitoring when scaling beyond single-job dispatches.
 
