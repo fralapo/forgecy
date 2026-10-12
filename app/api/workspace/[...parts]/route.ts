@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { auth,requireClient,read,json,fail,ApiFailure,dbError,audit } from "@/lib/http";
-import { clientSchema,sourceSchema,offerSchema,campaignSchema,missionSchema,chatSchema,updateContentSchema } from "@/lib/schemas";
+import { clientSchema,sourceSchema,offerSchema,campaignSchema,missionSchema,chatSchema,updateContentSchema,signalSchema } from "@/lib/schemas";
 import { draftDossier,executeMission,contextForAI } from "@/lib/agent-team";
 import { handleLeaderMessage } from "@/lib/leader-intent";
 import { modelJson,lowTrustRule } from "@/lib/ai";
@@ -17,7 +17,7 @@ function validId(value:string|undefined){
 }
 async function list(ctx:Awaited<ReturnType<typeof auth>>,id:string){
  const selections=[
-  ["sources","*"],["offers","*"],["dossiers","*"],["campaigns","*"],
+  ["sources","*"],["community_signals","*"],["offers","*"],["dossiers","*"],["campaigns","*"],
   ["contents","*"],["messages","*"],["missions","*"],["agent_events","*"],
   ["social_snapshots","*"],["social_accounts","id,client_id,platform,remote_id,username,token_expires_at,created_at"]
  ] as const;
@@ -79,6 +79,13 @@ export async function POST(request:Request,{params}:Params){
    dbError(error,"Impossibile salvare la fonte");
    await audit(ctx,id,"source_created",data.id);
    return json({source:data},201);
+  }
+  if(p.length===3 && p[2]==="signals"){
+   const input=await read(request,signalSchema);
+   const {data,error}=await ctx.db.from("community_signals").insert({...input,client_id:id}).select().single();
+   dbError(error,"Impossibile registrare il feedback");
+   await audit(ctx,id,"community_signal_created",data.id);
+   return json({signal:data},201);
   }
   if(p.length===3 && p[2]==="website"){
    const input=await read(request,z.object({url:z.url()}));
@@ -248,6 +255,12 @@ export async function PATCH(request:Request,{params}:Params){
    const {data:current}=await ctx.db.from("contents").select("revision,offer_id,offer_version,parent_id,source_revision,status").eq("id",contentId).eq("client_id",id).maybeSingle();
    if(!current)throw new ApiFailure(404,"Contenuto non trovato");
    if(input.status==="approved" && current.status==="stale")throw new ApiFailure(409,"La bozza è obsoleta: verificane le dipendenze prima di approvarla");
+   if(input.editorial_brief?.community_signal_ids?.length){
+     const ids=input.editorial_brief.community_signal_ids;
+     const {data:linked,error:linkedError}=await ctx.db.from("community_signals").select("id").eq("client_id",id).in("id",ids);
+     dbError(linkedError);
+     if((linked||[]).length!==new Set(ids).size)throw new ApiFailure(400,"Un segnale della community non appartiene a questo cliente");
+   }
    if(input.slides?.some(slide=>slide.image_path && (!slide.image_path.startsWith(id+"/")||slide.image_path.includes(".."))))throw new ApiFailure(403,"Immagine fuori dal profilo cliente");
    if(input.status==="approved" && current.offer_id){
      const {data:offer}=await ctx.db.from("offers").select("version,status").eq("id",current.offer_id).eq("client_id",id).maybeSingle();
@@ -262,5 +275,22 @@ export async function PATCH(request:Request,{params}:Params){
    await audit(ctx,id,"content_updated",contentId);return json({content:data});
   }
   throw new ApiFailure(404,"Aggiornamento non disponibile");
+ }catch(e){return fail(e)}
+}
+
+export async function DELETE(_request:Request,{params}:Params){
+ try{
+  const p=(await params).parts,ctx=await auth();
+  if(p[0]!=="clients")throw new ApiFailure(404,"Risorsa non trovata");
+  const id=validId(p[1]);await requireClient(ctx,id);
+  if(p.length===4&&p[2]==="signals"){
+   const signalId=validId(p[3]);
+   const {data,error}=await ctx.db.from("community_signals").delete().eq("id",signalId).eq("client_id",id).select("id").maybeSingle();
+   dbError(error,"Impossibile eliminare l'osservazione");
+   if(!data)throw new ApiFailure(404,"Osservazione non trovata");
+   await audit(ctx,id,"community_signal_deleted",signalId);
+   return json({deleted:true});
+  }
+  throw new ApiFailure(404,"Eliminazione non disponibile");
  }catch(e){return fail(e)}
 }
