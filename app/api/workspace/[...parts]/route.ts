@@ -6,6 +6,7 @@ import { handleLeaderMessage } from "@/lib/leader-intent";
 import { modelJson,lowTrustRule } from "@/lib/ai";
 import { crawlWebsite } from "@/lib/site-ingest";
 import { extractDocument } from "@/lib/document-extract";
+import { slidePreflight } from "@/lib/carousel-layout";
 
 export const runtime="nodejs";
 export const maxDuration=120;
@@ -147,6 +148,8 @@ export async function POST(request:Request,{params}:Params){
    const input=await read(request,campaignSchema);
    const ctxAI=await contextForAI(ctx,id);
    if(ctxAI.dossier?.status!=="approved")throw new ApiFailure(409,"Approva prima il dossier aziendale");
+   if(ctxAI.strategy?.status!=="approved"||ctxAI.strategy.knowledge_revision!==ctxAI.client.knowledge_revision)
+     throw new ApiFailure(409,"Approva prima la strategia aziendale aggiornata");
    if(ctxAI.strategy?.status!=="approved"||ctxAI.strategy.knowledge_revision!==ctxAI.client.knowledge_revision)
      throw new ApiFailure(409,"Approva prima il piano strategico aggiornato");
    if(input.offer_id && !ctxAI.offers.some(o=>o.id===input.offer_id)) throw new ApiFailure(409,"L'offerta deve essere verificata");
@@ -301,9 +304,18 @@ export async function PATCH(request:Request,{params}:Params){
   if(p.length===4 && p[2]==="contents"){
    const contentId=validId(p[3]);
    const input=await read(request,updateContentSchema.refine(x=>Object.keys(x).length>0));
-   const {data:current}=await ctx.db.from("contents").select("revision,offer_id,offer_version,parent_id,source_revision,status").eq("id",contentId).eq("client_id",id).maybeSingle();
+   const {data:current}=await ctx.db.from("contents").select("revision,offer_id,offer_version,parent_id,source_revision,status,format,slides").eq("id",contentId).eq("client_id",id).maybeSingle();
    if(!current)throw new ApiFailure(404,"Contenuto non trovato");
    if(input.status==="approved" && current.status==="stale")throw new ApiFailure(409,"La bozza è obsoleta: verificane le dipendenze prima di approvarla");
+   if(input.status==="approved"){
+     const finalSlides=Array.isArray(input.slides)?input.slides:
+       Array.isArray(current.slides)?current.slides as Array<{headline:string;body:string;layout?:"cover"|"content"|"quote"|"closing"}>:[];
+     if((current.format==="carousel"||current.format==="document")&&
+        (finalSlides.length<3||finalSlides.length>8))
+       throw new ApiFailure(422,"Caroselli e documenti richiedono fra 3 e 8 slide");
+     const problems=finalSlides.flatMap(slidePreflight).filter(x=>x.severity==="blocking");
+     if(problems.length)throw new ApiFailure(422,"Controllo grafico: "+problems[0].message);
+   }
    if(input.editorial_brief?.community_signal_ids?.length){
      const ids=input.editorial_brief.community_signal_ids;
      const {data:linked,error:linkedError}=await ctx.db.from("community_signals").select("id").eq("client_id",id).in("id",ids);
