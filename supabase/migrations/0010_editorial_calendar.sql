@@ -13,7 +13,7 @@ create table public.editorial_entries(
  created_at timestamptz not null default now(),
  updated_at timestamptz not null default now(),
  unique(id,client_id),
- foreign key(content_id,client_id) references public.contents(id,client_id) on delete set null
+ foreign key(content_id,client_id) references public.contents(id,client_id) on delete set null (content_id)
 );
 create index editorial_entries_client_time_idx on public.editorial_entries(client_id,planned_at);
 alter table public.editorial_entries enable row level security;
