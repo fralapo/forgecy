@@ -47,6 +47,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0001_init.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0002_invariants.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0003_knowledge_versions.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0004_content_approval.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/smoke.sql
       - name: Build
         run: npm run build

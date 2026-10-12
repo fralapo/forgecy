@@ -52,4 +52,27 @@ begin
  if (select status from public.dossiers where client_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') <> 'stale'
  then raise exception 'Offer creation must invalidate current dossier'; end if;
 end $$;
+
+-- An edit to an approved asset MUST reset its status; LinkedIn children go stale.
+insert into public.dossiers(client_id,version,knowledge_revision,status,summary)
+select id,2,knowledge_revision,'draft','Confirmed revised baseline'
+from public.clients where id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+select public.approve_forgecy_dossier('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+ (select id from public.dossiers where client_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and version=2));
+insert into public.campaigns(id,client_id,title,objective,period)
+values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','September','Promote verified offers','September');
+insert into public.contents(id,client_id,campaign_id,channel,format,title,slides,status)
+values
+ ('dddddddd-dddd-4ddd-8ddd-dddddddddddd','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','cccccccc-cccc-4ccc-8ccc-cccccccccccc','instagram','carousel','Original','[]'::jsonb,'approved'),
+ ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','cccccccc-cccc-4ccc-8ccc-cccccccccccc','linkedin','document','Adaptation','[]'::jsonb,'approved');
+update public.contents set parent_id='dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+ where id='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+update public.contents set title='Edited original' where id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+do $
+begin
+ if (select status from public.contents where id='dddddddd-dddd-4ddd-8ddd-dddddddddddd') <> 'draft'
+ then raise exception 'Approval not reset on creative edit'; end if;
+ if (select status from public.contents where id='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee') <> 'stale'
+ then raise exception 'Adaptation not invalidated'; end if;
+end $;
 reset role;
