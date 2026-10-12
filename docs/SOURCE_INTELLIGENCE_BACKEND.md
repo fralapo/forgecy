@@ -13,6 +13,10 @@ Questa estensione lavora **nell'applicazione Next.js attiva alla radice della re
 7. **Controlli deterministici**: per dichiarare un'affermazione `verified` l'AI deve presentare un ID di fonte del cliente e una citazione testuale esatta (almeno 12 caratteri) contenuta nella prova. Se l'ID non esiste o la citazione non coincide, la certezza viene abbassata a `inferred`. Il report è registrato in `dossiers.evidence_report`. La verifica di corrispondenza testuale **non equivale a fact-checking**: l'approvazione umana rimane obbligatoria.
 8. **Concorrenza e versioni**: se il knowledge revision cambia mentre il modello lavora, il server interrompe il salvataggio e chiede di ripetere l'analisi. Il database impedisce l'approvazione di dossier obsoleti.
 
+## Integrazione V19 — budget condivisi
+
+La successiva migrazione `0012_website_crawl_budgets.sql` aggiunge limiti di acquisizione PostgreSQL atomici per cliente e proprietario, con risposte HTTP 429 e rifiuto totale se la prenotazione fallisce. Consulta [CRAWL_BUDGETS.md](CRAWL_BUDGETS.md).
+
 ## Requisiti per l'attivazione
 
 1. Esegui le migrazioni Supabase in ordine da `0001` fino a **`0007_source_intelligence.sql`** nel progetto usato da Forgecy.
