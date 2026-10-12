@@ -28,7 +28,7 @@ function Empty({title,text,children}:{title:string;text:string;children?:React.R
 export default function Views(props:Props){
  const {data,view}=props;
  if(view==="today")return <Today {...props}/>;
- if(view==="knowledge")return <Knowledge {...props}/>;
+ if(view==="knowledge")return <Knowledge key={data.client.id} {...props}/>;
  if(view==="offers")return <Offers {...props}/>;
  if(view==="projects")return <Projects key={data.client.id} {...props}/>;
  return <Results {...props}/>;
@@ -80,7 +80,7 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
  }>>([]);
  const [searchStatus,setSearchStatus]=useState<"idle"|"loading"|"ready"|"error">("idle");
  useEffect(()=>{
-  if(sourceQuery.trim().length<2){setFoundSources([]);setSearchStatus("idle");return;}
+  if(sourceQuery.trim().length<2)return;
   let stale=false;
   const timer=window.setTimeout(()=>{
    setSearchStatus("loading");
@@ -91,7 +91,6 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
   },260);
   return()=>{stale=true;window.clearTimeout(timer);};
  },[sourceQuery,data.client.id]);
- useEffect(()=>{setSourceQuery("");setFoundSources([]);},[data.client.id]);
  const signals=data.community_signals||[];
  const patterns=audiencePatterns(signals);
  const dossier=data.dossiers[0],approval=dossier?.status==="draft" && dossier.knowledge_revision===data.client.knowledge_revision;
@@ -143,7 +142,7 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
      <label htmlFor="forgecy-source-search">Cerca in documenti, note e pagine del sito</label>
      <input id="forgecy-source-search" value={sourceQuery} maxLength={160}
       placeholder="Es. servizi, posizionamento, sostenibilità…"
-      onChange={e=>setSourceQuery(e.target.value)} style={{marginTop:8}}/>
+      onChange={e=>{const value=e.target.value;setSourceQuery(value);if(value.trim().length<2){setFoundSources([]);setSearchStatus("idle");}}} style={{marginTop:8}}/>
      <p className="caption" style={{marginTop:7}}>Ricerca nei contenuti indicizzati del cliente attivo. Nessun dato di altri clienti è accessibile.</p>
      {sourceQuery.trim().length>=2&&<div style={{marginTop:14}}>
        {searchStatus==="loading"&&<p className="caption">Ricerca delle fonti in corso…</p>}
@@ -238,7 +237,7 @@ function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Pro
   <Header k="PROGETTI / OBIETTIVI" title="Dall'obiettivo alla pubblicazione." sub="Ogni campagna tiene insieme strategia, calendario, post e adattamenti LinkedIn."
    actions={<div className="flex gap8 wrap"><button className={"button "+(calendarOpen?"primary":"")} onClick={()=>setCalendarOpen(v=>!v)}><CalendarDays size={16}/>{calendarOpen?"Torna ai progetti":"Calendario editoriale"}</button><button className="button primary" onClick={onChat}><Sparkles size={16}/> Affida un obiettivo al Leader</button></div>}/>
   {calendarOpen&&<EditorialCalendar data={data} onAction={onAction} busy={busy}/>}
-  {!calendarOpen&&chosen&&<ContentEditor key={chosen.id} content={chosen} clientName={data.client.name} profile={data.client.profile} onBack={()=>setContentId(null)} onAction={onAction} busy={busy}/>}
+  {!calendarOpen&&chosen&&<ContentEditor key={chosen.id+":"+chosen.revision} content={chosen} clientName={data.client.name} profile={data.client.profile} onBack={()=>setContentId(null)} onAction={onAction} busy={busy}/>}
   {!calendarOpen&&!chosen&&campaign&&<div className="stack-lg">
    <div className="flex between center wrap gap12"><button className="button small ghost" onClick={()=>setCampaignId(null)}><ChevronLeft size={16}/> Tutti i progetti</button><Badge value={campaign.status}/></div>
    <div><div className="eyebrow">{campaign.period}</div><h2 style={{fontSize:25,marginTop:5}}>{campaign.title}</h2><p className="tagline" style={{marginTop:6}}>{campaign.objective}</p></div>
@@ -278,9 +277,19 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
  const current=slides[idx];
  const slidePreset=layoutStyle(resolvedLayout(current?.layout));
  const slideIssues=current?slidePreflight(current):[];
- const [imageSrc,setImageSrc]=useState("");
- useEffect(()=>{let cancelled=false;const path=current?.image_path;if(!path){setImageSrc("");return;}setImageSrc("");import("./types").then(m=>m.requestJson<{url:string}>("/api/workspace/clients/"+content.client_id+"/assets?path="+encodeURIComponent(path))).then(v=>{if(!cancelled)setImageSrc(v.url)}).catch(()=>{if(!cancelled)setImageSrc("")});return()=>{cancelled=true}},[content.client_id,current?.image_path]);
- useEffect(()=>{setTitle(content.title);setCaption(content.caption);dispatchHistory({type:"reset",slides:content.slides||[]});setBrief(content.editorial_brief||{});setIdx(0)},[content.id,content.revision]);
+ const [resolvedImage,setResolvedImage]=useState<{path:string;url:string}|null>(null);
+ // A new slide must never temporarily show the previous slide's image.
+ const imageSrc=resolvedImage?.path===current?.image_path?resolvedImage.url:"";
+ useEffect(()=>{
+  let cancelled=false;
+  const path=current?.image_path;
+  if(!path)return;
+  import("./types").then(m=>m.requestJson<{url:string}>(
+    "/api/workspace/clients/"+content.client_id+"/assets?path="+encodeURIComponent(path)
+  )).then(v=>{if(!cancelled)setResolvedImage({path,url:v.url});})
+    .catch(()=>{if(!cancelled)setResolvedImage({path,url:""});});
+  return()=>{cancelled=true};
+ },[content.client_id,current?.image_path]);
  const save=async(status?:"draft"|"review"|"approved")=>{
   const change:Record<string,unknown>={id:content.id,title,caption,slides,editorial_brief:{audience_need:brief.audience_need||"",hook:brief.hook||"",promise:brief.promise||"",value_delivered:brief.value_delivered||"",emotional_angle:brief.emotional_angle||"",rational_proof:brief.rational_proof||"",single_cta:brief.single_cta||"",community_signal_ids:brief.community_signal_ids||[]}};
   if(status)change.status=status;
