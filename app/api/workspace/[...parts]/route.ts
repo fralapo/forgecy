@@ -147,6 +147,8 @@ export async function POST(request:Request,{params}:Params){
    const input=await read(request,campaignSchema);
    const ctxAI=await contextForAI(ctx,id);
    if(ctxAI.dossier?.status!=="approved")throw new ApiFailure(409,"Approva prima il dossier aziendale");
+   if(ctxAI.strategy?.status!=="approved"||ctxAI.strategy.knowledge_revision!==ctxAI.client.knowledge_revision)
+     throw new ApiFailure(409,"Approva prima il piano strategico aggiornato");
    if(input.offer_id && !ctxAI.offers.some(o=>o.id===input.offer_id)) throw new ApiFailure(409,"L'offerta deve essere verificata");
    const {data,error}=await ctx.db.from("campaigns").insert({...input,client_id:id,status:"draft"}).select().single();
    dbError(error,"Campagna non creata");await audit(ctx,id,"campaign_created",data.id);
