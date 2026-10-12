@@ -5,9 +5,10 @@ import {draftDossier,executeMission,contextForAI} from "./agent-team";
 import {missionSchema} from "./schemas";
 import {workerDb} from "./worker-db";
 import {draftStrategy} from "./strategic-blueprint";
+import {JobLeaseLost,runWithJobLease} from "./job-lease";
 
 const jobSchema=z.object({
-  id:z.uuid(),client_id:z.uuid(),requested_by:z.uuid(),
+  id:z.uuid(),client_id:z.uuid(),requested_by:z.uuid(),lease_token:z.uuid(),
   kind:z.enum(["dossier","mission","strategy"]),payload:z.record(z.string(),z.unknown()),
   status:z.literal("running"),attempts:z.number().int().min(1),
   max_attempts:z.number().int().min(1).max(3)
@@ -20,7 +21,8 @@ export function nextFailure(job:Pick<AiJob,"attempts"|"max_attempts">,fatal:bool
  return {retry,run_after:new Date(now+delay).toISOString()};
 }
 
-async function execute(db:ReturnType<typeof workerDb>,job:AiJob){
+async function execute(db:ReturnType<typeof workerDb>,job:AiJob,checkpoint:()=>Promise<void>){
+ await checkpoint();
  const {data:client,error}=await db.from("clients").select("owner_id,knowledge_revision")
     .eq("id",job.client_id).maybeSingle();
  dbError(error,"Il worker non può leggere il cliente");
@@ -30,13 +32,15 @@ async function execute(db:ReturnType<typeof workerDb>,job:AiJob){
  const ctx={db,user:{id:job.requested_by}} as unknown as Context;
  if(job.kind==="dossier"){
    if(Object.keys(job.payload).length)throw new ApiFailure(400,"Payload dossier non valido");
-   const dossier=await draftDossier(ctx,job.client_id,job.id);
+   const dossier=await draftDossier(ctx,job.client_id,job.id,checkpoint);
+   await checkpoint();
    await audit(ctx,job.client_id,"dossier_generated",dossier.id,{job_id:job.id});
    return {dossier_id:dossier.id,version:dossier.version};
  }
  if(job.kind==="strategy"){
    if(Object.keys(job.payload).length)throw new ApiFailure(400,"Payload strategia non valido");
-   const plan=await draftStrategy(ctx,job.client_id,job.id);
+   const plan=await draftStrategy(ctx,job.client_id,job.id,checkpoint);
+   await checkpoint();
    await audit(ctx,job.client_id,"strategy_generated",plan.id,{job_id:job.id});
    return {strategy_id:plan.id,version:plan.version};
  }
@@ -57,11 +61,13 @@ async function execute(db:ReturnType<typeof workerDb>,job:AiJob){
    return {mission_id:prior.id,proposal_title:"Proposta già disponibile"};
  let missionId=prior?.id;
  if(missionId){
+   await checkpoint();
    const reset=await db.from("missions").update({
      status:"running",error:null,updated_at:new Date().toISOString()
    }).eq("id",missionId).eq("client_id",job.client_id);
    dbError(reset.error,"Impossibile riprendere la missione");
  }else{
+   await checkpoint();
    const {data:mission,error:missionErr}=await db.from("missions").insert({
      client_id:job.client_id,request:input.data.request,status:"running",ai_job_id:job.id
    }).select("id").single();
@@ -70,8 +76,10 @@ async function execute(db:ReturnType<typeof workerDb>,job:AiJob){
    missionId=mission.id;
  }
  const output=await executeMission(ctx,job.client_id,missionId!,input.data.request,
-   input.data.period,input.data.offer_id??null);
+   input.data.period,input.data.offer_id??null,checkpoint);
+ await checkpoint();
  await audit(ctx,job.client_id,"mission_proposed",missionId!,{job_id:job.id});
+ await checkpoint();
  await db.from("messages").insert({
    client_id:job.client_id,role:"leader",
    body:"Il team ha completato la missione: «"+output.payload.campaign.title+"». "+
@@ -90,26 +98,43 @@ export async function processNextJob(){
  const parsed=jobSchema.safeParse(raw);
  if(!parsed.success)throw new ApiFailure(500,"Il worker ha ricevuto un lavoro non valido");
  const job=parsed.data;
- try {
-   const result=await execute(db,job);
-   const finished=await db.from("ai_jobs").update({
-     status:"succeeded",result,error:null,locked_until:null,finished_at:new Date().toISOString(),
-     updated_at:new Date().toISOString()
-   }).eq("id",job.id).eq("status","running").eq("attempts",job.attempts).select("id").maybeSingle();
-   dbError(finished.error,"Risultato del lavoro non salvato");
-   if(!finished.data)throw new ApiFailure(409,"Il worker ha perso la proprietà del lavoro");
+ const renew=async()=>{
+   const heartbeat=await db.rpc("forgecy_heartbeat_ai_job",{
+     p_job_id:job.id,p_lease_token:job.lease_token
+   });
+   if(heartbeat.error){
+     console.error("[AI job lease] Rinnovo impossibile:",heartbeat.error.message);
+     return false;
+   }
+   return heartbeat.data===true;
+ };
+ try{
+   const result=await runWithJobLease(renew,async checkpoint=>{
+     return execute(db,job,checkpoint);
+   });
+   // Atomic fencing: attempt counts alone are not an ownership proof.
+   const completed=await db.rpc("forgecy_complete_ai_job",{
+     p_job_id:job.id,p_lease_token:job.lease_token,p_result:result
+   });
+   dbError(completed.error,"Impossibile completare il lavoro in modo atomico");
+   if(completed.data!==true){
+     return {processed:true,job_id:job.id,status:"lost",kind:job.kind};
+   }
    return {processed:true,job_id:job.id,status:"succeeded",kind:job.kind};
  }catch(err){
+   // A previous worker must NEVER fail, complete or reschedule a newer attempt.
+   if(err instanceof JobLeaseLost)
+     return {processed:true,job_id:job.id,status:"lost",kind:job.kind};
    const fatal=err instanceof ApiFailure && err.status<500;
    const policy=nextFailure(job,fatal);
    const message=(err instanceof Error?err.message:"Errore sconosciuto").slice(0,400);
-   // An expired/competing worker must not overwrite a newer attempt.
-   const {error}=await db.from("ai_jobs").update({
-     status:policy.retry?"queued":"failed",
-     error:message,run_after:policy.run_after,locked_until:null,
-     finished_at:policy.retry?null:new Date().toISOString(),updated_at:new Date().toISOString()
-   }).eq("id",job.id).eq("status","running").eq("attempts",job.attempts);
-   dbError(error,"Impossibile salvare il fallimento del lavoro");
+   const failed=await db.rpc("forgecy_fail_ai_job",{
+     p_job_id:job.id,p_lease_token:job.lease_token,
+     p_error:message,p_retry:policy.retry,p_run_after:policy.run_after
+   });
+   dbError(failed.error,"Impossibile registrare il fallimento del lavoro");
+   if(failed.data!==true)
+     return {processed:true,job_id:job.id,status:"lost",kind:job.kind};
    return {processed:true,job_id:job.id,status:policy.retry?"retry":"failed",kind:job.kind};
  }
 }
