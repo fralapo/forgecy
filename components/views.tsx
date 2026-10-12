@@ -4,6 +4,7 @@ import { ArrowRight,Archive,BookOpen,CalendarDays,Check,ChevronLeft,ChevronRight
 import type { Snapshot,View,Offer,Content,Slide,EditorialBrief } from "./types";
 import { offerLabel,statusLabel } from "./types";
 import { audiencePatterns } from "@/lib/audience";
+import { brandStyle } from "@/lib/brand";
 
 type Props={
  data:Snapshot;view:View;
@@ -132,6 +133,9 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
   {tab==="profile"&&<div className="grid2">
    <div className="card"><div className="section-title"><h2>Identità cliente</h2><button className="button small" onClick={()=>onModal("profile")}>Modifica</button></div>
     <div className="info-pair"><span>Ragione sociale</span><strong>{data.client.name}</strong></div><div className="info-pair"><span>Settore</span><strong>{data.client.industry||"Da completare"}</strong></div><div className="info-pair"><span>Sito web</span><strong>{data.client.website||"Da completare"}</strong></div>
+    <div className="separator"/><div className="flex center gap12 wrap">
+     {[{label:"Primario",color:brandStyle(data.client.profile).primary},{label:"Sfondo",color:brandStyle(data.client.profile).background}].map(x=><div key={x.label} className="flex center gap8"><span style={{display:"inline-block",width:25,height:25,background:x.color,border:"1px solid #ddd",borderRadius:6}}/><small>{x.label}: {x.color}</small></div>)}
+    </div><div className="caption" style={{marginTop:12}}>Font indicato: {brandStyle(data.client.profile).headingFont||"Non indicato"} (riferimento, non installato)</div>
     <div className="separator"/><pre style={{whiteSpace:"pre-wrap",fontFamily:"inherit",fontSize:13,color:"var(--muted)"}}>{JSON.stringify(data.client.profile,null,2)}</pre>
    </div>
    <div className="card"><BookOpen size={20}/><h2 style={{marginTop:14}}>Una sola fonte di verità</h2><p className="tagline" style={{marginTop:10}}>Quando cambi identità, offerta o documenti, il dossier precedente viene invalidato. Nessuna strategia futura potrà riutilizzarlo senza revisione.</p></div>
@@ -171,7 +175,7 @@ function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Pro
  return <>
   <Header k="PROGETTI / OBIETTIVI" title="Dall'obiettivo alla pubblicazione." sub="Ogni campagna tiene insieme strategia, calendario, post e adattamenti LinkedIn."
    actions={<button className="button primary" onClick={onChat}><Sparkles size={16}/> Affida un obiettivo al Leader</button>}/>
-  {chosen&&<ContentEditor key={chosen.id} content={chosen} onBack={()=>setContentId(null)} onAction={onAction} busy={busy}/>}
+  {chosen&&<ContentEditor key={chosen.id} content={chosen} clientName={data.client.name} profile={data.client.profile} onBack={()=>setContentId(null)} onAction={onAction} busy={busy}/>}
   {!chosen&&campaign&&<div className="stack-lg">
    <div className="flex between center wrap gap12"><button className="button small ghost" onClick={()=>setCampaignId(null)}><ChevronLeft size={16}/> Tutti i progetti</button><Badge value={campaign.status}/></div>
    <div><div className="eyebrow">{campaign.period}</div><h2 style={{fontSize:25,marginTop:5}}>{campaign.title}</h2><p className="tagline" style={{marginTop:6}}>{campaign.objective}</p></div>
@@ -195,7 +199,8 @@ function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Pro
   <Empty title="Nessun progetto ancora" text="Parti da un obiettivo commerciale: il Leader creerà una proposta completa da approvare."><button className="button primary" onClick={onChat}>✧ Avvia una campagna</button></Empty>)}
  </>;
 }
-function ContentEditor({content,onBack,onAction,busy}:{content:Content;onBack:()=>void;onAction:Props["onAction"];busy:string|null}){
+function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{content:Content;clientName:string;profile:Record<string,unknown>;onBack:()=>void;onAction:Props["onAction"];busy:string|null}){
+ const palette=brandStyle(profile);
  const [title,setTitle]=useState(content.title),[caption,setCaption]=useState(content.caption);
  const [slides,setSlides]=useState<Slide[]>(content.slides||[]);
  const [brief,setBrief]=useState<Partial<EditorialBrief>>(content.editorial_brief||{});
@@ -247,8 +252,8 @@ function ContentEditor({content,onBack,onAction,busy}:{content:Content;onBack:()
    </div>
    <div className="card" style={{background:"#f5f8f4"}}>
     {slides.length?<><div className="eyebrow" style={{textAlign:"center",marginBottom:16}}>ANTEPRIMA · {content.channel==="instagram"?"4:5 · 1080×1350":"16:9 · 1920×1080"} · PAGINA {idx+1}/{slides.length}</div>
-     <div className="slide" style={{aspectRatio:content.channel==="linkedin"?"16 / 9":"4 / 5",maxWidth:content.channel==="linkedin"?"100%":"350px",...(imageSrc?{backgroundImage:"linear-gradient(#e1ead8b8,#e1ead8b8),url("+JSON.stringify(imageSrc)+")",backgroundSize:"cover",backgroundPosition:"center"}:{})}}>
-      <div style={{fontSize:11,letterSpacing:".14em",fontWeight:800}}>{content.channel==="instagram"?"INSTAGRAM":"LINKEDIN"} · BOZZA DEL CLIENTE</div>
+     <div className="slide" style={{backgroundColor:palette.background,color:palette.text,aspectRatio:content.channel==="linkedin"?"16 / 9":"4 / 5",maxWidth:content.channel==="linkedin"?"100%":"350px",...(imageSrc?{backgroundImage:"linear-gradient(#e1ead8b8,#e1ead8b8),url("+JSON.stringify(imageSrc)+")",backgroundSize:"cover",backgroundPosition:"center"}:{})}}>
+      <div style={{fontSize:11,letterSpacing:".14em",fontWeight:800}}>{clientName.slice(0,32).toUpperCase()} · {content.channel.toUpperCase()}</div>
       <div><h3>{current?.headline}</h3><p style={{marginTop:14}}>{current?.body}</p></div>
       <div style={{fontSize:11,fontWeight:750}}>DESIGN CONTESTUALE · {idx+1}</div>
      </div>
