@@ -1,7 +1,7 @@
 "use client";
 import { useEffect,useState } from "react";
 import { ArrowRight,Archive,BookOpen,CalendarDays,Check,ChevronLeft,ChevronRight,Clock,FileText,Globe,Instagram,Layers3,Package,Plus,RefreshCw,Sparkles,Target,UploadCloud,AlertTriangle,Image as ImageIcon,ExternalLink } from "lucide-react";
-import type { Snapshot,View,Offer,Content,Slide } from "./types";
+import type { Snapshot,View,Offer,Content,Slide,EditorialBrief } from "./types";
 import { offerLabel,statusLabel } from "./types";
 import { audiencePatterns } from "@/lib/audience";
 
@@ -198,13 +198,14 @@ function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Pro
 function ContentEditor({content,onBack,onAction,busy}:{content:Content;onBack:()=>void;onAction:Props["onAction"];busy:string|null}){
  const [title,setTitle]=useState(content.title),[caption,setCaption]=useState(content.caption);
  const [slides,setSlides]=useState<Slide[]>(content.slides||[]);
+ const [brief,setBrief]=useState<Partial<EditorialBrief>>(content.editorial_brief||{});
  const [idx,setIdx]=useState(0);
  const current=slides[idx];
  const [imageSrc,setImageSrc]=useState("");
  useEffect(()=>{let cancelled=false;const path=current?.image_path;if(!path){setImageSrc("");return;}setImageSrc("");import("./types").then(m=>m.requestJson<{url:string}>("/api/workspace/clients/"+content.client_id+"/assets?path="+encodeURIComponent(path))).then(v=>{if(!cancelled)setImageSrc(v.url)}).catch(()=>{if(!cancelled)setImageSrc("")});return()=>{cancelled=true}},[content.client_id,current?.image_path]);
- useEffect(()=>{setTitle(content.title);setCaption(content.caption);setSlides(content.slides||[]);setIdx(0)},[content.id,content.revision]);
+ useEffect(()=>{setTitle(content.title);setCaption(content.caption);setSlides(content.slides||[]);setBrief(content.editorial_brief||{});setIdx(0)},[content.id,content.revision]);
  const save=async(status?:"draft"|"review"|"approved")=>{
-  const change:Record<string,unknown>={id:content.id,title,caption,slides};
+  const change:Record<string,unknown>={id:content.id,title,caption,slides,editorial_brief:{audience_need:brief.audience_need||"",hook:brief.hook||"",promise:brief.promise||"",value_delivered:brief.value_delivered||"",emotional_angle:brief.emotional_angle||"",rational_proof:brief.rational_proof||"",single_cta:brief.single_cta||"",community_signal_ids:brief.community_signal_ids||[]}};
   if(status)change.status=status;
   await onAction("updateContent",change);
  };
@@ -217,6 +218,22 @@ function ContentEditor({content,onBack,onAction,busy}:{content:Content;onBack:()
    <div className="card stack">
     <label>Titolo del contenuto</label><input value={title} onChange={e=>setTitle(e.target.value)} maxLength={240}/>
     <label>Didascalia</label><textarea value={caption} onChange={e=>setCaption(e.target.value)} rows={7} maxLength={12000}/>
+    <details className="finding" style={{marginTop:8}}>
+     <summary style={{cursor:"pointer",fontWeight:800,fontSize:13}}>Perché questo contenuto? · Rationale creativo</summary>
+     <p className="caption" style={{margin:"10px 0"}}>Verifica che la promessa del gancio sia mantenuta, il beneficio sia concreto e la CTA abbia un solo obiettivo. Le note sono modificabili, non un punteggio automatico.</p>
+     {([
+       ["audience_need","Bisogno reale del pubblico"],
+       ["hook","Gancio / prima promessa"],
+       ["promise","Cosa promette il contenuto"],
+       ["value_delivered","Come viene mantenuta la promessa"],
+       ["emotional_angle","Beneficio emotivo (senza manipolazione)"],
+       ["rational_proof","Prova concreta o limite dell'affermazione"],
+       ["single_cta","Un'unica CTA o nessuna"]
+      ] as Array<[keyof EditorialBrief,string]>).map(([key,label])=><div key={key} style={{marginTop:12}}>
+       <label>{label}</label><textarea rows={2} value={String(brief[key]||"")} onChange={e=>setBrief(v=>({...v,[key]:e.target.value}))}/>
+      </div>)}
+     {!!brief.community_signal_ids?.length&&<p className="caption" style={{marginTop:12}}>Osservazioni collegate: {brief.community_signal_ids.length}. Controllale nella Biblioteca del cliente.</p>}
+    </details>
     {slides.length===0 && (content.format==="carousel"||content.format==="document")&&<button className="button small" onClick={()=>{setSlides([{headline:"Prima pagina",body:"",visual_prompt:""}]);setIdx(0)}}><Plus size={14}/> Aggiungi la prima pagina</button>}
     {slides.length>0&&<><div className="separator"/><label>Slide {idx+1} di {slides.length}</label>
      <label>Titolo slide</label><textarea rows={3} value={current?.headline||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,headline:e.target.value}:x))}/>
@@ -229,9 +246,9 @@ function ContentEditor({content,onBack,onAction,busy}:{content:Content;onBack:()
     {content.channel==="instagram"&&<button className="button" disabled={Boolean(busy)||content.status==="stale"} onClick={()=>onAction("adapt",{id:content.id})}><Layers3 size={15}/> Riadatta per LinkedIn</button>}
    </div>
    <div className="card" style={{background:"#f5f8f4"}}>
-    {slides.length?<><div className="eyebrow" style={{textAlign:"center",marginBottom:16}}>ANTEPRIMA · PAGINA {idx+1}/{slides.length}</div>
-     <div className="slide" style={imageSrc?{backgroundImage:"linear-gradient(#e1ead8b8,#e1ead8b8),url("+JSON.stringify(imageSrc)+")",backgroundSize:"cover",backgroundPosition:"center"}:{}}>
-      <div style={{fontSize:11,letterSpacing:".14em",fontWeight:800}}>FORGECY · {content.channel.toUpperCase()}</div>
+    {slides.length?<><div className="eyebrow" style={{textAlign:"center",marginBottom:16}}>ANTEPRIMA · {content.channel==="instagram"?"4:5 · 1080×1350":"16:9 · 1920×1080"} · PAGINA {idx+1}/{slides.length}</div>
+     <div className="slide" style={{aspectRatio:content.channel==="linkedin"?"16 / 9":"4 / 5",maxWidth:content.channel==="linkedin"?"100%":"350px",...(imageSrc?{backgroundImage:"linear-gradient(#e1ead8b8,#e1ead8b8),url("+JSON.stringify(imageSrc)+")",backgroundSize:"cover",backgroundPosition:"center"}:{})}}>
+      <div style={{fontSize:11,letterSpacing:".14em",fontWeight:800}}>{content.channel==="instagram"?"INSTAGRAM":"LINKEDIN"} · BOZZA DEL CLIENTE</div>
       <div><h3>{current?.headline}</h3><p style={{marginTop:14}}>{current?.body}</p></div>
       <div style={{fontSize:11,fontWeight:750}}>DESIGN CONTESTUALE · {idx+1}</div>
      </div>
