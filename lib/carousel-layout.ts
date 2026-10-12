@@ -27,3 +27,28 @@ export function slidePreflight(slide:SlideText):PreflightIssue[]{
    issues.push({severity:"warning",message:"La pagina finale dovrebbe indicare una prossima azione utile o conclusione."});
  return issues;
 }
+
+/** Editor history holds at most 30 snapshots, is reset after remote revision, and never writes to the server until Save. */
+export type EditableSlide={headline:string;body:string;layout?:SlideLayout;visual_prompt?:string;image_path?:string};
+export type SlideHistory={
+ past:EditableSlide[][];present:EditableSlide[];future:EditableSlide[][];
+};
+export type SlideHistoryAction=
+ |{type:"edit";slides:EditableSlide[]}
+ |{type:"reset";slides:EditableSlide[]}
+ |{type:"undo"}|{type:"redo"};
+export function slideHistoryReducer(state:SlideHistory,action:SlideHistoryAction):SlideHistory{
+ if(action.type==="reset")return {past:[],present:action.slides,future:[]};
+ if(action.type==="undo"){
+   if(!state.past.length)return state;
+   return {past:state.past.slice(0,-1),present:state.past[state.past.length-1],
+     future:[state.present,...state.future].slice(0,30)};
+ }
+ if(action.type==="redo"){
+   if(!state.future.length)return state;
+   return {past:[...state.past,state.present].slice(-30),present:state.future[0],
+     future:state.future.slice(1)};
+ }
+ if(JSON.stringify(action.slides)===JSON.stringify(state.present))return state;
+ return {past:[...state.past,state.present].slice(-30),present:action.slides,future:[]};
+}
