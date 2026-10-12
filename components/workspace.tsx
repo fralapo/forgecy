@@ -94,6 +94,8 @@ export default function Workspace(){
   if(name==="reprocessDocument")return mutate(name,()=>requestJson(root+"/sources/"+body.id+"/process",{method:"POST",body:"{}"}),"Estrazione ripetuta");
   if(name==="dossierDraft")return mutate(name,()=>requestJson(root+"/jobs",{method:"POST",body:JSON.stringify({kind:"dossier",payload:{}})}),"Analisi accodata: controlla lo stato dei lavori AI");
   if(name==="dossierApprove")return mutate(name,()=>requestJson(root+"/dossier/approve",{method:"POST",body:JSON.stringify(body)}),"Dossier approvato");
+  if(name==="strategyDraft")return mutate(name,()=>requestJson(root+"/jobs",{method:"POST",body:JSON.stringify({kind:"strategy",payload:{}})}),"Preparazione del piano strategico accodata");
+  if(name==="strategyApprove")return mutate(name,()=>requestJson(root+"/strategy/"+body.id+"/approve",{method:"POST",body:"{}"}),"Piano strategico approvato");
   if(name==="verifyOffer")return mutate(name,()=>requestJson(root+"/offers/"+body.id,{method:"PATCH",body:JSON.stringify({status:"verified"})}),"Offerta verificata: rivedi il dossier");
   if(name==="updateContent")return mutate(name,()=>requestJson(root+"/contents/"+body.id,{method:"PATCH",body:JSON.stringify({title:body.title,caption:body.caption,slides:body.slides,editorial_brief:body.editorial_brief,...(body.status?{status:body.status}:{})})}),"Contenuto salvato");
   if(name==="revalidateContent")return mutate(name,()=>requestJson(root+"/contents/"+body.id+"/revalidate",{method:"POST",body:"{}"}),"Bozza riaperta: verifica i dati e richiedi l’approvazione");
@@ -188,7 +190,8 @@ export default function Workspace(){
  }
  const current=clients.find(c=>c.id===clientId);
  const latestDossier=data?.dossiers?.[0];
- const canCampaign=latestDossier?.status==="approved" && latestDossier.knowledge_revision===data?.client.knowledge_revision;
+ const latestStrategy=data?.strategies?.[0];
+ const canCampaign=latestDossier?.status==="approved" && latestDossier.knowledge_revision===data?.client.knowledge_revision && latestStrategy?.status==="approved" && latestStrategy.knowledge_revision===data?.client.knowledge_revision;
  const pendingMissions=(data?.missions||[]).filter(x=>x.status==="proposed");
  const baseModal=()=>setModal({kind:"client"});
 
@@ -259,7 +262,7 @@ export default function Workspace(){
     {current&&<div className="chat-prompt"><div className="eyebrow">AZIONI RAPIDE</div>
      <button className="button small" style={{justifyContent:"start"}} disabled={Boolean(busy)} onClick={()=>setModal({kind:"signal"})}><Plus size={14}/> Registra un feedback della community</button>
      <button className="button small" style={{justifyContent:"start"}} disabled={!canCampaign||Boolean(busy)} onClick={()=>setModal({kind:"mission"})}><Sparkles size={14}/> Proponi una campagna completa</button>
-     {!canCampaign&&<span className="caption">Per generare campagne devi prima approvare il dossier aziendale aggiornato.</span>}
+     {!canCampaign&&<span className="caption">Per generare campagne devi approvare il dossier e il piano strategico aziendale aggiornati.</span>}
     </div>}
     <form className="chat-compose" onSubmit={sendMessage}><textarea value={chatText} disabled={!current||Boolean(busy)} onChange={e=>setChatText(e.target.value)} placeholder={current?"Chiedi qualsiasi cosa sul cliente…":"Prima seleziona un cliente"} maxLength={4000} rows={3}/>
      <div className="chat-footer"><button type="button" className="button small" disabled={!current||Boolean(busy)} onClick={()=>setModal({kind:"upload"})}><Plus size={14}/> Allega file</button><span className="caption">{busy?"Elaborazione…":"OpenRouter"}</span><button className="button primary small" type="submit" disabled={!chatText.trim()||!current||Boolean(busy)}><Send size={15}/> Invia</button></div>
