@@ -75,4 +75,25 @@ begin
  if (select status from public.contents where id='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee') <> 'stale'
  then raise exception 'Adaptation not invalidated'; end if;
 end $test$;
+-- Community evidence belongs to the active client only.
+insert into public.community_signals(client_id,platform,kind,topic,excerpt,audience_need,source_url)
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','instagram','question','Delicati','Come si usa sui tessuti delicati?','Chiarezza uso','https://example.com/post1');
+do $editorial$
+begin
+ if (select count(*) from public.community_signals where client_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')<>1 then raise exception 'Signal was not persisted';end if;
+ begin
+  insert into public.community_signals(client_id,platform,kind,topic,excerpt)
+  values('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','instagram','comment','Other','Unrelated message');
+  raise exception 'Cross client signal write unexpectedly succeeded';
+ exception when insufficient_privilege then null;
+ end;
+end $editorial$;
+-- Creative rationale must survive approval-safe content editing.
+update public.contents set editorial_brief='{"hook":"What changes?","audience_need":"Explain fabric care","single_cta":""}'::jsonb
+ where id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+do $editorial$
+begin
+ if (select editorial_brief->>'hook' from public.contents where id='dddddddd-dddd-4ddd-8ddd-dddddddddddd') <> 'What changes?'
+ then raise exception 'Creative rationale missing'; end if;
+end $editorial$;
 reset role;

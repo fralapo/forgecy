@@ -7,12 +7,14 @@ export type Offer={id:string;client_id:string;kind:"product"|"service";name:stri
 export type Dossier={id:string;version:number;status:"draft"|"stale"|"approved";summary:string;findings:Array<{topic:string;claim:string;source_ids:string[];certainty:string}>;knowledge_revision:number};
 export type Campaign={id:string;title:string;objective:string;period:string;offer_id:string|null;status:string;strategy:Record<string,unknown>;created_at:string};
 export type Slide={headline:string;body:string;visual_prompt?:string;image_path?:string};
-export type Content={id:string;client_id:string;campaign_id:string;offer_id?:string|null;parent_id?:string|null;title:string;caption:string;channel:"instagram"|"linkedin";format:"post"|"carousel"|"document";status:"draft"|"review"|"approved"|"stale";slides:Slide[];revision:number;source_revision?:number;offer_version?:number};
-export type Message={id:string;role:"user"|"leader";body:string;created_at:string};
+export type EditorialBrief={audience_need:string;hook:string;promise:string;value_delivered:string;emotional_angle:string;rational_proof:string;single_cta:string;community_signal_ids:string[]};
+export type CommunitySignal={id:string;client_id:string;platform:string;kind:string;topic:string;excerpt:string;audience_need:string;source_url:string|null;context:string;observed_at:string;created_at:string};
+export type Content={id:string;client_id:string;campaign_id:string;offer_id?:string|null;parent_id?:string|null;title:string;caption:string;channel:"instagram"|"linkedin";format:"post"|"carousel"|"document";status:"draft"|"review"|"approved"|"stale";slides:Slide[];editorial_brief?:Partial<EditorialBrief>;revision:number;source_revision?:number;offer_version?:number};
+export type Message={id:string;role:"user"|"leader";body:string;created_at:string;metadata?:{kind?:string;signal?:Partial<CommunitySignal>}};
 export type Mission={id:string;request:string;status:string;payload:Record<string,unknown>;error?:string|null;created_at:string};
 export type AgentEvent={id:string;mission_id:string;agent:string;recipient:string;summary:string;created_at:string};
 export type Snapshot={
- client:Client;sources:Source[];offers:Offer[];dossiers:Dossier[];campaigns:Campaign[];
+ client:Client;sources:Source[];community_signals:CommunitySignal[];offers:Offer[];dossiers:Dossier[];campaigns:Campaign[];
  contents:Content[];messages:Message[];missions:Mission[];agent_events:AgentEvent[];
  social_accounts:Array<{id:string;username:string;remote_id:string;token_expires_at?:string}>;
  social_snapshots:Array<{id:string;collected_at:string;period:string;data:{account?:{followers_count?:number;media_count?:number};media?:Array<{id:string;like_count?:number;comments_count?:number;caption?:string;permalink?:string}>;source?:string;measured?:boolean}}>;

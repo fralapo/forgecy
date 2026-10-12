@@ -29,6 +29,26 @@ export const missionSchema=z.object({
  period:bounded(80).default("Prossimi 30 giorni")
 });
 export const chatSchema=z.object({body:bounded(4000).min(1)});
+export const signalSchema=z.object({
+ platform:z.enum(["instagram","linkedin","website","review","support","other"]),
+ kind:z.enum(["comment","question","objection","review","faq","dm","other"]),
+ topic:bounded(160).min(2),
+ excerpt:bounded(2500).min(5),
+ audience_need:bounded(1000).default(""),
+ context:bounded(1200).default(""),
+ source_url:z.url().max(1500).refine(v=>/^https?:\/\//i.test(v),"Usa un riferimento http(s)").nullable().default(null),
+ observed_at:z.iso.date().optional()
+});
+export const editorialBriefSchema=z.object({
+ audience_need:bounded(800).default(""),
+ hook:bounded(400).default(""),
+ promise:bounded(700).default(""),
+ value_delivered:bounded(800).default(""),
+ emotional_angle:bounded(300).default(""),
+ rational_proof:bounded(800).default(""),
+ single_cta:bounded(300).default(""),
+ community_signal_ids:z.array(z.uuid()).max(8).default([])
+});
 export const updateContentSchema=z.object({
  title:bounded(240).min(1).optional(),
  caption:bounded(12000).optional(),
@@ -36,6 +56,7 @@ export const updateContentSchema=z.object({
  headline:bounded(250),body:bounded(1200),
  visual_prompt:bounded(1200).optional(),image_path:bounded(500).optional()
  })).max(20).optional(),
+ editorial_brief:editorialBriefSchema.optional(),
  status:z.enum(["draft","review","approved"]).optional()
 });
 export const uuid=z.uuid();

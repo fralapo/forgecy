@@ -3,9 +3,11 @@ import type { Context } from "./http";
 import { ApiFailure,dbError } from "./http";
 import { lowTrustRule,modelJson } from "./ai";
 import { contextForAI,draftDossier,executeMission,answerLeader } from "./agent-team";
+import { signalSchema } from "./schemas";
 
 const intentSchema=z.object({
- action:z.enum(["answer","campaign","dossier"]),
+ action:z.enum(["answer","campaign","dossier","signal"]),
+ signal:signalSchema.nullable().optional(),
  objective:z.string().max(2500).default(""),
  period:z.string().max(80).default("Prossimi 30 giorni"),
  offer_id:z.uuid().nullable().default(null)
@@ -19,6 +21,7 @@ export async function handleLeaderMessage(ctx:Context,clientId:string,body:strin
   lowTrustRule+"\nYou are the routing coordinator. Classify the USER request only. "+
   "Choose campaign when user asks to CREATE a strategy, promotional campaign, content plan or post series. "+
   "Choose dossier when user asks for an initial or updated company analysis. "+
+  "Choose signal ONLY for an explicit command to register an anonymized community question, objection, review or feedback. Return a proposed signal with valid type/platform and source details only if supplied; otherwise leave source_url null. "+
   "Choose answer for questions, greetings, explanations or edits that cannot be executed through supported operations. "+
   "Do not invent offer IDs; choose an exact ID only when clearly matched. "+
   "Consider the previous client-scoped conversation: if the user specifies an offer after a campaign clarification, recover the original objective and month. "+
@@ -28,6 +31,15 @@ export async function handleLeaderMessage(ctx:Context,clientId:string,body:strin
     "\nPeriodo corrente: "+new Date().toISOString().slice(0,10),
   intentSchema
  );
+ if(intent.action==="signal"){
+   if(!/(registr|annot|aggiung|salva|segnala)/i.test(body)||!intent.signal){
+     return {body:"Posso preparare un'osservazione per la Biblioteca. Dimmi quale domanda, obiezione o feedback vuoi registrare, senza nomi o dati personali.",metadata:{kind:"answer"}};
+   }
+   return {
+     body:"Ho preparato un feedback della community sul tema «"+intent.signal.topic+"». Controllalo e conferma prima di inserirlo nella Biblioteca: non è ancora stato salvato.",
+     metadata:{kind:"signal_proposal",signal:intent.signal}
+   };
+ }
  if(intent.action==="dossier"){
    const dossier=await draftDossier(ctx,clientId);
    return {

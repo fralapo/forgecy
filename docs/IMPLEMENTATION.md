@@ -24,7 +24,7 @@ Optional server-only:
 
 ## Database setup
 
-Run migrations 0001_init.sql, 0002_invariants.sql, 0003_knowledge_versions.sql and 0004_content_approval.sql **in that order** using the Supabase SQL Editor.
+Run migrations 0001_init.sql, 0002_invariants.sql, 0003_knowledge_versions.sql and 0004_content_approval.sql and 0005_editorial_intelligence.sql **in that order** using the Supabase SQL Editor.
 
 Postgres RLS applies to all client-owned records. Every source/profile/offer change bumps the client's knowledge revision and marks its dossier stale. A dossier can only be approved if it matches the current revision. A product edit invalidates linked assets. Editing an approved carousel resets it to draft; editing the Instagram original invalidates LinkedIn variants. Revalidation returns stale content to draft, not to approved.
 
@@ -73,3 +73,7 @@ Website copy, uploaded text and external posts are **untrusted evidence, never i
 The temporary Postgres Docker container used by GitHub Actions is strictly a test service, not a runtime requirement.
 
 Original application code remains in old/ and the original Git history.
+
+## Editorial strategy extension
+
+A client now has a private `community_signals` table and an in-Library feedback workflow. Agent prompts work from audience signals and established product information and return `editorial_brief` metadata for each generated content asset, including audience need, hook, promised value, emotional angle, practical proof, single CTA and attributable community signal IDs. Platform default exports: Instagram 1080×1350 PNG; LinkedIn 1920×1080 PDF. For source-by-source detail, see [EDITORIAL_INTELLIGENCE.md](EDITORIAL_INTELLIGENCE.md). Existing installations must apply migration 0005 before deploying the updated application.

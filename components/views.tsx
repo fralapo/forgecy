@@ -1,8 +1,10 @@
 "use client";
 import { useEffect,useState } from "react";
 import { ArrowRight,Archive,BookOpen,CalendarDays,Check,ChevronLeft,ChevronRight,Clock,FileText,Globe,Instagram,Layers3,Package,Plus,RefreshCw,Sparkles,Target,UploadCloud,AlertTriangle,Image as ImageIcon,ExternalLink } from "lucide-react";
-import type { Snapshot,View,Offer,Content,Slide } from "./types";
+import type { Snapshot,View,Offer,Content,Slide,EditorialBrief } from "./types";
 import { offerLabel,statusLabel } from "./types";
+import { audiencePatterns } from "@/lib/audience";
+import { brandStyle } from "@/lib/brand";
 
 type Props={
  data:Snapshot;view:View;
@@ -66,12 +68,14 @@ function Today({data,onView,onChat,onModal}:{data:Snapshot;onView:(v:View)=>void
  </>;
 }
 function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["onModal"];onAction:Props["onAction"];busy:string|null}){
- const [tab,setTab]=useState<"dossier"|"sources"|"profile">("dossier");
+ const [tab,setTab]=useState<"dossier"|"sources"|"community"|"profile">("dossier");
+ const signals=data.community_signals||[];
+ const patterns=audiencePatterns(signals);
  const dossier=data.dossiers[0],approval=dossier?.status==="draft" && dossier.knowledge_revision===data.client.knowledge_revision;
  return <>
   <Header k="BIBLIOTECA / CONOSCENZA" title="Conoscere prima di creare." sub={"Le informazioni di "+data.client.name+" alimentano tutto il lavoro del team AI."}
    actions={<button className="button" onClick={()=>onModal("source")}><Plus size={16}/> Aggiungi fonte</button>}/>
-  <div className="tabs">{[["dossier","Analisi aziendale"],["sources","Fonti e documenti"],["profile","Profilo brand"]].map(([k,t])=><button key={k} onClick={()=>setTab(k as typeof tab)} className={"tab "+(tab===k?"active":"")}>{t}</button>)}</div>
+  <div className="tabs">{[["dossier","Analisi aziendale"],["sources","Fonti e documenti"],["community","Voce della community"],["profile","Profilo brand"]].map(([k,t])=><button key={k} onClick={()=>setTab(k as typeof tab)} className={"tab "+(tab===k?"active":"")}>{t}</button>)}</div>
   {tab==="dossier"&&<div className="stack-lg">
    <div className="card">
     <div className="flex between center gap12 wrap"><div><h2>Dossier aziendale</h2><p className="caption" style={{marginTop:6}}>Fotografia documentata della situazione attuale, non un piano strategico.</p></div>{dossier?<Badge value={dossier.status}/>:<span className="pill muted">Non presente</span>}</div>
@@ -95,9 +99,43 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
    </div>
    {data.sources.some(s=>s.status==="pending")&&<div className="notice warn">Alcuni PDF/immagini sono salvati privatamente ma l'estrazione automatica del testo non è ancora attiva. Usa una nota testuale per renderne il contenuto disponibile agli agenti.</div>}
   </div>}
+  {tab==="community"&&<div className="stack-lg">
+   <div className="flex between center gap12 wrap">
+    <div><h2>Ascolta, poi crea.</h2><p className="tagline" style={{marginTop:5}}>Domande, commenti, recensioni e obiezioni diventano spunti editoriali collegati al cliente.</p></div>
+    <button className="button primary" onClick={()=>onModal("signal")}><Plus size={15}/> Registra un feedback</button>
+   </div>
+   <div className="notice">Inserisci solo osservazioni anonimizzate: niente nomi, email o dati privati dei clienti finali. Un commento isolato non rappresenta l'intera community.</div>
+   <div className="grid3">
+    <div className="card metric-card"><span className="muted">Osservazioni raccolte</span><strong>{signals.length}</strong><small>Registrate manualmente</small></div>
+    <div className="card metric-card"><span className="muted">Temi emersi</span><strong>{patterns.length}</strong><small>Argomenti raggruppati</small></div>
+    <div className="card metric-card"><span className="muted">Pattern con fonti distinte</span><strong>{patterns.filter(p=>p.kind==="corroborated").length}</strong><small>Candidati da valutare, non trend certi</small></div>
+   </div>
+   {patterns.length>0&&<div className="card">
+     <div className="section-title"><h2>Bisogni e temi ricorrenti</h2></div>
+     <div className="grid2">{patterns.slice(0,12).map(p=><div className="finding" key={p.topic}>
+       <div className="flex between center gap8"><strong>{p.topic}</strong><span className={"pill "+(p.kind==="isolated"?"warn":"")}>{p.kind==="corroborated"?"Fonti distinte":p.kind==="candidate"?"Da corroborare":"Ipotesi"}</span></div>
+       <p>{p.observations} osservazioni · {p.distinct_references} riferimenti documentati</p>
+       {p.needs.length>0&&<div className="caption" style={{marginTop:7}}>Bisogno: {p.needs.slice(0,2).join(" · ")}</div>}
+     </div>)}</div>
+   </div>}
+   <div className="card"><div className="section-title"><h2>Archivio dei segnali</h2></div>
+    {signals.length?signals.map(signal=><div className="list-row" key={signal.id}>
+      <div className="stack" style={{gap:6}}>
+       <div className="flex center gap8 wrap"><strong>{signal.topic}</strong><span className="pill muted">{signal.platform} / {signal.kind}</span><small>{signal.observed_at}</small></div>
+       <p className="tagline">{signal.excerpt}</p>
+       {signal.audience_need&&<p className="caption">Bisogno interpretato: {signal.audience_need}</p>}
+       {signal.source_url&&<a className="caption" href={signal.source_url} target="_blank" rel="noopener noreferrer">Apri riferimento <ExternalLink size={12} style={{display:"inline"}}/></a>}
+      </div>
+      <button className="button small ghost" aria-label={"Elimina osservazione "+signal.topic} onClick={()=>{if(window.confirm("Eliminare questa osservazione?"))onAction("deleteSignal",{id:signal.id})}}>Elimina</button>
+    </div>):<Empty title="Nessuna osservazione ancora" text="Registra una domanda ricorrente, un'obiezione o una recensione rilevante."><button className="button" onClick={()=>onModal("signal")}>Aggiungi il primo feedback</button></Empty>}
+   </div>
+  </div>}
   {tab==="profile"&&<div className="grid2">
    <div className="card"><div className="section-title"><h2>Identità cliente</h2><button className="button small" onClick={()=>onModal("profile")}>Modifica</button></div>
     <div className="info-pair"><span>Ragione sociale</span><strong>{data.client.name}</strong></div><div className="info-pair"><span>Settore</span><strong>{data.client.industry||"Da completare"}</strong></div><div className="info-pair"><span>Sito web</span><strong>{data.client.website||"Da completare"}</strong></div>
+    <div className="separator"/><div className="flex center gap12 wrap">
+     {[{label:"Primario",color:brandStyle(data.client.profile).primary},{label:"Sfondo",color:brandStyle(data.client.profile).background}].map(x=><div key={x.label} className="flex center gap8"><span style={{display:"inline-block",width:25,height:25,background:x.color,border:"1px solid #ddd",borderRadius:6}}/><small>{x.label}: {x.color}</small></div>)}
+    </div><div className="caption" style={{marginTop:12}}>Font indicato: {brandStyle(data.client.profile).headingFont||"Non indicato"} (riferimento, non installato)</div>
     <div className="separator"/><pre style={{whiteSpace:"pre-wrap",fontFamily:"inherit",fontSize:13,color:"var(--muted)"}}>{JSON.stringify(data.client.profile,null,2)}</pre>
    </div>
    <div className="card"><BookOpen size={20}/><h2 style={{marginTop:14}}>Una sola fonte di verità</h2><p className="tagline" style={{marginTop:10}}>Quando cambi identità, offerta o documenti, il dossier precedente viene invalidato. Nessuna strategia futura potrà riutilizzarlo senza revisione.</p></div>
@@ -137,7 +175,7 @@ function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Pro
  return <>
   <Header k="PROGETTI / OBIETTIVI" title="Dall'obiettivo alla pubblicazione." sub="Ogni campagna tiene insieme strategia, calendario, post e adattamenti LinkedIn."
    actions={<button className="button primary" onClick={onChat}><Sparkles size={16}/> Affida un obiettivo al Leader</button>}/>
-  {chosen&&<ContentEditor key={chosen.id} content={chosen} onBack={()=>setContentId(null)} onAction={onAction} busy={busy}/>}
+  {chosen&&<ContentEditor key={chosen.id} content={chosen} clientName={data.client.name} profile={data.client.profile} onBack={()=>setContentId(null)} onAction={onAction} busy={busy}/>}
   {!chosen&&campaign&&<div className="stack-lg">
    <div className="flex between center wrap gap12"><button className="button small ghost" onClick={()=>setCampaignId(null)}><ChevronLeft size={16}/> Tutti i progetti</button><Badge value={campaign.status}/></div>
    <div><div className="eyebrow">{campaign.period}</div><h2 style={{fontSize:25,marginTop:5}}>{campaign.title}</h2><p className="tagline" style={{marginTop:6}}>{campaign.objective}</p></div>
@@ -161,16 +199,18 @@ function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Pro
   <Empty title="Nessun progetto ancora" text="Parti da un obiettivo commerciale: il Leader creerà una proposta completa da approvare."><button className="button primary" onClick={onChat}>✧ Avvia una campagna</button></Empty>)}
  </>;
 }
-function ContentEditor({content,onBack,onAction,busy}:{content:Content;onBack:()=>void;onAction:Props["onAction"];busy:string|null}){
+function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{content:Content;clientName:string;profile:Record<string,unknown>;onBack:()=>void;onAction:Props["onAction"];busy:string|null}){
+ const palette=brandStyle(profile);
  const [title,setTitle]=useState(content.title),[caption,setCaption]=useState(content.caption);
  const [slides,setSlides]=useState<Slide[]>(content.slides||[]);
+ const [brief,setBrief]=useState<Partial<EditorialBrief>>(content.editorial_brief||{});
  const [idx,setIdx]=useState(0);
  const current=slides[idx];
  const [imageSrc,setImageSrc]=useState("");
  useEffect(()=>{let cancelled=false;const path=current?.image_path;if(!path){setImageSrc("");return;}setImageSrc("");import("./types").then(m=>m.requestJson<{url:string}>("/api/workspace/clients/"+content.client_id+"/assets?path="+encodeURIComponent(path))).then(v=>{if(!cancelled)setImageSrc(v.url)}).catch(()=>{if(!cancelled)setImageSrc("")});return()=>{cancelled=true}},[content.client_id,current?.image_path]);
- useEffect(()=>{setTitle(content.title);setCaption(content.caption);setSlides(content.slides||[]);setIdx(0)},[content.id,content.revision]);
+ useEffect(()=>{setTitle(content.title);setCaption(content.caption);setSlides(content.slides||[]);setBrief(content.editorial_brief||{});setIdx(0)},[content.id,content.revision]);
  const save=async(status?:"draft"|"review"|"approved")=>{
-  const change:Record<string,unknown>={id:content.id,title,caption,slides};
+  const change:Record<string,unknown>={id:content.id,title,caption,slides,editorial_brief:{audience_need:brief.audience_need||"",hook:brief.hook||"",promise:brief.promise||"",value_delivered:brief.value_delivered||"",emotional_angle:brief.emotional_angle||"",rational_proof:brief.rational_proof||"",single_cta:brief.single_cta||"",community_signal_ids:brief.community_signal_ids||[]}};
   if(status)change.status=status;
   await onAction("updateContent",change);
  };
@@ -183,6 +223,22 @@ function ContentEditor({content,onBack,onAction,busy}:{content:Content;onBack:()
    <div className="card stack">
     <label>Titolo del contenuto</label><input value={title} onChange={e=>setTitle(e.target.value)} maxLength={240}/>
     <label>Didascalia</label><textarea value={caption} onChange={e=>setCaption(e.target.value)} rows={7} maxLength={12000}/>
+    <details className="finding" style={{marginTop:8}}>
+     <summary style={{cursor:"pointer",fontWeight:800,fontSize:13}}>Perché questo contenuto? · Rationale creativo</summary>
+     <p className="caption" style={{margin:"10px 0"}}>Verifica che la promessa del gancio sia mantenuta, il beneficio sia concreto e la CTA abbia un solo obiettivo. Le note sono modificabili, non un punteggio automatico.</p>
+     {([
+       ["audience_need","Bisogno reale del pubblico"],
+       ["hook","Gancio / prima promessa"],
+       ["promise","Cosa promette il contenuto"],
+       ["value_delivered","Come viene mantenuta la promessa"],
+       ["emotional_angle","Beneficio emotivo (senza manipolazione)"],
+       ["rational_proof","Prova concreta o limite dell'affermazione"],
+       ["single_cta","Un'unica CTA o nessuna"]
+      ] as Array<[keyof EditorialBrief,string]>).map(([key,label])=><div key={key} style={{marginTop:12}}>
+       <label>{label}</label><textarea rows={2} value={String(brief[key]||"")} onChange={e=>setBrief(v=>({...v,[key]:e.target.value}))}/>
+      </div>)}
+     {!!brief.community_signal_ids?.length&&<p className="caption" style={{marginTop:12}}>Osservazioni collegate: {brief.community_signal_ids.length}. Controllale nella Biblioteca del cliente.</p>}
+    </details>
     {slides.length===0 && (content.format==="carousel"||content.format==="document")&&<button className="button small" onClick={()=>{setSlides([{headline:"Prima pagina",body:"",visual_prompt:""}]);setIdx(0)}}><Plus size={14}/> Aggiungi la prima pagina</button>}
     {slides.length>0&&<><div className="separator"/><label>Slide {idx+1} di {slides.length}</label>
      <label>Titolo slide</label><textarea rows={3} value={current?.headline||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,headline:e.target.value}:x))}/>
@@ -195,9 +251,9 @@ function ContentEditor({content,onBack,onAction,busy}:{content:Content;onBack:()
     {content.channel==="instagram"&&<button className="button" disabled={Boolean(busy)||content.status==="stale"} onClick={()=>onAction("adapt",{id:content.id})}><Layers3 size={15}/> Riadatta per LinkedIn</button>}
    </div>
    <div className="card" style={{background:"#f5f8f4"}}>
-    {slides.length?<><div className="eyebrow" style={{textAlign:"center",marginBottom:16}}>ANTEPRIMA · PAGINA {idx+1}/{slides.length}</div>
-     <div className="slide" style={imageSrc?{backgroundImage:"linear-gradient(#e1ead8b8,#e1ead8b8),url("+JSON.stringify(imageSrc)+")",backgroundSize:"cover",backgroundPosition:"center"}:{}}>
-      <div style={{fontSize:11,letterSpacing:".14em",fontWeight:800}}>FORGECY · {content.channel.toUpperCase()}</div>
+    {slides.length?<><div className="eyebrow" style={{textAlign:"center",marginBottom:16}}>ANTEPRIMA · {content.channel==="instagram"?"4:5 · 1080×1350":"16:9 · 1920×1080"} · PAGINA {idx+1}/{slides.length}</div>
+     <div className="slide" style={{backgroundColor:palette.background,color:palette.text,aspectRatio:content.channel==="linkedin"?"16 / 9":"4 / 5",maxWidth:content.channel==="linkedin"?"100%":"350px",...(imageSrc?{backgroundImage:"linear-gradient(#e1ead8b8,#e1ead8b8),url("+JSON.stringify(imageSrc)+")",backgroundSize:"cover",backgroundPosition:"center"}:{})}}>
+      <div style={{fontSize:11,letterSpacing:".14em",fontWeight:800}}>{clientName.slice(0,32).toUpperCase()} · {content.channel.toUpperCase()}</div>
       <div><h3>{current?.headline}</h3><p style={{marginTop:14}}>{current?.body}</p></div>
       <div style={{fontSize:11,fontWeight:750}}>DESIGN CONTESTUALE · {idx+1}</div>
      </div>

@@ -12,7 +12,7 @@ export async function POST(request:Request,{params}:{params:Promise<{clientId:st
    slideIndex:z.number().int().min(0).max(19),
    prompt:z.string().trim().min(12).max(1600)
   }));
-  const {data:content,error}=await ctx.db.from("contents").select("id,slides,revision").eq("id",contentId).eq("client_id",clientId).maybeSingle();
+  const {data:content,error}=await ctx.db.from("contents").select("id,slides,revision,channel").eq("id",contentId).eq("client_id",clientId).maybeSingle();
   dbError(error);if(!content)throw new ApiFailure(404,"Contenuto non trovato");
   const slides=Array.isArray(content.slides)?content.slides:[];
   if(input.slideIndex>=slides.length)throw new ApiFailure(400,"Slide inesistente");
@@ -24,7 +24,7 @@ export async function POST(request:Request,{params}:{params:Promise<{clientId:st
     model:process.env.OPENAI_IMAGE_MODEL||"gpt-image-1",
     prompt:"Professional editorial image for a static brand carousel. "+input.prompt+
       "\nAvoid any invented logos, text, pricing, trademarks or identifiable real people.",
-    size:"1024x1536",quality:"medium",n:1
+    size:content.channel==="linkedin"?"1536x1024":"1024x1536",quality:"medium",n:1
    }),
    signal:AbortSignal.timeout(85000),cache:"no-store"
   });
