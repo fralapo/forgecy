@@ -59,7 +59,7 @@ async function record(ctx:Context,clientId:string,missionId:string,agent:string,
 export async function contextForAI(ctx:Context,clientId:string){
  const [cl,d,offers,sources,campaigns,metrics,signals]=await Promise.all([
    ctx.db.from("clients").select("name,industry,website,profile,knowledge_revision").eq("id",clientId).single(),
-   ctx.db.from("dossiers").select("id,status,summary,findings,version").eq("client_id",clientId).order("version",{ascending:false}).limit(1).maybeSingle(),
+   ctx.db.from("dossiers").select("id,status,summary,findings,version,knowledge_revision").eq("client_id",clientId).order("version",{ascending:false}).limit(1).maybeSingle(),
    ctx.db.from("offers").select("id,name,kind,description,benefits,audience,price,currency,cta,status,version").eq("client_id",clientId).eq("status","verified").limit(40),
    ctx.db.from("sources").select("id,kind,title,url,body,status").eq("client_id",clientId).eq("status","ready").order("captured_at",{ascending:false,nullsFirst:false}).limit(20),
    ctx.db.from("campaigns").select("title,objective,period,strategy,status").eq("client_id",clientId).order("created_at",{ascending:false}).limit(6),
@@ -88,7 +88,11 @@ export async function answerLeader(ctx:Context,clientId:string,question:string){
  ]);
  return reply.slice(0,12000);
 }
-export async function draftDossier(ctx:Context,clientId:string){
+export async function draftDossier(ctx:Context,clientId:string,jobId?:string){
+ if(jobId){
+  const {data:existing}=await ctx.db.from("dossiers").select("*").eq("client_id",clientId).eq("ai_job_id",jobId).maybeSingle();
+  if(existing)return existing;
+ }
  const context=await contextForAI(ctx,clientId);
  if(context.sources.length===0 && context.offers.length===0)
    throw new ApiFailure(409,"Aggiungi almeno una fonte o un'offerta prima di creare il dossier");
@@ -154,7 +158,8 @@ export async function draftDossier(ctx:Context,clientId:string){
  const {data,error}=await ctx.db.from("dossiers").insert({
    client_id:clientId,version,status:"draft",
    knowledge_revision:context.client.knowledge_revision,
-   summary:result.summary,findings:checked.findings,evidence_report:checked.report
+   summary:result.summary,findings:checked.findings,evidence_report:checked.report,
+   ...(jobId?{ai_job_id:jobId}:{})
  }).select().single();
  dbError(error,"Salvataggio dossier non riuscito: controlla che non esista una versione più recente");
  return data;
