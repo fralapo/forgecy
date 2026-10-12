@@ -1,4 +1,5 @@
 -- Minimal auth/storage schemas to exercise Supabase-compatible migrations in vanilla PostgreSQL CI.
+create role anon;
 create role authenticated;
 create role service_role bypassrls;
 create schema auth;
