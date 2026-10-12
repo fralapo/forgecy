@@ -367,9 +367,15 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
      {snap&&selected&&<a className="button" href={"/api/workspace/clients/"+data.client.id+"/reports/instagram?accountId="+encodeURIComponent(selected)} target="_blank" rel="noopener noreferrer"><FileText size={15}/> Esporta CSV</a>}</div>}/>
   {!data.social_accounts.length?<div className="notice warn">Instagram non è collegato. Per leggere dati veri è necessario un account Professional autorizzato su Meta.</div>:
    <div className="card"><div className="flex between center wrap gap12"><div><h2>Account Instagram</h2><p className="caption">La dashboard non mescola mai account differenti</p></div>
-    <select aria-label="Account Instagram" value={selected||""} onChange={e=>setRequested(e.target.value)} style={{maxWidth:240}}>
+    <div className="flex center gap8 wrap">
+     <select aria-label="Account Instagram" value={selected||""} onChange={e=>setRequested(e.target.value)} style={{maxWidth:240}}>
       {data.social_accounts.map(a=><option value={a.id} key={a.id}>@{a.username}</option>)}
-    </select></div></div>}
+     </select>
+     <button className="button small" disabled={!selected||Boolean(busy)} onClick={()=>{
+       if(window.confirm("Scollegare Instagram? Credenziali e statistiche locali verranno eliminate. Il consenso Meta remoto va revocato separatamente."))
+         onAction("disconnectSocial",{id:selected});
+     }}>Scollega</button>
+    </div></div></div>}
   <div className="grid3" style={{marginTop:18}}>
    <div className="card metric-card"><span className="muted">Follower · ultima lettura</span>
     <strong>{num(stats.followers)}</strong><small>{stats.delta===null?"Variazione non disponibile":(stats.delta>=0?"+":"")+num(stats.delta)+" rispetto alla lettura precedente"}</small></div>
