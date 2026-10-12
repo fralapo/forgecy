@@ -1,12 +1,12 @@
 "use client";
-import { useEffect,useState } from "react";
+import { useEffect,useReducer,useState } from "react";
 import { ArrowRight,Archive,BookOpen,CalendarDays,Check,ChevronLeft,ChevronRight,Clock,FileText,Globe,Instagram,Layers3,Package,Plus,RefreshCw,Sparkles,Target,UploadCloud,AlertTriangle,Image as ImageIcon,ExternalLink } from "lucide-react";
 import type { Snapshot,View,Offer,Content,Slide,EditorialBrief } from "./types";
 import { offerLabel,statusLabel } from "./types";
 import { audiencePatterns } from "@/lib/audience";
 import { brandStyle } from "@/lib/brand";
 import { summarizeInstagram } from "@/lib/social-analytics";
-import {resolvedLayout,layoutStyle,slidePreflight} from "@/lib/carousel-layout";
+import {resolvedLayout,layoutStyle,slidePreflight,slideHistoryReducer} from "@/lib/carousel-layout";
 
 type Props={
  data:Snapshot;view:View;
@@ -226,7 +226,14 @@ function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Pro
 function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{content:Content;clientName:string;profile:Record<string,unknown>;onBack:()=>void;onAction:Props["onAction"];busy:string|null}){
  const palette=brandStyle(profile);
  const [title,setTitle]=useState(content.title),[caption,setCaption]=useState(content.caption);
- const [slides,setSlides]=useState<Slide[]>(content.slides||[]);
+ const [history,dispatchHistory]=useReducer(slideHistoryReducer,{
+   past:[],present:content.slides||[],future:[]
+ });
+ const slides=history.present;
+ const setSlides=(update:Slide[]|((current:Slide[])=>Slide[]))=>{
+   const next=typeof update==="function"?update(slides):update;
+   dispatchHistory({type:"edit",slides:next});
+ };
  const [brief,setBrief]=useState<Partial<EditorialBrief>>(content.editorial_brief||{});
  const [idx,setIdx]=useState(0);
  const current=slides[idx];
@@ -234,11 +241,11 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
  const slideIssues=current?slidePreflight(current):[];
  const [imageSrc,setImageSrc]=useState("");
  useEffect(()=>{let cancelled=false;const path=current?.image_path;if(!path){setImageSrc("");return;}setImageSrc("");import("./types").then(m=>m.requestJson<{url:string}>("/api/workspace/clients/"+content.client_id+"/assets?path="+encodeURIComponent(path))).then(v=>{if(!cancelled)setImageSrc(v.url)}).catch(()=>{if(!cancelled)setImageSrc("")});return()=>{cancelled=true}},[content.client_id,current?.image_path]);
- useEffect(()=>{setTitle(content.title);setCaption(content.caption);setSlides(content.slides||[]);setBrief(content.editorial_brief||{});setIdx(0)},[content.id,content.revision]);
+ useEffect(()=>{setTitle(content.title);setCaption(content.caption);dispatchHistory({type:"reset",slides:content.slides||[]});setBrief(content.editorial_brief||{});setIdx(0)},[content.id,content.revision]);
  const save=async(status?:"draft"|"review"|"approved")=>{
   const change:Record<string,unknown>={id:content.id,title,caption,slides,editorial_brief:{audience_need:brief.audience_need||"",hook:brief.hook||"",promise:brief.promise||"",value_delivered:brief.value_delivered||"",emotional_angle:brief.emotional_angle||"",rational_proof:brief.rational_proof||"",single_cta:brief.single_cta||"",community_signal_ids:brief.community_signal_ids||[]}};
   if(status)change.status=status;
-  await onAction("updateContent",change);
+  return await onAction("updateContent",change);
  };
  const exportRoot="/api/workspace/clients/"+content.client_id+"/contents/"+content.id+"/export";
  return <div className="stack-lg">
@@ -266,7 +273,13 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
      {!!brief.community_signal_ids?.length&&<p className="caption" style={{marginTop:12}}>Osservazioni collegate: {brief.community_signal_ids.length}. Controllale nella Biblioteca del cliente.</p>}
     </details>
     {slides.length===0 && (content.format==="carousel"||content.format==="document")&&<button className="button small" onClick={()=>{setSlides([{headline:"Prima pagina",body:"",visual_prompt:""}]);setIdx(0)}}><Plus size={14}/> Aggiungi la prima pagina</button>}
-    {slides.length>0&&<><div className="separator"/><label>Slide {idx+1} di {slides.length}</label>
+    {slides.length>0&&<><div className="separator"/><div className="flex between center wrap gap8">
+      <label>Slide {idx+1} di {slides.length}</label>
+      <div className="flex gap8">
+       <button className="button small" disabled={!history.past.length} onClick={()=>dispatchHistory({type:"undo"})}>Annulla modifica</button>
+       <button className="button small" disabled={!history.future.length} onClick={()=>dispatchHistory({type:"redo"})}>Ripeti</button>
+      </div>
+     </div>
      <label>Struttura grafica</label><select value={resolvedLayout(current?.layout)} onChange={e=>setSlides(v=>v.map((x,i)=>i===idx?{...x,layout:resolvedLayout(e.target.value)}:x))}><option value="cover">Copertina</option><option value="content">Contenuto</option><option value="quote">Citazione / evidenza</option><option value="closing">Conclusione / CTA</option></select>
      <label>Titolo slide</label><textarea rows={3} value={current?.headline||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,headline:e.target.value}:x))}/>
      <label>Testo slide</label><textarea rows={4} value={current?.body||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,body:e.target.value}:x))}/>
@@ -280,7 +293,7 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
       <button className="button small" disabled={idx>=slides.length-1} onClick={()=>{const next=[...slides];[next[idx+1],next[idx]]=[next[idx],next[idx+1]];setSlides(next);setIdx(idx+1)}}>Sposta →</button>
       <button className="button small" disabled={slides.length<=1} onClick={()=>{setSlides(s=>s.filter((_,i)=>i!==idx));setIdx(0)}}>Rimuovi</button>
      </div>
-     <button className="button small" disabled={Boolean(busy)} onClick={async()=>{await save();await onAction("image",{id:content.id,slideIndex:idx,prompt:current?.visual_prompt||current?.headline||""})}}><ImageIcon size={14}/> Genera immagine con OpenAI</button>
+     <button className="button small" disabled={Boolean(busy)} onClick={async()=>{if(await save())await onAction("image",{id:content.id,slideIndex:idx,prompt:current?.visual_prompt||current?.headline||""})}}><ImageIcon size={14}/> Genera immagine con OpenAI</button>
     </>}
     <div className="separator"/><div className="flex gap8 wrap"><button className="button primary" disabled={Boolean(busy)} onClick={()=>save()}>Salva modifiche</button><button className="button" disabled={Boolean(busy)||content.status==="stale"} onClick={()=>save("approved")}><Check size={14}/> Approva</button></div>
     {content.channel==="instagram"&&<button className="button" disabled={Boolean(busy)||content.status==="stale"} onClick={()=>onAction("adapt",{id:content.id})}><Layers3 size={15}/> Riadatta per LinkedIn</button>}
@@ -294,6 +307,7 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
      </div>
      <div className="slide-nav"><button className="button small" disabled={idx===0} onClick={()=>setIdx(i=>i-1)}><ChevronLeft size={15}/></button><span className="caption">{idx+1} / {slides.length}</span><button className="button small" disabled={idx===slides.length-1} onClick={()=>setIdx(i=>i+1)}><ChevronRight size={15}/></button></div>
      <div className="flex center gap8 wrap" style={{justifyContent:"center",marginTop:14}}><a className="button small" href={exportRoot+"?format=png&slide="+idx} target="_blank" rel="noreferrer">Esporta PNG</a>{content.channel==="linkedin"&&<a className="button small" href={exportRoot+"?format=pdf"} target="_blank" rel="noreferrer">Esporta PDF</a>}</div>
+     <p className="caption" style={{marginTop:8,textAlign:"center"}}>Esportazione basata sull’ultima versione salvata.</p>
     </>:<div className="empty"><FileText size={24} style={{margin:"auto auto 12px"}}/><p>Post testuale: lavora sulla didascalia e sul titolo.</p></div>}
    </div>
   </div>
