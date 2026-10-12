@@ -13,14 +13,17 @@ const intentSchema=z.object({
 export async function handleLeaderMessage(ctx:Context,clientId:string,body:string){
  const context=await contextForAI(ctx,clientId);
  const offers=context.offers.map(o=>({id:o.id,name:o.name,kind:o.kind}));
+ const {data:history}=await ctx.db.from("messages").select("role,body").eq("client_id",clientId).order("created_at",{ascending:false}).limit(12);
+ const recent=(history||[]).reverse().map(m=>({role:m.role,body:String(m.body).slice(0,1700)}));
  const intent=await modelJson(
   lowTrustRule+"\nYou are the routing coordinator. Classify the USER request only. "+
   "Choose campaign when user asks to CREATE a strategy, promotional campaign, content plan or post series. "+
   "Choose dossier when user asks for an initial or updated company analysis. "+
   "Choose answer for questions, greetings, explanations or edits that cannot be executed through supported operations. "+
   "Do not invent offer IDs; choose an exact ID only when clearly matched. "+
+  "Consider the previous client-scoped conversation: if the user specifies an offer after a campaign clarification, recover the original objective and month. "+
   "Never pretend a task was executed. Return short objective and explicit period.",
-  "Utente chiede: "+body+"\nProdotti/servizi VERIFICATI JSON: "+JSON.stringify(offers)+
+  "CRONOLOGIA CHAT JSON:\n"+JSON.stringify(recent).slice(0,16000)+"\nUtente chiede ora: "+body+"\nProdotti/servizi VERIFICATI JSON: "+JSON.stringify(offers)+
     "\nDossier attuale: "+(context.dossier?.status||"assente")+
     "\nPeriodo corrente: "+new Date().toISOString().slice(0,10),
   intentSchema

@@ -226,7 +226,7 @@ export default function Workspace(){
      {!canCampaign&&<span className="caption">Per generare campagne devi prima approvare il dossier aziendale aggiornato.</span>}
     </div>}
     <form className="chat-compose" onSubmit={sendMessage}><textarea value={chatText} disabled={!current||Boolean(busy)} onChange={e=>setChatText(e.target.value)} placeholder={current?"Chiedi qualsiasi cosa sul cliente…":"Prima seleziona un cliente"} maxLength={4000} rows={3}/>
-     <div className="chat-footer"><span className="caption">{busy?"Elaborazione in corso…":"Risposte AI da OpenRouter"}</span><button className="button primary small" type="submit" disabled={!chatText.trim()||!current||Boolean(busy)}><Send size={15}/> Invia</button></div>
+     <div className="chat-footer"><button type="button" className="button small" disabled={!current||Boolean(busy)} onClick={()=>setModal({kind:"upload"})}><Plus size={14}/> Allega file</button><span className="caption">{busy?"Elaborazione…":"OpenRouter"}</span><button className="button primary small" type="submit" disabled={!chatText.trim()||!current||Boolean(busy)}><Send size={15}/> Invia</button></div>
     </form>
    </aside>
   </div>
