@@ -4,7 +4,7 @@ import { clientSchema,sourceSchema,offerSchema,campaignSchema,missionSchema,chat
 import { draftDossier,executeMission,contextForAI } from "@/lib/agent-team";
 import { handleLeaderMessage } from "@/lib/leader-intent";
 import { modelJson,lowTrustRule } from "@/lib/ai";
-import { inspectWebsite } from "@/lib/site-ingest";
+import { crawlWebsite } from "@/lib/site-ingest";
 import { extractDocument } from "@/lib/document-extract";
 
 export const runtime="nodejs";
@@ -89,14 +89,41 @@ export async function POST(request:Request,{params}:Params){
    return json({signal:data},201);
   }
   if(p.length===3 && p[2]==="website"){
-   const input=await read(request,z.object({url:z.url()}));
-   const site=await inspectWebsite(input.url);
-   const {data,error}=await ctx.db.from("sources").insert({
-    client_id:id,kind:"website",title:site.title||site.url,url:site.url,
-    body:site.description+"\n"+site.body,status:"ready",captured_at:site.capturedAt
-   }).select().single();
-   dbError(error);await audit(ctx,id,"website_imported",data.id);
-   return json({source:data},201);
+   const input=await read(request,z.object({
+     url:z.url(),maxPages:z.number().int().min(1).max(6).default(5)
+   }));
+   const result=await crawlWebsite(input.url,input.maxPages);
+   const {data:previous,error:priorError}=await ctx.db.from("sources")
+     .select("id,url,content_sha256").eq("client_id",id).eq("kind","website");
+   dbError(priorError,"Impossibile verificare le fonti web esistenti");
+   const byUrl=new Map((previous||[]).map(row=>[row.url,row]));
+   const imported:unknown[]=[];
+   let unchanged=0;
+   for(const page of result.pages){
+     const existing=byUrl.get(page.url);
+     if(existing?.content_sha256===page.contentSha256){unchanged++;continue;}
+     const record={
+       client_id:id,kind:"website",title:page.title||page.url,url:page.url,
+       body:[page.description,page.body].filter(Boolean).join("\n"),
+       status:"ready",captured_at:page.capturedAt,
+       content_sha256:page.contentSha256,
+       source_metadata:{source:"public_html",root_url:input.url,crawler:"ForgecyResearch/1.0"}
+     };
+     const write=existing
+       ?ctx.db.from("sources").update(record).eq("id",existing.id).eq("client_id",id).select().single()
+       :ctx.db.from("sources").insert(record).select().single();
+     const {data,error}=await write;
+     dbError(error,"Errore durante il salvataggio della pagina web");
+     imported.push(data);
+   }
+   await audit(ctx,id,"website_crawl_finished",undefined,{
+     domain:new URL(input.url).hostname,imported:imported.length,unchanged,
+     skipped:result.skipped.length,pages:result.pages.length
+   });
+   return json({source:imported[0]||null,sources:imported,unchanged,
+     visited:result.pages.length,skipped:result.skipped,
+     message:imported.length?"Fonti web acquisite. Rivedi il dossier prima dell'approvazione.":"Nessun cambiamento alle pagine già registrate."
+   },imported.length?201:200);
   }
   if(p.length===3 && p[2]==="offers"){
    const input=await read(request,offerSchema);
