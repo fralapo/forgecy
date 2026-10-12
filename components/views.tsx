@@ -6,6 +6,7 @@ import { offerLabel,statusLabel } from "./types";
 import { audiencePatterns } from "@/lib/audience";
 import { brandStyle } from "@/lib/brand";
 import { summarizeInstagram } from "@/lib/social-analytics";
+import {resolvedLayout,layoutStyle,slidePreflight} from "@/lib/carousel-layout";
 
 type Props={
  data:Snapshot;view:View;
@@ -229,6 +230,8 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
  const [brief,setBrief]=useState<Partial<EditorialBrief>>(content.editorial_brief||{});
  const [idx,setIdx]=useState(0);
  const current=slides[idx];
+ const slidePreset=layoutStyle(resolvedLayout(current?.layout));
+ const slideIssues=current?slidePreflight(current):[];
  const [imageSrc,setImageSrc]=useState("");
  useEffect(()=>{let cancelled=false;const path=current?.image_path;if(!path){setImageSrc("");return;}setImageSrc("");import("./types").then(m=>m.requestJson<{url:string}>("/api/workspace/clients/"+content.client_id+"/assets?path="+encodeURIComponent(path))).then(v=>{if(!cancelled)setImageSrc(v.url)}).catch(()=>{if(!cancelled)setImageSrc("")});return()=>{cancelled=true}},[content.client_id,current?.image_path]);
  useEffect(()=>{setTitle(content.title);setCaption(content.caption);setSlides(content.slides||[]);setBrief(content.editorial_brief||{});setIdx(0)},[content.id,content.revision]);
@@ -264,8 +267,11 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
     </details>
     {slides.length===0 && (content.format==="carousel"||content.format==="document")&&<button className="button small" onClick={()=>{setSlides([{headline:"Prima pagina",body:"",visual_prompt:""}]);setIdx(0)}}><Plus size={14}/> Aggiungi la prima pagina</button>}
     {slides.length>0&&<><div className="separator"/><label>Slide {idx+1} di {slides.length}</label>
+     <label>Struttura grafica</label><select value={resolvedLayout(current?.layout)} onChange={e=>setSlides(v=>v.map((x,i)=>i===idx?{...x,layout:resolvedLayout(e.target.value)}:x))}><option value="cover">Copertina</option><option value="content">Contenuto</option><option value="quote">Citazione / evidenza</option><option value="closing">Conclusione / CTA</option></select>
      <label>Titolo slide</label><textarea rows={3} value={current?.headline||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,headline:e.target.value}:x))}/>
      <label>Testo slide</label><textarea rows={4} value={current?.body||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,body:e.target.value}:x))}/>
+     <div className="caption">Titolo: {(current?.headline||"").length} caratteri · Testo: {(current?.body||"").length} caratteri</div>
+     {slideIssues.length>0&&<div className="notice warn">{slideIssues.map((issue,i)=><p key={i}>{issue.severity==="blocking"?"Da correggere":"Da verificare"}: {issue.message}</p>)}</div>}
      <label>Prompt visivo</label><textarea rows={3} value={current?.visual_prompt||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,visual_prompt:e.target.value}:x))}/>
      <div className="flex gap8 wrap"><button className="button small" onClick={()=>setSlides(s=>[...s,{headline:"Nuova pagina",body:"",visual_prompt:""}])}><Plus size={14}/> Pagina</button><button className="button small" disabled={slides.length<=1} onClick={()=>{setSlides(s=>s.filter((_,i)=>i!==idx));setIdx(0)}}>Rimuovi pagina</button></div>
      <button className="button small" disabled={Boolean(busy)} onClick={async()=>{await save();await onAction("image",{id:content.id,slideIndex:idx,prompt:current?.visual_prompt||current?.headline||""})}}><ImageIcon size={14}/> Genera immagine con OpenAI</button>
@@ -277,7 +283,7 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
     {slides.length?<><div className="eyebrow" style={{textAlign:"center",marginBottom:16}}>ANTEPRIMA · {content.channel==="instagram"?"4:5 · 1080×1350":"16:9 · 1920×1080"} · PAGINA {idx+1}/{slides.length}</div>
      <div className="slide" style={{backgroundColor:palette.background,color:palette.text,aspectRatio:content.channel==="linkedin"?"16 / 9":"4 / 5",maxWidth:content.channel==="linkedin"?"100%":"350px",...(imageSrc?{backgroundImage:"linear-gradient(#e1ead8b8,#e1ead8b8),url("+JSON.stringify(imageSrc)+")",backgroundSize:"cover",backgroundPosition:"center"}:{})}}>
       <div style={{fontSize:11,letterSpacing:".14em",fontWeight:800}}>{clientName.slice(0,32).toUpperCase()} · {content.channel.toUpperCase()}</div>
-      <div><h3>{current?.headline}</h3><p style={{marginTop:14}}>{current?.body}</p></div>
+      <div style={{textAlign:slidePreset.textAlign}}><h3>{current?.headline}</h3><p style={{marginTop:14}}>{current?.body}</p></div>
       <div style={{fontSize:11,fontWeight:750}}>DESIGN CONTESTUALE · {idx+1}</div>
      </div>
      <div className="slide-nav"><button className="button small" disabled={idx===0} onClick={()=>setIdx(i=>i-1)}><ChevronLeft size={15}/></button><span className="caption">{idx+1} / {slides.length}</span><button className="button small" disabled={idx===slides.length-1} onClick={()=>setIdx(i=>i+1)}><ChevronRight size={15}/></button></div>
