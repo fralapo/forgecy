@@ -63,7 +63,7 @@ export async function contextForAI(ctx:Context,clientId:string){
    ctx.db.from("offers").select("id,name,kind,description,benefits,audience,price,currency,cta,status,version").eq("client_id",clientId).eq("status","verified").limit(40),
    ctx.db.from("sources").select("id,kind,title,url,body,status").eq("client_id",clientId).eq("status","ready").order("captured_at",{ascending:false,nullsFirst:false}).limit(20),
    ctx.db.from("campaigns").select("title,objective,period,strategy,status").eq("client_id",clientId).order("created_at",{ascending:false}).limit(6),
-   ctx.db.from("social_snapshots").select("period,data,collected_at").eq("client_id",clientId).order("collected_at",{ascending:false}).limit(3),
+   ctx.db.from("social_snapshots").select("id,period,data,collected_at").eq("client_id",clientId).order("collected_at",{ascending:false}).limit(3),
    ctx.db.from("community_signals").select("id,topic,excerpt,audience_need,platform,kind,source_url,context,observed_at").eq("client_id",clientId).order("created_at",{ascending:false}).limit(100)
  ]);
  if(cl.error || !cl.data) throw new ApiFailure(404,"Cliente non disponibile");
@@ -106,7 +106,10 @@ export async function draftDossier(ctx:Context,clientId:string){
      price:o.price,currency:o.currency
    })),
    community_signals:context.community_signals.slice(0,12).map(s=>({
-     topic:s.topic,excerpt:s.excerpt.slice(0,350),kind:s.kind
+     id:s.id,topic:s.topic,excerpt:s.excerpt.slice(0,350),kind:s.kind
+   })),
+   social_snapshots:context.social.slice(0,2).map(s=>({
+     id:s.id,period:s.period,collected_at:s.collected_at,data:s.data.slice(0,2800)
    }))
  };
  const dossierSchema=z.object({
@@ -132,6 +135,8 @@ export async function draftDossier(ctx:Context,clientId:string){
  );
  const evidence=[
    ...context.sources.map(s=>({id:s.id,body:s.body,status:s.status})),
+   ...context.community_signals.map(s=>({id:s.id,status:"ready",body:s.excerpt})),
+   ...context.social.map(s=>({id:s.id,status:"ready",body:s.data})),
    ...context.offers.map(o=>({
      id:o.id,status:"ready",
      body:[o.name,o.description,...o.benefits,o.audience,
