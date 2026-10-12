@@ -81,7 +81,7 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
     <div className="flex between center gap12 wrap"><div><h2>Dossier aziendale</h2><p className="caption" style={{marginTop:6}}>Fotografia documentata della situazione attuale, non un piano strategico.</p></div>{dossier?<Badge value={dossier.status}/>:<span className="pill muted">Non presente</span>}</div>
     <div className="separator"/>
     {!dossier?<Empty title="Il dossier non esiste ancora" text="Aggiungi sito, note oppure offerte commerciali e fai analizzare le fonti dagli agenti."/>:
-     <><p className="prose">{dossier.summary}</p><div className="caption" style={{marginTop:14}}>Versione {dossier.version} · Revisione della conoscenza {dossier.knowledge_revision}</div></>}
+     <><p className="prose">{dossier.summary}</p><div className="caption" style={{marginTop:14}}>Versione {dossier.version} · Revisione della conoscenza {dossier.knowledge_revision}</div>{dossier.evidence_report&&<div className="caption" style={{marginTop:7}}>Verifica citazioni: {dossier.evidence_report.verified} affermazioni con estratto testuale · {dossier.evidence_report.inferred} ipotesi · {dossier.evidence_report.unknown} dati mancanti{dossier.evidence_report.downgraded>0?" · "+dossier.evidence_report.downgraded+" riclassificate dopo il controllo":""}. La corrispondenza con una fonte non è un fact-check indipendente.</div>}</>}
     <div className="flex gap8 wrap" style={{marginTop:20}}>
      <button disabled={Boolean(busy)||(!data.sources.length&&!data.offers.length)} className="button primary" onClick={()=>onAction("dossierDraft")}><Sparkles size={15}/>{busy==="dossierDraft"?"Analisi in corso…":"Analizza e crea nuova versione"}</button>
      {approval&&<button className="button" onClick={()=>onAction("dossierApprove",{dossier_id:dossier.id})}><Check size={15}/> Approva dossier</button>}
@@ -89,7 +89,7 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
     {dossier?.status==="stale"&&<div className="notice warn" style={{marginTop:13}}>Hai modificato fonti, brand o offerte: questa analisi non è più aggiornata. Genera e approva una nuova versione.</div>}
    </div>
    {dossier?.findings?.length>0&&<div className="card"><div className="section-title"><h2>Evidenze e ipotesi</h2></div>
-    <div className="grid2">{dossier.findings.map((f,i)=><div className="finding" key={i}><div className="flex center between gap8"><strong>{f.topic}</strong><span className={"pill "+(f.certainty==="verified"?"":"warn")}>{f.certainty==="verified"?"Da fonte":f.certainty==="inferred"?"Ipotesi":"Da verificare"}</span></div><p>{f.claim}</p><div className="caption" style={{marginTop:7}}>Fonti: {f.source_ids.length?f.source_ids.join(", "):"Non indicate"}</div></div>)}</div>
+    <div className="grid2">{dossier.findings.map((f,i)=><div className="finding" key={i}><div className="flex center between gap8"><strong>{f.topic}</strong><span className={"pill "+(f.certainty==="verified"?"":"warn")}>{f.certainty==="verified"?"Citazione presente":f.certainty==="inferred"?"Ipotesi":"Da verificare"}</span></div><p>{f.claim}</p>{f.evidence_quote&&<blockquote className="caption" style={{margin:"10px 0 0",paddingLeft:10,borderLeft:"2px solid var(--line)"}}>“{f.evidence_quote}”</blockquote>}<div className="caption" style={{marginTop:7}}>Fonti: {f.source_ids.length?f.source_ids.map(sourceId=>data.sources.find(s=>s.id===sourceId)?.title||data.offers.find(o=>o.id===sourceId)?.name||data.community_signals.find(s=>s.id===sourceId)?.topic||data.social_snapshots.find(s=>s.id===sourceId)?.period||"Fonte "+sourceId.slice(0,8)).join(" · "):"Non indicate"}</div></div>)}</div>
    </div>}
   </div>}
   {tab==="sources"&&<div className="stack-lg">
@@ -97,7 +97,7 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
    <div className="card">{data.sources.length?data.sources.map(s=><div className="list-row" key={s.id}><div className="flex center gap12"><div className="client-avatar">{s.kind==="website"?<Globe size={17}/>:<FileText size={17}/>}</div><div><strong>{s.title}</strong><div className="caption">{s.kind} · {s.body?.length||0} caratteri · {s.url||"Nessun URL"}</div>{s.error&&<div className="caption" style={{color:"var(--danger)"}}>{s.error}</div>}</div></div><div className="flex center gap8 wrap"><Badge value={s.status}/>{s.kind==="document"&&s.file_path&&s.status!=="ready"&&<button className="button small" onClick={()=>onAction("reprocessDocument",{id:s.id})}>Riprova</button>}</div></div>):
     <Empty title="Nessuna fonte" text="Inizia aggiungendo il sito del cliente, un brief o una nota."/>}
    </div>
-   {data.sources.some(s=>s.status==="pending")&&<div className="notice warn">Alcuni PDF/immagini sono salvati privatamente ma l'estrazione automatica del testo non è ancora attiva. Usa una nota testuale per renderne il contenuto disponibile agli agenti.</div>}
+   {data.sources.some(s=>s.status==="pending")&&<div className="notice warn">Alcune fonti non sono ancora leggibili. I PDF con testo e i DOCX sono supportati; per scansioni e immagini serve ancora OCR oppure una trascrizione testuale.</div>}
   </div>}
   {tab==="community"&&<div className="stack-lg">
    <div className="flex between center gap12 wrap">
