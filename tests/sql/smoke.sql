@@ -165,3 +165,30 @@ begin
    raise exception 'Atomic job claim failed';end if;
 end $jobs$;
 reset role;
+
+-- Calendar is client-owned, attached contents must match the client, and planning is not publishing.
+set role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+insert into public.editorial_entries(client_id,created_by,content_id,channel,title,planned_at,status)
+values (
+ 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111',
+ 'dddddddd-dddd-4ddd-8ddd-dddddddddddd','instagram','Editorial draft',
+ now()+interval '2 days','planned'
+);
+do $cal$
+begin
+ if (select count(*) from public.editorial_entries)<>1 then
+  raise exception 'Editorial calendar RLS did not return only owned records';
+ end if;
+ begin
+  insert into public.editorial_entries(client_id,created_by,channel,title,planned_at)
+  values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','11111111-1111-4111-8111-111111111111',
+    'instagram','Cross-client entry',now());
+  raise exception 'Cross-tenant calendar creation allowed';
+ exception when insufficient_privilege then null;
+ end;
+ if exists (select 1 from public.editorial_entries where status='published') then
+  raise exception 'Calendar must not imply automatic publishing';
+ end if;
+end $cal$;
+reset role;
