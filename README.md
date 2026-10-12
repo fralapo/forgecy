@@ -21,6 +21,8 @@ The complete previous repository is preserved under the **old/** folder with its
    - supabase/migrations/0010_editorial_calendar.sql
    - supabase/migrations/0011_client_evidence_search.sql
    - supabase/migrations/0012_website_crawl_budgets.sql
+   - supabase/migrations/0013_source_chunks.sql
+   - supabase/migrations/0014_source_chunks_backfill.sql
 4. Copy .env.example to .env.local. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from the Supabase dashboard.
 5. Enable email OTP / magic-link sign-in in Supabase Authentication. Allow http://localhost:3000/auth/callback as a redirect URL.
 6. Run **npm run dev** and open http://localhost:3000.
@@ -30,6 +32,10 @@ The complete previous repository is preserved under the **old/** folder with its
 10. Do not enable `ENABLE_WEBSITE_INGEST=true` until outbound network restrictions are in place. Apply migration 0012 before deploying the shared crawl budgets; see [CRAWL_BUDGETS.md](docs/CRAWL_BUDGETS.md).
 
 To deploy, connect this repository to Vercel (or a compatible Next.js Node host), configure the same environment variables, run the migrations in the production Supabase project and add the production auth redirect URL. Normal development requires no Docker or self-managed database.
+
+## Client Knowledge Search (indexed excerpts)
+
+The Library can now search bounded, source-attributed passages from websites and private text documents, rather than relying only on whole-source matches. The Leader and company dossier use these retrieved excerpts, with strict client isolation and evidence validation. This is keyword retrieval, **not semantic embeddings or fact-checking**. Requires migrations 0013 and 0014. Details: [docs/CLIENT_KNOWLEDGE_SEARCH.md](docs/CLIENT_KNOWLEDGE_SEARCH.md).
 
 ## Editorial intelligence from training materials
 
