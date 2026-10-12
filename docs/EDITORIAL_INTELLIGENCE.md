@@ -35,6 +35,7 @@ This playbook is a paraphrased operational interpretation of eight PDF training 
 ### 5. Fonts and visual modules (Migliori font di Canva, pp. 2–47; Raccolta app utili di Canva, pp. 3–13)
 - Treat the PDF as **typography and visual-treatment inspiration**, not as font license, downloadable font package or evidence that an integration exists.
 - Patterns, frames, controlled texture, typography treatments and palette extraction are ideas for later versions of the editor.
+- The client profile now stores a brand primary/background palette and a heading-font name as a design reference. The preview and PNG/PDF exports apply the palette with a contrast fallback; fonts are NOT silently downloaded or embedded.
 - Respect the client's established logo, palette and typography before suggesting alternatives. Do not auto-apply arbitrary Canva aesthetic choices.
 - Rich-layer editing and external Canva app connections **are not implemented** by this change.
 

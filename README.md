@@ -24,7 +24,7 @@ To deploy, connect this repository to Vercel (or a compatible Next.js Node host)
 
 ## Editorial intelligence from training materials
 
-Library now includes **Voce della community**, where the team can record anonymized questions, objections, reviews and audience feedback. The AI uses observed needs (without treating one comment as a universal trend) to create an inspectable creative brief for static Instagram and LinkedIn content. Instagram defaults to 4:5 and LinkedIn documents to 16:9. See [docs/EDITORIAL_INTELLIGENCE.md](docs/EDITORIAL_INTELLIGENCE.md) for source mapping and limitations.
+Library now includes **Voce della community**, where the team can record anonymized questions, objections, reviews and audience feedback. The AI uses observed needs (without treating one comment as a universal trend) to create an inspectable creative brief for static Instagram and LinkedIn content. Per-client brand colors now affect preview and PNG/PDF; a heading font can be documented without automatically installing it. Instagram defaults to 4:5 and LinkedIn documents to 16:9. See [docs/EDITORIAL_INTELLIGENCE.md](docs/EDITORIAL_INTELLIGENCE.md) for source mapping and limitations.
 
 ## How work flows
 
