@@ -57,6 +57,7 @@ async function execute(db:ReturnType<typeof workerDb>,job:AiJob){
      client_id:job.client_id,request:input.data.request,status:"running",ai_job_id:job.id
    }).select("id").single();
    dbError(missionErr,"Impossibile creare la missione");
+   if(!mission)throw new ApiFailure(500,"Missione non creata");
    missionId=mission.id;
  }
  const output=await executeMission(ctx,job.client_id,missionId!,input.data.request,
