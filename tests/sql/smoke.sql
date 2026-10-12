@@ -68,11 +68,11 @@ values
 update public.contents set parent_id='dddddddd-dddd-4ddd-8ddd-dddddddddddd'
  where id='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
 update public.contents set title='Edited original' where id='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
-do $
+do $test$
 begin
  if (select status from public.contents where id='dddddddd-dddd-4ddd-8ddd-dddddddddddd') <> 'draft'
  then raise exception 'Approval not reset on creative edit'; end if;
  if (select status from public.contents where id='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee') <> 'stale'
  then raise exception 'Adaptation not invalidated'; end if;
-end $;
+end $test$;
 reset role;
