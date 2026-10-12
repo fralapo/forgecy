@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feat/forgecy-v11-client-first-rebuild
+      - feat/forgecy-v13-skills-quality-reliability
       - main
   pull_request:
     branches:
