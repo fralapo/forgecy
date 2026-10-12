@@ -1,0 +1,33 @@
+export type Client={
+ id:string;name:string;industry:string;website?:string|null;
+ profile:Record<string,unknown>;knowledge_revision:number;created_at?:string;
+};
+export type Source={id:string;client_id:string;kind:string;title:string;url?:string|null;body:string;status:string;file_path?:string|null;error?:string|null};
+export type Offer={id:string;client_id:string;kind:"product"|"service";name:string;description:string;audience:string;benefits:string[];price:number|null;currency:string;cta:string;status:"draft"|"verified"|"archived";version:number};
+export type Dossier={id:string;version:number;status:"draft"|"stale"|"approved";summary:string;findings:Array<{topic:string;claim:string;source_ids:string[];certainty:string}>;knowledge_revision:number};
+export type Campaign={id:string;title:string;objective:string;period:string;offer_id:string|null;status:string;strategy:Record<string,unknown>;created_at:string};
+export type Slide={headline:string;body:string;visual_prompt?:string;image_path?:string};
+export type Content={id:string;client_id:string;campaign_id:string;offer_id?:string|null;parent_id?:string|null;title:string;caption:string;channel:"instagram"|"linkedin";format:"post"|"carousel"|"document";status:"draft"|"review"|"approved"|"stale";slides:Slide[];revision:number;source_revision?:number;offer_version?:number};
+export type Message={id:string;role:"user"|"leader";body:string;created_at:string};
+export type Mission={id:string;request:string;status:string;payload:Record<string,unknown>;error?:string|null;created_at:string};
+export type AgentEvent={id:string;mission_id:string;agent:string;recipient:string;summary:string;created_at:string};
+export type Snapshot={
+ client:Client;sources:Source[];offers:Offer[];dossiers:Dossier[];campaigns:Campaign[];
+ contents:Content[];messages:Message[];missions:Mission[];agent_events:AgentEvent[];
+ social_accounts:Array<{id:string;username:string;remote_id:string;token_expires_at?:string}>;
+ social_snapshots:Array<{id:string;collected_at:string;period:string;data:{account?:{followers_count?:number;media_count?:number};media?:Array<{id:string;like_count?:number;comments_count?:number;caption?:string;permalink?:string}>;source?:string;measured?:boolean}}>;
+};
+export type View="today"|"knowledge"|"offers"|"projects"|"results";
+export async function requestJson<T=Record<string,unknown>>(url:string,init:RequestInit={}):Promise<T>{
+ const headers:Record<string,string>={};
+ if(!(init.body instanceof FormData))headers["Content-Type"]="application/json";
+ const response=await fetch(url,{...init,headers:{...headers,...init.headers},cache:"no-store"});
+ let data:Record<string,unknown>={};
+ try{data=await response.json() as Record<string,unknown>}catch{}
+ if(response.status===401 && typeof window!=="undefined")window.location.assign("/login");
+ if(!response.ok)throw new Error(typeof data.error==="string"?data.error:("Richiesta non riuscita: HTTP "+response.status));
+ return data as T;
+}
+export const statusLabel=(s:string)=>({approved:"Approvato",draft:"Bozza",stale:"Da aggiornare",proposed:"Da approvare",verified:"Verificato",archived:"Archiviato",running:"In lavorazione",failed:"Errore",review:"In revisione",active:"Attiva",completed:"Conclusa"}[s]||s);
+export const offerLabel=(o:Offer)=>o.price==null?"Su preventivo":new Intl.NumberFormat("it-IT",{style:"currency",currency:o.currency||"EUR"}).format(o.price);
+export function initials(s:string){return s.trim().split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase()}

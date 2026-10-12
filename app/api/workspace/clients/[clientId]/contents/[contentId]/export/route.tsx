@@ -1,0 +1,77 @@
+import { z } from "zod";
+import { ImageResponse } from "next/og";
+import { PDFDocument,StandardFonts,rgb } from "pdf-lib";
+import { auth,requireClient,fail,ApiFailure } from "@/lib/http";
+
+export const runtime="nodejs";
+export const maxDuration=30;
+type Params={params:Promise<{clientId:string,contentId:string}>};
+type Slide={headline?:string;body?:string;image_path?:string};
+function supportedText(value:string){
+ return value.replace(/[^\x20-\x7E\u00A0-\u00FF]/g," ").replace(/\s+/g," ").trim();
+}
+async function pdfExport(name:string,slides:Slide[],caption:string){
+ const doc=await PDFDocument.create();
+ const regular=await doc.embedFont(StandardFonts.Helvetica);
+ const bold=await doc.embedFont(StandardFonts.HelveticaBold);
+ const w=1080,h=1350;
+ const pages=slides.length?slides:[{headline:name,body:caption}];
+ for(let i=0;i<pages.length;i++){
+  const current=pages[i],page=doc.addPage([w,h]);
+  page.drawRectangle({x:0,y:0,width:w,height:h,color:rgb(0.865,0.9,0.865)});
+  page.drawText("FORGECY  /  LINKEDIN DOCUMENT",{x:88,y:1245,size:21,font:bold,color:rgb(.19,.37,.27)});
+  const drawWrapped=(str:string,startY:number,size:number,font:typeof bold,maxLines:number)=>{
+   const words=supportedText(str).split(/\s+/);
+   const lines:string[]=[];let line="";
+   for(const word of words){
+    const candidate=line?line+" "+word:word;
+    if(font.widthOfTextAtSize(candidate,size)>900 && line){lines.push(line);line=word;}else line=candidate;
+   }
+   if(line)lines.push(line);
+   lines.slice(0,maxLines).forEach((s,j)=>page.drawText(s,{x:88,y:startY-j*size*1.26,size,font,color:rgb(.13,.23,.18)}));
+   return startY-Math.min(lines.length,maxLines)*size*1.26;
+  };
+  const end=drawWrapped(current.headline||name,1040,66,bold,9);
+  drawWrapped(current.body||"",Math.min(end-55,490),29,regular,14);
+  page.drawText("Pagina "+(i+1)+" / "+pages.length,{x:88,y:85,size:20,font:regular,color:rgb(.27,.44,.34)});
+ }
+ const bytes=await doc.save();
+ return new Response(new Uint8Array(bytes),{
+  headers:{"Content-Type":"application/pdf","Content-Disposition":"attachment; filename=forgecy-linkedin.pdf","Cache-Control":"no-store"}
+ });
+}
+export async function GET(request:Request,{params}:Params){
+ try{
+  const {clientId,contentId}=await params,ctx=await auth();
+  await requireClient(ctx,clientId);
+  if(!z.uuid().safeParse(contentId).success)throw new ApiFailure(400,"ID contenuto non valido");
+  const {data,error}=await ctx.db.from("contents").select("channel,format,title,caption,slides,status").eq("client_id",clientId).eq("id",contentId).maybeSingle();
+  if(error||!data)throw new ApiFailure(404,"Contenuto non trovato");
+  if(data.status==="stale")throw new ApiFailure(409,"Questo contenuto è obsoleto: aggiornalo prima di esportare");
+  const url=new URL(request.url);
+  const format=url.searchParams.get("format")||"png";
+  const slides=Array.isArray(data.slides)?(data.slides as Slide[]):[];
+  if(format==="pdf"){
+    if(data.channel!=="linkedin")throw new ApiFailure(400,"Il PDF è destinato alle varianti LinkedIn");
+    return await pdfExport(data.title,slides,data.caption);
+  }
+  if(format==="txt"){
+   return new Response(data.caption,{headers:{"Content-Type":"text/plain; charset=utf-8","Content-Disposition":"attachment; filename=forgecy-post.txt"}});
+  }
+  if(format!=="png")throw new ApiFailure(400,"Formato non supportato");
+  const idx=Math.max(0,Math.min(slides.length-1,Number(url.searchParams.get("slide")||0)));
+  if(!Number.isInteger(idx)||!slides[idx])throw new ApiFailure(400,"Pagina non disponibile");
+  const slide=slides[idx];
+  return new ImageResponse(
+   <div style={{width:"100%",height:"100%",display:"flex",flexDirection:"column",justifyContent:"space-between",padding:100,backgroundColor:"#dce5d9",color:"#244536",fontFamily:"sans-serif"}}>
+    <div style={{display:"flex",fontSize:23,fontWeight:800,letterSpacing:3}}>FORGECY  /  {data.channel.toUpperCase()}</div>
+    <div style={{display:"flex",flexDirection:"column"}}>
+     <div style={{fontSize:72,lineHeight:1.12,fontWeight:800,marginBottom:48}}>{slide.headline||data.title}</div>
+     <div style={{fontSize:37,lineHeight:1.5}}>{slide.body||""}</div>
+    </div>
+    <div style={{display:"flex",justifyContent:"space-between",fontSize:24,fontWeight:700}}><span>{data.title.slice(0,45)}</span><span>{idx+1} / {slides.length}</span></div>
+   </div>,
+   {width:1080,height:1350,headers:{"Content-Disposition":"attachment; filename=forgecy-slide-"+(idx+1)+".png","Cache-Control":"no-store"}}
+  );
+ }catch(e){return fail(e)}
+}
