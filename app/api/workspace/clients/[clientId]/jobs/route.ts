@@ -5,7 +5,8 @@ export const runtime="nodejs";
 type P={params:Promise<{clientId:string}>};
 const createJob=z.discriminatedUnion("kind",[
   z.object({kind:z.literal("dossier"),payload:z.object({}).strict().default({})}),
-  z.object({kind:z.literal("mission"),payload:missionSchema})
+  z.object({kind:z.literal("mission"),payload:missionSchema}),
+  z.object({kind:z.literal("strategy"),payload:z.object({}).strict().default({})})
 ]);
 export async function GET(_request:Request,{params}:P){
  try{
@@ -33,12 +34,29 @@ export async function POST(request:Request,{params}:P){
    if(!current||current.status!=="approved"||
      current.knowledge_revision!==client?.knowledge_revision)
       throw new ApiFailure(409,"Prima approva un dossier aziendale attuale");
+   const {data:strategy,error:strategyError}=await ctx.db.from("strategies")
+     .select("status,knowledge_revision").eq("client_id",clientId)
+     .order("version",{ascending:false}).limit(1).maybeSingle();
+   dbError(strategyError);
+   if(!strategy||strategy.status!=="approved"||
+      strategy.knowledge_revision!==client?.knowledge_revision)
+     throw new ApiFailure(409,"Prima approva il piano strategico del cliente");
    if(input.payload.offer_id){
     const {data:offer}=await ctx.db.from("offers").select("id")
       .eq("client_id",clientId).eq("id",input.payload.offer_id)
       .eq("status","verified").maybeSingle();
     if(!offer)throw new ApiFailure(409,"L'offerta non è verificata");
    }
+  }else if(input.kind==="strategy"){
+   const {data:dossier,error:dossierError}=await ctx.db.from("dossiers")
+     .select("status,knowledge_revision").eq("client_id",clientId)
+     .order("version",{ascending:false}).limit(1).maybeSingle();
+   dbError(dossierError);
+   const {data:client}=await ctx.db.from("clients")
+     .select("knowledge_revision").eq("id",clientId).single();
+   if(!dossier||dossier.status!=="approved"||
+      dossier.knowledge_revision!==client?.knowledge_revision)
+     throw new ApiFailure(409,"Approva un dossier attuale prima del piano strategico");
   }else{
    const {count,error}=await ctx.db.from("sources").select("id",{head:true,count:"exact"})
      .eq("client_id",clientId).eq("status","ready");
