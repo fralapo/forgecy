@@ -23,6 +23,7 @@ export type WebsitePage = {
 /** URL checks complement, but never replace, outbound network firewall rules. */
 export function publicHttpsUrl(value: string): URL {
   let url: URL;
+  if (value.length > 2048) throw new Error("URL del sito troppo lunga");
   try { url = new URL(value); } catch { throw new Error("URL del sito non valida"); }
   if (url.protocol !== "https:" || (url.port && url.port !== "443") ||
       url.username || url.password || url.hostname.endsWith(".") ||
@@ -119,8 +120,10 @@ export function robotsPermit(rules: RobotRule[], url: URL, bot = "forgecyresearc
   let winner: { score:number; action:"allow"|"disallow" }|undefined;
   for (const rule of applicable) {
     if (!rule.path) continue;
-    const escaped = rule.path.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
-    const regex = new RegExp("^" + escaped.replace(/\$$/, "$"));
+    const anchored=rule.path.endsWith("$");
+    const raw=anchored?rule.path.slice(0,-1):rule.path;
+    const escaped=raw.replace(/[.+?^${}()|[\]\\]/g,"\\$&").replace(/\*/g,".*");
+    const regex=new RegExp("^"+escaped+(anchored?"$":""));
     if (!regex.test(path)) continue;
     const score = rule.path.replace(/[*$]/g,"").length;
     if (!winner || score > winner.score || (score === winner.score && rule.action === "allow"))
