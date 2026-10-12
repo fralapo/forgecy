@@ -4,6 +4,9 @@ insert into auth.users(id) values
  ('22222222-2222-4222-8222-222222222222');
 grant select,insert,update,delete on all tables in schema public to authenticated;
 grant usage on all sequences in schema public to authenticated;
+-- The job table is deliberately read-only through PostgREST.
+revoke insert,update,delete on public.ai_jobs from authenticated;
+grant select on public.ai_jobs to authenticated;
 insert into public.clients(id,owner_id,name) values
  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','Company A'),
  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','22222222-2222-4222-8222-222222222222','Company B');
@@ -111,4 +114,37 @@ begin
  end;
  raise exception 'Quality gate unexpectedly allowed blocked campaign';
 end $quality$;
+reset role;
+
+-- AI job access: enqueue is scoped to the authenticated client and rate limited.
+set role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+do $jobs$
+declare jid uuid; unavailable bool;
+begin
+ jid:=public.forgecy_enqueue_ai_job('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','dossier','{}'::jsonb);
+ if jid is null then raise exception 'Enqueue did not return an ID';end if;
+ begin
+   perform public.forgecy_enqueue_ai_job('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','dossier','{}'::jsonb);
+   raise exception 'Cross-client queue accepted';
+ exception when others then
+   if sqlerrm='Cross-client queue accepted' then raise; end if;
+ end;
+ begin
+   update public.ai_jobs set status='succeeded' where id=jid;
+   raise exception 'Client could mutate job directly';
+ exception when insufficient_privilege then null;
+ end;
+ if (select count(*) from public.ai_jobs where client_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')<>1
+ then raise exception 'Job not visible to its owner';end if;
+end $jobs$;
+reset role;
+set role service_role;
+do $jobs$
+begin
+ if (select count(*) from public.forgecy_claim_ai_job())<>1 then
+   raise exception 'Worker could not claim one job';end if;
+ if (select count(*) from public.ai_jobs where status='running' and attempts=1)<>1 then
+   raise exception 'Atomic job claim failed';end if;
+end $jobs$;
 reset role;
