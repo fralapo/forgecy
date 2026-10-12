@@ -1,0 +1,53 @@
+name: Forgecy V11 checks
+on:
+  push:
+    branches:
+      - feat/forgecy-v11-client-first-rebuild
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: example-anon-key-for-build-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18.0'
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Security/invariant tests
+        run: npm test
+      - name: SQL migrations and RLS smoke tests
+        run: |
+          psql -v ON_ERROR_STOP=1 -f tests/sql/bootstrap.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0001_init.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0002_invariants.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0003_knowledge_versions.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0004_content_approval.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/smoke.sql
+      - name: Build
+        run: npm run build
