@@ -6,6 +6,7 @@ import { offerLabel,statusLabel } from "./types";
 import { audiencePatterns } from "@/lib/audience";
 import { brandStyle } from "@/lib/brand";
 import { summarizeInstagram } from "@/lib/social-analytics";
+import EditorialCalendar from "./editorial-calendar";
 import {resolvedLayout,layoutStyle,slidePreflight,slideHistoryReducer} from "@/lib/carousel-layout";
 
 type Props={
@@ -191,6 +192,7 @@ function Offers({data,onModal,onAction}:{data:Snapshot;onModal:Props["onModal"];
 }
 function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Props["onModal"];onAction:Props["onAction"];onChat:()=>void;busy:string|null}){
  const [campaignId,setCampaignId]=useState<string|null>(null);
+ const [calendarOpen,setCalendarOpen]=useState(false);
  const [contentId,setContentId]=useState<string|null>(null);
  const [tab,setTab]=useState<"brief"|"production">("production");
  const campaign=data.campaigns.find(c=>c.id===campaignId);
@@ -198,9 +200,10 @@ function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Pro
  const chosen=contents.find(c=>c.id===contentId);
  return <>
   <Header k="PROGETTI / OBIETTIVI" title="Dall'obiettivo alla pubblicazione." sub="Ogni campagna tiene insieme strategia, calendario, post e adattamenti LinkedIn."
-   actions={<button className="button primary" onClick={onChat}><Sparkles size={16}/> Affida un obiettivo al Leader</button>}/>
-  {chosen&&<ContentEditor key={chosen.id} content={chosen} clientName={data.client.name} profile={data.client.profile} onBack={()=>setContentId(null)} onAction={onAction} busy={busy}/>}
-  {!chosen&&campaign&&<div className="stack-lg">
+   actions={<div className="flex gap8 wrap"><button className={"button "+(calendarOpen?"primary":"")} onClick={()=>setCalendarOpen(v=>!v)}><CalendarDays size={16}/>{calendarOpen?"Torna ai progetti":"Calendario editoriale"}</button><button className="button primary" onClick={onChat}><Sparkles size={16}/> Affida un obiettivo al Leader</button></div>}/>
+  {calendarOpen&&<EditorialCalendar data={data} onAction={onAction} busy={busy}/>}
+  {!calendarOpen&&chosen&&<ContentEditor key={chosen.id} content={chosen} clientName={data.client.name} profile={data.client.profile} onBack={()=>setContentId(null)} onAction={onAction} busy={busy}/>}
+  {!calendarOpen&&!chosen&&campaign&&<div className="stack-lg">
    <div className="flex between center wrap gap12"><button className="button small ghost" onClick={()=>setCampaignId(null)}><ChevronLeft size={16}/> Tutti i progetti</button><Badge value={campaign.status}/></div>
    <div><div className="eyebrow">{campaign.period}</div><h2 style={{fontSize:25,marginTop:5}}>{campaign.title}</h2><p className="tagline" style={{marginTop:6}}>{campaign.objective}</p></div>
    <div className="tabs"><button className={"tab "+(tab==="brief"?"active":"")} onClick={()=>setTab("brief")}>Strategia e brief</button><button className={"tab "+(tab==="production"?"active":"")} onClick={()=>setTab("production")}>Produzione ({contents.length})</button></div>
@@ -215,7 +218,7 @@ function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Pro
      <Empty title="Nessun contenuto" text="Puoi aggiungere un post o chiedere al Leader una proposta di campagna completa."><button className="button" onClick={()=>onModal("content",{campaign_id:campaign.id})}>Crea post</button></Empty>}
     </div>}
   </div>}
-  {!chosen&&!campaign&&(data.campaigns.length?<div className="grid2">{data.campaigns.map(c=><button key={c.id} className="click-card stack" onClick={()=>{setCampaignId(c.id);setTab("production")}}>
+  {!calendarOpen&&!chosen&&!campaign&&(data.campaigns.length?<div className="grid2">{data.campaigns.map(c=><button key={c.id} className="click-card stack" onClick={()=>{setCampaignId(c.id);setTab("production")}}>
    <div className="flex between center"><span className="eyebrow">{c.period}</span><Badge value={c.status}/></div>
    <h2>{c.title}</h2><p className="tagline">{c.objective}</p>
    <div className="flex between center"><span className="caption">{data.contents.filter(x=>x.campaign_id===c.id).length} contenuti</span><ArrowRight size={16}/></div>
