@@ -273,7 +273,13 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
      <div className="caption">Titolo: {(current?.headline||"").length} caratteri · Testo: {(current?.body||"").length} caratteri</div>
      {slideIssues.length>0&&<div className="notice warn">{slideIssues.map((issue,i)=><p key={i}>{issue.severity==="blocking"?"Da correggere":"Da verificare"}: {issue.message}</p>)}</div>}
      <label>Prompt visivo</label><textarea rows={3} value={current?.visual_prompt||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,visual_prompt:e.target.value}:x))}/>
-     <div className="flex gap8 wrap"><button className="button small" onClick={()=>setSlides(s=>[...s,{headline:"Nuova pagina",body:"",visual_prompt:""}])}><Plus size={14}/> Pagina</button><button className="button small" disabled={slides.length<=1} onClick={()=>{setSlides(s=>s.filter((_,i)=>i!==idx));setIdx(0)}}>Rimuovi pagina</button></div>
+     <div className="flex gap8 wrap">
+      <button className="button small" onClick={()=>{setSlides(s=>[...s.slice(0,idx+1),{headline:"Nuova pagina",body:"",layout:"content"},...s.slice(idx+1)]);setIdx(idx+1)}}><Plus size={14}/> Pagina</button>
+      <button className="button small" onClick={()=>{setSlides(s=>[...s.slice(0,idx+1),{...s[idx]},...s.slice(idx+1)]);setIdx(idx+1)}}>Duplica</button>
+      <button className="button small" disabled={idx===0} onClick={()=>{const next=[...slides];[next[idx-1],next[idx]]=[next[idx],next[idx-1]];setSlides(next);setIdx(idx-1)}}>Sposta ←</button>
+      <button className="button small" disabled={idx>=slides.length-1} onClick={()=>{const next=[...slides];[next[idx+1],next[idx]]=[next[idx],next[idx+1]];setSlides(next);setIdx(idx+1)}}>Sposta →</button>
+      <button className="button small" disabled={slides.length<=1} onClick={()=>{setSlides(s=>s.filter((_,i)=>i!==idx));setIdx(0)}}>Rimuovi</button>
+     </div>
      <button className="button small" disabled={Boolean(busy)} onClick={async()=>{await save();await onAction("image",{id:content.id,slideIndex:idx,prompt:current?.visual_prompt||current?.headline||""})}}><ImageIcon size={14}/> Genera immagine con OpenAI</button>
     </>}
     <div className="separator"/><div className="flex gap8 wrap"><button className="button primary" disabled={Boolean(busy)} onClick={()=>save()}>Salva modifiche</button><button className="button" disabled={Boolean(busy)||content.status==="stale"} onClick={()=>save("approved")}><Check size={14}/> Approva</button></div>
