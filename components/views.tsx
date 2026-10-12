@@ -279,7 +279,7 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
  const slideIssues=current?slidePreflight(current):[];
  const [resolvedImage,setResolvedImage]=useState<{path:string;url:string}|null>(null);
  // A new slide must never temporarily show the previous slide's image.
- const imageSrc=resolvedImage?.path===current?.image_path?resolvedImage.url:"";
+ const imageSrc=resolvedImage && resolvedImage.path===current?.image_path?resolvedImage.url:"";
  useEffect(()=>{
   let cancelled=false;
   const path=current?.image_path;
