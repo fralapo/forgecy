@@ -4,7 +4,8 @@ import { clientSchema,sourceSchema,offerSchema,campaignSchema,missionSchema,chat
 import { draftDossier,executeMission,contextForAI } from "@/lib/agent-team";
 import { handleLeaderMessage } from "@/lib/leader-intent";
 import { modelJson,lowTrustRule } from "@/lib/ai";
-import { crawlWebsite } from "@/lib/site-ingest";
+import { crawlWebsite, publicHttpsUrl } from "@/lib/site-ingest";
+import { requireWebsiteCrawlingEnabled, reserveWebsiteCrawl } from "@/lib/crawl-budget";
 import { extractDocument } from "@/lib/document-extract";
 import { slidePreflight } from "@/lib/carousel-layout";
 
@@ -93,6 +94,12 @@ export async function POST(request:Request,{params}:Params){
    const input=await read(request,z.object({
      url:z.url(),maxPages:z.number().int().min(1).max(6).default(5)
    }));
+   requireWebsiteCrawlingEnabled();
+   let hostname:string;
+   try {hostname=publicHttpsUrl(input.url).hostname;}
+   catch {throw new ApiFailure(400,"Inserisci un sito HTTPS pubblico valido");}
+   // Reservation is atomic across instances; a failed DB check must block crawling.
+   const reservationId=await reserveWebsiteCrawl(ctx,id,hostname,input.maxPages);
    const result=await crawlWebsite(input.url,input.maxPages);
    const {data:previous,error:priorError}=await ctx.db.from("sources")
      .select("id,url,content_sha256").eq("client_id",id).eq("kind","website");
@@ -118,7 +125,7 @@ export async function POST(request:Request,{params}:Params){
      imported.push(data);
    }
    await audit(ctx,id,"website_crawl_finished",undefined,{
-     domain:new URL(input.url).hostname,imported:imported.length,unchanged,
+     domain:hostname,reservationId,imported:imported.length,unchanged,
      skipped:result.skipped.length,pages:result.pages.length
    });
    return json({source:imported[0]||null,sources:imported,unchanged,
