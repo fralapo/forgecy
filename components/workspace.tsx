@@ -148,7 +148,7 @@ export default function Workspace(){
   }else if(kind==="profile"){
    url=root;method="PATCH";
    payload={name:String(f.get("name")||""),industry:String(f.get("industry")||""),website:String(f.get("website")||""),
-    profile:{...(data?.client.profile||{}),description:String(f.get("description")||""),tone:String(f.get("tone")||"")}};
+    profile:{...(data?.client.profile||{}),description:String(f.get("description")||""),tone:String(f.get("tone")||""),brand_primary:String(f.get("brand_primary")||"#244536"),brand_background:String(f.get("brand_background")||"#dce5d9"),heading_font:String(f.get("heading_font")||"").slice(0,100)}};
   }else if(kind==="campaign"){
    url=root+"/campaigns";payload={title:String(f.get("title")||""),objective:String(f.get("objective")||""),period:String(f.get("period")||""),
     offer_id:String(f.get("offer_id")||"")||null};
@@ -249,7 +249,12 @@ export default function Workspace(){
   {modal&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setModal(null)}}><div className="modal"><div className="modal-head"><div><div className="eyebrow">FORGECY / {current?.name||"NUOVO CLIENTE"}</div><h2 style={{marginTop:7}}>{({client:"Aggiungi un cliente",source:"Nuova fonte",signal:"Ascolto della community",upload:"Carica documento",offer:"Prodotto o servizio",profile:"Profilo del cliente",campaign:"Nuova campagna",content:"Nuovo contenuto",mission:"Affida un obiettivo al Leader"} as Record<string,string>)[modal.kind]||"Nuovo elemento"}</h2></div><button className="button ghost small" aria-label="Chiudi" onClick={()=>setModal(null)}><X size={18}/></button></div>
    <form onSubmit={modal.kind==="client"?createClient:submitModal}>
     {modal.kind==="client"&&<><div><label>Nome del cliente *</label><input required name="name" autoFocus maxLength={160} placeholder="Es. CasaLuce"/></div><div className="cols"><div><label>Settore</label><input name="industry" placeholder="Es. Cura della casa"/></div><div><label>Sito web</label><input name="website" placeholder="https://azienda.it"/></div></div></>}
-    {modal.kind==="profile"&&<><div><label>Nome</label><input required name="name" defaultValue={current?.name}/></div><div className="cols"><div><label>Settore</label><input name="industry" defaultValue={current?.industry}/></div><div><label>Sito web</label><input name="website" defaultValue={current?.website||""}/></div></div><div><label>Descrizione</label><textarea name="description" rows={4} defaultValue={String(data?.client.profile?.description||"")}/></div><div><label>Tono di voce</label><textarea name="tone" rows={2} defaultValue={String(data?.client.profile?.tone||"")}/></div></>}
+    {modal.kind==="profile"&&<><div><label>Nome</label><input required name="name" defaultValue={current?.name}/></div><div className="cols"><div><label>Settore</label><input name="industry" defaultValue={current?.industry}/></div><div><label>Sito web</label><input name="website" defaultValue={current?.website||""}/></div></div><div><label>Descrizione</label><textarea name="description" rows={4} defaultValue={String(data?.client.profile?.description||"")}/></div><div><label>Tono di voce</label><textarea name="tone" rows={2} defaultValue={String(data?.client.profile?.tone||"")}/></div>
+      <div className="cols">
+       <div><label>Colore principale</label><input name="brand_primary" type="color" defaultValue={String(data?.client.profile?.brand_primary||"#244536")}/></div>
+       <div><label>Colore di sfondo</label><input name="brand_background" type="color" defaultValue={String(data?.client.profile?.brand_background||"#dce5d9")}/></div>
+      </div>
+      <div><label>Font del brand (nome di riferimento)</label><input name="heading_font" maxLength={100} defaultValue={String(data?.client.profile?.heading_font||"")} placeholder="Es. Recoleta, Cinzel, Inter…"/><p className="caption" style={{marginTop:5}}>Il font è un riferimento per il designer: prima di usarlo nelle esportazioni serve un file con licenza adeguata.</p></div></>}
     {modal.kind==="signal"&&<>
      <div className="notice">Registra feedback anonimizzati. Evita dati personali e chiarisci da dove arriva l'osservazione: un segnale isolato è un'ipotesi, non una statistica.</div>
      <div className="cols">
