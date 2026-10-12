@@ -19,7 +19,7 @@ function validId(value:string|undefined){
 async function list(ctx:Awaited<ReturnType<typeof auth>>,id:string){
  const selections=[
   ["sources","*"],["community_signals","*"],["offers","*"],["dossiers","*"],["campaigns","*"],
-  ["contents","*"],["messages","*"],["missions","*"],["agent_events","*"],["ai_jobs","*"],
+  ["contents","*"],["messages","*"],["missions","*"],["agent_events","*"],["ai_jobs","*"],["strategies","*"],
   ["social_snapshots","*"],["social_accounts","id,client_id,platform,remote_id,username,token_expires_at,created_at"]
  ] as const;
  const results=await Promise.all(selections.map(async ([table,fields])=>{
@@ -156,6 +156,8 @@ export async function POST(request:Request,{params}:Params){
    const input=await read(request,missionSchema);
    const context=await contextForAI(ctx,id);
    if(context.dossier?.status!=="approved")throw new ApiFailure(409,"Approva un dossier attuale prima di affidare una campagna agli agenti");
+   if(context.strategy?.status!=="approved"||context.strategy.knowledge_revision!==context.client.knowledge_revision)
+     throw new ApiFailure(409,"Approva prima il piano strategico attuale");
    if(input.offer_id && !context.offers.some(o=>o.id===input.offer_id))throw new ApiFailure(409,"Offerta non confermata");
    const {data,error}=await ctx.db.from("missions").insert({client_id:id,request:input.request,status:"running"}).select().single();
    dbError(error,"Missione non avviata");
