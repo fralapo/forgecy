@@ -213,3 +213,92 @@ begin
  end;
 end $evidence$;
 reset role;
+
+
+-- Crawl budget acceptance: atomic, user-owned reservations, not bypassable via PostgREST.
+-- These tests intentionally run after all migrations; they must FAIL before 0012 is implemented.
+revoke all on public.website_crawl_requests from authenticated,anon;
+set role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+do $crawl$
+declare a uuid := 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+begin
+  if public.forgecy_reserve_website_crawl(a,'example.com',6) is null then
+    raise exception 'First crawl did not return an ID';
+  end if;
+  perform public.forgecy_reserve_website_crawl(a,'example.com',6);
+  begin
+    perform public.forgecy_reserve_website_crawl(a,'example.com',1);
+    raise exception 'Client burst limit bypassed';
+  exception when sqlstate 'P0429' then null;
+  end;
+  begin
+    perform public.forgecy_reserve_website_crawl(
+      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','other.example',1
+    );
+    raise exception 'Foreign client could reserve crawl';
+  exception when others then
+    if sqlerrm='Foreign client could reserve crawl' then raise; end if;
+  end;
+  begin
+    insert into public.website_crawl_requests(client_id,requested_by,hostname,page_budget)
+    values (a,'11111111-1111-4111-8111-111111111111','example.com',6);
+    raise exception 'User bypassed quota by direct insert';
+  exception when insufficient_privilege then null;
+  end;
+end $crawl$;
+reset role;
+
+-- A second client owned by the same account has its own burst quota.
+insert into public.clients(id,owner_id,name) values
+ ('99999999-9999-4999-8999-999999999999','11111111-1111-4111-8111-111111111111','Company C');
+set role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+select public.forgecy_reserve_website_crawl('99999999-9999-4999-8999-999999999999','example.org',6);
+reset role;
+
+-- Reservations from an earlier 15-minute interval still count toward the rolling daily budget.
+insert into public.website_crawl_requests(client_id,requested_by,hostname,page_budget,requested_at)
+select 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111',
+       'example.com',6,now()-interval '1 hour'
+from generate_series(1,2);
+set role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+do $crawl$
+begin
+  begin
+    perform public.forgecy_reserve_website_crawl(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','example.com',1
+    );
+    raise exception 'Client daily page limit bypassed';
+  exception when sqlstate 'P0429' then null;
+  end;
+end $crawl$;
+reset role;
+
+-- The owner's total reserved traffic applies across all their clients.
+insert into public.website_crawl_requests(client_id,requested_by,hostname,page_budget,requested_at)
+select '99999999-9999-4999-8999-999999999999','11111111-1111-4111-8111-111111111111',
+       'example.org',6,now()-interval '1 hour'
+from generate_series(1,19);
+insert into public.clients(id,owner_id,name) values
+ ('88888888-8888-4888-8888-888888888888','11111111-1111-4111-8111-111111111111','Company D');
+set role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+do $crawl$
+begin
+  begin
+    perform public.forgecy_reserve_website_crawl(
+      '88888888-8888-4888-8888-888888888888','example.net',1
+    );
+    raise exception 'Owner-wide daily budget bypassed';
+  exception when sqlstate 'P0429' then null;
+  end;
+end $crawl$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
+select public.forgecy_reserve_website_crawl(
+ 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','another-example.com',6
+);
+reset role;
