@@ -165,7 +165,7 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
     <div><h2>Ascolta, poi crea.</h2><p className="tagline" style={{marginTop:5}}>Domande, commenti, recensioni e obiezioni diventano spunti editoriali collegati al cliente.</p></div>
     <button className="button primary" onClick={()=>onModal("signal")}><Plus size={15}/> Registra un feedback</button>
    </div>
-   <div className="notice">Inserisci solo osservazioni anonimizzate: niente nomi, email o dati privati dei clienti finali. Un commento isolato non rappresenta l'intera community.</div>
+   <div className="notice">Inserisci solo osservazioni anonimizzate: niente nomi, email o dati privati dei clienti finali. Un commento isolato non rappresenta l&apos;intera community.</div>
    <div className="grid3">
     <div className="card metric-card"><span className="muted">Osservazioni raccolte</span><strong>{signals.length}</strong><small>Registrate manualmente</small></div>
     <div className="card metric-card"><span className="muted">Temi emersi</span><strong>{patterns.length}</strong><small>Argomenti raggruppati</small></div>
@@ -289,8 +289,8 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
  const exportRoot="/api/workspace/clients/"+content.client_id+"/contents/"+content.id+"/export";
  return <div className="stack-lg">
   <div className="flex between center gap12 wrap"><button className="button small ghost" onClick={onBack}><ChevronLeft size={16}/> Torna ai contenuti</button><Badge value={content.status}/></div>
-  <div><div className="eyebrow">{content.channel==="instagram"?"INSTAGRAM":"LINKEDIN"} · {content.format}</div><h2 style={{fontSize:22,marginTop:5}}>Modifica il contenuto</h2><p className="caption">Revisioni separate per canale, con collegamento all'originale quando presente.</p></div>
-  {content.status==="stale"&&<div className="notice warn">Questa bozza utilizza informazioni o una versione originale che sono cambiate. Rivedila prima dell'approvazione.</div>}
+  <div><div className="eyebrow">{content.channel==="instagram"?"INSTAGRAM":"LINKEDIN"} · {content.format}</div><h2 style={{fontSize:22,marginTop:5}}>Modifica il contenuto</h2><p className="caption">Revisioni separate per canale, con collegamento all&apos;originale quando presente.</p></div>
+  {content.status==="stale"&&<div className="notice warn">Questa bozza utilizza informazioni o una versione originale che sono cambiate. Rivedila prima dell&apos;approvazione.</div>}
   <div className="content-editor">
    <div className="card stack">
     <label>Titolo del contenuto</label><input value={title} onChange={e=>setTitle(e.target.value)} maxLength={240}/>
@@ -379,8 +379,8 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
   <div className="grid3" style={{marginTop:18}}>
    <div className="card metric-card"><span className="muted">Follower · ultima lettura</span>
     <strong>{num(stats.followers)}</strong><small>{stats.delta===null?"Variazione non disponibile":(stats.delta>=0?"+":"")+num(stats.delta)+" rispetto alla lettura precedente"}</small></div>
-   <div className="card metric-card"><span className="muted">Contenuti dell'account</span>
-    <strong>{num(stats.media_count)}</strong><small>Conteggio riportato dall'API Meta</small></div>
+   <div className="card metric-card"><span className="muted">Contenuti dell&apos;account</span>
+    <strong>{num(stats.media_count)}</strong><small>Conteggio riportato dall&apos;API Meta</small></div>
    <div className="card metric-card"><span className="muted">Interazioni del campione</span>
     <strong>{num(stats.total_sampled_interactions)}</strong><small>Like + commenti per {stats.sampled_posts_with_interactions} contenuti con dati disponibili</small></div>
   </div>
@@ -422,7 +422,7 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
    <div className="card"><h2 style={{marginBottom:14}}>Storico delle campagne</h2>
     {data.campaigns.length?data.campaigns.slice(0,8).map(c=><div className="list-row" key={c.id}><div><strong>{c.title}</strong><div className="caption">{c.period} · {c.objective.slice(0,90)}</div></div><Badge value={c.status}/></div>):
     <Empty title="Non ci sono ancora campagne" text="Le campagne approvate potranno usare questi dati come riferimento."/>}
-    <div className="notice" style={{marginTop:14}}>I dati Instagram non dimostrano l'efficacia causale di una campagna. Attribuzione e confronto richiedono un periodo e KPI definiti.</div>
+    <div className="notice" style={{marginTop:14}}>I dati Instagram non dimostrano l&apos;efficacia causale di una campagna. Attribuzione e confronto richiedono un periodo e KPI definiti.</div>
    </div>
   </div>
  </>;
