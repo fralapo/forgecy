@@ -159,8 +159,8 @@ export function sitemapUrls(xml:string,root:string,maxItems=MAX_SITEMAP_DISCOVER
     try {
       const parsed=publicHttpsUrl(value.trim());
       if(parsed.origin!==base.origin || BAD_PATH.test(parsed.pathname))return;
-      if(kind==="indices"&&!/\\.xml$/i.test(parsed.pathname))return;
-      if(kind==="pages"&&/\\.(?:pdf|jpg|png|mp4|zip|webp|xml|json)$/i.test(parsed.pathname))return;
+      if(kind==="indices"&&!/\.xml$/i.test(parsed.pathname))return;
+      if(kind==="pages"&&/\.(?:pdf|jpg|png|mp4|zip|webp|xml|json)$/i.test(parsed.pathname))return;
       parsed.search="";
       const canonical=parsed.toString();
       if(seen.has(canonical))return;
@@ -177,12 +177,12 @@ export function sitemapUrls(xml:string,root:string,maxItems=MAX_SITEMAP_DISCOVER
 export function robotsSitemapUrls(text:string,root:string):string[]{
   const base=publicHttpsUrl(root);
   const choices:string[]=[];
-  for(const line of text.split(/\\r?\\n/)){
-    const match=/^\\s*sitemap\\s*:\\s*(\\S+)/i.exec(line);
+  for(const line of text.split(/\r?\n/)){
+    const match=/^\s*sitemap\s*:\s*(\S+)/i.exec(line);
     if(!match)continue;
     try{
       const candidate=publicHttpsUrl(match[1]);
-      if(candidate.origin===base.origin&&/\\.xml$/i.test(candidate.pathname)&&
+      if(candidate.origin===base.origin&&/\.xml$/i.test(candidate.pathname)&&
         !choices.includes(candidate.toString()))choices.push(candidate.toString());
     }catch{/* unsafe external sitemap */}
     if(choices.length>=2)break;
