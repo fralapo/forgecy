@@ -97,6 +97,24 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
     <div className="grid2">{dossier.findings.map((f,i)=><div className="finding" key={i}><div className="flex center between gap8"><strong>{f.topic}</strong><span className={"pill "+(f.certainty==="verified"?"":"warn")}>{f.certainty==="verified"?"Citazione presente":f.certainty==="inferred"?"Ipotesi":"Da verificare"}</span></div><p>{f.claim}</p>{f.evidence_quote&&<blockquote className="caption" style={{margin:"10px 0 0",paddingLeft:10,borderLeft:"2px solid var(--line)"}}>“{f.evidence_quote}”</blockquote>}<div className="caption" style={{marginTop:7}}>Fonti: {f.source_ids.length?f.source_ids.map(sourceId=>data.sources.find(s=>s.id===sourceId)?.title||data.offers.find(o=>o.id===sourceId)?.name||data.community_signals.find(s=>s.id===sourceId)?.topic||data.social_snapshots.find(s=>s.id===sourceId)?.period||"Fonte "+sourceId.slice(0,8)).join(" · "):"Non indicate"}</div></div>)}</div>
    </div>}
   </div>}
+  {tab==="strategy"&&<div className="stack-lg">
+   <div className="card">
+    <div className="flex between center wrap gap12"><div><h2>Piano strategico</h2><p className="caption">La direzione approvata per tutte le campagne del cliente.</p></div>{strategy?<Badge value={strategy.status}/>:<span className="pill muted">Non presente</span>}</div>
+    {strategy?<><div className="separator"/><h2>{strategy.blueprint.title}</h2><p className="prose">{strategy.blueprint.diagnosis}</p><div className="caption">Versione {strategy.version}</div></>:<Empty title="Manca il piano strategico" text="Approva il dossier per elaborare obiettivi, KPI, pubblico e roadmap."/>}
+    <div className="flex gap8 wrap" style={{marginTop:18}}>
+     <button className="button primary" disabled={Boolean(busy)||Boolean(strategyJob)||dossier?.status!=="approved"} onClick={()=>onAction("strategyDraft")}><Sparkles size={15}/>{strategyJob?"Elaborazione in corso…":"Genera piano strategico"}</button>
+     {strategy?.status==="draft"&&strategy.knowledge_revision===data.client.knowledge_revision&&<button className="button" onClick={()=>onAction("strategyApprove",{id:strategy.id})}><Check size={15}/> Approva strategia</button>}
+    </div>
+    {strategy?.status==="stale"&&<div className="notice warn" style={{marginTop:14}}>Le fonti sono cambiate: genera una nuova versione del piano.</div>}
+   </div>
+   {strategy&&<div className="stack-lg">
+    <div className="card"><h2>Posizionamento</h2><p className="prose">{strategy.blueprint.positioning}</p><div className="separator"/>{strategy.blueprint.audiences.map((a,i)=><div className="list-row" key={i}>{a}</div>)}</div>
+    <div className="card"><h2>Obiettivi e KPI</h2>{strategy.blueprint.objectives.map((o,i)=><div className="finding" key={i} style={{marginTop:12}}><strong>{o.goal}</strong><p>{o.rationale}</p><div className="caption">KPI: {o.kpi} · Baseline: {o.baseline||"Da misurare"} · Target: {o.target}</div></div>)}</div>
+    <div className="grid2">{strategy.blueprint.content_pillars.map((p,i)=><div className="card" key={i}><h2>{p.name}</h2><p className="tagline">{p.purpose}</p>{p.examples.map((e,j)=><p key={j} className="caption">• {e}</p>)}</div>)}</div>
+    <div className="card"><h2>Roadmap 30 / 60 / 90 giorni</h2><div className="grid3">{[["30",strategy.blueprint.roadmap.days_30],["60",strategy.blueprint.roadmap.days_60],["90",strategy.blueprint.roadmap.days_90]].map(([days,items])=><div key={days as string}><strong>{days as string} giorni</strong>{(items as string[]).map((a,i)=><p className="caption" key={i}>• {a}</p>)}</div>)}</div></div>
+    <div className="card"><h2>Rischi e lacune</h2>{[...strategy.blueprint.risks,...strategy.blueprint.unknowns].map((a,i)=><div className="list-row" key={i}>{a}</div>)}</div>
+   </div>}
+  </div>}
   {tab==="sources"&&<div className="stack-lg">
    <div className="flex between center wrap gap12"><p className="tagline">Siti web, note, file e profili social del cliente.</p><div className="flex gap8 wrap"><button className="button small" onClick={()=>onModal("source")}><Globe size={15}/> Aggiungi fonte</button><button className="button small" onClick={()=>onModal("upload")}><UploadCloud size={15}/> Carica documento</button></div></div>
    <div className="card">{data.sources.length?data.sources.map(s=><div className="list-row" key={s.id}><div className="flex center gap12"><div className="client-avatar">{s.kind==="website"?<Globe size={17}/>:<FileText size={17}/>}</div><div><strong>{s.title}</strong><div className="caption">{s.kind} · {s.body?.length||0} caratteri · {s.url||"Nessun URL"}</div>{s.error&&<div className="caption" style={{color:"var(--danger)"}}>{s.error}</div>}</div></div><div className="flex center gap8 wrap"><Badge value={s.status}/>{s.kind==="document"&&s.file_path&&s.status!=="ready"&&<button className="button small" onClick={()=>onAction("reprocessDocument",{id:s.id})}>Riprova</button>}</div></div>):
