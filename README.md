@@ -15,6 +15,7 @@ The complete previous repository is preserved under the **old/** folder with its
    - supabase/migrations/0004_content_approval.sql
    - supabase/migrations/0005_editorial_intelligence.sql
    - supabase/migrations/0006_quality_gates.sql
+   - supabase/migrations/0007_source_intelligence.sql
 4. Copy .env.example to .env.local. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from the Supabase dashboard.
 5. Enable email OTP / magic-link sign-in in Supabase Authentication. Allow http://localhost:3000/auth/callback as a redirect URL.
 6. Run **npm run dev** and open http://localhost:3000.
@@ -52,9 +53,9 @@ A green CI build confirms these checks; it does not prove the external Meta, Ope
 
 ## Security and current limitations
 
-Every client-owned table uses Supabase Auth and Postgres RLS. Client ownership is checked server-side. Storage buckets are private; provider credentials stay on the server. The public website fetcher is disabled by default and requires network egress restrictions before enabling.
+Every client-owned table uses Supabase Auth and Postgres RLS. Client ownership is checked server-side. Storage buckets are private; provider credentials stay on the server. The bounded, robots-aware multi-page website crawler is disabled by default and **must not** be enabled without network-level outbound restrictions. Source content hashes and exact-quote evidence reports are stored in private client-scoped tables; they do not replace independent fact checking. See [docs/SOURCE_INTELLIGENCE_BACKEND.md](docs/SOURCE_INTELLIGENCE_BACKEND.md).
 
-This is a functional fullstack foundation **not yet a finished production SaaS**. Automatic PDF/DOCX extraction and OCR, durable asynchronous agent queues, fine-grained team roles, channel publishing, per-account AI spending limits and legacy database migrations remain to be built.
+This is a functional fullstack foundation **not yet a finished production SaaS**. OCR for scanned PDFs and images, durable asynchronous agent queues, fine-grained team roles, channel publishing, per-account AI spending limits and legacy database migrations remain to be built.
 
 Original source code: [old/](old/). More setup and endpoint details: [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md).
 
