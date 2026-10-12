@@ -4,11 +4,12 @@ import { PDFDocument,StandardFonts,rgb } from "pdf-lib";
 import { auth,requireClient,fail,ApiFailure } from "@/lib/http";
 import { STATIC_FORMATS } from "@/lib/editorial-principles";
 import { brandStyle,rgbFromHex } from "@/lib/brand";
+import {resolvedLayout,layoutStyle,slidePreflight} from "@/lib/carousel-layout";
 
 export const runtime="nodejs";
 export const maxDuration=30;
 type Params={params:Promise<{clientId:string,contentId:string}>};
-type Slide={headline?:string;body?:string;image_path?:string};
+type Slide={headline?:string;body?:string;image_path?:string;layout?:"cover"|"content"|"quote"|"closing"};
 function supportedText(value:string){
  return value.replace(/[^\x20-\x7E\u00A0-\u00FF]/g," ").replace(/\s+/g," ").trim();
 }
@@ -20,6 +21,7 @@ async function pdfExport(name:string,slides:Slide[],caption:string,clientId:stri
  const pages=slides.length?slides:[{headline:name,body:caption}];
  for(let i=0;i<pages.length;i++){
   const current=pages[i],page=doc.addPage([w,h]);
+  const preset=layoutStyle(resolvedLayout(current.layout));
   page.drawRectangle({x:0,y:0,width:w,height:h,color:rgb(...rgbFromHex(palette.background))});
   if(current.image_path){
    if(!current.image_path.startsWith(clientId+"/") || current.image_path.includes(".."))throw new ApiFailure(403,"Risorsa fuori dal profilo");
@@ -39,10 +41,10 @@ async function pdfExport(name:string,slides:Slide[],caption:string,clientId:stri
     if(font.widthOfTextAtSize(candidate,size)>w-240 && line){lines.push(line);line=word;}else line=candidate;
    }
    if(line)lines.push(line);
-   lines.slice(0,maxLines).forEach((s,j)=>page.drawText(s,{x:120,y:startY-j*size*1.26,size,font,color:rgb(...rgbFromHex(palette.text))}));
+   lines.slice(0,maxLines).forEach((s,j)=>page.drawText(s,{x:preset.textAlign==="center"?Math.max(50,(w-font.widthOfTextAtSize(s,size))/2):120,y:startY-j*size*1.26,size,font,color:rgb(...rgbFromHex(palette.text))}));
    return startY-Math.min(lines.length,maxLines)*size*1.26;
   };
-  const end=drawWrapped(current.headline||name,820,82,bold,5);
+  const end=drawWrapped(current.headline||name,820,Math.round(82*preset.titleScale),bold,5);
   drawWrapped(current.body||"",Math.min(end-48,470),36,regular,8);
   page.drawText("Pagina "+(i+1)+" / "+pages.length,{x:120,y:65,size:23,font:regular,color:rgb(...rgbFromHex(palette.text))});
  }
@@ -73,6 +75,9 @@ export async function GET(request:Request,{params}:Params){
   const idx=Math.max(0,Math.min(slides.length-1,Number(url.searchParams.get("slide")||0)));
   if(!Number.isInteger(idx)||!slides[idx])throw new ApiFailure(400,"Pagina non disponibile");
   const slide=slides[idx];
+  const issues=slidePreflight(slide);
+  if(issues.some(x=>x.severity==="blocking"))throw new ApiFailure(400,"La pagina contiene errori bloccanti: "+issues[0].message);
+  const preset=layoutStyle(resolvedLayout(slide.layout));
   let signedImage:string|null=null;
   if(slide.image_path){
    if(!slide.image_path.startsWith(clientId+"/")||slide.image_path.includes(".."))throw new ApiFailure(403,"Risorsa non autorizzata");
@@ -90,8 +95,8 @@ export async function GET(request:Request,{params}:Params){
     <div style={{display:"flex",position:"relative",width:"100%",height:"100%",flexDirection:"column",justifyContent:"space-between",padding:pad}}>
     <div style={{display:"flex",fontSize:23,fontWeight:800,letterSpacing:3}}>{client.name.slice(0,50)}  /  {data.channel.toUpperCase()}</div>
     <div style={{display:"flex",flexDirection:"column"}}>
-     <div style={{fontSize:slide.headline && slide.headline.length>75?48:72,lineHeight:1.12,fontWeight:800,marginBottom:48}}>{slide.headline||data.title}</div>
-     <div style={{fontSize:37,lineHeight:1.5}}>{slide.body||""}</div>
+     <div style={{fontSize:slide.headline && slide.headline.length>75?48:Math.round(72*preset.titleScale),lineHeight:1.12,fontWeight:preset.titleWeight,textAlign:preset.textAlign,marginBottom:48}}>{slide.headline||data.title}</div>
+     <div style={{fontSize:37,lineHeight:1.5,textAlign:preset.textAlign}}>{slide.body||""}</div>
     </div>
     <div style={{display:"flex",justifyContent:"space-between",fontSize:24,fontWeight:700}}><span>{data.title.slice(0,45)}</span><span>{idx+1} / {slides.length}</span></div>
     </div>
