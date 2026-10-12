@@ -9,7 +9,7 @@ test("website URLs reject SSRF destinations and unsupported schemes",()=>{
     "https://127.0.0.1/","https://[::1]/","https://company.local/",
     "https://admin:pass@example.com/","https://example.com:8443/",
     "https://example.com./"
-  ]) assert.throws(()=>publicHttpsUrl(input),undefined,input);
+  ]) assert.throws(()=>publicHttpsUrl(input),Error,input);
   assert.equal(publicHttpsUrl("https://example.com/about#anchor").toString(),"https://example.com/about");
 });
 
