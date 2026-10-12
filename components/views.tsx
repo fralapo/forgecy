@@ -110,6 +110,7 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
     <div className="flex gap8 wrap" style={{marginTop:20}}>
      <button disabled={Boolean(busy)||Boolean(dossierJob)||(!data.sources.length&&!data.offers.length)} className="button primary" onClick={()=>onAction("dossierDraft")}><Sparkles size={15}/>{dossierJob?"Analisi "+(dossierJob.status==="queued"?"in coda":"in corso")+"…":busy==="dossierDraft"?"Accodamento…":"Analizza e crea nuova versione"}</button>
      {approval&&<button className="button" onClick={()=>onAction("dossierApprove",{dossier_id:dossier.id})}><Check size={15}/> Approva dossier</button>}
+     {dossier&&<a className="button" href={"/api/workspace/clients/"+data.client.id+"/reports/dossier"} target="_blank" rel="noopener noreferrer"><FileText size={14}/> Esporta dossier MD</a>}
     </div>
     {dossier?.status==="stale"&&<div className="notice warn" style={{marginTop:13}}>Hai modificato fonti, brand o offerte: questa analisi non è più aggiornata. Genera e approva una nuova versione.</div>}
    </div>
@@ -124,6 +125,7 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
     <div className="flex gap8 wrap" style={{marginTop:18}}>
      <button className="button primary" disabled={Boolean(busy)||Boolean(strategyJob)||dossier?.status!=="approved"} onClick={()=>onAction("strategyDraft")}><Sparkles size={15}/>{strategyJob?"Elaborazione in corso…":"Genera piano strategico"}</button>
      {strategy?.status==="draft"&&strategy.knowledge_revision===data.client.knowledge_revision&&<button className="button" onClick={()=>onAction("strategyApprove",{id:strategy.id})}><Check size={15}/> Approva strategia</button>}
+     {strategy&&<a className="button" href={"/api/workspace/clients/"+data.client.id+"/reports/strategy"} target="_blank" rel="noopener noreferrer"><FileText size={14}/> Esporta strategia MD</a>}
     </div>
     {strategy?.status==="stale"&&<div className="notice warn" style={{marginTop:14}}>Le fonti sono cambiate: genera una nuova versione del piano.</div>}
    </div>
@@ -361,7 +363,8 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
   <Header k="PERFORMANCE / MEMORIA" title="I risultati guidano la prossima scelta."
    sub="Metriche reali del singolo account, fonti tracciate e nessun numero simulato."
    actions={<div className="flex gap8 wrap"><a className="button" href={"/api/integrations/instagram/connect?clientId="+data.client.id}><Instagram size={16}/> Collega Instagram</a>
-     <button className="button primary" disabled={!data.social_accounts.length||Boolean(busy)} onClick={()=>onAction("syncSocial")}><RefreshCw size={15}/> Sincronizza</button></div>}/>
+     <button className="button primary" disabled={!data.social_accounts.length||Boolean(busy)} onClick={()=>onAction("syncSocial")}><RefreshCw size={15}/> Sincronizza</button>
+     {snap&&selected&&<a className="button" href={"/api/workspace/clients/"+data.client.id+"/reports/instagram?accountId="+encodeURIComponent(selected)} target="_blank" rel="noopener noreferrer"><FileText size={15}/> Esporta CSV</a>}</div>}/>
   {!data.social_accounts.length?<div className="notice warn">Instagram non è collegato. Per leggere dati veri è necessario un account Professional autorizzato su Meta.</div>:
    <div className="card"><div className="flex between center wrap gap12"><div><h2>Account Instagram</h2><p className="caption">La dashboard non mescola mai account differenti</p></div>
     <select aria-label="Account Instagram" value={selected||""} onChange={e=>setRequested(e.target.value)} style={{maxWidth:240}}>
