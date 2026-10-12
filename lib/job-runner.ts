@@ -29,7 +29,7 @@ async function execute(db:ReturnType<typeof workerDb>,job:AiJob){
  const ctx={db,user:{id:job.requested_by}} as unknown as Context;
  if(job.kind==="dossier"){
    if(Object.keys(job.payload).length)throw new ApiFailure(400,"Payload dossier non valido");
-   const dossier=await draftDossier(ctx,job.client_id);
+   const dossier=await draftDossier(ctx,job.client_id,job.id);
    await audit(ctx,job.client_id,"dossier_generated",dossier.id,{job_id:job.id});
    return {dossier_id:dossier.id,version:dossier.version};
  }
@@ -40,15 +40,35 @@ async function execute(db:ReturnType<typeof workerDb>,job:AiJob){
    throw new ApiFailure(409,"Approva un dossier aggiornato prima di avviare gli agenti");
  if(input.data.offer_id&&!all.offers.some(o=>o.id===input.data.offer_id))
    throw new ApiFailure(409,"L'offerta deve essere verificata per questo cliente");
- // Mission inserted only when the job starts, after checking ownership.
- const {data:mission,error:missionErr}=await db.from("missions").insert({
-   client_id:job.client_id,request:input.data.request,status:"running"
- }).select("id").single();
- dbError(missionErr,"Impossibile creare la missione");
- const output=await executeMission(ctx,job.client_id,mission.id,input.data.request,
+ // The unique ai_job_id makes worker retries idempotent across crashes.
+ const {data:prior,error:priorError}=await db.from("missions")
+   .select("id,status,payload").eq("ai_job_id",job.id).eq("client_id",job.client_id).maybeSingle();
+ dbError(priorError);
+ if(prior?.status==="proposed"||prior?.status==="approved")
+   return {mission_id:prior.id,proposal_title:"Proposta già disponibile"};
+ let missionId=prior?.id;
+ if(missionId){
+   const reset=await db.from("missions").update({
+     status:"running",error:null,updated_at:new Date().toISOString()
+   }).eq("id",missionId).eq("client_id",job.client_id);
+   dbError(reset.error,"Impossibile riprendere la missione");
+ }else{
+   const {data:mission,error:missionErr}=await db.from("missions").insert({
+     client_id:job.client_id,request:input.data.request,status:"running",ai_job_id:job.id
+   }).select("id").single();
+   dbError(missionErr,"Impossibile creare la missione");
+   missionId=mission.id;
+ }
+ const output=await executeMission(ctx,job.client_id,missionId!,input.data.request,
    input.data.period,input.data.offer_id??null);
- await audit(ctx,job.client_id,"mission_proposed",mission.id,{job_id:job.id});
- return {mission_id:mission.id,proposal_title:output.payload.campaign.title};
+ await audit(ctx,job.client_id,"mission_proposed",missionId!,{job_id:job.id});
+ await db.from("messages").insert({
+   client_id:job.client_id,role:"leader",
+   body:"Il team ha completato la missione: «"+output.payload.campaign.title+"». "+
+     "Apri il riquadro della proposta per verificare e approvare i contenuti.",
+   metadata:{kind:"campaign_proposal",mission_id:missionId,job_id:job.id}
+ });
+ return {mission_id:missionId!,proposal_title:output.payload.campaign.title};
 }
 
 export async function processNextJob(){
