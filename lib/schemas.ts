@@ -1,5 +1,4 @@
 import { z } from "zod";
-import {LAYOUTS} from "./creative-templates";
 const bounded = (max=2000) => z.string().trim().max(max);
 export const clientSchema=z.object({
  name:bounded(160).min(1),industry:bounded(160).default(""),website:bounded(600).optional(),
@@ -56,7 +55,6 @@ export const updateContentSchema=z.object({
  slides:z.array(z.object({
  headline:bounded(250),body:bounded(1200),
  visual_prompt:bounded(1200).optional(),image_path:bounded(500).optional(),
- layout:z.enum(LAYOUTS).optional(),
   layout:z.enum(["cover","content","quote","closing"]).optional()
  })).max(20).optional(),
  editorial_brief:editorialBriefSchema.optional(),
