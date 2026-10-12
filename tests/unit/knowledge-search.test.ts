@@ -7,7 +7,7 @@ import {
 
 test("retrieval terms are bounded, unique and skip generic filler",()=>{
   assert.equal(knowledgeQueryFromQuestion("cosa sai del posizionamento e target del cliente?"),
-    "sai OR del OR posizionamento OR target");
+    "posizionamento OR target");
   assert.equal(knowledgeQueryFromQuestion("  COME  COSA  QUANDO  "),null);
   assert.equal(knowledgeQueryFromQuestion("prodotti prodotti SERVIZI"),"prodotti OR servizi");
   assert.ok(knowledgeQueryFromQuestion("Termine ".repeat(100))!.length<=200);
