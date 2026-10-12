@@ -1,4 +1,4 @@
-# Forgecy — client-first AI agency workspace (V18 development branch)
+# Forgecy — client-first AI agency workspace (V19 development branch)
 
 Forgecy is a responsive browser-based agency workspace: one client profile at a time, an approved company knowledge base, verified products and services, AI-coordinated campaigns, static Instagram and LinkedIn content, and performance history.
 
@@ -20,6 +20,7 @@ The complete previous repository is preserved under the **old/** folder with its
    - supabase/migrations/0009_strategic_blueprints.sql
    - supabase/migrations/0010_editorial_calendar.sql
    - supabase/migrations/0011_client_evidence_search.sql
+   - supabase/migrations/0012_ai_worker_fencing.sql
 4. Copy .env.example to .env.local. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from the Supabase dashboard.
 5. Enable email OTP / magic-link sign-in in Supabase Authentication. Allow http://localhost:3000/auth/callback as a redirect URL.
 6. Run **npm run dev** and open http://localhost:3000.
