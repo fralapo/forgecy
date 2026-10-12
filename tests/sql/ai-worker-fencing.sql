@@ -69,6 +69,14 @@ set role authenticated;
 select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
 do $rights$
 begin
+  -- The authenticated workspace can read job status, but never its secret lease.
+  perform id,status,attempts,run_after from public.ai_jobs
+    where client_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  begin
+    perform lease_token from public.ai_jobs limit 1;
+    raise exception 'Browser could read the lease token';
+  exception when insufficient_privilege then null;
+  end;
   begin
     perform public.forgecy_complete_ai_job(
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',gen_random_uuid(),'{}'::jsonb
