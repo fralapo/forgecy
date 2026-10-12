@@ -7,6 +7,8 @@ grant usage on all sequences in schema public to authenticated;
 -- The job table is deliberately read-only through PostgREST.
 revoke insert,update,delete on public.ai_jobs from authenticated;
 grant select on public.ai_jobs to authenticated;
+revoke insert,update,delete on public.strategies from authenticated;
+grant select on public.strategies to authenticated;
 insert into public.clients(id,owner_id,name) values
  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','Company A'),
  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','22222222-2222-4222-8222-222222222222','Company B');
@@ -102,11 +104,18 @@ end $editorial$;
 -- Company strategies are separate, approval-bound objects based on the latest dossier.
 reset role;
 insert into public.strategies(client_id,dossier_id,version,status,knowledge_revision,blueprint)
-select d.client_id,d.id,1,'approved',d.knowledge_revision,
+select d.client_id,d.id,1,'draft',d.knowledge_revision,
  '{"title":"Approved baseline","positioning":"Evidence based","objectives":[]}'::jsonb
 from public.dossiers d where d.client_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and d.version=2;
 set role authenticated;
 select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+select public.approve_forgecy_strategy('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+ (select id from public.strategies where client_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'));
+do $strategy$
+begin
+ if (select status from public.strategies where client_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') <> 'approved'
+ then raise exception 'Strategy approval failed'; end if;
+end $strategy$;
 -- Brand Guard blockers must prevent final approval atomically.
 insert into public.missions(id,client_id,status,request,proposed_action,payload)
 values('ffffffff-ffff-4fff-8fff-ffffffffffff',
