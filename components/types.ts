@@ -13,9 +13,14 @@ export type Content={id:string;client_id:string;campaign_id:string;offer_id?:str
 export type Message={id:string;role:"user"|"leader";body:string;created_at:string;metadata?:{kind?:string;signal?:Partial<CommunitySignal>}};
 export type Mission={id:string;request:string;status:string;payload:Record<string,unknown>;error?:string|null;created_at:string};
 export type AgentEvent={id:string;mission_id:string;agent:string;recipient:string;summary:string;created_at:string};
+export type AiJob={
+ id:string;client_id:string;kind:"dossier"|"mission";status:"queued"|"running"|"succeeded"|"failed"|"cancelled";
+ attempts:number;max_attempts:number;created_at:string;updated_at:string;finished_at?:string|null;
+ error?:string|null;result?:Record<string,unknown>
+};
 export type Snapshot={
  client:Client;sources:Source[];community_signals:CommunitySignal[];offers:Offer[];dossiers:Dossier[];campaigns:Campaign[];
- contents:Content[];messages:Message[];missions:Mission[];agent_events:AgentEvent[];
+ contents:Content[];messages:Message[];missions:Mission[];agent_events:AgentEvent[];ai_jobs:AiJob[];
  social_accounts:Array<{id:string;username:string;remote_id:string;token_expires_at?:string}>;
  social_snapshots:Array<{id:string;collected_at:string;period:string;data:{account?:{followers_count?:number;media_count?:number};media?:Array<{id:string;like_count?:number;comments_count?:number;caption?:string;permalink?:string}>;source?:string;measured?:boolean}}>;
 };
