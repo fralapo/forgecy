@@ -1,5 +1,6 @@
 -- Minimal auth/storage schemas to exercise Supabase-compatible migrations in vanilla PostgreSQL CI.
 create role authenticated;
+create role service_role bypassrls;
 create schema auth;
 create schema storage;
 create table auth.users (id uuid primary key);
@@ -17,4 +18,5 @@ create table storage.objects (
  name text not null
 );
 grant usage on schema auth,storage,public to authenticated;
+grant usage on schema auth,storage,public to service_role;
 grant execute on function auth.uid() to authenticated;
