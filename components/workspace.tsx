@@ -85,10 +85,11 @@ export default function Workspace(){
  async function onAction(name:string,body:Record<string,unknown>={}):Promise<unknown>{
   if(!clientId)return;
   const root=endpoint(clientId);
+  if(name==="deleteSignal")return mutate(name,()=>requestJson(root+"/signals/"+body.id,{method:"DELETE"}),"Osservazione eliminata");
   if(name==="dossierDraft")return mutate(name,()=>requestJson(root+"/dossier/draft",{method:"POST",body:"{}"}),"Dossier generato: controllalo prima di approvare");
   if(name==="dossierApprove")return mutate(name,()=>requestJson(root+"/dossier/approve",{method:"POST",body:JSON.stringify(body)}),"Dossier approvato");
   if(name==="verifyOffer")return mutate(name,()=>requestJson(root+"/offers/"+body.id,{method:"PATCH",body:JSON.stringify({status:"verified"})}),"Offerta verificata: rivedi il dossier");
-  if(name==="updateContent")return mutate(name,()=>requestJson(root+"/contents/"+body.id,{method:"PATCH",body:JSON.stringify({title:body.title,caption:body.caption,slides:body.slides,...(body.status?{status:body.status}:{})})}),"Contenuto salvato");
+  if(name==="updateContent")return mutate(name,()=>requestJson(root+"/contents/"+body.id,{method:"PATCH",body:JSON.stringify({title:body.title,caption:body.caption,slides:body.slides,editorial_brief:body.editorial_brief,...(body.status?{status:body.status}:{})})}),"Contenuto salvato");
   if(name==="revalidateContent")return mutate(name,()=>requestJson(root+"/contents/"+body.id+"/revalidate",{method:"POST",body:"{}"}),"Bozza riaperta: verifica i dati e richiedi l’approvazione");
   if(name==="adapt")return mutate(name,()=>requestJson(root+"/contents/"+body.id+"/adapt",{method:"POST",body:"{}"}),"Variante LinkedIn creata");
   if(name==="image")return mutate(name,()=>requestJson(root+"/contents/"+body.id+"/image",{method:"POST",body:JSON.stringify({slideIndex:body.slideIndex,prompt:body.prompt})}),"Immagine generata e salvata");
@@ -122,6 +123,18 @@ export default function Workspace(){
    }else{
      url=root+"/sources";payload={kind:sourceKind,title:String(f.get("title")||siteUrl||"Nuova fonte"),url:siteUrl||undefined,body:String(f.get("body")||"")};
    }
+  }else if(kind==="signal"){
+   url=root+"/signals";
+   payload={
+    platform:String(f.get("platform")||"instagram"),
+    kind:String(f.get("kind")||"comment"),
+    topic:String(f.get("topic")||"").trim(),
+    excerpt:String(f.get("excerpt")||"").trim(),
+    audience_need:String(f.get("audience_need")||"").trim(),
+    context:String(f.get("context")||"").trim(),
+    source_url:String(f.get("source_url")||"").trim()||null,
+    ...(String(f.get("observed_at")||"")?{observed_at:String(f.get("observed_at"))}:{})
+   };
   }else if(kind==="offer"){
    url=root+"/offers"+(item.id?"/"+item.id:"");method=item.id?"PATCH":"POST";
    const priceText=String(f.get("price")||"").trim().replace(",",".");
@@ -222,6 +235,7 @@ export default function Workspace(){
      <div ref={railEnd}/>
     </div>
     {current&&<div className="chat-prompt"><div className="eyebrow">AZIONI RAPIDE</div>
+     <button className="button small" style={{justifyContent:"start"}} disabled={Boolean(busy)} onClick={()=>setModal({kind:"signal"})}><Plus size={14}/> Registra un feedback della community</button>
      <button className="button small" style={{justifyContent:"start"}} disabled={!canCampaign||Boolean(busy)} onClick={()=>setModal({kind:"mission"})}><Sparkles size={14}/> Proponi una campagna completa</button>
      {!canCampaign&&<span className="caption">Per generare campagne devi prima approvare il dossier aziendale aggiornato.</span>}
     </div>}
@@ -232,10 +246,22 @@ export default function Workspace(){
   </div>
   <nav className="mobile-bottom">{[nav[0],nav[1],nav[2],nav[3]].map(n=><button key={n.key} className={view===n.key?"active":""} onClick={()=>{setView(n.key);setChatOpen(false)}}><n.icon size={19}/>{n.label}</button>)}<button className={view==="results"?"active":""} onClick={()=>{setView("results");setChatOpen(false)}}><Activity size={19}/>Risultati</button></nav>
   {switchOpen&&<div className="switch-popover mobile-switch"><div className="eyebrow" style={{padding:8}}>CLIENTI</div>{clients.map(c=><button key={c.id} onClick={()=>choose(c.id)}><span className="client-avatar">{initials(c.name)}</span>{c.name}</button>)}<button onClick={()=>{setSwitchOpen(false);baseModal()}}><Plus size={14}/> Nuovo cliente</button><button onClick={logout}><LogOut size={14}/> Esci</button></div>}
-  {modal&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setModal(null)}}><div className="modal"><div className="modal-head"><div><div className="eyebrow">FORGECY / {current?.name||"NUOVO CLIENTE"}</div><h2 style={{marginTop:7}}>{({client:"Aggiungi un cliente",source:"Nuova fonte",upload:"Carica documento",offer:"Prodotto o servizio",profile:"Profilo del cliente",campaign:"Nuova campagna",content:"Nuovo contenuto",mission:"Affida un obiettivo al Leader"} as Record<string,string>)[modal.kind]||"Nuovo elemento"}</h2></div><button className="button ghost small" aria-label="Chiudi" onClick={()=>setModal(null)}><X size={18}/></button></div>
+  {modal&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setModal(null)}}><div className="modal"><div className="modal-head"><div><div className="eyebrow">FORGECY / {current?.name||"NUOVO CLIENTE"}</div><h2 style={{marginTop:7}}>{({client:"Aggiungi un cliente",source:"Nuova fonte",signal:"Ascolto della community",upload:"Carica documento",offer:"Prodotto o servizio",profile:"Profilo del cliente",campaign:"Nuova campagna",content:"Nuovo contenuto",mission:"Affida un obiettivo al Leader"} as Record<string,string>)[modal.kind]||"Nuovo elemento"}</h2></div><button className="button ghost small" aria-label="Chiudi" onClick={()=>setModal(null)}><X size={18}/></button></div>
    <form onSubmit={modal.kind==="client"?createClient:submitModal}>
     {modal.kind==="client"&&<><div><label>Nome del cliente *</label><input required name="name" autoFocus maxLength={160} placeholder="Es. CasaLuce"/></div><div className="cols"><div><label>Settore</label><input name="industry" placeholder="Es. Cura della casa"/></div><div><label>Sito web</label><input name="website" placeholder="https://azienda.it"/></div></div></>}
     {modal.kind==="profile"&&<><div><label>Nome</label><input required name="name" defaultValue={current?.name}/></div><div className="cols"><div><label>Settore</label><input name="industry" defaultValue={current?.industry}/></div><div><label>Sito web</label><input name="website" defaultValue={current?.website||""}/></div></div><div><label>Descrizione</label><textarea name="description" rows={4} defaultValue={String(data?.client.profile?.description||"")}/></div><div><label>Tono di voce</label><textarea name="tone" rows={2} defaultValue={String(data?.client.profile?.tone||"")}/></div></>}
+    {modal.kind==="signal"&&<>
+     <div className="notice">Registra feedback anonimizzati. Evita dati personali e chiarisci da dove arriva l'osservazione: un segnale isolato è un'ipotesi, non una statistica.</div>
+     <div className="cols">
+      <div><label>Piattaforma</label><select name="platform"><option value="instagram">Instagram</option><option value="linkedin">LinkedIn</option><option value="review">Recensioni</option><option value="website">Sito / FAQ</option><option value="support">Assistenza</option><option value="other">Altra fonte</option></select></div>
+      <div><label>Tipo di segnale</label><select name="kind"><option value="comment">Commento</option><option value="question">Domanda</option><option value="objection">Obiezione</option><option value="review">Recensione</option><option value="faq">FAQ</option><option value="dm">Messaggio privato anonimizzato</option><option value="other">Altro</option></select></div>
+     </div>
+     <div><label>Argomento comune *</label><input name="topic" required minLength={2} maxLength={160} placeholder="Es. Come scegliere l'ammorbidente"/></div>
+     <div><label>Osservazione / domanda anonimizzata *</label><textarea name="excerpt" required minLength={5} maxLength={2500} rows={4} placeholder="Es. Molti chiedono se il prodotto è adatto ai tessuti delicati."/></div>
+     <div><label>Quale bisogno potrebbe rivelare?</label><textarea name="audience_need" maxLength={1000} rows={2} placeholder="Es. Capire se il prodotto è delicato sui capi"/></div>
+     <div className="cols"><div><label>Link alla fonte (se pubblico)</label><input name="source_url" type="url" placeholder="https://..."/></div><div><label>Data dell'osservazione</label><input name="observed_at" type="date"/></div></div>
+     <div><label>Contesto (facoltativo)</label><textarea name="context" maxLength={1200} rows={2} placeholder="A quale post, prodotto o discussione si riferisce?"/></div>
+    </>}
     {modal.kind==="source"&&<><div><label>Tipo di fonte</label><select name="kind" defaultValue="note"><option value="note">Nota / Brief</option><option value="website">Sito web</option><option value="social">Profilo social (riferimento)</option></select></div><div><label>Titolo</label><input name="title" placeholder="Es. Brief commerciale"/></div><div><label>URL (opzionale)</label><input name="url" type="url" placeholder="https://esempio.it"/></div><div><label>Contenuto / annotazioni</label><textarea name="body" rows={5} placeholder="Informazioni attendibili, prodotti, tone of voice, obiettivi…"/></div><label style={{display:"flex",alignItems:"center",gap:8,fontWeight:500}}><input type="checkbox" name="auto"/> Acquisisci automaticamente da HTTPS (richiede crawler abilitato)</label></>}
     {modal.kind==="upload"&&<><div><label>Documento del cliente (max 10 MB)</label><input type="file" name="file" required accept=".txt,.md,.csv,.pdf,.png,.jpg,.jpeg,.webp"/></div><div className="notice warn">Testi, Markdown e CSV sono letti subito. PDF e immagini vengono archiviati privatamente ma richiedono estrazione testo aggiuntiva per l'analisi AI.</div></>}
     {modal.kind==="offer"&&(()=>{
