@@ -57,19 +57,21 @@ async function record(ctx:Context,clientId:string,missionId:string,agent:string,
  dbError(error,"Non è stato possibile salvare il passaggio tra agenti");
 }
 export async function contextForAI(ctx:Context,clientId:string){
- const [cl,d,offers,sources,campaigns,metrics,signals]=await Promise.all([
+ const [cl,d,offers,sources,campaigns,metrics,signals,blueprint]=await Promise.all([
    ctx.db.from("clients").select("name,industry,website,profile,knowledge_revision").eq("id",clientId).single(),
    ctx.db.from("dossiers").select("id,status,summary,findings,version,knowledge_revision").eq("client_id",clientId).order("version",{ascending:false}).limit(1).maybeSingle(),
    ctx.db.from("offers").select("id,name,kind,description,benefits,audience,price,currency,cta,status,version").eq("client_id",clientId).eq("status","verified").limit(40),
    ctx.db.from("sources").select("id,kind,title,url,body,status").eq("client_id",clientId).eq("status","ready").order("captured_at",{ascending:false,nullsFirst:false}).limit(20),
    ctx.db.from("campaigns").select("title,objective,period,strategy,status").eq("client_id",clientId).order("created_at",{ascending:false}).limit(6),
    ctx.db.from("social_snapshots").select("id,period,data,collected_at").eq("client_id",clientId).order("collected_at",{ascending:false}).limit(3),
-   ctx.db.from("community_signals").select("id,topic,excerpt,audience_need,platform,kind,source_url,context,observed_at").eq("client_id",clientId).order("created_at",{ascending:false}).limit(100)
+   ctx.db.from("community_signals").select("id,topic,excerpt,audience_need,platform,kind,source_url,context,observed_at").eq("client_id",clientId).order("created_at",{ascending:false}).limit(100),
+   ctx.db.from("strategies").select("id,version,status,knowledge_revision,blueprint,dossier_id").eq("client_id",clientId).order("version",{ascending:false}).limit(1).maybeSingle()
  ]);
  if(cl.error || !cl.data) throw new ApiFailure(404,"Cliente non disponibile");
  return {
    client:cl.data,
    dossier:d.data||null,
+   strategy:blueprint.data||null,
    offers:offers.data||[],
    sources:(sources.data||[]).map(s=>({...s,body:s.body.slice(0,9000)})),
    community_signals:(signals.data||[]).map(v=>({...v,excerpt:v.excerpt.slice(0,1200),context:v.context.slice(0,500)})),
@@ -168,9 +170,11 @@ export async function draftDossier(ctx:Context,clientId:string,jobId?:string){
 export async function executeMission(ctx:Context,clientId:string,missionId:string,request:string,period:string,offerId:string|null){
  const all=await contextForAI(ctx,clientId);
  if(!all.dossier || all.dossier.status!=="approved") throw new ApiFailure(409,"Approva un dossier aggiornato prima di avviare la campagna");
+ if(!all.strategy||all.strategy.status!=="approved"||all.strategy.knowledge_revision!==all.client.knowledge_revision)
+   throw new ApiFailure(409,"Approva il piano strategico attuale prima di avviare la campagna");
  const offer=offerId?all.offers.find(o=>o.id===offerId):null;
  if(offerId && !offer) throw new ApiFailure(409,"Seleziona un'offerta verificata per questo cliente");
- const ctxJson=JSON.stringify({client:all.client,dossier:all.dossier,offer:offer||null,community_patterns:all.community_patterns,community_signals:all.community_signals,history:all.history,social:all.social}).slice(0,45000);
+ const ctxJson=JSON.stringify({client:all.client,dossier:all.dossier,company_strategy:all.strategy,offer:offer||null,community_patterns:all.community_patterns,community_signals:all.community_signals,history:all.history,social:all.social}).slice(0,45000);
  try {
    await record(ctx,clientId,missionId,"Leader","Analyst","Brief validato e contesto assegnato",{request,period,offerId});
    const analysis=await modelJson(lowTrustRule+"\nRole: Social & Business Analyst.\n"+playbook("analyst")+"\nStart from community questions, objections and needs. Isolated feedback is hypothetical, corroboration is a possible trend not population proof. Cite available source IDs and never invent metrics.",
