@@ -102,6 +102,7 @@ export default function Workspace(){
   if(name==="adapt")return mutate(name,()=>requestJson(root+"/contents/"+body.id+"/adapt",{method:"POST",body:"{}"}),"Variante LinkedIn creata");
   if(name==="image")return mutate(name,()=>requestJson(root+"/contents/"+body.id+"/image",{method:"POST",body:JSON.stringify({slideIndex:body.slideIndex,prompt:body.prompt})}),"Immagine generata e salvata");
   if(name==="syncSocial")return mutate(name,()=>requestJson(root+"/social/sync",{method:"POST",body:"{}"}),"Dati Instagram aggiornati");
+  if(name==="disconnectSocial")return mutate(name,()=>requestJson(root+"/social/accounts/"+body.id,{method:"DELETE"}),"Account Instagram scollegato e statistiche locali cancellate");
   if(name==="calendarCreate")return mutate(name,()=>requestJson(root+"/editorial",{method:"POST",body:JSON.stringify(body)}),"Voce aggiunta al calendario");
   if(name==="calendarUpdate")return mutate(name,()=>requestJson(root+"/editorial/"+body.id,{method:"PATCH",body:JSON.stringify({status:body.status})}),"Stato editoriale aggiornato");
   if(name==="calendarDelete")return mutate(name,()=>requestJson(root+"/editorial/"+body.id,{method:"DELETE"}),"Uscita rimossa dal calendario");
