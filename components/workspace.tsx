@@ -70,6 +70,11 @@ export default function Workspace(){
   return()=>{active=false};
  },[clientId,refresh]);
  useEffect(()=>{railEnd.current?.scrollIntoView({behavior:"smooth",block:"end"})},[data?.messages.length,chatOpen]);
+ useEffect(()=>{
+  if(!clientId||!data?.ai_jobs?.some(j=>j.status==="queued"||j.status==="running"))return;
+  const id=window.setInterval(()=>{refresh(clientId).catch(()=>undefined);},9000);
+  return()=>window.clearInterval(id);
+ },[clientId,data?.ai_jobs,refresh]);
 
  async function reloadAll(){
   const result=await requestJson<{clients:Client[]}>("/api/workspace/clients");setClients(result.clients);
@@ -87,7 +92,7 @@ export default function Workspace(){
   const root=endpoint(clientId);
   if(name==="deleteSignal")return mutate(name,()=>requestJson(root+"/signals/"+body.id,{method:"DELETE"}),"Osservazione eliminata");
   if(name==="reprocessDocument")return mutate(name,()=>requestJson(root+"/sources/"+body.id+"/process",{method:"POST",body:"{}"}),"Estrazione ripetuta");
-  if(name==="dossierDraft")return mutate(name,()=>requestJson(root+"/dossier/draft",{method:"POST",body:"{}"}),"Dossier generato: controllalo prima di approvare");
+  if(name==="dossierDraft")return mutate(name,()=>requestJson(root+"/jobs",{method:"POST",body:JSON.stringify({kind:"dossier",payload:{}})}),"Analisi accodata: controlla lo stato dei lavori AI");
   if(name==="dossierApprove")return mutate(name,()=>requestJson(root+"/dossier/approve",{method:"POST",body:JSON.stringify(body)}),"Dossier approvato");
   if(name==="verifyOffer")return mutate(name,()=>requestJson(root+"/offers/"+body.id,{method:"PATCH",body:JSON.stringify({status:"verified"})}),"Offerta verificata: rivedi il dossier");
   if(name==="updateContent")return mutate(name,()=>requestJson(root+"/contents/"+body.id,{method:"PATCH",body:JSON.stringify({title:body.title,caption:body.caption,slides:body.slides,editorial_brief:body.editorial_brief,...(body.status?{status:body.status}:{})})}),"Contenuto salvato");
@@ -101,7 +106,8 @@ export default function Workspace(){
     return response;
   }
   if(name==="rejectMission")return mutate(name,()=>requestJson(root+"/missions/"+body.id+"/reject",{method:"POST",body:"{}"}),"Proposta scartata");
-  if(name==="newMission")return mutate(name,()=>requestJson(root+"/missions",{method:"POST",body:JSON.stringify(body)}),"Il team ha preparato una proposta da approvare");
+  if(name==="newMission")return mutate(name,()=>requestJson(root+"/jobs",{method:"POST",body:JSON.stringify({kind:"mission",payload:body})}),"Il Leader ha accodato la missione");
+  if(name==="cancelJob")return mutate(name,()=>requestJson(root+"/jobs/"+body.id,{method:"DELETE"}),"Lavoro annullato");
  }
  async function createClient(e:React.FormEvent<HTMLFormElement>){
    e.preventDefault();const form=new FormData(e.currentTarget);
