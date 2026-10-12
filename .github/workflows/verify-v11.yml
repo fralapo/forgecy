@@ -57,6 +57,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0009_strategic_blueprints.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0010_editorial_calendar.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0011_client_evidence_search.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0012_website_crawl_budgets.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/smoke.sql
       - name: Build
         run: npm run build
