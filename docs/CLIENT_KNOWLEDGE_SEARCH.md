@@ -88,6 +88,13 @@ The Leader retrieves matching snippets in its prompt as *untrusted evidence*
 with exact source IDs, while other AI actions continue to require approved
 dossier/strategic gates.
 
+The **dossier generator** also retrieves up to 16 excerpts across four independent
+research topics (company/mission, products/services, audience, positioning).
+This avoids privileging the first uploaded documents. After inference, every
+cited source UUID is reloaded **under the selected client's authorization** and
+its quoted passage is checked against the authoritative stored source body.
+Unsupported references are downgraded rather than accepted as verified.
+
 ## Design limitations
 
 - It is not an embedding model, a vector database or semantic RAG yet.
