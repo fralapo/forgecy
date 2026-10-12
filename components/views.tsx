@@ -5,6 +5,7 @@ import type { Snapshot,View,Offer,Content,Slide,EditorialBrief } from "./types";
 import { offerLabel,statusLabel } from "./types";
 import { audiencePatterns } from "@/lib/audience";
 import { brandStyle } from "@/lib/brand";
+import { summarizeInstagram } from "@/lib/social-analytics";
 
 type Props={
  data:Snapshot;view:View;
@@ -266,31 +267,70 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
   </div>
  </div>;
 }
-function Results({data,onAction,busy}:{data:Snapshot;onAction:Props["onAction"];busy:string|null}){
- const latest=data.social_snapshots[0];
- const account=latest?.data.account;
- const posts=latest?.data.media||[];
- const interactions=posts.reduce((n,p)=>n+(p.like_count||0)+(p.comments_count||0),0);
+function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAction"];onChat:()=>void;busy:string|null}){
+ const [requested,setRequested]=useState("");
+ const selected=data.social_accounts.some(a=>a.id===requested)?requested:data.social_accounts[0]?.id;
+ const stats=summarizeInstagram(data.social_snapshots,selected);
+ const snap=stats.latest;
+ const num=(x:number|null|undefined)=>x===null||x===undefined?"—":x.toLocaleString("it-IT");
+ const maxFollowers=Math.max(1,...stats.history.map(p=>p.count));
  return <>
-  <Header k="PERFORMANCE / MEMORIA" title="I risultati guidano la prossima scelta." sub="Solo statistiche importate realmente, senza simulazioni o numeri stimati."
-    actions={<div className="flex gap8 wrap"><a className="button" href={"/api/integrations/instagram/connect?clientId="+data.client.id}><Instagram size={16}/> Collega Instagram</a>
-      <button className="button primary" disabled={!data.social_accounts.length||Boolean(busy)} onClick={()=>onAction("syncSocial")}><RefreshCw size={15}/> Sincronizza</button></div>}/>
-  {!data.social_accounts.length?<div className="notice warn">Instagram non è collegato. Per ottenere statistiche vere serve un account professionale e l'autorizzazione Meta. Il database non genera numeri dimostrativi.</div>:
-   <div className="card"><h2>Account collegati</h2>{data.social_accounts.map(a=><div className="list-row" key={a.id}><div><strong>@{a.username}</strong><div className="caption">Instagram Professional · ID {a.remote_id}</div></div><span className="pill">Collegato</span></div>)}</div>}
+  <Header k="PERFORMANCE / MEMORIA" title="I risultati guidano la prossima scelta."
+   sub="Metriche reali del singolo account, fonti tracciate e nessun numero simulato."
+   actions={<div className="flex gap8 wrap"><a className="button" href={"/api/integrations/instagram/connect?clientId="+data.client.id}><Instagram size={16}/> Collega Instagram</a>
+     <button className="button primary" disabled={!data.social_accounts.length||Boolean(busy)} onClick={()=>onAction("syncSocial")}><RefreshCw size={15}/> Sincronizza</button></div>}/>
+  {!data.social_accounts.length?<div className="notice warn">Instagram non è collegato. Per leggere dati veri è necessario un account Professional autorizzato su Meta.</div>:
+   <div className="card"><div className="flex between center wrap gap12"><div><h2>Account Instagram</h2><p className="caption">La dashboard non mescola mai account differenti</p></div>
+    <select aria-label="Account Instagram" value={selected||""} onChange={e=>setRequested(e.target.value)} style={{maxWidth:240}}>
+      {data.social_accounts.map(a=><option value={a.id} key={a.id}>@{a.username}</option>)}
+    </select></div></div>}
   <div className="grid3" style={{marginTop:18}}>
-   <div className="card metric-card"><span className="muted">Follower · ultimo dato</span><strong>{account?.followers_count?.toLocaleString("it-IT")??"—"}</strong><small>Meta Graph API, non stimato</small></div>
-   <div className="card metric-card"><span className="muted">Contenuti account</span><strong>{account?.media_count?.toLocaleString("it-IT")??"—"}</strong><small>Quando disponibile dall'API</small></div>
-   <div className="card metric-card"><span className="muted">Interazioni negli ultimi {posts.length} post acquisiti</span><strong>{latest?interactions.toLocaleString("it-IT"):"—"}</strong><small>Like + commenti riportati da Meta</small></div>
+   <div className="card metric-card"><span className="muted">Follower · ultima lettura</span>
+    <strong>{num(stats.followers)}</strong><small>{stats.delta===null?"Variazione non disponibile":(stats.delta>=0?"+":"")+num(stats.delta)+" rispetto alla lettura precedente"}</small></div>
+   <div className="card metric-card"><span className="muted">Contenuti dell'account</span>
+    <strong>{num(stats.media_count)}</strong><small>Conteggio riportato dall'API Meta</small></div>
+   <div className="card metric-card"><span className="muted">Interazioni del campione</span>
+    <strong>{num(stats.total_sampled_interactions)}</strong><small>Like + commenti per {stats.sampled_posts_with_interactions} contenuti con dati disponibili</small></div>
   </div>
-  <div className="grid2" style={{marginTop:20}}>
-   <div className="card"><div className="section-title"><h2>Contenuti osservati</h2><span className="caption">{latest?new Date(latest.collected_at).toLocaleDateString("it-IT"):"Non disponibili"}</span></div>
-    {posts.length?posts.slice(0,8).map(p=><div className="list-row" key={p.id}><div><p style={{fontWeight:650}}>{p.caption?.slice(0,100)||"Post Instagram"}</p><div className="caption">{p.like_count??"—"} like · {p.comments_count??"—"} commenti</div></div>{p.permalink&&<a target="_blank" rel="noreferrer" href={p.permalink} aria-label="Apri su Instagram"><ExternalLink size={15}/></a>}</div>):
-    <Empty title="Nessun dato disponibile" text="Collega l'account professionale e avvia una sincronizzazione."/>}
+  <div className="grid2" style={{marginTop:18}}>
+   <div className="card">
+    <div className="section-title"><h2>Evoluzione follower</h2><span className="caption">{stats.history.length} rilevazioni storiche</span></div>
+    {stats.history.length>=2?
+      <div style={{display:"flex",alignItems:"end",gap:8,minHeight:105,padding:"15px 0 0"}} role="img" aria-label={"Storico follower: "+stats.history.map(p=>new Date(p.date).toLocaleDateString("it-IT")+" "+p.count).join(", ")}>
+      {stats.history.map(p=><div key={p.date} style={{flex:1,minWidth:0,textAlign:"center"}}>
+       <div title={p.count+" follower · "+new Date(p.date).toLocaleDateString("it-IT")} style={{height:Math.max(6,Math.round(p.count/maxFollowers*82)),borderRadius:"5px 5px 0 0",background:"var(--accent)",opacity:.75}}/>
+       <small className="caption" style={{fontSize:10}}>{new Date(p.date).toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit"})}</small>
+      </div>)}</div>:
+      <Empty title="Servono almeno due rilevazioni" text="Sincronizza nuovamente in un giorno successivo per confrontare valori reali."/>}
+    <div className="separator"/>
+    <div className="info-pair"><span>Ultima sincronizzazione</span><strong>{snap?new Date(snap.collected_at).toLocaleString("it-IT"):"—"}</strong></div>
+    <div className="info-pair"><span>Copertura insight post disponibili</span><strong>{stats.sampled_posts_with_reach===null?"Non disponibile":stats.sampled_posts_with_reach+" su "+stats.sampled_posts}</strong></div>
+    {snap?.data.insights_status==="unavailable"&&<div className="notice warn">Gli insight avanzati non sono disponibili per questo account o per i permessi correnti. Like, commenti e follower rimangono utilizzabili.</div>}
+   </div>
+   <div className="card">
+    <div className="section-title"><h2>Contenuti con più interazioni</h2><span className="caption">Ultimo campione Meta</span></div>
+    {stats.top.length?stats.top.map((p,i)=><div className="list-row" key={p.id}>
+      <div className="stack" style={{gap:4,minWidth:0}}>
+       <strong>{i+1}. {p.caption?.slice(0,85)||p.media_type||"Post Instagram"}</strong>
+       <div className="caption">{num(p.likes)} like · {num(p.comments)} commenti · {num(p.interactions)} interazioni</div>
+       {(p.reach!==null||p.saves!==null||p.shares!==null)&&<div className="caption">{p.reach!==null?"Copertura "+num(p.reach)+" · ":""}{p.saves!==null?"Salvataggi "+num(p.saves)+" · ":""}{p.shares!==null?"Condivisioni "+num(p.shares):""}</div>}
+      </div>
+      {p.permalink&&<a target="_blank" rel="noreferrer" href={p.permalink} aria-label="Apri su Instagram"><ExternalLink size={15}/></a>}
+     </div>):<Empty title="Nessun contenuto con dati utilizzabili" text="Collega e sincronizza un account professionale per ottenere contenuti reali."/>}
+   </div>
+  </div>
+  <div className="grid2" style={{marginTop:18}}>
+   <div className="card">
+    <div className="section-title"><h2>Decisioni da prendere con il Leader</h2></div>
+    <p className="tagline">Le metriche sono un punto di partenza: valuta il pubblico, la copertura degli insight, gli obiettivi del cliente e il contesto prima di modificare la strategia.</p>
+    <div className="info-pair"><span>Media interazioni per post rilevabile</span><strong>{stats.average_interactions===null?"—":num(Math.round(stats.average_interactions))}</strong></div>
+    <div className="caption" style={{marginTop:10}}>Questo non è il tasso di engagement e il campione dei post non rappresenta necessariamente un periodo specifico. I dati mancanti non sono considerati zero.</div>
+    <button className="button primary" style={{marginTop:16}} onClick={onChat}><Sparkles size={15}/> Analizza con il Leader</button>
    </div>
    <div className="card"><h2 style={{marginBottom:14}}>Storico delle campagne</h2>
-    {data.campaigns.length?data.campaigns.map(c=><div className="list-row" key={c.id}><div><strong>{c.title}</strong><div className="caption">{c.period} · {c.objective.slice(0,90)}</div></div><Badge value={c.status}/></div>):
-    <Empty title="Non ci sono ancora campagne" text="I risultati delle campagne concluse contribuiranno alla memoria del Leader."/>}
-    <div className="notice" style={{marginTop:14}}>I numeri Instagram non provano, da soli, l'efficacia di una singola campagna. Per attribuzione e confronti affidabili servono link tracciati, finestre temporali e KPI concordati.</div>
+    {data.campaigns.length?data.campaigns.slice(0,8).map(c=><div className="list-row" key={c.id}><div><strong>{c.title}</strong><div className="caption">{c.period} · {c.objective.slice(0,90)}</div></div><Badge value={c.status}/></div>):
+    <Empty title="Non ci sono ancora campagne" text="Le campagne approvate potranno usare questi dati come riferimento."/>}
+    <div className="notice" style={{marginTop:14}}>I dati Instagram non dimostrano l'efficacia causale di una campagna. Attribuzione e confronto richiedono un periodo e KPI definiti.</div>
    </div>
   </div>
  </>;
