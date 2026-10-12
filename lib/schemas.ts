@@ -34,7 +34,7 @@ export const updateContentSchema=z.object({
  caption:bounded(12000).optional(),
  slides:z.array(z.object({
  headline:bounded(250),body:bounded(1200),
- visual_prompt:bounded(1200).optional(),image_url:z.string().url().optional()
+ visual_prompt:bounded(1200).optional(),image_path:bounded(500).optional()
  })).max(20).optional(),
  status:z.enum(["draft","review","approved"]).optional()
 });

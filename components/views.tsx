@@ -166,6 +166,8 @@ function ContentEditor({content,onBack,onAction,busy}:{content:Content;onBack:()
  const [slides,setSlides]=useState<Slide[]>(content.slides||[]);
  const [idx,setIdx]=useState(0);
  const current=slides[idx];
+ const [imageSrc,setImageSrc]=useState("");
+ useEffect(()=>{let cancelled=false;const path=current?.image_path;if(!path){setImageSrc("");return;}setImageSrc("");import("./types").then(m=>m.requestJson<{url:string}>("/api/workspace/clients/"+content.client_id+"/assets?path="+encodeURIComponent(path))).then(v=>{if(!cancelled)setImageSrc(v.url)}).catch(()=>{if(!cancelled)setImageSrc("")});return()=>{cancelled=true}},[content.client_id,current?.image_path]);
  useEffect(()=>{setTitle(content.title);setCaption(content.caption);setSlides(content.slides||[]);setIdx(0)},[content.id,content.revision]);
  const save=async(status?:"draft"|"review"|"approved")=>{
   const change:Record<string,unknown>={id:content.id,title,caption,slides};
@@ -181,6 +183,7 @@ function ContentEditor({content,onBack,onAction,busy}:{content:Content;onBack:()
    <div className="card stack">
     <label>Titolo del contenuto</label><input value={title} onChange={e=>setTitle(e.target.value)} maxLength={240}/>
     <label>Didascalia</label><textarea value={caption} onChange={e=>setCaption(e.target.value)} rows={7} maxLength={12000}/>
+    {slides.length===0 && (content.format==="carousel"||content.format==="document")&&<button className="button small" onClick={()=>{setSlides([{headline:"Prima pagina",body:"",visual_prompt:""}]);setIdx(0)}}><Plus size={14}/> Aggiungi la prima pagina</button>}
     {slides.length>0&&<><div className="separator"/><label>Slide {idx+1} di {slides.length}</label>
      <label>Titolo slide</label><textarea rows={3} value={current?.headline||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,headline:e.target.value}:x))}/>
      <label>Testo slide</label><textarea rows={4} value={current?.body||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,body:e.target.value}:x))}/>
@@ -193,7 +196,7 @@ function ContentEditor({content,onBack,onAction,busy}:{content:Content;onBack:()
    </div>
    <div className="card" style={{background:"#f5f8f4"}}>
     {slides.length?<><div className="eyebrow" style={{textAlign:"center",marginBottom:16}}>ANTEPRIMA · PAGINA {idx+1}/{slides.length}</div>
-     <div className="slide">
+     <div className="slide" style={imageSrc?{backgroundImage:"linear-gradient(#e1ead8b8,#e1ead8b8),url("+JSON.stringify(imageSrc)+")",backgroundSize:"cover",backgroundPosition:"center"}:{}}>
       <div style={{fontSize:11,letterSpacing:".14em",fontWeight:800}}>FORGECY · {content.channel.toUpperCase()}</div>
       <div><h3>{current?.headline}</h3><p style={{marginTop:14}}>{current?.body}</p></div>
       <div style={{fontSize:11,fontWeight:750}}>DESIGN CONTESTUALE · {idx+1}</div>

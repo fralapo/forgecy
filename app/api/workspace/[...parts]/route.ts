@@ -147,6 +147,27 @@ export async function POST(request:Request,{params}:Params){
    const saved=await ctx.db.from("messages").insert({client_id:id,role:"leader",body:answer}).select().single();
    dbError(saved.error,"Risposta non salvata");return json({message:saved.data});
   }
+  if(p.length===5 && p[2]==="contents" && p[4]==="revalidate"){
+   const contentId=validId(p[3]);
+   const {data:current,error:currentError}=await ctx.db.from("contents").select("id,status,offer_id,parent_id,revision").eq("id",contentId).eq("client_id",id).maybeSingle();
+   dbError(currentError);if(!current)throw new ApiFailure(404,"Contenuto non trovato");
+   if(current.status!=="stale")throw new ApiFailure(409,"Solo i contenuti da aggiornare possono essere revisionati");
+   let offer_version:number|null=null,source_revision:number|null=null;
+   if(current.offer_id){
+     const {data:offer}=await ctx.db.from("offers").select("status,version").eq("client_id",id).eq("id",current.offer_id).maybeSingle();
+     if(!offer||offer.status!=="verified")throw new ApiFailure(409,"Verifica prima l'offerta collegata");
+     offer_version=offer.version;
+   }
+   if(current.parent_id){
+     const {data:original}=await ctx.db.from("contents").select("status,revision").eq("client_id",id).eq("id",current.parent_id).maybeSingle();
+     if(!original||original.status==="stale")throw new ApiFailure(409,"Aggiorna prima l'originale Instagram");
+     source_revision=original.revision;
+   }
+   const {data,error}=await ctx.db.from("contents").update({status:"draft",offer_version,source_revision}).eq("id",contentId).eq("client_id",id).eq("revision",current.revision).select().maybeSingle();
+   dbError(error);if(!data)throw new ApiFailure(409,"Versione modificata: aggiorna la pagina");
+   await audit(ctx,id,"content_revalidated",contentId);
+   return json({content:data});
+  }
   if(p.length===5 && p[2]==="contents" && p[4]==="adapt"){
    const contentId=validId(p[3]);
    const {data:original,error}=await ctx.db.from("contents").select("*").eq("id",contentId).eq("client_id",id).maybeSingle();
@@ -171,7 +192,7 @@ export async function POST(request:Request,{params}:Params){
      campaign_id:uuid,channel:z.enum(["instagram","linkedin"]),
      format:z.enum(["post","carousel","document"]),title:z.string().min(1).max(240),
      caption:z.string().max(12000).default(""),offer_id:uuid.nullable().optional()
-   }));
+   }).refine(v=>v.channel==="instagram"?(v.format==="post"||v.format==="carousel"):(v.format==="post"||v.format==="document"),"Formato non disponibile per questo canale"));
    const {data:campaign}=await ctx.db.from("campaigns").select("id").eq("client_id",id).eq("id",input.campaign_id).maybeSingle();
    if(!campaign)throw new ApiFailure(404,"Campagna non trovata");
    const {data,error}=await ctx.db.from("contents").insert({...input,client_id:id,slides:[],status:"draft"}).select().single();
@@ -223,8 +244,10 @@ export async function PATCH(request:Request,{params}:Params){
   if(p.length===4 && p[2]==="contents"){
    const contentId=validId(p[3]);
    const input=await read(request,updateContentSchema.refine(x=>Object.keys(x).length>0));
-   const {data:current}=await ctx.db.from("contents").select("revision,offer_id,offer_version,parent_id,source_revision").eq("id",contentId).eq("client_id",id).maybeSingle();
+   const {data:current}=await ctx.db.from("contents").select("revision,offer_id,offer_version,parent_id,source_revision,status").eq("id",contentId).eq("client_id",id).maybeSingle();
    if(!current)throw new ApiFailure(404,"Contenuto non trovato");
+   if(input.status==="approved" && current.status==="stale")throw new ApiFailure(409,"La bozza è obsoleta: verificane le dipendenze prima di approvarla");
+   if(input.slides?.some(slide=>slide.image_path && (!slide.image_path.startsWith(id+"/")||slide.image_path.includes(".."))))throw new ApiFailure(403,"Immagine fuori dal profilo cliente");
    if(input.status==="approved" && current.offer_id){
      const {data:offer}=await ctx.db.from("offers").select("version,status").eq("id",current.offer_id).eq("client_id",id).maybeSingle();
      if(!offer||offer.status!=="verified"||offer.version!==current.offer_version)throw new ApiFailure(409,"Offerta cambiata: aggiorna il contenuto");

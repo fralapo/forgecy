@@ -30,7 +30,7 @@ const contentSchema=z.object({
      body:z.string().max(1000),
      visual_prompt:z.string().max(1000).optional()
    })).max(12)
- })).min(2).max(12)
+ }).refine(piece=>piece.channel==="instagram"?(piece.format==="post"||piece.format==="carousel"):(piece.format==="post"||piece.format==="document"),"Canale e formato non coerenti")).min(2).max(12)
 });
 const guardSchema=z.object({warnings:z.array(z.string().max(600)).max(12),recommendations:z.array(z.string().max(600)).max(8)});
 
