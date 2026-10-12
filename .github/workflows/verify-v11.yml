@@ -53,6 +53,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0006_quality_gates.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0007_source_intelligence.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0008_ai_jobs.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0009_strategic_blueprints.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/smoke.sql
       - name: Build
         run: npm run build
