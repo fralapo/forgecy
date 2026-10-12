@@ -36,7 +36,7 @@ export const signalSchema=z.object({
  excerpt:bounded(2500).min(5),
  audience_need:bounded(1000).default(""),
  context:bounded(1200).default(""),
- source_url:z.url().max(1500).nullable().default(null),
+ source_url:z.url().max(1500).refine(v=>/^https?:\/\//i.test(v),"Usa un riferimento http(s)").nullable().default(null),
  observed_at:z.iso.date().optional()
 });
 export const editorialBriefSchema=z.object({
