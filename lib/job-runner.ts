@@ -4,10 +4,11 @@ import {ApiFailure,audit,dbError} from "./http";
 import {draftDossier,executeMission,contextForAI} from "./agent-team";
 import {missionSchema} from "./schemas";
 import {workerDb} from "./worker-db";
+import {draftStrategy} from "./strategic-blueprint";
 
 const jobSchema=z.object({
   id:z.uuid(),client_id:z.uuid(),requested_by:z.uuid(),
-  kind:z.enum(["dossier","mission"]),payload:z.record(z.string(),z.unknown()),
+  kind:z.enum(["dossier","mission","strategy"]),payload:z.record(z.string(),z.unknown()),
   status:z.literal("running"),attempts:z.number().int().min(1),
   max_attempts:z.number().int().min(1).max(3)
 });
@@ -33,11 +34,19 @@ async function execute(db:ReturnType<typeof workerDb>,job:AiJob){
    await audit(ctx,job.client_id,"dossier_generated",dossier.id,{job_id:job.id});
    return {dossier_id:dossier.id,version:dossier.version};
  }
+ if(job.kind==="strategy"){
+   if(Object.keys(job.payload).length)throw new ApiFailure(400,"Payload strategia non valido");
+   const plan=await draftStrategy(ctx,job.client_id,job.id);
+   await audit(ctx,job.client_id,"strategy_generated",plan.id,{job_id:job.id});
+   return {strategy_id:plan.id,version:plan.version};
+ }
  const input=missionSchema.safeParse(job.payload);
  if(!input.success)throw new ApiFailure(400,"Parametri della missione non validi");
  const all=await contextForAI(ctx,job.client_id);
  if(all.dossier?.status!=="approved"||all.dossier.knowledge_revision!==all.client.knowledge_revision)
    throw new ApiFailure(409,"Approva un dossier aggiornato prima di avviare gli agenti");
+ if(!all.strategy||all.strategy.status!=="approved"||all.strategy.knowledge_revision!==all.client.knowledge_revision)
+   throw new ApiFailure(409,"Approva il piano strategico attuale prima della missione");
  if(input.data.offer_id&&!all.offers.some(o=>o.id===input.data.offer_id))
    throw new ApiFailure(409,"L'offerta deve essere verificata per questo cliente");
  // The unique ai_job_id makes worker retries idempotent across crashes.
