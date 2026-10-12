@@ -96,4 +96,19 @@ begin
  if (select editorial_brief->>'hook' from public.contents where id='dddddddd-dddd-4ddd-8ddd-dddddddddddd') <> 'What changes?'
  then raise exception 'Creative rationale missing'; end if;
 end $editorial$;
+-- Brand Guard blockers must prevent final approval atomically.
+insert into public.missions(id,client_id,status,request,proposed_action,payload)
+values('ffffffff-ffff-4fff-8fff-ffffffffffff',
+ 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','proposed','Test quality gate',
+ 'create_campaign','{"campaign":{"title":"Blocked","objective":"Testing","period":"September","strategy":{"qa":{"blocking_issues":["Unsupported product claim"]}}},"contents":[{"channel":"instagram","format":"post","title":"Draft","caption":"Body","slides":[]}]}');
+do $quality$
+begin
+ begin
+  perform public.approve_forgecy_mission('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','ffffffff-ffff-4fff-8fff-ffffffffffff');
+ exception when others then
+  if position('problemi bloccanti' in SQLERRM)=0 then raise; end if;
+  return;
+ end;
+ raise exception 'Quality gate unexpectedly allowed blocked campaign';
+end $quality$;
 reset role;
