@@ -1,3 +1,4 @@
+import { loadEnv } from "@forgecy/core";
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
 
@@ -12,7 +13,7 @@ export function proxy(request: NextRequest) {
       status: 503,
       headers: { "retry-after": "15" },
     });
-  if (!getSessionCookie(request)) {
+  if (loadEnv().FORGECY_AUTH_MODE !== "open" && !getSessionCookie(request)) {
     const url = new URL("/login", request.url);
     url.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(url);

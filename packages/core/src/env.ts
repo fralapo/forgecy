@@ -10,7 +10,7 @@ const bool = z
   .optional()
   .transform((v) => v === "true" || v === "1");
 
-export const authModes = ["local", "intranet", "team"] as const;
+export const authModes = ["local", "intranet", "team", "open"] as const;
 export type AuthMode = (typeof authModes)[number];
 
 export const envSchema = z.object({

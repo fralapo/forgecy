@@ -151,13 +151,15 @@ export default async function SettingsPage() {
                 ))}
               </ul>
             </Card>
-            <Card className="p-6">
-              <div className="flex items-center gap-2">
-                <UserPlus aria-hidden className="size-5 text-fg-muted" strokeWidth={1.5} />
-                <h2 className="text-heading-sm text-fg">{t("newUser.title")}</h2>
-              </div>
-              <NewUserForm />
-            </Card>
+            {env.FORGECY_AUTH_MODE !== "open" ? (
+              <Card className="p-6">
+                <div className="flex items-center gap-2">
+                  <UserPlus aria-hidden className="size-5 text-fg-muted" strokeWidth={1.5} />
+                  <h2 className="text-heading-sm text-fg">{t("newUser.title")}</h2>
+                </div>
+                <NewUserForm />
+              </Card>
+            ) : null}
           </>
         ) : null}
       </div>

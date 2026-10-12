@@ -55,6 +55,8 @@ export type NewUserState = { error?: string; ok?: boolean };
 export async function createUserAction(_prev: NewUserState, form: FormData): Promise<NewUserState> {
   const admin = await requireUser();
   assertCan(admin.actor, "users.manage");
+  if (env.FORGECY_AUTH_MODE === "open")
+    throw new Error("Open mode has a single admin; users are disabled.");
   const parsed = newUserSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: await firstIssue(parsed.error) };
   const exists = await getDb().query.users.findFirst({

@@ -118,6 +118,11 @@ describe("env", () => {
     expect(env.FORGECY_AUTH_MODE).toBe("local");
     expect(env.FORGECY_MAGIC_LINK_TTL_MINUTES).toBe(15);
   });
+  it("accepts the open auth mode and rejects unknown ones", () => {
+    const base = { DATABASE_URL: "x", BETTER_AUTH_SECRET: "x".repeat(32) };
+    expect(loadEnv({ ...base, FORGECY_AUTH_MODE: "open" }).FORGECY_AUTH_MODE).toBe("open");
+    expect(() => loadEnv({ ...base, FORGECY_AUTH_MODE: "none" })).toThrow(/FORGECY_AUTH_MODE/);
+  });
   it("fails loudly on a short secret", () => {
     expect(() => loadEnv({ DATABASE_URL: "x", BETTER_AUTH_SECRET: "short" })).toThrow(
       /BETTER_AUTH_SECRET/,

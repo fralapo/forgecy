@@ -22,7 +22,8 @@
   "authMode": {
     "local": "Local",
     "intranet": "Intranet",
-    "team": "Team (magic link and Google)"
+    "team": "Team (magic link and Google)",
+    "open": "Open (single admin, no sign-in)"
   },
   "storageDriver": {
     "local": "Local disk",
