@@ -9,6 +9,7 @@ This playbook is a paraphrased operational interpretation of eight PDF training 
 ### 1. Start by listening (Community e Content Creation, pp. 3–20)
 - The client **Library → Voce della community** accepts manually recorded, anonymized feedback: comments, FAQs, reviews, questions, objections and message summaries.
 - Each observation records topic, channel, source URL (when public), audience need and context. All rows use client-scoped RLS. Observations can be deleted.
+- The Leader also recognizes an explicit request to register audience feedback, prepares a **draft**, and exposes a review form in the chat. No observation is stored before confirmation.
 - Related topics are grouped. One item = isolated hypothesis; multiple without independent source URLs = candidate; multiple with distinct traceable URLs = corroborated candidate, **not a statistically representative truth**.
 - Analyst uses these qualitative inputs, separating questions/needs from substantiated outcomes. Recurring formats are proposed only where pattern + brand strategy align.
 - Never automatically import private DMs. Manually entered text should be de-identified; the interface displays a privacy reminder.
