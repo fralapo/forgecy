@@ -1,4 +1,5 @@
 import type {ObservedSnapshot} from "@/lib/social-analytics";
+import type {SlideLayout} from "@/lib/creative-templates";
 export type Client={
  id:string;name:string;industry:string;website?:string|null;
  profile:Record<string,unknown>;knowledge_revision:number;created_at?:string;
