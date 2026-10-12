@@ -99,6 +99,14 @@ begin
  if (select editorial_brief->>'hook' from public.contents where id='dddddddd-dddd-4ddd-8ddd-dddddddddddd') <> 'What changes?'
  then raise exception 'Creative rationale missing'; end if;
 end $editorial$;
+-- Company strategies are separate, approval-bound objects based on the latest dossier.
+reset role;
+insert into public.strategies(client_id,dossier_id,version,status,knowledge_revision,blueprint)
+select d.client_id,d.id,1,'approved',d.knowledge_revision,
+ '{"title":"Approved baseline","positioning":"Evidence based","objectives":[]}'::jsonb
+from public.dossiers d where d.client_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and d.version=2;
+set role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
 -- Brand Guard blockers must prevent final approval atomically.
 insert into public.missions(id,client_id,status,request,proposed_action,payload)
 values('ffffffff-ffff-4fff-8fff-ffffffffffff',
