@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {z} from "zod";
 import {guardApiMutation} from "../../lib/request-guard";
 import {read,ApiFailure,MAX_JSON_BODY_BYTES} from "../../lib/http";
+import {readMultipartForm} from "../../lib/request-body";
 
 function request(method:string,origin?:string,fetchSite?:string,url="https://forgecy.example/api/workspace/clients"){
  const headers=new Headers();
@@ -87,4 +88,49 @@ test("JSON accepts neither form content, malformed JSON nor UTF-8 corruption",as
  });
  await assert.rejects(()=>read(invalid,z.unknown()),
    (e:unknown)=>e instanceof ApiFailure&&e.status===400);
+});
+
+test("a real multipart upload parses correctly after bounded streaming",async()=>{
+ const boundary="----ForgecyTestBoundary";
+ const bytes=[
+   "--"+boundary+"\r\n",
+   'Content-Disposition: form-data; name="file"; filename="brief.txt"\r\n',
+   "Content-Type: text/plain\r\n\r\n",
+   "Verified brand profile\r\n",
+   "--"+boundary+"--\r\n"
+ ].join("");
+ const upload=new Request("https://forgecy.example/api/workspace/clients/upload",{
+   method:"POST",headers:{"content-type":"multipart/form-data; boundary="+boundary},
+   body:bytes
+ });
+ const form=await readMultipartForm(upload);
+ const file=form.get("file");
+ assert.ok(file instanceof File);
+ assert.equal(file.name,"brief.txt");
+ assert.equal(await file.text(),"Verified brand profile");
+});
+test("oversized multipart is blocked without trusting Content-Length",async()=>{
+ const boundary="----ForgecyTestBoundary";
+ const data="--"+boundary+"\r\n"+'Content-Disposition: form-data; name="file"; filename="big.txt"\r\n'+
+   "Content-Type: text/plain\r\n\r\n"+ "a".repeat(12_000_000) +
+   "\r\n--"+boundary+"--\r\n";
+ const upload=new Request("https://forgecy.example/api/workspace/clients/upload",{
+   method:"POST",headers:{"content-type":"multipart/form-data; boundary="+boundary},
+   body:data
+ });
+ upload.headers.delete("content-length");
+ await assert.rejects(()=>readMultipartForm(upload),
+   (e:unknown)=>e instanceof ApiFailure&&e.status===413);
+});
+test("multipart refuses boundary-less and forged declarations",async()=>{
+ const bad=new Request("https://forgecy.example/api/workspace/clients/upload",{
+   method:"POST",headers:{"content-type":"multipart/form-data"},body:"bad"
+ });
+ await assert.rejects(()=>readMultipartForm(bad),
+   (e:unknown)=>e instanceof ApiFailure&&e.status===415);
+ const tampered=new Request("https://forgecy.example/api/workspace/clients/upload",{
+   method:"POST",headers:{"content-type":"multipart/form-data; boundary=abc","content-length":"999999999"},body:"bad"
+ });
+ await assert.rejects(()=>readMultipartForm(tampered),
+   (e:unknown)=>e instanceof ApiFailure&&e.status===413);
 });
