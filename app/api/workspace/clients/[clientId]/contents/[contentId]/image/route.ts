@@ -3,6 +3,7 @@ import { auth,requireClient,read,fail,json,ApiFailure,dbError,audit } from "@/li
 import { playbook } from "@/lib/skills/playbooks";
 import { brandStyle } from "@/lib/brand";
 import { reserveAiRequest } from "@/lib/ai-request-budget";
+import {withAiUsageScope,recordAiProviderUsage} from "@/lib/ai-usage";
 export const runtime="nodejs";
 export const maxDuration=120;
 
@@ -51,7 +52,9 @@ export async function POST(request:Request,{params}:{params:Promise<{clientId:st
    console.error("[openai image]",response.status);
    throw new ApiFailure(502,"Generazione immagine non riuscita: HTTP "+response.status);
   }
-  const payload=await response.json() as {data?:Array<{b64_json?:string}>};
+  const payload=await response.json() as {data?:Array<{b64_json?:string}>;usage?:unknown};
+  await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"image"},()=>
+    recordAiProviderUsage("openai",process.env.OPENAI_IMAGE_MODEL||"gpt-image-1",payload));
   const encoded=payload.data?.[0]?.b64_json;
   if(!encoded)throw new ApiFailure(502,"Nessuna immagine ricevuta");
   const binary=Buffer.from(encoded,"base64");
