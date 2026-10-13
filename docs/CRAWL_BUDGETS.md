@@ -27,7 +27,7 @@ A request for `maxPages: 6` reserves **six pages**, even if fewer are actually a
 
 ## Deployment and rollback
 
-1. Apply migrations **0001 through 0012**, including 0012, in an isolated Supabase staging project.
+1. For the current app, apply migrations **0001 through 0017** in your Supabase project (0012 introduces crawl quotas). A separate disposable test project is optional.
 2. Confirm the authenticated quota RPC and the SQL RLS smoke tests with two users and separate clients.
 3. Deploy the app; the crawler stays **off** by default. No frontend credential or service-role key is needed for reservations.
 4. Configure egress filtering, then enable `ENABLE_WEBSITE_INGEST=true` only in a verified environment.
@@ -46,4 +46,4 @@ A request for `maxPages: 6` reserves **six pages**, even if fewer are actually a
 
 - Reservation limits constrain *completed authorization attempts*, not total bytes transferred by a malicious or compromised remote site. The crawler's existing byte/time caps still apply.
 - This is not a global IP-based rate limiter for every Forgecy API endpoint. Other expensive operations require their own budgets.
-- No cross-deployment load-test or real-network SSRF penetration test is possible without a configured staging environment. CI proves SQL behavior and API utility logic, not infrastructure egress protection.
+- No cross-deployment load-test or real-network SSRF penetration test is possible without a configured isolated test environment. CI proves SQL behavior and API utility logic, not infrastructure egress protection.

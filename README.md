@@ -1,12 +1,16 @@
-# Forgecy — client-first AI agency workspace
+# Forgecy — personal, locally run AI workspace
 
-Forgecy is a responsive browser-based agency workspace: one client profile at a time, an approved company knowledge base, verified products and services, AI-coordinated campaigns, static Instagram and LinkedIn content, and performance history.
+Forgecy is an open-source project for personal use. Run the application on your own computer, connect your own Supabase project and bring your own AI API keys. It helps you manage client or brand profiles, approved knowledge, products/services, strategies, static Instagram and LinkedIn content, and performance history.
 
-The complete previous repository is preserved under the **old/** folder with its original Git history. The V11 application runs from the new repository root.
+There is no Forgecy-operated hosted service, subscription or shared customer backend. Each installation uses the operator's accounts and credentials; Supabase and enabled AI/social providers remain external services with their own terms and costs. Running the app locally does not make its database or AI processing offline. A separate staging environment is optional, not required for a personal installation.
 
-## Setup without Docker
+The complete previous repository is preserved under the **old/** folder with its original Git history. The current Next.js/Supabase application runs from the repository root. Features preserved in `old/` are not automatically part of the current application.
 
-1. Install Node.js 22.18 or later and run **npm install**.
+## Run locally without Docker
+
+Follow the step-by-step [local setup guide](docs/LOCAL_SETUP.md), including the local AI dispatcher and troubleshooting. The short version:
+
+1. Install Node.js 22.18 or later, clone this repository, enter its directory and run **npm install**.
 2. Create a managed Supabase project (Auth, PostgreSQL, Storage).
 3. In the Supabase SQL Editor, apply these migrations **in order**:
    - supabase/migrations/0001_init.sql
@@ -26,15 +30,15 @@ The complete previous repository is preserved under the **old/** folder with its
    - supabase/migrations/0015_ai_worker_fencing.sql
    - supabase/migrations/0016_ai_request_budgets.sql
    - supabase/migrations/0017_ai_provider_usage.sql
-4. Copy .env.example to .env.local. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from the Supabase dashboard.
+4. Copy `.env.example` to `.env.local`. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from your Supabase dashboard. Despite the variable names, `sb_publishable_…` is accepted; the private `sb_secret_…` key belongs only in `SUPABASE_SERVICE_ROLE_KEY`. Keep `.env.local` private and untracked.
 5. Enable email OTP / magic-link sign-in in Supabase Authentication. Allow http://localhost:3000/auth/callback as a redirect URL.
-6. Run **npm run dev** and open http://localhost:3000.
+6. Run **npm run dev -- --hostname 127.0.0.1** and open http://localhost:3000.
 7. Add OPENROUTER_API_KEY on the server to enable real AI. Without a key, AI endpoints return configuration errors instead of invented answers.
-8. To run queued AI work, configure `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET` on the backend and schedule the protected `/api/jobs/dispatch` endpoint. See [AI_JOB_RUNNER.md](docs/AI_JOB_RUNNER.md).
+8. To run queued AI work, configure `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET` in `.env.local` and run the local dispatcher described in the setup guide while the app is running. See [AI_JOB_RUNNER.md](docs/AI_JOB_RUNNER.md).
 9. Optionally set `OPENAI_API_KEY` for generated images and `META_*` for Instagram Professional access. Do not add secrets to a `NEXT_PUBLIC_` variable.
 10. Do not enable `ENABLE_WEBSITE_INGEST=true` until outbound network restrictions are in place. Apply migration 0012 before deploying the shared crawl budgets; see [CRAWL_BUDGETS.md](docs/CRAWL_BUDGETS.md).
 
-To deploy, connect this repository to Vercel (or a compatible Next.js Node host), configure the same environment variables, run the migrations in the production Supabase project and add the production auth redirect URL. Normal development requires no Docker or self-managed database.
+A cloud deployment is optional. For a local optimized build, use `npm run build` and `npm run start -- --hostname 127.0.0.1`; `APP_ORIGIN=http://localhost:3000` is required in that mode. If you choose a public host, configure its exact HTTPS origin, auth callback, private environment variables and worker scheduler separately. Normal personal use requires no Docker, public web host or second Supabase project.
 
 ## V21 integration: protected AI workers
 
@@ -46,7 +50,7 @@ The Library can now search bounded, source-attributed passages from websites and
 
 ## Editorial intelligence from training materials
 
-Library now includes **Voce della community**, where the team can record anonymized questions, objections, reviews and audience feedback. The AI uses observed needs (without treating one comment as a universal trend) to create an inspectable creative brief for static Instagram and LinkedIn content. Per-client brand colors now affect preview and PNG/PDF; a heading font can be documented without automatically installing it. Instagram defaults to 4:5 and LinkedIn documents to 16:9. See [docs/EDITORIAL_INTELLIGENCE.md](docs/EDITORIAL_INTELLIGENCE.md) for source mapping and limitations.
+Library now includes **Voce della community**, where you can record anonymized questions, objections, reviews and audience feedback. The AI uses observed needs (without treating one comment as a universal trend) to create an inspectable creative brief for static Instagram and LinkedIn content. Per-client brand colors now affect preview and PNG/PDF; a heading font can be documented without automatically installing it. Instagram defaults to 4:5 and LinkedIn documents to 16:9. See [docs/EDITORIAL_INTELLIGENCE.md](docs/EDITORIAL_INTELLIGENCE.md) for source mapping and limitations.
 
 ## Skill-guided quality and document intelligence
 
@@ -71,7 +75,7 @@ Excluded by design: **videos and reels**.
 
 ## Validation
 
-The Forgecy V11 GitHub Actions workflow runs dependency installation, strict TypeScript checks, Node tests, PostgreSQL migrations + Row-Level Security smoke tests, and a Next.js production build.
+The GitHub Actions quality workflow runs dependency installation, strict TypeScript checks, Node tests, PostgreSQL migrations + Row-Level Security smoke tests, and a Next.js production build.
 
 A green CI build confirms these checks; it does not prove the external Meta, OpenRouter or OpenAI services work without real accounts and credentials.
 
@@ -79,7 +83,7 @@ A green CI build confirms these checks; it does not prove the external Meta, Ope
 
 Every client-owned table uses Supabase Auth and Postgres RLS. Client ownership is checked server-side. Storage buckets are private; provider credentials stay on the server. The bounded, robots-aware multi-page website crawler is disabled by default and **must not** be enabled without network-level outbound restrictions. Source content hashes and exact-quote evidence reports are stored in private client-scoped tables; they do not replace independent fact checking. See [docs/SOURCE_INTELLIGENCE_BACKEND.md](docs/SOURCE_INTELLIGENCE_BACKEND.md).
 
-This is a functional fullstack foundation **not yet a finished production SaaS**. A basic PostgreSQL-backed AI job queue exists but requires a configured scheduler and an external smoke test. OCR for scans and images, durable multi-stage agent checkpoints, organization/team permissions, channel publishing, reliable Meta token refresh, provider-level token/currency caps, full visual render parity, production observability, and migrations of legacy data remain to be built. See [CURRENT_ROADMAP.md](docs/CURRENT_ROADMAP.md).
+The core personal workflow is implemented; verify your own installation with real accounts before relying on it. Queued AI work needs a running dispatcher. Remaining reliability and usability work includes OCR, per-agent resumability, reliable Meta token refresh, stronger spending controls, preview/export parity and backup/restore verification. Organization/team permissions, client portals and billing are optional extensions, not requirements for personal use. See [CURRENT_ROADMAP.md](docs/CURRENT_ROADMAP.md).
 
 Original source code: [old/](old/). More setup and endpoint details: [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md).
 
@@ -92,4 +96,4 @@ The Results screen includes a per-client usage summary for OpenRouter and OpenAI
 
 ## V24 AI request safeguards
 
-The hosted API reserves PostgreSQL-backed per-client and per-owner request quota before synchronous AI calls, while the existing queue RPC reserves capacity for asynchronous work. A 429 response means a rolling quota was reached; failed reservations block external AI calls. These counters are not a monetary spending cap. Deploy migration `0016_ai_request_budgets.sql` before the V24 API code. See [docs/AI_REQUEST_BUDGETS.md](docs/AI_REQUEST_BUDGETS.md).
+The application API reserves PostgreSQL-backed per-client and per-owner request quota before synchronous AI calls, while the existing queue RPC reserves capacity for asynchronous work. A 429 response means a rolling quota was reached; failed reservations block external AI calls. These counters are not a monetary spending cap. Deploy migration `0016_ai_request_budgets.sql` before the V24 API code. See [docs/AI_REQUEST_BUDGETS.md](docs/AI_REQUEST_BUDGETS.md).

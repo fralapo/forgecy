@@ -1,4 +1,6 @@
-# Forgecy V21: integrazione incrementale del backend
+# Forgecy V21: note storiche di integrazione del backend
+
+Integrata su `main` dalla release V24 (#100). Per installare la versione corrente seguire [LOCAL_SETUP.md](LOCAL_SETUP.md): la sequenza completa arriva a **0017**, non si ferma a V21.
 
 ## Perché
 Le PR precedenti avevano introdotto due migrazioni diverse con numero **0012**. La nuova linea di integrazione parte dal lavoro V20 (PR #94), conserva il budget crawler e la ricerca a estratti e porta i controlli worker della PR #95 su una numerazione non ambigua.
@@ -18,7 +20,7 @@ Non rinominare o riapplicare migrazioni già eseguite in un database di produzio
 1. Typecheck, lint, test Node.
 2. PostgreSQL 16: migrazioni 0001–0015, smoke test RLS, ricerca a estratti e test concorrenza worker.
 3. Build Next.js.
-4. Staging **da eseguire manualmente** con Supabase/OpenRouter reali, worker e Meta autorizzato; CI non dimostra l'integrazione esterna.
+4. Verifica della propria installazione con Supabase/OpenRouter reali, worker e Meta autorizzato se abilitato; CI non dimostra l'integrazione esterna. Un progetto di test separato è facoltativo.
 5. Monitorare race e processi interrotti con almeno due dispatcher concorrenti prima del rilascio.
 
 ## Limiti

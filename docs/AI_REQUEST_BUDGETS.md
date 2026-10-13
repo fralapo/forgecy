@@ -70,7 +70,7 @@ budget con altri clienti.
 La CI esegue test TypeScript e PostgreSQL: RLS negata, client di un altro
 proprietario, limite del quarto d'ora, limite delle 24 ore, budget ponderato
 cross-client e chiamate dirette all'RPC della coda. Va ancora fatto un collaudo
-su staging con **due processi worker/app concorrenti**.
+in un ambiente di test con **due processi worker/app concorrenti**.
 
 Per un vero *hard budget in USD* servono ulteriori passi:
 - registrare gli ID e i dati di utilizzo fatturabile che il provider restituisce;
