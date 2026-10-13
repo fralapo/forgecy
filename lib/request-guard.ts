@@ -1,0 +1,51 @@
+/**
+ * Origin verification for cookie-authenticated API writes.
+ * Browsers cannot forge Origin or Sec-Fetch-Site; an external API client must set
+ * an approved Origin explicitly. The check does not replace authentication or RLS.
+ */
+export type MutationRequest = Pick<Request,"method"|"url"|"headers">;
+export type GuardResult = {ok:true}|{ok:false;status:403|503;error:string};
+
+const safeMethods=new Set(["GET","HEAD","OPTIONS"]);
+
+function strictOrigin(value:string):string|null{
+  try{
+    const url=new URL(value);
+    if(!["https:","http:"].includes(url.protocol) ||
+       url.username || url.password || url.pathname!=="/" ||
+       url.search || url.hash || url.origin==="null" ||
+       value!==url.origin)return null;
+    return url.origin;
+  }catch{return null;}
+}
+
+export function guardApiMutation(
+ request:MutationRequest,
+ options:{appOrigin?:string;production?:boolean}={}
+):GuardResult{
+  const method=request.method.toUpperCase();
+  if(safeMethods.has(method))return {ok:true};
+  let destination:URL;
+  try{destination=new URL(request.url);}
+  catch{return {ok:false,status:403,error:"URL richiesta non valida"};}
+  // Only API mutations: OAuth callbacks and cron GETs are unaffected.
+  if(!destination.pathname.startsWith("/api/"))return {ok:true};
+
+  const configured=options.appOrigin?.trim();
+  if(options.production&&!configured)
+    return {ok:false,status:503,error:"APP_ORIGIN non configurata sul server"};
+  const expected=strictOrigin(configured||destination.origin);
+  if(!expected)
+    return {ok:false,status:503,error:"Origine applicazione configurata in modo non valido"};
+  if(options.production && expected.startsWith("http://") &&
+     !/^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(expected))
+    return {ok:false,status:503,error:"L'origine dell'applicazione deve usare HTTPS"};
+
+  const from=request.headers.get("origin")||"";
+  if(!strictOrigin(from)||from!==expected)
+    return {ok:false,status:403,error:"Origine della richiesta non autorizzata"};
+  const fetchSite=request.headers.get("sec-fetch-site");
+  if(fetchSite && fetchSite!=="same-origin" && fetchSite!=="none")
+    return {ok:false,status:403,error:"Richiesta proveniente da un sito esterno"};
+  return {ok:true};
+}
