@@ -35,3 +35,30 @@ create policy ai_provider_usage_owner_select on public.ai_provider_usage
 
 comment on table public.ai_provider_usage is
   'Provider-reported usage only. Missing cost stays NULL. Not a hard spend cap, billing or exhaustive reconciliation.';
+
+-- SECURITY INVOKER preserves RLS. Counts with absent provider data remain explicit.
+create or replace function public.forgecy_client_ai_usage_summary(
+  p_client_id uuid, p_days integer default 30
+) returns table (
+  provider text,operation text,model text,
+  calls bigint,token_reported_calls bigint,cost_reported_calls bigint,
+  prompt_tokens numeric,completion_tokens numeric,reported_cost_usd numeric
+) language sql stable security invoker set search_path='' as $$
+  select u.provider,u.operation,u.model,
+         count(*)::bigint,
+         count(*) filter (where u.usage_status='reported')::bigint,
+         count(*) filter (where u.reported_cost_usd is not null)::bigint,
+         coalesce(sum(u.prompt_tokens),0)::numeric,
+         coalesce(sum(u.completion_tokens),0)::numeric,
+         sum(u.reported_cost_usd)::numeric
+    from public.ai_provider_usage u
+   where p_days between 1 and 90
+     and u.client_id=p_client_id
+     and auth.uid()=u.requested_by
+     and u.created_at >= now()-make_interval(days=>p_days)
+   group by u.provider,u.operation,u.model
+   order by sum(u.reported_cost_usd) desc nulls last,u.provider,u.operation,u.model
+   limit 100
+$$;
+revoke all on function public.forgecy_client_ai_usage_summary(uuid,integer) from public,anon;
+grant execute on function public.forgecy_client_ai_usage_summary(uuid,integer) to authenticated;
