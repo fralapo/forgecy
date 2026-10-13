@@ -24,6 +24,7 @@ The complete previous repository is preserved under the **old/** folder with its
    - supabase/migrations/0013_source_chunks.sql
    - supabase/migrations/0014_source_chunks_backfill.sql
    - supabase/migrations/0015_ai_worker_fencing.sql
+   - supabase/migrations/0016_ai_request_budgets.sql
 4. Copy .env.example to .env.local. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from the Supabase dashboard.
 5. Enable email OTP / magic-link sign-in in Supabase Authentication. Allow http://localhost:3000/auth/callback as a redirect URL.
 6. Run **npm run dev** and open http://localhost:3000.
@@ -82,3 +83,7 @@ This is a functional fullstack foundation **not yet a finished production SaaS**
 Original source code: [old/](old/). More setup and endpoint details: [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md).
 
 License: AGPL-3.0-only. See LICENSE.
+
+## V24 AI request safeguards
+
+The hosted API reserves PostgreSQL-backed per-client and per-owner request quota before synchronous AI calls, while the existing queue RPC reserves capacity for asynchronous work. A 429 response means a rolling quota was reached; failed reservations block external AI calls. These counters are not a monetary spending cap. Deploy migration `0016_ai_request_budgets.sql` before the V24 API code. See [docs/AI_REQUEST_BUDGETS.md](docs/AI_REQUEST_BUDGETS.md).
