@@ -4,6 +4,8 @@ insert into auth.users(id) values
  ('22222222-2222-4222-8222-222222222222');
 grant select,insert,update,delete on all tables in schema public to authenticated;
 grant usage on all sequences in schema public to authenticated;
+-- The private AI request ledger is NEVER exposed via Data API reads/writes.
+revoke all on public.ai_request_reservations from authenticated;
 -- The job table is deliberately read-only through PostgREST.
 revoke insert,update,delete,select on public.ai_jobs from authenticated;
 grant select (id,client_id,requested_by,kind,payload,status,result,error,attempts,max_attempts,run_after,locked_until,created_at,updated_at,finished_at) on public.ai_jobs to authenticated;
