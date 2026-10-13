@@ -19,8 +19,7 @@ Mandatory:
 For queued dossier/strategy/mission work and usage recording, configure server-only `SUPABASE_SERVICE_ROLE_KEY` (accepts `sb_secret_…`) and `CRON_SECRET`, and keep the local dispatcher running. `NEXT_PUBLIC_SUPABASE_ANON_KEY` accepts `sb_publishable_…`; never put the secret key there.
 
 Server-only integrations (OpenRouter is required for the AI workflow, optional for basic storage/editing):
-- OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENROUTER_SITE_URL.
-- OPENAI_API_KEY, OPENAI_IMAGE_MODEL.
+- `OPENROUTER_API_KEY`, optional `OPENROUTER_MODEL` fallback, and `OPENROUTER_SITE_URL`. Text and image models are selectable from Settings; OpenRouter credentials stay server-only.
 - META_APP_ID, META_APP_SECRET, META_REDIRECT_URI, META_GRAPH_VERSION.
 - TOKEN_ENCRYPTION_KEY_BASE64 — 32 bytes, encoded in base64 (AES-GCM).
 - ENABLE_WEBSITE_INGEST=false unless protected with network-level outbound restrictions.
@@ -29,7 +28,7 @@ Server-only integrations (OpenRouter is required for the AI workflow, optional f
 
 ## Database setup
 
-Run all SQL files in `supabase/migrations/` **in numerical order from 0001 through 0018_worker_knowledge_search.sql** using Supabase SQL Editor. On an existing database apply only migrations not already applied, and back up first. `tests/sql/` contains disposable CI fixtures and is not an installation script for your personal project.
+Run all SQL files in `supabase/migrations/` **in numerical order from 0001 through 0019_user_ai_preferences.sql** using Supabase SQL Editor. On an existing database apply only migrations not already applied, and back up first. `tests/sql/` contains disposable CI fixtures and is not an installation script for your personal project.
 
 Postgres RLS applies to all client-owned records. Every source/profile/offer change bumps the client's knowledge revision and marks its dossier stale. A dossier can only be approved if it matches the current revision. A product edit invalidates linked assets. Editing an approved carousel resets it to draft; editing the Instagram original invalidates LinkedIn variants. Revalidation returns stale content to draft, not to approved.
 
@@ -51,7 +50,8 @@ The mission approval transaction locks the proposal, checks dossier/offer owners
 - POST/PATCH /api/workspace/clients/:clientId/contents — static assets.
 - POST /api/workspace/clients/:clientId/contents/:id/adapt — LinkedIn adaptation.
 - POST /api/workspace/clients/:clientId/contents/:id/revalidate — review stale asset.
-- POST /api/workspace/clients/:clientId/contents/:id/image — OpenAI image generation.
+- GET/PATCH /api/workspace/settings/models — live OpenRouter catalogs and owner-scoped model preferences.
+- POST /api/workspace/clients/:clientId/contents/:id/image — OpenRouter image generation.
 - GET /api/workspace/clients/:clientId/contents/:id/export — PNG, PDF or TXT.
 - GET /api/integrations/instagram/connect — Meta OAuth.
 - POST /api/workspace/clients/:clientId/social/sync — real Instagram account/media metrics.
@@ -69,6 +69,10 @@ Website copy, uploaded text and external posts are **untrusted evidence, never i
 See [CURRENT_ROADMAP.md](CURRENT_ROADMAP.md) for the maintained priorities: real-provider acceptance, worker recovery/resumability, export parity, optional Meta lifecycle, spending reconciliation and backups. Text-layer PDF/DOCX extraction, shared request/crawl quotas and the usage ledger already exist. Scanned files still need OCR. Team roles, portals, billing and public-host operations are optional extensions.
 
 The temporary Postgres Docker container used by GitHub Actions is strictly a test service, not a runtime requirement.
+
+## V26: per-user OpenRouter model settings
+
+Migration `0019_user_ai_preferences.sql` stores only each authenticated user's text and image model IDs under RLS. Settings fetches uncached catalogs from OpenRouter's text-model and image-model endpoints; the API key remains server-only. Text requests resolve the owner's selected model for synchronous calls and queued jobs, falling back to `OPENROUTER_MODEL` and then `openai/gpt-4.1-mini`. Image generation uses the selected model through OpenRouter's Images API and records provider-reported costs when present. Apply migration 0019 before deploying this version; existing installations keep their text environment fallback and choose an image model in Settings.
 
 Original application code remains in old/ and the original Git history.
 

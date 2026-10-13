@@ -38,7 +38,7 @@ Let each authenticated Forgecy user choose the OpenRouter text model and image-g
 5. Text generation reads that user's saved text model, falling back to `OPENROUTER_MODEL` and then the existing default when no preference exists.
 6. Image generation reads that user's saved image model. It uses `OPENROUTER_API_KEY` and `POST /api/v1/images`, preserving Forgecy's existing prompt, client authorization, request budget, optimistic content revision check, private asset storage, and audit event.
 
-The image request uses a portrait 4:5 aspect ratio for Instagram and landscape 16:9 for LinkedIn. Read `data[0].b64_json` and `data[0].media_type`, allow only supported image media types, derive the stored extension from the validated type, and enforce the existing maximum asset size. Record image usage as provider `openrouter`, including reported cost when OpenRouter supplies it. No OpenAI image key is required after the change.
+The image request uses a portrait 4:5 aspect ratio for Instagram and landscape 16:9 for LinkedIn when that ratio is advertised by the selected model; otherwise it omits the ratio and lets the model use its default. Read `data[0].b64_json` and `data[0].media_type`, allow only supported image media types, derive the stored extension from the validated type, and enforce the existing maximum asset size. Record image usage as provider `openrouter`, including reported cost when OpenRouter supplies it. No OpenAI image key is required after the change.
 
 ## Preferences and access control
 

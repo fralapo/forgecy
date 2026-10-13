@@ -42,7 +42,7 @@ export type Snapshot={
  social_accounts:Array<{id:string;username:string;remote_id:string;token_expires_at?:string}>;
  social_snapshots:ObservedSnapshot[];
 };
-export type View="today"|"knowledge"|"offers"|"projects"|"results";
+export type View="today"|"knowledge"|"offers"|"projects"|"results"|"settings";
 export async function requestJson<T=Record<string,unknown>>(url:string,init:RequestInit={}):Promise<T>{
  const headers:Record<string,string>={};
  if(!(init.body instanceof FormData))headers["Content-Type"]="application/json";

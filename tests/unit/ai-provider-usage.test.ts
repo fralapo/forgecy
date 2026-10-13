@@ -30,6 +30,16 @@ test("Missing costs remain NULL even when tokens are measured",()=>{
  assert.equal(record.provider_request_id,null);
 });
 
+test("OpenRouter image responses preserve provider-reported image cost and tokens",()=>{
+ const record=providerUsageRecord({clientId:clientA,requestedBy:ownerA,operation:"image"},
+  "openrouter","image/model",{usage:{prompt_tokens:24,completion_tokens:1200,total_tokens:1224,cost:0.014}});
+ assert.equal(record.model,"image/model");
+ assert.equal(record.prompt_tokens,24);
+ assert.equal(record.completion_tokens,1200);
+ assert.equal(record.reported_cost_usd,0.014);
+ assert.equal(record.usage_status,"reported");
+});
+
 test("Unknown or misleading numeric values are not inserted as fabricated data",()=>{
  const record=providerUsageRecord({clientId:clientA,requestedBy:ownerA,operation:"adapt"},
   "openrouter","test",{

@@ -49,7 +49,7 @@ OCR, PDF images, advanced tabular extraction, background workers and full concep
 
 GitHub CI installs dependencies, typechecks, runs unit tests for playbook/quality and PDF extraction, applies SQL migrations 0001 through 0006 on PostgreSQL with RLS tests, and builds the Next.js production app.
 
-This does not test live Supabase, OpenRouter, OpenAI image generation, Meta OAuth or full client workflow; those require managed credentials and an acceptance environment. No videos/reels are enabled.
+This does not test live Supabase, OpenRouter image generation, Meta OAuth or full client workflow; those require managed credentials and an acceptance environment. No videos/reels are enabled.
 
 ## Next prioritized work
 

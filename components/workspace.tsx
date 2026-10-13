@@ -2,6 +2,7 @@
 import { useCallback,useEffect,useRef,useState } from "react";
 import { Activity,BookOpen,BriefcaseBusiness,Check,ChevronDown,ChevronRight,FileText,FolderKanban,LayoutDashboard,LoaderCircle,LogOut,Menu,MessageCircle,Package,Plus,Send,Settings2,ShieldCheck,Sparkles,Users,X } from "lucide-react";
 import Views from "./views";
+import ModelSettings from "./model-settings";
 import type { Client,Offer,Snapshot,View,Mission } from "./types";
 import { initials,requestJson,statusLabel } from "./types";
 import { browserDb } from "@/lib/supabase-browser";
@@ -12,7 +13,8 @@ const nav:Array<{key:View;label:string;icon:typeof LayoutDashboard}>=[
  {key:"knowledge",label:"Biblioteca",icon:BookOpen},
  {key:"offers",label:"Offerta",icon:Package},
  {key:"projects",label:"Progetti",icon:FolderKanban},
- {key:"results",label:"Risultati",icon:Activity}
+ {key:"results",label:"Risultati",icon:Activity},
+ {key:"settings",label:"Impostazioni",icon:Settings2}
 ];
 const endpoint=(id:string)=>"/api/workspace/clients/"+id;
 function getError(error:unknown){return error instanceof Error?error.message:"Operazione non riuscita"}
@@ -232,7 +234,7 @@ export default function Workspace(){
       <div className="eyebrow">BENVENUTO IN FORGECY</div><h1>Il lavoro inizia da un cliente.</h1><p className="tagline">Crea uno spazio dedicato: potrai aggiungere sito, fonti, prodotti e servizi, costruire un dossier approvato e parlare con il Leader.</p>
       <div><button className="button primary" onClick={baseModal}><Plus size={16}/> Crea il primo cliente</button></div>
      </div>:!data?<div className="empty">Caricamento dati di {current.name}…</div>:
-      <Views data={data} view={view} onView={setView} onModal={(kind,item)=>setModal({kind,item})} onAction={onAction} onChat={()=>setChatOpen(true)} busy={busy}/>}
+      view==="settings"?<ModelSettings/>:<Views data={data} view={view} onView={setView} onModal={(kind,item)=>setModal({kind,item})} onAction={onAction} onChat={()=>setChatOpen(true)} busy={busy}/>}
     </div></main>
    </div>
    <aside className={"chat-panel "+(chatOpen?"open":"")}>
@@ -274,7 +276,7 @@ export default function Workspace(){
     </form>
    </aside>
   </div>
-  <nav className="mobile-bottom">{[nav[0],nav[1],nav[2],nav[3]].map(n=><button key={n.key} className={view===n.key?"active":""} onClick={()=>{setView(n.key);setChatOpen(false)}}><n.icon size={19}/>{n.label}</button>)}<button className={view==="results"?"active":""} onClick={()=>{setView("results");setChatOpen(false)}}><Activity size={19}/>Risultati</button></nav>
+  <nav className="mobile-bottom">{[nav[0],nav[1],nav[2],nav[3],nav[4]].map(n=><button key={n.key} aria-label={n.label} title={n.label} className={view===n.key?"active":""} onClick={()=>{setView(n.key);setChatOpen(false)}}><n.icon size={19}/>{n.label}</button>)}<button aria-label="Impostazioni" title="Impostazioni" className={view==="settings"?"active":""} onClick={()=>{setView("settings");setChatOpen(false)}}><Settings2 size={19}/><span>Impost.</span></button></nav>
   {switchOpen&&<div className="switch-popover mobile-switch"><div className="eyebrow" style={{padding:8}}>CLIENTI</div>{clients.map(c=><button key={c.id} onClick={()=>choose(c.id)}><span className="client-avatar">{initials(c.name)}</span>{c.name}</button>)}<button onClick={()=>{setSwitchOpen(false);baseModal()}}><Plus size={14}/> Nuovo cliente</button><button onClick={logout}><LogOut size={14}/> Esci</button></div>}
   {modal&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setModal(null)}}><div className="modal"><div className="modal-head"><div><div className="eyebrow">FORGECY / {current?.name||"NUOVO CLIENTE"}</div><h2 style={{marginTop:7}}>{({client:"Aggiungi un cliente",source:"Nuova fonte",signal:"Ascolto della community",upload:"Carica documento",offer:"Prodotto o servizio",profile:"Profilo del cliente",campaign:"Nuova campagna",content:"Nuovo contenuto",mission:"Affida un obiettivo al Leader"} as Record<string,string>)[modal.kind]||"Nuovo elemento"}</h2></div><button className="button ghost small" aria-label="Chiudi" onClick={()=>setModal(null)}><X size={18}/></button></div>
    <form onSubmit={modal.kind==="client"?createClient:submitModal}>
