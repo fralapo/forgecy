@@ -20,7 +20,7 @@ Keep `.env.local` untracked. On macOS/Linux you can restrict local access with `
 
 ## 2. Initialize your Supabase project
 
-Create a project in your own Supabase account. In its **SQL Editor**, apply every file in `supabase/migrations/` in filename order: `0001_init.sql` through `0018_worker_knowledge_search.sql` (18 files at this revision). Use the repository files directly, not the old application's migrations.
+Create a project in your own Supabase account. In its **SQL Editor**, apply every file in `supabase/migrations/` in filename order: `0001_init.sql` through `0019_user_ai_preferences.sql` (19 migrations at this revision). Use the repository files directly, not the old application's migrations.
 
 The migrations create tables, owner/client RLS policies, RPCs and two **private** Storage buckets: `forgecy-sources` and `forgecy-assets`. Do not make them public. The publishable/secret API keys are not PostgreSQL passwords and cannot execute arbitrary migration SQL through the normal REST API.
 
@@ -60,9 +60,9 @@ Find the project URL in Supabase **Project Settings → Data API** (or the **Con
 | `APP_ORIGIN` | `http://localhost:3000` (exact origin, no final slash) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Your project URL, `https://<project-ref>.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your `sb_publishable_…` key, or legacy anon JWT |
-| `SUPABASE_SERVICE_ROLE_KEY` | Your **private** `sb_secret_…` key, or legacy service-role JWT; worker and usage ledger only |
+| `SUPABASE_SERVICE_ROLE_KEY` | Your **private** `sb_secret_…` key, or legacy service-role JWT; server-only worker, text preference lookup and usage ledger |
 | `OPENROUTER_API_KEY` | Your OpenRouter key for chat, dossiers, strategies and specialist missions |
-| `OPENROUTER_MODEL` | A model supporting strict JSON Schema for dossiers; default `openai/gpt-4.1-mini` |
+| `OPENROUTER_MODEL` | Optional fallback text model; default `openai/gpt-4.1-mini`. Choose active text and image models in **Impostazioni** |
 | `OPENROUTER_SITE_URL` | `http://localhost:3000` |
 | `CRON_SECRET` | A private random string of at least 24 characters protecting the dispatcher |
 | `ENABLE_WEBSITE_INGEST` | Keep `false` until network isolation is configured |
@@ -141,13 +141,13 @@ Start with a sample client/brand profile and text notes or a supported document:
 6. Check Results → AI usage. Unknown costs stay unknown; compare usage with your provider dashboard.
 7. Change a source and verify that outdated dossiers/strategy/content require review.
 
-Without an OpenRouter key, AI fails with a configuration error; it does not generate sample answers. Without a configured dispatcher, queued jobs remain queued. Without the private Supabase key, the worker cannot execute and provider observations cannot be saved.
+Without an OpenRouter key, AI and model catalogs fail with a configuration error; the app does not generate sample answers. Without a configured dispatcher, queued jobs remain queued. Without the private Supabase key, the worker cannot execute, saved per-user text models are not applied to AI requests, and provider observations cannot be saved.
 
 For code changes, run `npm run typecheck`, `npm run lint`, `npm test` and `npm run build`. CI additionally uses a disposable PostgreSQL database for migrations and RLS tests. These checks do not verify your external accounts or visual exports.
 
 ## Optional integrations
 
-- **Generated images:** add your `OPENAI_API_KEY`; default image model is `gpt-image-1`. Text/layout editing does not require it. Image token observations may have no reported USD cost.
+- **Generated images:** choose a model in **Impostazioni**. Forgecy uses the same server-only `OPENROUTER_API_KEY` as text generation; OpenRouter reports token counts and costs when available. Each user's selected model IDs sync through Supabase, while the key remains local to each installation.
 - **Instagram:** configure your Meta app, authorized Professional account, permissions, callback variables and a 32-byte base64 `TOKEN_ENCRYPTION_KEY_BASE64`. The local callback in `.env.example` must be allowed by your Meta app. This is optional and requires Meta's setup/review rules. Expired credentials currently require reconnection. Local disconnect does not revoke Meta consent remotely.
 - **Website import:** disabled by default. Code URL/DNS checks are not a substitute for public-only outbound network isolation, even on a personal computer. Use manually supplied notes/documents until that isolation is configured. See [SOURCE_INTELLIGENCE_BACKEND.md](SOURCE_INTELLIGENCE_BACKEND.md) and [CRAWL_BUDGETS.md](CRAWL_BUDGETS.md).
 - **Public hosting/collaboration:** a separate decision. Configure HTTPS origin, auth callbacks, secrets, scheduler, request limits, backups and monitoring for that deployment. Organizations, billing and a client portal are not needed to run Forgecy personally.
@@ -162,7 +162,7 @@ For code changes, run `npm run typecheck`, `npm run lint`, `npm test` and `npm r
 | Magic link goes to the wrong page or cannot exchange session | Check Site URL/redirect allowlist and open the link in the requesting browser. |
 | Login email is not delivered | Check Supabase email restrictions, rate limits and SMTP configuration. |
 | Jobs stay queued | Start both terminals and check private Supabase key, cron secret and server errors. |
-| AI returns 503 or schema errors | Set an OpenRouter key and a model supporting the required schema; check provider balance/access. |
+| AI returns 503 or schema errors | Set an OpenRouter key and choose a text model advertising structured outputs for dossiers and campaigns; check provider balance/access. |
 | Usage is incomplete | Check migration 0017, server-only key and provider response usage; the panel is not a complete bill. |
 | PDF differs from preview or loses symbols | Current PDF renderer has font/line limits; inspect exports before use. |
 

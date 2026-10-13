@@ -1,4 +1,4 @@
-# Forgecy V25 — provider usage telemetry (OpenRouter / OpenAI images)
+# Forgecy V25–V26 — provider usage telemetry (OpenRouter text and images)
 
 This change adds **measured, provider-reported usage observations** per client. It does **not** implement a hard USD/EUR budget, a billing system, or a guarantee that every charge was captured. V24's atomic request-count limits remain active and independent.
 
@@ -9,7 +9,7 @@ Forgecy runs locally with your own accounts; this telemetry is for inspecting pe
 1. Apply `supabase/migrations/0017_ai_provider_usage.sql` after 0016 in your own Supabase project. Back up existing data before upgrades; a separate test project is optional.
 2. Configure `SUPABASE_SERVICE_ROLE_KEY` **on the server only** for both synchronous API routes and the worker. If absent, AI generation still works under existing V24 limits, but telemetry cannot be saved. The server logs a warning, not customer data.
 3. Ensure `OPENROUTER_API_KEY` is set and the chosen model supports regular completion usage. Forgecy asks for `usage:{include:true}`; cost is read only from the OpenRouter response's `usage.cost` field, not derived from a price list.
-4. If OpenAI image generation is configured, `/v1/images/generations` may provide input/output tokens; costs are **NULL** because that endpoint does not supply the final USD charge.
+4. OpenRouter image generation uses the selected model through `/api/v1/images`; record response tokens and `usage.cost` only when present.
 5. Deploy the application code with migration 0017 in place. The new **Risultati → Utilizzo dei modelli AI** panel displays totals for 7/30/90 days. It requests `GET /api/workspace/clients/:id/ai-usage?days=30` and does not display sensitive provider request identifiers.
 
 ## Data model and privacy
@@ -27,10 +27,10 @@ No prompts, generated images, customer text, tokens, provider keys or other secr
 - Normal chat and content adaptation are scoped to the authenticated client.
 - Dossier and campaign generation from the synchronous endpoints are scoped likewise.
 - The queued worker scopes all stages (including multiple specialist calls) to `job_id`, `client_id` and `requested_by`.
-- Image generation records provider tokens if the response includes them, with `reported_cost_usd=NULL`.
+- Image generation records provider tokens and reported cost from OpenRouter when the response includes them; missing costs remain `NULL`.
 - The recorder runs **after** the paid provider call. A database outage must not cause the app to retry a billable generation. Ledger failures are logged without blocking the AI response.
 - Missing costs are shown as unknown, not as $0. A total can be displayed as a *partial reported subtotal*, including cases where the model returned an output without usage data.
-- A unique `(provider,provider_request_id)` index prevents duplicate reporting of identical provider response IDs where available. OpenAI image API responses do not provide the same stable ID, so exactly-once accounting is not guaranteed there.
+- A unique `(provider,provider_request_id)` index prevents duplicate reporting of identical provider response IDs where available. Image responses may not include a stable request ID, so exactly-once accounting is not guaranteed.
 - Historical calls made before V25 are not reconstructed.
 
 ## Security and limitations
@@ -41,9 +41,8 @@ Before enforcing spend caps, Forgecy would need **preauthorization of maximum pr
 
 ## Test plan
 
-GitHub Actions runs TypeScript, lint, unit tests, PostgreSQL 16 migrations 0001–0017 and RLS smoke tests, and production build. Unit tests verify zero vs missing cost, parallel tenant isolation with AsyncLocalStorage, and no billing retry on a failed insert. SQL tests verify immutable events, cross-owner isolation, anonymous denial and aggregate accuracy. A real-provider acceptance test is still required before trusting metrics operationally.
+GitHub Actions runs TypeScript, lint, unit tests, PostgreSQL 16 migrations and RLS smoke tests, and production build. Unit tests verify zero vs missing cost, parallel tenant isolation with AsyncLocalStorage, and no billing retry on a failed insert. SQL tests verify immutable events, cross-owner isolation, anonymous denial and aggregate accuracy. A real-provider acceptance test is still required before trusting metrics operationally.
 
 References:
 - https://openrouter.ai/support/ (request usage with `usage:{include:true}`)
 - https://github.com/OpenRouterTeam/docs/blob/main/api_reference/overview.mdx (response `usage.cost` and generation ID)
-- https://developers.openai.com/api/reference/resources/images/methods/generate (image token usage)

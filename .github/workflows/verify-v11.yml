@@ -66,11 +66,13 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0016_ai_request_budgets.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0017_ai_provider_usage.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0018_worker_knowledge_search.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0019_user_ai_preferences.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/smoke.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/knowledge.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/worker-knowledge.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/ai-worker-fencing.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/ai-request-budgets.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/ai-provider-usage.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/ai-model-settings.sql
       - name: Build
         run: npm run build

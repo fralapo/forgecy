@@ -31,12 +31,13 @@ Follow the step-by-step [local setup guide](docs/LOCAL_SETUP.md), including the 
    - supabase/migrations/0016_ai_request_budgets.sql
    - supabase/migrations/0017_ai_provider_usage.sql
    - supabase/migrations/0018_worker_knowledge_search.sql
+   - supabase/migrations/0019_user_ai_preferences.sql
 4. Copy `.env.example` to `.env.local`. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from your Supabase dashboard. Despite the variable names, `sb_publishable_…` is accepted; the private `sb_secret_…` key belongs only in `SUPABASE_SERVICE_ROLE_KEY`. Keep `.env.local` private and untracked.
 5. Enable email OTP / magic-link sign-in in Supabase Authentication. Allow http://localhost:3000/auth/callback as a redirect URL.
 6. Run **npm run dev -- --hostname 127.0.0.1** and open http://localhost:3000.
 7. Add OPENROUTER_API_KEY on the server to enable real AI. Without a key, AI endpoints return configuration errors instead of invented answers.
 8. To run queued AI work, configure `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET` in `.env.local` and run the local dispatcher described in the setup guide while the app is running. See [AI_JOB_RUNNER.md](docs/AI_JOB_RUNNER.md).
-9. Optionally set `OPENAI_API_KEY` for generated images and `META_*` for Instagram Professional access. Do not add secrets to a `NEXT_PUBLIC_` variable.
+9. Open **Impostazioni** in Forgecy to choose live OpenRouter text and image models. The selected model IDs sync to your Supabase account across devices. Configure your own server-only `OPENROUTER_API_KEY`; no OpenAI key is needed for generated images. Set `META_*` only for Instagram Professional access. Do not add secrets to a `NEXT_PUBLIC_` variable.
 10. Do not enable `ENABLE_WEBSITE_INGEST=true` until outbound network restrictions are in place. Apply migration 0012 before deploying the shared crawl budgets; see [CRAWL_BUDGETS.md](docs/CRAWL_BUDGETS.md).
 
 A cloud deployment is optional. For a local optimized build, use `npm run build` and `npm run start -- --hostname 127.0.0.1`; `APP_ORIGIN=http://localhost:3000` is required in that mode. If you choose a public host, configure its exact HTTPS origin, auth callback, private environment variables and worker scheduler separately. Normal personal use requires no Docker, public web host or second Supabase project.
@@ -78,7 +79,7 @@ Excluded by design: **videos and reels**.
 
 The GitHub Actions quality workflow runs dependency installation, strict TypeScript checks, Node tests, PostgreSQL migrations + Row-Level Security smoke tests, and a Next.js production build.
 
-A green CI build confirms these checks; it does not prove the external Meta, OpenRouter or OpenAI services work without real accounts and credentials.
+A green CI build confirms these checks; it does not prove the external Meta or OpenRouter services work without real accounts and credentials.
 
 ## Security and current limitations
 
@@ -93,7 +94,11 @@ License: AGPL-3.0-only. See LICENSE.
 
 ## V25 provider-reported AI usage
 
-The Results screen includes a per-client usage summary for OpenRouter and OpenAI image generation. It records response-provided token counts and **nullable** reported USD costs; missing costs are not treated as zero. The owner-scoped read API is backed by immutable, server-written ledger entries. Configure the private `SUPABASE_SERVICE_ROLE_KEY` on all API/worker hosts to record observations. The database migration `0017_ai_provider_usage.sql` must be applied before deploying the endpoint. Usage reports are **not guaranteed complete, not invoices, and not currency spending caps**. See [docs/AI_PROVIDER_USAGE.md](docs/AI_PROVIDER_USAGE.md).
+The Results screen includes a per-client usage summary for OpenRouter text and image calls. It records response-provided token counts and **nullable** reported USD costs; missing costs are not treated as zero. The owner-scoped read API is backed by immutable, server-written ledger entries. Configure the private `SUPABASE_SERVICE_ROLE_KEY` on all API/worker hosts to record observations. The database migration `0017_ai_provider_usage.sql` must be applied before deploying the endpoint. Usage reports are **not guaranteed complete, not invoices, and not currency spending caps**. See [docs/AI_PROVIDER_USAGE.md](docs/AI_PROVIDER_USAGE.md).
+
+## V26 in-app OpenRouter model selection
+
+Settings fetches current OpenRouter text and image-generation catalogs and stores each signed-in user's selected model IDs in Supabase migration `0019_user_ai_preferences.sql`. Preferences sync across computers using the same Supabase project and account. The API key remains on each installation's server. See [docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md).
 
 ## V24 AI request safeguards
 

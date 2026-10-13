@@ -1,5 +1,6 @@
 import {AsyncLocalStorage} from "node:async_hooks";
 import {workerDb} from "./worker-db";
+import {withUserTextModel} from "./ai-model-settings";
 
 export type AiUsageOperation = "chat"|"adapt"|"dossier"|"strategy"|"mission"|"image";
 export type AiUsageRecord = {
@@ -19,7 +20,8 @@ type Scope = {
 const storage=new AsyncLocalStorage<Scope>();
 
 export async function withAiUsageScope<T>(scope:Scope,work:()=>Promise<T>):Promise<T> {
-  return storage.run(scope,work);
+  if(scope.operation==="image") return storage.run(scope,work);
+  return withUserTextModel(scope.requestedBy,()=>storage.run(scope,work));
 }
 function quantity(value:unknown,integer:boolean):number|null {
   const parsed=typeof value==="number"?value:

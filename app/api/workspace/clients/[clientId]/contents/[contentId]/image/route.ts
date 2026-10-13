@@ -4,6 +4,8 @@ import { playbook } from "@/lib/skills/playbooks";
 import { brandStyle } from "@/lib/brand";
 import { reserveAiRequest } from "@/lib/ai-request-budget";
 import {withAiUsageScope,recordAiProviderUsage} from "@/lib/ai-usage";
+import {loadOpenRouterCatalog} from "@/lib/ai-model-settings";
+import {decodeOpenRouterImage} from "@/lib/openrouter-image";
 export const runtime="nodejs";
 export const maxDuration=120;
 
@@ -36,31 +38,36 @@ export async function POST(request:Request,{params}:{params:Promise<{clientId:st
    "Framing: "+(content.channel==="linkedin"?"landscape image with wide margins suitable for a 16:9 document":"portrait image with generous negative space suitable for a 4:5 social post")+".",
    "Do NOT forge a product label, exact packaging, logos, claims, prices, endorsements or recognizable real people. If no validated product reference is uploaded, use symbolic unbranded still life. Leave headline, CTA and all typography for the editable layout."
   ].join("\n");
-  const key=process.env.OPENAI_API_KEY;
-  if(!key)throw new ApiFailure(503,"OPENAI_API_KEY non configurata: immagini AI disabilitate");
+  const key=process.env.OPENROUTER_API_KEY;
+  if(!key)throw new ApiFailure(503,"Configura OPENROUTER_API_KEY nel server per generare immagini");
+  const {data:preference,error:preferenceError}=await ctx.db.from("user_ai_preferences")
+   .select("image_model").eq("user_id",ctx.user.id).maybeSingle();
+  dbError(preferenceError,"Impossibile leggere il modello immagini selezionato");
+  const imageModelId=preference?.image_model;
+  if(!imageModelId)throw new ApiFailure(409,"Scegli un modello per le immagini in Impostazioni prima di generare");
+  const imageModels=await loadOpenRouterCatalog("image");
+  const imageModel=imageModels.find(model=>model.id===imageModelId);
+  if(!imageModel)throw new ApiFailure(409,"Il modello immagini salvato non è più disponibile. Scegline uno aggiornato in Impostazioni");
   await reserveAiRequest(ctx,clientId,"image");
-  const response=await fetch("https://api.openai.com/v1/images/generations",{
-   method:"POST",headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},
-   body:JSON.stringify({
-    model:process.env.OPENAI_IMAGE_MODEL||"gpt-image-1",
-    prompt:visualPrompt,
-    size:content.channel==="linkedin"?"1536x1024":"1024x1536",quality:"medium",n:1
-   }),
+  const desiredAspectRatio=content.channel==="linkedin"?"16:9":"4:5";
+  const response=await fetch("https://openrouter.ai/api/v1/images",{
+   method:"POST",headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json",
+    "HTTP-Referer":process.env.OPENROUTER_SITE_URL||"http://localhost:3000","X-Title":"Forgecy"},
+   body:JSON.stringify({model:imageModelId,prompt:visualPrompt,
+    ...(imageModel.supportedAspectRatios.includes(desiredAspectRatio)?{aspect_ratio:desiredAspectRatio}:{})}),
    signal:AbortSignal.timeout(85000),cache:"no-store"
   });
   if(!response.ok) {
-   console.error("[openai image]",response.status);
+   console.error("[openrouter image]",response.status);
    throw new ApiFailure(502,"Generazione immagine non riuscita: HTTP "+response.status);
   }
-  const payload=await response.json() as {data?:Array<{b64_json?:string}>;usage?:unknown};
+  let payload:unknown;
+  try{payload=await response.json()}catch{throw new ApiFailure(502,"OpenRouter ha restituito una risposta immagine non valida")}
   await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"image"},()=>
-    recordAiProviderUsage("openai",process.env.OPENAI_IMAGE_MODEL||"gpt-image-1",payload));
-  const encoded=payload.data?.[0]?.b64_json;
-  if(!encoded)throw new ApiFailure(502,"Nessuna immagine ricevuta");
-  const binary=Buffer.from(encoded,"base64");
-  if(binary.length>15_000_000)throw new ApiFailure(413,"Immagine troppo grande");
-  const path=clientId+"/"+contentId+"/"+crypto.randomUUID()+".png";
-  const uploaded=await ctx.db.storage.from("forgecy-assets").upload(path,binary,{contentType:"image/png",upsert:false});
+    recordAiProviderUsage("openrouter",imageModelId,payload));
+  const {binary,contentType,extension}=decodeOpenRouterImage(payload);
+  const path=clientId+"/"+contentId+"/"+crypto.randomUUID()+"."+extension;
+  const uploaded=await ctx.db.storage.from("forgecy-assets").upload(path,binary,{contentType,upsert:false});
   dbError(uploaded.error,"Immagine generata ma archiviazione non riuscita");
   const updatedSlides=slides.map((s,i)=>i===input.slideIndex?{...s,image_path:path,visual_prompt:input.prompt}:s);
   const saved=await ctx.db.from("contents").update({slides:updatedSlides}).eq("id",contentId).eq("client_id",clientId).eq("revision",content.revision).select("id,revision,slides").maybeSingle();

@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { ApiFailure } from "./http";
 import {recordAiProviderUsage} from "./ai-usage";
+import {currentTextModel} from "./ai-model-settings";
 
 type Msg = { role:"system"|"user"|"assistant"; content:string };
 export async function modelText(messages:Msg[], timeout=25000):Promise<string>{
+  const model=currentTextModel();
   const apiKey=process.env.OPENROUTER_API_KEY;
   if(!apiKey) throw new ApiFailure(503,"OpenRouter non configurato. Inserisci OPENROUTER_API_KEY sul server.");
   const response=await fetch("https://openrouter.ai/api/v1/chat/completions",{
@@ -15,7 +17,7 @@ export async function modelText(messages:Msg[], timeout=25000):Promise<string>{
       "X-Title":"Forgecy"
     },
     body:JSON.stringify({
-      model:process.env.OPENROUTER_MODEL||"openai/gpt-4.1-mini",
+      model,
       temperature:0.35,max_tokens:3000,messages,
       usage:{include:true}
     }),
@@ -26,12 +28,13 @@ export async function modelText(messages:Msg[], timeout=25000):Promise<string>{
     throw new ApiFailure(502,"Il provider AI non ha completato la richiesta (HTTP "+response.status+").");
   }
   const data=await response.json() as {choices?:Array<{message?:{content?:string}}>};
-  await recordAiProviderUsage("openrouter",process.env.OPENROUTER_MODEL||"openai/gpt-4.1-mini",data);
+  await recordAiProviderUsage("openrouter",model,data);
   const content=data.choices?.[0]?.message?.content?.trim();
   if(!content) throw new ApiFailure(502,"Il provider AI non ha restituito testo");
   return content;
 }
 export async function modelJson<T>(system:string,user:string,schema:z.ZodType<T>):Promise<T>{
+  const model=currentTextModel();
   const jsonSchema=z.toJSONSchema(schema,{target:"draft-7"});
   const apiKey=process.env.OPENROUTER_API_KEY;
   if(!apiKey)throw new ApiFailure(503,"OpenRouter non configurato. Inserisci OPENROUTER_API_KEY sul server.");
@@ -43,7 +46,7 @@ export async function modelJson<T>(system:string,user:string,schema:z.ZodType<T>
       "X-Title":"Forgecy"
     },
     body:JSON.stringify({
-      model:process.env.OPENROUTER_MODEL||"openai/gpt-4.1-mini",
+      model,
       temperature:0.35,max_tokens:3000,
       messages:[
         {role:"system",content:system+"\nRestituisci un oggetto JSON che rispetta esattamente questo schema. Non omettere campi richiesti e non aggiungere spiegazioni o markdown:\n"+JSON.stringify(jsonSchema)},
@@ -58,7 +61,7 @@ export async function modelJson<T>(system:string,user:string,schema:z.ZodType<T>
     throw new ApiFailure(502,"Il provider AI non ha completato la richiesta JSON (HTTP "+response.status+").");
   }
   const answer=await response.json() as {choices?:Array<{message?:{content?:string}}>};
-  await recordAiProviderUsage("openrouter",process.env.OPENROUTER_MODEL||"openai/gpt-4.1-mini",answer);
+  await recordAiProviderUsage("openrouter",model,answer);
   const content=answer.choices?.[0]?.message?.content?.trim();
   if(!content)throw new ApiFailure(502,"Il provider AI non ha restituito JSON");
   let parsed:unknown;
@@ -88,6 +91,7 @@ export const lowTrustRule=[
 export async function modelStructuredJson<T>(
   system:string,user:string,schema:z.ZodType<T>,name="forgecy_dossier"
 ):Promise<T>{
+  const model=currentTextModel();
   const key=process.env.OPENROUTER_API_KEY;
   if(!key)throw new ApiFailure(503,"OpenRouter non configurato. Inserisci OPENROUTER_API_KEY sul server.");
   const jsonSchema=z.toJSONSchema(schema,{target:"draft-7"});
@@ -99,7 +103,7 @@ export async function modelStructuredJson<T>(
       "X-Title":"Forgecy"
     },
     body:JSON.stringify({
-      model:process.env.OPENROUTER_MODEL||"openai/gpt-4.1-mini",
+      model,
       temperature:0.1,max_tokens:6200,
       provider:{require_parameters:true},
       messages:[{role:"system",content:system},{role:"user",content:user}],
@@ -113,7 +117,7 @@ export async function modelStructuredJson<T>(
     throw new ApiFailure(502,"OpenRouter non ha generato il dossier strutturato (HTTP "+response.status+"). Verifica che il modello supporti JSON Schema.");
   }
   const answer=await response.json() as {choices?:Array<{message?:{content?:string;refusal?:string}}>};
-  await recordAiProviderUsage("openrouter",process.env.OPENROUTER_MODEL||"openai/gpt-4.1-mini",answer);
+  await recordAiProviderUsage("openrouter",model,answer);
   const content=answer.choices?.[0]?.message?.content;
   if(!content)throw new ApiFailure(502,"Il modello non ha restituito un dossier");
   let parsed:unknown;
