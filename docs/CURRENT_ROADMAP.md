@@ -25,7 +25,7 @@ This document tracks **the development branch** `feature/source-intelligence-bac
 3. **Worker deployment**: configure scheduler credentials and hosted function timeout. Verify lease recovery and duplicate control under two concurrent workers. Split long missions into resumable steps; current queue has coarse job-level checkpoints.
 4. **Security and access**: external security review of SECURITY DEFINER RPCs, RLS and all authenticated mutations; add CSRF/origin policy where appropriate, upload file scanners, audit tamper protection, application rate limits and secret rotation.
 5. **Backup/restore**: scheduled Supabase backup plan, restore drills, retention policy for uploaded documents and customer data deletion.
-6. **AI controls**: per-tenant currency/token spending ceilings with hard server-side rejection; provider timeouts, failure categories, alerting and cost audit. Current job-count quotas do **not** bound currency spending.
+6. **AI controls**: V24 introduces server-side cross-instance, per-client and per-owner weighted request quotas for chat, jobs, adaptations and images (migration 0016). This is **not a hard currency/token ceiling**. A true cost ledger, model usage reporting, provider timeouts, alerting and reconciliation remain P0; see [AI_REQUEST_BUDGETS.md](AI_REQUEST_BUDGETS.md).
 7. **Meta live certification**: validate professional account eligibility, permissions/review, OAuth, token refresh, disconnect/revocation, permitted media/insight metrics, quotas and time-window differences.
 
 ## Product improvement — P1
