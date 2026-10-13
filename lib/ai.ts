@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ApiFailure } from "./http";
+import {recordAiProviderUsage} from "./ai-usage";
 
 type Msg = { role:"system"|"user"|"assistant"; content:string };
 export async function modelText(messages:Msg[], timeout=25000):Promise<string>{
@@ -15,7 +16,8 @@ export async function modelText(messages:Msg[], timeout=25000):Promise<string>{
     },
     body:JSON.stringify({
       model:process.env.OPENROUTER_MODEL||"openai/gpt-4.1-mini",
-      temperature:0.35,max_tokens:3000,messages
+      temperature:0.35,max_tokens:3000,messages,
+      usage:{include:true}
     }),
     signal:AbortSignal.timeout(timeout),cache:"no-store"
   });
@@ -24,6 +26,7 @@ export async function modelText(messages:Msg[], timeout=25000):Promise<string>{
     throw new ApiFailure(502,"Il provider AI non ha completato la richiesta (HTTP "+response.status+").");
   }
   const data=await response.json() as {choices?:Array<{message?:{content?:string}}>};
+  await recordAiProviderUsage("openrouter",process.env.OPENROUTER_MODEL||"openai/gpt-4.1-mini",data);
   const content=data.choices?.[0]?.message?.content?.trim();
   if(!content) throw new ApiFailure(502,"Il provider AI non ha restituito testo");
   return content;
@@ -72,7 +75,8 @@ export async function modelStructuredJson<T>(
       temperature:0.1,max_tokens:6200,
       provider:{require_parameters:true},
       messages:[{role:"system",content:system},{role:"user",content:user}],
-      response_format:{type:"json_schema",json_schema:{name,strict:true,schema:jsonSchema}}
+      response_format:{type:"json_schema",json_schema:{name,strict:true,schema:jsonSchema}},
+      usage:{include:true}
     }),
     signal:AbortSignal.timeout(60_000),cache:"no-store"
   });
@@ -81,6 +85,7 @@ export async function modelStructuredJson<T>(
     throw new ApiFailure(502,"OpenRouter non ha generato il dossier strutturato (HTTP "+response.status+"). Verifica che il modello supporti JSON Schema.");
   }
   const answer=await response.json() as {choices?:Array<{message?:{content?:string;refusal?:string}}>};
+  await recordAiProviderUsage("openrouter",process.env.OPENROUTER_MODEL||"openai/gpt-4.1-mini",answer);
   const content=answer.choices?.[0]?.message?.content;
   if(!content)throw new ApiFailure(502,"Il modello non ha restituito un dossier");
   let parsed:unknown;
