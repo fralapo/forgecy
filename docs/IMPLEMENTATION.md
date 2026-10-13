@@ -1,4 +1,6 @@
-# Forgecy V11 — backend & deployment reference
+# Forgecy — local runtime and backend reference
+
+Forgecy is a personal open-source application run on the operator's computer with their own Supabase project and API keys. Public hosting and separate staging/production projects are optional. Start with [LOCAL_SETUP.md](LOCAL_SETUP.md).
 
 ## Design contract
 
@@ -12,8 +14,11 @@ Mandatory:
 - NEXT_PUBLIC_SUPABASE_URL — URL of a managed Supabase project.
 - NEXT_PUBLIC_SUPABASE_ANON_KEY — Supabase publishable key. RLS must be enabled.
 - Supabase Email OTP/Auth redirect URLs.
+- `APP_ORIGIN=http://localhost:3000` for local optimized builds (`npm run start`); development also accepts it.
 
-Optional server-only:
+For queued dossier/strategy/mission work and usage recording, configure server-only `SUPABASE_SERVICE_ROLE_KEY` (accepts `sb_secret_…`) and `CRON_SECRET`, and keep the local dispatcher running. `NEXT_PUBLIC_SUPABASE_ANON_KEY` accepts `sb_publishable_…`; never put the secret key there.
+
+Server-only integrations (OpenRouter is required for the AI workflow, optional for basic storage/editing):
 - OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENROUTER_SITE_URL.
 - OPENAI_API_KEY, OPENAI_IMAGE_MODEL.
 - META_APP_ID, META_APP_SECRET, META_REDIRECT_URI, META_GRAPH_VERSION.
@@ -24,7 +29,7 @@ Optional server-only:
 
 ## Database setup
 
-Run all SQL files in `supabase/migrations/` **in numerical order from 0001 through 0011_client_evidence_search.sql** using Supabase SQL Editor, following the validation instructions in `tests/sql/smoke.sql`. Keep a database backup before production migrations.
+Run all SQL files in `supabase/migrations/` **in numerical order from 0001 through 0017_ai_provider_usage.sql** using Supabase SQL Editor. On an existing database apply only migrations not already applied, and back up first. `tests/sql/` contains disposable CI fixtures and is not an installation script for your personal project.
 
 Postgres RLS applies to all client-owned records. Every source/profile/offer change bumps the client's knowledge revision and marks its dossier stale. A dossier can only be approved if it matches the current revision. A product edit invalidates linked assets. Editing an approved carousel resets it to draft; editing the Instagram original invalidates LinkedIn variants. Revalidation returns stale content to draft, not to approved.
 
@@ -59,16 +64,9 @@ The Leader routes user intent to answer, draft a company dossier or propose a ca
 
 Website copy, uploaded text and external posts are **untrusted evidence, never instructions**. Facts must be associated with their sources or labelled inferred/unknown. Never manufacture metrics or prices. Do not present simulated Instagram statistics as real.
 
-## Production work still needed
+## Remaining local-use work
 
-1. The initial PostgreSQL queue is implemented, but **production job scheduling, stage-level resumability, streaming, provider cost caps and live worker tests** remain required.
-2. Extract and index text from uploaded PDF/DOCX/images before feeding them to AI; current extraction covers text, Markdown and CSV.
-3. Use network egress isolation, crawl budgets and URL/robots policy before enabling the website import.
-4. Complete and live-test Meta app verification, OAuth, token renewal, account disconnect and permitted Instagram insight fields.
-5. Implement richer visual editor/templates, full QA and real image/document acceptance tests.
-6. Add organization memberships, collaborative reviewer roles, cost reporting, observability, backups and migration of any old stored customer data.
-7. Add social publishing or scheduled posting only if desired; no videos/reels.
-8. Test full user journeys on a real Supabase instance and provider accounts; CI checks schemas and builds but is not external API integration certification.
+See [CURRENT_ROADMAP.md](CURRENT_ROADMAP.md) for the maintained priorities: real-provider acceptance, worker recovery/resumability, export parity, optional Meta lifecycle, spending reconciliation and backups. Text-layer PDF/DOCX extraction, shared request/crawl quotas and the usage ledger already exist. Scanned files still need OCR. Team roles, portals, billing and public-host operations are optional extensions.
 
 The temporary Postgres Docker container used by GitHub Actions is strictly a test service, not a runtime requirement.
 
@@ -99,4 +97,8 @@ The 0007 migration adds source provenance, content hashes and a dossier evidence
 - Routes: `/api/workspace/clients/:id/jobs`, `/sources/search`, `/strategy/:strategyId/approve`, `/editorial`, `/reports/{dossier,strategy,instagram}`, `/social/accounts/:accountId`.
 - Full release checklist and known blockers: [CURRENT_ROADMAP.md](CURRENT_ROADMAP.md).
 
-**These capabilities currently live in a draft pull request.** They are not a production deployment, and GitHub CI passing does not establish live Meta, OpenRouter, Supabase or crawler reliability.
+These capabilities are integrated on `main`. Configure and verify your own installation; GitHub CI does not establish live Meta, OpenRouter, Supabase or crawler reliability.
+
+## V19–V25 integration
+
+Migrations 0012–0014 add shared crawl reservations and indexed source chunks/backfill; 0015 adds fenced worker leases; 0016 adds distributed AI request quotas; 0017 adds private provider-reported usage. Apply them in order after 0011. API mutation origin checks and bounded document/body parsing need no extra SQL migration. Results includes `/api/workspace/clients/:id/ai-usage?days=7|30|90`.

@@ -1,67 +1,67 @@
-# Forgecy — roadmap, operational gaps and acceptance criteria
+# Forgecy — personal-use roadmap and acceptance criteria
 
-This document tracks the **current application on `main`** and the in-review V25 usage extension. Features are not considered deployed merely because their code exists or CI passes.
+Updated 13 October 2026. This describes the current application on `main`, including V25. Code and passing CI do not certify an individual installation's external services.
 
-## Implemented in the development branch
+## Intended use
 
-- Supabase Auth and RLS on per-client data, private original uploads, typed Next.js endpoints and strict TypeScript CI.
-- Multi-page guarded HTTPS acquisition with `robots.txt`, bounded optional sitemap discovery, DNS pinning, same-origin restrictions and SHA-256 deduplication. **Disabled by default** until egress firewall is configured.
-- Text/PDF (text layer)/DOCX/CSV/Markdown extraction and private source storage.
-- Real OpenRouter dossier generation with JSON Schema, an evidence report and source quote checks; user approval gates.
-- Client-specific PostgreSQL full-text search; Leader grounding with retrieved document excerpts.
-- Distinct versioned strategic blueprints, goals/KPIs, roadmaps and human approval.
-- Basic durable `ai_jobs` queue with owner verification, DB quotas, worker leases, retry counts and UI progress. **Requires scheduler + privileged backend secrets**.
-- Staged agents: Analyst → Strategist → Creative → Brand Guard → Leader, with audit events and approval-required proposed campaigns.
-- Instagram Graph authorization skeleton, optional per-media insights, separate account observations, actual-data dashboards with absent values preserved.
-- Static Instagram and LinkedIn creation, shared semantic slide layouts, safe edit preflight, undo/redo, PNG/PDF/TXT exports.
-- Editorial calendar entries linked to a specific client, with manual status changes.
-- Authenticated Markdown dossier/strategy exports and CSV social export; no synthetic metrics.
-- V24 PostgreSQL-backed request quotas plus V25 provider-reported token/nullable cost observations by client (migration 0017); neither is a guaranteed USD cap.
-- GitHub Actions checks: TypeScript, unit tests, SQL migrations, RLS smoke checks and production build.
+Forgecy is an open-source personal project: run it locally with your own Supabase project and your own API keys. One personal installation is enough; separate staging and production projects are optional. Multiple client/brand profiles organize your work. They do not imply a commercial SaaS or collaborative organization model.
 
-## Production blockers — P0
+The Next.js server runs on your computer. Auth, database and files live in your configured Supabase project; enabled AI and Meta integrations contact their respective providers. Local execution is not offline processing. See [LOCAL_SETUP.md](LOCAL_SETUP.md).
 
-1. **Staging acceptance**: deploy to an isolated environment and test with real Supabase user accounts, two genuinely separate clients, authorized site content, document uploads and OpenRouter API credentials. CI does not perform external API calls.
-2. **Website networking**: enforce public-only network egress at the infrastructure layer before enabling the crawler; verify the new PostgreSQL crawl reservations in staging, keep the egress firewall disabled-by-default, and add DNS/redirect penetration tests. Shared client/owner budgets are implemented in stacked development PR.
-3. **Worker deployment**: configure scheduler credentials and hosted function timeout. Verify lease recovery and duplicate control under two concurrent workers. Split long missions into resumable steps; current queue has coarse job-level checkpoints.
-4. **Security and access**: external security review of SECURITY DEFINER RPCs, RLS and all authenticated mutations; add CSRF/origin policy where appropriate, upload file scanners, audit tamper protection, application rate limits and secret rotation.
-5. **Backup/restore**: scheduled Supabase backup plan, restore drills, retention policy for uploaded documents and customer data deletion.
-6. **AI controls**: V24 enforces shared request quotas (migration 0016); V25 adds observed usage and provider-reported costs where available (migration 0017). **Neither is a hard spending cap.** Missing provider costs, upstream spend limits, billing reconciliation, alerting and provider-error accounting remain P0; see [AI_REQUEST_BUDGETS.md](AI_REQUEST_BUDGETS.md) and [AI_PROVIDER_USAGE.md](AI_PROVIDER_USAGE.md).
-7. **Meta live certification**: validate professional account eligibility, permissions/review, OAuth, token refresh, disconnect/revocation, permitted media/insight metrics, quotas and time-window differences.
+## Implemented
 
-## Product improvement — P1
+- Supabase email authentication, owner/client isolation with RLS and private source/asset storage.
+- Bounded HTTPS website acquisition, provenance, hashes and shared crawl reservations. Crawling remains disabled by default until outbound network isolation is configured.
+- Text, Markdown, CSV, text-layer PDF and DOCX extraction; PostgreSQL full-text source/excerpt search.
+- Structured AI dossiers, matching source quotations, approval/versioning and invalidation when knowledge changes.
+- Separate approved strategic blueprints with positioning, goals/KPIs and 30/60/90-day roadmaps.
+- Persistent AI jobs with ownership checks, quotas, retries, renewable leases and fencing; sequential specialist hand-offs and human-approved campaign proposals.
+- Static Instagram/LinkedIn editor, layouts, reorder/duplicate, undo/redo, PNG/PDF/TXT and Markdown/CSV reports; a manual editorial calendar.
+- Instagram authorization and measured snapshots/optional media insights, preserving unknown values.
+- Shared AI request quotas (0016) and per-client provider-reported tokens/nullable USD observations (0017). Neither is a guaranteed monetary cap.
+- GitHub Actions: TypeScript, lint, Node tests, PostgreSQL migrations/RLS and Next.js build.
 
-1. Real searchable knowledge wiki with entities, conflict resolution, semantic retrieval where source corpus size warrants it, periodic source refresh and diff review.
-2. OCR for scanned PDFs/images, isolated extraction workers, bounded PDF rendering, antivirus and protections against malicious documents.
-3. True orchestrator graph: resumable specialist tasks, parallel stages when independent, review/retry by individual agent, independent quality critic and human intervention.
-4. Rich WYSIWYG design: art-direction library, custom brand typography with authorized fonts, editable layers and parity checks between preview, PNG and PDF; avoid hiding text overflow.
-5. Production factories by platform inspired by `fabbriche-template`, keeping brand identity separate from channel recipes. Current supported assets are **static Instagram and LinkedIn**.
-6. Social analytics with comparable periods, authorized insights, data freshness indicators, metric definitions and an explicit KPI attribution model.
-7. Client approval portal, collaborator seats, agency/org memberships, fine-grained reviewer privileges and notifications.
-8. Publishing and scheduling only after social platform permissions and customer authorizations are validated.
-9. Human-editable strategic blueprint revisions with structured diffs, approval history and KPI experiments.
+## First priority — a usable personal installation
 
-## Optional scope decision — P2
+1. Make fresh installation repeatable: supported Node, ordered migrations 0001–0017, private environment file, email callback and local start instructions.
+2. Validate the complete journey with your own account: sources/offers → dossier → approval → strategy → approval → mission → proposal → approval → edit/export. Use disposable sample content before important work.
+3. Keep queued work operational while the computer is on. Test retry/recovery and concurrent dispatch; show configuration failures clearly. Finer per-agent resumability remains an improvement, not a prerequisite to installing the app.
+4. Check generated files visually, including long text, accents, symbols and images. Preview, PNG and PDF use different rendering paths; PDF wrapping may truncate lines and unsupported characters are filtered.
+5. Verify spending information against provider records. Handle missing usage explicitly and set upstream provider spending limits when available; add alerts/reconciliation before treating local estimates as complete.
+6. Back up the personal Supabase database and private files before upgrades; verify restoration and document customer/source deletion and retention.
+7. Enable integrations individually. Keep website ingestion off without network isolation. Test Meta permissions, token expiry/reconnect and actual insights before depending on them.
 
-Video/Reels, audio production, complex automation, white-label agency billing and competitive SEO/GEO audits require separate product decisions and budgets. The current static production flow does not pretend to generate videos.
+## Next improvements — reliability and creative workflow
 
-## Acceptance checklist for one real customer
+- OCR for scanned documents, safer isolated extraction and stronger malicious-file defenses.
+- Per-agent resume/retry, cancellation of running calls and error visibility.
+- Shared rendering, overflow checks, authorized custom fonts and a richer asset/template library.
+- Source refresh/diffs, contradictions, fact timestamps and semantic retrieval when corpus size warrants it.
+- Editable strategic revisions and comparable social periods, freshness and KPI definitions.
+- Optional publishing/scheduling after platform permissions and account authorization are verified.
 
-- [ ] Two user accounts cannot read or alter each other's company data through frontend, REST or RPCs.
-- [ ] Importing a real allowed site yields page-level links and hashes; denied/unsafe destinations cannot be fetched.
-- [ ] Uploading a PDF and DOCX extracts only supported textual evidence; scanned images report their unsupported status.
-- [ ] The dossier contains real quote-linked claims, unknowns and approval status.
-- [ ] Updating a source invalidates existing dossier and strategy and blocks old campaign approvals.
-- [ ] Worker retries do not duplicate completed missions; user can cancel a queued job.
-- [ ] A real Instagram Professional account connects, syncs and exports known real fields. Missing fields remain blank.
-- [ ] Carousel can be edited, approved, rendered and exported consistently with brand settings.
-- [ ] Operational errors are visible in logs and user-facing status without exposing secrets.
-- [ ] A new deployment and a disaster recovery restore can reproduce the customer workspace.
+## Optional extensions
 
-## Engineering method
+Organizations, collaborator/reviewer seats, a client portal, notifications, hosted multi-user operation, billing and white-label features are not personal-use release blockers. Video/Reels, audio and SEO/GEO research require separate scope decisions. The current flow supports static Instagram and LinkedIn.
 
-Inspired by the planning/testing/review principles in [Everything Claude Code (ECC)](https://github.com/affaan-m/ecc) without importing external hooks indiscriminately:
+If you expose an instance publicly, additionally assess external security review, rate limits, secret rotation, worker hosting limits, monitoring and recovery. Do not disable RLS, authentication or origin checks to simplify local setup.
 
-`scope → failing test → minimal implementation → code review → CI → security review → docs → staged release`.
+## Personal acceptance checklist
 
-Work in small pull requests where possible. Deploy migrations before dependent API code, verify on staging, and merge only after green CI. Keep production migrations strictly forward-only and tested against existing data.
+- [ ] A clean checkout installs with the documented Node version and starts on loopback.
+- [ ] Migrations 0001–0017 and both private buckets are present in your Supabase project.
+- [ ] Email sign-in returns to the local callback and opens your workspace.
+- [ ] Anonymous access is denied; separate accounts cannot access each other's profiles (use disposable accounts when testing this).
+- [ ] Text/PDF/DOCX uploads and source search work; scans clearly report limitations.
+- [ ] Dossier quotes are inspectable; approvals and source-change invalidation work.
+- [ ] A dispatched job produces a reviewable strategy/campaign and retries without duplicate completed records.
+- [ ] Static content can be edited and exported legibly with expected brand settings.
+- [ ] Usage records preserve unknown costs; provider bills remain authoritative.
+- [ ] Optional Instagram and website ingestion work only after their prerequisites are configured.
+- [ ] Data and private files can be backed up and restored.
+
+Use sample records for validation; the SQL suites under `tests/sql/` are designed for a disposable test database and must not be run against your personal data project. CI does not execute real provider calls.
+
+## Maintenance
+
+Prefer small changes, green CI and forward-only migrations. Back up existing data before upgrades; apply only migrations not already applied. A separate test project is useful for risky changes but is not required for ordinary personal use. Archived `old/` code and data are not automatically migrated.

@@ -135,7 +135,7 @@ set of real agency questions before adopting embeddings.
 
 ## Integration with earlier phases
 
-This PR is based on `feature/crawl-shared-budget` (PR #93), which already contains the original source-level `forgecy_search_sources` endpoint and its indexed lexical search. The `0013` migration introduces *additional bounded source chunks* and a distinct `forgecy_search_client_sources` RPC, without deleting or renaming the previous RPC. The Library query and Leader now use chunk search. The two retrieval systems coexist safely for old clients during a staged rollout. A later refactoring may retire the original source-level RPC only after all callers are migrated and staging acceptance is successful.
+This feature is integrated on `main` through release #100. Its original parent was `feature/crawl-shared-budget` (PR #93), which contained the original source-level `forgecy_search_sources` endpoint and its indexed lexical search. The `0013` migration introduces *additional bounded source chunks* and a distinct `forgecy_search_client_sources` RPC, without deleting or renaming the previous RPC. The Library query and Leader now use chunk search. The two retrieval systems coexist safely for old clients during a staged rollout. A later refactoring may retire the original source-level RPC only after all callers are migrated and installation acceptance is successful.
 
 **Migration ordering is deliberate:** the parent branch already uses `0010_editorial_calendar.sql`, `0011_client_evidence_search.sql` and `0012_website_crawl_budgets.sql`; never reuse these numbers for the search chunks. Apply schema `0013` before backfill `0014`.
 

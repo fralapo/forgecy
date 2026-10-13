@@ -2,9 +2,11 @@
 
 This change adds **measured, provider-reported usage observations** per client. It does **not** implement a hard USD/EUR budget, a billing system, or a guarantee that every charge was captured. V24's atomic request-count limits remain active and independent.
 
+Forgecy runs locally with your own accounts; this telemetry is for inspecting personal usage, not SaaS billing. See [LOCAL_SETUP.md](LOCAL_SETUP.md).
+
 ## Activation
 
-1. Apply `supabase/migrations/0017_ai_provider_usage.sql` after 0016 in staging, then production following the existing backup/migration procedure.
+1. Apply `supabase/migrations/0017_ai_provider_usage.sql` after 0016 in your own Supabase project. Back up existing data before upgrades; a separate test project is optional.
 2. Configure `SUPABASE_SERVICE_ROLE_KEY` **on the server only** for both synchronous API routes and the worker. If absent, AI generation still works under existing V24 limits, but telemetry cannot be saved. The server logs a warning, not customer data.
 3. Ensure `OPENROUTER_API_KEY` is set and the chosen model supports regular completion usage. Forgecy asks for `usage:{include:true}`; cost is read only from the OpenRouter response's `usage.cost` field, not derived from a price list.
 4. If OpenAI image generation is configured, `/v1/images/generations` may provide input/output tokens; costs are **NULL** because that endpoint does not supply the final USD charge.

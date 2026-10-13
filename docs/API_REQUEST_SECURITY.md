@@ -14,7 +14,13 @@ La nuova protezione in `proxy.ts` controlla in ingresso tutte le richieste **non
 
 ## Configurazione
 
-Nel deploy di produzione imposta:
+Per l’uso personale locale imposta in `.env.local` (necessario anche con `npm run start`):
+
+```env
+APP_ORIGIN=http://localhost:3000
+```
+
+Un build “production” di Next.js può girare sul tuo computer: non implica un servizio pubblico né un secondo ambiente. Se scegli un deploy pubblico imposta invece:
 
 ```env
 APP_ORIGIN=https://dominio-pubblico-forgecy.example
@@ -38,10 +44,10 @@ Durante `npm run dev`, senza `APP_ORIGIN`, Forgecy usa l'origine richiesta come 
 
 ## Limiti residuali
 
-Questa misura rafforza le API cookie-authenticated ma non sostituisce autenticazione, RLS, permessi API, autorizzazione client-side e scadenza sessioni. Va affiancata a CORS volutamente restrittivo, CSP, rate limit distribuito, cookie SameSite e una verifica dei flussi reali in staging. `Origin` è forgibile da client non-browser, quindi non è una protezione contro un attaccante già autenticato che controlli un client HTTP.
+Questa misura rafforza le API cookie-authenticated ma non sostituisce autenticazione, RLS, permessi API, autorizzazione client-side e scadenza sessioni. Va affiancata a CORS volutamente restrittivo, CSP, rate limit distribuito, cookie SameSite e una verifica dei flussi reali nella propria installazione. `Origin` è forgibile da client non-browser, quindi non è una protezione contro un attaccante già autenticato che controlli un client HTTP.
 
 Gli upload multipart passano ora attraverso `readMultipartForm`: **massimo 11 MB effettivi** letti in streaming prima che `formData()` inizi il parsing, anche con `Content-Length` mancante o dichiarato falso. Restano necessari limiti reverse proxy/WAF per bloccare richieste troppo grandi prima che arrivino al processo applicativo.
 
 ## Dipendenze
 
-PR impilata sopra V22 → V21 → V20 (#94) → V19 (#93) → V18 (#91). Nessuna migrazione SQL aggiuntiva.
+Integrata su `main` attraverso la release V24 (#100). Nessuna migrazione SQL aggiuntiva per questa protezione; l’app corrente richiede l’intera sequenza 0001–0017.

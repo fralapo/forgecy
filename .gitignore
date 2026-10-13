@@ -7,3 +7,5 @@ coverage/
 .env.*.local
 *.tsbuildinfo
 .DS_Store
+# Private local setup, generated SQL bundles and validation artifacts
+.local/
