@@ -1,6 +1,6 @@
 # Forgecy — roadmap, operational gaps and acceptance criteria
 
-This document tracks **the development branch** `feature/source-intelligence-backend` (PR #91). Features are not considered deployed merely because their code exists or CI passes.
+This document tracks the **current application on `main`** and the in-review V25 usage extension. Features are not considered deployed merely because their code exists or CI passes.
 
 ## Implemented in the development branch
 
@@ -16,6 +16,7 @@ This document tracks **the development branch** `feature/source-intelligence-bac
 - Static Instagram and LinkedIn creation, shared semantic slide layouts, safe edit preflight, undo/redo, PNG/PDF/TXT exports.
 - Editorial calendar entries linked to a specific client, with manual status changes.
 - Authenticated Markdown dossier/strategy exports and CSV social export; no synthetic metrics.
+- V24 PostgreSQL-backed request quotas plus V25 provider-reported token/nullable cost observations by client (migration 0017); neither is a guaranteed USD cap.
 - GitHub Actions checks: TypeScript, unit tests, SQL migrations, RLS smoke checks and production build.
 
 ## Production blockers — P0
@@ -25,7 +26,7 @@ This document tracks **the development branch** `feature/source-intelligence-bac
 3. **Worker deployment**: configure scheduler credentials and hosted function timeout. Verify lease recovery and duplicate control under two concurrent workers. Split long missions into resumable steps; current queue has coarse job-level checkpoints.
 4. **Security and access**: external security review of SECURITY DEFINER RPCs, RLS and all authenticated mutations; add CSRF/origin policy where appropriate, upload file scanners, audit tamper protection, application rate limits and secret rotation.
 5. **Backup/restore**: scheduled Supabase backup plan, restore drills, retention policy for uploaded documents and customer data deletion.
-6. **AI controls**: V24 introduces server-side cross-instance, per-client and per-owner weighted request quotas for chat, jobs, adaptations and images (migration 0016). This is **not a hard currency/token ceiling**. A true cost ledger, model usage reporting, provider timeouts, alerting and reconciliation remain P0; see [AI_REQUEST_BUDGETS.md](AI_REQUEST_BUDGETS.md).
+6. **AI controls**: V24 enforces shared request quotas (migration 0016); V25 adds observed usage and provider-reported costs where available (migration 0017). **Neither is a hard spending cap.** Missing provider costs, upstream spend limits, billing reconciliation, alerting and provider-error accounting remain P0; see [AI_REQUEST_BUDGETS.md](AI_REQUEST_BUDGETS.md) and [AI_PROVIDER_USAGE.md](AI_PROVIDER_USAGE.md).
 7. **Meta live certification**: validate professional account eligibility, permissions/review, OAuth, token refresh, disconnect/revocation, permitted media/insight metrics, quotas and time-window differences.
 
 ## Product improvement — P1
@@ -63,4 +64,4 @@ Inspired by the planning/testing/review principles in [Everything Claude Code (E
 
 `scope → failing test → minimal implementation → code review → CI → security review → docs → staged release`.
 
-Work in small pull requests where possible; consolidate the current broad PR before merging it. Keep production migrations strictly forward-only and tested against existing data.
+Work in small pull requests where possible. Deploy migrations before dependent API code, verify on staging, and merge only after green CI. Keep production migrations strictly forward-only and tested against existing data.
