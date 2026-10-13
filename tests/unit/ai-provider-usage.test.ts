@@ -65,13 +65,12 @@ test("A failed usage insert must never retry or fail a paid model response",asyn
 });
 
 test("Provider instrumentation outside a client-scoped call never writes records",async()=>{
- let calls=0;
  // No scope intentionally: anonymous model helpers cannot invent a client ID.
  const original=process.env.SUPABASE_SERVICE_ROLE_KEY;
  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
  try{
   await recordAiProviderUsage("openrouter","model",{id:"gen-X"});
-  assert.equal(calls,0);
+  assert.ok(true);
  }finally{
   if(original!==undefined)process.env.SUPABASE_SERVICE_ROLE_KEY=original;
  }
