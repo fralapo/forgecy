@@ -7,6 +7,7 @@ import { modelJson,lowTrustRule } from "@/lib/ai";
 import { crawlWebsite, publicHttpsUrl } from "@/lib/site-ingest";
 import { requireWebsiteCrawlingEnabled, reserveWebsiteCrawl } from "@/lib/crawl-budget";
 import { extractDocument } from "@/lib/document-extract";
+import { assertSafeDocument, DocumentSafetyError } from "@/lib/document-safety";
 import { slidePreflight } from "@/lib/carousel-layout";
 
 export const runtime="nodejs";
@@ -276,6 +277,12 @@ export async function POST(request:Request,{params}:Params){
    const safeName=file.name.replace(/[^a-z0-9._-]/gi,"_").slice(0,90);
    const path=id+"/"+crypto.randomUUID()+"/"+safeName;
    const bytes=new Uint8Array(await file.arrayBuffer());
+   // Reject malformed archives and spoofed files before private Storage receives them.
+   try { assertSafeDocument(bytes,file.type,file.name); }
+   catch(error){
+     if(error instanceof DocumentSafetyError)throw new ApiFailure(415,error.message);
+     throw error;
+   }
    const uploaded=await ctx.db.storage.from("forgecy-sources").upload(path,bytes,{contentType:file.type,upsert:false});
    dbError(uploaded.error,"Caricamento non riuscito");
    const extraction=await extractDocument(bytes,file.type,file.name);
