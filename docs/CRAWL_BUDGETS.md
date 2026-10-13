@@ -27,7 +27,7 @@ A request for `maxPages: 6` reserves **six pages**, even if fewer are actually a
 
 ## Deployment and rollback
 
-1. For the current app, apply migrations **0001 through 0017** in your Supabase project (0012 introduces crawl quotas). A separate disposable test project is optional.
+1. For the current app, apply migrations **0001 through 0018** in your Supabase project (0012 introduces crawl quotas). A separate disposable test project is optional.
 2. Confirm the authenticated quota RPC and the SQL RLS smoke tests with two users and separate clients.
 3. Deploy the app; the crawler stays **off** by default. No frontend credential or service-role key is needed for reservations.
 4. Configure egress filtering, then enable `ENABLE_WEBSITE_INGEST=true` only in a verified environment.

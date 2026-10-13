@@ -30,7 +30,7 @@ async function execute(db:ReturnType<typeof workerDb>,job:AiJob,checkpoint:()=>P
  if(!client||client.owner_id!==job.requested_by)
    throw new ApiFailure(403,"Lavoro non autorizzato: proprietario differente");
  // The service role bypasses RLS; NEVER run a job without this ownership check.
- const ctx={db,user:{id:job.requested_by}} as unknown as Context;
+ const ctx={db,user:{id:job.requested_by},workerRequestedBy:job.requested_by} as unknown as Context;
  if(job.kind==="dossier"){
    if(Object.keys(job.payload).length)throw new ApiFailure(400,"Payload dossier non valido");
    const dossier=await draftDossier(ctx,job.client_id,job.id,checkpoint);

@@ -29,7 +29,7 @@ Server-only integrations (OpenRouter is required for the AI workflow, optional f
 
 ## Database setup
 
-Run all SQL files in `supabase/migrations/` **in numerical order from 0001 through 0017_ai_provider_usage.sql** using Supabase SQL Editor. On an existing database apply only migrations not already applied, and back up first. `tests/sql/` contains disposable CI fixtures and is not an installation script for your personal project.
+Run all SQL files in `supabase/migrations/` **in numerical order from 0001 through 0018_worker_knowledge_search.sql** using Supabase SQL Editor. On an existing database apply only migrations not already applied, and back up first. `tests/sql/` contains disposable CI fixtures and is not an installation script for your personal project.
 
 Postgres RLS applies to all client-owned records. Every source/profile/offer change bumps the client's knowledge revision and marks its dossier stale. A dossier can only be approved if it matches the current revision. A product edit invalidates linked assets. Editing an approved carousel resets it to draft; editing the Instagram original invalidates LinkedIn variants. Revalidation returns stale content to draft, not to approved.
 
@@ -101,4 +101,4 @@ These capabilities are integrated on `main`. Configure and verify your own insta
 
 ## V19–V25 integration
 
-Migrations 0012–0014 add shared crawl reservations and indexed source chunks/backfill; 0015 adds fenced worker leases; 0016 adds distributed AI request quotas; 0017 adds private provider-reported usage. Apply them in order after 0011. API mutation origin checks and bounded document/body parsing need no extra SQL migration. Results includes `/api/workspace/clients/:id/ai-usage?days=7|30|90`.
+Migrations 0012–0014 add shared crawl reservations and indexed source chunks/backfill; 0015 adds fenced worker leases; 0016 adds distributed AI request quotas; 0017 adds private provider-reported usage; 0018 adds checked service-role knowledge retrieval for queued workers. Apply them in order after 0011. API mutation origin checks and bounded document/body parsing need no extra SQL migration. Results includes `/api/workspace/clients/:id/ai-usage?days=7|30|90`.
