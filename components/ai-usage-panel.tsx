@@ -19,18 +19,20 @@ const euroUsd=(value:number|null)=>value===null?"—":
 const count=(value:number)=>value.toLocaleString("it-IT");
 export default function AiUsagePanel({clientId}:{clientId:string}){
  const [days,setDays]=useState(30);
- const [snapshot,setSnapshot]=useState<Snapshot|null>(null);
- const [error,setError]=useState("");
- const [loading,setLoading]=useState(true);
+ const [response,setResponse]=useState<{key:string;value:Snapshot|null;error:string}|null>(null);
+ const requestKey=clientId+":"+days;
  useEffect(()=>{
    let alive=true;
-   setLoading(true);setError("");setSnapshot(null);
    requestJson<Snapshot>("/api/workspace/clients/"+clientId+"/ai-usage?days="+days)
-     .then(data=>{if(alive)setSnapshot(data);})
-     .catch(err=>{if(alive)setError(err instanceof Error?err.message:"Registro non disponibile");})
-     .finally(()=>{if(alive)setLoading(false);});
+     .then(value=>{if(alive)setResponse({key:requestKey,value,error:""});})
+     .catch(err=>{if(alive)setResponse({
+       key:requestKey,value:null,error:err instanceof Error?err.message:"Registro non disponibile"
+     });});
    return()=>{alive=false};
- },[clientId,days]);
+ },[clientId,days,requestKey]);
+ const loading=response?.key!==requestKey;
+ const snapshot=loading?null:response?.value;
+ const error=loading?"":response?.error||"";
  const summary=snapshot?.totals;
  return <div className="card" style={{marginTop:20}}>
    <div className="section-title">
@@ -73,7 +75,7 @@ export default function AiUsagePanel({clientId}:{clientId:string}){
            </div>
          </div>)}
        </div>:null}
-       <p className="caption">Immagini OpenAI: token dove disponibili; costo USD non comunicato dall'endpoint immagini. Le richieste non ricevute o non registrate dal backend potrebbero mancare.</p>
+       <p className="caption">Immagini OpenAI: token dove disponibili; costo USD non comunicato dall&apos;endpoint immagini. Le richieste non ricevute o non registrate dal backend potrebbero mancare.</p>
      </div>}
  </div>;
 }
