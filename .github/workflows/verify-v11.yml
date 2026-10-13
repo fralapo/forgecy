@@ -63,8 +63,10 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0013_source_chunks.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0014_source_chunks_backfill.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0015_ai_worker_fencing.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0016_ai_request_budgets.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/smoke.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/knowledge.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/ai-worker-fencing.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/ai-request-budgets.sql
       - name: Build
         run: npm run build
