@@ -48,7 +48,8 @@ begin
  begin
   update public.ai_provider_usage set reported_cost_usd=0
   where client_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-  raise exception 'Authenticated user modified provider usage';
+  get diagnostics v_count = row_count;
+  if v_count > 0 then raise exception 'Authenticated user modified provider usage';end if;
  exception when insufficient_privilege then null;end;
 end $check$;
 reset role;
