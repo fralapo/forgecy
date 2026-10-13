@@ -12,7 +12,7 @@ Website acquisition is disabled by default. AI needs your OpenRouter key; queued
 
 ## Set up your installation
 
-Follow [LOCAL_SETUP.md](LOCAL_SETUP.md). Apply all migrations **0001–0017**, configure local auth and `.env.local`, start the app on loopback, then start the dispatcher. Never run CI SQL fixtures against your personal project or put API keys in committed files.
+Follow [LOCAL_SETUP.md](LOCAL_SETUP.md). Apply all migrations **0001–0018**, configure local auth and `.env.local`, start the app on loopback, then start the dispatcher. Never run CI SQL fixtures against your personal project or put API keys in committed files.
 
 ## Evidence and limitations
 

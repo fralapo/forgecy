@@ -61,7 +61,10 @@ export async function auth() {
   if (error || !data.user) throw new ApiFailure(401,"Accedi per continuare");
   return { db, user: data.user };
 }
-export type Context = Awaited<ReturnType<typeof auth>>;
+export type Context = Awaited<ReturnType<typeof auth>> & {
+  /** Set only by the privileged worker after checking job/client ownership. */
+  workerRequestedBy?: string;
+};
 export async function requireClient(ctx: Context, clientId: string) {
   if (!z.uuid().safeParse(clientId).success) throw new ApiFailure(400,"ID cliente non valido");
   const { data, error } = await ctx.db.from("clients").select("id,name,industry,website,profile").eq("id", clientId).maybeSingle();

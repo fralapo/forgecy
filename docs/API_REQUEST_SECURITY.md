@@ -50,4 +50,4 @@ Gli upload multipart passano ora attraverso `readMultipartForm`: **massimo 11 MB
 
 ## Dipendenze
 
-Integrata su `main` attraverso la release V24 (#100). Nessuna migrazione SQL aggiuntiva per questa protezione; l’app corrente richiede l’intera sequenza 0001–0017.
+Integrata su `main` attraverso la release V24 (#100). Nessuna migrazione SQL aggiuntiva per questa protezione; l’app corrente richiede l’intera sequenza 0001–0018.

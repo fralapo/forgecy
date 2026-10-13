@@ -20,7 +20,7 @@ Keep `.env.local` untracked. On macOS/Linux you can restrict local access with `
 
 ## 2. Initialize your Supabase project
 
-Create a project in your own Supabase account. In its **SQL Editor**, apply every file in `supabase/migrations/` in filename order: `0001_init.sql` through `0017_ai_provider_usage.sql` (17 files at this revision). Use the repository files directly, not the old application's migrations.
+Create a project in your own Supabase account. In its **SQL Editor**, apply every file in `supabase/migrations/` in filename order: `0001_init.sql` through `0018_worker_knowledge_search.sql` (18 files at this revision). Use the repository files directly, not the old application's migrations.
 
 The migrations create tables, owner/client RLS policies, RPCs and two **private** Storage buckets: `forgecy-sources` and `forgecy-assets`. Do not make them public. The publishable/secret API keys are not PostgreSQL passwords and cannot execute arbitrary migration SQL through the normal REST API.
 

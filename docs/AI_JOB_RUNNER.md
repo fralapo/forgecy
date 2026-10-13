@@ -18,7 +18,7 @@ For personal use, run the app and the sequential local dispatcher in [LOCAL_SETU
 
 ## Activation and optional hosted scheduling
 
-1. For the current application, apply SQL migrations `0001` through `0017_ai_provider_usage.sql` in order. Apply the website quota migration 0012 and source-chunk migrations 0013/0014 before 0015.
+1. For the current application, apply SQL migrations `0001` through `0018_worker_knowledge_search.sql` in order. Apply the website quota migration 0012 and source-chunk migrations 0013/0014 before 0015.
 2. Set `SUPABASE_SERVICE_ROLE_KEY`, `OPENROUTER_API_KEY` and `CRON_SECRET` in the backend environment (the cron secret must have at least 24 characters).
 3. Call `GET /api/jobs/dispatch` with `Authorization: Bearer <CRON_SECRET>` from an authenticated **server-side scheduler**. One invocation processes at most one queued job; the endpoint is unavailable when secrets are missing.
 4. For **Vercel Pro**, configure a schedule such as `*/5 * * * *` in `vercel.json` for path `/api/jobs/dispatch`. Vercel injects the `Authorization` header when `CRON_SECRET` is set. Vercel **Hobby** limits Cron jobs to daily schedules; do not deploy a 5-minute cron configuration on Hobby. Alternatively invoke the endpoint from an external trusted scheduler with the Bearer token.
@@ -27,7 +27,7 @@ For personal use, run the app and the sequential local dispatcher in [LOCAL_SETU
 
 ## V19 lease fencing and concurrency guarantees
 
-Apply `0015_ai_worker_fencing.sql` **after** migrations 0012, 0013 and 0014; then apply 0016 and 0017 for the current app.
+Apply `0015_ai_worker_fencing.sql` **after** migrations 0012, 0013 and 0014; then apply 0016, 0017 and 0018 for the current app.
 Every worker claim now receives a cryptographically random, server-only `lease_token` and a 150-second lease. While working, `runWithJobLease` renews it about every 30 seconds (and at checkpoints before critical writes). Completion and failure use dedicated PostgreSQL RPCs that succeed only when the job is still running **and** the same unexpired lease token is held.
 
 The previous attempt's token is invalidated when the expired job is requeued. A stale worker cannot renew, complete or fail another worker's attempt, even if it knows the job ID. The lease token is excluded from grants to authenticated app users; only the service-role worker may call heartbeat/complete/fail RPCs.
@@ -36,6 +36,10 @@ An interrupted worker may already have sent an OpenRouter request before its lea
 
 The SQL smoke suite tests stale-token rejection, lease renewal, recovery, exhaustion and service-only privileges; unit tests test a renewal failure during processing. These do **not** replace a real installation test with two independent worker processes and the actual provider.
 
+
+## Worker evidence retrieval (0018)
+
+Queued jobs use a service-role database client and have no user-session `auth.uid()`. Migration `0018_worker_knowledge_search.sql` supplies a separate service-role-only excerpt search RPC that verifies both the client ID and requesting owner. The worker marks this context only after checking `clients.owner_id`; ordinary authenticated searches retain their existing RLS RPC. Apply 0018 before running the updated worker. Never grant this RPC to browser roles.
 
 ## Security and reliability notes
 

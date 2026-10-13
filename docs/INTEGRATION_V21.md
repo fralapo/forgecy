@@ -1,6 +1,6 @@
 # Forgecy V21: note storiche di integrazione del backend
 
-Integrata su `main` dalla release V24 (#100). Per installare la versione corrente seguire [LOCAL_SETUP.md](LOCAL_SETUP.md): la sequenza completa arriva a **0017**, non si ferma a V21.
+Integrata su `main` dalla release V24 (#100). Per installare la versione corrente seguire [LOCAL_SETUP.md](LOCAL_SETUP.md): la sequenza completa arriva a **0018**, non si ferma a V21.
 
 ## Perché
 Le PR precedenti avevano introdotto due migrazioni diverse con numero **0012**. La nuova linea di integrazione parte dal lavoro V20 (PR #94), conserva il budget crawler e la ricerca a estratti e porta i controlli worker della PR #95 su una numerazione non ambigua.

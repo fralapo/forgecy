@@ -43,7 +43,7 @@ Non effettua estrazione dei file sul disco, non esegue macro o link. Non conside
 
 Questa PR **non implementa antivirus, sandbox CPU/memoria, cancellazione sicura, isolamento dei parser, OCR o gestione code separate per file**. Un PDF particolarmente complesso può ancora richiedere molte risorse. Il parsing dei file arbitrari andrebbe spostato in worker con limiti di tempo, memoria e permessi; è anche necessario monitorare dipendenze, prevedere quarantine/scansioni antivirus, rate limit utenti e retention.
 
-Per elaborare file non fidati ad alto volume servono un threat model e test in un ambiente isolato. Queste difese sono integrate su `main` dalla release V24 (#100); non aggiungono migrazioni SQL o variabili d'ambiente. Per l'installazione personale corrente seguire [LOCAL_SETUP.md](LOCAL_SETUP.md) e applicare le migrazioni 0001–0017.
+Per elaborare file non fidati ad alto volume servono un threat model e test in un ambiente isolato. Queste difese sono integrate su `main` dalla release V24 (#100); non aggiungono migrazioni SQL o variabili d'ambiente. Per l'installazione personale corrente seguire [LOCAL_SETUP.md](LOCAL_SETUP.md) e applicare le migrazioni 0001–0018.
 
 Riferimenti:
 - ZIP/OOXML: https://www.loc.gov/preservation/digital/formats/fdd/fdd000354

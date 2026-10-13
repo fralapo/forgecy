@@ -35,9 +35,14 @@ export async function retrieveClientKnowledge(
 ):Promise<KnowledgeHit[]> {
   const phrase=knowledgeQueryFromQuestion(question);
   if(!phrase)return [];
-  const {data,error}=await ctx.db.rpc("forgecy_search_client_sources",{
-    p_client_id:clientId,p_query:phrase,p_limit:Math.min(Math.max(limit,1),20)
-  });
+  const args={p_client_id:clientId,p_query:phrase,p_limit:Math.min(Math.max(limit,1),20)};
+  // A service-role worker has no auth.uid(). Its private RPC checks the queued
+  // requester against the client owner; browser sessions retain the RLS RPC.
+  const {data,error}=ctx.workerRequestedBy
+    ?await ctx.db.rpc("forgecy_worker_search_client_sources",{
+      ...args,p_requested_by:ctx.workerRequestedBy
+    })
+    :await ctx.db.rpc("forgecy_search_client_sources",args);
   if(error)throw new ApiFailure(500,"La ricerca nella memoria aziendale non è disponibile");
   return (data||[]).map((row:KnowledgeHit)=>({
     source_id:row.source_id,

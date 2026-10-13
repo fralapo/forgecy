@@ -23,7 +23,7 @@ The Next.js server runs on your computer. Auth, database and files live in your 
 
 ## First priority — a usable personal installation
 
-1. Make fresh installation repeatable: supported Node, ordered migrations 0001–0017, private environment file, email callback and local start instructions.
+1. Make fresh installation repeatable: supported Node, ordered migrations 0001–0018, private environment file, email callback and local start instructions.
 2. Validate the complete journey with your own account: sources/offers → dossier → approval → strategy → approval → mission → proposal → approval → edit/export. Use disposable sample content before important work.
 3. Keep queued work operational while the computer is on. Test retry/recovery and concurrent dispatch; show configuration failures clearly. Finer per-agent resumability remains an improvement, not a prerequisite to installing the app.
 4. Check generated files visually, including long text, accents, symbols and images. Preview, PNG and PDF use different rendering paths; PDF wrapping may truncate lines and unsupported characters are filtered.
@@ -49,7 +49,7 @@ If you expose an instance publicly, additionally assess external security review
 ## Personal acceptance checklist
 
 - [ ] A clean checkout installs with the documented Node version and starts on loopback.
-- [ ] Migrations 0001–0017 and both private buckets are present in your Supabase project.
+- [ ] Migrations 0001–0018 and both private buckets are present in your Supabase project.
 - [ ] Email sign-in returns to the local callback and opens your workspace.
 - [ ] Anonymous access is denied; separate accounts cannot access each other's profiles (use disposable accounts when testing this).
 - [ ] Text/PDF/DOCX uploads and source search work; scans clearly report limitations.

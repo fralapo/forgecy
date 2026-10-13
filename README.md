@@ -30,6 +30,7 @@ Follow the step-by-step [local setup guide](docs/LOCAL_SETUP.md), including the 
    - supabase/migrations/0015_ai_worker_fencing.sql
    - supabase/migrations/0016_ai_request_budgets.sql
    - supabase/migrations/0017_ai_provider_usage.sql
+   - supabase/migrations/0018_worker_knowledge_search.sql
 4. Copy `.env.example` to `.env.local`. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from your Supabase dashboard. Despite the variable names, `sb_publishable_…` is accepted; the private `sb_secret_…` key belongs only in `SUPABASE_SERVICE_ROLE_KEY`. Keep `.env.local` private and untracked.
 5. Enable email OTP / magic-link sign-in in Supabase Authentication. Allow http://localhost:3000/auth/callback as a redirect URL.
 6. Run **npm run dev -- --hostname 127.0.0.1** and open http://localhost:3000.
