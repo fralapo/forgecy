@@ -8,6 +8,7 @@ import { crawlWebsite, publicHttpsUrl } from "@/lib/site-ingest";
 import { requireWebsiteCrawlingEnabled, reserveWebsiteCrawl } from "@/lib/crawl-budget";
 import { extractDocument } from "@/lib/document-extract";
 import { assertSafeDocument, DocumentSafetyError } from "@/lib/document-safety";
+import { readMultipartForm } from "@/lib/request-body";
 import { slidePreflight } from "@/lib/carousel-layout";
 
 export const runtime="nodejs";
@@ -268,8 +269,7 @@ export async function POST(request:Request,{params}:Params){
    return json({source:data,extracted:extraction.status==="ready"});
   }
   if(p.length===3 && p[2]==="upload"){
-   if(Number(request.headers.get("content-length")||0)>11_000_000)throw new ApiFailure(413,"File troppo grande");
-   const form=await request.formData(),file=form.get("file");
+   const form=await readMultipartForm(request,11_000_000),file=form.get("file");
    if(!(file instanceof File))throw new ApiFailure(400,"Seleziona un file");
    if(file.size>10_000_000||file.size===0)throw new ApiFailure(413,"Dimensione non valida");
    const allowed=["text/plain","text/markdown","text/csv","application/pdf","application/vnd.openxmlformats-officedocument.wordprocessingml.document","image/png","image/jpeg","image/webp"];
