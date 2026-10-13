@@ -99,7 +99,7 @@ test("unsupported, encrypted, duplicated, path-traversal, macro and active conte
 });
 test("actual expansion and forged ZIP claims are rejected before DOCX parsing",()=>{
  errorArchive([...validEntries,{name:"word/huge.xml",body:"X".repeat(70_000)}],/espande/);
- errorArchive(validEntries.map((e,i)=>i===2?{...e,declaredSize:50_000}:e),/Dimensioni/);
+ errorArchive(validEntries.map((e,i)=>i===2?{...e,declaredSize:Buffer.byteLength(XML)+10}:e),/Dimensioni/);
  const archive=zip(validEntries);
  archive.writeUInt32LE(0xffffffff,archive.length-6);
  assert.throws(()=>inspectDocxArchive(archive),DocumentSafetyError);
