@@ -5,6 +5,7 @@ import { draftDossier,executeMission,contextForAI } from "@/lib/agent-team";
 import { handleLeaderMessage } from "@/lib/leader-intent";
 import { modelJson,lowTrustRule } from "@/lib/ai";
 import { reserveAiRequest } from "@/lib/ai-request-budget";
+import {withAiUsageScope} from "@/lib/ai-usage";
 import { crawlWebsite, publicHttpsUrl } from "@/lib/site-ingest";
 import { requireWebsiteCrawlingEnabled, reserveWebsiteCrawl } from "@/lib/crawl-budget";
 import { extractDocument } from "@/lib/document-extract";
@@ -145,7 +146,7 @@ export async function POST(request:Request,{params}:Params){
   }
   if(p.length===4 && p[2]==="dossier" && p[3]==="draft"){
    await reserveAiRequest(ctx,id,"dossier");
-   const dossier=await draftDossier(ctx,id);
+   const dossier=await withAiUsageScope({clientId:id,requestedBy:ctx.user.id,operation:"dossier"},()=>draftDossier(ctx,id));
    await audit(ctx,id,"dossier_generated",dossier.id);
    return json({dossier},201);
   }
@@ -178,7 +179,7 @@ export async function POST(request:Request,{params}:Params){
    await reserveAiRequest(ctx,id,"mission");
    const {data,error}=await ctx.db.from("missions").insert({client_id:id,request:input.request,status:"running"}).select().single();
    dbError(error,"Missione non avviata");
-   const result=await executeMission(ctx,id,data.id,input.request,input.period,input.offer_id||null);
+   const result=await withAiUsageScope({clientId:id,requestedBy:ctx.user.id,operation:"mission"},()=>executeMission(ctx,id,data.id,input.request,input.period,input.offer_id||null));
    await audit(ctx,id,"mission_proposed",data.id);
    return json({mission_id:data.id,...result},201);
   }
@@ -199,7 +200,7 @@ export async function POST(request:Request,{params}:Params){
    await reserveAiRequest(ctx,id,"chat");
    const {error}=await ctx.db.from("messages").insert({client_id:id,role:"user",body:input.body});
    dbError(error,"Messaggio non inviato");
-   const result=await handleLeaderMessage(ctx,id,input.body);
+   const result=await withAiUsageScope({clientId:id,requestedBy:ctx.user.id,operation:"chat"},()=>handleLeaderMessage(ctx,id,input.body));
    const saved=await ctx.db.from("messages").insert({client_id:id,role:"leader",body:result.body,metadata:result.metadata}).select().single();
    dbError(saved.error,"Risposta non salvata");return json({message:saved.data});
   }
@@ -233,8 +234,8 @@ export async function POST(request:Request,{params}:Params){
    const schema=z.object({title:z.string().min(1).max(240),caption:z.string().max(12000),
     slides:z.array(z.object({headline:z.string().max(240),body:z.string().max(1000),visual_prompt:z.string().max(1000).optional()})).max(20)});
    await reserveAiRequest(ctx,id,"adapt");
-   const revised=await modelJson(lowTrustRule+"\nRole: LinkedIn editor. Reframe an Instagram asset for LinkedIn professionals; not just a literal translation. Output professional copy and document pages when original carousel. No unsupported claims.",
-      "ORIGINALE JSON:\n"+JSON.stringify(original).slice(0,24000),schema);
+   const revised=await withAiUsageScope({clientId:id,requestedBy:ctx.user.id,operation:"adapt"},()=>modelJson(lowTrustRule+"\nRole: LinkedIn editor. Reframe an Instagram asset for LinkedIn professionals; not just a literal translation. Output professional copy and document pages when original carousel. No unsupported claims.",
+      "ORIGINALE JSON:\n"+JSON.stringify(original).slice(0,24000),schema));
    const {data,error:writeError}=await ctx.db.from("contents").insert({
     client_id:id,campaign_id:original.campaign_id,offer_id:original.offer_id,offer_version:original.offer_version,
     parent_id:original.id,source_revision:original.revision,
