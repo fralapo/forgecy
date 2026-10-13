@@ -6,6 +6,7 @@ import {missionSchema} from "./schemas";
 import {workerDb} from "./worker-db";
 import {draftStrategy} from "./strategic-blueprint";
 import {JobLeaseLost,runWithJobLease} from "./job-lease";
+import {withAiUsageScope} from "./ai-usage";
 
 const jobSchema=z.object({
   id:z.uuid(),client_id:z.uuid(),requested_by:z.uuid(),lease_token:z.uuid(),
@@ -110,7 +111,7 @@ export async function processNextJob(){
  };
  try{
    const result=await runWithJobLease(renew,async checkpoint=>{
-     return execute(db,job,checkpoint);
+     return withAiUsageScope({clientId:job.client_id,requestedBy:job.requested_by,operation:job.kind,jobId:job.id},()=>execute(db,job,checkpoint));
    });
    // Atomic fencing: attempt counts alone are not an ownership proof.
    const completed=await db.rpc("forgecy_complete_ai_job",{
