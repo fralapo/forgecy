@@ -3,6 +3,7 @@ import { useEffect,useReducer,useState } from "react";
 import { ArrowRight,Archive,BookOpen,CalendarDays,Check,ChevronLeft,ChevronRight,Clock,FileText,Globe,Instagram,Layers3,Package,Plus,RefreshCw,Sparkles,Target,UploadCloud,AlertTriangle,Image as ImageIcon,ExternalLink } from "lucide-react";
 import type { Snapshot,View,Offer,Content,Slide,EditorialBrief } from "./types";
 import { offerLabel,statusLabel,requestJson } from "./types";
+import AiUsagePanel from "./ai-usage-panel";
 import { audiencePatterns } from "@/lib/audience";
 import { brandStyle } from "@/lib/brand";
 import { summarizeInstagram } from "@/lib/social-analytics";
@@ -434,5 +435,6 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
     <div className="notice" style={{marginTop:14}}>I dati Instagram non dimostrano l&apos;efficacia causale di una campagna. Attribuzione e confronto richiedono un periodo e KPI definiti.</div>
    </div>
   </div>
+  <AiUsagePanel clientId={data.client.id}/>
  </>;
 }

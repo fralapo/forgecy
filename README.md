@@ -1,4 +1,4 @@
-# Forgecy — client-first AI agency workspace (V18 development branch)
+# Forgecy — client-first AI agency workspace
 
 Forgecy is a responsive browser-based agency workspace: one client profile at a time, an approved company knowledge base, verified products and services, AI-coordinated campaigns, static Instagram and LinkedIn content, and performance history.
 
@@ -25,6 +25,7 @@ The complete previous repository is preserved under the **old/** folder with its
    - supabase/migrations/0014_source_chunks_backfill.sql
    - supabase/migrations/0015_ai_worker_fencing.sql
    - supabase/migrations/0016_ai_request_budgets.sql
+   - supabase/migrations/0017_ai_provider_usage.sql
 4. Copy .env.example to .env.local. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from the Supabase dashboard.
 5. Enable email OTP / magic-link sign-in in Supabase Authentication. Allow http://localhost:3000/auth/callback as a redirect URL.
 6. Run **npm run dev** and open http://localhost:3000.
@@ -83,6 +84,11 @@ This is a functional fullstack foundation **not yet a finished production SaaS**
 Original source code: [old/](old/). More setup and endpoint details: [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md).
 
 License: AGPL-3.0-only. See LICENSE.
+
+
+## V25 provider-reported AI usage
+
+The Results screen includes a per-client usage summary for OpenRouter and OpenAI image generation. It records response-provided token counts and **nullable** reported USD costs; missing costs are not treated as zero. The owner-scoped read API is backed by immutable, server-written ledger entries. Configure the private `SUPABASE_SERVICE_ROLE_KEY` on all API/worker hosts to record observations. The database migration `0017_ai_provider_usage.sql` must be applied before deploying the endpoint. Usage reports are **not guaranteed complete, not invoices, and not currency spending caps**. See [docs/AI_PROVIDER_USAGE.md](docs/AI_PROVIDER_USAGE.md).
 
 ## V24 AI request safeguards
 
