@@ -70,6 +70,11 @@ export default function Workspace(){
   return()=>{active=false};
  },[clientId,refresh]);
  useEffect(()=>{railEnd.current?.scrollIntoView({behavior:"smooth",block:"end"})},[data?.messages.length,chatOpen]);
+ useEffect(()=>{
+  if(!clientId||!data?.ai_jobs?.some(j=>j.status==="queued"||j.status==="running"))return;
+  const id=window.setInterval(()=>{refresh(clientId).catch(()=>undefined);},9000);
+  return()=>window.clearInterval(id);
+ },[clientId,data?.ai_jobs,refresh]);
 
  async function reloadAll(){
   const result=await requestJson<{clients:Client[]}>("/api/workspace/clients");setClients(result.clients);
@@ -87,21 +92,29 @@ export default function Workspace(){
   const root=endpoint(clientId);
   if(name==="deleteSignal")return mutate(name,()=>requestJson(root+"/signals/"+body.id,{method:"DELETE"}),"Osservazione eliminata");
   if(name==="reprocessDocument")return mutate(name,()=>requestJson(root+"/sources/"+body.id+"/process",{method:"POST",body:"{}"}),"Estrazione ripetuta");
-  if(name==="dossierDraft")return mutate(name,()=>requestJson(root+"/dossier/draft",{method:"POST",body:"{}"}),"Dossier generato: controllalo prima di approvare");
+  if(name==="dossierDraft")return mutate(name,()=>requestJson(root+"/jobs",{method:"POST",body:JSON.stringify({kind:"dossier",payload:{}})}),"Analisi accodata: controlla lo stato dei lavori AI");
   if(name==="dossierApprove")return mutate(name,()=>requestJson(root+"/dossier/approve",{method:"POST",body:JSON.stringify(body)}),"Dossier approvato");
+  if(name==="strategyDraft")return mutate(name,()=>requestJson(root+"/jobs",{method:"POST",body:JSON.stringify({kind:"strategy",payload:{}})}),"Preparazione del piano strategico accodata");
+  if(name==="strategyApprove")return mutate(name,()=>requestJson(root+"/strategy/"+body.id+"/approve",{method:"POST",body:"{}"}),"Piano strategico approvato");
   if(name==="verifyOffer")return mutate(name,()=>requestJson(root+"/offers/"+body.id,{method:"PATCH",body:JSON.stringify({status:"verified"})}),"Offerta verificata: rivedi il dossier");
   if(name==="updateContent")return mutate(name,()=>requestJson(root+"/contents/"+body.id,{method:"PATCH",body:JSON.stringify({title:body.title,caption:body.caption,slides:body.slides,editorial_brief:body.editorial_brief,...(body.status?{status:body.status}:{})})}),"Contenuto salvato");
   if(name==="revalidateContent")return mutate(name,()=>requestJson(root+"/contents/"+body.id+"/revalidate",{method:"POST",body:"{}"}),"Bozza riaperta: verifica i dati e richiedi l’approvazione");
   if(name==="adapt")return mutate(name,()=>requestJson(root+"/contents/"+body.id+"/adapt",{method:"POST",body:"{}"}),"Variante LinkedIn creata");
   if(name==="image")return mutate(name,()=>requestJson(root+"/contents/"+body.id+"/image",{method:"POST",body:JSON.stringify({slideIndex:body.slideIndex,prompt:body.prompt})}),"Immagine generata e salvata");
   if(name==="syncSocial")return mutate(name,()=>requestJson(root+"/social/sync",{method:"POST",body:"{}"}),"Dati Instagram aggiornati");
+  if(name==="disconnectSocial")return mutate(name,()=>requestJson(root+"/social/accounts/"+body.id,{method:"DELETE"}),"Account Instagram scollegato e statistiche locali cancellate");
+  if(name==="calendarCreate")return mutate(name,()=>requestJson(root+"/editorial",{method:"POST",body:JSON.stringify(body)}),"Voce aggiunta al calendario");
+  if(name==="calendarUpdate")return mutate(name,()=>requestJson(root+"/editorial/"+body.id,{method:"PATCH",body:JSON.stringify({status:body.status})}),"Stato editoriale aggiornato");
+  if(name==="calendarDelete")return mutate(name,()=>requestJson(root+"/editorial/"+body.id,{method:"DELETE"}),"Uscita rimossa dal calendario");
+
   if(name==="approveMission"){
     const response=await mutate<{campaign_id:string}>(name,()=>requestJson(root+"/missions/"+body.id+"/approve",{method:"POST",body:"{}"}),"Campagna creata dalla proposta");
     if(response){setView("projects");setChatOpen(false)}
     return response;
   }
   if(name==="rejectMission")return mutate(name,()=>requestJson(root+"/missions/"+body.id+"/reject",{method:"POST",body:"{}"}),"Proposta scartata");
-  if(name==="newMission")return mutate(name,()=>requestJson(root+"/missions",{method:"POST",body:JSON.stringify(body)}),"Il team ha preparato una proposta da approvare");
+  if(name==="newMission")return mutate(name,()=>requestJson(root+"/jobs",{method:"POST",body:JSON.stringify({kind:"mission",payload:body})}),"Il Leader ha accodato la missione");
+  if(name==="cancelJob")return mutate(name,()=>requestJson(root+"/jobs/"+body.id,{method:"DELETE"}),"Lavoro annullato");
  }
  async function createClient(e:React.FormEvent<HTMLFormElement>){
    e.preventDefault();const form=new FormData(e.currentTarget);
@@ -182,12 +195,13 @@ export default function Workspace(){
  }
  const current=clients.find(c=>c.id===clientId);
  const latestDossier=data?.dossiers?.[0];
- const canCampaign=latestDossier?.status==="approved" && latestDossier.knowledge_revision===data?.client.knowledge_revision;
+ const latestStrategy=data?.strategies?.[0];
+ const canCampaign=latestDossier?.status==="approved" && latestDossier.knowledge_revision===data?.client.knowledge_revision && latestStrategy?.status==="approved" && latestStrategy.knowledge_revision===data?.client.knowledge_revision;
  const pendingMissions=(data?.missions||[]).filter(x=>x.status==="proposed");
  const baseModal=()=>setModal({kind:"client"});
 
  if(loading)return <main className="login-panel" style={{minHeight:"100vh"}}><div className="stack"><LoaderCircle className="spin"/> Caricamento Forgecy…</div></main>;
- if(error && !clients.length)return <main className="login-panel" style={{minHeight:"100vh"}}><div className="card stack"><h2>Forgecy non è ancora configurato</h2><p className="tagline">{error}</p><p className="caption">Configura Supabase ed esegui le migration seguendo il README.</p><a className="button" href="/login">Vai all'accesso</a></div></main>;
+ if(error && !clients.length)return <main className="login-panel" style={{minHeight:"100vh"}}><div className="card stack"><h2>Forgecy non è ancora configurato</h2><p className="tagline">{error}</p><p className="caption">Configura Supabase ed esegui le migration seguendo il README.</p><a className="button" href="/login">Vai all&apos;accesso</a></div></main>;
  return <>
   <div className="app-shell">
    <aside className="sidebar">
@@ -225,7 +239,7 @@ export default function Workspace(){
     <div className="chat-head"><div className="chat-title"><span className="avatar-square" style={{width:36,height:36}}><Sparkles size={19}/></span><span>Leader AI <small style={{display:"block",fontWeight:500}}>{current?.name||"Seleziona un cliente"}</small></span></div>
      <button className="button small ghost mobile-chat-toggle" aria-label="Chiudi chat" onClick={()=>setChatOpen(false)}><X size={18}/></button></div>
     <div className="chat-message-list">
-     <div className="chat-bubble leader">Ciao! Sono il Leader di Forgecy. Conosco esclusivamente le informazioni del cliente attivo. Posso rispondere a domande o coordinare una campagna con un'approvazione esplicita.</div>
+     <div className="chat-bubble leader">Ciao! Sono il Leader di Forgecy. Conosco esclusivamente le informazioni del cliente attivo. Posso rispondere a domande o coordinare una campagna con un&apos;approvazione esplicita.</div>
      {data?.messages?.map(m=><div key={m.id} style={{display:"contents"}}>
       <div className={"chat-bubble "+(m.role==="user"?"user":"leader")}>{m.body}</div>
       {m.role==="leader"&&m.metadata?.kind==="signal_proposal"&&m.metadata.signal&&<button style={{alignSelf:"flex-start"}} className="button small" onClick={()=>setModal({kind:"signal",item:m.metadata?.signal})}><Check size={14}/> Rivedi e registra il feedback</button>}
@@ -253,7 +267,7 @@ export default function Workspace(){
     {current&&<div className="chat-prompt"><div className="eyebrow">AZIONI RAPIDE</div>
      <button className="button small" style={{justifyContent:"start"}} disabled={Boolean(busy)} onClick={()=>setModal({kind:"signal"})}><Plus size={14}/> Registra un feedback della community</button>
      <button className="button small" style={{justifyContent:"start"}} disabled={!canCampaign||Boolean(busy)} onClick={()=>setModal({kind:"mission"})}><Sparkles size={14}/> Proponi una campagna completa</button>
-     {!canCampaign&&<span className="caption">Per generare campagne devi prima approvare il dossier aziendale aggiornato.</span>}
+     {!canCampaign&&<span className="caption">Per generare campagne devi approvare il dossier e il piano strategico aziendale aggiornati.</span>}
     </div>}
     <form className="chat-compose" onSubmit={sendMessage}><textarea value={chatText} disabled={!current||Boolean(busy)} onChange={e=>setChatText(e.target.value)} placeholder={current?"Chiedi qualsiasi cosa sul cliente…":"Prima seleziona un cliente"} maxLength={4000} rows={3}/>
      <div className="chat-footer"><button type="button" className="button small" disabled={!current||Boolean(busy)} onClick={()=>setModal({kind:"upload"})}><Plus size={14}/> Allega file</button><span className="caption">{busy?"Elaborazione…":"OpenRouter"}</span><button className="button primary small" type="submit" disabled={!chatText.trim()||!current||Boolean(busy)}><Send size={15}/> Invia</button></div>
@@ -272,7 +286,7 @@ export default function Workspace(){
       </div>
       <div><label>Font del brand (nome di riferimento)</label><input name="heading_font" maxLength={100} defaultValue={String(data?.client.profile?.heading_font||"")} placeholder="Es. Recoleta, Cinzel, Inter…"/><p className="caption" style={{marginTop:5}}>Il font è un riferimento per il designer: prima di usarlo nelle esportazioni serve un file con licenza adeguata.</p></div></>}
     {modal.kind==="signal"&&<>
-     <div className="notice">Registra feedback anonimizzati. Evita dati personali e chiarisci da dove arriva l'osservazione: un segnale isolato è un'ipotesi, non una statistica.</div>
+     <div className="notice">Registra feedback anonimizzati. Evita dati personali e chiarisci da dove arriva l&apos;osservazione: un segnale isolato è un&apos;ipotesi, non una statistica.</div>
      <div className="cols">
       <div><label>Piattaforma</label><select name="platform" defaultValue={String((modal.item as Record<string,unknown>|undefined)?.platform||"instagram")}><option value="instagram">Instagram</option><option value="linkedin">LinkedIn</option><option value="review">Recensioni</option><option value="website">Sito / FAQ</option><option value="support">Assistenza</option><option value="other">Altra fonte</option></select></div>
       <div><label>Tipo di segnale</label><select name="kind" defaultValue={String((modal.item as Record<string,unknown>|undefined)?.kind||"comment")}><option value="comment">Commento</option><option value="question">Domanda</option><option value="objection">Obiezione</option><option value="review">Recensione</option><option value="faq">FAQ</option><option value="dm">Messaggio privato anonimizzato</option><option value="other">Altro</option></select></div>
@@ -280,11 +294,11 @@ export default function Workspace(){
      <div><label>Argomento comune *</label><input name="topic" required minLength={2} defaultValue={String((modal.item as Record<string,unknown>|undefined)?.topic||"")} maxLength={160} placeholder="Es. Come scegliere l'ammorbidente"/></div>
      <div><label>Osservazione / domanda anonimizzata *</label><textarea name="excerpt" required minLength={5} defaultValue={String((modal.item as Record<string,unknown>|undefined)?.excerpt||"")} maxLength={2500} rows={4} placeholder="Es. Molti chiedono se il prodotto è adatto ai tessuti delicati."/></div>
      <div><label>Quale bisogno potrebbe rivelare?</label><textarea name="audience_need" maxLength={1000} defaultValue={String((modal.item as Record<string,unknown>|undefined)?.audience_need||"")} rows={2} placeholder="Es. Capire se il prodotto è delicato sui capi"/></div>
-     <div className="cols"><div><label>Link alla fonte (se pubblico)</label><input name="source_url" type="url" defaultValue={String((modal.item as Record<string,unknown>|undefined)?.source_url||"")} placeholder="https://..."/></div><div><label>Data dell'osservazione</label><input name="observed_at" type="date"/></div></div>
+     <div className="cols"><div><label>Link alla fonte (se pubblico)</label><input name="source_url" type="url" defaultValue={String((modal.item as Record<string,unknown>|undefined)?.source_url||"")} placeholder="https://..."/></div><div><label>Data dell&apos;osservazione</label><input name="observed_at" type="date"/></div></div>
      <div><label>Contesto (facoltativo)</label><textarea name="context" maxLength={1200} defaultValue={String((modal.item as Record<string,unknown>|undefined)?.context||"")} rows={2} placeholder="A quale post, prodotto o discussione si riferisce?"/></div>
     </>}
     {modal.kind==="source"&&<><div><label>Tipo di fonte</label><select name="kind" defaultValue="note"><option value="note">Nota / Brief</option><option value="website">Sito web</option><option value="social">Profilo social (riferimento)</option></select></div><div><label>Titolo</label><input name="title" placeholder="Es. Brief commerciale"/></div><div><label>URL (opzionale)</label><input name="url" type="url" placeholder="https://esempio.it"/></div><div><label>Contenuto / annotazioni</label><textarea name="body" rows={5} placeholder="Informazioni attendibili, prodotti, tone of voice, obiettivi…"/></div><label style={{display:"flex",alignItems:"center",gap:8,fontWeight:500}}><input type="checkbox" name="auto"/> Acquisisci automaticamente da HTTPS (richiede crawler abilitato)</label></>}
-    {modal.kind==="upload"&&<><div><label>Documento del cliente (max 10 MB)</label><input type="file" name="file" required accept=".txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg,.webp"/></div><div className="notice warn">Testi, Markdown e CSV sono letti subito. PDF e immagini vengono archiviati privatamente ma richiedono estrazione testo aggiuntiva per l'analisi AI.</div></>}
+    {modal.kind==="upload"&&<><div><label>Documento del cliente (max 10 MB)</label><input type="file" name="file" required accept=".txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg,.webp"/></div><div className="notice warn">Testi, Markdown e CSV sono letti subito. PDF e immagini vengono archiviati privatamente ma richiedono estrazione testo aggiuntiva per l&apos;analisi AI.</div></>}
     {modal.kind==="offer"&&(()=>{
       const o=(modal.item||{}) as Partial<Offer>;
       return <><div className="cols"><div><label>Tipologia</label><select name="kind" defaultValue={o.kind||"service"}><option value="product">Prodotto fisico</option><option value="service">Servizio</option></select></div><div><label>Prezzo EUR (vuoto = preventivo)</label><input name="price" inputMode="decimal" defaultValue={o.price??""} placeholder="19.90"/></div></div><div><label>Nome prodotto / servizio *</label><input required name="name" defaultValue={o.name||""}/></div><div><label>Descrizione</label><textarea rows={4} name="description" defaultValue={o.description||""}/></div><div><label>Pubblico</label><input name="audience" defaultValue={o.audience||""}/></div><div><label>Benefici verificabili (uno per riga)</label><textarea name="benefits" rows={4} defaultValue={(o.benefits||[]).join("\n")}/></div><div><label>Call to action</label><input name="cta" defaultValue={o.cta||""} placeholder="Scopri di più"/></div></>;

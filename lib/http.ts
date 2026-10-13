@@ -14,10 +14,45 @@ export function fail(error: unknown) {
   console.error("[forgecy]", error instanceof Error ? error.message : "Unexpected failure");
   return json({ error: "Errore interno. Riprova o controlla i log del server." }, 500);
 }
+export const MAX_JSON_BODY_BYTES=200_000;
 export async function read<T>(request: Request, schema: z.ZodType<T>): Promise<T> {
-  if (Number(request.headers.get("content-length") || 0) > 200_000) throw new ApiFailure(413,"Richiesta troppo grande");
-  let raw: unknown;
-  try { raw = await request.json(); } catch { throw new ApiFailure(400, "JSON non valido"); }
+  const contentType=request.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
+  if(contentType!=="application/json" && !contentType?.endsWith("+json"))
+    throw new ApiFailure(415,"È necessario Content-Type: application/json");
+  const declaredRaw=request.headers.get("content-length");
+  if(declaredRaw!==null){
+    const declared=Number(declaredRaw);
+    if(!Number.isSafeInteger(declared)||declared<0)
+      throw new ApiFailure(400,"Content-Length non valido");
+    if(declared>MAX_JSON_BODY_BYTES)
+      throw new ApiFailure(413,"Richiesta JSON troppo grande");
+  }
+  if(!request.body)throw new ApiFailure(400,"Corpo JSON mancante");
+  const reader=request.body.getReader();
+  const chunks:Uint8Array[]=[];
+  let size=0;
+  try {
+    while(true){
+      const {done,value}=await reader.read();
+      if(done)break;
+      size+=value.byteLength;
+      if(size>MAX_JSON_BODY_BYTES){
+        await reader.cancel().catch(()=>undefined);
+        throw new ApiFailure(413,"Richiesta JSON troppo grande");
+      }
+      chunks.push(value);
+    }
+  }catch(error){
+    if(error instanceof ApiFailure)throw error;
+    throw new ApiFailure(400,"Impossibile leggere la richiesta JSON");
+  }finally{reader.releaseLock();}
+  let raw:unknown;
+  try{
+    const all=new Uint8Array(size);
+    let offset=0;
+    for(const chunk of chunks){all.set(chunk,offset);offset+=chunk.byteLength;}
+    raw=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(all));
+  }catch{throw new ApiFailure(400,"JSON non valido");}
   return schema.parse(raw);
 }
 export async function auth() {

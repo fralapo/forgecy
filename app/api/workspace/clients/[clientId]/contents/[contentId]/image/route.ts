@@ -2,6 +2,7 @@ import { z } from "zod";
 import { auth,requireClient,read,fail,json,ApiFailure,dbError,audit } from "@/lib/http";
 import { playbook } from "@/lib/skills/playbooks";
 import { brandStyle } from "@/lib/brand";
+import { reserveAiRequest } from "@/lib/ai-request-budget";
 export const runtime="nodejs";
 export const maxDuration=120;
 
@@ -36,6 +37,7 @@ export async function POST(request:Request,{params}:{params:Promise<{clientId:st
   ].join("\n");
   const key=process.env.OPENAI_API_KEY;
   if(!key)throw new ApiFailure(503,"OPENAI_API_KEY non configurata: immagini AI disabilitate");
+  await reserveAiRequest(ctx,clientId,"image");
   const response=await fetch("https://api.openai.com/v1/images/generations",{
    method:"POST",headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},
    body:JSON.stringify({

@@ -1,3 +1,4 @@
+import { assertSafeDocument, DocumentSafetyError } from "./document-safety";
 /**
  * Bound client-upload text extraction. Original binary always remains in private
  * Supabase Storage; extracted text is separate, untrusted evidence.
@@ -10,6 +11,7 @@ function clean(value:string):string{
 export async function extractDocument(bytes:Uint8Array,mime:string,name:string):Promise<Extraction>{
  const ext=name.toLowerCase().split(".").pop();
  try {
+  assertSafeDocument(bytes,mime,name);
   if(["txt","md","csv"].includes(ext||"")&&mime.startsWith("text/")){
    const decoded=new TextDecoder("utf-8",{fatal:false}).decode(bytes);
    return {status:decoded.trim()?"ready":"error",body:clean(decoded),
@@ -42,6 +44,8 @@ export async function extractDocument(bytes:Uint8Array,mime:string,name:string):
    return {status:"pending",body:"",error:"Immagine archiviata: estrazione OCR non ancora disponibile"};
   return {status:"error",body:"",error:"Formato non supportato o estensione e MIME non corrispondenti"};
  }catch(error){
+  if(error instanceof DocumentSafetyError)
+   return {status:"error",body:"",error:error.message};
   console.error("[document-extract]",error instanceof Error?error.message:"unknown");
   return {status:"error",body:"",error:"Estrazione non riuscita: prova un PDF testuale o DOCX valido"};
  }

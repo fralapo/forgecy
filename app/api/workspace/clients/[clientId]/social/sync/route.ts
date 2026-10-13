@@ -1,5 +1,6 @@
 import { auth,requireClient,fail,json,ApiFailure,dbError,audit } from "@/lib/http";
 import { decrypt } from "@/lib/crypto";
+import { optionalMetaInsights } from "@/lib/instagram-insights";
 export const runtime="nodejs";
 export const maxDuration=45;
 
@@ -27,7 +28,22 @@ export async function POST(_request:Request,{params}:{params:Promise<{clientId:s
    mediaUrl.searchParams.set("fields","id,caption,media_type,permalink,timestamp,like_count,comments_count");
    mediaUrl.searchParams.set("limit","50");mediaUrl.searchParams.set("access_token",token);
    const [account,media]=await Promise.all([graph(accountUrl),graph(mediaUrl)]);
-   const collected={account,media:media.data||[],source:"Meta Instagram Graph API",measured:true};
+   const items=(media.data||[]) as Array<{
+     id:string;caption?:string;media_type?:string;permalink?:string;
+     like_count?:number;comments_count?:number;timestamp?:string
+   }>;
+   // Insights are permission- and media-type-dependent. Unavailable = null, never zero.
+   const withInsights=await Promise.all(items.map(async(item,index)=>{
+     if(index>=8)return item;
+     const metrics=item.media_type==="STORY"?["reach","shares"]:["reach","saved","shares"];
+     const optional=await optionalMetaInsights(item.id,token,ver,metrics);
+     return {...item,...(optional.available?{insights:optional.insights}:{})};
+   }));
+   const collected={
+     account,media:withInsights,source:"Meta Instagram Graph API",measured:true,
+     insights_status:withInsights.some(item=>"insights" in item)?"partial":"unavailable",
+     metric_scope:"latest_50_posts; optional insights requested for first 8 media"
+   };
    const {data:row,error:saveError}=await ctx.db.from("social_snapshots").insert({
     client_id:id,account_id:a.id,data:collected,period:"latest_50_posts"
    }).select("id,collected_at").single();

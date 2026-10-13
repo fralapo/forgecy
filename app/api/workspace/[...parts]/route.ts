@@ -4,8 +4,13 @@ import { clientSchema,sourceSchema,offerSchema,campaignSchema,missionSchema,chat
 import { draftDossier,executeMission,contextForAI } from "@/lib/agent-team";
 import { handleLeaderMessage } from "@/lib/leader-intent";
 import { modelJson,lowTrustRule } from "@/lib/ai";
-import { inspectWebsite } from "@/lib/site-ingest";
+import { reserveAiRequest } from "@/lib/ai-request-budget";
+import { crawlWebsite, publicHttpsUrl } from "@/lib/site-ingest";
+import { requireWebsiteCrawlingEnabled, reserveWebsiteCrawl } from "@/lib/crawl-budget";
 import { extractDocument } from "@/lib/document-extract";
+import { assertSafeDocument, DocumentSafetyError } from "@/lib/document-safety";
+import { readMultipartForm } from "@/lib/request-body";
+import { slidePreflight } from "@/lib/carousel-layout";
 
 export const runtime="nodejs";
 export const maxDuration=120;
@@ -19,7 +24,7 @@ function validId(value:string|undefined){
 async function list(ctx:Awaited<ReturnType<typeof auth>>,id:string){
  const selections=[
   ["sources","*"],["community_signals","*"],["offers","*"],["dossiers","*"],["campaigns","*"],
-  ["contents","*"],["messages","*"],["missions","*"],["agent_events","*"],
+  ["contents","*"],["messages","*"],["missions","*"],["agent_events","*"],["ai_jobs","id,client_id,requested_by,kind,payload,status,result,error,attempts,max_attempts,run_after,locked_until,created_at,updated_at,finished_at"],["strategies","*"],["editorial_entries","*"],
   ["social_snapshots","*"],["social_accounts","id,client_id,platform,remote_id,username,token_expires_at,created_at"]
  ] as const;
  const results=await Promise.all(selections.map(async ([table,fields])=>{
@@ -89,14 +94,47 @@ export async function POST(request:Request,{params}:Params){
    return json({signal:data},201);
   }
   if(p.length===3 && p[2]==="website"){
-   const input=await read(request,z.object({url:z.url()}));
-   const site=await inspectWebsite(input.url);
-   const {data,error}=await ctx.db.from("sources").insert({
-    client_id:id,kind:"website",title:site.title||site.url,url:site.url,
-    body:site.description+"\n"+site.body,status:"ready",captured_at:site.capturedAt
-   }).select().single();
-   dbError(error);await audit(ctx,id,"website_imported",data.id);
-   return json({source:data},201);
+   const input=await read(request,z.object({
+     url:z.url(),maxPages:z.number().int().min(1).max(6).default(5)
+   }));
+   requireWebsiteCrawlingEnabled();
+   let hostname:string;
+   try {hostname=publicHttpsUrl(input.url).hostname;}
+   catch {throw new ApiFailure(400,"Inserisci un sito HTTPS pubblico valido");}
+   // Reservation is atomic across instances; a failed DB check must block crawling.
+   const reservationId=await reserveWebsiteCrawl(ctx,id,hostname,input.maxPages);
+   const result=await crawlWebsite(input.url,input.maxPages);
+   const {data:previous,error:priorError}=await ctx.db.from("sources")
+     .select("id,url,content_sha256").eq("client_id",id).eq("kind","website");
+   dbError(priorError,"Impossibile verificare le fonti web esistenti");
+   const byUrl=new Map((previous||[]).map(row=>[row.url,row]));
+   const imported:unknown[]=[];
+   let unchanged=0;
+   for(const page of result.pages){
+     const existing=byUrl.get(page.url);
+     if(existing?.content_sha256===page.contentSha256){unchanged++;continue;}
+     const record={
+       client_id:id,kind:"website",title:page.title||page.url,url:page.url,
+       body:[page.description,page.body].filter(Boolean).join("\n"),
+       status:"ready",captured_at:page.capturedAt,
+       content_sha256:page.contentSha256,
+       source_metadata:{source:"public_html",root_url:input.url,crawler:"ForgecyResearch/1.0"}
+     };
+     const write=existing
+       ?ctx.db.from("sources").update(record).eq("id",existing.id).eq("client_id",id).select().single()
+       :ctx.db.from("sources").insert(record).select().single();
+     const {data,error}=await write;
+     dbError(error,"Errore durante il salvataggio della pagina web");
+     imported.push(data);
+   }
+   await audit(ctx,id,"website_crawl_finished",undefined,{
+     domain:hostname,reservationId,imported:imported.length,unchanged,
+     skipped:result.skipped.length,pages:result.pages.length
+   });
+   return json({source:imported[0]||null,sources:imported,unchanged,
+     visited:result.pages.length,skipped:result.skipped,
+     message:imported.length?"Fonti web acquisite. Rivedi il dossier prima dell'approvazione.":"Nessun cambiamento alle pagine già registrate."
+   },imported.length?201:200);
   }
   if(p.length===3 && p[2]==="offers"){
    const input=await read(request,offerSchema);
@@ -106,6 +144,7 @@ export async function POST(request:Request,{params}:Params){
    return json({offer:data},201);
   }
   if(p.length===4 && p[2]==="dossier" && p[3]==="draft"){
+   await reserveAiRequest(ctx,id,"dossier");
    const dossier=await draftDossier(ctx,id);
    await audit(ctx,id,"dossier_generated",dossier.id);
    return json({dossier},201);
@@ -120,6 +159,10 @@ export async function POST(request:Request,{params}:Params){
    const input=await read(request,campaignSchema);
    const ctxAI=await contextForAI(ctx,id);
    if(ctxAI.dossier?.status!=="approved")throw new ApiFailure(409,"Approva prima il dossier aziendale");
+   if(ctxAI.strategy?.status!=="approved"||ctxAI.strategy.knowledge_revision!==ctxAI.client.knowledge_revision)
+     throw new ApiFailure(409,"Approva prima la strategia aziendale aggiornata");
+   if(ctxAI.strategy?.status!=="approved"||ctxAI.strategy.knowledge_revision!==ctxAI.client.knowledge_revision)
+     throw new ApiFailure(409,"Approva prima il piano strategico aggiornato");
    if(input.offer_id && !ctxAI.offers.some(o=>o.id===input.offer_id)) throw new ApiFailure(409,"L'offerta deve essere verificata");
    const {data,error}=await ctx.db.from("campaigns").insert({...input,client_id:id,status:"draft"}).select().single();
    dbError(error,"Campagna non creata");await audit(ctx,id,"campaign_created",data.id);
@@ -129,7 +172,10 @@ export async function POST(request:Request,{params}:Params){
    const input=await read(request,missionSchema);
    const context=await contextForAI(ctx,id);
    if(context.dossier?.status!=="approved")throw new ApiFailure(409,"Approva un dossier attuale prima di affidare una campagna agli agenti");
+   if(context.strategy?.status!=="approved"||context.strategy.knowledge_revision!==context.client.knowledge_revision)
+     throw new ApiFailure(409,"Approva prima il piano strategico attuale");
    if(input.offer_id && !context.offers.some(o=>o.id===input.offer_id))throw new ApiFailure(409,"Offerta non confermata");
+   await reserveAiRequest(ctx,id,"mission");
    const {data,error}=await ctx.db.from("missions").insert({client_id:id,request:input.request,status:"running"}).select().single();
    dbError(error,"Missione non avviata");
    const result=await executeMission(ctx,id,data.id,input.request,input.period,input.offer_id||null);
@@ -150,6 +196,7 @@ export async function POST(request:Request,{params}:Params){
   }
   if(p.length===3 && p[2]==="messages"){
    const input=await read(request,chatSchema);
+   await reserveAiRequest(ctx,id,"chat");
    const {error}=await ctx.db.from("messages").insert({client_id:id,role:"user",body:input.body});
    dbError(error,"Messaggio non inviato");
    const result=await handleLeaderMessage(ctx,id,input.body);
@@ -185,6 +232,7 @@ export async function POST(request:Request,{params}:Params){
    const docFormat=original.format==="carousel"?"document":"post";
    const schema=z.object({title:z.string().min(1).max(240),caption:z.string().max(12000),
     slides:z.array(z.object({headline:z.string().max(240),body:z.string().max(1000),visual_prompt:z.string().max(1000).optional()})).max(20)});
+   await reserveAiRequest(ctx,id,"adapt");
    const revised=await modelJson(lowTrustRule+"\nRole: LinkedIn editor. Reframe an Instagram asset for LinkedIn professionals; not just a literal translation. Output professional copy and document pages when original carousel. No unsupported claims.",
       "ORIGINALE JSON:\n"+JSON.stringify(original).slice(0,24000),schema);
    const {data,error:writeError}=await ctx.db.from("contents").insert({
@@ -226,8 +274,7 @@ export async function POST(request:Request,{params}:Params){
    return json({source:data,extracted:extraction.status==="ready"});
   }
   if(p.length===3 && p[2]==="upload"){
-   if(Number(request.headers.get("content-length")||0)>11_000_000)throw new ApiFailure(413,"File troppo grande");
-   const form=await request.formData(),file=form.get("file");
+   const form=await readMultipartForm(request,11_000_000),file=form.get("file");
    if(!(file instanceof File))throw new ApiFailure(400,"Seleziona un file");
    if(file.size>10_000_000||file.size===0)throw new ApiFailure(413,"Dimensione non valida");
    const allowed=["text/plain","text/markdown","text/csv","application/pdf","application/vnd.openxmlformats-officedocument.wordprocessingml.document","image/png","image/jpeg","image/webp"];
@@ -235,6 +282,12 @@ export async function POST(request:Request,{params}:Params){
    const safeName=file.name.replace(/[^a-z0-9._-]/gi,"_").slice(0,90);
    const path=id+"/"+crypto.randomUUID()+"/"+safeName;
    const bytes=new Uint8Array(await file.arrayBuffer());
+   // Reject malformed archives and spoofed files before private Storage receives them.
+   try { assertSafeDocument(bytes,file.type,file.name); }
+   catch(error){
+     if(error instanceof DocumentSafetyError)throw new ApiFailure(415,error.message);
+     throw error;
+   }
    const uploaded=await ctx.db.storage.from("forgecy-sources").upload(path,bytes,{contentType:file.type,upsert:false});
    dbError(uploaded.error,"Caricamento non riuscito");
    const extraction=await extractDocument(bytes,file.type,file.name);
@@ -270,9 +323,18 @@ export async function PATCH(request:Request,{params}:Params){
   if(p.length===4 && p[2]==="contents"){
    const contentId=validId(p[3]);
    const input=await read(request,updateContentSchema.refine(x=>Object.keys(x).length>0));
-   const {data:current}=await ctx.db.from("contents").select("revision,offer_id,offer_version,parent_id,source_revision,status").eq("id",contentId).eq("client_id",id).maybeSingle();
+   const {data:current}=await ctx.db.from("contents").select("revision,offer_id,offer_version,parent_id,source_revision,status,format,slides").eq("id",contentId).eq("client_id",id).maybeSingle();
    if(!current)throw new ApiFailure(404,"Contenuto non trovato");
    if(input.status==="approved" && current.status==="stale")throw new ApiFailure(409,"La bozza è obsoleta: verificane le dipendenze prima di approvarla");
+   if(input.status==="approved"){
+     const finalSlides=Array.isArray(input.slides)?input.slides:
+       Array.isArray(current.slides)?current.slides as Array<{headline:string;body:string;layout?:"cover"|"content"|"quote"|"closing"}>:[];
+     if((current.format==="carousel"||current.format==="document")&&
+        (finalSlides.length<3||finalSlides.length>8))
+       throw new ApiFailure(422,"Caroselli e documenti richiedono fra 3 e 8 slide");
+     const problems=finalSlides.flatMap(slidePreflight).filter(x=>x.severity==="blocking");
+     if(problems.length)throw new ApiFailure(422,"Controllo grafico: "+problems[0].message);
+   }
    if(input.editorial_brief?.community_signal_ids?.length){
      const ids=input.editorial_brief.community_signal_ids;
      const {data:linked,error:linkedError}=await ctx.db.from("community_signals").select("id").eq("client_id",id).in("id",ids);

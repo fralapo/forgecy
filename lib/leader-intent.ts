@@ -2,11 +2,11 @@ import { z } from "zod";
 import type { Context } from "./http";
 import { ApiFailure,dbError } from "./http";
 import { lowTrustRule,modelJson } from "./ai";
-import { contextForAI,draftDossier,executeMission,answerLeader } from "./agent-team";
+import { contextForAI,answerLeader } from "./agent-team";
 import { signalSchema } from "./schemas";
 
 const intentSchema=z.object({
- action:z.enum(["answer","campaign","dossier","signal"]),
+ action:z.enum(["answer","campaign","dossier","strategy","signal"]),
  signal:signalSchema.nullable().optional(),
  objective:z.string().max(2500).default(""),
  period:z.string().max(80).default("Prossimi 30 giorni"),
@@ -21,6 +21,7 @@ export async function handleLeaderMessage(ctx:Context,clientId:string,body:strin
   lowTrustRule+"\nYou are the routing coordinator. Classify the USER request only. "+
   "Choose campaign when user asks to CREATE a strategy, promotional campaign, content plan or post series. "+
   "Choose dossier when user asks for an initial or updated company analysis. "+
+  "Choose strategy when user asks for the overall company positioning, strategic plan, goals, KPI and 30/60/90-day direction; NOT for a particular campaign. "+
   "Choose signal ONLY for an explicit command to register an anonymized community question, objection, review or feedback. Return a proposed signal with valid type/platform and source details only if supplied; otherwise leave source_url null. "+
   "Choose answer for questions, greetings, explanations or edits that cannot be executed through supported operations. "+
   "Do not invent offer IDs; choose an exact ID only when clearly matched. "+
@@ -41,16 +42,29 @@ export async function handleLeaderMessage(ctx:Context,clientId:string,body:strin
    };
  }
  if(intent.action==="dossier"){
-   const dossier=await draftDossier(ctx,clientId);
+   const queued=await ctx.db.rpc("forgecy_enqueue_ai_job",{
+     p_client_id:clientId,p_kind:"dossier",p_payload:{}
+   });
+   dbError(queued.error,"Non posso accodare l'analisi: verifica il limite di lavori del cliente");
    return {
-    body:"Ho preparato una nuova bozza del dossier aziendale (versione "+dossier.version+
-     "). Apri Biblioteca → Analisi aziendale per verificare le fonti e approvarla. Nessuna strategia è stata applicata automaticamente.",
-    metadata:{kind:"dossier_draft",dossier_id:dossier.id}
+     body:"Ho accodato l'analisi aziendale. Gli agenti lavoreranno sulle fonti attuali e troverai il dossier in Biblioteca al termine. Non è ancora stato generato né approvato.",
+     metadata:{kind:"job_queued",job_id:queued.data}
    };
+ }
+ if(intent.action==="strategy"){
+   if(context.dossier?.status!=="approved")
+     return {body:"Il piano strategico deve partire da un dossier aziendale aggiornato e approvato. Completa prima l'analisi.",metadata:{kind:"blocked_missing_dossier"}};
+   const queued=await ctx.db.rpc("forgecy_enqueue_ai_job",{
+     p_client_id:clientId,p_kind:"strategy",p_payload:{}
+   });
+   dbError(queued.error,"Il piano strategico non può essere accodato");
+   return {body:"Ho accodato la preparazione del piano strategico aziendale. Sarà una bozza da esaminare in Biblioteca → Strategia prima di usarla per le campagne.",metadata:{kind:"job_queued",job_id:queued.data}};
  }
  if(intent.action==="campaign"){
    if(context.dossier?.status!=="approved")
     return {body:"Posso coordinare questa campagna, ma prima serve un dossier aziendale attuale e approvato. Apri Biblioteca → Analisi aziendale e completalo. Non avvio la produzione su informazioni non verificate.",metadata:{kind:"blocked_missing_dossier"}};
+   if(context.strategy?.status!=="approved"||context.strategy.knowledge_revision!==context.client.knowledge_revision)
+     return {body:"Prima approva il piano strategico aggiornato in Biblioteca → Strategia: le campagne devono rispettare una direzione aziendale validata.",metadata:{kind:"blocked_missing_strategy"}};
    if(intent.offer_id && !offers.some(o=>o.id===intent.offer_id))
     throw new ApiFailure(409,"L'offerta scelta non è verificata per questo cliente");
    // If a commercial objective mentions a product that is not explicitly matched,
@@ -60,17 +74,14 @@ export async function handleLeaderMessage(ctx:Context,clientId:string,body:strin
       body:"Ho riconosciuto l'obiettivo commerciale, ma non ho identificato con certezza il prodotto o servizio. Specifica quale offerta verificata intendi promuovere: "+offers.map(o=>o.name).join(", ")+".",
       metadata:{kind:"offer_clarification"}
     };
-   const {data:mission,error}=await ctx.db.from("missions").insert({
-    client_id:clientId,status:"running",request:intent.objective||body
-   }).select().single();
-   dbError(error,"Non è stato possibile avviare il team");
-   const result=await executeMission(ctx,clientId,mission.id,intent.objective||body,intent.period,intent.offer_id);
-   const camp=result.payload.campaign;
+   const queued=await ctx.db.rpc("forgecy_enqueue_ai_job",{
+     p_client_id:clientId,p_kind:"mission",
+     p_payload:{request:intent.objective||body,period:intent.period,offer_id:intent.offer_id}
+   });
+   dbError(queued.error,"Missione non accodata: verifica limiti e configurazione");
    return {
-    body:"Ho coordinato Analyst, Strategist, Copywriter/Art Director e Brand Guard. "+
-     "La proposta «"+camp.title+"» per "+intent.period+
-     " è pronta. Puoi controllare i passaggi degli agenti e approvarla qui in chat: non ho ancora creato la campagna.",
-    metadata:{kind:"campaign_proposal",mission_id:mission.id}
+     body:"Ho affidato l'obiettivo alla coda del Leader. Analyst, Strategist, Creative e Brand Guard elaboreranno la proposta. Comparirà in chat quando completa; nessuna campagna è stata approvata.",
+     metadata:{kind:"job_queued",job_id:queued.data}
    };
  }
  return {body:await answerLeader(ctx,clientId,body),metadata:{kind:"answer"}};
