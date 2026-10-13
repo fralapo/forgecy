@@ -12,5 +12,5 @@
 - [x] Extend `Context` in `lib/http.ts`, mark the checked worker context in `lib/job-runner.ts`, and route retrieval in `lib/knowledge-search.ts`. Re-run the focused test; keep normal session routing unchanged.
 - [x] Add `0018_worker_knowledge_search.sql`: SECURITY INVOKER, service-role-only execute grant, explicit client-owner check, 2–200-character query, 1–20 results and the existing chunk result contract.
 - [x] Add SQL worker search cases to the disposable CI suite: own-owner success, mismatched-owner rejection, null/oversized inputs and authenticated/anonymous denial. Add migration/test commands to the existing workflow.
-- [ ] Update installation references from 0017 to 0018, explain the worker RPC and run typecheck, lint, all Node tests, build and SQL CI. Check links and private-key exclusion.
-- [ ] Apply only migration 0018 to the initialized personal project, rebuild/restart locally and rerun the real-provider sample flow; remove temporary accounts, records and files. Publish the fix through a green PR.
+- [x] Update installation references from 0017 to 0018, explain the worker RPC and run typecheck, lint, all Node tests, build and SQL CI. Check links and private-key exclusion.
+- [x] Apply only migration 0018 to the initialized personal project, rebuild/restart locally and rerun the real-provider sample flow; remove temporary accounts, records and files. Publish the fix through a green PR.
