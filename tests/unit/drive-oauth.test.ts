@@ -11,7 +11,7 @@ test("desktop Drive OAuth uses loopback PKCE and rejects a mismatched callback s
   process.env.GOOGLE_DRIVE_CLIENT_ID = "test-project.apps.googleusercontent.com";
   process.env.FORGECY_DATA_DIR = directory;
   try {
-    const { beginGoogleDriveOAuth, googleDriveFlow } = await import("../../lib/sync/drive");
+    const { beginGoogleDriveOAuth, configureGoogleDriveClientId, googleDriveConfigured, googleDriveFlow } = await import("../../lib/sync/drive");
     const flow = await beginGoogleDriveOAuth();
     const authorization = new URL(flow.authorizationUrl);
     const redirect = new URL(authorization.searchParams.get("redirect_uri") || "");
@@ -28,6 +28,17 @@ test("desktop Drive OAuth uses loopback PKCE and rejects a mismatched callback s
     assert.equal(callback.status, 400);
     assert.match(await callback.text(), /Collegamento non riuscito/);
     assert.deepEqual(googleDriveFlow(flow.flowId), { status: "error", message: "Verifica OAuth non riuscita" });
+
+    delete process.env.GOOGLE_DRIVE_CLIENT_ID;
+    assert.deepEqual(configureGoogleDriveClientId("local-project.apps.googleusercontent.com"), { configured: true, source: "local" });
+    assert.equal(googleDriveConfigured(), true);
+    const localFlow = await beginGoogleDriveOAuth();
+    const localAuthorization = new URL(localFlow.authorizationUrl);
+    assert.equal(localAuthorization.searchParams.get("client_id"), "local-project.apps.googleusercontent.com");
+    const localRedirect = new URL(localAuthorization.searchParams.get("redirect_uri") || "");
+    const localCallback = await fetch(`${localRedirect.origin}/?state=mismatched&code=synthetic-code`);
+    assert.equal(localCallback.status, 400);
+    assert.throws(() => configureGoogleDriveClientId("not-a-google-client-id"), /Client ID Google valido/);
   } finally {
     if (previousClientId === undefined) delete process.env.GOOGLE_DRIVE_CLIENT_ID;
     else process.env.GOOGLE_DRIVE_CLIENT_ID = previousClientId;

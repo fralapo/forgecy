@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Cloud, Download, LoaderCircle, RefreshCw, Upload, Unplug } from "lucide-react";
 import { requestJson } from "./types";
 
-type Status = { configured: boolean; connected: boolean; folderId: string | null; lastSyncedAt: string | null; hasPreviousSync: boolean };
+type Status = { configured: boolean; clientIdSource: "environment" | "local" | "missing"; connected: boolean; folderId: string | null; lastSyncedAt: string | null; hasPreviousSync: boolean };
 type LocalBackup = { id: string; createdAt: string; size: number; hashPrefix: string };
 type Branch = { id: string; name: string; hash: string; parentHash: string };
 type SyncResult = { status: string; message: string; branches?: Branch[] };
@@ -13,6 +13,7 @@ export default function DriveSettings() {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [clientIdInput, setClientIdInput] = useState("");
   const [branches, setBranches] = useState<Branch[]>([]);
   const [backups, setBackups] = useState<LocalBackup[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -33,6 +34,15 @@ export default function DriveSettings() {
       await requestJson<{ backup: LocalBackup }>("/api/sync/backups", { method: "POST" });
       await loadBackups(); setMessage("Backup locale creato e verificato.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Backup locale non riuscito"); }
+    finally { setBusy(""); }
+  }
+
+  async function saveClientId() {
+    setBusy("Salvataggio Client ID…"); setError(""); setMessage("");
+    try {
+      await requestJson<{ configured: boolean; source: string }>("/api/sync/google/client-id", { method: "POST", body: JSON.stringify({ clientId: clientIdInput }) });
+      setClientIdInput(""); setMessage("Client ID salvato nella configurazione locale di Forgecy. Ora puoi collegare Google Drive."); await loadStatus();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Salvataggio Client ID non riuscito"); }
     finally { setBusy(""); }
   }
 
@@ -133,7 +143,18 @@ export default function DriveSettings() {
     {status && <div className="caption" role="status">{status.connected ? "Drive collegato su questo computer" : "Drive non collegato"}{status.lastSyncedAt ? ` · ultima sincronizzazione ${new Date(status.lastSyncedAt).toLocaleString("it-IT")}` : ""}</div>}
     {error && <div className="notice error" role="alert">{error}</div>}
     {message && <div className="notice" role="status">{message}</div>}
-    {!status?.configured && <div className="notice warn">Per collegare Drive, crea un OAuth Client ID di tipo applicazione desktop nella Google Cloud Console, abilita Google Drive API e aggiungi <code>GOOGLE_DRIVE_CLIENT_ID</code> al file <code>.env.local</code>. I passaggi sono nella <a href="https://github.com/fralapo/forgecy/blob/main/docs/LOCAL_SETUP.md" target="_blank" rel="noreferrer">guida di configurazione</a>.</div>}
+    {status && status.clientIdSource !== "environment" && <div className={status.clientIdSource === "missing" ? "notice warn stack" : "notice stack"}>
+      <strong>{status.clientIdSource === "local" ? "Client ID Google configurato" : "Configura Google Drive"}</strong>
+      {status.clientIdSource === "local" && <span>Per sostituire il Client ID configurato, incolla quello nuovo qui sotto.</span>}
+      <span>Crea nella Google Cloud Console un OAuth Client ID di tipo <strong>applicazione desktop</strong> e abilita Google Drive API. Incolla qui il Client ID: è un identificativo pubblico, non la tua chiave API.</span>
+      <label className="stack">Client ID Google
+        <input autoComplete="off" inputMode="url" value={clientIdInput} onChange={event => setClientIdInput(event.target.value)} placeholder="123456789-abc.apps.googleusercontent.com" aria-describedby="drive-client-id-help" />
+      </label>
+      <span id="drive-client-id-help" className="caption">Viene salvato solo nella cartella dati privata di questo computer, non nel workspace, nei backup o su Drive.</span>
+      <button className="button" onClick={() => void saveClientId()} disabled={Boolean(busy) || !clientIdInput.trim()}><Check size={15}/> Salva Client ID</button>
+      <span className="caption">Istruzioni dettagliate nella <a href="https://github.com/fralapo/forgecy/blob/main/docs/LOCAL_SETUP.md" target="_blank" rel="noreferrer">guida di configurazione</a>.</span>
+    </div>}
+    {status?.clientIdSource === "environment" && <p className="caption">Client ID Google configurato in <code>.env.local</code>.</p>}
     <p className="caption">Per il primo consenso OAuth apri Forgecy nel browser del computer che lo ospita; il callback Google usa l’indirizzo locale <code>127.0.0.1</code>. Dopo aver collegato Drive dal computer, puoi avviare la sincronizzazione anche accedendo da remoto.</p>
     <div className="flex gap8" style={{ flexWrap: "wrap" }}>
       {!status?.connected

@@ -31,7 +31,36 @@ function dataDirectory() {
 }
 function statePath() { return join(dataDirectory(), "drive-sync.json"); }
 function tokenFilePath() { return join(dataDirectory(), "google-drive-oauth.json"); }
+function clientIdPath() { return join(dataDirectory(), "google-drive-client.json"); }
 function keyringEntry() { return new Entry(CREDENTIAL_SERVICE, CREDENTIAL_ACCOUNT); }
+
+function validGoogleClientId(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9._-]{1,160}\.apps\.googleusercontent\.com$/.test(value.trim());
+}
+function localGoogleClientId() {
+  try {
+    const value = (JSON.parse(readFileSync(clientIdPath(), "utf8")) as { clientId?: unknown }).clientId;
+    return validGoogleClientId(value) ? value.trim() : null;
+  } catch { return null; }
+}
+function googleClientConfiguration() {
+  const environmentClientId = process.env.GOOGLE_DRIVE_CLIENT_ID?.trim();
+  if (validGoogleClientId(environmentClientId)) return { clientId: environmentClientId, source: "environment" as const };
+  const clientId = localGoogleClientId();
+  return clientId ? { clientId, source: "local" as const } : { clientId: null, source: "missing" as const };
+}
+
+export function configureGoogleDriveClientId(value: unknown) {
+  if (!validGoogleClientId(value)) throw new ApiFailure(400, "Inserisci un Client ID Google valido che termina con .apps.googleusercontent.com");
+  const clientId = value.trim();
+  const path = clientIdPath();
+  const temporaryPath = `${path}.${randomUUID()}.tmp`;
+  writeFileSync(temporaryPath, JSON.stringify({ clientId }), { mode: 0o600, flag: "wx" });
+  try { chmodSync(temporaryPath, 0o600); } catch { /* Windows uses the app data directory ACL. */ }
+  try { renameSync(temporaryPath, path); }
+  catch (error) { try { unlinkSync(temporaryPath); } catch { /* Best effort cleanup of an interrupted config write. */ } throw error; }
+  return { configured: true, source: "local" as const };
+}
 
 async function readTokens(): Promise<Tokens | null> {
   try {
@@ -78,11 +107,11 @@ async function exchangeCode(form: URLSearchParams) {
   return result;
 }
 
-export function googleDriveConfigured() { return Boolean(process.env.GOOGLE_DRIVE_CLIENT_ID?.endsWith(".apps.googleusercontent.com")); }
+export function googleDriveConfigured() { return Boolean(googleClientConfiguration().clientId); }
 
 export async function beginGoogleDriveOAuth() {
-  const clientId = process.env.GOOGLE_DRIVE_CLIENT_ID?.trim();
-  if (!clientId || !clientId.endsWith(".apps.googleusercontent.com")) throw new ApiFailure(503, "Imposta GOOGLE_DRIVE_CLIENT_ID nel file .env.local per collegare Google Drive");
+  const { clientId } = googleClientConfiguration();
+  if (!clientId) throw new ApiFailure(503, "Imposta il Client ID Google nelle impostazioni Drive oppure nel file .env.local");
   const state = randomBytes(32).toString("base64url");
   const verifier = randomBytes(48).toString("base64url");
   const challenge = createHash("sha256").update(verifier).digest("base64url");
@@ -100,8 +129,9 @@ export async function beginGoogleDriveOAuth() {
         const redirectUri = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
         const result = await exchangeCode(new URLSearchParams({ client_id: clientId, code: callback.searchParams.get("code")!, code_verifier: verifier, grant_type: "authorization_code", redirect_uri: redirectUri }));
         const previous = await readTokens();
-        if (typeof result.refresh_token !== "string" && !previous?.refreshToken) throw new Error("Google non ha fornito un token di aggiornamento; ripeti il collegamento con accesso offline");
-        await writeTokens({ clientId, refreshToken: String(result.refresh_token || previous!.refreshToken), accessToken: String(result.access_token), expiresAt: Date.now() + Number(result.expires_in || 3600) * 1000 });
+        const reusableRefreshToken = previous?.clientId === clientId ? previous.refreshToken : null;
+        if (typeof result.refresh_token !== "string" && !reusableRefreshToken) throw new Error("Google non ha fornito un token di aggiornamento; ripeti il collegamento con accesso offline");
+        await writeTokens({ clientId, refreshToken: String(result.refresh_token || reusableRefreshToken), accessToken: String(result.access_token), expiresAt: Date.now() + Number(result.expires_in || 3600) * 1000 });
         flow.status = "connected"; flow.message = "Google Drive collegato";
         response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'" });
         response.end("<!doctype html><meta charset=utf-8><title>Forgecy</title><style>body{font:16px system-ui;max-width:36rem;margin:12vh auto;padding:0 1.5rem;color:#234b38}h1{font-size:1.5rem}p{line-height:1.6}</style><h1>Google Drive collegato a Forgecy</h1><p>Puoi tornare all'app. Questa finestra può essere chiusa.</p>");
@@ -140,13 +170,14 @@ export function googleDriveFlow(flowId: string) {
 export async function googleDriveStatus() {
   const tokens = await readTokens();
   const state = readState();
-  return { configured: googleDriveConfigured(), connected: Boolean(tokens?.refreshToken), folderId: state.folderId || null, lastSyncedAt: state.lastSyncedAt || null, hasPreviousSync: Boolean(state.lastSyncedHash) };
+  const client = googleClientConfiguration();
+  return { configured: Boolean(client.clientId), clientIdSource: client.source, connected: Boolean(tokens?.refreshToken && tokens.clientId === client.clientId), folderId: state.folderId || null, lastSyncedAt: state.lastSyncedAt || null, hasPreviousSync: Boolean(state.lastSyncedHash) };
 }
 
 async function validTokens(forceRefresh = false): Promise<Tokens> {
   const tokens = await readTokens();
   if (!tokens?.refreshToken) throw new ApiFailure(409, "Collega Google Drive prima di sincronizzare");
-  if (tokens.clientId !== process.env.GOOGLE_DRIVE_CLIENT_ID) throw new ApiFailure(409, "GOOGLE_DRIVE_CLIENT_ID è cambiato: ricollega Google Drive");
+  if (tokens.clientId !== googleClientConfiguration().clientId) throw new ApiFailure(409, "Il Client ID Google è cambiato: ricollega Google Drive");
   if (!forceRefresh && tokens.accessToken && (tokens.expiresAt || 0) > Date.now() + 60_000) return tokens;
   const form = new URLSearchParams({ client_id: tokens.clientId, refresh_token: tokens.refreshToken, grant_type: "refresh_token" });
   const response = await fetch(GOOGLE_TOKEN, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: form, signal: AbortSignal.timeout(20_000), cache: "no-store" });
