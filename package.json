@@ -3,12 +3,15 @@
   "version": "13.0.0",
   "private": true,
   "scripts": {
+    "prepare": "node scripts/setup-git-hooks.mjs",
     "dev": "next dev --hostname 127.0.0.1",
     "build": "next build",
     "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "node --test tests/*.test.mjs && tsx --test tests/unit/*.test.ts"
+    "test": "node --test tests/*.test.mjs && tsx --test tests/unit/*.test.ts",
+    "security:scan": "node scripts/secret-scan.mjs --tracked",
+    "security:hooks": "git config core.hooksPath .githooks"
   },
   "engines": {
     "node": ">=22.18.0"

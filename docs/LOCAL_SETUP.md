@@ -12,6 +12,8 @@ cp .env.example .env.local
 npm run dev
 ```
 
+Durante `npm install` Forgecy abilita controlli Git locali: i commit e i push vengono bloccati se le modifiche contengono formati noti di credenziali. La CI esegue anche Gitleaks sulla cronologia e `npm run security:scan` sui file tracciati. I controlli mostrano il percorso e il tipo di credenziale rilevato, mai il valore. `.env.local` è escluso da Git.
+
 Apri `http://localhost:3000`. Il server si lega all'interfaccia loopback per impostazione predefinita. Non esporre Forgecy su una rete pubblica: è un'app personale locale, senza autenticazione multiutente.
 
 Il database è creato automaticamente e aggiornato all'avvio. Percorsi predefiniti:
