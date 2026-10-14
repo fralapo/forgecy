@@ -64,9 +64,9 @@ In **Impostazioni → OCR e lettura dei documenti** selezioni il modello OpenRou
 
 ## Usare Google Drive per desktop come destinazione
 
-Forgecy non richiede un login Google. Installa e configura **Google Drive per desktop** sul computer che ospita Forgecy, attendi che la cartella Drive sia disponibile in Esplora file e seleziona in **Impostazioni → Backup e trasferimento** una sottocartella dedicata, per esempio `Forgecy Backups`. Forgecy scrive lì archivi autonomi; il client Google Drive li sincronizza come normali file. Puoi usare allo stesso modo una cartella sincronizzata da un altro servizio.
+Forgecy non richiede un login Google. Installa e configura **Google Drive per desktop** sul computer che ospita Forgecy, attendi che la cartella Drive sia disponibile in Esplora file e seleziona in **Impostazioni → Backup e trasferimento** una sottocartella dedicata, per esempio `Forgecy Backups`. Forgecy crea lì archivi autonomi; il client cloud è responsabile del caricamento online. Dopo il primo backup, verifica che il file `.forgecy.zip` compaia effettivamente su Drive prima di considerare attiva la copia remota. Puoi usare allo stesso modo una cartella sincronizzata da un altro servizio.
 
-La cartella scelta deve essere locale al computer che esegue Forgecy e scrivibile dal tuo utente. Non selezionare la cartella dati di Forgecy o una sua cartella genitore. Se il computer è spento o Drive non è disponibile, il client sincronizzerà i file quando torna online. Per usare i backup su un altro computer, scarica o copia un file `.forgecy.zip` e importalo dall'app: non aprire il database attivo da una cartella cloud e non lavorare contemporaneamente sullo stesso workspace da due computer.
+La cartella scelta deve essere locale al computer che esegue Forgecy e scrivibile dal tuo utente. Non selezionare la cartella dati di Forgecy o una sua cartella genitore. Se il computer è spento o il client cloud non è disponibile, la copia remota non è aggiornata finché il client non completa la sincronizzazione. Per usare i backup su un altro computer, scarica o copia un file `.forgecy.zip` e importalo dall'app: non aprire il database attivo da una cartella cloud e non lavorare contemporaneamente sullo stesso workspace da due computer.
 
 ## Esportare e importare
 

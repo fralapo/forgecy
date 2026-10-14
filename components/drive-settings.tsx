@@ -82,7 +82,7 @@ export default function DriveSettings() {
         <label className="stack">Cartella sul computer che ospita Forgecy
           <input autoComplete="off" spellCheck={false} value={draft.directory} onChange={event => setDraft({ ...draft, directory: event.target.value })} placeholder="Percorso assoluto della cartella" />
         </label>
-        <p className="caption">Inserisci un percorso locale completo, per esempio la cartella Forgecy dentro Google Drive per desktop. La cartella deve essere disponibile al computer che esegue Forgecy; da telefono non puoi selezionare una cartella del server.</p>
+        <p className="caption">Inserisci un percorso locale completo, per esempio una sottocartella di Google Drive per desktop. Forgecy crea qui il file di backup; il caricamento online dipende dal client cloud installato. Dopo il primo backup, controlla che il file <code>.forgecy.zip</code> sia visibile online prima di affidarti alla sincronizzazione. Da telefono non puoi selezionare una cartella del server.</p>
         <div className="flex gap8" style={{ flexWrap: "wrap" }}>
           <label className="stack">Crea una copia ogni
             <select value={draft.intervalHours} onChange={event => setDraft({ ...draft, intervalHours: Number(event.target.value) })}>
