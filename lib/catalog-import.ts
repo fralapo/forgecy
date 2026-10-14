@@ -17,6 +17,8 @@ const productSchema=z.object({
  image_index:z.number().int().min(0).max(7).nullable().default(null)
 }).strict();
 export const catalogExtractionSchema=z.object({products:z.array(productSchema).max(40)}).strict();
+/** The model response is parsed without a hard array ceiling, then capped before reconciliation. */
+export const catalogExtractionModelSchema=z.object({products:z.array(productSchema)}).strict();
 export type CatalogExtraction=z.infer<typeof catalogExtractionSchema>;
 
 export function normalizeCatalogName(value:string){

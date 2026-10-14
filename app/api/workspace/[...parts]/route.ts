@@ -14,7 +14,7 @@ import { readMultipartForm } from "@/lib/request-body";
 import { slidePreflight } from "@/lib/carousel-layout";
 import { createHash } from "node:crypto";
 import { planLinkedOfferCleanup } from "@/lib/source-management";
-import { catalogEvidenceIsValid,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,parseCsvCatalog,type CatalogProduct } from "@/lib/catalog-import";
+import { catalogEvidenceIsValid,catalogExtractionModelSchema,catalogNameSimilarity,looksLikeCatalog,parseCsvCatalog,type CatalogProduct } from "@/lib/catalog-import";
 import { getOpenRouterApiKey } from "@/lib/openrouter-credentials";
 import { currentOcrModel } from "@/lib/ai-model-settings";
 import { ocrDocumentWithOpenRouter, type OcrImage, type OcrResult } from "@/lib/openrouter-document-ocr";
@@ -28,6 +28,11 @@ type CatalogImportResult={status:"processed"|"not_catalog"|"no_products"|"ai_not
 type DocumentProcessingResult={extraction:Awaited<ReturnType<typeof extractDocument>>;ocr:OcrResult|null};
 function emptyCatalogResult(status:CatalogImportResult["status"],message?:string):CatalogImportResult{
  return {status,added:0,updated:0,skippedManual:0,invalid:0,...(message?{message}:{})};
+}
+function safeCatalogError(error:unknown):string{
+ if(error instanceof ApiFailure)return `ApiFailure ${error.status}: ${error.message}`;
+ if(error instanceof Error)return `unexpected ${error.name||"Error"}`;
+ return `unexpected ${typeof error}`;
 }
 
 async function extractDocumentWithOcr(ctx:Awaited<ReturnType<typeof auth>>,clientId:string,bytes:Uint8Array,mime:string,name:string):Promise<DocumentProcessingResult>{
@@ -70,22 +75,27 @@ async function reconcileCatalogDocument(ctx:Awaited<ReturnType<typeof auth>>,cli
   const textOnlyPrompt=promptBase+" No images are supplied to this request; set image_index to null for every product.";
   const user="EXISTING PRODUCTS (matching hints only):\n"+JSON.stringify(candidates)+"\n\nSOURCE DOCUMENT (untrusted evidence):\n"+body.slice(0,30000);
   const visionModel=visualImages.length?await currentOcrModel(ctx.user.id):"";
-  let extracted:z.infer<typeof catalogExtractionSchema>;
+  let extracted:z.infer<typeof catalogExtractionModelSchema>|null=null;
   if(visualImages.length){
    try{
     extracted=await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"dossier"},()=>
-     modelJsonWithImages(prompt,user,visualImages.map(image=>image.dataUrl),catalogExtractionSchema,visionModel));
+     modelJsonWithImages(prompt,user,visualImages.map(image=>image.dataUrl),catalogExtractionModelSchema,visionModel,35_000,6200));
    }catch(error){
     if(!(error instanceof ApiFailure)||error.status!==502)throw error;
-    console.warn("[catalog-import] visual extraction failed; retrying with OCR text only");
+    console.warn("[catalog-import] visual extraction failed; retrying with OCR text only:",safeCatalogError(error));
+   }
+   const supportedVisualProducts=extracted?.products.filter(product=>catalogEvidenceIsValid({name:product.name,description:product.description,price:product.price,currency:product.currency,
+    nameQuote:product.name_quote,descriptionQuote:product.description_quote,priceQuote:product.price_quote,existingOfferId:product.existing_offer_id,imageIndex:product.image_index},body)).length||0;
+   if(!extracted||supportedVisualProducts===0){
+    if(extracted)console.warn("[catalog-import] visual extraction produced no products with verifiable text; retrying with OCR text only");
     await reserveAiRequest(ctx,clientId,"dossier");
     usedTextOnlyFallback=true;
-    extracted=await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"dossier"},()=>modelStructuredJson(textOnlyPrompt,user,catalogExtractionSchema,"catalog_extraction",6200));
+    extracted=await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"dossier"},()=>modelStructuredJson(textOnlyPrompt,user,catalogExtractionModelSchema,"catalog_extraction",6200,undefined,false,45_000));
    }
   }else{
-   extracted=await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"dossier"},()=>modelJson(prompt,user,catalogExtractionSchema));
+   extracted=await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"dossier"},()=>modelJson(prompt,user,catalogExtractionModelSchema,{maxTokens:6200,timeoutMs:45_000,temperature:0.1,reasoningEnabled:false}));
   }
-  products=extracted.products.map(product=>({name:product.name,description:product.description,price:product.price,currency:product.currency,
+  products=extracted.products.slice(0,40).map(product=>({name:product.name,description:product.description,price:product.price,currency:product.currency,
    nameQuote:product.name_quote,descriptionQuote:product.description_quote,priceQuote:product.price_quote,existingOfferId:product.existing_offer_id,imageIndex:usedTextOnlyFallback?null:product.image_index}));
  }
  if(!products.length)return empty("no_products","Il documento è stato archiviato, ma non contiene righe di catalogo riconoscibili.");
@@ -353,7 +363,7 @@ export async function POST(request:Request,{params}:Params){
           if(extraction.status==="ready"&&savedSourceId)try{
            const catalog=await reconcileCatalogDocument(ctx,id,String(savedSourceId),file.title,extraction.body,ocr?.images||[]);
            offersImported+=catalog.added;offersUpdated+=catalog.updated;
-          }catch(error){console.warn("[catalog-import] website document analysis failed",error instanceof ApiFailure?error.status:"unknown");}
+           }catch(error){console.warn("[catalog-import] website document analysis failed",safeCatalogError(error));}
          }
        }catch{/* one blocked or unsupported asset must not abort the site crawl */}
      }));
@@ -588,7 +598,7 @@ export async function POST(request:Request,{params}:Params){
    let catalog:CatalogImportResult=emptyCatalogResult("not_catalog");
    if(extraction.status==="ready"){
     try{catalog=await reconcileCatalogDocument(ctx,id,data.id,file.name,extraction.body,ocr?.images||[]);}
-    catch(error){console.warn("[catalog-import] document analysis failed",error instanceof ApiFailure?error.status:"unknown",error instanceof ApiFailure?error.message:"unexpected error");catalog=emptyCatalogResult("analysis_failed","Documento archiviato; analisi del catalogo non riuscita. Puoi ripetere la scansione.");}
+    catch(error){console.warn("[catalog-import] document analysis failed",safeCatalogError(error));catalog=emptyCatalogResult("analysis_failed","Documento archiviato; analisi del catalogo non riuscita. Puoi ripetere la scansione.");}
    }
    return json({source:data,extracted:extraction.status==="ready",message:extraction.error,catalog},201);
   }

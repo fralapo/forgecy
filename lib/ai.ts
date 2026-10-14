@@ -14,6 +14,23 @@ function responseContentText(content:unknown):string{
     return block.type==="text"&&typeof block.text==="string"?[block.text]:[];
   }).join("\n").trim();
 }
+function safeResponseShape(value:unknown){
+  if(value===null||typeof value!=="object")return {responseType:typeof value};
+  const root=value as {model?:unknown;choices?:unknown;usage?:unknown};
+  const choice=Array.isArray(root.choices)?root.choices[0] as Record<string,unknown>|undefined:undefined;
+  const message=choice?.message&&typeof choice.message==="object"?choice.message as Record<string,unknown>:{};
+  const content=message.content;
+  const usage=root.usage&&typeof root.usage==="object"?root.usage as Record<string,unknown>:{};
+  return {
+    model:typeof root.model==="string"?root.model.slice(0,120):null,
+    finishReason:typeof choice?.finish_reason==="string"?choice.finish_reason:null,
+    contentType:typeof content,
+    contentBlockTypes:Array.isArray(content)?content.slice(0,12).map(block=>block&&typeof block==="object"&&"type" in block?String((block as {type:unknown}).type).slice(0,40):"unknown"):undefined,
+    refusal:Boolean(message.refusal),
+    hasReasoning:typeof message.reasoning==="string"&&message.reasoning.length>0,
+    completionTokens:typeof usage.completion_tokens==="number"?usage.completion_tokens:null
+  };
+}
 async function openRouterFetch(init:RequestInit):Promise<Response>{
   try{return await fetch("https://openrouter.ai/api/v1/chat/completions",init);}
   catch(error){
@@ -50,7 +67,8 @@ export async function modelText(messages:Msg[], timeout=25000):Promise<string>{
   if(!content) throw new ApiFailure(502,"Il provider AI non ha restituito testo");
   return content;
 }
-export async function modelJson<T>(system:string,user:string,schema:z.ZodType<T>):Promise<T>{
+export type JsonRequestOptions={maxTokens?:number;timeoutMs?:number;temperature?:number;reasoningEnabled?:boolean};
+export async function modelJson<T>(system:string,user:string,schema:z.ZodType<T>,options:JsonRequestOptions={}):Promise<T>{
   const model=currentTextModel();
   const jsonSchema=z.toJSONSchema(schema,{target:"draft-7"});
   const apiKey=await getOpenRouterApiKey();
@@ -64,23 +82,26 @@ export async function modelJson<T>(system:string,user:string,schema:z.ZodType<T>
     },
     body:JSON.stringify({
       model,
-      temperature:0.35,max_tokens:3000,
+      temperature:options.temperature??0.35,max_tokens:options.maxTokens??3000,
+      ...(options.reasoningEnabled===undefined?{}:{reasoning:{enabled:options.reasoningEnabled}}),
       messages:[
         {role:"system",content:system+"\nRestituisci un oggetto JSON che rispetta esattamente questo schema. Non omettere campi richiesti e non aggiungere spiegazioni o markdown:\n"+JSON.stringify(jsonSchema)},
         {role:"user",content:user}
       ],
       response_format:{type:"json_object"},plugins:[{id:"response-healing"}],usage:{include:true}
     }),
-    signal:AbortSignal.timeout(60_000),cache:"no-store"
+    signal:AbortSignal.timeout(options.timeoutMs??60_000),cache:"no-store"
   });
   if(!response.ok){
     console.error("[openrouter json] HTTP",response.status);
     throw new ApiFailure(502,"Il provider AI non ha completato la richiesta JSON (HTTP "+response.status+").");
   }
-  const answer=await response.json() as {choices?:Array<{message?:{content?:unknown}}>};
+  let answer:{choices?:Array<{message?:{content?:unknown}}>};
+  try{answer=await response.json() as typeof answer;}
+  catch(error){throw new ApiFailure(502,error instanceof DOMException&&error.name==="TimeoutError"?"Il provider AI ha superato il tempo limite durante la risposta JSON.":"Il provider AI ha restituito una risposta JSON non valida.");}
   await recordAiProviderUsage("openrouter",model,answer);
   const content=responseContentText(answer.choices?.[0]?.message?.content);
-  if(!content)throw new ApiFailure(502,"Il provider AI non ha restituito JSON");
+  if(!content){console.warn("[openrouter json] empty response",safeResponseShape(answer));throw new ApiFailure(502,"Il provider AI non ha restituito JSON");}
   let parsed:unknown;
   try {parsed=JSON.parse(content);}
   catch {throw new ApiFailure(502,"Il provider ha restituito JSON non valido");}
@@ -96,7 +117,7 @@ export async function modelJson<T>(system:string,user:string,schema:z.ZodType<T>
 }
 
 /** Structured extraction with bounded PDF-derived image evidence and an explicit vision-capable model. */
-export async function modelJsonWithImages<T>(system:string,user:string,images:string[],schema:z.ZodType<T>,model:string):Promise<T>{
+export async function modelJsonWithImages<T>(system:string,user:string,images:string[],schema:z.ZodType<T>,model:string,timeoutMs=60_000,maxTokens=6200):Promise<T>{
   if(images.length>8||images.some(image=>!/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/u.test(image)))
     throw new ApiFailure(422,"Le immagini del documento non sono in un formato supportato.");
   const apiKey=await getOpenRouterApiKey();
@@ -106,20 +127,22 @@ export async function modelJsonWithImages<T>(system:string,user:string,images:st
     method:"POST",
     headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json",
       "HTTP-Referer":process.env.OPENROUTER_SITE_URL||"http://localhost:3000","X-Title":"Forgecy"},
-    body:JSON.stringify({model,temperature:0.1,max_tokens:3000,
+    body:JSON.stringify({model,temperature:0.1,max_tokens:maxTokens,reasoning:{enabled:false},
       messages:[{role:"system",content:system+"\nRestituisci un oggetto JSON che rispetta esattamente questo schema. Non aggiungere spiegazioni o markdown:\n"+JSON.stringify(jsonSchema)},
         {role:"user",content:[{type:"text",text:user},...images.map(url=>({type:"image_url",image_url:{url}}))]}],
       response_format:{type:"json_object"},plugins:[{id:"response-healing"}],usage:{include:true}}),
-    signal:AbortSignal.timeout(60_000),cache:"no-store"
+    signal:AbortSignal.timeout(timeoutMs),cache:"no-store"
   });
   if(!response.ok){
     console.error("[openrouter vision json] HTTP",response.status);
     throw new ApiFailure(502,"Il modello visivo non ha completato l'estrazione strutturata (HTTP "+response.status+").");
   }
-  const answer=await response.json() as {choices?:Array<{message?:{content?:unknown}}>};
+  let answer:{choices?:Array<{message?:{content?:unknown}}>};
+  try{answer=await response.json() as typeof answer;}
+  catch(error){throw new ApiFailure(502,error instanceof DOMException&&error.name==="TimeoutError"?"Il modello visivo ha superato il tempo limite durante la risposta JSON.":"Il modello visivo ha restituito una risposta non valida.");}
   await recordAiProviderUsage("openrouter",model,answer);
   const content=responseContentText(answer.choices?.[0]?.message?.content);
-  if(!content)throw new ApiFailure(502,"Il modello visivo non ha restituito JSON.");
+  if(!content){console.warn("[openrouter vision json] empty response",safeResponseShape(answer));throw new ApiFailure(502,"Il modello visivo non ha restituito JSON.");}
   let parsed:unknown;
   try{parsed=JSON.parse(content);}catch{throw new ApiFailure(502,"Il modello visivo ha restituito JSON non valido.");}
   const checked=schema.safeParse(parsed);
@@ -139,7 +162,7 @@ export const lowTrustRule=[
 /** Strict OpenRouter JSON Schema responses for durable company dossiers. No silent mock fallback. */
 export async function modelStructuredJson<T>(
   system:string,user:string,schema:z.ZodType<T>,name="forgecy_dossier",maxTokens=6200,
-  keyProvider:()=>Promise<string|null>=getOpenRouterApiKey
+  keyProvider:()=>Promise<string|null>=getOpenRouterApiKey,reasoningEnabled?:boolean,timeoutMs=60_000
 ):Promise<T>{
   const model=currentTextModel();
   const key=await keyProvider();
@@ -154,20 +177,23 @@ export async function modelStructuredJson<T>(
     },
     body:JSON.stringify({
       model,
-      temperature:0.1,max_completion_tokens:maxTokens,reasoning_effort:"low",
+      temperature:0.1,max_completion_tokens:maxTokens,
+      ...(reasoningEnabled===undefined?{reasoning_effort:"low"}:{reasoning:{enabled:reasoningEnabled}}),
       provider:{require_parameters:true},
       messages:[{role:"system",content:system},{role:"user",content:user}],
       response_format:{type:"json_schema",json_schema:{name,strict:true,schema:jsonSchema}},
       plugins:[{id:"response-healing"}],
       usage:{include:true}
     }),
-    signal:AbortSignal.timeout(60_000),cache:"no-store"
+    signal:AbortSignal.timeout(timeoutMs),cache:"no-store"
   });
   if(!response.ok){
     console.error("[openrouter structured] HTTP",response.status);
     throw new ApiFailure(502,"OpenRouter non ha generato il dossier strutturato (HTTP "+response.status+"). Verifica che il modello supporti JSON Schema.");
   }
-  const answer=await response.json() as {choices?:Array<{message?:{content?:unknown;refusal?:string}}>};
+  let answer:{choices?:Array<{message?:{content?:unknown;refusal?:string}}>};
+  try{answer=await response.json() as typeof answer;}
+  catch(error){throw new ApiFailure(502,error instanceof DOMException&&error.name==="TimeoutError"?"OpenRouter ha superato il tempo limite durante il dossier JSON.":"OpenRouter ha restituito una risposta JSON non valida.");}
   await recordAiProviderUsage("openrouter",model,answer);
   const content=responseContentText(answer.choices?.[0]?.message?.content);
   if(!content)throw new ApiFailure(502,"Il modello non ha restituito un dossier");
