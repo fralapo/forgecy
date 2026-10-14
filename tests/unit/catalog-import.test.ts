@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog} from "../../lib/catalog-import";
+import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseMarkdownCatalogTable} from "../../lib/catalog-import";
 
 test("catalog names normalize accents and punctuation for safe matching",()=>{
  assert.equal(normalizeCatalogName("Caffè — Espresso 100%"),"caffe espresso 100");
@@ -48,4 +48,14 @@ test("catalog model responses can be parsed before the importer caps them at 40 
  const product={name:"Prodotto valido",description:"",price:null,currency:"EUR",name_quote:"Prodotto valido",description_quote:"",price_quote:"",existing_offer_id:null,image_index:null};
  assert.equal(catalogExtractionSchema.safeParse({products:Array.from({length:41},()=>product)}).success,false);
  assert.equal(catalogExtractionModelSchema.safeParse({products:Array.from({length:41},()=>product)}).success,true);
+});
+
+test("OCR Markdown price tables are imported deterministically with exact row evidence",()=>{
+ const source="Listino prodotti\n| Modello | Codice | Prezzo listino (IVA excl.) |\n| --- | --- | --- |\n| CL5000iL/Set 35 4CCE unità interna a cassetta | 7733701908 | 1.690,00 € |\n| CL5000iL/Set 53 4CCE unità interna a cassetta | 7733701909 | 2.180,00 € |\n\nPagina successiva\n| Modello | Codice | Prezzo listino (IVA excl.) |\n| --- | --- | --- |\n| CL5000iL/Set 70 4CE unità interna a cassetta | 7733701910 | 2.610,00 € |";
+ const products=parseMarkdownCatalogTable(source);
+ assert.equal(products.length,3);
+ assert.equal(products[0].name,"CL5000iL/Set 35 4CCE unità interna a cassetta");
+ assert.equal(products[0].price,1690);
+ assert.equal(products[0].priceQuote,"1.690,00 €");
+ assert.equal(catalogEvidenceIsValid(products[0],source),true);
 });

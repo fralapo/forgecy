@@ -345,7 +345,7 @@ export default function ModelSettings() {
     </div>}
     <article className="card stack">
       <div className="flex center gap8"><Settings2 size={18}/><h2>OCR e lettura dei documenti</h2></div>
-      <p className="caption">L’OCR viene eseguito solo tramite OpenRouter: Forgecy non usa motori OCR locali. Per velocizzare l’elaborazione, i PDF con testo incorporato e i formati testuali vengono letti senza OCR; PDF scannerizzati e immagini sono inviati al modello API selezionato. L’estrazione AI dei campi prodotto da un catalogo è una fase separata e può inviare il testo e le immagini estratti.</p>
+      <p className="caption">L’OCR viene eseguito solo tramite OpenRouter: Forgecy non usa motori OCR locali. I PDF con testo incorporato e i formati testuali vengono letti senza OCR; PDF scannerizzati e immagini sono inviati al modello API selezionato. CSV e tabelle Markdown con colonne prodotto e prezzo vengono confrontati localmente; per cataloghi non tabellari l’estrazione AI è una fase separata e può inviare testo e immagini a OpenRouter.</p>
       {catalog&&<><ModelSelector kind="vision" label="Modello OpenRouter per OCR API e documenti" selectedId={catalog.preferences.ocrModel||DEFAULT_OCR_MODEL}
           models={catalog.visionModels} unavailable={!catalog.visionModels.some(model=>model.id===(catalog.preferences.ocrModel||DEFAULT_OCR_MODEL))}
           recommendedId={DEFAULT_OCR_MODEL} disabled={Boolean(saving)} onChange={id=>void selectModel("ocr",id)} />
