@@ -21,8 +21,12 @@ test("local storage and loopback worker are the active architecture", () => {
   const database = readFileSync("lib/local-db/index.ts", "utf8");
   const worker = readFileSync("lib/local-worker.ts", "utf8");
   const config = readFileSync("proxy.ts", "utf8");
+  const access = readFileSync("lib/tailscale-access.ts", "utf8");
+  const manifest = JSON.parse(readFileSync("package.json", "utf8"));
   assert.match(database, /forgecy\.sqlite/);
   assert.match(database, /journal_mode = WAL/i);
   assert.match(worker, /processNextJob/);
-  assert.match(config, /localhost|127\.0\.0\.1/);
+  assert.match(access, /localhost.*127\.0\.0\.1/);
+  assert.match(manifest.scripts["start:tailscale"], /--hostname 127\.0\.0\.1/);
+  assert.match(config, /FORGECY_TAILSCALE_ALLOWED_USER/);
 });

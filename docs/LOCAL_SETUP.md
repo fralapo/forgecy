@@ -36,10 +36,26 @@ Apri **Impostazioni** nell'app, anche prima di creare il primo cliente, incolla 
 | `OPENROUTER_MODEL` | Modello testo di ripiego se non è impostato un modello nelle preferenze locali. Il valore predefinito è DeepSeek Flash Latest. |
 | `OPENROUTER_SITE_URL` | Identificativo facoltativo inviato nei metadati OpenRouter. |
 | `APP_ORIGIN` | Origine esatta locale, necessaria con `npm run start`; esempio `http://localhost:3000`. |
+| `FORGECY_TAILSCALE_ALLOWED_USER` | Facoltativa; login Tailscale esatto autorizzato a passare da Serve. Non è una chiave e resta in `.env.local`. |
+| `FORGECY_TAILSCALE_HOST` | Facoltativa; hostname MagicDNS HTTPS esatto mostrato da `tailscale serve status`, senza schema né porta. |
 | `GOOGLE_DRIVE_CLIENT_ID` | Facoltativo; OAuth Client ID Google di tipo applicazione desktop, richiesto solo per Drive. |
 | `ENABLE_WEBSITE_INGEST` | Facoltativa; l'importazione dei siti è attiva per impostazione predefinita. Imposta `false` per disabilitarla. |
 
 Non usare il prefisso `NEXT_PUBLIC_` per chiavi private.
+
+### Accesso dal telefono via Tailscale
+
+Forgecy può essere raggiunto dal telefono solo tramite Tailscale Serve. Il backend continua ad ascoltare su loopback; il proxy accetta l'hostname tailnet HTTPS esatto configurato in `FORGECY_TAILSCALE_HOST` solo quando Serve inoltra l'identità Tailscale e il login corrisponde a `FORGECY_TAILSCALE_ALLOWED_USER`. Il server non accetta richieste da altri host o utenti del tailnet. Non attivare Funnel, port forwarding o un bind sulla rete locale.
+
+Sul computer server:
+
+1. Accedi a Tailscale con lo stesso account autorizzato anche sul telefono e abilita HTTPS/Serve per il tailnet.
+2. Imposta in `.env.local` il login esatto in `FORGECY_TAILSCALE_ALLOWED_USER` e l'hostname `*.ts.net` mostrato da Serve in `FORGECY_TAILSCALE_HOST`.
+3. Avvia `npm run dev:tailscale` durante lo sviluppo oppure esegui `npm run build` e `npm run start:tailscale` per la versione di produzione.
+4. Controlla `tailscale serve status`: il proxy HTTPS deve puntare a `http://127.0.0.1:7693` ed essere disponibile solo nel tailnet.
+5. Dal telefono, con Tailscale connesso, apri il nome HTTPS `*.ts.net` mostrato da Serve.
+
+La regola di accesso Tailscale deve consentire al tuo telefono di raggiungere il nodo server. Il solo fatto che il telefono sia nel tailnet non autorizza altri account: Forgecy verifica anche l'identità inoltrata da Serve.
 
 ### Snapshot Instagram
 

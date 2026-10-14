@@ -5,8 +5,10 @@
   "scripts": {
     "prepare": "node scripts/setup-git-hooks.mjs",
     "dev": "next dev --hostname 127.0.0.1",
+    "dev:tailscale": "next dev --hostname 127.0.0.1 --port 7693",
     "build": "next build",
     "start": "next start --hostname 127.0.0.1",
+    "start:tailscale": "next start --hostname 127.0.0.1 --port 7693",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "node --test tests/*.test.mjs && tsx --test tests/unit/*.test.ts",
