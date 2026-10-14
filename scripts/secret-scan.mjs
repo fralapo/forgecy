@@ -62,7 +62,14 @@ try {
   } else if (mode === '--tracked') {
     const files = git(['ls-files', '-z']).split('\0').filter(Boolean);
     lines = files.flatMap((file) => {
-      return readFileSync(file, 'utf8').split(/\r?\n/).map((line) => ({ file, line }));
+      try {
+        return readFileSync(file, 'utf8').split(/\r?\n/).map((line) => ({ file, line }));
+      } catch (error) {
+        // A tracked file can be deleted from the working tree while a change is being prepared.
+        // There is no working-tree content to inspect; outgoing/history scans cover committed content.
+        if (error.code === 'ENOENT') return [];
+        throw error;
+      }
     });
   } else {
     console.error('Usage: secret-scan.mjs --staged | --tracked | --range <base> <head> | --outgoing <head> | --self-test');
