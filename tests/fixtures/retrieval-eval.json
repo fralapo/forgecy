@@ -102,6 +102,13 @@
     "query": "Quanto costa la chiave a settore USAG U02820301?"
   },
   {
+    "id": "usag-282sn-35-50-sku-price",
+    "category": "catalog-sku-price",
+    "passage": "Catalogo-listino USAG 2026, pagina 110: chiave a settore snodata con nasello quadro per ghiere da 35-50 mm, codice U02820302, prezzo 29,00 EUR.",
+    "query": "Quanto costa la chiave a settore USAG per ghiere da 35-50 mm, codice U02820302?",
+    "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
+  },
+  {
     "id": "usag-283-curved-sku-price",
     "category": "catalog-sku-price",
     "passage": "Catalogo-listino USAG 2026, pagina 110: chiave poligonale doppia curva, misura 6x7 mm, codice U02831302, prezzo 9,15 EUR.",
