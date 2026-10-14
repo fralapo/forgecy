@@ -64,6 +64,13 @@ export default function Workspace(){
    })();
    return()=>{active=false};
  },[]);
+ useEffect(()=>{
+  let active=true;
+  const checkLocalOcrUpdate=()=>{if(active)void requestJson("/api/workspace/settings/ocr").catch(()=>undefined);};
+  const initial=window.setTimeout(checkLocalOcrUpdate,1800);
+  const timer=window.setInterval(checkLocalOcrUpdate,30*60_000);
+  return()=>{active=false;window.clearTimeout(initial);window.clearInterval(timer);};
+ },[]);
  useEffect(()=>{if(!clientId)return;let active=true;
   refresh(clientId).catch(e=>{if(active)setError(getError(e))});
   return()=>{active=false};
@@ -89,8 +96,23 @@ export default function Workspace(){
  async function onAction(name:string,body:Record<string,unknown>={}):Promise<unknown>{
   if(!clientId)return;
   const root=endpoint(clientId);
+  if(name==="deleteOffer")return mutate(name,()=>requestJson(root+"/offers/"+body.id,{method:"DELETE"}),"Prodotto o servizio eliminato; campagne e contenuti precedenti conservati senza il collegamento");
   if(name==="deleteSignal")return mutate(name,()=>requestJson(root+"/signals/"+body.id,{method:"DELETE"}),"Osservazione eliminata");
-  if(name==="reprocessDocument")return mutate(name,()=>requestJson(root+"/sources/"+body.id+"/process",{method:"POST",body:"{}"}),"Estrazione ripetuta");
+  if(name==="deleteSource")return mutate(name,()=>requestJson<{removedDraftOffers:number;preservedOffers:number}>(root+"/sources/"+body.id,{method:"DELETE"}).then(result=>{
+   flash(result.removedDraftOffers?`Fonte eliminata e rimossi ${result.removedDraftOffers} prodotti in bozza collegati.`:"Fonte eliminata.");return result;
+  }));
+  if(name==="rescanWebsite"){
+   const website=data?.client.website;
+   if(!website)throw new Error("Aggiungi prima il sito nel profilo del cliente");
+   return mutate(name,()=>requestJson<{message:string}>(root+"/website",{method:"POST",body:JSON.stringify({url:website,maxPages:100})}).then(result=>{flash(result.message);return result;}));
+  }
+  if(name==="reprocessDocument"){
+   const result=await mutate<{catalog?:{status:string;added:number;updated:number;skippedManual:number;message?:string}}>(name,()=>requestJson(root+"/sources/"+body.id+"/process",{method:"POST",body:"{}"}));
+   if(result?.catalog?.status==="processed")flash(`Catalogo aggiornato: ${result.catalog.added} aggiunti, ${result.catalog.updated} migliorati${result.catalog.skippedManual?`, ${result.catalog.skippedManual} modifiche manuali protette`:""}.`);
+   else if(result?.catalog?.message)flash(result.catalog.message);
+   else if(result)flash("Scansione della fonte completata");
+   return result;
+  }
   if(name==="dossierDraft")return mutate(name,()=>requestJson(root+"/jobs",{method:"POST",body:JSON.stringify({kind:"dossier",payload:{}})}),"Analisi accodata: controlla lo stato dei lavori AI");
   if(name==="dossierApprove")return mutate(name,()=>requestJson(root+"/dossier/approve",{method:"POST",body:JSON.stringify(body)}),"Dossier approvato");
   if(name==="strategyDraft")return mutate(name,()=>requestJson(root+"/jobs",{method:"POST",body:JSON.stringify({kind:"strategy",payload:{}})}),"Preparazione del piano strategico accodata");
@@ -118,9 +140,33 @@ export default function Workspace(){
  async function createClient(e:React.FormEvent<HTMLFormElement>){
    e.preventDefault();const form=new FormData(e.currentTarget);
    const name=String(form.get("name")||"").trim();
-   const payload={name,industry:String(form.get("industry")||""),website:String(form.get("website")||"")};
-   const result=await mutate<{client:Client}>("createClient",()=>requestJson("/api/workspace/clients",{method:"POST",body:JSON.stringify(payload)}));
-   if(result){setClients(cs=>cs.some(c=>c.id===result.client.id)?cs:[result.client,...cs]);currentId.current=result.client.id;setClientId(result.client.id);setModal(null);flash("Cliente creato");}
+   const intake=String(form.get("intake")||"site");
+   const siteUrl=String(form.get("website")||"").trim();
+   const files=form.getAll("files").filter((f):f is File=>f instanceof File&&f.size>0);
+   if((intake==="site"||intake==="both")&&!siteUrl){setError("Inserisci l’indirizzo del sito oppure scegli un’altra modalità di importazione.");return;}
+   if((intake==="files"||intake==="both")&&!files.length){setError("Seleziona almeno un documento oppure scegli un’altra modalità di importazione.");return;}
+   setBusy("createClient");setError("");
+   try{
+     const result=await requestJson<{client:Client}>("/api/workspace/clients",{method:"POST",body:JSON.stringify({name,industry:String(form.get("industry")||""),website:siteUrl})});
+     const created=result.client;setClients(cs=>[created,...cs.filter(c=>c.id!==created.id)]);currentId.current=created.id;setClientId(created.id);setData(null);window.localStorage.setItem("forgecy-active-client",created.id);setView("knowledge");setModal(null);
+     let pages=0,products=0,images=0,docs=0,dossierQueued=false;const issues:string[]=[];const root=endpoint(created.id);
+     if((intake==="site"||intake==="both")&&siteUrl){
+       try{const result=await requestJson<{visited:number;offersImported:number;imagesImported:number;documentsImported:number;dossierQueued:boolean}>(root+"/website",{method:"POST",body:JSON.stringify({url:siteUrl,maxPages:100})});pages=result.visited;products=result.offersImported;images=result.imagesImported;docs=result.documentsImported;dossierQueued=result.dossierQueued;}
+       catch(err){issues.push("sito: "+getError(err));}
+     }
+     if(files.length)for(const file of files){
+       try{const upload=new FormData();upload.set("file",file);await requestJson(root+"/upload",{method:"POST",body:upload});docs++;}
+       catch(err){issues.push(file.name+": "+getError(err));}
+     }
+     if((pages||products||images||docs)&&!dossierQueued){
+       try{await requestJson(root+"/jobs",{method:"POST",body:JSON.stringify({kind:"dossier",payload:{}})});dossierQueued=true;}
+       catch(err){issues.push("analisi iniziale: "+getError(err));}
+     }
+     await refresh(created.id);
+     flash(`Cliente creato · ${pages} pagine, ${products} prodotti, ${images} immagini, ${docs} file importati${dossierQueued?" · dossier in preparazione":""}${issues.length?" · con avvisi":""}`);
+     if(issues.length)setError(issues.join(" · "));
+   }catch(err){setError(getError(err));}
+   finally{setBusy(null);}
  }
  async function submitModal(e:React.FormEvent<HTMLFormElement>){
   e.preventDefault();
@@ -161,7 +207,7 @@ export default function Workspace(){
   }else if(kind==="profile"){
    url=root;method="PATCH";
    payload={name:String(f.get("name")||""),industry:String(f.get("industry")||""),website:String(f.get("website")||""),
-    profile:{...(data?.client.profile||{}),description:String(f.get("description")||""),tone:String(f.get("tone")||""),brand_primary:String(f.get("brand_primary")||"#244536"),brand_background:String(f.get("brand_background")||"#dce5d9"),heading_font:String(f.get("heading_font")||"").slice(0,100)}};
+   profile:{...(data?.client.profile||{}),description:String(f.get("description")||""),tone:String(f.get("tone")||""),brand_primary:String(f.get("brand_primary")||"#475569"),brand_background:String(f.get("brand_background")||"#f8fafc"),heading_font:String(f.get("heading_font")||"").slice(0,100),brand_logo_url:String(f.get("brand_logo_url")||"")==="__automatic__"?String(data?.client.profile?.brand_logo_url||""):String(f.get("brand_logo_url")||""),brand_visual_source:String(f.get("brand_visual_source")||"manual")}};
   }else if(kind==="campaign"){
    url=root+"/campaigns";payload={title:String(f.get("title")||""),objective:String(f.get("objective")||""),period:String(f.get("period")||""),
     offer_id:String(f.get("offer_id")||"")||null};
@@ -176,8 +222,11 @@ export default function Workspace(){
   }else if(kind==="upload"){
    const file=f.get("file");if(!(file instanceof File)){setError("Seleziona un file");return}
    const form=new FormData();form.set("file",file);
-   const result=await mutate<{extracted:boolean;message?:string}>("upload",()=>requestJson(root+"/upload",{method:"POST",body:form}),"Documento caricato");
+   const result=await mutate<{extracted:boolean;message?:string;catalog?:{status:string;added:number;updated:number;skippedManual:number;message?:string}}>("upload",()=>requestJson(root+"/upload",{method:"POST",body:form}));
    if(result&&!result.extracted)flash("Documento archiviato ma non leggibile: "+(result.message||"richiede revisione"));
+   else if(result?.catalog?.status==="processed")flash(`Documento importato. Catalogo: ${result.catalog.added} prodotti aggiunti, ${result.catalog.updated} migliorati${result.catalog.skippedManual?`, ${result.catalog.skippedManual} modifiche manuali protette`:""}.`);
+   else if(result?.catalog?.message)flash(result.catalog.message);
+   else if(result)flash("Documento caricato e archiviato");
    if(result)setModal(null);return;
   }else return;
   const result=await mutate(kind,()=>requestJson(url,{method,body:JSON.stringify(payload)}),"Operazione completata");
@@ -275,11 +324,13 @@ export default function Workspace(){
   {switchOpen&&<div className="switch-popover mobile-switch"><div className="eyebrow" style={{padding:8}}>CLIENTI</div>{clients.map(c=><button key={c.id} onClick={()=>choose(c.id)}><span className="client-avatar">{initials(c.name)}</span>{c.name}</button>)}<button onClick={()=>{setSwitchOpen(false);baseModal()}}><Plus size={14}/> Nuovo cliente</button></div>}
   {modal&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setModal(null)}}><div className="modal"><div className="modal-head"><div><div className="eyebrow">FORGECY / {current?.name||"NUOVO CLIENTE"}</div><h2 style={{marginTop:7}}>{({client:"Aggiungi un cliente",source:"Nuova fonte",signal:"Ascolto della community",upload:"Carica documento",offer:"Prodotto o servizio",profile:"Profilo del cliente",campaign:"Nuova campagna",content:"Nuovo contenuto",mission:"Affida un obiettivo al Leader"} as Record<string,string>)[modal.kind]||"Nuovo elemento"}</h2></div><button className="button ghost small" aria-label="Chiudi" onClick={()=>setModal(null)}><X size={18}/></button></div>
    <form onSubmit={modal.kind==="client"?createClient:submitModal}>
-    {modal.kind==="client"&&<><div><label>Nome del cliente *</label><input required name="name" autoFocus maxLength={160} placeholder="Es. CasaLuce"/></div><div className="cols"><div><label>Settore</label><input name="industry" placeholder="Es. Cura della casa"/></div><div><label>Sito web</label><input name="website" placeholder="https://azienda.it"/></div></div></>}
+    {modal.kind==="client"&&<><div><label>Nome del cliente *</label><input required name="name" autoFocus maxLength={160} placeholder="Es. CasaLuce"/></div><div className="cols"><div><label>Settore</label><input name="industry" placeholder="Es. Cura della casa"/></div><div><label>Modalità di partenza</label><select name="intake" defaultValue="site"><option value="site">Importa il sito (consigliato)</option><option value="files">Carica documenti</option><option value="both">Sito e documenti</option><option value="later">Lo configuro più tardi</option></select></div></div><div><label>Sito web da analizzare</label><input name="website" type="url" placeholder="https://azienda.it"/><p className="caption" style={{marginTop:5}}>Acquisisce pagine pubbliche, catalogo prodotti, immagini e documenti trovati sullo stesso dominio.</p></div><div><label>Documenti integrativi (facoltativi, max 10 MB ciascuno)</label><input type="file" name="files" multiple accept=".txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg,.webp"/><p className="caption" style={{marginTop:5}}>Il sito basta per iniziare. Il dossier viene preparato automaticamente dopo l’importazione.</p></div></>}
     {modal.kind==="profile"&&<><div><label>Nome</label><input required name="name" defaultValue={current?.name}/></div><div className="cols"><div><label>Settore</label><input name="industry" defaultValue={current?.industry}/></div><div><label>Sito web</label><input name="website" defaultValue={current?.website||""}/></div></div><div><label>Descrizione</label><textarea name="description" rows={4} defaultValue={String(data?.client.profile?.description||"")}/></div><div><label>Tono di voce</label><textarea name="tone" rows={2} defaultValue={String(data?.client.profile?.tone||"")}/></div>
+      <div><label>Logo</label><select name="brand_logo_url" defaultValue={String(data?.client.profile?.brand_logo_url||"__automatic__")}><option value="__automatic__">Selezione automatica dal sito</option>{[...new Map((data?.sources||[]).filter(source=>source.source_metadata?.asset_role==="logo"&&source.file_path&&source.source_metadata?.storage_bucket==="forgecy-assets").map(source=>[source.url,source])).values()].map(source=><option key={source.id} value={source.url||""}>{source.title}{source.url?" · "+new URL(source.url).pathname.split("/").pop():""}</option>)}</select><p className="caption" style={{marginTop:5}}>La scansione rileva il logo dal sito. Qui puoi scegliere un’altra immagine importata.</p></div>
+      <div><label>Palette e logo</label><select name="brand_visual_source" defaultValue={String(data?.client.profile?.brand_visual_source||(current?.website?"website":"manual"))}><option value="website">Aggiorna automaticamente dal sito</option><option value="manual">Usa valori personalizzati</option></select><p className="caption" style={{marginTop:5}}>In modalità automatica la prossima scansione aggiorna i dati visivi rilevati. In modalità personalizzata le tue scelte vengono mantenute.</p></div>
       <div className="cols">
-       <div><label>Colore principale</label><input name="brand_primary" type="color" defaultValue={String(data?.client.profile?.brand_primary||"#244536")}/></div>
-       <div><label>Colore di sfondo</label><input name="brand_background" type="color" defaultValue={String(data?.client.profile?.brand_background||"#dce5d9")}/></div>
+       <div><label>Colore principale</label><input name="brand_primary" type="color" defaultValue={String(data?.client.profile?.brand_primary||"#475569")}/></div>
+       <div><label>Colore di sfondo</label><input name="brand_background" type="color" defaultValue={String(data?.client.profile?.brand_background||"#f8fafc")}/></div>
       </div>
       <div><label>Font del brand (nome di riferimento)</label><input name="heading_font" maxLength={100} defaultValue={String(data?.client.profile?.heading_font||"")} placeholder="Es. Recoleta, Cinzel, Inter…"/><p className="caption" style={{marginTop:5}}>Il font è un riferimento per il designer: prima di usarlo nelle esportazioni serve un file con licenza adeguata.</p></div></>}
     {modal.kind==="signal"&&<>
@@ -295,7 +346,7 @@ export default function Workspace(){
      <div><label>Contesto (facoltativo)</label><textarea name="context" maxLength={1200} defaultValue={String((modal.item as Record<string,unknown>|undefined)?.context||"")} rows={2} placeholder="A quale post, prodotto o discussione si riferisce?"/></div>
     </>}
     {modal.kind==="source"&&<><div><label>Tipo di fonte</label><select name="kind" defaultValue="note"><option value="note">Nota / Brief</option><option value="website">Sito web</option><option value="social">Profilo social (riferimento)</option></select></div><div><label>Titolo</label><input name="title" placeholder="Es. Brief commerciale"/></div><div><label>URL (opzionale)</label><input name="url" type="url" placeholder="https://esempio.it"/></div><div><label>Contenuto / annotazioni</label><textarea name="body" rows={5} placeholder="Informazioni attendibili, prodotti, tone of voice, obiettivi…"/></div><label style={{display:"flex",alignItems:"center",gap:8,fontWeight:500}}><input type="checkbox" name="auto"/> Acquisisci automaticamente da HTTPS (richiede crawler abilitato)</label></>}
-    {modal.kind==="upload"&&<><div><label>Documento del cliente (max 10 MB)</label><input type="file" name="file" required accept=".txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg,.webp"/></div><div className="notice warn">Testi, Markdown e CSV sono letti subito. PDF e immagini vengono archiviati privatamente ma richiedono estrazione testo aggiuntiva per l&apos;analisi AI.</div></>}
+    {modal.kind==="upload"&&<><div><label>Documento del cliente (max 10 MB)</label><input type="file" name="file" required accept=".txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg,.webp"/></div><div className="notice warn">Per PDF e immagini scannerizzati Forgecy usa la modalità OCR scelta in Impostazioni: parser locale o OpenRouter. L’OCR API invia il file a provider esterni e Mistral applica una tariffa per pagina sui PDF; l’OCR locale mantiene il file sul computer. L’estrazione AI di un catalogo è una fase separata e può inviare testo e immagini a OpenRouter. I prodotti vengono confrontati con quelli presenti e le modifiche manuali restano protette.</div></>}
     {modal.kind==="offer"&&(()=>{
       const o=(modal.item||{}) as Partial<Offer>;
       return <><div className="cols"><div><label>Tipologia</label><select name="kind" defaultValue={o.kind||"service"}><option value="product">Prodotto fisico</option><option value="service">Servizio</option></select></div><div><label>Prezzo EUR (vuoto = preventivo)</label><input name="price" inputMode="decimal" defaultValue={o.price??""} placeholder="19.90"/></div></div><div><label>Nome prodotto / servizio *</label><input required name="name" defaultValue={o.name||""}/></div><div><label>Descrizione</label><textarea rows={4} name="description" defaultValue={o.description||""}/></div><div><label>Pubblico</label><input name="audience" defaultValue={o.audience||""}/></div><div><label>Benefici verificabili (uno per riga)</label><textarea name="benefits" rows={4} defaultValue={(o.benefits||[]).join("\n")}/></div><div><label>Call to action</label><input name="cta" defaultValue={o.cta||""} placeholder="Scopri di più"/></div></>;

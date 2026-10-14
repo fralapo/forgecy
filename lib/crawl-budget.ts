@@ -1,15 +1,12 @@
 import type { Context } from "./http";
 import { ApiFailure } from "./http";
+import { websiteIngestEnabled } from "./crawl-config";
 
-/**
- * Crawler must remain opt-in until egress filtering blocks private/link-local
- * destinations at the machine/network boundary.
- */
 export function requireWebsiteCrawlingEnabled(
   enabled=process.env.ENABLE_WEBSITE_INGEST
 ):void {
-  if(enabled!=="true")throw new ApiFailure(503,
-    "Importazione automatica dei siti non abilitata. Configura prima le protezioni di rete.");
+  if(!websiteIngestEnabled(enabled))throw new ApiFailure(503,
+    "Importazione automatica dei siti disabilitata nelle impostazioni del server.");
 }
 
 /**

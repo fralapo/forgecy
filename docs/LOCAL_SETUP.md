@@ -37,9 +37,13 @@ Apri **Impostazioni** nell'app, anche prima di creare il primo cliente, incolla 
 | `GOOGLE_DRIVE_CLIENT_ID` | Facoltativo; OAuth Client ID Google di tipo applicazione desktop, richiesto solo per Drive. |
 | `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`, `META_GRAPH_VERSION` | Facoltativi, per collegare un account Instagram Professional. |
 | `TOKEN_ENCRYPTION_KEY_BASE64` | Chiave casuale per cifrare i token social salvati localmente. |
-| `ENABLE_WEBSITE_INGEST` | Lascia `false` salvo che tu abbia configurato e compreso la raccolta web. |
+| `ENABLE_WEBSITE_INGEST` | Facoltativa; l'importazione dei siti è attiva per impostazione predefinita. Imposta `false` per disabilitarla. |
 
 Non usare il prefisso `NEXT_PUBLIC_` per chiavi private. Per generare una chiave di cifratura Meta, esegui `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"` e copia l'output solo nel `.env.local` di quel computer.
+
+Nelle **Impostazioni → OCR e lettura dei documenti** puoi scegliere **Automatico**, **Solo parser locale** o **OpenRouter**. Forgecy estrae sempre localmente il testo già incorporato nei PDF. Per scansioni e immagini, Automatico raccomanda il parser locale solo su piattaforme idonee con il modello già installato; altrimenti sceglie OpenRouter. **Solo locale** è rigoroso: se il parser manca o fallisce, il file resta in sospeso e non viene inviato all'API. OpenRouter usa il modello visivo scelto; il parser Mistral OCR costa circa 0,002 USD per pagina, oltre ai token. I PDF OCR sono limitati a 40 pagine e fino a 8 immagini inoltrate al modello. L'OCR locale non invia il file a un servizio OCR; l'estrazione strutturata dei campi catalogo è una fase AI separata e può inviare testo e immagini a OpenRouter.
+
+Il parser locale usa PaddleOCR-VL, Python 3.12 isolato e `uv`; servono circa 8 GB liberi per runtime e modelli. **Controlla versione** verifica l'ultima release stabile; l'aggiornamento automatico è attivo di default e controlla quando Forgecy è in uso. Ogni versione viene scaricata in un ambiente separato, sottoposta a un'inferenza di prova e attivata soltanto se il test riesce. Se `uv` non è disponibile, installalo seguendo la [guida ufficiale](https://docs.astral.sh/uv/getting-started/installation/) e riapri Impostazioni.
 
 ## Configurare Google Drive
 

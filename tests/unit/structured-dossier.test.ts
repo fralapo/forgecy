@@ -21,16 +21,18 @@ test("dossier inference requests server-only structured OpenRouter output",async
       summary:z.string().min(10),
       findings:z.array(z.object({claim:z.string()}))
     });
-    const result=await modelStructuredJson("Sistema","Fonte test",schema);
+    const result=await modelStructuredJson("Sistema","Fonte test",schema,"forgecy_dossier",6200,async()=>process.env.OPENROUTER_API_KEY||null);
     assert.equal(result.findings.length,0);
     const request=outgoing as unknown as {
       response_format:{type:string;json_schema:{strict:boolean;schema:{type:string}}};
-      provider:{require_parameters:boolean}
+      provider:{require_parameters:boolean};max_completion_tokens:number;reasoning_effort:string
     };
     assert.equal(request.response_format.type,"json_schema");
     assert.equal(request.response_format.json_schema.strict,true);
     assert.equal(request.response_format.json_schema.schema.type,"object");
     assert.equal(request.provider.require_parameters,true);
+    assert.equal(request.max_completion_tokens,6200);
+    assert.equal(request.reasoning_effort,"low");
   } finally {
     globalThis.fetch=oldFetch;
     if(oldKey===undefined)delete process.env.OPENROUTER_API_KEY;

@@ -10,11 +10,10 @@ function fakeContext(
   return {db:{rpc}} as unknown as Context;
 }
 
-test("ingestion remains opt-in and unavailable when server egress is not explicitly enabled",()=>{
+test("website ingestion is enabled by default and can be explicitly disabled",()=>{
   assert.throws(()=>requireWebsiteCrawlingEnabled("false"),(e:unknown)=>
     e instanceof ApiFailure && e.status===503);
-  assert.throws(()=>requireWebsiteCrawlingEnabled(undefined),(e:unknown)=>
-    e instanceof ApiFailure && e.status===503);
+  assert.doesNotThrow(()=>requireWebsiteCrawlingEnabled(undefined));
   assert.doesNotThrow(()=>requireWebsiteCrawlingEnabled("true"));
 });
 

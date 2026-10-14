@@ -6,7 +6,7 @@ import { getLocalDataDirectory } from "./index";
 const LIMITS: Record<string, number> = { "forgecy-sources": 10 * 1024 * 1024, "forgecy-assets": 15 * 1024 * 1024 };
 const MIME: Record<string, string> = {
   ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
-  ".gif": "image/gif", ".svg": "image/svg+xml", ".pdf": "application/pdf", ".txt": "text/plain",
+  ".gif": "image/gif", ".avif": "image/avif", ".svg": "image/svg+xml", ".pdf": "application/pdf", ".txt": "text/plain",
   ".md": "text/markdown", ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 };
 

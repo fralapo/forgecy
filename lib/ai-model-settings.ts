@@ -2,8 +2,8 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { ApiFailure } from "./http";
 import { workerDb } from "./worker-db";
 import { getOpenRouterApiKey } from "./openrouter-credentials";
-import { DEFAULT_TEXT_MODEL, DEFAULT_IMAGE_MODEL } from "./ai-model-defaults";
-export { DEFAULT_TEXT_MODEL, DEFAULT_IMAGE_MODEL } from "./ai-model-defaults";
+import { DEFAULT_TEXT_MODEL, DEFAULT_IMAGE_MODEL, DEFAULT_OCR_MODEL } from "./ai-model-defaults";
+export { DEFAULT_TEXT_MODEL, DEFAULT_IMAGE_MODEL, DEFAULT_OCR_MODEL } from "./ai-model-defaults";
 
 export type OpenRouterModel = {
   id: string;
@@ -15,6 +15,7 @@ export type OpenRouterModel = {
 export type OpenRouterImageModel = Pick<OpenRouterModel, "id" | "name" | "description"> & {
   supportedAspectRatios: string[];
 };
+export type OpenRouterVisionModel = OpenRouterModel;
 type Fetcher = typeof fetch;
 const textModelStorage = new AsyncLocalStorage<string>();
 const OPENROUTER = "https://openrouter.ai/api/v1";
@@ -68,8 +69,13 @@ export function normalizeImageModels(payload: unknown): OpenRouterImageModel[] {
   });
 }
 
-async function catalogRequest(path: string, fetcher: Fetcher): Promise<unknown> {
-  const key = await getOpenRouterApiKey();
+export function normalizeVisionModels(payload: unknown): OpenRouterVisionModel[] {
+  return normalizeTextModels(payload);
+}
+
+type ApiKeyProvider=()=>Promise<string|null>;
+async function catalogRequest(path: string, fetcher: Fetcher,keyProvider:ApiKeyProvider): Promise<unknown> {
+  const key = await keyProvider();
   if (!key) throw new ApiFailure(503, "Configura OPENROUTER_API_KEY nel server per caricare i modelli");
   let response: Response;
   try {
@@ -89,23 +95,39 @@ async function catalogRequest(path: string, fetcher: Fetcher): Promise<unknown> 
   catch { throw new ApiFailure(502, "OpenRouter ha restituito un catalogo non valido"); }
 }
 
-export async function loadOpenRouterCatalogs(fetcher: Fetcher = fetch) {
-  const [textPayload, imagePayload] = await Promise.all([
-    catalogRequest("/models?output_modalities=text", fetcher),
-    catalogRequest("/images/models", fetcher)
+export async function loadOpenRouterCatalogs(fetcher: Fetcher = fetch,keyProvider:ApiKeyProvider=getOpenRouterApiKey) {
+  const [textPayload, imagePayload, visionPayload] = await Promise.all([
+    catalogRequest("/models?output_modalities=text", fetcher,keyProvider),
+    catalogRequest("/images/models", fetcher,keyProvider),
+    catalogRequest("/models?input_modalities=image&output_modalities=text", fetcher,keyProvider)
   ]);
   return {
     textModels: normalizeTextModels(textPayload),
-    imageModels: normalizeImageModels(imagePayload)
+    imageModels: normalizeImageModels(imagePayload),
+    visionModels: normalizeVisionModels(visionPayload)
   };
 }
 
 export function loadOpenRouterCatalog(kind: "text", fetcher?: Fetcher): Promise<OpenRouterModel[]>;
 export function loadOpenRouterCatalog(kind: "image", fetcher?: Fetcher): Promise<OpenRouterImageModel[]>;
-export async function loadOpenRouterCatalog(kind: "text" | "image", fetcher: Fetcher = fetch) {
-  const path = kind === "text" ? "/models?output_modalities=text" : "/images/models";
-  const payload = await catalogRequest(path, fetcher);
-  return kind === "text" ? normalizeTextModels(payload) : normalizeImageModels(payload);
+export function loadOpenRouterCatalog(kind: "vision", fetcher?: Fetcher): Promise<OpenRouterVisionModel[]>;
+export async function loadOpenRouterCatalog(kind: "text" | "image" | "vision", fetcher: Fetcher = fetch,keyProvider:ApiKeyProvider=getOpenRouterApiKey) {
+  const path = kind === "text" ? "/models?output_modalities=text" : kind === "vision" ? "/models?input_modalities=image&output_modalities=text" : "/images/models";
+  const payload = await catalogRequest(path, fetcher,keyProvider);
+  return kind === "text" ? normalizeTextModels(payload) : kind === "vision" ? normalizeVisionModels(payload) : normalizeImageModels(payload);
+}
+
+export async function readOcrModelPreference(userId:string):Promise<string|null>{
+  const {data,error}=await workerDb().from("ai_preferences").select("ocr_model").eq("owner_id",userId).maybeSingle();
+  if(error){
+    console.error("[ai settings] Could not read OCR model preference",error.code||"database error");
+    throw new ApiFailure(503,"Impossibile leggere il modello OCR salvato nel workspace locale.");
+  }
+  return data?.ocr_model||null;
+}
+
+export async function currentOcrModel(userId:string):Promise<string>{
+  return await readOcrModelPreference(userId)||DEFAULT_OCR_MODEL;
 }
 
 export function currentTextModel() {

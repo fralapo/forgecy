@@ -1,6 +1,7 @@
 "use client";
 import { useEffect,useReducer,useState } from "react";
-import { ArrowRight,BookOpen,CalendarDays,Check,ChevronLeft,ChevronRight,FileText,Globe,Instagram,Layers3,Plus,RefreshCw,Sparkles,UploadCloud,Image as ImageIcon,ExternalLink } from "lucide-react";
+import Image from "next/image";
+import { ArrowRight,BookOpen,CalendarDays,Check,ChevronLeft,ChevronRight,FileText,Globe,Instagram,Layers3,Plus,RefreshCw,Sparkles,UploadCloud,Image as ImageIcon,ExternalLink,Trash2 } from "lucide-react";
 import type { Snapshot,View,Content,Slide,EditorialBrief } from "./types";
 import { offerLabel,statusLabel,requestJson } from "./types";
 import AiUsagePanel from "./ai-usage-panel";
@@ -20,6 +21,13 @@ type Props={
 };
 
 function Badge({value}:{value:string}){return <span className={"pill "+(["stale","draft","proposed","running"].includes(value)?"warn":value==="failed"?"danger":value==="archived"?"muted":"")}>{statusLabel(value)}</span>}
+function SourceFilePreview({clientId,source}:{clientId:string;source:Snapshot["sources"][number]}){
+ const [url,setUrl]=useState("");
+ const bucket=source.source_metadata?.storage_bucket==="forgecy-assets"?"forgecy-assets":"forgecy-sources";
+ useEffect(()=>{let active=true;if(!source.file_path)return;requestJson<{url:string}>(`/api/workspace/clients/${clientId}/assets?bucket=${bucket}&path=${encodeURIComponent(source.file_path)}`).then(r=>{if(active)setUrl(r.url)}).catch(()=>undefined);return()=>{active=false}},[bucket,clientId,source.file_path]);
+ if(!url)return null;
+ return bucket==="forgecy-assets"?<a href={url} target="_blank" rel="noreferrer" className="caption" style={{display:"block",marginTop:9}}><Image src={url} alt={source.title} width={220} height={140} unoptimized style={{width:"auto",height:"auto",maxWidth:220,maxHeight:140,objectFit:"contain",borderRadius:8,background:"var(--surface)"}}/><span style={{display:"block"}}>Apri immagine · {String(source.source_metadata?.asset_role||"immagine")}</span></a>:<a className="button small" href={url} target="_blank" rel="noreferrer" style={{marginTop:9}}>Apri documento</a>;
+}
 function Header({k,title,sub,actions}:{k:string;title:string;sub:string;actions?:React.ReactNode}){
  return <header className="page-head"><div><div className="eyebrow">{k}</div><h1>{title}</h1><p>{sub}</p></div><div className="page-actions">{actions}</div></header>;
 }
@@ -73,11 +81,11 @@ function Today({data,onView,onChat,onAction}:{data:Snapshot;onView:(v:View)=>voi
   </div>
  </>;
 }
-function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["onModal"];onAction:Props["onAction"];busy:string|null}){
+function Knowledge({data,onModal,onAction,onView,busy}:{data:Snapshot;onModal:Props["onModal"];onAction:Props["onAction"];onView:Props["onView"];busy:string|null}){
  const [tab,setTab]=useState<"dossier"|"strategy"|"sources"|"community"|"profile">("dossier");
  const [sourceQuery,setSourceQuery]=useState("");
  const [foundSources,setFoundSources]=useState<Array<{
-  source_id:string;source_title:string;source_url:string|null;chunk_ordinal:number;excerpt:string;relevance:number
+  source_id:string;source_title:string;source_url:string|null;chunk_ordinal:number;excerpt:string;relevance:number;section_title?:string
  }>>([]);
  const [searchStatus,setSearchStatus]=useState<"idle"|"loading"|"ready"|"error">("idle");
  useEffect(()=>{
@@ -97,11 +105,28 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
  const dossier=data.dossiers[0],approval=dossier?.status==="draft" && dossier.knowledge_revision===data.client.knowledge_revision;
  const dossierJob=data.ai_jobs?.find(j=>j.kind==="dossier"&&(j.status==="queued"||j.status==="running"));
  const strategy=data.strategies?.[0],strategyJob=data.ai_jobs?.find(j=>j.kind==="strategy"&&(j.status==="queued"||j.status==="running"));
+ const brandProfile=data.client.profile||{};
+ const clientToken=data.client.name.toLowerCase().replace(/[^a-z0-9]/g,"");
+ const logoCandidates=data.sources.filter(source=>source.source_metadata?.asset_role==="logo"&&source.file_path&&source.source_metadata?.storage_bucket==="forgecy-assets");
+ const logoSource=logoCandidates.find(source=>source.url===brandProfile.brand_logo_url)||[...logoCandidates].sort((a,b)=>{
+  const score=(source:Snapshot["sources"][number])=>{
+   const text=(source.title+" "+(source.url||"")).toLowerCase(),token=clientToken;
+   return (token&&text.replace(/[^a-z0-9]/g,"").includes(token)?8:0)-(/favicon|icon|150x150|32x32|16x16/.test(text)?8:0)-(/chimiclean/.test(text)?2:0);
+  };
+  return score(b)-score(a);
+ })[0];
+ const brandColors=[
+  {label:"Primario",value:brandProfile.brand_primary},
+  {label:"Secondario",value:brandProfile.brand_secondary},
+  {label:"Accento",value:brandProfile.brand_accent},
+  {label:"Sfondo",value:brandProfile.brand_background}
+ ].filter((item):item is {label:string;value:string}=>typeof item.value==="string"&&/^#[0-9a-f]{6}$/i.test(item.value));
  return <>
   <Header k="BIBLIOTECA / CONOSCENZA" title="Conoscere prima di creare." sub={"Le informazioni di "+data.client.name+" alimentano tutto il lavoro del team AI."}
    actions={<button className="button" onClick={()=>onModal("source")}><Plus size={16}/> Aggiungi fonte</button>}/>
   <div className="tabs">{[["dossier","Analisi aziendale"],["strategy","Strategia"],["sources","Fonti e documenti"],["community","Voce della community"],["profile","Profilo brand"]].map(([k,t])=><button key={k} onClick={()=>setTab(k as typeof tab)} className={"tab "+(tab===k?"active":"")}>{t}</button>)}</div>
   {tab==="dossier"&&<div className="stack-lg">
+   {data.sources.some(source=>source.kind==="website")&&<div className="card"><div className="eyebrow">RACCOLTA AUTOMATICA DAL SITO</div><p className="tagline" style={{marginTop:7}}>Forgecy ha già importato i dati trovati sul sito di {data.client.name}.</p><div className="grid2" style={{marginTop:12}}><div><strong>{data.sources.filter(source=>source.kind==="website").length}</strong><div className="caption">pagine e fonti web</div></div><div><strong>{data.offers.filter(offer=>offer.kind==="product").length}</strong><div className="caption">prodotti nel catalogo</div></div><div><strong>{data.sources.filter(source=>["logo","product","image"].includes(String(source.source_metadata?.asset_role))).length}</strong><div className="caption">loghi e immagini</div></div><div><strong>{data.sources.filter(source=>source.kind==="document"&&!source.source_metadata?.asset_role).length}</strong><div className="caption">file e documenti</div></div></div><div className="flex gap8 wrap" style={{marginTop:14}}><button className="button small" onClick={()=>setTab("sources")}>Vedi pagine, immagini e file</button><button className="button small" onClick={()=>onView("offers")}>Apri catalogo prodotti</button></div></div>}
    <div className="card">
     <div className="flex between center gap12 wrap"><div><h2>Dossier aziendale</h2><p className="caption" style={{marginTop:6}}>Fotografia documentata della situazione attuale, non un piano strategico.</p></div>{dossier?<Badge value={dossier.status}/>:<span className="pill muted">Non presente</span>}</div>
     <div className="separator"/>
@@ -138,7 +163,7 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
    </div>}
   </div>}
   {tab==="sources"&&<div className="stack-lg">
-   <div className="flex between center wrap gap12"><p className="tagline">Siti web, note, file e profili social del cliente.</p><div className="flex gap8 wrap"><button className="button small" onClick={()=>onModal("source")}><Globe size={15}/> Aggiungi fonte</button><button className="button small" onClick={()=>onModal("upload")}><UploadCloud size={15}/> Carica documento</button></div></div>
+   <div className="flex between center wrap gap12"><p className="tagline">Siti web, note, file e profili social del cliente.</p><div className="flex gap8 wrap">{data.client.website&&<button className="button small" disabled={Boolean(busy)} onClick={()=>onAction("rescanWebsite")}><RefreshCw size={15}/>{busy==="rescanWebsite"?"Scansione in corso…":"Riesegui scansione sito"}</button>}<button className="button small" onClick={()=>onModal("source")}><Globe size={15}/> Aggiungi fonte</button><button className="button small" onClick={()=>onModal("upload")}><UploadCloud size={15}/> Carica documento</button></div></div>
    <div className="card">
      <label htmlFor="forgecy-source-search">Cerca in documenti, note e pagine del sito</label>
      <input id="forgecy-source-search" value={sourceQuery} maxLength={160}
@@ -149,16 +174,16 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
        {searchStatus==="loading"&&<p className="caption">Ricerca delle fonti in corso…</p>}
        {searchStatus==="error"&&<p className="caption">Ricerca temporaneamente non disponibile. Controlla che le migrazioni 0013 e 0014 siano state eseguite.</p>}
        {searchStatus==="ready"&&(foundSources.length?foundSources.map(s=><div className="list-row" key={s.source_id+":"+s.chunk_ordinal}>
-        <div style={{minWidth:0}}><strong>{s.source_title}</strong><p className="caption" style={{marginTop:6,whiteSpace:"pre-wrap"}}>{s.excerpt}</p>
+        <div style={{minWidth:0}}><strong>{s.source_title}</strong>{s.section_title&&<div className="caption">Sezione: {s.section_title}</div>}<p className="caption" style={{marginTop:6,whiteSpace:"pre-wrap"}}>{s.excerpt}</p>
          <p className="caption" style={{marginTop:5}}>Estratto {s.chunk_ordinal+1} · Fonte {s.source_id.slice(0,8)}</p></div>
         {s.source_url&&/^https?:\/\//i.test(s.source_url)&&<a href={s.source_url} target="_blank" rel="noopener noreferrer" className="button small">Apri fonte <ExternalLink size={12}/></a>}
        </div>):<p className="caption">Nessuna corrispondenza nelle fonti disponibili.</p>)}
      </div>}
    </div>
-   <div className="card">{data.sources.length?data.sources.map(s=><div className="list-row" key={s.id}><div className="flex center gap12"><div className="client-avatar">{s.kind==="website"?<Globe size={17}/>:<FileText size={17}/>}</div><div><strong>{s.title}</strong><div className="caption">{s.kind} · {s.body?.length||0} caratteri · {s.url||"Nessun URL"}</div>{s.error&&<div className="caption" style={{color:"var(--danger)"}}>{s.error}</div>}</div></div><div className="flex center gap8 wrap"><Badge value={s.status}/>{s.kind==="document"&&s.file_path&&s.status!=="ready"&&<button className="button small" onClick={()=>onAction("reprocessDocument",{id:s.id})}>Riprova</button>}</div></div>):
+   <div className="card">{data.sources.length?data.sources.map(s=><div className="list-row" key={s.id}><div style={{minWidth:0,flex:1}}><div className="flex center gap12"><div className="client-avatar">{s.kind==="website"?<Globe size={17}/>:<FileText size={17}/>}</div><div><strong>{s.title}</strong><div className="caption">{s.kind} · {s.body?.length||0} caratteri · {s.url||"Nessun URL"}</div>{s.error&&<div className="caption" style={{color:"var(--danger)"}}>{s.error}</div>}</div></div>{s.body&&<details style={{marginTop:10,marginLeft:48}}><summary className="caption" style={{cursor:"pointer",fontWeight:600}}>Mostra il testo estratto</summary><div className="caption" style={{marginTop:8,maxHeight:320,overflow:"auto",whiteSpace:"pre-wrap",lineHeight:1.6}}>{s.body}</div></details>}{s.file_path&&<div style={{marginLeft:48}}><SourceFilePreview clientId={data.client.id} source={s}/></div>}</div><div className="flex center gap8 wrap"><Badge value={s.status}/>{s.kind==="document"&&s.file_path&&s.status!=="ready"&&<button className="button small" disabled={Boolean(busy)} onClick={()=>onAction("reprocessDocument",{id:s.id})}>Riprova</button>}<button className="button small ghost" disabled={Boolean(busy)} aria-label={"Elimina fonte "+s.title} title="Elimina fonte" onClick={()=>{const ok=window.confirm("Eliminare «"+s.title+"»? I prodotti in bozza collegati saranno eliminati; quelli verificati o già usati saranno conservati senza il collegamento alla fonte.");if(ok)onAction("deleteSource",{id:s.id})}}><Trash2 size={14}/> Elimina</button></div></div>):
     <Empty title="Nessuna fonte" text="Inizia aggiungendo il sito del cliente, un brief o una nota."/>}
    </div>
-   {data.sources.some(s=>s.status==="pending")&&<div className="notice warn">Alcune fonti non sono ancora leggibili. I PDF con testo e i DOCX sono supportati; per scansioni e immagini serve ancora OCR oppure una trascrizione testuale.</div>}
+   {data.sources.some(s=>s.status==="pending")&&<div className="notice warn">Alcune fonti non sono ancora leggibili. Per riprovare una scansione o un&apos;immagine, controlla la modalità OCR in Impostazioni e rielabora la fonte.</div>}
   </div>}
   {tab==="community"&&<div className="stack-lg">
    <div className="flex between center gap12 wrap">
@@ -194,16 +219,22 @@ function Knowledge({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["on
   {tab==="profile"&&<div className="grid2">
    <div className="card"><div className="section-title"><h2>Identità cliente</h2><button className="button small" onClick={()=>onModal("profile")}>Modifica</button></div>
     <div className="info-pair"><span>Ragione sociale</span><strong>{data.client.name}</strong></div><div className="info-pair"><span>Settore</span><strong>{data.client.industry||"Da completare"}</strong></div><div className="info-pair"><span>Sito web</span><strong>{data.client.website||"Da completare"}</strong></div>
-    <div className="separator"/><div className="flex center gap12 wrap">
-     {[{label:"Primario",color:brandStyle(data.client.profile).primary},{label:"Sfondo",color:brandStyle(data.client.profile).background}].map(x=><div key={x.label} className="flex center gap8"><span style={{display:"inline-block",width:25,height:25,background:x.color,border:"1px solid #ddd",borderRadius:6}}/><small>{x.label}: {x.color}</small></div>)}
-    </div><div className="caption" style={{marginTop:12}}>Font indicato: {brandStyle(data.client.profile).headingFont||"Non indicato"} (riferimento, non installato)</div>
-    <div className="separator"/><pre style={{whiteSpace:"pre-wrap",fontFamily:"inherit",fontSize:13,color:"var(--muted)"}}>{JSON.stringify(data.client.profile,null,2)}</pre>
+    <div className="separator"/>{typeof brandProfile.description==="string"&&brandProfile.description&&<p className="tagline">{brandProfile.description}</p>}{typeof brandProfile.tone==="string"&&brandProfile.tone&&<p className="caption" style={{marginTop:9}}>Tono di voce: {brandProfile.tone}</p>}
+    {typeof brandProfile.brand_visual_source==="string"&&<div className="caption" style={{marginTop:14}}>Identità visiva: {brandProfile.brand_visual_source==="website"?"aggiornata dalla scansione del sito":"personalizzata"}</div>}
    </div>
-   <div className="card"><BookOpen size={20}/><h2 style={{marginTop:14}}>Una sola fonte di verità</h2><p className="tagline" style={{marginTop:10}}>Quando cambi identità, offerta o documenti, il dossier precedente viene invalidato. Nessuna strategia futura potrà riutilizzarlo senza revisione.</p></div>
+   <div className="card"><div className="section-title"><h2>Identità visiva del brand</h2>{brandProfile.brand_visual_source==="website"&&<span className="pill">Rilevata dal sito</span>}{brandProfile.brand_visual_source==="manual"&&<span className="pill muted">Modificata manualmente</span>}</div>
+    {logoSource?<><div className="caption">Logo del cliente</div><SourceFilePreview clientId={data.client.id} source={logoSource}/></>:<div className="empty"><strong style={{display:"block",marginBottom:5}}>Logo non rilevato</strong>La scansione non ha trovato un logo archiviabile. Puoi importare un’immagine dalle fonti del sito.</div>}
+    <div className="separator"/><div className="caption" style={{fontWeight:700,marginBottom:10}}>Palette rilevata</div>
+    {brandColors.length?<div className="flex center gap12 wrap">{brandColors.map(color=><div key={color.label} className="flex center gap8"><span title={color.value} style={{display:"inline-block",width:28,height:28,background:color.value,border:"1px solid var(--line)",borderRadius:7}}/><small>{color.label}<br/>{color.value.toUpperCase()}</small></div>)}</div>:<p className="caption">Non ho trovato colori dichiarati dal sito. Puoi impostare primario e sfondo con “Modifica”.</p>}
+    <div className="caption" style={{marginTop:13}}>Font di riferimento: {brandStyle(brandProfile).headingFont||"non rilevato"}. {brandProfile.brand_captured_at?"Ultimo rilevamento: "+new Date(String(brandProfile.brand_captured_at)).toLocaleDateString("it-IT"):""}</div>
+    {typeof brandProfile.brand_source_url==="string"&&<a className="caption" href={brandProfile.brand_source_url} target="_blank" rel="noopener noreferrer" style={{display:"inline-block",marginTop:8}}>Fonte: {brandProfile.brand_source_url} <ExternalLink size={12} style={{display:"inline"}}/></a>}
+    <div className="separator"/><h3>Fonti e aggiornamenti</h3><p className="tagline" style={{marginTop:8}}>Le scansioni del sito aggiornano logo e palette finché non modifichi manualmente l’identità visiva.</p><button className="button small" style={{marginTop:12}} onClick={()=>setTab("sources")}>Apri fonti e documenti</button>
+   </div>
+   <div className="card" style={{gridColumn:"1 / -1"}}><BookOpen size={20}/><h2 style={{marginTop:14}}>Una sola fonte di verità</h2><p className="tagline" style={{marginTop:10}}>Quando cambi identità, offerta o documenti, il dossier precedente viene invalidato. Nessuna strategia futura potrà riutilizzarlo senza revisione.</p></div>
   </div>}
  </>;
 }
-function Offers({data,onModal,onAction}:{data:Snapshot;onModal:Props["onModal"];onAction:Props["onAction"]}){
+function Offers({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["onModal"];onAction:Props["onAction"];busy:string|null}){
  const [filter,setFilter]=useState<"all"|"product"|"service">("all");
  const items=data.offers.filter(o=>filter==="all"||o.kind===filter);
  return <>
@@ -212,6 +243,7 @@ function Offers({data,onModal,onAction}:{data:Snapshot;onModal:Props["onModal"];
   <div className="tabs">{[["all","Tutte"],["product","Prodotti"],["service","Servizi"]].map(([k,t])=><button key={k} className={"tab "+(filter===k?"active":"")} onClick={()=>setFilter(k as typeof filter)}>{t} {k==="all"?"("+data.offers.length+")":""}</button>)}</div>
   {items.length?<div className="grid2">{items.map(o=><div className="card stack" key={o.id}>
    <div className="flex between center"><span className="offer-type">{o.kind==="product"?"Prodotto fisico":"Servizio"}</span><Badge value={o.status}/></div>
+   {o.image_source_id&&data.sources.find(source=>source.id===o.image_source_id)?.file_path&&<SourceFilePreview clientId={data.client.id} source={data.sources.find(source=>source.id===o.image_source_id)!}/>}
    <h2>{o.name}</h2><p className="tagline">{o.description||"Descrizione da completare."}</p>
    <div className="info-pair"><span>Prezzo</span><strong>{offerLabel(o)}</strong></div>
    <div className="info-pair"><span>Destinatari</span><strong>{o.audience||"Non indicati"}</strong></div>
@@ -220,6 +252,7 @@ function Offers({data,onModal,onAction}:{data:Snapshot;onModal:Props["onModal"];
     <button className="button small" onClick={()=>onModal("offer",o)}>Modifica</button>
     {o.status==="draft"&&<button className="button small primary" onClick={()=>onAction("verifyOffer",{id:o.id})}><Check size={13}/> Conferma dati</button>}
     {o.status==="verified"&&<button className="button small" onClick={()=>onModal("campaign",{offer_id:o.id})}>Promuovi <ArrowRight size={13}/></button>}
+    <button className="button small ghost" disabled={Boolean(busy)} aria-label={`Elimina ${o.name}`} onClick={()=>{if(window.confirm(`Eliminare «${o.name}» dal catalogo? Le campagne e i contenuti già creati restano, ma perdono il collegamento a questo prodotto.`))onAction("deleteOffer",{id:o.id});}}><Trash2 size={14}/> Elimina</button>
    </div>
   </div>)}</div>:
   <Empty title="Nessuna offerta in questa categoria" text="Registra prodotti e servizi, quindi verifica i dati commerciali per utilizzarli nelle campagne."><button className="button primary" onClick={()=>onModal("offer")}><Plus size={15}/> Aggiungi la prima offerta</button></Empty>}

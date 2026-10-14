@@ -40,7 +40,7 @@ test("plain-text uploads are available as evidence",async()=>{
  assert.equal(result.status,"ready");
  assert.match(result.body,/Confirmed price/);
 });
-test("images remain pending without inventing OCR",async()=>{
+test("local image extraction remains pending until the configured OCR path runs",async()=>{
  const result=await extractDocument(new Uint8Array([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]),"image/png","label.png");
  assert.equal(result.status,"pending");assert.equal(result.body,"");
 });

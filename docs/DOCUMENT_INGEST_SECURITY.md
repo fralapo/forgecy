@@ -4,7 +4,7 @@
 
 Il primo passaggio su file caricati da un cliente è la validazione di **tipo + firma + struttura**. Solo dopo l'esito positivo il backend salva il file nella cartella privata locale. La stessa validazione viene rieseguita nella libreria di estrazione, compreso il comando di rielaborazione.
 
-I normali PDF testuali, Word DOCX, TXT/MD/CSV UTF-8 e immagini JPEG/PNG/WebP restano formati supportati. Le immagini restano **pending**: nessuna inferenza OCR è stata introdotta.
+I normali PDF testuali, Word DOCX, TXT/MD/CSV UTF-8 e immagini JPEG/PNG/WebP restano formati supportati. I PDF e le immagini vengono prima elaborati in locale. Per scansioni e immagini si può scegliere OpenRouter, PaddleOCR-VL locale o la modalità automatica; Solo locale non effettua fallback remoto.
 
 ## Controlli DOCX
 
@@ -22,11 +22,20 @@ Non effettua estrazione dei file sul disco, non esegue macro o link. Non conside
 ## Altri formati
 
 - Max **10 MB** per file (limite esistente, rafforzato nel validatore centrale).
-- PDF: firma \`%PDF-\`, terminatore \`%%EOF\` e parser testuale limitato alle prime 40 pagine. I PDF scannerizzati non vengono interpretati automaticamente.
+- PDF: firma \`%PDF-\`, terminatore \`%%EOF\` e parser testuale limitato alle prime 40 pagine. Se non estrae testo, il motore OCR selezionato avvia PaddleOCR-VL locale o il file-parser OpenRouter con Mistral OCR; i file oltre le 40 pagine restano archiviati e possono essere divisi e ricaricati.
+- Immagini: firma del formato verificata prima di elaborare l'immagine con il motore OCR scelto. Per i PDF il parser può restituire al massimo 8 immagini; l'eventuale passaggio di immagini al modello AI per estrarre i prodotti è distinto dall'OCR. Forgecy collega una foto a un prodotto solo quando l'associazione è chiara.
+- OCR API: viene usato quando è selezionato o quando la modalità automatica lo sceglie; PDF e immagini inviati vengono elaborati fuori dal computer da OpenRouter e dai provider. Mistral OCR è fatturato a pagina anche con BYOK; il costo documentato è 2 USD ogni 1.000 pagine. Le chiamate al modello visivo entrano nel registro utilizzo OpenRouter.
+- Ogni estrazione AI resta evidenza non attendibile. L'importazione prodotti conserva solo campi con citazioni letterali verificate sul testo estratto e non sovrascrive campi bloccati da modifiche manuali.
 - TXT/MD/CSV: codifica UTF-8 valida, senza byte NUL.
 - PNG/JPEG/WebP: verifica delle firme standard, senza dichiarare che il resto della struttura dell'immagine sia completamente valido.
 
 ## Copertura test
+
+### OCR locale e aggiornamenti
+
+- PDF e immagini possono usare PaddleOCR-VL CPU in un ambiente Python privato oppure l'API OpenRouter; il controllo hardware propone la modalità locale solo su sistemi supportati, con almeno 12 GB di RAM e spazio disponibile. La selezione Solo locale non ripiega mai sull'API.
+- L'installer usa una versione stabile del pacchetto, staging separato e un'inferenza sintetica prima di cambiare il puntatore della versione attiva. La versione precedente resta disponibile se installazione o test falliscono; i vecchi ambienti/modelli vengono rimossi solo dopo l'attivazione e quando non sono in uso.
+- L'estrazione AI strutturata di cataloghi è separata dall'OCR e può trasmettere testo e immagini al modello OpenRouter configurato.
 
 \`tests/unit/document-safety.test.ts\` produce un ZIP DOCX reale e verifica estrazione Mammoth. Testa anche:
 - archivio cifrato;
@@ -41,7 +50,7 @@ Non effettua estrazione dei file sul disco, non esegue macro o link. Non conside
 
 ## Limitazioni e requisiti per la produzione
 
-Questa PR **non implementa antivirus, sandbox CPU/memoria, cancellazione sicura, isolamento dei parser, OCR o gestione code separate per file**. Un PDF particolarmente complesso può ancora richiedere molte risorse. Il parsing dei file arbitrari andrebbe spostato in worker con limiti di tempo, memoria e permessi; è anche necessario monitorare dipendenze, prevedere quarantine/scansioni antivirus, rate limit utenti e retention.
+La pipeline usa limiti di upload e di pagine, ma non implementa antivirus, cancellazione sicura o un processo isolato separato per l'OCR. Un PDF complesso può ancora richiedere risorse locali durante il controllo pagina. Per installazioni esposte a file non fidati ad alto volume servono scansione antivirus, isolamento CPU/memoria, rate limit e retention più stretti.
 
 Per elaborare file non fidati ad alto volume servono un threat model e test in un ambiente isolato. Queste difese sono integrate su `main` dalla release V24 (#100); non aggiungono migrazioni SQL o variabili d'ambiente. Per l'installazione personale corrente seguire [LOCAL_SETUP.md](LOCAL_SETUP.md) e applicare le migrazioni 0001–0018.
 

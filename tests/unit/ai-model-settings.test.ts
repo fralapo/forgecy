@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import {
   defaultImageModel, defaultTextModel, loadOpenRouterCatalogs, normalizeImageModels,
-  normalizeTextModels, withTextModel, withUserTextModel, currentTextModel
+  normalizeTextModels, normalizeVisionModels, withTextModel, withUserTextModel, currentTextModel
 } from "../../lib/ai-model-settings";
 import { decodeOpenRouterImage } from "../../lib/openrouter-image";
 
@@ -38,7 +38,17 @@ describe("OpenRouter catalog normalization", () => {
     ]);
   });
 
-  it("fetches both uncached catalogs from their distinct OpenRouter endpoints", async () => {
+  it("normalizes the live image-input text-model catalog for OCR selection", () => {
+    assert.deepEqual(normalizeVisionModels({data:[
+      {id:"deepseek/deepseek-v4.1-flash",name:"DeepSeek V4.1 Flash",supported_parameters:["structured_outputs"]},
+      {id:"text-only/model",name:"Filtered upstream"}
+    ]}),[
+      {id:"deepseek/deepseek-v4.1-flash",name:"DeepSeek V4.1 Flash",description:"",structuredOutputs:true},
+      {id:"text-only/model",name:"Filtered upstream",description:"",structuredOutputs:false}
+    ]);
+  });
+
+  it("fetches live text, image-generation, and image-input catalogs", async () => {
     process.env.OPENROUTER_API_KEY = "test-key";
     const urls: string[] = [];
     const catalogs = await loadOpenRouterCatalogs(async (input, init) => {
@@ -46,13 +56,15 @@ describe("OpenRouter catalog normalization", () => {
       assert.equal(new Headers(init?.headers).get("authorization"), "Bearer test-key");
       assert.equal(init?.cache, "no-store");
       return new Response(JSON.stringify({ data: [{ id: "org/model", name: "Model" }] }), { status: 200 });
-    });
+    },async()=>process.env.OPENROUTER_API_KEY||null);
     assert.deepEqual(urls.sort(), [
       "https://openrouter.ai/api/v1/images/models",
+      "https://openrouter.ai/api/v1/models?input_modalities=image&output_modalities=text",
       "https://openrouter.ai/api/v1/models?output_modalities=text"
     ]);
     assert.equal(catalogs.textModels[0]?.id, "org/model");
     assert.equal(catalogs.imageModels[0]?.id, "org/model");
+    assert.equal(catalogs.visionModels[0]?.id, "org/model");
   });
 });
 

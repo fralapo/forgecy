@@ -43,7 +43,7 @@ The Leader displays warnings and blocking issues. The local database rejects pro
 
 Client uploads retain immutable originals in the private local data folder. Text-based PDFs (bounded to the first 40 pages), DOCX, plain text, Markdown and CSV are converted into limited evidence text. Up to 10 MB per file and 80,000 extracted characters; invalid files or scanned PDFs do not turn into fabricated evidence. A source shows ready, pending, or error and offers retry.
 
-OCR, PDF images, advanced tabular extraction, background workers and full concept/entity wiki remain future work. Client documents should be scanned for malicious content and processed within restricted memory/CPU and outbound network limits before using this pipeline for arbitrary high-volume customer uploads.
+The current pipeline performs local-first PDF/DOCX/CSV extraction, optional remote OCR through OpenRouter for scanned PDFs and images, product reconciliation, and local hybrid retrieval. Remaining work includes representative OCR/evidence evaluations, stronger table extraction for irregular catalogs, and a versioned concept/entity wiki if real workflows demonstrate the need. Client documents should be scanned for malicious content and processed within restricted memory/CPU and outbound network limits before using this pipeline for arbitrary high-volume customer uploads.
 
 ## Validation
 
@@ -54,7 +54,8 @@ This does not test live OpenRouter image generation, Meta OAuth or full client w
 ## Next prioritized work
 
 - Durable queue with retries, cancellation, per-client AI budgets.
-- Client wiki with versioned evidence/conflict resolution and native PDF/OCR processing isolation.
+- Corpus-quality evaluation for OCR, tables, product/image matching, and retrieval on representative client documents.
+- Consider a versioned concept/entity wiki only if observed multi-hop questions justify its added complexity.
 - GEO audit with real page crawling and source-grounded findings; never synthetic rankings.
 - Rich design layers/templates with export parity.
 - Authenticated organizations and human reviewer roles.

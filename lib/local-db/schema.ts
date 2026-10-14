@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS offers (
  kind TEXT NOT NULL CHECK(kind IN ('product','service')), name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 180),
  description TEXT NOT NULL DEFAULT '', audience TEXT NOT NULL DEFAULT '', benefits TEXT NOT NULL DEFAULT '[]',
  price REAL, currency TEXT NOT NULL DEFAULT 'EUR', cta TEXT NOT NULL DEFAULT '', source_id TEXT,
+ image_source_id TEXT REFERENCES sources(id) ON DELETE SET NULL,
+ catalog_locked INTEGER NOT NULL DEFAULT 0 CHECK(catalog_locked IN (0,1)),
  status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','verified','archived')),
  version INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
  UNIQUE(id,client_id),
@@ -157,7 +159,7 @@ CREATE INDEX IF NOT EXISTS editorial_entries_client_time_idx ON editorial_entrie
 CREATE TABLE IF NOT EXISTS website_crawl_requests (
  id TEXT PRIMARY KEY, client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
  requested_by TEXT NOT NULL, hostname TEXT NOT NULL CHECK(length(hostname) BETWEEN 4 AND 253),
- page_budget INTEGER NOT NULL CHECK(page_budget BETWEEN 1 AND 6), requested_at TEXT NOT NULL
+ page_budget INTEGER NOT NULL CHECK(page_budget BETWEEN 1 AND 100), requested_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS website_crawl_client_window_idx ON website_crawl_requests(client_id,requested_at DESC);
 CREATE INDEX IF NOT EXISTS website_crawl_actor_window_idx ON website_crawl_requests(requested_by,requested_at DESC);
@@ -165,10 +167,17 @@ CREATE INDEX IF NOT EXISTS website_crawl_actor_window_idx ON website_crawl_reque
 CREATE TABLE IF NOT EXISTS source_chunks (
  id INTEGER PRIMARY KEY AUTOINCREMENT, client_id TEXT NOT NULL, source_id TEXT NOT NULL,
  ordinal INTEGER NOT NULL CHECK(ordinal BETWEEN 0 AND 79), body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 1700),
+ section_title TEXT NOT NULL DEFAULT '' CHECK(length(section_title)<=240),
  created_at TEXT NOT NULL, UNIQUE(source_id,ordinal),
  FOREIGN KEY(source_id,client_id) REFERENCES sources(id,client_id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS source_chunks_client_source_idx ON source_chunks(client_id,source_id);
+CREATE TABLE IF NOT EXISTS source_chunk_embeddings (
+ chunk_id INTEGER NOT NULL REFERENCES source_chunks(id) ON DELETE CASCADE,
+ model_id TEXT NOT NULL CHECK(length(model_id) BETWEEN 1 AND 180), dimensions INTEGER NOT NULL CHECK(dimensions BETWEEN 1 AND 2048),
+ vector BLOB NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(chunk_id,model_id)
+);
+CREATE INDEX IF NOT EXISTS source_chunk_embeddings_model_idx ON source_chunk_embeddings(model_id,chunk_id);
 
 CREATE TABLE IF NOT EXISTS ai_request_reservations (
  id TEXT PRIMARY KEY, client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
@@ -194,7 +203,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS ai_provider_usage_external_id_unique ON ai_pro
 
 CREATE TABLE IF NOT EXISTS ai_preferences (
  owner_id TEXT PRIMARY KEY, text_model TEXT CHECK(text_model IS NULL OR length(text_model) BETWEEN 1 AND 180),
- image_model TEXT CHECK(image_model IS NULL OR length(image_model) BETWEEN 1 AND 180), updated_at TEXT NOT NULL
+ image_model TEXT CHECK(image_model IS NULL OR length(image_model) BETWEEN 1 AND 180),
+ ocr_model TEXT CHECK(ocr_model IS NULL OR length(ocr_model) BETWEEN 1 AND 180),
+ ocr_provider TEXT NOT NULL DEFAULT 'auto' CHECK(ocr_provider IN ('auto','openrouter','local')),
+ ocr_auto_update INTEGER NOT NULL DEFAULT 1 CHECK(ocr_auto_update IN (0,1)),
+ semantic_enabled INTEGER NOT NULL DEFAULT 0 CHECK(semantic_enabled IN (0,1)), updated_at TEXT NOT NULL
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS source_fts USING fts5(id UNINDEXED, title, body, tokenize='unicode61 remove_diacritics 2');
@@ -204,6 +217,22 @@ CREATE TRIGGER IF NOT EXISTS sources_fts_update AFTER UPDATE OF title,body,statu
  BEGIN DELETE FROM source_fts WHERE id=old.id; INSERT INTO source_fts(id,title,body) SELECT new.id,new.title,substr(new.body,1,20000) WHERE new.status='ready'; END;
 CREATE TRIGGER IF NOT EXISTS sources_fts_delete AFTER DELETE ON sources
  BEGIN DELETE FROM source_fts WHERE id=old.id; END;
+
+CREATE VIRTUAL TABLE IF NOT EXISTS source_chunk_fts USING fts5(chunk_id UNINDEXED, source_id UNINDEXED, title, body, tokenize='unicode61 remove_diacritics 2');
+CREATE TRIGGER IF NOT EXISTS source_chunks_fts_insert AFTER INSERT ON source_chunks
+ BEGIN INSERT INTO source_chunk_fts(chunk_id,source_id,title,body)
+   SELECT new.id,new.source_id,s.title,new.body FROM sources s WHERE s.id=new.source_id AND s.status='ready'; END;
+CREATE TRIGGER IF NOT EXISTS source_chunks_fts_update AFTER UPDATE OF source_id,body ON source_chunks
+ BEGIN DELETE FROM source_chunk_fts WHERE chunk_id=old.id;
+   INSERT INTO source_chunk_fts(chunk_id,source_id,title,body)
+   SELECT new.id,new.source_id,s.title,new.body FROM sources s WHERE s.id=new.source_id AND s.status='ready'; END;
+CREATE TRIGGER IF NOT EXISTS source_chunks_fts_delete AFTER DELETE ON source_chunks
+ BEGIN DELETE FROM source_chunk_fts WHERE chunk_id=old.id; END;
+CREATE TRIGGER IF NOT EXISTS sources_chunk_fts_update AFTER UPDATE OF title,status ON sources
+ BEGIN DELETE FROM source_chunk_fts WHERE source_id=old.id;
+   INSERT INTO source_chunk_fts(chunk_id,source_id,title,body)
+   SELECT c.id,c.source_id,new.title,c.body FROM source_chunks c
+   WHERE c.source_id=new.id AND new.status='ready'; END;
 `;
 
 export const JSON_COLUMNS: Record<string, ReadonlySet<string>> = {

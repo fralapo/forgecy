@@ -5,6 +5,7 @@ import { chmodSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { JSON_COLUMNS, LOCAL_SCHEMA, TABLES } from "./schema";
+import { splitSourceIntoChunks } from "../source-chunking";
 
 export const LOCAL_OWNER_ID = "00000000-0000-4000-8000-000000000001";
 export type DbError = { message: string; code?: string };
@@ -25,13 +26,91 @@ function configure(db: Database.Database) {
   db.pragma("synchronous = FULL");
   db.exec(LOCAL_SCHEMA);
   const version = Number(db.pragma("user_version", { simple: true }));
-  if (version > 2) throw new Error(`Database Forgecy v${version} non supportato da questa versione dell'app`);
+  if (version > 10) throw new Error(`Database Forgecy v${version} non supportato da questa versione dell'app`);
   if (version < 2) {
     db.transaction(() => {
       const columns = db.pragma("table_info(social_accounts)") as { name: string }[];
       if (!columns.some(column => column.name === "needs_reauth"))
         db.exec("ALTER TABLE social_accounts ADD COLUMN needs_reauth INTEGER NOT NULL DEFAULT 0 CHECK(needs_reauth IN (0,1))");
       db.pragma("user_version = 2");
+    })();
+  }
+  const currentVersion=Number(db.pragma("user_version",{simple:true}));
+  if(currentVersion<4){
+    db.transaction(()=>{
+      db.exec(`CREATE TABLE website_crawl_requests_v4 (
+       id TEXT PRIMARY KEY, client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+       requested_by TEXT NOT NULL, hostname TEXT NOT NULL CHECK(length(hostname) BETWEEN 4 AND 253),
+       page_budget INTEGER NOT NULL CHECK(page_budget BETWEEN 1 AND 100), requested_at TEXT NOT NULL
+      );
+      INSERT INTO website_crawl_requests_v4 SELECT * FROM website_crawl_requests;
+      DROP TABLE website_crawl_requests;
+      ALTER TABLE website_crawl_requests_v4 RENAME TO website_crawl_requests;
+      CREATE INDEX website_crawl_client_window_idx ON website_crawl_requests(client_id,requested_at DESC);
+      CREATE INDEX website_crawl_actor_window_idx ON website_crawl_requests(requested_by,requested_at DESC);
+      PRAGMA user_version = 4;`);
+    })();
+  }
+  const indexedVersion=Number(db.pragma("user_version",{simple:true}));
+  if(indexedVersion<5){
+    db.transaction(()=>{
+      db.exec(`INSERT INTO source_chunk_fts(chunk_id,source_id,title,body)
+        SELECT c.id,c.source_id,s.title,c.body FROM source_chunks c
+        JOIN sources s ON s.id=c.source_id AND s.client_id=c.client_id
+        WHERE s.status='ready';
+        PRAGMA user_version = 5;`);
+    })();
+  }
+  const currentSchemaVersion=Number(db.pragma("user_version",{simple:true}));
+  if(currentSchemaVersion<6){
+    db.transaction(()=>{
+      const chunkColumns=db.pragma("table_info(source_chunks)") as {name:string}[];
+      if(!chunkColumns.some(column=>column.name==="section_title"))
+        db.exec("ALTER TABLE source_chunks ADD COLUMN section_title TEXT NOT NULL DEFAULT '' CHECK(length(section_title)<=240)");
+      const preferenceColumns=db.pragma("table_info(ai_preferences)") as {name:string}[];
+      if(!preferenceColumns.some(column=>column.name==="semantic_enabled"))
+        db.exec("ALTER TABLE ai_preferences ADD COLUMN semantic_enabled INTEGER NOT NULL DEFAULT 0 CHECK(semantic_enabled IN (0,1))");
+      db.pragma("user_version = 6");
+    })();
+  }
+  const offerSchemaVersion=Number(db.pragma("user_version",{simple:true}));
+  if(offerSchemaVersion<7){
+    db.transaction(()=>{
+      const offerColumns=db.pragma("table_info(offers)") as {name:string}[];
+      if(!offerColumns.some(column=>column.name==="image_source_id"))
+        db.exec("ALTER TABLE offers ADD COLUMN image_source_id TEXT REFERENCES sources(id) ON DELETE SET NULL");
+      db.exec(`UPDATE offers SET status='verified',updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+        WHERE status='draft' AND kind='product' AND source_id IN (SELECT id FROM sources WHERE kind='website')`);
+      db.pragma("user_version = 7");
+    })();
+  }
+  const catalogSchemaVersion=Number(db.pragma("user_version",{simple:true}));
+  if(catalogSchemaVersion<8){
+    db.transaction(()=>{
+      const offerColumns=db.pragma("table_info(offers)") as {name:string}[];
+      if(!offerColumns.some(column=>column.name==="catalog_locked"))
+        db.exec("ALTER TABLE offers ADD COLUMN catalog_locked INTEGER NOT NULL DEFAULT 0 CHECK(catalog_locked IN (0,1))");
+      db.pragma("user_version = 8");
+    })();
+  }
+  const ocrSchemaVersion=Number(db.pragma("user_version",{simple:true}));
+  if(ocrSchemaVersion<9){
+    db.transaction(()=>{
+      const preferenceColumns=db.pragma("table_info(ai_preferences)") as {name:string}[];
+      if(!preferenceColumns.some(column=>column.name==="ocr_model"))
+        db.exec("ALTER TABLE ai_preferences ADD COLUMN ocr_model TEXT CHECK(ocr_model IS NULL OR length(ocr_model) BETWEEN 1 AND 180)");
+      db.pragma("user_version = 9");
+    })();
+  }
+  const localOcrSchemaVersion=Number(db.pragma("user_version",{simple:true}));
+  if(localOcrSchemaVersion<10){
+    db.transaction(()=>{
+      const preferenceColumns=db.pragma("table_info(ai_preferences)") as {name:string}[];
+      if(!preferenceColumns.some(column=>column.name==="ocr_provider"))
+        db.exec("ALTER TABLE ai_preferences ADD COLUMN ocr_provider TEXT NOT NULL DEFAULT 'auto' CHECK(ocr_provider IN ('auto','openrouter','local'))");
+      if(!preferenceColumns.some(column=>column.name==="ocr_auto_update"))
+        db.exec("ALTER TABLE ai_preferences ADD COLUMN ocr_auto_update INTEGER NOT NULL DEFAULT 1 CHECK(ocr_auto_update IN (0,1))");
+      db.pragma("user_version = 10");
     })();
   }
   return db;
@@ -304,9 +383,10 @@ export class LocalDatabase {
     }
     if (table === "sources" && next && next.status === "ready") {
       const body = String(next.body || "");
-      const insert = this.connection.prepare("INSERT OR REPLACE INTO source_chunks(client_id,source_id,ordinal,body,created_at) VALUES(?,?,?,?,?)");
+      const insert = this.connection.prepare("INSERT OR REPLACE INTO source_chunks(client_id,source_id,ordinal,body,section_title,created_at) VALUES(?,?,?,?,?,?)");
       this.connection.prepare("DELETE FROM source_chunks WHERE source_id=?").run(next.id);
-      for (let offset = 0, ordinal = 0; offset < body.length && ordinal < 80; offset += 1500, ordinal++) insert.run(clientId, next.id, ordinal, body.slice(offset, offset + 1700), now());
+      for (const chunk of splitSourceIntoChunks(body))
+        insert.run(clientId,next.id,chunk.ordinal,chunk.body,chunk.sectionTitle,now());
     } else if (table === "sources") this.connection.prepare("DELETE FROM source_chunks WHERE source_id=?").run(row.id);
   }
   snapshot(destination: string) { return this.connection.backup(destination); }
@@ -326,6 +406,15 @@ export class LocalDatabase {
     };
     const transaction = db.transaction(() => {
       switch (name) {
+        case "forgecy_delete_offer": {
+          const offer=db.prepare("SELECT * FROM offers WHERE id=? AND client_id=?").get(a.p_offer_id,a.p_client_id) as Record<string,unknown>|undefined;
+          if(!client(a.p_client_id)||!offer)throw new Error("Offerta non trovata");
+          const campaigns=db.prepare("UPDATE campaigns SET offer_id=NULL,updated_at=? WHERE client_id=? AND offer_id=?").run(time,a.p_client_id,a.p_offer_id).changes;
+          const contents=db.prepare("UPDATE contents SET offer_id=NULL,offer_version=NULL,updated_at=? WHERE client_id=? AND offer_id=?").run(time,a.p_client_id,a.p_offer_id).changes;
+          db.prepare("DELETE FROM offers WHERE id=? AND client_id=?").run(a.p_offer_id,a.p_client_id);
+          this.afterMutation("offers",offer,null);
+          return {id:offer.id,campaignsDetached:campaigns,contentsDetached:contents};
+        }
         case "forgecy_reserve_ai_request": {
           const owner = client(a.p_client_id);
           if (!owner) throw new Error("Cliente non autorizzato");
@@ -346,13 +435,13 @@ export class LocalDatabase {
         case "forgecy_reserve_website_crawl": {
           if (!client(a.p_client_id)) throw new Error("Cliente non autorizzato");
           const host = String(a.p_hostname || ""); const pages = Number(a.p_page_budget);
-          if (!/^[a-z0-9][a-z0-9.-]*[a-z0-9]$/.test(host) || !host.includes(".") || host.includes("..") || pages < 1 || pages > 6) throw new Error("Richiesta di acquisizione non valida");
+          if (!/^[a-z0-9][a-z0-9.-]*[a-z0-9]$/.test(host) || !host.includes(".") || host.includes("..") || pages < 1 || pages > 100) throw new Error("Richiesta di acquisizione non valida");
           const fifteen = new Date(Date.now() - 15 * 60_000).toISOString(); const day = new Date(Date.now() - 86_400_000).toISOString();
           const recent = Number((db.prepare("SELECT count(*) n FROM website_crawl_requests WHERE client_id=? AND requested_at>? ").get(a.p_client_id, fifteen) as { n: number } | undefined)?.n || 0);
           const own = db.prepare("SELECT count(*) n,coalesce(sum(page_budget),0) pages FROM website_crawl_requests WHERE requested_by=? AND requested_at>? ").get(LOCAL_OWNER_ID, day) as { n: number; pages: number };
           const mine = Number((db.prepare("SELECT coalesce(sum(page_budget),0) n FROM website_crawl_requests WHERE client_id=? AND requested_at>? ").get(a.p_client_id, day) as { n: number } | undefined)?.n || 0);
           if (recent >= 2) throw new Error("Attendi prima di avviare una nuova analisi del sito");
-          if (mine + pages > 24 || own.n >= 30 || own.pages + pages > 144) throw new Error("Budget giornaliero di acquisizione esaurito");
+          if (mine + pages > 200 || own.n >= 30 || own.pages + pages > 600) throw new Error("Budget giornaliero di acquisizione esaurito");
           return insert("website_crawl_requests", { client_id: a.p_client_id, requested_by: LOCAL_OWNER_ID, hostname: host, page_budget: pages }).id;
         }
         case "forgecy_enqueue_ai_job": {
@@ -447,9 +536,15 @@ export class LocalDatabase {
           const match = terms.map(term => `"${term.replaceAll('"', '""')}"`).join(" OR ");
           const max = Math.min(20, Math.max(1, Number(a.p_limit || 8)));
           if (name === "forgecy_search_sources") {
-            return rows(`SELECT s.id,s.title,s.kind,s.url,substr(s.body,1,1500) excerpt,(-bm25(source_fts)) relevance,s.captured_at FROM source_fts JOIN sources s ON s.id=source_fts.id WHERE source_fts MATCH ? AND s.client_id=? AND s.status='ready' ORDER BY bm25(source_fts),s.captured_at DESC LIMIT ?`, match, a.p_client_id, max);
+            return rows(`SELECT s.id,s.title,s.kind,s.url,c.section_title,substr(c.body,1,1500) excerpt,
+                (-bm25(source_chunk_fts,0,0,4.0,1.0)) relevance,s.captured_at
+              FROM source_chunk_fts
+              JOIN source_chunks c ON c.id=source_chunk_fts.chunk_id
+              JOIN sources s ON s.id=c.source_id AND s.client_id=c.client_id
+              WHERE source_chunk_fts MATCH ? AND s.client_id=? AND s.status='ready'
+              ORDER BY bm25(source_chunk_fts,0,0,4.0,1.0),s.captured_at DESC LIMIT ?`, match, a.p_client_id, max);
           }
-          const results = rows(`SELECT c.source_id,s.title source_title,s.url source_url,c.ordinal chunk_ordinal,c.body excerpt,(-bm25(source_fts)) relevance FROM source_fts JOIN sources s ON s.id=source_fts.id JOIN source_chunks c ON c.source_id=s.id AND c.client_id=s.client_id WHERE source_fts MATCH ? AND s.client_id=? AND s.status='ready' ORDER BY bm25(source_fts),c.ordinal LIMIT ?`, match, a.p_client_id, max);
+          const results = rows(`SELECT c.source_id,s.title source_title,s.url source_url,c.ordinal chunk_ordinal,c.section_title,c.body excerpt,(-bm25(source_chunk_fts,0,0,4.0,1.0)) relevance FROM source_chunk_fts JOIN source_chunks c ON c.id=source_chunk_fts.chunk_id JOIN sources s ON s.id=c.source_id AND s.client_id=c.client_id WHERE source_chunk_fts MATCH ? AND s.client_id=? AND s.status='ready' ORDER BY bm25(source_chunk_fts,0,0,4.0,1.0),c.ordinal LIMIT ?`, match, a.p_client_id, max);
           return results;
         }
         case "forgecy_client_ai_usage_summary": {
