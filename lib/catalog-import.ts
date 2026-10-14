@@ -106,10 +106,16 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
   const separators=markdownCells(lines[headerLine+1]);
   if(!headers||!separators||headers.length!==separators.length||!separators.every(cell=>/^:?-{3,}:?$/u.test(cell.replace(/\s/gu,""))))continue;
   const normalizedHeaders=headers.map(normalizeCatalogName);
-  const nameIndex=headerIndex(normalizedHeaders,["nome","nome prodotto","prodotto","product","product name","name","articolo","nome articolo","item","modello","model"]);
+  let nameIndex=headerIndex(normalizedHeaders,["nome","nome prodotto","prodotto","product","product name","name","articolo","nome articolo","item","modello","model"]);
   const priceIndex=headerIndex(normalizedHeaders,["prezzo listino","prezzo","price","costo"]);
-  if(nameIndex<0||priceIndex<0)continue;
-  const descriptionIndex=headerIndex(normalizedHeaders,["descrizione","description","dettagli","details"]);
+  if(priceIndex<0)continue;
+  let descriptionIndex=headerIndex(normalizedHeaders,["descrizione","description","dettagli","details"]);
+  const codeIndex=headerIndex(normalizedHeaders,["codice","code","sku","codice prodotto","product code"]);
+  if(nameIndex<0&&descriptionIndex>=0&&codeIndex>=0){
+   nameIndex=descriptionIndex;
+   descriptionIndex=codeIndex;
+  }
+  if(nameIndex<0)continue;
   const currencyIndex=headerIndex(normalizedHeaders,["valuta","currency"]);
   const products:CatalogProduct[]=[];
   for(let rowLine=headerLine+2;rowLine<lines.length;rowLine++){
