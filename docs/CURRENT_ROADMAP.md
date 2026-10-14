@@ -14,7 +14,6 @@ Aggiornato il 14 ottobre 2026. Forgecy è un progetto open source per uso person
 - Importazione manuale di snapshot Instagram e conteggio follower dall'archivio JSON dell'account proprietario; i nomi restano nel browser. Nessuno scraping o accesso automatico alla piattaforma.
 - Cataloghi OpenRouter correnti per modelli testo e immagini, selezionabili da Impostazioni e salvati nel workspace.
 - Export/import verificato, backup locali automatici a rotazione e snapshot immutabili Google Drive con scelta manuale in caso di conflitto.
-- Importazione locale di snapshot JSON Instagram, confronto storico e export CSV; nessun accesso automatico alla piattaforma.
 
 ## Limiti conosciuti
 
@@ -24,7 +23,7 @@ Drive sincronizza solo quando richiesto e trasferisce snapshot completi, inclusi
 
 1. Provare la configurazione Google OAuth su un progetto Cloud personale e completare un ciclo export/import fra due computer.
 2. **Completata su dati sintetici.** Prova live isolata con la chiave OpenRouter locale: PDF scannerizzato di una pagina, OCR Mistral, estrazione e riconciliazione AI (1 prodotto aggiornato, 1 aggiunto, 0 invalidi; costo riportato 0,002825 USD). Il test SQLite chiude e riapre il database e recupera il job scaduto con lease rinnovata. Nessun dato cliente è stato usato e la chiave non è stata stampata o scritta nel workspace.
-3. Aggiungere una prova controllata della gestione conflitti con due snapshot divergenti e verificare la copia locale di recupero.
+3. **Completata in test isolato.** Due rami figli dello stesso snapshot sono rilevati come teste divergenti; la copia locale è salvata prima del ripristino, resta valida dopo il ripristino dell'altro snapshot e conserva il contenuto specifico del ramo locale. La sincronizzazione Google reale resta da provare con OAuth.
 4. Ampliare l'evaluation con documenti rappresentativi reali: accuratezza OCR, copertura delle tabelle e qualità del collegamento delle foto prodotto.
 
 I controlli automatizzati sono in GitHub Actions. Google Drive e OpenRouter richiedono credenziali configurate dall'utente. Instagram accetta snapshot manuali e conteggi follower dall'archivio JSON dell'account proprietario; non estrae metriche dei post dall'archivio e non raccoglie dati da altri profili. Dettagli e limiti sono in INSTAGRAM_SNAPSHOTS.md.
