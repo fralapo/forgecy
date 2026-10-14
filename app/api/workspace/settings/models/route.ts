@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ApiFailure, auth, dbError, fail, json, read } from "@/lib/http";
-import { defaultTextModel, loadOpenRouterCatalog, loadOpenRouterCatalogs } from "@/lib/ai-model-settings";
+import { defaultImageModel, defaultTextModel, loadOpenRouterCatalog, loadOpenRouterCatalogs } from "@/lib/ai-model-settings";
 
 export const runtime = "nodejs";
 
@@ -17,7 +17,7 @@ export async function GET() {
       ...catalogs,
       preferences: {
         textModel: preference.data?.text_model || defaultTextModel(),
-        imageModel: preference.data?.image_model || null
+        imageModel: preference.data?.image_model || defaultImageModel()
       }
     });
   } catch (error) { return fail(error); }

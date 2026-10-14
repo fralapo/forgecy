@@ -1,8 +1,9 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { LoaderCircle, RefreshCw, Settings2 } from "lucide-react";
+import { LoaderCircle, RefreshCw, Search, Settings2 } from "lucide-react";
 import { requestJson } from "./types";
 import type { OpenRouterImageModel, OpenRouterModel } from "@/lib/ai-model-settings";
+import { DEFAULT_IMAGE_MODEL, DEFAULT_TEXT_MODEL } from "@/lib/ai-model-defaults";
 import DriveSettings from "./drive-settings";
 
 type Preferences = { textModel: string; imageModel: string | null };
@@ -12,6 +13,93 @@ type ModelResponse = {
   imageModels: OpenRouterImageModel[];
   preferences: Preferences;
 };
+
+type SelectableModel = OpenRouterModel | OpenRouterImageModel;
+
+const PROVIDER_NAMES: Record<string, string> = {
+  "amazon": "Amazon", "anthropic": "Anthropic", "black-forest-labs": "Black Forest Labs",
+  "bytedance": "ByteDance", "bytedance-seed": "ByteDance Seed", "deepseek": "DeepSeek", "google": "Google",
+  "meta-llama": "Meta", "microsoft": "Microsoft", "mistralai": "Mistral AI",
+  "moonshotai": "Moonshot AI", "openai": "OpenAI", "qwen": "Qwen", "x-ai": "xAI",
+  "z-ai": "Z.ai"
+};
+
+function providerFor(modelId: string) {
+  const slug = modelId.replace(/^~/, "").split("/")[0]?.toLowerCase() || "other";
+  return PROVIDER_NAMES[slug] || slug.split(/[-_]/).map(word => word ? word[0].toUpperCase() + word.slice(1) : "").join(" ");
+}
+
+function ModelSelector({
+  kind, label, selectedId, models, unavailable, recommendedId, disabled, onChange
+}: {
+  kind: "text" | "image";
+  label: string;
+  selectedId: string;
+  models: SelectableModel[];
+  unavailable: boolean;
+  recommendedId: string;
+  disabled: boolean;
+  onChange: (id: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [provider, setProvider] = useState(() => selectedId ? providerFor(selectedId) : "");
+  const providers = [...new Set(models.map(model => providerFor(model.id)))].sort((a, b) => a.localeCompare(b, "it"));
+  const normalizedQuery = query.trim().toLocaleLowerCase("it");
+  const filtered = models.filter(model => {
+    const matchesProvider = !provider || providerFor(model.id) === provider;
+    const matchesQuery = !normalizedQuery || `${model.name} ${model.id} ${providerFor(model.id)} ${model.description}`
+      .toLocaleLowerCase("it").includes(normalizedQuery);
+    return matchesProvider && matchesQuery;
+  });
+  const groups = new Map<string, SelectableModel[]>();
+  for (const model of filtered) {
+    const name = providerFor(model.id);
+    groups.set(name, [...(groups.get(name) || []), model]);
+  }
+  const selected = models.find(model => model.id === selectedId);
+  const selectedProvider = selected ? providerFor(selected.id) : "";
+  const selectedOutsideFilters = Boolean(selectedId && !filtered.some(model => model.id === selectedId));
+
+  return <div className="model-picker stack">
+    <div className="model-picker-tools">
+      <div>
+        <label className="model-search-label" htmlFor={`forgecy-${kind}-model-search`}><Search size={14}/> Cerca tra {models.length} modelli</label>
+        <input id={`forgecy-${kind}-model-search`} type="search" value={query}
+          onChange={event => setQuery(event.target.value)} placeholder="Nome, produttore o ID…" />
+      </div>
+      <div>
+        <label className="model-provider-label" htmlFor={`forgecy-${kind}-provider`}>Produttore</label>
+        <select id={`forgecy-${kind}-provider`} value={provider} onChange={event => setProvider(event.target.value)}>
+          <option value="">Tutti i produttori ({models.length})</option>
+          {providers.map(name => <option key={name} value={name}>{name} ({models.filter(model => providerFor(model.id) === name).length})</option>)}
+        </select>
+      </div>
+    </div>
+    <label htmlFor={`forgecy-${kind}-model`}>{label}</label>
+    <select id={`forgecy-${kind}-model`} value={selectedId} disabled={disabled} onChange={event => onChange(event.target.value)}>
+      {(unavailable || selectedOutsideFilters) && <option value={selectedId}>
+        {selected?.name || selectedId} · {unavailable ? "non più disponibile" : "selezionato, fuori dai filtri"}
+      </option>}
+      {[...groups.entries()].sort(([a], [b]) => a.localeCompare(b, "it")).map(([name, rows]) =>
+        <optgroup key={name} label={`${name} · ${rows.length}`}>
+          {rows.sort((a, b) => a.name.localeCompare(b.name, "it")).map(model => <option key={model.id} value={model.id}>
+            {model.name} — {model.id}{"structuredOutputs" in model ? model.structuredOutputs ? " · JSON strutturato" : " · JSON non indicato" : ""}
+          </option>)}
+        </optgroup>
+      )}
+    </select>
+    <div className="model-selection-summary">
+      <div className="flex between center gap8 wrap">
+        <span className="pill muted">{selectedProvider || "Modello selezionato"}</span>
+        {selectedId === recommendedId && <span className="pill">Predefinito consigliato</span>}
+        <span className="caption">{filtered.length} risultati</span>
+      </div>
+      <strong>{selected?.name || selectedId}</strong>
+      <code>{selectedId}</code>
+      {selected?.description && <p className="caption model-description">{selected.description}</p>}
+    </div>
+  </div>;
+}
 
 export default function ModelSettings() {
   const [catalog, setCatalog] = useState<ModelResponse | null>(null);
@@ -111,8 +199,8 @@ export default function ModelSettings() {
 
   const textUnavailable = Boolean(catalog?.preferences.textModel &&
     !catalog.textModels.some(model => model.id === catalog.preferences.textModel));
-  const imageUnavailable = Boolean(catalog?.preferences.imageModel &&
-    !catalog.imageModels.some(model => model.id === catalog.preferences.imageModel));
+  const imageUnavailable = Boolean(catalog &&
+    !catalog.imageModels.some(model => model.id === (catalog.preferences.imageModel || DEFAULT_IMAGE_MODEL)));
 
   return <section className="stack-lg" style={{ maxWidth: 900 }}>
     <div className="page-head">
@@ -155,31 +243,18 @@ export default function ModelSettings() {
       <article className="card stack">
         <div className="flex center gap8"><Settings2 size={18}/><h2>Modello testo</h2></div>
         <p className="caption">Usato dal Leader, dagli agenti, dai dossier e dalle strategie. I modelli senza output strutturato restano selezionabili, ma dossier e campagne potrebbero non funzionare.</p>
-        <label htmlFor="forgecy-text-model">Modello OpenRouter per il testo</label>
-        <select id="forgecy-text-model" value={catalog.preferences.textModel}
-          disabled={Boolean(saving)} onChange={event => void selectModel("text", event.target.value)}>
-          {textUnavailable && <option value={catalog.preferences.textModel}>
-            {catalog.preferences.textModel} · non più disponibile
-          </option>}
-          {catalog.textModels.map(model => <option key={model.id} value={model.id}>
-            {model.name} — {model.id}{model.structuredOutputs ? " · schema strutturato" : " · schema non indicato"}
-          </option>)}
-        </select>
-        <p className="caption">{catalog.textModels.length} modelli testo disponibili. La compatibilità JSON è indicata dal catalogo OpenRouter e può variare per provider.</p>
+        <ModelSelector kind="text" label="Modello OpenRouter per il testo" selectedId={catalog.preferences.textModel}
+          models={catalog.textModels} unavailable={textUnavailable} recommendedId={DEFAULT_TEXT_MODEL}
+          disabled={Boolean(saving)} onChange={id => void selectModel("text", id)} />
+        <p className="caption">{catalog.textModels.length} modelli testo dal catalogo OpenRouter. I gruppi seguono il produttore e la ricerca filtra nome, ID e descrizione. La compatibilità JSON è indicata dal catalogo e può variare per provider.</p>
       </article>
 
       <article className="card stack">
         <div className="flex center gap8"><Settings2 size={18}/><h2>Modello immagini</h2></div>
         <p className="caption">Usato per creare immagini statiche dei contenuti. La chiave OpenRouter è configurata solo sul server; i modelli sono addebitati dal tuo account OpenRouter.</p>
-        <label htmlFor="forgecy-image-model">Modello OpenRouter per le immagini</label>
-        <select id="forgecy-image-model" value={catalog.preferences.imageModel || ""}
-          disabled={Boolean(saving)} onChange={event => void selectModel("image", event.target.value)}>
-          <option value="" disabled>Seleziona un modello immagini</option>
-          {imageUnavailable && catalog.preferences.imageModel && <option value={catalog.preferences.imageModel}>
-            {catalog.preferences.imageModel} · non più disponibile
-          </option>}
-          {catalog.imageModels.map(model => <option key={model.id} value={model.id}>{model.name} — {model.id}</option>)}
-        </select>
+        <ModelSelector kind="image" label="Modello OpenRouter per le immagini" selectedId={catalog.preferences.imageModel || DEFAULT_IMAGE_MODEL}
+          models={catalog.imageModels} unavailable={imageUnavailable} recommendedId={DEFAULT_IMAGE_MODEL}
+          disabled={Boolean(saving)} onChange={id => void selectModel("image", id)} />
         <p className="caption">{catalog.imageModels.length} modelli di generazione immagini disponibili. Se un modello non supporta il rapporto del contenuto, OpenRouter userà il proprio formato predefinito.</p>
       </article>
     </div>}

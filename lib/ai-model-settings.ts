@@ -2,6 +2,8 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { ApiFailure } from "./http";
 import { workerDb } from "./worker-db";
 import { getOpenRouterApiKey } from "./openrouter-credentials";
+import { DEFAULT_TEXT_MODEL, DEFAULT_IMAGE_MODEL } from "./ai-model-defaults";
+export { DEFAULT_TEXT_MODEL, DEFAULT_IMAGE_MODEL } from "./ai-model-defaults";
 
 export type OpenRouterModel = {
   id: string;
@@ -107,15 +109,24 @@ export async function loadOpenRouterCatalog(kind: "text" | "image", fetcher: Fet
 }
 
 export function currentTextModel() {
-  return textModelStorage.getStore() || process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
+  return textModelStorage.getStore() || configuredTextFallback();
 }
 
 export function withTextModel<T>(model: string | null | undefined, work: () => Promise<T>): Promise<T> {
-  return textModelStorage.run(model || process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini", work);
+  return textModelStorage.run(model || configuredTextFallback(), work);
 }
 
 export function defaultTextModel() {
-  return process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
+  return configuredTextFallback();
+}
+
+function configuredTextFallback() {
+  const configured = process.env.OPENROUTER_MODEL;
+  return configured && configured !== "openai/gpt-4.1-mini" ? configured : DEFAULT_TEXT_MODEL;
+}
+
+export function defaultImageModel() {
+  return DEFAULT_IMAGE_MODEL;
 }
 
 async function readTextPreference(userId: string): Promise<string | null> {
