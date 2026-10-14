@@ -16,7 +16,7 @@ describe("crypto", () => {
   const key = generateEncryptionKey();
 
   it("round-trips a BYOK key", () => {
-    const secret = "test-secret-WXYZ-1234";
+    const secret = "WXYZ";
     const enc = encryptSecret(secret, key);
     expect(enc).not.toContain(secret);
     expect(enc.startsWith("v1:")).toBe(true);
