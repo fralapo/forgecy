@@ -30,6 +30,23 @@ test("authenticated API mutations require the exact origin, not just same-site",
    appOrigin:"https://forgecy.example"
  }).ok,false);
 });
+test("localhost and IPv4 loopback are equivalent only on the same scheme and port",()=>{
+ const accepted=guardApiMutation(request("PATCH","http://127.0.0.1:3000",undefined,
+   "http://localhost:3000/api/workspace/settings/openrouter-key"),{
+   appOrigin:"http://localhost:3000"
+ });
+ assert.equal(accepted.ok,true);
+
+ for(const origin of ["http://localhost:3001","https://127.0.0.1:3000",
+   "http://attacker.example:3000"]){
+   const result=guardApiMutation(request("PATCH",origin),{appOrigin:"http://localhost:3000"});
+   assert.equal(result.ok,false,origin);
+   if(!result.ok)assert.equal(result.status,403);
+ }
+ assert.equal(guardApiMutation(request("PATCH","http://[::1]:3000"),{
+   appOrigin:"http://localhost:3000"
+ }).ok,true);
+});
 test("only API writes are origin gated; production requires a configured host",()=>{
  assert.equal(guardApiMutation(request("GET","https://evil.example"),{production:true}).ok,true);
  assert.equal(guardApiMutation(request("POST",undefined,undefined,"https://forgecy.example/workspace"),{
