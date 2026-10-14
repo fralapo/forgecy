@@ -25,7 +25,7 @@ export async function extractDocument(bytes:Uint8Array,mime:string,name:string):
    const parser=new PDFParse({data:Uint8Array.from(bytes)});
    try {
     // Extract a bounded prefix; scanned PDFs need explicit OCR (not silently guessed).
-    const text=await parser.getText({first:40});
+    const text=await parser.getText({first:40,pageJoiner:""});
     const body=clean(text.text||"");
     return body.length>20?{status:"ready",body,error:null}:
      {status:"error",body:"",error:"PDF senza testo leggibile: serve OCR o una trascrizione"};

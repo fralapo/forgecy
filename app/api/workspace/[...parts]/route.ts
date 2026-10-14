@@ -542,7 +542,7 @@ export async function POST(request:Request,{params}:Params){
    let catalog:CatalogImportResult=emptyCatalogResult("not_catalog");
    if(extraction.status==="ready"){
     try{catalog=await reconcileCatalogDocument(ctx,id,sourceId,source.title,extraction.body,ocr?.images||[]);}
-    catch(error){console.warn("[catalog-import] document analysis failed",error instanceof ApiFailure?error.status:"unknown");catalog=emptyCatalogResult("analysis_failed","Documento archiviato; analisi del catalogo non riuscita. Puoi ripetere la scansione.");}
+    catch(error){console.warn("[catalog-import] document analysis failed",error instanceof ApiFailure?error.status:"unknown",error instanceof Error?error.message:"unknown error");catalog=emptyCatalogResult("analysis_failed","Documento archiviato; analisi del catalogo non riuscita. Puoi ripetere la scansione.");}
    }
    await audit(ctx,id,"document_reprocessed",sourceId,{status:extraction.status});
    return json({source:data,extracted:extraction.status==="ready",catalog});

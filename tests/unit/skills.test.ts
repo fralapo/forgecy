@@ -57,3 +57,9 @@ test("genuine text PDF is extracted without OCR",async()=>{
  assert.equal(result.status,"ready",result.error||"");
  assert.match(result.body,/Verified product information/);
 });
+test("page boundary markers alone do not make a multi-page scan look like extracted text",async()=>{
+ const doc=await PDFDocument.create();doc.addPage([450,500]);doc.addPage([450,500]);
+ const result=await extractDocument(await doc.save(),"application/pdf","scan.pdf");
+ assert.equal(result.status,"error");
+ assert.equal(result.error,"PDF senza testo leggibile: serve OCR o una trascrizione");
+});
