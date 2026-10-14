@@ -10,11 +10,11 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
  const queryPath=join(process.cwd(),"tests/fixtures/retrieval-eval.json");
  const candidates=JSON.parse(readFileSync(fixturePath,"utf8")) as Candidate[];
  const targets=JSON.parse(readFileSync(queryPath,"utf8")) as Array<{id:string;passage:string}>;
- assert.equal(targets.length,28);
- assert.equal(candidates.length,111);
+ assert.equal(targets.length,29);
+ assert.equal(candidates.length,120);
  assert.equal(new Set(candidates.map(candidate=>candidate.id)).size,candidates.length);
  const targetIds=new Set(targets.map(target=>target.id));
- const targetProductCodes=new Set(targets.flatMap(target=>[...target.passage.matchAll(/(?:codice|articolo)\s+([A-Z0-9-]+)/giu)].map(match=>match[1].toUpperCase())));
+ const targetProductCodes=new Set(targets.flatMap(target=>[...target.passage.matchAll(/(?:codice|articolo)\s+([A-Z0-9]+(?:[.-][A-Z0-9]+)*)/giu)].map(match=>match[1].toUpperCase())));
  const targetCaleffiVariants=new Set(targets.flatMap(target=>{
   const match=/codice (AIR\d{6})(?:, variante ([^,]+))?/u.exec(target.passage);
   return match?[`${match[1]}:${(match[2]||"default").normalize("NFKD").replace(/[\u0300-\u036f]/gu,"").toLocaleLowerCase("it").replace(/[^\p{L}\p{N}]+/gu," ").trim()}`]:[];
@@ -30,6 +30,7 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
   const vaillant=/codice (\d{10}), prezzo ([\d.]+,\d{2}) EUR\./u.exec(candidate.passage);
   const caleffi=/codice (AIR\d{6}(?: BLK)?), variante ([^,]+), .+?, prezzo ([\d.]+,\d{2}) EUR\./u.exec(candidate.passage);
   const upower=/articolo ([A-Z0-9]+); classe di protezione ([A-Z0-9 ]+)\./u.exec(candidate.passage);
+  const briani=/codice (\d{3}\.\d{3}\.\d{2}\.\d{2}), prezzo ([\d.]+,\d{2}) EUR\./u.exec(candidate.passage);
   if(usag){
    assert.equal(candidate.source_url,"https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf");
    assert.equal(candidate.id,`usag-candidate-${usag[1].toLowerCase()}`);
@@ -47,6 +48,10 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
    assert.match(candidate.id,/^caleffi-candidate-[A-Z0-9-]+$/iu);
    const variantKey=`${caleffi[1]}:${caleffi[2].normalize("NFKD").replace(/[\u0300-\u036f]/gu,"").toLocaleLowerCase("it").replace(/[^\p{L}\p{N}]+/gu," ").trim()}`;
    assert.equal(targetCaleffiVariants.has(variantKey),false,candidate.id);
+  }else if(briani){
+   assert.equal(candidate.source_url,"https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf");
+   assert.equal(candidate.id,`briani-candidate-${briani[1]}`);
+   assert.equal(targetProductCodes.has(briani[1]),false,candidate.id);
   }else{
    assert.ok(upower,candidate.id);
    const productCode=/articolo ([A-Z0-9]+)/u.exec(candidate.passage)?.[1];
@@ -59,5 +64,5 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
    assert.equal(targetProductCodes.has(productCode.toUpperCase()),false,candidate.id);
   }
  }
- assert.deepEqual([...sources.values()].sort((a,b)=>a-b),[1,1,1,22,24,24,38]);
+ assert.deepEqual([...sources.values()].sort((a,b)=>a-b),[1,1,1,9,22,24,24,38]);
 });

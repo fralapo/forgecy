@@ -36,7 +36,7 @@ async function main() {
     return counts;
   },{});
   const { embedLocalTexts, LOCAL_EMBEDDING_MODEL_ID, LOCAL_EMBEDDING_MODEL_REVISION } = await import("../lib/local-embeddings");
-  const { fuseKnowledgeHits, knowledgeQueryContainsIdentifier, knowledgeQueryFromQuestion } = await import("../lib/knowledge-search");
+  const { fuseKnowledgeHits, IDENTIFIER_LEXICAL_WEIGHT, knowledgeQueryContainsIdentifier, knowledgeQueryFromQuestion } = await import("../lib/knowledge-search");
   const vectors = await embedInBatches([...candidates.map(candidate => candidate.passage), ...examples.map(example => example.query)], embedLocalTexts);
   const passages = vectors.slice(0, candidates.length);
   const queries = vectors.slice(candidates.length);
@@ -61,7 +61,7 @@ async function main() {
       chunk_ordinal: 0, excerpt: candidates[passageIndex].passage,
       relevance: vector.reduce((sum, value, dimension) => sum + value * queries[index][dimension], 0),
     })).sort((a, b) => b.relevance - a.relevance);
-    const hybrid = fuseKnowledgeHits(lexical, semantic, 8, knowledgeQueryContainsIdentifier(example.query) ? 3 : 1);
+    const hybrid = fuseKnowledgeHits(lexical, semantic, 8, knowledgeQueryContainsIdentifier(example.query) ? IDENTIFIER_LEXICAL_WEIGHT : 1);
     const rank = (hits: Hit[]): Rank => {
       const index = hits.findIndex(hit => hit.source_id === example.id);
       const value = index < 0 ? 0 : index + 1;

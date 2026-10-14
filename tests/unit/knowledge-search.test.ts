@@ -20,6 +20,7 @@ test("retrieval terms are bounded, unique and skip generic filler",()=>{
   assert.ok(knowledgeQueryFromQuestion("Termine ".repeat(100))!.length<=200);
  assert.equal(knowledgeQueryContainsIdentifier("Quanto costa il prodotto 0010013146?"),true);
  assert.equal(knowledgeQueryContainsIdentifier("Quanto costa la chiave U02831302?"),true);
+ assert.equal(knowledgeQueryContainsIdentifier("Qual è il prezzo del codice 101.080.25.28?"),true);
  assert.equal(knowledgeQueryContainsIdentifier("Quanto costa la chiave poligonale?"),false);
 });
 

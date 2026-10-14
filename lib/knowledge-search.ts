@@ -13,6 +13,8 @@ export type KnowledgeHit={
   section_title?:string;
 };
 
+export const IDENTIFIER_LEXICAL_WEIGHT = 10;
+
 const STOP_WORDS=new Set([
   "come","cosa","quale","quali","quando","dove","perche","perché","quanto","per",
   "sai","del","dei","degli","dello","dell","dati","parlami","anche",
@@ -38,7 +40,7 @@ export function knowledgeQueryFromQuestion(value:string):string|null {
 
 export function knowledgeQueryContainsIdentifier(value:string):boolean {
   return (value.normalize("NFKC").match(/[\p{L}\p{N}][\p{L}\p{N}./-]{3,}/gu)||[])
-    .some(token=>/\d/u.test(token)&&(/[\p{L}]/u.test(token)||/^\d{7,}$/u.test(token)));
+    .some(token=>/\d/u.test(token)&&(/[\p{L}]/u.test(token)||token.replace(/\D/gu,"").length>=7));
 }
 
 export async function retrieveClientKnowledge(
@@ -75,7 +77,7 @@ export async function retrieveClientKnowledge(
     const counts=knowledgeEmbeddingCounts(clientId,LOCAL_EMBEDDING_INDEX_ID);
     if(counts.indexed===0)return lexical.slice(0,boundedLimit);
     const semantic=await searchSemanticKnowledge(clientId,question,Math.min(boundedLimit*3,20));
-    return fuseKnowledgeHits(lexical,semantic,boundedLimit,knowledgeQueryContainsIdentifier(question)?3:1);
+    return fuseKnowledgeHits(lexical,semantic,boundedLimit,knowledgeQueryContainsIdentifier(question)?IDENTIFIER_LEXICAL_WEIGHT:1);
   }catch(error){
     console.error("[knowledge search] Local semantic search unavailable; using FTS5",error instanceof Error?error.message:"unknown error");
     return lexical.slice(0,boundedLimit);

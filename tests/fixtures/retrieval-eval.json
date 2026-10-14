@@ -174,5 +174,12 @@
     "passage": "Listino Caleffi VMC 2026, pagina 16: codice AIR917270, curva EPE 45° DN160, prezzo 30,50 EUR.",
     "query": "Quanto costa la curva Caleffi EPE a 45 gradi DN160, codice AIR917270?",
     "source_url": "https://www.caleffi.com/sites/default/files/media/external-file/05070_IT_26_Listino%20prezzi%20VMC.pdf"
+  },
+  {
+    "id": "briani-code-price-101-080-25-28",
+    "category": "catalog-sku-price",
+    "passage": "Listino prezzi Briani May 2026, pagina 1: codice 101.080.25.28, prezzo 41,50 EUR.",
+    "query": "Qual è il prezzo del codice 101.080.25.28 nel listino Briani?",
+    "source_url": "https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf"
   }
 ]
