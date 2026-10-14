@@ -61,6 +61,8 @@ Il testo importato dal web o dai file è dato non attendibile, mai istruzione pe
 
 L'estrazione nativa locale resta il primo passaggio. Se non restituisce testo, Forgecy invia il PDF o l'immagine a OpenRouter con il modello OCR selezionato; se chiave o chiamata non sono disponibili, la fonte resta in sospeso e può essere riprovata. Questo evita il runtime locale che, nelle prove sul computer di sviluppo, ha impiegato troppo tempo anche per una singola pagina. L'invio comporta elaborazione esterna e possibili costi secondo la tariffa aggiornata del provider. L'eventuale estrazione AI strutturata dei prodotti è una richiesta separata, necessaria solo per cataloghi da riconciliare.
 
+Ulteriore prova di OCR tecnico su una scheda non commerciale: pagina 11 del [catalogo ufficiale Rain Bird Italia 2020](https://www.rainbird.com/sites/default/files/media/documents/2020-05/2020_INTL_Turf_Catalog_ITA_web.pdf), rasterizzata in un PDF di una pagina. Mistral OCR ha trovato 3/3 indicatori attesi (`1800-SAM`, `4,2 m`, `1804-SAM`) e 1/1 codice; una richiesta, 24.524 ms e costo riportato 0,004283 USD. L'importazione è rimasta `not_catalog`, come atteso per una scheda tecnica senza listino. La pagina contiene più foto ma il parser non ha restituito immagini associate; non è una prova positiva di associazione visiva. Il test ha usato un workspace temporaneo e non ha modificato i dati dell'utente.
+
 ## Piano di implementazione
 
 1. **Recupero passage-level e ingestione strutturata — implementati.** FTS5 sui passaggi, migrazione dell’indice, struttura HTML, sezione del documento, test su corrispondenze in fonti lunghe e invalidazione dopo aggiornamenti.
