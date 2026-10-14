@@ -3,6 +3,8 @@ import {test} from "node:test";
 import {
   knowledgeQueryFromQuestion,
   knowledgeQueryContainsIdentifier,
+  knowledgeQueryContainsNumericValue,
+  rankKnowledgeHitsByExactNumbers,
   contextFromKnowledgeHits,
   retrieveClientKnowledge,
   fuseKnowledgeHits
@@ -22,6 +24,8 @@ test("retrieval terms are bounded, unique and skip generic filler",()=>{
  assert.equal(knowledgeQueryContainsIdentifier("Quanto costa la chiave U02831302?"),true);
  assert.equal(knowledgeQueryContainsIdentifier("Qual è il prezzo del codice 101.080.25.28?"),true);
  assert.equal(knowledgeQueryContainsIdentifier("Quanto costa la chiave poligonale?"),false);
+ assert.equal(knowledgeQueryContainsNumericValue("Quanto costa la chiave da 35 a 50 mm?"),true);
+ assert.equal(knowledgeQueryContainsNumericValue("Quanto costa la chiave poligonale?"),false);
 });
 
 test("search evidence context retains source IDs and avoids copying scores",()=>{
@@ -53,6 +57,31 @@ test("hybrid fusion prioritizes exact product identifiers when the lexical match
  const semantic=[hit("similar-product",0),hit("nearby-product",0),hit("exact-code",0)];
  assert.equal(fuseKnowledgeHits(lexical,semantic,3,1)[0].source_id,"similar-product");
  assert.equal(fuseKnowledgeHits(lexical,semantic,3,3)[0].source_id,"exact-code");
+});
+
+test("exact numeric measurements promote matching evidence and normalize Italian decimals",()=>{
+ const hits=[
+  {source_id:"near",excerpt:"OMNIA M 3.2 taglia 06 HI3, potenza 6,35 kW",relevance:1},
+  {source_id:"exact",excerpt:"OMNIA M 3.2 taglia 08 HI3, potenza 8,40 kW",relevance:0.5},
+  {source_id:"other",excerpt:"OMNIA LIFE M taglia 08, potenza 8,40 kW",relevance:0.8},
+ ];
+ assert.deepEqual(rankKnowledgeHitsByExactNumbers("OMNIA M 3.2 taglia 08 HI3 potenza 8,4 kW",hits)
+  .map(hit=>hit.source_id),["exact","other","near"]);
+ assert.equal(rankKnowledgeHitsByExactNumbers("nessuna misura qui",hits),hits);
+});
+
+test("local lexical fallback ranks matching numeric product variants first",async()=>{
+ const candidates=[
+  {source_id:"near",source_title:"Listino",source_url:"https://example.test/list.pdf",chunk_ordinal:0,
+   excerpt:"OMNIA M 3.2 taglia 06 HI3, potenza termica 6,35 kW, prezzo 9.172,80 EUR.",relevance:0.9},
+  {source_id:"exact",source_title:"Listino",source_url:"https://example.test/list.pdf",chunk_ordinal:0,
+   excerpt:"OMNIA M 3.2 taglia 08 HI3, potenza termica 8,40 kW, prezzo 9.613,76 EUR.",relevance:0.5},
+ ];
+ const ctx={db:{rpc:async()=>({data:candidates,error:null}),from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:{semantic_enabled:0},error:null})})})})},
+  user:{id:"11111111-1111-4111-8111-111111111111"}} as unknown as import("../../lib/http").Context;
+ const hits=await retrieveClientKnowledge(ctx,"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "OMNIA M 3.2 taglia 08 HI3 potenza 8,4 kW",2);
+ assert.equal(hits[0].source_id,"exact");
 });
 
 

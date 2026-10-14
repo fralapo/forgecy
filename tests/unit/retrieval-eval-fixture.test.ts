@@ -10,10 +10,10 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
  const queryPath=join(process.cwd(),"tests/fixtures/retrieval-eval.json");
  const candidates=JSON.parse(readFileSync(fixturePath,"utf8")) as Candidate[];
  const targets=JSON.parse(readFileSync(queryPath,"utf8")) as Array<{id:string;passage:string;category:string;source_url?:string}>;
- assert.equal(targets.length,29);
- assert.equal(candidates.length,120);
+ assert.equal(targets.length,33);
+ assert.equal(candidates.length,135);
  const catalogTargets=targets.filter(target=>target.category.startsWith("catalog-"));
- assert.equal(catalogTargets.length,21);
+ assert.equal(catalogTargets.length,25);
  assert.ok(catalogTargets.every(target=>target.source_url),"every public catalog target must have a citation source");
  assert.equal(new Set(candidates.map(candidate=>candidate.id)).size,candidates.length);
  const targetIds=new Set(targets.map(target=>target.id));
@@ -34,6 +34,7 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
   const caleffi=/codice (AIR\d{6}(?: BLK)?), variante ([^,]+), .+?, prezzo ([\d.]+,\d{2}) EUR\./u.exec(candidate.passage);
   const upower=/articolo ([A-Z0-9]+); classe di protezione ([A-Z0-9 ]+)\./u.exec(candidate.passage);
   const briani=/codice (\d{3}\.\d{3}\.\d{2}\.\d{2}), prezzo ([\d.]+,\d{2}) EUR\./u.exec(candidate.passage);
+  const ferroli=/codice ([A-Z0-9]+), prezzo ([\d.]+,\d{2}) EUR\./u.exec(candidate.passage);
   if(usag){
    assert.equal(candidate.source_url,"https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf");
    assert.equal(candidate.id,`usag-candidate-${usag[1].toLowerCase()}`);
@@ -55,6 +56,10 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
    assert.equal(candidate.source_url,"https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf");
    assert.equal(candidate.id,`briani-candidate-${briani[1]}`);
    assert.equal(targetProductCodes.has(briani[1]),false,candidate.id);
+  }else if(ferroli){
+   assert.equal(candidate.source_url,"https://cms.ferroli.com/sites/default/files/2026-09/LISTINO%20FERROLI%20MAR%202026_89LI3019_01_low.pdf");
+   assert.match(candidate.id,/^ferroli-candidate-[a-z0-9-]+$/iu);
+   assert.equal(targetProductCodes.has(ferroli[1]),false,candidate.id);
   }else{
    assert.ok(upower,candidate.id);
    const productCode=/articolo ([A-Z0-9]+)/u.exec(candidate.passage)?.[1];
@@ -67,5 +72,5 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
    assert.equal(targetProductCodes.has(productCode.toUpperCase()),false,candidate.id);
   }
  }
- assert.deepEqual([...sources.values()].sort((a,b)=>a-b),[1,1,1,9,22,24,24,38]);
+ assert.deepEqual([...sources.values()].sort((a,b)=>a-b),[1,1,1,9,15,22,24,24,38]);
 });

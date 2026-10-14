@@ -148,14 +148,14 @@
   {
     "id": "ferroli-omnia-life-m-sku-price",
     "category": "catalog-sku-price",
-    "passage": "Listino Ferroli marzo 2026: pompa di calore OMNIA LIFE M taglia 04, codice 2CP100AF, prezzo di listino 8.705,84 EUR.",
+    "passage": "Listino Ferroli marzo 2026: pompa di calore OMNIA LIFE M taglia 04, potenza termica A7W35 4,50 kW, codice 2CP100AF, prezzo di listino 8.705,84 EUR.",
     "query": "Quanto costa la pompa di calore OMNIA LIFE M da 4,5 kW? Qual è il suo codice?",
     "source_url": "https://cms.ferroli.com/sites/default/files/2026-09/LISTINO%20FERROLI%20MAR%202026_89LI3019_01_low.pdf"
   },
   {
     "id": "ferroli-omnia-m32-sku-price",
     "category": "catalog-sku-price",
-    "passage": "Listino Ferroli marzo 2026: pompa di calore OMNIA M 3.2 taglia 04, codice 2CP000AF, prezzo di listino 6.964,88 EUR.",
+    "passage": "Listino Ferroli marzo 2026: pompa di calore OMNIA M 3.2 taglia 04, potenza termica A7W35 4,20 kW, codice 2CP000AF, prezzo di listino 6.964,88 EUR.",
     "query": "Quanto costa la pompa di calore Ferroli OMNIA M 3.2 da 4,20 kW?",
     "source_url": "https://cms.ferroli.com/sites/default/files/2026-09/LISTINO%20FERROLI%20MAR%202026_89LI3019_01_low.pdf"
   },
@@ -193,5 +193,33 @@
     "passage": "Listino prezzi Briani May 2026, pagina 1: codice 101.080.25.28, prezzo 41,50 EUR.",
     "query": "Qual è il prezzo del codice 101.080.25.28 nel listino Briani?",
     "source_url": "https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf"
+  },
+  {
+    "id": "ferroli-omnia-life-08-code-price",
+    "category": "catalog-sku-price",
+    "passage": "Listino Ferroli marzo 2026: pompa di calore OMNIA LIFE M taglia 08, potenza termica A7W35 8,40 kW, codice 2CP100CF, prezzo 10.323,04 EUR.",
+    "query": "Quali sono codice e prezzo della pompa Ferroli OMNIA LIFE M taglia 08?",
+    "source_url": "https://cms.ferroli.com/sites/default/files/2026-09/LISTINO%20FERROLI%20MAR%202026_89LI3019_01_low.pdf"
+  },
+  {
+    "id": "ferroli-omnia-life-12t-code-price",
+    "category": "catalog-sku-price",
+    "passage": "Listino Ferroli marzo 2026: pompa di calore OMNIA LIFE M taglia 12T trifase, potenza termica A7W35 12,00 kW, codice 2CP100HF, prezzo 14.067,04 EUR.",
+    "query": "Quanto costa la OMNIA LIFE M da 12 kW trifase e qual è il codice?",
+    "source_url": "https://cms.ferroli.com/sites/default/files/2026-09/LISTINO%20FERROLI%20MAR%202026_89LI3019_01_low.pdf"
+  },
+  {
+    "id": "ferroli-omnia-m32-hi3-08-code-price",
+    "category": "catalog-sku-price",
+    "passage": "Listino Ferroli marzo 2026: pompa di calore OMNIA M 3.2 taglia 08 HI3 con resistenza elettrica da 3 kW a 230 V, potenza termica A7W35 8,40 kW, codice 2CP00ICF, prezzo 9.613,76 EUR.",
+    "query": "Codice e prezzo della Ferroli OMNIA M 3.2 da 8,4 kW con resistenza da 3 kW?",
+    "source_url": "https://cms.ferroli.com/sites/default/files/2026-09/LISTINO%20FERROLI%20MAR%202026_89LI3019_01_low.pdf"
+  },
+  {
+    "id": "ferroli-omnia-m32-16t-code-price",
+    "category": "catalog-sku-price",
+    "passage": "Listino Ferroli marzo 2026: pompa di calore OMNIA M 3.2 taglia 16T trifase, potenza termica A7W35 15,9 kW, codice 2CP000JF, prezzo 12.576,72 EUR.",
+    "query": "Qual è il codice e il prezzo del modello Ferroli OMNIA M 3.2 da 16 kW trifase?",
+    "source_url": "https://cms.ferroli.com/sites/default/files/2026-09/LISTINO%20FERROLI%20MAR%202026_89LI3019_01_low.pdf"
   }
 ]

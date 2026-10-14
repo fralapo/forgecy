@@ -43,6 +43,42 @@ export function knowledgeQueryContainsIdentifier(value:string):boolean {
     .some(token=>/\d/u.test(token)&&(/[\p{L}]/u.test(token)||token.replace(/\D/gu,"").length>=7));
 }
 
+function normalizeNumericValue(value:string):string {
+  const normalized=value.replace(/\s/gu,"");
+  if(normalized.includes(",")){
+    const decimal=normalized.replace(/\./gu,"").replace(",",".");
+    const [integer,fraction=""]=decimal.split(".");
+    return `${integer}.${fraction.replace(/0+$/u,"")||"0"}`;
+  }
+  if(/^\d{1,3}(?:\.\d{3})+$/u.test(normalized))return normalized.replace(/\./gu,"");
+  if(normalized.includes(".")){
+    const [integer,fraction=""]=normalized.split(".");
+    return `${integer}.${fraction.replace(/0+$/u,"")||"0"}`;
+  }
+  return normalized;
+}
+
+function exactNumericValues(value:string):Set<string> {
+  const values=new Set<string>();
+  const normalized=value.normalize("NFKC");
+  const pattern=/(?<![\p{L}\p{N}])(\d+(?:[.,]\d+)*)(?=(?:T\b|[^\p{L}\p{N}]|$))/giu;
+  for(const match of normalized.matchAll(pattern))values.add(normalizeNumericValue(match[1]));
+  return values;
+}
+
+export function knowledgeQueryContainsNumericValue(value:string):boolean {
+  return exactNumericValues(value).size>0;
+}
+
+/** Keep passages matching exact measurements or sizes ahead of numeric near-matches. */
+export function rankKnowledgeHitsByExactNumbers<T extends {excerpt:string}>(question:string,hits:T[]):T[] {
+  const queryNumbers=exactNumericValues(question);
+  if(!queryNumbers.size)return hits;
+  return hits.map((hit,index)=>({hit,index,matches:[...exactNumericValues(hit.excerpt)].filter(value=>queryNumbers.has(value)).length}))
+    .sort((a,b)=>b.matches-a.matches||a.index-b.index)
+    .map(item=>item.hit);
+}
+
 export async function retrieveClientKnowledge(
  ctx:Context,clientId:string,question:string,limit=8
 ):Promise<KnowledgeHit[]> {
@@ -57,7 +93,7 @@ export async function retrieveClientKnowledge(
     })
     :await ctx.db.rpc("forgecy_search_client_sources",args)):{data:[],error:null};
   if(error)throw new ApiFailure(500,"La ricerca nella memoria aziendale non è disponibile");
-  const lexical=(data||[]).map((row:KnowledgeHit)=>({
+  const lexicalRows:KnowledgeHit[]=(data||[]).map((row:KnowledgeHit)=>({
     source_id:row.source_id,
     source_title:row.source_title,
     source_url:row.source_url||null,
@@ -66,6 +102,7 @@ export async function retrieveClientKnowledge(
     relevance:row.relevance,
     ...(row.section_title?{section_title:String(row.section_title).slice(0,240)}:{})
   }));
+  const lexical=rankKnowledgeHitsByExactNumbers(question,lexicalRows);
   const preferences=await ctx.db.from("ai_preferences").select("semantic_enabled")
     .eq("owner_id",ctx.user.id).maybeSingle();
   if(preferences.error){
@@ -77,7 +114,8 @@ export async function retrieveClientKnowledge(
     const counts=knowledgeEmbeddingCounts(clientId,LOCAL_EMBEDDING_INDEX_ID);
     if(counts.indexed===0)return lexical.slice(0,boundedLimit);
     const semantic=await searchSemanticKnowledge(clientId,question,Math.min(boundedLimit*3,20));
-    return fuseKnowledgeHits(lexical,semantic,boundedLimit,knowledgeQueryContainsIdentifier(question)?IDENTIFIER_LEXICAL_WEIGHT:1);
+    return fuseKnowledgeHits(lexical,semantic,boundedLimit,
+      knowledgeQueryContainsIdentifier(question)||knowledgeQueryContainsNumericValue(question)?IDENTIFIER_LEXICAL_WEIGHT:1);
   }catch(error){
     console.error("[knowledge search] Local semantic search unavailable; using FTS5",error instanceof Error?error.message:"unknown error");
     return lexical.slice(0,boundedLimit);
