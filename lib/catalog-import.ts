@@ -111,7 +111,9 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
   if(priceIndex<0)continue;
   let descriptionIndex=headerIndex(normalizedHeaders,["descrizione","description","dettagli","details"]);
   const codeIndex=headerIndex(normalizedHeaders,["codice","code","sku","codice prodotto","product code"]);
-  if(nameIndex<0&&descriptionIndex>=0&&codeIndex>=0){
+  const segmentIndex=headerIndex(normalizedHeaders,["segmento","segment","categoria","category"]);
+  const nameFromDescription=nameIndex<0&&descriptionIndex>=0&&codeIndex>=0;
+  if(nameFromDescription){
    nameIndex=descriptionIndex;
    descriptionIndex=codeIndex;
   }
@@ -123,11 +125,13 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
    if(!cells||cells.length!==headers.length){if(products.length)break;continue;}
    const name=(cells[nameIndex]||"").trim();
    if(name.length<2||/^[-—–]+$/u.test(name))continue;
-   const description=(descriptionIndex>=0?cells[descriptionIndex]||"":"").trim().slice(0,1200);
+   const description=nameFromDescription
+    ?[cells[codeIndex]||"",segmentIndex>=0?cells[segmentIndex]||"":""].map(value=>value.trim()).filter(Boolean).join(" — ").slice(0,1200)
+    :(descriptionIndex>=0?cells[descriptionIndex]||"":"").trim().slice(0,1200);
    const priceQuote=(cells[priceIndex]||"").trim();
    const price=parsePrice(priceQuote);
    products.push({name,description,price,currency:(currencyIndex>=0?cells[currencyIndex]||"EUR":"EUR").trim().toUpperCase().slice(0,3)||"EUR",
-    nameQuote:name,descriptionQuote:description,priceQuote:price===null?"":priceQuote,existingOfferId:null,imageIndex:null});
+    nameQuote:name,descriptionQuote:nameFromDescription?JSON.stringify([cells[codeIndex]||"",segmentIndex>=0?cells[segmentIndex]||"":""].map(value=>value.trim()).filter(Boolean)):description,priceQuote:price===null?"":priceQuote,existingOfferId:null,imageIndex:null});
   }
   found.push(...products);
   if(found.length>=1000)return found.slice(0,1000);
@@ -137,11 +141,17 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
 
 export function catalogEvidenceIsValid(product:CatalogProduct,sourceText:string){
  const exact=(quote:string)=>!!quote&&sourceText.includes(quote);
+ let descriptionQuotes=[product.descriptionQuote];
+ try{
+  const parsed:unknown=JSON.parse(product.descriptionQuote);
+  if(Array.isArray(parsed)&&parsed.length>0&&parsed.every(quote=>typeof quote==="string"&&quote.trim()))
+   descriptionQuotes=parsed as string[];
+ }catch{/* Existing model output uses a single literal quote. */}
  const normalizedName=normalizeCatalogName(product.name);
  return exact(product.nameQuote)&&
    normalizeCatalogName(product.nameQuote).includes(normalizedName)&&
-   (product.description===""||(exact(product.descriptionQuote)&&product.descriptionQuote.length>=Math.min(8,product.description.length)&&
-    normalizeCatalogName(product.descriptionQuote).includes(normalizeCatalogName(product.description))))&&
+   (product.description===""||(descriptionQuotes.every(exact)&&product.descriptionQuote.length>=Math.min(8,product.description.length)&&
+    normalizeCatalogName(descriptionQuotes.join(" ")).includes(normalizeCatalogName(product.description))))&&
    (product.price===null||(exact(product.priceQuote)&&parsePrice(product.priceQuote)===product.price));
 }
 

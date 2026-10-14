@@ -60,12 +60,14 @@ test("OCR Markdown price tables are imported deterministically with exact row ev
  assert.equal(catalogEvidenceIsValid(products[0],source),true);
 });
 
-test("OCR lists with description, code, segment and price columns keep product codes as evidence",()=>{
+test("OCR lists with description, code, segment and price columns keep identifiers and categories as evidence",()=>{
  const source="Listino prezzi Vaillant\n| Codice | Descrizione | Segmento | Prezzo € |\n| --- | --- | --- | --- |\n| 0010007523 | ecoVIT exclusive VKK 656/4-7 | Basamento Condensing | 6.185,00 |";
  const products=parseMarkdownCatalogTable(source);
  assert.equal(products.length,1);
  assert.equal(products[0].name,"ecoVIT exclusive VKK 656/4-7");
- assert.equal(products[0].description,"0010007523");
+ assert.equal(products[0].description,"0010007523 — Basamento Condensing");
+ assert.equal(products[0].descriptionQuote,JSON.stringify(["0010007523","Basamento Condensing"]));
  assert.equal(products[0].price,6185);
  assert.equal(catalogEvidenceIsValid(products[0],source),true);
+ assert.equal(catalogEvidenceIsValid({...products[0],descriptionQuote:JSON.stringify(["0010007523","Segmento inventato"])},source),false);
 });
