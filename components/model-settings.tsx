@@ -6,6 +6,7 @@ import type { OpenRouterImageModel, OpenRouterModel } from "@/lib/ai-model-setti
 import DriveSettings from "./drive-settings";
 
 type Preferences = { textModel: string; imageModel: string | null };
+type KeyStatus = { configured: boolean; source: "app" | "environment" | null };
 type ModelResponse = {
   textModels: OpenRouterModel[];
   imageModels: OpenRouterImageModel[];
@@ -20,6 +21,9 @@ export default function ModelSettings() {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
   const [refreshedAt, setRefreshedAt] = useState<string | null>(null);
+  const [keyStatus, setKeyStatus] = useState<KeyStatus | null>(null);
+  const [apiKey, setApiKey] = useState("");
+  const [savingKey, setSavingKey] = useState(false);
 
   const loadCatalog = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true);
@@ -38,8 +42,50 @@ export default function ModelSettings() {
   }, []);
 
   useEffect(() => {
-    queueMicrotask(() => { void loadCatalog(); });
+    let active = true;
+    void (async () => {
+      try {
+        const result = await requestJson<{ key: KeyStatus }>("/api/workspace/settings/openrouter-key");
+        if (!active) return;
+        setKeyStatus(result.key);
+        if (result.key.configured) await loadCatalog();
+        else setLoading(false);
+      } catch (cause) {
+        if (!active) return;
+        setError(cause instanceof Error ? cause.message : "Impossibile controllare la configurazione OpenRouter");
+        setLoading(false);
+      }
+    })();
+    return () => { active = false; };
   }, [loadCatalog]);
+
+  async function saveKey(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (savingKey || !apiKey.trim()) return;
+    setSavingKey(true); setError(""); setSaved("");
+    try {
+      const result = await requestJson<{ key: KeyStatus; message: string }>("/api/workspace/settings/openrouter-key", {
+        method: "PATCH", body: JSON.stringify({ apiKey: apiKey.trim() })
+      });
+      setKeyStatus(result.key); setApiKey(""); setSaved(result.message);
+      await loadCatalog(true);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Impossibile salvare la chiave OpenRouter");
+    } finally { setSavingKey(false); }
+  }
+
+  async function removeKey() {
+    if (savingKey) return;
+    setSavingKey(true); setError(""); setSaved("");
+    try {
+      const result = await requestJson<{ key: KeyStatus; message: string }>("/api/workspace/settings/openrouter-key", { method: "DELETE" });
+      setKeyStatus(result.key); setSaved(result.message);
+      if (result.key.configured) await loadCatalog(true);
+      else { setCatalog(null); setLoading(false); }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Impossibile rimuovere la chiave OpenRouter");
+    } finally { setSavingKey(false); }
+  }
 
   async function selectModel(kind: "text" | "image", modelId: string) {
     if (!catalog || saving || !modelId) return;
@@ -86,7 +132,25 @@ export default function ModelSettings() {
     {saved && <div className="notice" role="status">{saved}</div>}
     {refreshedAt && <p className="caption">Cataloghi caricati da OpenRouter alle {refreshedAt}. Premi “Aggiorna modelli” per controllare di nuovo.</p>}
 
+    <article className="card stack">
+      <h2>Chiave API OpenRouter</h2>
+      <p className="caption">Inserisci qui la tua chiave personale. Forgecy la verifica e la conserva sul computer nel portachiavi di sistema; se non disponibile, usa un file accessibile solo al tuo utente. La chiave non viene mostrata di nuovo né sincronizzata su Drive.</p>
+      {keyStatus?.configured && <p className="caption" role="status">Chiave configurata{keyStatus.source === "environment" ? " nel file .env.local" : " nell'app"}.</p>}
+      <form className="stack" onSubmit={event => void saveKey(event)}>
+        <label htmlFor="forgecy-openrouter-key">{keyStatus?.configured ? "Sostituisci chiave" : "La tua chiave OpenRouter"}</label>
+        <input id="forgecy-openrouter-key" type="password" autoComplete="new-password" value={apiKey}
+          onChange={event => setApiKey(event.target.value)} placeholder="Incolla la tua chiave personale" minLength={20} maxLength={512} required />
+        <div className="flex gap8 wrap">
+          <button className="button primary" type="submit" disabled={savingKey || apiKey.trim().length < 20}>
+            {savingKey ? <LoaderCircle className="spin" size={15}/> : <Settings2 size={15}/>} Verifica e salva chiave
+          </button>
+          {keyStatus?.source === "app" && <button className="button" type="button" onClick={() => void removeKey()} disabled={savingKey}>Rimuovi chiave salvata</button>}
+        </div>
+      </form>
+    </article>
+
     {loading && <div className="empty"><LoaderCircle className="spin" size={18}/> Caricamento dei cataloghi OpenRouter…</div>}
+    {!loading && !keyStatus?.configured && <div className="notice warn">Inserisci e verifica una chiave OpenRouter per caricare i modelli testo e immagini. Puoi farlo anche prima di creare un cliente.</div>}
     {!loading && catalog && <div className="grid2">
       <article className="card stack">
         <div className="flex center gap8"><Settings2 size={18}/><h2>Modello testo</h2></div>
@@ -120,7 +184,7 @@ export default function ModelSettings() {
       </article>
     </div>}
     {saving && <p className="caption" role="status"><LoaderCircle className="spin" size={14}/> Salvataggio preferenza…</p>}
-    <div className="notice warn">Le preferenze sono salvate sul computer. Ogni installazione Forgecy configura la propria chiave server-only <code>OPENROUTER_API_KEY</code>.</div>
+    <div className="notice warn">Le preferenze dei modelli e la chiave API restano su questo computer. Per usare Forgecy su un altro PC, configura lì la tua chiave personale.</div>
     <DriveSettings />
   </section>;
 }
