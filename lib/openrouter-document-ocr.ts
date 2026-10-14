@@ -181,16 +181,26 @@ export async function ocrDocumentWithOpenRouter(options: OcrOptions): Promise<Oc
           "HTTP-Referer": process.env.OPENROUTER_SITE_URL || "http://localhost:3000", "X-Title": "Forgecy"
         }, body: JSON.stringify(body), signal: AbortSignal.timeout(90_000), cache: "no-store" });
       } catch { throw new ApiFailure(502, "OpenRouter non è raggiungibile per l'OCR. Il file resta salvato e puoi riprovare."); }
-      if (!response.ok) {
-        let details="provider error details unavailable";
-        try { details=safeProviderError(await response.clone().json()); } catch { /* Keep provider details out of the user message. */ }
-        console.error("[openrouter ocr] HTTP", response.status, details);
-        throw new ApiFailure(response.status === 429 ? 429 : 502, response.status === 429
-          ? "OpenRouter ha raggiunto un limite temporaneo per l'OCR. Puoi riprovare."
-          : "OpenRouter non ha completato l'OCR. Il file resta salvato e puoi riprovare.");
-      }
       let payload: unknown;
-      try { payload = await response.json(); } catch { throw new ApiFailure(502, "OpenRouter ha restituito una risposta OCR non valida."); }
+      if (!response.ok) {
+        let failurePayload: unknown;
+        let details="provider error details unavailable";
+        try {
+          failurePayload=await response.clone().json();
+          details=safeProviderError(failurePayload);
+        } catch { /* Keep provider details out of the user message. */ }
+        console.error("[openrouter ocr] HTTP", response.status, details);
+        const recoveredText=parsedDocumentText(failurePayload);
+        if(recoveredText.length<20||recoveredText.toLocaleUpperCase("it").includes("TESTO_NON_LEGGIBILE"))
+          throw new ApiFailure(response.status === 429 ? 429 : 502, response.status === 429
+            ? "OpenRouter ha raggiunto un limite temporaneo per l'OCR. Puoi riprovare."
+            : "OpenRouter non ha completato l'OCR. Il file resta salvato e puoi riprovare.");
+        // The PDF parser may have finished OCR before the downstream inference failed.
+        // Keep those annotations so retrying will not pay to parse this segment again.
+        payload=failurePayload;
+      } else {
+        try { payload = await response.json(); } catch { throw new ApiFailure(502, "OpenRouter ha restituito una risposta OCR non valida."); }
+      }
       const extracted = parsedDocumentText(payload);
       if (extracted.length < 20 || extracted.toLocaleUpperCase("it").includes("TESTO_NON_LEGGIBILE"))
         throw new ApiFailure(422, "OCR completato, ma non è stato trovato testo leggibile nel documento.");

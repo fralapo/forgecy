@@ -80,6 +80,30 @@ test("sends scanned PDFs through the bounded Mistral OCR parser and keeps its so
   assert.match(String(content?.[0]?.text),/quantità, misure e unità di misura/);
 });
 
+test("recovers parsed OCR annotations from a downstream provider error", async () => {
+  const pdf = await PDFDocument.create();
+  pdf.addPage([300, 400]);
+  const bytes = new Uint8Array(await pdf.save());
+  let requests = 0;
+  const result = await ocrDocumentWithOpenRouter({
+    bytes, mime: "application/pdf", name: "catalogo.pdf", model: "deepseek/deepseek-v4.1-flash",
+    keyProvider: async () => "test-key",
+    fetcher: async () => {
+      requests++;
+      return new Response(JSON.stringify({error:{
+        message:"downstream provider failed",
+        metadata:{file_annotations:[{type:"file",file:{content:[
+          {type:"text",text:"Prodotto Aloe 250 ml, codice AL-250, prezzo 12,50 euro."}
+        ]}}]}
+      }}), {status:502});
+    }
+  });
+  assert.equal(requests,1);
+  assert.equal(result.pagesProcessed,1);
+  assert.equal(result.partialFailure,false);
+  assert.match(result.body,/codice AL-250/);
+});
+
 test("splits scanned PDFs over 40 pages into ordered OCR requests", async () => {
   const pdf = await PDFDocument.create();
   for (let page = 0; page < 42; page++) pdf.addPage([300, 400]);
