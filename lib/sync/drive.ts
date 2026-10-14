@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { ApiFailure } from "../http";
 import { getLocalDataDirectory, localDb } from "../local-db";
 import { createWorkspaceArchive, restoreWorkspaceArchive, validateWorkspaceArchive, type SnapshotManifest } from "./archive";
+import { saveLocalConflictCopy } from "./conflict-backup";
 
 const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
@@ -393,9 +394,7 @@ export async function resolveDriveConflict(choice: "local" | "remote", remoteFil
   if (!chosen) throw new ApiFailure(404, "Copia Drive non trovata o non più disponibile");
   const remote = await downloadSnapshot(chosen);
   const local = await createWorkspaceArchive({ parentHash: state.lastSyncedHash || "", deviceId: state.deviceId });
-  const conflictDir = join(dataDirectory(), "conflicts"); mkdirSync(conflictDir, { recursive: true, mode: 0o700 });
-  const localCopy = join(conflictDir, `local-${local.manifest.createdAt.replaceAll(":", "-")}-${local.manifest.hash.slice(0, 12)}.forgecy.zip`);
-  writeFileSync(localCopy, local.archive, { flag: "wx", mode: 0o600 });
+  const localCopy = saveLocalConflictCopy(dataDirectory(), local.archive, local.manifest.createdAt, local.manifest.hash);
   await restoreWorkspaceArchive(remote.archive);
   state.lastSyncedHash = remote.manifest.hash; state.lastSyncedContentHash = remote.manifest.contentHash; state.lastSyncedAt = new Date().toISOString(); saveState(state);
   return { status: "downloaded" as const, hash: remote.manifest.hash, localConflictCopy: localCopy, message: "Copia Drive aperta. La versione locale precedente è conservata nella cartella conflitti di Forgecy." };
