@@ -71,3 +71,22 @@ test("OCR lists with description, code, segment and price columns keep identifie
  assert.equal(catalogEvidenceIsValid(products[0],source),true);
  assert.equal(catalogEvidenceIsValid({...products[0],descriptionQuote:JSON.stringify(["0010007523","Segmento inventato"])},source),false);
 });
+
+test("OCR product tables headed Codice, Descrizione and Listino import locally with exact code and price evidence",()=>{
+ const source="LISTINO GUANTI 2025\n| Codice | Descrizione | Listino |\n| --- | --- | --- |\n| GUG00009 | ATLAS Conf=12 Pa | 138,65 € |\n| GUG14409 | ATLAS Conf=144 Pa | 1.569,60 € |\n| GUG00020 | BACHATA Conf=12 Pa | 61,70 € |";
+ const products=parseMarkdownCatalogTable(source);
+ assert.equal(products.length,3);
+ assert.equal(products[0].name,"ATLAS Conf=12 Pa");
+ assert.equal(products[0].description,"GUG00009");
+ assert.equal(products[0].price,138.65);
+ assert.equal(products[1].price,1569.6);
+ assert.equal(catalogEvidenceIsValid(products[0],source),true);
+ assert.equal(catalogEvidenceIsValid({...products[0],price:138.66},source),false);
+ const csv="Codice;Descrizione;Listino\nGUG00009;ATLAS Conf=12 Pa;138,65 €\nGUG14409;ATLAS Conf=144 Pa;1.569,60 €";
+ const csvProducts=parseCsvCatalog(csv);
+ assert.equal(csvProducts.length,2);
+ assert.equal(csvProducts[0].name,"ATLAS Conf=12 Pa");
+ assert.equal(csvProducts[0].description,"GUG00009");
+ assert.equal(csvProducts[0].price,138.65);
+ assert.equal(catalogEvidenceIsValid(csvProducts[0],csv),true);
+});

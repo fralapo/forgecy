@@ -76,17 +76,21 @@ export function parseCsvCatalog(text:string):CatalogProduct[]{
  const rows=parseCsv(text);if(rows.length<2)return [];
  const headers=rows[0].map(normalizeCatalogName);
  const nameIndex=headerIndex(headers,["nome","nome prodotto","prodotto","product","product name","name","articolo","nome articolo","item"]);
- if(nameIndex<0)return [];
  const descriptionIndex=headerIndex(headers,["descrizione","description","dettagli","details"]);
- const priceIndex=headerIndex(headers,["prezzo","price","costo"]);
+ const codeIndex=headerIndex(headers,["codice","code","sku","codice prodotto","product code"]);
+ const segmentIndex=headerIndex(headers,["segmento","segment","categoria","category"]);
+ const nameFromDescription=nameIndex<0&&descriptionIndex>=0&&codeIndex>=0;
+ const priceIndex=headerIndex(headers,["prezzo","price","costo","listino"]);
  const currencyIndex=headerIndex(headers,["valuta","currency"]);
+ if(nameIndex<0&&!nameFromDescription)return [];
  return rows.slice(1,1001).flatMap(cells=>{
-  const name=(cells[nameIndex]||"").trim();if(name.length<2)return [];
-  const description=(descriptionIndex>=0?cells[descriptionIndex]||"":"").trim().slice(0,4000);
+  const name=(cells[nameFromDescription?descriptionIndex:nameIndex]||"").trim();if(name.length<2)return [];
+  const codeAndSegment=[codeIndex>=0?cells[codeIndex]||"":"",segmentIndex>=0?cells[segmentIndex]||"":""].map(value=>value.trim()).filter(Boolean);
+  const description=(nameFromDescription?codeAndSegment.join(" — "):descriptionIndex>=0?cells[descriptionIndex]||"":"").trim().slice(0,4000);
   const priceRaw=priceIndex>=0?cells[priceIndex]||"":"";
   const price=parsePrice(priceRaw);
   return [{name,description,price,currency:(currencyIndex>=0?cells[currencyIndex]||"EUR":"EUR").trim().toUpperCase().slice(0,3)||"EUR",
-   nameQuote:name,descriptionQuote:description,priceQuote:price===null?"":priceRaw,
+   nameQuote:name,descriptionQuote:nameFromDescription?JSON.stringify(codeAndSegment):description,priceQuote:price===null?"":priceRaw,
    existingOfferId:null,imageIndex:null}];
  });
 }
@@ -107,7 +111,7 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
   if(!headers||!separators||headers.length!==separators.length||!separators.every(cell=>/^:?-{3,}:?$/u.test(cell.replace(/\s/gu,""))))continue;
   const normalizedHeaders=headers.map(normalizeCatalogName);
   let nameIndex=headerIndex(normalizedHeaders,["nome","nome prodotto","prodotto","product","product name","name","articolo","nome articolo","item","modello","model"]);
-  const priceIndex=headerIndex(normalizedHeaders,["prezzo listino","prezzo","price","costo"]);
+  const priceIndex=headerIndex(normalizedHeaders,["prezzo listino","prezzo","price","costo","listino"]);
   if(priceIndex<0)continue;
   let descriptionIndex=headerIndex(normalizedHeaders,["descrizione","description","dettagli","details"]);
   const codeIndex=headerIndex(normalizedHeaders,["codice","code","sku","codice prodotto","product code"]);
