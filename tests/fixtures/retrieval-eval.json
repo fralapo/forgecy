@@ -51,55 +51,64 @@
     "id": "bosch-sku-price",
     "category": "catalog-sku-price",
     "passage": "CL5000iL-Set 35 4CCE unità interna a cassetta, codice 7733701908, prezzo di listino IVA esclusa 1.690,00 euro.",
-    "query": "Qual è il prezzo IVA esclusa del modello CL5000iL-Set 35 4CCE, codice 7733701908?"
+    "query": "Qual è il prezzo IVA esclusa del modello CL5000iL-Set 35 4CCE, codice 7733701908?",
+    "source_url": "https://www.bosch-industrial.com/it/media/country_pool/documenti/listino_2025_large_commercial_8738400436.pdf"
   },
   {
     "id": "bosch-cooling-capacity",
     "category": "catalog-technical-value",
     "passage": "Principali dati tecnici CL5000iL-Set 35 4CCE: capacità nominale in raffrescamento 3,5 kW; EER 3,35; capacità nominale in riscaldamento 3,81 kW; COP 3,74.",
-    "query": "Qual è la capacità di raffreddamento del CL5000iL-Set 35 4CCE?"
+    "query": "Qual è la capacità di raffreddamento del CL5000iL-Set 35 4CCE?",
+    "source_url": "https://www.bosch-homecomfort.com/ocsmedia/optimized/full/o547776v272_2024_07_8738400372_Large_split_brochure_bq.pdf"
   },
   {
     "id": "bosch-refrigerant",
     "category": "catalog-attribute",
     "passage": "I climatizzatori CL5000iL-Set 35 4CCE e CL5000iL-Set 53 4CCE usano refrigerante R32; le quantità di riempimento indicate sono rispettivamente 0,72 kg e 1,15 kg.",
-    "query": "Quale refrigerante usa il climatizzatore Bosch CL5000iL-Set 53 4CCE?"
+    "query": "Quale refrigerante usa il climatizzatore Bosch CL5000iL-Set 53 4CCE?",
+    "source_url": "https://www.bosch-homecomfort.com/ocsmedia/optimized/full/o547776v272_2024_07_8738400372_Large_split_brochure_bq.pdf"
   },
   {
     "id": "bosch-twin-sku-price",
     "category": "catalog-sku-price",
     "passage": "Climatizzatori Largesplit configurazione Twin: CL5000iL-Set 2x70 4CE, codice 7733701968, prezzo 4.830,00 euro; CL5000iL-Set 2x88 4CE, codice 7733701969, prezzo 5.500,00 euro.",
-    "query": "Quanto costa il sistema CL5000iL-Set 2x88 4CE codice 7733701969?"
+    "query": "Quanto costa il sistema CL5000iL-Set 2x88 4CE codice 7733701969?",
+    "source_url": "https://www.bosch-industrial.com/it/media/country_pool/documenti/listino_2025_large_commercial_8738400436.pdf"
   },
   {
     "id": "vaillant-ecovit-sku-price",
     "category": "catalog-sku-price",
     "passage": "Listino Vaillant giugno 2026: ecoVIT exclusive VKK 476/4-7, codice 0010007523, segmento Basamento Condensing, prezzo 5.239,00 EUR.",
-    "query": "Qual è il prezzo del modello ecoVIT exclusive VKK 476/4-7 con codice 0010007523?"
+    "query": "Qual è il prezzo del modello ecoVIT exclusive VKK 476/4-7 con codice 0010007523?",
+    "source_url": "https://supporto.vaillant.it/downloads/vgoa-vaillant-it-doc/listini/2026/listino-vaillant-giugno-2026-3139348.pdf"
   },
   {
     "id": "vaillant-ecotec-sku-price",
     "category": "catalog-sku-price",
     "passage": "Listino Vaillant giugno 2026: ecoTEC plus VM 806/5-5 H, codice 0010010759, segmento Murali Condensing Alta Potenza, prezzo 6.307,00 EUR.",
-    "query": "Quanto costa la caldaia Vaillant ecoTEC plus VM 806/5-5 H codice 0010010759?"
+    "query": "Quanto costa la caldaia Vaillant ecoTEC plus VM 806/5-5 H codice 0010010759?",
+    "source_url": "https://supporto.vaillant.it/downloads/vgoa-vaillant-it-doc/listini/2026/listino-vaillant-giugno-2026-3139348.pdf"
   },
   {
     "id": "vaillant-auroflow-segment",
     "category": "catalog-attribute",
     "passage": "Nel listino Vaillant giugno 2026, il codice 0010013146 identifica auroFLOW plus VPM 15 D - staz. drain bac, segmento Stazioni Solari, prezzo 2.107,00 EUR.",
-    "query": "A quale segmento appartiene il prodotto Vaillant con codice 0010013146?"
+    "query": "A quale segmento appartiene il prodotto Vaillant con codice 0010013146?",
+    "source_url": "https://supporto.vaillant.it/downloads/vgoa-vaillant-it-doc/listini/2026/listino-vaillant-giugno-2026-3139348.pdf"
   },
   {
     "id": "vaillant-ecocompact-product",
     "category": "catalog-technical-value",
     "passage": "Il prodotto Vaillant ecoCOMPACT VSC 256/4-5 100 (H-IT) ha codice 0010014667 e prezzo di listino 4.511,00 EUR; è classificato nel segmento Basamento Condensing.",
-    "query": "Trova il codice e il prezzo del modello ecoCOMPACT VSC 256/4-5 100 (H-IT)."
+    "query": "Trova il codice e il prezzo del modello ecoCOMPACT VSC 256/4-5 100 (H-IT).",
+    "source_url": "https://supporto.vaillant.it/downloads/vgoa-vaillant-it-doc/listini/2026/listino-vaillant-giugno-2026-3139348.pdf"
   },
   {
     "id": "usag-282sn-sku-price",
     "category": "catalog-sku-price",
     "passage": "Catalogo-listino USAG 2026, pagina 110: chiave a settore snodata con nasello quadro, misura 15-35 mm, codice U02820301, prezzo 25,00 EUR.",
-    "query": "Quanto costa la chiave a settore USAG U02820301?"
+    "query": "Quanto costa la chiave a settore USAG U02820301?",
+    "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
   },
   {
     "id": "usag-282sn-35-50-sku-price",
@@ -133,19 +142,22 @@
     "id": "usag-283-curved-sku-price",
     "category": "catalog-sku-price",
     "passage": "Catalogo-listino USAG 2026, pagina 110: chiave poligonale doppia curva, misura 6x7 mm, codice U02831302, prezzo 9,15 EUR.",
-    "query": "Qual è il prezzo della chiave poligonale doppia curva USAG 6x7 codice U02831302?"
+    "query": "Qual è il prezzo della chiave poligonale doppia curva USAG 6x7 codice U02831302?",
+    "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
   },
   {
     "id": "ferroli-omnia-life-m-sku-price",
     "category": "catalog-sku-price",
     "passage": "Listino Ferroli marzo 2026: pompa di calore OMNIA LIFE M taglia 04, codice 2CP100AF, prezzo di listino 8.705,84 EUR.",
-    "query": "Quanto costa la pompa di calore OMNIA LIFE M da 4,5 kW? Qual è il suo codice?"
+    "query": "Quanto costa la pompa di calore OMNIA LIFE M da 4,5 kW? Qual è il suo codice?",
+    "source_url": "https://cms.ferroli.com/sites/default/files/2026-09/LISTINO%20FERROLI%20MAR%202026_89LI3019_01_low.pdf"
   },
   {
     "id": "ferroli-omnia-m32-sku-price",
     "category": "catalog-sku-price",
     "passage": "Listino Ferroli marzo 2026: pompa di calore OMNIA M 3.2 taglia 04, codice 2CP000AF, prezzo di listino 6.964,88 EUR.",
-    "query": "Quanto costa la pompa di calore Ferroli OMNIA M 3.2 da 4,20 kW?"
+    "query": "Quanto costa la pompa di calore Ferroli OMNIA M 3.2 da 4,20 kW?",
+    "source_url": "https://cms.ferroli.com/sites/default/files/2026-09/LISTINO%20FERROLI%20MAR%202026_89LI3019_01_low.pdf"
   },
   {
     "id": "upower-velar-protection-class",

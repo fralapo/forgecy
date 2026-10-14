@@ -9,9 +9,12 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
  const fixturePath=join(process.cwd(),"tests/fixtures/retrieval-eval-candidates.json");
  const queryPath=join(process.cwd(),"tests/fixtures/retrieval-eval.json");
  const candidates=JSON.parse(readFileSync(fixturePath,"utf8")) as Candidate[];
- const targets=JSON.parse(readFileSync(queryPath,"utf8")) as Array<{id:string;passage:string}>;
+ const targets=JSON.parse(readFileSync(queryPath,"utf8")) as Array<{id:string;passage:string;category:string;source_url?:string}>;
  assert.equal(targets.length,29);
  assert.equal(candidates.length,120);
+ const catalogTargets=targets.filter(target=>target.category.startsWith("catalog-"));
+ assert.equal(catalogTargets.length,21);
+ assert.ok(catalogTargets.every(target=>target.source_url),"every public catalog target must have a citation source");
  assert.equal(new Set(candidates.map(candidate=>candidate.id)).size,candidates.length);
  const targetIds=new Set(targets.map(target=>target.id));
  const targetProductCodes=new Set(targets.flatMap(target=>[...target.passage.matchAll(/(?:codice|articolo)\s+([A-Z0-9]+(?:[.-][A-Z0-9]+)*)/giu)].map(match=>match[1].toUpperCase())));

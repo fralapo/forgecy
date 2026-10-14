@@ -8,7 +8,7 @@ loadEnvConfig(process.cwd());
 type Example = { id: string; category: string; passage: string; query: string; source_url?: string | null };
 type Candidate = {id:string;passage:string;source_url:string|null};
 type Hit = { source_id: string; source_title: string; source_url: string | null; chunk_ordinal: number; excerpt: string; relevance: number };
-type Rank = { rank: number; reciprocalRank: number; recallAt3: number };
+type Rank = { rank: number; reciprocalRank: number; recallAt3: number; citationAvailable: boolean; citationCoveredAt3: boolean };
 
 async function embedInBatches(texts: string[], embedTexts: (batch: string[]) => Promise<number[][]>, batchSize = 32) {
   const embeddings: number[][] = [];
@@ -19,15 +19,22 @@ async function embedInBatches(texts: string[], embedTexts: (batch: string[]) => 
 }
 
 function rankingMetrics(ranks: Rank[]) {
+  const citedTargets = ranks.filter(item => item.citationAvailable);
   return {
     mrr: ranks.reduce((sum, item) => sum + item.reciprocalRank, 0) / ranks.length,
     recallAt3: ranks.reduce((sum, item) => sum + item.recallAt3, 0) / ranks.length,
+    citationCoverageAt3: citedTargets.length
+      ? citedTargets.filter(item => item.citationCoveredAt3).length / citedTargets.length
+      : null,
+    citedTargetCount: citedTargets.length,
   };
 }
 
 async function main() {
   const examples = JSON.parse(readFileSync(join(process.cwd(), "tests/fixtures/retrieval-eval.json"), "utf8")) as Example[];
   const distractors = JSON.parse(readFileSync(join(process.cwd(), "tests/fixtures/retrieval-eval-candidates.json"), "utf8")) as Candidate[];
+  const catalogTargets = examples.filter(example => example.category.startsWith("catalog-"));
+  if (catalogTargets.some(example => !example.source_url)) throw new Error("Every public catalog target must include a source URL");
   const candidates:Candidate[]=[...examples.map(({id,passage,source_url})=>({id,passage,source_url:source_url??null})),...distractors];
   if(new Set(candidates.map(candidate=>candidate.id)).size!==candidates.length)throw new Error("Retrieval fixture contains duplicate candidate IDs");
   const distractorsBySource=distractors.reduce<Record<string,number>>((counts,candidate)=>{
@@ -65,7 +72,15 @@ async function main() {
     const rank = (hits: Hit[]): Rank => {
       const index = hits.findIndex(hit => hit.source_id === example.id);
       const value = index < 0 ? 0 : index + 1;
-      return { rank: value, reciprocalRank: value ? 1 / value : 0, recallAt3: value > 0 && value <= 3 ? 1 : 0 };
+      const target = value ? hits[index] : undefined;
+      const citationAvailable = Boolean(target?.source_url);
+      return {
+        rank: value,
+        reciprocalRank: value ? 1 / value : 0,
+        recallAt3: value > 0 && value <= 3 ? 1 : 0,
+        citationAvailable,
+        citationCoveredAt3: citationAvailable && value > 0 && value <= 3,
+      };
     };
     return {
       id: example.id,
@@ -89,6 +104,8 @@ async function main() {
     distractorsBySource,
     count: results.length,
     candidateCount:candidates.length,
+    annotatedCatalogTargets: catalogTargets.length,
+    catalogTargetsWithSources: catalogTargets.filter(example => Boolean(example.source_url)).length,
     ...Object.fromEntries(strategies.map(strategy => [strategy, rankingMetrics(results.map(item => item[strategy]))])),
     categories,
     ranks: results.map(({ id, category, lexical, semantic, hybrid }) => ({ id, category, lexical: lexical.rank, semantic: semantic.rank, hybrid: hybrid.rank })),
