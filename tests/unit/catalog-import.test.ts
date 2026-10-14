@@ -90,6 +90,18 @@ test("OCR product matrices without prices import coded products and package evid
  assert.deepEqual(parseMarkdownCatalogTable("Catalogo\n| Cod. | Descrizione |\n| --- | --- |\n| DD107 | Nome prodotto |"),[]);
 });
 
+test("native PDF catalog tables with vertically extracted columns import coded products without OCR",()=>{
+ const source="Catalogo 2026\nCod.\nDescrizione Prodotto\nContenuto\nBarcode\nAMMORBIDENTE DEO DUE\nDD107\n\nDEO DUE MORBIDO FIORI D'ACQUA\n\n1 LT\n\n8388776980149\n\n18388776980146\n6\nDD103\n\nDEO DUE MORBIDO FIORI ROSA\n\n1 LT\n\n8388776980026";
+ const products=parseLocalCatalogProducts("Catalogo_DeoDue_2026.pdf",source);
+ assert.equal(products.length,2);
+ assert.deepEqual(products.map(product=>product.name),["DEO DUE MORBIDO FIORI D'ACQUA","DEO DUE MORBIDO FIORI ROSA"]);
+ assert.equal(products[0].description,"DD107 — 1 LT");
+ assert.equal(products[0].price,null);
+ assert.equal(catalogEvidenceIsValid(products[0],source),true);
+ assert.equal(catalogEvidenceIsValid({...products[1],descriptionQuote:JSON.stringify(["DD999","2 LT"])},source),false);
+ assert.deepEqual(parseLocalCatalogProducts("Catalogo.pdf","Cod.\nDescrizione Prodotto\nDD107\n1 LT\n8388776980149"),[]);
+});
+
 test("OCR tables with only dimensions, product code and euro price import verifiable items",()=>{
  const source="USAG catalog 2026\n| mm | mm | mm | Cod. | immagine | € |\n| --- | --- | --- | --- | --- | --- |\n| 15÷35 | 3,5 | 168 | U02820301 | ![img-0.jpg](img-0.jpg) | 25,00 |\n| 35÷50 | 4 | 202 | U02820302 | ![img-0.jpg](img-0.jpg) | 29,00 |";
  const products=parseLocalCatalogProducts("Catalogo USAG",source);

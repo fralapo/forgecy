@@ -203,6 +203,28 @@ export function parseMarkdownCatalogCards(text:string):CatalogProduct[]{
  return products.length===productStarts.length?products:[];
 }
 
+/** Estrae tabelle PDF testuali in cui il layout dispone le colonne su righe separate. */
+export function parseNativeCatalogRows(text:string):CatalogProduct[]{
+ const lines=text.split(/\r?\n/u).map(line=>line.trim());
+ const codeHeader=lines.findIndex(line=>/^(?:cod\.?|codice|code|sku)$/iu.test(line));
+ const descriptionHeader=lines.findIndex((line,index)=>index>=codeHeader&&index<=codeHeader+24&&
+  /^(?:descrizione prodotto|descrizione|product description)$/iu.test(line));
+ if(codeHeader<0||descriptionHeader<0)return [];
+ const products:CatalogProduct[]=[];
+ for(let index=descriptionHeader+1;index<lines.length;index++){
+  const code=lines[index];
+  if(!/^(?:(?:[A-Z]{1,8}[ -]?)\d{3,10}[A-Z]?|\d{5,10})$/iu.test(code))continue;
+  const following=lines.slice(index+1).filter(Boolean).slice(0,3);
+  const name=following.find(value=>/\p{L}{3}/u.test(value)&&!/^\d/u.test(value)&&value.length<=180);
+  if(!name)continue;
+  const packageSize=following.find(value=>/^\d+(?:[,.]\d+)?\s*(?:ml|cl|l|lt|g|gr|kg|pz)\b/iu.test(value));
+  const descriptionQuotes=[code,...(packageSize?[packageSize]:[])];
+  products.push({name,description:descriptionQuotes.join(" — "),price:null,currency:"EUR",
+   nameQuote:name,descriptionQuote:JSON.stringify(descriptionQuotes),priceQuote:"",existingOfferId:null,imageIndex:null});
+ }
+ return products;
+}
+
 /** Parse deterministic catalog formats before asking an AI model to interpret the document. */
 export function parseLocalCatalogProducts(title:string,text:string):CatalogProduct[]{
  const csvProducts=parseCsvCatalog(text);
@@ -211,6 +233,8 @@ export function parseLocalCatalogProducts(title:string,text:string):CatalogProdu
  if(markdownProducts.length)return markdownProducts;
  const catalogCards=parseMarkdownCatalogCards(text);
  if(catalogCards.length)return catalogCards;
+ const nativeRows=looksLikeCatalog(title,text)?parseNativeCatalogRows(text):[];
+ if(nativeRows.length)return nativeRows;
  return looksLikeCatalog(title,text)?parseMarkdownImageVariants(text):[];
 }
 
