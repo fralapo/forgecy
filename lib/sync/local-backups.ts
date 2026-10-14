@@ -1,6 +1,6 @@
 import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { getLocalDataDirectory } from "../local-db";
 import { createWorkspaceArchive } from "./archive";
 
@@ -25,25 +25,15 @@ function defaultSettings(): AutomaticBackupSettings {
 
 function configPath() { return join(getLocalDataDirectory(), CONFIG_FILE); }
 
-function pathOverlapsDataDirectory(path: string) {
-  const data = resolve(/*turbopackIgnore: true*/ getLocalDataDirectory());
-  const target = resolve(/*turbopackIgnore: true*/ path);
-  const isWithin = (parent: string, child: string) => {
-    const rel = relative(parent, child);
-    return rel === "" || (!rel.startsWith(`..${sep}`) && rel !== ".." && !isAbsolute(rel));
-  };
-  return isWithin(data, target) || isWithin(target, data);
-}
-
 function normalizeSettings(input: Partial<AutomaticBackupSettings>): AutomaticBackupSettings {
   const defaults = defaultSettings();
   const requestedDirectory = typeof input.directory === "string" ? input.directory.trim() : "";
   if (requestedDirectory && !isAbsolute(requestedDirectory)) throw new Error("Inserisci un percorso assoluto valido per la cartella dei backup.");
   const directory = requestedDirectory ? resolve(/*turbopackIgnore: true*/ requestedDirectory) : defaults.directory;
+  if (directory !== resolve(/*turbopackIgnore: true*/ defaults.directory))
+    throw new Error("I backup automatici vengono salvati solo nella cartella locale privata di Forgecy. Per trasferirli, scarica o esporta l'archivio e copialo manualmente.");
   const intervalHours = Number(input.intervalHours);
   const retention = Number(input.retention);
-  if (resolve(/*turbopackIgnore: true*/ directory) !== resolve(/*turbopackIgnore: true*/ defaults.directory) && pathOverlapsDataDirectory(directory))
-    throw new Error("La cartella dei backup deve restare separata dalla cartella dati di Forgecy.");
   if (!(BACKUP_INTERVAL_OPTIONS_HOURS as readonly number[]).includes(intervalHours)) throw new Error("Frequenza backup non valida.");
   if (!(BACKUP_RETENTION_OPTIONS as readonly number[]).includes(retention)) throw new Error("Numero di copie da conservare non valido.");
   return { directory, intervalHours, retention };
@@ -54,7 +44,9 @@ export function getAutomaticBackupSettings(): AutomaticBackupSettings {
   if (!existsSync(path)) return defaultSettings();
   try {
     const parsed = JSON.parse(readFileSync(path, "utf8")) as Partial<AutomaticBackupSettings>;
-    return normalizeSettings(parsed);
+    // Older versions allowed choosing a cloud-synced folder. Keep its schedule,
+    // but put future automatic backups in this computer's private data folder.
+    return normalizeSettings({ ...parsed, directory: defaultSettings().directory });
   } catch (error) {
     console.error("[automatic backup] Configurazione non valida; uso la cartella predefinita.", error instanceof Error ? error.message : "errore");
     return defaultSettings();

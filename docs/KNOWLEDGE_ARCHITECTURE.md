@@ -6,7 +6,7 @@ Per l'OCR Forgecy legge in locale il testo già incorporato nei PDF. Questa è e
 
 ## Perché questa scelta
 
-Forgecy è single-user e local-first: SQLite e gli asset sul disco sono il workspace autorevole; archivi export/import trasferiscono il workspace tra computer e i backup periodici possono essere sincronizzati da un client cloud desktop. Spostare la memoria in un servizio vettoriale cloud aggiungerebbe costi, credenziali e un secondo posto in cui conservare contenuti dei clienti, senza risolvere da solo la qualità delle risposte.
+Forgecy è single-user e local-first: SQLite e gli asset sul disco sono il workspace autorevole; archivi export/import trasferiscono il workspace tra computer e i backup periodici restano nella cartella locale privata dell'app. Le copie su servizi cloud come Google Drive sono manuali. Spostare la memoria in un servizio vettoriale cloud aggiungerebbe costi, credenziali e un secondo posto in cui conservare contenuti dei clienti, senza risolvere da solo la qualità delle risposte.
 
 RAG è il pattern giusto per le domande che richiedono di trovare passaggi in siti, PDF, note e documenti. Non deve però sostituire le tabelle già affidabili per offerte verificate, identità del brand, revisioni e dossier approvati. Il dossier è una sintesi controllabile da una persona; le fonti con provenienza sono le prove; il recupero porta all’agente soltanto i passaggi pertinenti al compito.
 

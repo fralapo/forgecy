@@ -1,8 +1,8 @@
 import { assertSafeDocument, DocumentSafetyError } from "./document-safety";
 import { createHash } from "node:crypto";
-import { parseLocalCatalogProducts, parsePositionedNativeCatalogRows, normalizeCatalogName, looksLikeCatalog, type CatalogProduct } from "./catalog-import";
+import { parseLocalCatalogProducts, parsePositionedNativeCatalogRows, normalizeCatalogName, looksLikeCatalog, type CatalogProduct, type PositionedPdfTextItem } from "./catalog-import";
 import type { DocumentImage } from "./document-image";
-import { createPdfParser, getPositionedPdfText } from "./pdf-runtime";
+import { createPdfParser, getPositionedPdfText, getPdfImagePlacements, type PdfImagePlacement } from "./pdf-runtime";
 /**
  * Bound client-upload text extraction. Original binary always remains in private
  * Local private storage; extracted text is separate, untrusted evidence.
@@ -18,33 +18,80 @@ const MAX_NATIVE_PDF_IMAGE_PIXELS=12_000_000;
 function clean(value:string):string{
  return value.replace(/\u0000/g,"").replace(/\r\n?/g,"\n").trim().slice(0,MAX_EXTRACT_CHARS);
 }
-export async function extractNativeCatalogImages(parser:Awaited<ReturnType<typeof createPdfParser>>,pages:Array<{num:number;text:string}>,title:string,body:string):Promise<DocumentImage[]>{
+function imageSectionCandidates(image:{x:number;y:number;width:number;height:number},items:PositionedPdfTextItem[],products:CatalogProduct[]):string[]{
+ const codeItems=items.filter(item=>/^U\d{8}$/iu.test(item.str));
+ if(!codeItems.length)return products.map(product=>product.name);
+ const centerX=image.x+image.width/2;
+ const columns:number[]=[];
+ for(const x of codeItems.map(item=>item.x).sort((a,b)=>a-b))
+  if(!columns.length||Math.abs(x-columns[columns.length-1]!)>30)columns.push(x);
+ const columnCenter=columns.reduce((closest,current)=>Math.abs(current-centerX)<Math.abs(closest-centerX)?current:closest,columns[0]!);
+ const columnItems=codeItems.filter(item=>Math.abs(item.x-columnCenter)<=30).sort((a,b)=>b.y-a.y);
+ const groups:Array<typeof columnItems>=[];
+ for(const item of columnItems){
+  const group=groups[groups.length-1];
+  if(!group||group[group.length-1]!.y-item.y>24)groups.push([item]);
+  else group.push(item);
+ }
+ // Product images sit above their code rows in many printed catalogs. Use the
+ // first code cluster below the image; headings and prose between them vary by brand.
+ const group=groups.filter(rows=>Math.max(...rows.map(row=>row.y))<image.y+8)
+  .sort((a,b)=>(image.y-Math.max(...a.map(row=>row.y)))-(image.y-Math.max(...b.map(row=>row.y))))[0];
+ if(!group)return [];
+ const codes=new Set(group.map(item=>item.str.toLocaleUpperCase("en-US")));
+ const matched=products.filter(product=>{
+  const code=/U\d{8}/iu.exec(product.name)?.[0];
+  return code&&codes.has(code.toLocaleUpperCase("en-US"));
+ }).map(product=>product.name);
+ return matched;
+}
+
+export async function extractNativeCatalogImages(parser:Awaited<ReturnType<typeof createPdfParser>>,pages:Array<{num:number;text:string}>,title:string,body:string,positionedProductsByPage:Map<number,CatalogProduct[]>=new Map(),positionedItemsByPage:Map<number,PositionedPdfTextItem[]>=new Map()):Promise<DocumentImage[]>{
  const products=parseLocalCatalogProducts(title,body);
- if(!products.length)return [];
  const candidates=pages.map(page=>({page:page.num,names:[...new Set(products
   .filter(product=>normalizeCatalogName(page.text).includes(normalizeCatalogName(product.name)))
-  .map(product=>product.name))]})).filter(page=>page.page>0&&page.names.length)
+  .map(product=>product.name).concat((positionedProductsByPage.get(page.num)||[]).map(product=>product.name)))]})).filter(page=>page.page>0&&page.names.length)
   .sort((a,b)=>b.names.length-a.names.length||a.page-b.page);
  const found:DocumentImage[]=[];const hashes=new Set<string>();let totalBytes=0;
  for(const candidate of candidates){
   if(found.length>=MAX_NATIVE_PDF_IMAGES)break;
   let result;
-  try{result=await parser.getImage({partial:[candidate.page],imageBuffer:true,imageDataUrl:false,imageThreshold:100});}
+  try{result=await parser.getImage({partial:[candidate.page],imageBuffer:true,imageDataUrl:false,imageThreshold:20});}
   catch{continue;}
   const pageImages=result.pages.find(page=>page.pageNumber===candidate.page)?.images||[];
-  // Keep only pages whose image objects and locally verified product headings map one-to-one.
-  if(!pageImages.length||pageImages.length!==candidate.names.length||pageImages.length>MAX_NATIVE_PDF_IMAGES-found.length)continue;
-  const prepared=pageImages.map(image=>({image,bytes:Buffer.from(image.data)}));
-  if(prepared.some(({image,bytes})=>image.width*image.height>MAX_NATIVE_PDF_IMAGE_PIXELS||!bytes.length||bytes.length>5_000_000||
-   bytes[0]!==0x89||bytes[1]!==0x50||bytes[2]!==0x4e||bytes[3]!==0x47))continue;
+  if(!pageImages.length)continue;
+  let placements:PdfImagePlacement[];
+  try{placements=await getPdfImagePlacements(parser,candidate.page);}catch{placements=[];}
+  const pageItems=positionedItemsByPage.get(candidate.page)||[];
+  const ranked=pageImages.flatMap((image,index)=>{
+   const bytes=Buffer.from(image.data);
+   if(image.width*image.height>MAX_NATIVE_PDF_IMAGE_PIXELS||!bytes.length||bytes.length>5_000_000||
+    bytes[0]!==0x89||bytes[1]!==0x50||bytes[2]!==0x4e||bytes[3]!==0x47)return [];
+   const placement=placements.find(item=>item.name===image.name);
+   const names=placement?imageSectionCandidates(placement,pageItems,positionedProductsByPage.get(candidate.page)||products):candidate.names;
+   if(!names.length)return [];
+   return [{image,bytes,names,index}];
+  }).sort((a,b)=>a.names.length-b.names.length||b.image.width*b.image.height-a.image.width*a.image.height||a.index-b.index);
+  const singleNameCounts=new Map<string,number>();
+  for(const item of ranked)if(item.names.length===1){
+   const name=normalizeCatalogName(item.names[0]!);
+   singleNameCounts.set(name,(singleNameCounts.get(name)||0)+1);
+  }
+  const selected=ranked.filter(item=>{
+   if(item.names.length!==1)return true;
+   const name=normalizeCatalogName(item.names[0]!);
+   return singleNameCounts.get(name)===1;
+  }).slice(0,MAX_NATIVE_PDF_IMAGES-found.length);
+  const prepared=selected;
+  if(!prepared.length)continue;
   const pageTotal=prepared.reduce((sum,item)=>sum+item.bytes.length,0);
   if(totalBytes+pageTotal>MAX_NATIVE_PDF_IMAGE_BYTES)continue;
-  for(const {bytes} of prepared){
+  for(const {bytes,names} of prepared){
    const sha256=createHash("sha256").update(bytes).digest("hex");
    if(hashes.has(sha256))continue;
    hashes.add(sha256);totalBytes+=bytes.length;
    found.push({dataUrl:`data:image/png;base64,${bytes.toString("base64")}`,mime:"image/png",sha256,
-    origin:"native-pdf",pageNumber:candidate.page,candidateProductNames:candidate.names});
+    origin:"native-pdf",pageNumber:candidate.page,candidateProductNames:names});
   }
  }
  return found;
@@ -86,13 +133,21 @@ export async function extractDocumentWithMetadata(bytes:Uint8Array,mime:string,n
     const body=clean(pages.map(page=>`[Pagina PDF ${page.num}]\n${page.text}`).join("\n\n"));
     const textTruncated=(pageCount!==null&&pageCount>pagesProcessed)||textLength>=MAX_EXTRACT_CHARS;
     if(body.length<MIN_NATIVE_PDF_TEXT_CHARS)return {extraction:{status:"error",body:"",error:"PDF senza testo nativo sufficiente: serve OCR o una trascrizione"},pageCount,pagesProcessed,textTruncated};
-    const nativeImages=await extractNativeCatalogImages(parser,pages,name,body);
     const nativeCatalogProducts:CatalogProduct[]=[];
+    const positionedProductsByPage=new Map<number,CatalogProduct[]>();
+    const positionedItemsByPage=new Map<number,PositionedPdfTextItem[]>();
     if(looksLikeCatalog(name,body))for(const page of pages){
      if(nativeCatalogProducts.length>=200)break;
-     try{nativeCatalogProducts.push(...parsePositionedNativeCatalogRows(name,await getPositionedPdfText(parser,page.num)));}
+     try{
+      const items=await getPositionedPdfText(parser,page.num);
+      const pageProducts=parsePositionedNativeCatalogRows(name,items);
+      if(pageProducts.length)positionedProductsByPage.set(page.num,pageProducts);
+      if(pageProducts.length)positionedItemsByPage.set(page.num,items);
+      nativeCatalogProducts.push(...pageProducts);
+     }
      catch(error){console.warn("[document-extract] positioned catalog extraction skipped for page",page.num,error instanceof Error?error.message:"unknown");}
     }
+    const nativeImages=await extractNativeCatalogImages(parser,pages,name,body,positionedProductsByPage,positionedItemsByPage);
     return {extraction:{status:"ready",body,error:null},pageCount,pagesProcessed,textTruncated,...(nativeImages.length?{nativeImages}:{}),...(nativeCatalogProducts.length?{nativeCatalogProducts:nativeCatalogProducts.slice(0,200)}:{})};
    }finally{await parser.destroy();}
   }

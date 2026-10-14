@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { deflateSync } from "node:zlib";
 import { PDFDocument, StandardFonts } from "pdf-lib";
-import { applyNativeImageAssociations } from "../../lib/catalog-image-association";
+import { applyNativeImageAssociations, nativeImageAssociationSchema } from "../../lib/catalog-image-association";
 import { extractNativeCatalogImages } from "../../lib/document-extract";
 import type { CatalogProduct } from "../../lib/catalog-import";
 import { createPdfParser, pdfWasmUrl } from "../../lib/pdf-runtime";
@@ -71,13 +71,17 @@ const bodyFor = (names: string[]) => [
   ...names.map((name, index) => `${name},${index + 1}.00`),
 ].join("\n");
 
-test("native PDF product images decode and stay limited to one-to-one text/image pages", async () => {
+test("native PDF images stay page-scoped and ambiguous surplus images are excluded", async () => {
   assert.match(pdfWasmUrl(), /pdfjs-dist[\\/]wasm[\\/]$/u);
   const names = ["Alpha Cleaner", "Beta Polish", "Gamma Glass"];
   const parser = await createPdfParser(await productPdf(names, [1, 1, 1]));
   try {
     const extracted = await parser.getText({ first: 1, pageJoiner: "" });
-    const images = await extractNativeCatalogImages(parser, extracted.pages, "catalogo.pdf", bodyFor(names));
+    const products: CatalogProduct[] = names.map(name => ({
+      name, description: "", price: null, currency: "EUR", nameQuote: name, descriptionQuote: name, priceQuote: "",
+      existingOfferId: null, imageIndex: null,
+    }));
+    const images = await extractNativeCatalogImages(parser, extracted.pages, "catalogo.pdf", bodyFor(names), new Map([[1, products]]));
     assert.equal(images.length, 3);
     assert.deepEqual(images.map(image => image.origin), ["native-pdf", "native-pdf", "native-pdf"]);
     assert.deepEqual(images.map(image => image.pageNumber), [1, 1, 1]);
@@ -90,10 +94,33 @@ test("native PDF product images decode and stay limited to one-to-one text/image
   const ambiguous = await createPdfParser(await productPdf([names[0]!], [2]));
   try {
     const extracted = await ambiguous.getText({ first: 1, pageJoiner: "" });
-    const images = await extractNativeCatalogImages(ambiguous, extracted.pages, "catalogo.pdf", bodyFor([names[0]!]));
+    const product: CatalogProduct = {
+      name: names[0]!, description: "", price: null, currency: "EUR", nameQuote: names[0]!, descriptionQuote: names[0]!, priceQuote: "",
+      existingOfferId: null, imageIndex: null,
+    };
+    const images = await extractNativeCatalogImages(ambiguous, extracted.pages, "catalogo.pdf", bodyFor([names[0]!]), new Map([[1, [product]]]));
     assert.equal(images.length, 0);
   } finally {
     await ambiguous.destroy();
+  }
+});
+
+test("native catalog images are retained when one family photo represents several priced variants", async () => {
+  const names = ["15÷35 3,5 168 (U02820301)", "35÷50 4 202 (U02820302)", "50÷80 5 280 (U02820303)"];
+  const parser = await createPdfParser(await productPdf(names, [1, 0, 0]));
+  try {
+    const extracted = await parser.getText({ first: 1, pageJoiner: "" });
+    const candidates: CatalogProduct[] = names.map(name => ({
+      name, description: "", price: null, currency: "EUR", nameQuote: name, descriptionQuote: name, priceQuote: "",
+      existingOfferId: null, imageIndex: null,
+    }));
+    const images = await extractNativeCatalogImages(
+      parser, extracted.pages, "catalogo.pdf", "Catalogo chiavi USAG", new Map([[1, candidates]]),
+    );
+    assert.equal(images.length, 1);
+    assert.deepEqual(images[0]?.candidateProductNames, names);
+  } finally {
+    await parser.destroy();
   }
 });
 
@@ -119,4 +146,12 @@ test("native image associations reject products outside the page evidence and du
     { product_name: "Beta Polish", image_index: 0 },
   ]);
   assert.deepEqual(conflicting.map(product => product.imageIndex), [0, null]);
+});
+
+test("native image association schema accepts large pages with many priced variants", () => {
+  const associations = Array.from({length: 44}, (_, index) => ({
+    product_name: `Product variant ${index + 1}`,
+    image_index: index < 7 ? index : null,
+  }));
+  assert.equal(nativeImageAssociationSchema.safeParse({associations}).success, true);
 });

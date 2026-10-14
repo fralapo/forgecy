@@ -20,7 +20,9 @@ test("local-first runtime has no Supabase package or connection configuration", 
   const backupSettings = readFileSync("components/backup-settings.tsx", "utf8");
   assert.match(backupSettings, /Backup e trasferimento/);
   assert.doesNotMatch(backupSettings, /Collega Google Drive|Client ID Google/);
-  assert.match(backupSettings, /client cloud installato/);
+  assert.match(backupSettings, /Google Drive non viene contattato né sincronizzato automaticamente/);
+  assert.match(backupSettings, /copialo manualmente/);
+  assert.doesNotMatch(backupSettings, /sottocartella di Google Drive|client cloud installato/);
 });
 
 test("local storage and loopback worker are the active architecture", () => {

@@ -1,7 +1,11 @@
+import { z } from "zod";
 import { normalizeCatalogName, type CatalogProduct } from "./catalog-import";
 import type { DocumentImage } from "./document-image";
 
 export type ImageAssociation = { product_name: string; image_index: number | null };
+export const nativeImageAssociationSchema=z.object({associations:z.array(z.object({
+  product_name:z.string().trim().min(2).max(180),image_index:z.number().int().min(0).max(7).nullable(),
+})).max(200)}).strict();
 
 /** Apply only exact, page-supported, one-image-per-product visual matches. */
 export function applyNativeImageAssociations(

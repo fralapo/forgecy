@@ -35,7 +35,7 @@ export default function BackupSettings() {
       const result = await requestJson<{ settings: BackupSettings }>("/api/sync/backups/settings", { method: "POST", body: JSON.stringify(draft) });
       setSettings(result.settings); setDraft(result.settings);
       await loadBackups();
-      setMessage("Impostazioni salvate. I prossimi backup useranno questa cartella.");
+      setMessage("Impostazioni salvate. I prossimi backup resteranno sul computer che esegue Forgecy.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Impossibile salvare le impostazioni"); }
     finally { setBusy(""); }
   }
@@ -49,7 +49,7 @@ export default function BackupSettings() {
     setBusy("Creazione backup…"); setError(""); setMessage("");
     try {
       await requestJson<{ backup: LocalBackup }>("/api/sync/backups", { method: "POST" });
-      await loadBackups(); setMessage("Backup creato nella cartella selezionata.");
+      await loadBackups(); setMessage("Backup creato nella cartella locale privata di Forgecy.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Creazione backup non riuscita"); }
     finally { setBusy(""); }
   }
@@ -75,14 +75,11 @@ export default function BackupSettings() {
 
   return <article className="card stack">
     <div className="flex center gap8"><FolderSync size={18}/><h2>Backup e trasferimento</h2></div>
-    <p className="caption">Forgecy salva copie complete e verificabili del workspace. Per trasferirlo, esporta un archivio e importalo sull’altro computer. I backup automatici possono essere salvati in una cartella sincronizzata da Google Drive per desktop o da un altro servizio: Forgecy non richiede un account Google.</p>
+    <p className="caption">Forgecy salva copie complete e verificabili nella cartella locale privata dell’app su questo computer. Per trasferirle su un altro dispositivo o su Google Drive, scarica o esporta un archivio e copialo manualmente.</p>
     <section className="stack" aria-labelledby="automatic-backups-title">
       <h3 id="automatic-backups-title">Backup automatici</h3>
       {draft && <>
-        <label className="stack">Cartella sul computer che ospita Forgecy
-          <input autoComplete="off" spellCheck={false} value={draft.directory} onChange={event => setDraft({ ...draft, directory: event.target.value })} placeholder="Percorso assoluto della cartella" />
-        </label>
-        <p className="caption">Inserisci un percorso locale completo, per esempio una sottocartella di Google Drive per desktop. Forgecy crea qui il file di backup; il caricamento online dipende dal client cloud installato. Dopo il primo backup, controlla che il file <code>.forgecy.zip</code> sia visibile online prima di affidarti alla sincronizzazione. Da telefono non puoi selezionare una cartella del server.</p>
+        <p className="caption">Destinazione: cartella dati locale e privata di Forgecy su questo computer. Google Drive non viene contattato né sincronizzato automaticamente.</p>
         <div className="flex gap8" style={{ flexWrap: "wrap" }}>
           <label className="stack">Crea una copia ogni
             <select value={draft.intervalHours} onChange={event => setDraft({ ...draft, intervalHours: Number(event.target.value) })}>
@@ -96,14 +93,14 @@ export default function BackupSettings() {
           </label>
         </div>
         <div className="flex gap8" style={{ flexWrap: "wrap" }}>
-          <button className="button primary" onClick={() => void saveSettings()} disabled={Boolean(busy) || !dirty}>Salva destinazione e frequenza</button>
+          <button className="button primary" onClick={() => void saveSettings()} disabled={Boolean(busy) || !dirty}>Salva frequenza</button>
           <button className="button" onClick={() => void createBackup()} disabled={Boolean(busy)}>Crea backup ora</button>
         </div>
       </>}
       {backups.length ? <ul className="stack" style={{ paddingLeft: 20, margin: 0 }}>
         {backups.map(backup => <li key={backup.id} className="caption">{new Date(backup.createdAt).toLocaleString("it-IT")} · {(backup.size / 1024 / 1024).toFixed(1)} MB · <a href={`/api/sync/backups/${encodeURIComponent(backup.id)}`}>Scarica</a></li>)}
       </ul> : <p className="caption">Il primo backup verrà creato all’avvio di Forgecy.</p>}
-      <p className="caption">I backup contengono database e documenti dei clienti: proteggi la cartella come gli altri dati dell’app. Se la cartella scelta non è disponibile, Forgecy segnala l’errore e non elimina le copie esistenti.</p>
+      <p className="caption">I backup contengono database e documenti dei clienti. Le copie automatiche restano sul computer: per una copia su Google Drive, scarica il file e trasferiscilo manualmente.</p>
     </section>
     <section className="stack" aria-labelledby="workspace-transfer-title">
       <h3 id="workspace-transfer-title">Trasferisci il workspace</h3>
