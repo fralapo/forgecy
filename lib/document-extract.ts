@@ -8,7 +8,7 @@ import { createPdfParser } from "./pdf-runtime";
  * Local private storage; extracted text is separate, untrusted evidence.
  */
 export type Extraction={status:"ready"|"pending"|"error";body:string;error:string|null};
-export type DocumentExtraction={extraction:Extraction;pageCount:number|null;nativeImages?:DocumentImage[]};
+export type DocumentExtraction={extraction:Extraction;pageCount:number|null;pagesProcessed?:number|null;textTruncated?:boolean;nativeImages?:DocumentImage[]};
 export const MAX_EXTRACT_CHARS=80000;
 const MIN_NATIVE_PDF_TEXT_CHARS=80;
 const MAX_NATIVE_PDF_IMAGES=8;
@@ -55,10 +55,10 @@ export async function extractDocumentWithMetadata(bytes:Uint8Array,mime:string,n
   if(["txt","md","csv"].includes(ext||"")&&mime.startsWith("text/")){
    const decoded=new TextDecoder("utf-8",{fatal:false}).decode(bytes);
    return {extraction:{status:decoded.trim()?"ready":"error",body:clean(decoded),
-    error:decoded.trim()?null:"File di testo vuoto"},pageCount:null};
+    error:decoded.trim()?null:"File di testo vuoto"},pageCount:null,textTruncated:decoded.length>MAX_EXTRACT_CHARS};
   }
   if(ext==="pdf"&&mime==="application/pdf"){
-   if(new TextDecoder().decode(bytes.subarray(0,5))!=="%PDF-")
+    if(new TextDecoder().decode(bytes.subarray(0,5))!=="%PDF-")
     return {extraction:{status:"error",body:"",error:"File PDF non valido"},pageCount:null};
    const parser=await createPdfParser(bytes);
    try {
@@ -67,9 +67,11 @@ export async function extractDocumentWithMetadata(bytes:Uint8Array,mime:string,n
     // Extract a bounded prefix; scanned PDFs need explicit OCR (not silently guessed).
     const text=await parser.getText({first:40,pageJoiner:""});
     const body=clean(text.text||"");
-    if(body.length<MIN_NATIVE_PDF_TEXT_CHARS)return {extraction:{status:"error",body:"",error:"PDF senza testo nativo sufficiente: serve OCR o una trascrizione"},pageCount};
+    const pagesProcessed=Math.min(40,text.pages?.length||0,pageCount||40);
+    const textTruncated=(pageCount!==null&&pageCount>pagesProcessed)||(text.text||"").length>MAX_EXTRACT_CHARS;
+    if(body.length<MIN_NATIVE_PDF_TEXT_CHARS)return {extraction:{status:"error",body:"",error:"PDF senza testo nativo sufficiente: serve OCR o una trascrizione"},pageCount,pagesProcessed,textTruncated};
     const nativeImages=await extractNativeCatalogImages(parser,text.pages||[],name,body);
-    return {extraction:{status:"ready",body,error:null},pageCount,...(nativeImages.length?{nativeImages}:{})};
+    return {extraction:{status:"ready",body,error:null},pageCount,pagesProcessed,textTruncated,...(nativeImages.length?{nativeImages}:{})};
    }finally{await parser.destroy();}
   }
   if(ext==="docx"&&mime==="application/vnd.openxmlformats-officedocument.wordprocessingml.document"){
@@ -79,7 +81,7 @@ export async function extractDocumentWithMetadata(bytes:Uint8Array,mime:string,n
    const extracted=await mammoth.extractRawText({buffer:Buffer.from(bytes)});
    const body=clean(extracted.value||"");
    return {extraction:body.length>5?{status:"ready",body,error:null}:
-    {status:"error",body:"",error:"Il documento Word non contiene testo leggibile"},pageCount:null};
+    {status:"error",body:"",error:"Il documento Word non contiene testo leggibile"},pageCount:null,textTruncated:extracted.value.length>MAX_EXTRACT_CHARS};
   }
   if(["png","jpg","jpeg","webp"].includes(ext||"")&&mime.startsWith("image/"))
    return {extraction:{status:"pending",body:"",error:"Immagine archiviata: estrazione OCR non ancora disponibile"},pageCount:null};

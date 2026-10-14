@@ -22,6 +22,17 @@ type Props={
 };
 
 function Badge({value}:{value:string}){return <span className={"pill "+(["stale","draft","proposed","running"].includes(value)?"warn":value==="failed"?"danger":value==="archived"?"muted":"")}>{statusLabel(value)}</span>}
+function sourceCoverageNotice(source:Snapshot["sources"][number]):string|null{
+ const value=source.source_metadata?.document_processing;
+ if(!value||typeof value!=="object")return null;
+ const processing=value as Record<string,unknown>;
+ if(processing.truncation_reason==="page_limit"){
+  const read=Number(processing.pages_processed)||0,total=Number(processing.page_count)||0;
+  return `Sono state lette ${read} pagine su ${total}. Dividi il PDF in parti più piccole e carica anche le pagine mancanti.`;
+ }
+ if(processing.truncation_reason==="character_limit")return "Il testo estratto ha raggiunto il limite di Forgecy. Dividi il documento e carica le parti separatamente per includerlo tutto.";
+ return null;
+}
 function SourceFilePreview({clientId,source}:{clientId:string;source:Snapshot["sources"][number]}){
  const [url,setUrl]=useState("");
  const bucket=source.source_metadata?.storage_bucket==="forgecy-assets"?"forgecy-assets":"forgecy-sources";
@@ -181,7 +192,7 @@ function Knowledge({data,onModal,onAction,onView,busy}:{data:Snapshot;onModal:Pr
        </div>):<p className="caption">Nessuna corrispondenza nelle fonti disponibili.</p>)}
      </div>}
    </div>
-   <div className="card">{data.sources.length?data.sources.map(s=><div className="list-row" key={s.id}><div style={{minWidth:0,flex:1}}><div className="flex center gap12"><div className="client-avatar">{s.kind==="website"?<Globe size={17}/>:<FileText size={17}/>}</div><div><strong>{s.title}</strong><div className="caption">{s.kind} · {s.body?.length||0} caratteri · {s.url||"Nessun URL"}</div>{s.error&&<div className="caption" style={{color:"var(--danger)"}}>{s.error}</div>}</div></div>{s.body&&<details style={{marginTop:10,marginLeft:48}}><summary className="caption" style={{cursor:"pointer",fontWeight:600}}>Mostra il testo estratto</summary><div className="caption" style={{marginTop:8,maxHeight:320,overflow:"auto",whiteSpace:"pre-wrap",lineHeight:1.6}}>{s.body}</div></details>}{s.file_path&&<div style={{marginLeft:48}}><SourceFilePreview clientId={data.client.id} source={s}/></div>}</div><div className="flex center gap8 wrap"><Badge value={s.status}/>{s.kind==="document"&&s.file_path&&s.status!=="ready"&&<button className="button small" disabled={Boolean(busy)} onClick={()=>onAction("reprocessDocument",{id:s.id})}>Riprova</button>}<button className="button small ghost" disabled={Boolean(busy)} aria-label={"Elimina fonte "+s.title} title="Elimina fonte" onClick={()=>{const ok=window.confirm("Eliminare «"+s.title+"»? I prodotti in bozza collegati saranno eliminati; quelli verificati o già usati saranno conservati senza il collegamento alla fonte.");if(ok)onAction("deleteSource",{id:s.id})}}><Trash2 size={14}/> Elimina</button></div></div>):
+   <div className="card">{data.sources.length?data.sources.map(s=><div className="list-row" key={s.id}><div style={{minWidth:0,flex:1}}><div className="flex center gap12"><div className="client-avatar">{s.kind==="website"?<Globe size={17}/>:<FileText size={17}/>}</div><div><strong>{s.title}</strong><div className="caption">{s.kind} · {s.body?.length||0} caratteri · {s.url||"Nessun URL"}</div>{s.error&&<div className="caption" style={{color:"var(--danger)"}}>{s.error}</div>}</div></div>{sourceCoverageNotice(s)&&<div className="notice warn" style={{margin:"10px 0 0 48px"}}>{sourceCoverageNotice(s)}</div>}{s.body&&<details style={{marginTop:10,marginLeft:48}}><summary className="caption" style={{cursor:"pointer",fontWeight:600}}>Mostra il testo estratto</summary><div className="caption" style={{marginTop:8,maxHeight:320,overflow:"auto",whiteSpace:"pre-wrap",lineHeight:1.6}}>{s.body}</div></details>}{s.file_path&&<div style={{marginLeft:48}}><SourceFilePreview clientId={data.client.id} source={s}/></div>}</div><div className="flex center gap8 wrap"><Badge value={s.status}/>{s.kind==="document"&&s.file_path&&s.status!=="ready"&&<button className="button small" disabled={Boolean(busy)} onClick={()=>onAction("reprocessDocument",{id:s.id})}>Riprova</button>}<button className="button small ghost" disabled={Boolean(busy)} aria-label={"Elimina fonte "+s.title} title="Elimina fonte" onClick={()=>{const ok=window.confirm("Eliminare «"+s.title+"»? I prodotti in bozza collegati saranno eliminati; quelli verificati o già usati saranno conservati senza il collegamento alla fonte.");if(ok)onAction("deleteSource",{id:s.id})}}><Trash2 size={14}/> Elimina</button></div></div>):
     <Empty title="Nessuna fonte" text="Inizia aggiungendo il sito del cliente, un brief o una nota."/>}
    </div>
    {data.sources.some(s=>s.status==="pending")&&<div className="notice warn">Alcune fonti non sono ancora leggibili. Per riprovare una scansione o un&apos;immagine, controlla la modalità OCR in Impostazioni e rielabora la fonte.</div>}

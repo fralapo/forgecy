@@ -27,7 +27,7 @@ function uploadLimitForMime(mime:string){return mime==="application/pdf"?MAX_PDF
 
 const uuid=z.uuid();
 type CatalogImportResult={status:"processed"|"not_catalog"|"no_products"|"ai_not_configured"|"analysis_failed";added:number;updated:number;skippedManual:number;invalid:number;message?:string};
-type DocumentProcessingResult={extraction:Extraction;ocr:OcrResult|null;nativeImages:OcrImage[]};
+type DocumentProcessingResult={extraction:Extraction;ocr:OcrResult|null;nativeImages:OcrImage[];pageCount:number|null;pagesProcessed:number|null;textTruncated:boolean};
 function emptyCatalogResult(status:CatalogImportResult["status"],message?:string):CatalogImportResult{
  return {status,added:0,updated:0,skippedManual:0,invalid:0,...(message?{message}:{})};
 }
@@ -38,23 +38,27 @@ function safeCatalogError(error:unknown):string{
 }
 
 async function extractDocumentWithOcr(ctx:Awaited<ReturnType<typeof auth>>,clientId:string,bytes:Uint8Array,mime:string,name:string):Promise<DocumentProcessingResult>{
- const {extraction,pageCount,nativeImages=[]}=await extractDocumentWithMetadata(bytes,mime,name);
- if(extraction.status==="ready")return {extraction,ocr:null,nativeImages};
- if(mime!=="application/pdf"&&!mime.startsWith("image/"))return {extraction,ocr:null,nativeImages:[]};
+ const {extraction,pageCount,pagesProcessed,textTruncated=false,nativeImages=[]}=await extractDocumentWithMetadata(bytes,mime,name);
+ if(extraction.status==="ready")return {extraction,ocr:null,nativeImages,pageCount,pagesProcessed:pagesProcessed??null,textTruncated};
+ if(mime!=="application/pdf"&&!mime.startsWith("image/"))return {extraction,ocr:null,nativeImages:[],pageCount,pagesProcessed:pagesProcessed??null,textTruncated};
  try{
   const model=await currentOcrModel(ctx.user.id);
   await reserveAiRequest(ctx,clientId,"dossier");
   const ocr=await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"dossier"},()=>
    ocrDocumentWithOpenRouter({bytes,mime,name,model,pageCount:pageCount??undefined}));
-  return {extraction:{status:"ready",body:ocr.body,error:null},ocr,nativeImages:[]};
+  return {extraction:{status:"ready",body:ocr.body,error:null},ocr,nativeImages:[],pageCount:ocr.pageCount,pagesProcessed:ocr.pageCount,textTruncated};
  }catch(error){
   const message=error instanceof ApiFailure?error.message:"OCR non riuscito. Il file resta salvato e puoi riprovare.";
-  return {extraction:{status:"pending",body:"",error:message},ocr:null,nativeImages:[]};
+  return {extraction:{status:"pending",body:"",error:message},ocr:null,nativeImages:[],pageCount,pagesProcessed:pagesProcessed??null,textTruncated};
  }
 }
 
-function documentProcessingMetadata(ocr:OcrResult|null){
- return ocr?{document_processing:{method:ocr.engine,provider:ocr.provider,model:ocr.model,page_count:ocr.pageCount}}:{};
+function documentProcessingMetadata(processing:DocumentProcessingResult){
+ if(!processing.ocr&&processing.pageCount===null&&!processing.textTruncated)return {};
+ const pageLimitReached=processing.pageCount!==null&&processing.pagesProcessed!==null&&processing.pagesProcessed<processing.pageCount;
+ return {document_processing:{method:processing.ocr?.engine||"native-text",...(processing.ocr?{provider:processing.ocr.provider,model:processing.ocr.model}:{}),
+  ...(processing.pageCount!==null?{page_count:processing.pageCount}:{}),...(processing.pagesProcessed!==null?{pages_processed:processing.pagesProcessed}:{}),
+  text_truncated:processing.textTruncated||pageLimitReached,...(pageLimitReached?{truncation_reason:"page_limit"}:processing.textTruncated?{truncation_reason:"character_limit"}:{})}};
 }
 
 async function reconcileCatalogDocument(ctx:Awaited<ReturnType<typeof auth>>,clientId:string,sourceId:string,title:string,body:string,visualImages:OcrImage[]=[]):Promise<CatalogImportResult>{
@@ -368,13 +372,15 @@ export async function POST(request:Request,{params}:Params){
          let extraction:Extraction;
          let ocr:OcrResult|null=null;
          let nativeImages:OcrImage[]=[];
+         let documentProcessing:DocumentProcessingResult|null=null;
          if(file.kind==="document"){
           const processed=await extractDocumentWithOcr(ctx,id,saved.bytes,saved.contentType,file.title+"."+saved.extension);
+          documentProcessing=processed;
           extraction=processed.extraction;ocr=processed.ocr;nativeImages=processed.nativeImages;
          }else extraction={body:file.title+" — "+file.role+" scaricato dal sito aziendale.",status:"ready",error:null};
          const record={client_id:id,kind:"document",title:file.title.slice(0,180),url:file.url,file_path:path,...extraction,
            captured_at:extraction.status==="ready"?new Date().toISOString():null,content_sha256:contentSha256,
-           source_metadata:{source:"website_asset",root_url:input.url,storage_bucket:bucket,asset_role:file.role,content_type:saved.contentType,...documentProcessingMetadata(ocr)}};
+           source_metadata:{source:"website_asset",root_url:input.url,storage_bucket:bucket,asset_role:file.role,content_type:saved.contentType,...(documentProcessing?documentProcessingMetadata(documentProcessing):{})}};
          const row=existingFile
            ?await ctx.db.from("sources").update(record).eq("id",existingFile.id).eq("client_id",id).select("*").maybeSingle()
            :await ctx.db.from("sources").insert(record).select("*").single();
@@ -585,7 +591,7 @@ export async function POST(request:Request,{params}:Params){
    const processed=await extractDocumentWithOcr(ctx,id,new Uint8Array(await file.arrayBuffer()),mime,name);
    const {extraction,ocr}=processed;
    const {data,error}=await ctx.db.from("sources").update({
-    ...extraction,source_metadata:{...(source.source_metadata||{}),...documentProcessingMetadata(ocr)},
+    ...extraction,source_metadata:{...(source.source_metadata||{}),...documentProcessingMetadata(processed)},
     captured_at:extraction.status==="ready"?new Date().toISOString():null
    }).eq("id",sourceId).eq("client_id",id).select().maybeSingle();
    dbError(error);if(!data)throw new ApiFailure(404,"Documento non trovato");
@@ -618,7 +624,7 @@ export async function POST(request:Request,{params}:Params){
    const {extraction,ocr}=processed;
    const {data,error}=await ctx.db.from("sources").insert({
     client_id:id,kind:"document",title:file.name,file_path:path,...extraction,
-    source_metadata:documentProcessingMetadata(ocr),
+    source_metadata:documentProcessingMetadata(processed),
     captured_at:extraction.status==="ready"?new Date().toISOString():null
    }).select().single();
    if(error){await ctx.db.storage.from("forgecy-sources").remove([path]);dbError(error);}
