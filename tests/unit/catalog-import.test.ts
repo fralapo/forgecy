@@ -33,4 +33,13 @@ test("catalog extraction accepts a bounded visual reference or explicit absence"
  const product={name:"Crema viso",description:"",price:null,currency:"EUR",name_quote:"Crema viso",description_quote:"",price_quote:"",existing_offer_id:null,image_index:3};
  assert.equal(catalogExtractionSchema.safeParse({products:[product]}).success,true);
  assert.equal(catalogExtractionSchema.safeParse({products:[{...product,image_index:8}]}).success,false);
+ const incomplete=catalogExtractionSchema.safeParse({products:[{...product,name:undefined,name_quote:""}]});
+ assert.equal(incomplete.success,true);
+ if(incomplete.success){
+  assert.equal(incomplete.data.products[0].name,"Nome non verificato");
+  const item=incomplete.data.products[0];
+  assert.equal(catalogEvidenceIsValid({name:item.name,description:item.description,price:item.price,currency:item.currency,
+   nameQuote:item.name_quote,descriptionQuote:item.description_quote,priceQuote:item.price_quote,
+   existingOfferId:item.existing_offer_id,imageIndex:item.image_index},"Crema viso"),false);
+ }
 });

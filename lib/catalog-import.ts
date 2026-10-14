@@ -6,7 +6,7 @@ export type CatalogProduct={
 };
 
 const productSchema=z.object({
- name:z.string().trim().min(2).max(180),
+ name:z.string().trim().min(2).max(180).default("Nome non verificato"),
  description:z.string().trim().max(1200).default(""),
  price:z.number().nonnegative().max(99_999_999).nullable().default(null),
  currency:z.string().length(3).default("EUR"),

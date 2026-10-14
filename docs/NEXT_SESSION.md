@@ -41,6 +41,6 @@ npm test
 npm run build
 ```
 
-I test locali non convalidano le credenziali OpenRouter o il consenso OAuth Google dell'installazione. L'installazione del parser OCR non è un prerequisito per avviare Forgecy: dipende da sistema, `uv` e spazio libero e si può fare dalle Impostazioni OCR. Non inserire chiavi reali in issue, documenti o file versionati; su ciascun computer configurale nell'app o nel proprio `.env.local`.
+I test locali non convalidano le credenziali OpenRouter o il consenso OAuth Google dell'installazione. Non inserire chiavi reali in issue, documenti o file versionati; su ciascun computer configurale nell'app o nel proprio `.env.local`.
 
 Per i dettagli aggiornati su requisiti, backup, Drive e troubleshooting, iniziare da [LOCAL_SETUP.md](LOCAL_SETUP.md). La [roadmap](CURRENT_ROADMAP.md) e lo [stato implementazione](IMPLEMENTATION_STATUS.md) descrivono il prodotto e i controlli automatici.

@@ -5,11 +5,27 @@ import {currentTextModel} from "./ai-model-settings";
 import {getOpenRouterApiKey} from "./openrouter-credentials";
 
 type Msg = { role:"system"|"user"|"assistant"; content:string };
+function responseContentText(content:unknown):string{
+  if(typeof content==="string")return content.trim();
+  if(!Array.isArray(content))return "";
+  return content.flatMap(part=>{
+    if(part===null||typeof part!=="object")return [];
+    const block=part as {type?:unknown;text?:unknown};
+    return block.type==="text"&&typeof block.text==="string"?[block.text]:[];
+  }).join("\n").trim();
+}
+async function openRouterFetch(init:RequestInit):Promise<Response>{
+  try{return await fetch("https://openrouter.ai/api/v1/chat/completions",init);}
+  catch(error){
+    const timedOut=error instanceof DOMException&&error.name==="TimeoutError";
+    throw new ApiFailure(502,timedOut?"OpenRouter non ha risposto entro il tempo limite.":"OpenRouter non è raggiungibile. Verifica la connessione e riprova.");
+  }
+}
 export async function modelText(messages:Msg[], timeout=25000):Promise<string>{
   const model=currentTextModel();
   const apiKey=await getOpenRouterApiKey();
   if(!apiKey) throw new ApiFailure(503,"OpenRouter non configurato. Inserisci OPENROUTER_API_KEY sul server.");
-  const response=await fetch("https://openrouter.ai/api/v1/chat/completions",{
+  const response=await openRouterFetch({
     method:"POST",
     headers:{
       "Authorization":"Bearer "+apiKey,
@@ -28,9 +44,9 @@ export async function modelText(messages:Msg[], timeout=25000):Promise<string>{
     console.error("[openrouter] HTTP",response.status);
     throw new ApiFailure(502,"Il provider AI non ha completato la richiesta (HTTP "+response.status+").");
   }
-  const data=await response.json() as {choices?:Array<{message?:{content?:string}}>};
+  const data=await response.json() as {choices?:Array<{message?:{content?:unknown}}>};
   await recordAiProviderUsage("openrouter",model,data);
-  const content=data.choices?.[0]?.message?.content?.trim();
+  const content=responseContentText(data.choices?.[0]?.message?.content);
   if(!content) throw new ApiFailure(502,"Il provider AI non ha restituito testo");
   return content;
 }
@@ -39,7 +55,7 @@ export async function modelJson<T>(system:string,user:string,schema:z.ZodType<T>
   const jsonSchema=z.toJSONSchema(schema,{target:"draft-7"});
   const apiKey=await getOpenRouterApiKey();
   if(!apiKey)throw new ApiFailure(503,"OpenRouter non configurato. Inserisci OPENROUTER_API_KEY sul server.");
-  const response=await fetch("https://openrouter.ai/api/v1/chat/completions",{
+  const response=await openRouterFetch({
     method:"POST",
     headers:{
       "Authorization":"Bearer "+apiKey,"Content-Type":"application/json",
@@ -53,7 +69,7 @@ export async function modelJson<T>(system:string,user:string,schema:z.ZodType<T>
         {role:"system",content:system+"\nRestituisci un oggetto JSON che rispetta esattamente questo schema. Non omettere campi richiesti e non aggiungere spiegazioni o markdown:\n"+JSON.stringify(jsonSchema)},
         {role:"user",content:user}
       ],
-      response_format:{type:"json_object"},usage:{include:true}
+      response_format:{type:"json_object"},plugins:[{id:"response-healing"}],usage:{include:true}
     }),
     signal:AbortSignal.timeout(60_000),cache:"no-store"
   });
@@ -61,9 +77,9 @@ export async function modelJson<T>(system:string,user:string,schema:z.ZodType<T>
     console.error("[openrouter json] HTTP",response.status);
     throw new ApiFailure(502,"Il provider AI non ha completato la richiesta JSON (HTTP "+response.status+").");
   }
-  const answer=await response.json() as {choices?:Array<{message?:{content?:string}}>};
+  const answer=await response.json() as {choices?:Array<{message?:{content?:unknown}}>};
   await recordAiProviderUsage("openrouter",model,answer);
-  const content=answer.choices?.[0]?.message?.content?.trim();
+  const content=responseContentText(answer.choices?.[0]?.message?.content);
   if(!content)throw new ApiFailure(502,"Il provider AI non ha restituito JSON");
   let parsed:unknown;
   try {parsed=JSON.parse(content);}
@@ -86,23 +102,23 @@ export async function modelJsonWithImages<T>(system:string,user:string,images:st
   const apiKey=await getOpenRouterApiKey();
   if(!apiKey)throw new ApiFailure(503,"OpenRouter non configurato. Inserisci una chiave nelle Impostazioni.");
   const jsonSchema=z.toJSONSchema(schema,{target:"draft-7"});
-  const response=await fetch("https://openrouter.ai/api/v1/chat/completions",{
+  const response=await openRouterFetch({
     method:"POST",
     headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json",
       "HTTP-Referer":process.env.OPENROUTER_SITE_URL||"http://localhost:3000","X-Title":"Forgecy"},
     body:JSON.stringify({model,temperature:0.1,max_tokens:3000,
       messages:[{role:"system",content:system+"\nRestituisci un oggetto JSON che rispetta esattamente questo schema. Non aggiungere spiegazioni o markdown:\n"+JSON.stringify(jsonSchema)},
         {role:"user",content:[{type:"text",text:user},...images.map(url=>({type:"image_url",image_url:{url}}))]}],
-      response_format:{type:"json_object"},usage:{include:true}}),
+      response_format:{type:"json_object"},plugins:[{id:"response-healing"}],usage:{include:true}}),
     signal:AbortSignal.timeout(60_000),cache:"no-store"
   });
   if(!response.ok){
     console.error("[openrouter vision json] HTTP",response.status);
     throw new ApiFailure(502,"Il modello visivo non ha completato l'estrazione strutturata (HTTP "+response.status+").");
   }
-  const answer=await response.json() as {choices?:Array<{message?:{content?:string}}>};
+  const answer=await response.json() as {choices?:Array<{message?:{content?:unknown}}>};
   await recordAiProviderUsage("openrouter",model,answer);
-  const content=answer.choices?.[0]?.message?.content?.trim();
+  const content=responseContentText(answer.choices?.[0]?.message?.content);
   if(!content)throw new ApiFailure(502,"Il modello visivo non ha restituito JSON.");
   let parsed:unknown;
   try{parsed=JSON.parse(content);}catch{throw new ApiFailure(502,"Il modello visivo ha restituito JSON non valido.");}
@@ -129,7 +145,7 @@ export async function modelStructuredJson<T>(
   const key=await keyProvider();
   if(!key)throw new ApiFailure(503,"OpenRouter non configurato. Inserisci OPENROUTER_API_KEY sul server.");
   const jsonSchema=z.toJSONSchema(schema,{target:"draft-7"});
-  const response=await fetch("https://openrouter.ai/api/v1/chat/completions",{
+  const response=await openRouterFetch({
     method:"POST",
     headers:{
       "Authorization":"Bearer "+key,"Content-Type":"application/json",
@@ -142,6 +158,7 @@ export async function modelStructuredJson<T>(
       provider:{require_parameters:true},
       messages:[{role:"system",content:system},{role:"user",content:user}],
       response_format:{type:"json_schema",json_schema:{name,strict:true,schema:jsonSchema}},
+      plugins:[{id:"response-healing"}],
       usage:{include:true}
     }),
     signal:AbortSignal.timeout(60_000),cache:"no-store"
@@ -150,15 +167,19 @@ export async function modelStructuredJson<T>(
     console.error("[openrouter structured] HTTP",response.status);
     throw new ApiFailure(502,"OpenRouter non ha generato il dossier strutturato (HTTP "+response.status+"). Verifica che il modello supporti JSON Schema.");
   }
-  const answer=await response.json() as {choices?:Array<{message?:{content?:string;refusal?:string}}>};
+  const answer=await response.json() as {choices?:Array<{message?:{content?:unknown;refusal?:string}}>};
   await recordAiProviderUsage("openrouter",model,answer);
-  const content=answer.choices?.[0]?.message?.content;
+  const content=responseContentText(answer.choices?.[0]?.message?.content);
   if(!content)throw new ApiFailure(502,"Il modello non ha restituito un dossier");
   let parsed:unknown;
   try{parsed=JSON.parse(content);}catch{
     throw new ApiFailure(502,"Il modello ha restituito un documento non JSON");
   }
   const result=schema.safeParse(parsed);
-  if(!result.success)throw new ApiFailure(502,"Il dossier AI non rispetta lo schema richiesto");
+  if(!result.success){
+    const issues=result.error.issues.map(issue=>`${issue.path.length?issue.path.join("."):"<root>"}: ${issue.message}`).join("; ").slice(0,600);
+    console.error("[openrouter structured] schema validation failed",issues);
+    throw new ApiFailure(502,"Il dossier AI non rispetta lo schema richiesto");
+  }
   return result.data;
 }

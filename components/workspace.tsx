@@ -228,7 +228,7 @@ export default function Workspace(){
    const form=new FormData();form.set("file",file);
    const result=await mutate<{extracted:boolean;message?:string;catalog?:{status:string;added:number;updated:number;skippedManual:number;message?:string}}>("upload",()=>requestJson(root+"/upload",{method:"POST",body:form}));
    if(result&&!result.extracted)flash("Documento archiviato ma non leggibile: "+(result.message||"richiede revisione"));
-   else if(result?.catalog?.status==="processed")flash(`Documento importato. Catalogo: ${result.catalog.added} prodotti aggiunti, ${result.catalog.updated} migliorati${result.catalog.skippedManual?`, ${result.catalog.skippedManual} modifiche manuali protette`:""}.`);
+   else if(result?.catalog?.status==="processed")flash(`Documento importato. Catalogo: ${result.catalog.added} prodotti aggiunti, ${result.catalog.updated} migliorati${result.catalog.skippedManual?`, ${result.catalog.skippedManual} modifiche manuali protette`:""}.${result.catalog.message?` ${result.catalog.message}`:""}`);
    else if(result?.catalog?.message)flash(result.catalog.message);
    else if(result)flash("Documento caricato e archiviato");
    if(result)setModal(null);return;

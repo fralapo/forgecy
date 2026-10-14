@@ -91,6 +91,10 @@ async function main() {
     const productImages = (sources.data || []).filter((source: Record<string, unknown>) =>
       (source.source_metadata as Record<string, unknown> | undefined)?.asset_role === "product" && typeof source.file_path === "string");
     const linkedProductImages = new Set((offers.data || []).map((offer: Record<string, unknown>) => offer.image_source_id).filter(Boolean));
+    const normalizeEvidenceMarker = (value: string) => value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("it").replace(/[^\p{L}\p{N}]+/gu, "");
+    const extractedBody = (payload.source?.body || "");
+    const matchedTextMarkerIndices = expectedText.flatMap((marker, index) =>
+      normalizeEvidenceMarker(extractedBody).includes(normalizeEvidenceMarker(marker)) ? [index + 1] : []);
     let retainedSeedImage: string | null = null;
     const retainedImages: string[] = [];
     if (evidenceDirectory) {
@@ -125,7 +129,8 @@ async function main() {
       ocrMethod: payload.source?.source_metadata?.document_processing?.method || null,
       ocrPages: payload.source?.source_metadata?.document_processing?.page_count || null,
       pipelineElapsedMs,
-      expectedTextMarkersFound: expectedText.filter(marker => (payload.source?.body || "").replace(/\s+/g, " ").toLocaleLowerCase("it").includes(marker.replace(/\s+/g, " ").toLocaleLowerCase("it"))).length,
+      expectedTextMarkersFound: matchedTextMarkerIndices.length,
+      expectedTextMarkerIndices: matchedTextMarkerIndices,
       expectedTextMarkerCount: expectedText.length,
       expectedTableRowsFound: expectedRows.filter(row => (payload.source?.body || "").replace(/\s+/g, "").toLocaleLowerCase("it").includes(row.replace(/\s+/g, "").toLocaleLowerCase("it"))).length,
       expectedTableRowCount: expectedRows.length,
