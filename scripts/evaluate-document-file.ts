@@ -55,6 +55,7 @@ async function main() {
     const expectedName = argument("--seed-existing-name");
     const expectedText = argumentsFor("--expect-text");
     const expectedRows = argumentsFor("--expect-row");
+    const expectedProducts = argumentsFor("--expect-product");
     let expectedOfferId: string | null = null;
     if (expectedName) {
       const offer = await db.from("offers").insert({
@@ -84,7 +85,7 @@ async function main() {
       catalog?: { status?: string; added?: number; updated?: number; skippedManual?: number; invalid?: number };
     };
     if (!response.ok) throw new Error(payload.error || `Upload di valutazione fallito (HTTP ${response.status}).`);
-    const offers = await db.from("offers").select("id,source_id,image_source_id").eq("client_id", clientId).eq("kind", "product");
+    const offers = await db.from("offers").select("id,source_id,image_source_id,name,description,price").eq("client_id", clientId).eq("kind", "product");
     if (offers.error) throw new Error("Impossibile verificare i prodotti importati.");
     const expectedOffer = expectedOfferId ? offers.data?.find((offer: Record<string, unknown>) => offer.id === expectedOfferId) as Record<string, unknown> | undefined : undefined;
     const sources = await db.from("sources").select("id,title,source_metadata,file_path").eq("client_id", clientId);
@@ -96,6 +97,9 @@ async function main() {
     const extractedBody = (payload.source?.body || "");
     const matchedTextMarkerIndices = expectedText.flatMap((marker, index) =>
       normalizeEvidenceMarker(extractedBody).includes(normalizeEvidenceMarker(marker)) ? [index + 1] : []);
+    const matchedProductMarkerIndices = expectedProducts.flatMap((marker, index) =>
+      (offers.data || []).some((offer: Record<string, unknown>) =>
+        normalizeEvidenceMarker(`${String(offer.name || "")} ${String(offer.description || "")}`).includes(normalizeEvidenceMarker(marker))) ? [index + 1] : []);
     let retainedSeedImage: string | null = null;
     const retainedImages: string[] = [];
     if (evidenceDirectory) {
@@ -139,6 +143,9 @@ async function main() {
       expectedTextMarkerCount: expectedText.length,
       expectedTableRowsFound: expectedRows.filter(row => (payload.source?.body || "").replace(/\s+/g, "").toLocaleLowerCase("it").includes(row.replace(/\s+/g, "").toLocaleLowerCase("it"))).length,
       expectedTableRowCount: expectedRows.length,
+      expectedProductMarkersFound: matchedProductMarkerIndices.length,
+      expectedProductMarkerIndices: matchedProductMarkerIndices,
+      expectedProductMarkerCount: expectedProducts.length,
       catalog: payload.catalog || null,
       productRows: offers.data?.length || 0,
       visualProductAssets: productImages.length,
