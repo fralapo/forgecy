@@ -159,31 +159,52 @@ async function validTokens(forceRefresh = false): Promise<Tokens> {
   return refreshed;
 }
 
+const DRIVE_READ_RETRIES = 3;
+const DRIVE_RETRY_BASE_MS = 350;
+const DRIVE_RETRY_MAX_MS = 8_000;
+
+function retryDelay(response: { headers: Headers } | null, attempt: number) {
+  const retryAfter = response?.headers.get("retry-after");
+  const seconds = retryAfter && /^\d+(\.\d+)?$/.test(retryAfter) ? Number(retryAfter) : NaN;
+  const requested = Number.isFinite(seconds) ? seconds * 1000 : DRIVE_RETRY_BASE_MS * 2 ** attempt;
+  return Math.min(DRIVE_RETRY_MAX_MS, Math.max(0, requested));
+}
+
+export async function withDriveReadRetries<T extends { status: number; headers: Headers }>(request: () => Promise<T>, isAborted: () => boolean = () => false): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    let response: T | null = null;
+    try {
+      response = await request();
+      if ((response.status !== 429 && response.status < 500) || attempt >= DRIVE_READ_RETRIES) return response;
+    } catch (error) {
+      if (isAborted() || attempt >= DRIVE_READ_RETRIES) throw error;
+    }
+    await new Promise(resolve => setTimeout(resolve, retryDelay(response, attempt)));
+  }
+}
+
 async function driveFetch(path: string, init: RequestInit = {}, retryAuth = true): Promise<Response> {
   const tokens = await validTokens();
   const url = path.startsWith("https://") ? new URL(path) : new URL(path, DRIVE_API);
   if (url.hostname !== "www.googleapis.com" || (path.startsWith("https://") && !url.pathname.startsWith("/upload/drive/v3/")))
     throw new ApiFailure(502, "Google Drive ha restituito un endpoint di caricamento non valido");
-  let response: Response;
-  try {
-    response = await fetch(url, {
+  const request = () => fetch(url, {
       ...init,
       headers: { Authorization: `Bearer ${tokens.accessToken}`, ...init.headers },
       signal: init.signal || AbortSignal.timeout(30_000), cache: "no-store",
     });
+  const isRead = !init.method || init.method.toUpperCase() === "GET";
+  let response: Response;
+  try {
+    response = isRead
+      ? await withDriveReadRetries(request, () => Boolean(init.signal?.aborted))
+      : await request();
   } catch {
     throw new ApiFailure(503, "Google Drive non è raggiungibile. Controlla la connessione e riprova.");
   }
   if (response.status === 401 && retryAuth) {
     await validTokens(true);
     return driveFetch(path, init, false);
-  }
-  if (response.status === 429 || response.status >= 500) {
-    // Reads are safe to retry; writes are left for the next idempotent sync pass.
-    if (!init.method || init.method === "GET") {
-      await new Promise(resolve => setTimeout(resolve, 350));
-      return driveFetch(path, init, false);
-    }
   }
   return response;
 }
@@ -255,12 +276,37 @@ async function uploadSnapshot(folderId: string, archive: Buffer, manifest: Snaps
   return finish.json() as Promise<DriveFile>;
 }
 
+export async function readBoundedResponseBody(response: Response, maxBytes = 250 * 1024 * 1024) {
+  const contentLength = Number(response.headers.get("content-length") || 0);
+  if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+    await response.body?.cancel();
+    throw new ApiFailure(413, "Snapshot Drive troppo grande");
+  }
+  if (!response.body) return Buffer.alloc(0);
+  const reader = response.body.getReader();
+  const chunks: Buffer[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new ApiFailure(413, "Snapshot Drive troppo grande");
+      }
+      chunks.push(Buffer.from(value));
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return Buffer.concat(chunks, total);
+}
+
 async function downloadSnapshot(file: DriveFile) {
   const response = await driveFetch(`/files/${encodeURIComponent(file.id)}?alt=media`, { signal: AbortSignal.timeout(180_000) });
   if (!response.ok) throw new ApiFailure(502, "Impossibile scaricare lo snapshot da Google Drive");
-  const contentLength = Number(response.headers.get("content-length") || 0);
-  if (contentLength > 250 * 1024 * 1024) throw new ApiFailure(413, "Snapshot Drive troppo grande");
-  const archive = Buffer.from(await response.arrayBuffer());
+  const archive = await readBoundedResponseBody(response);
   const validated = validateWorkspaceArchive(archive);
   if (validated.manifest.hash !== file.appProperties?.hash || validated.manifest.contentHash !== file.appProperties?.contentHash || validated.manifest.parentHash !== (file.appProperties?.parentHash || "")) throw new ApiFailure(409, "Lo snapshot Drive non coincide con i metadati del ramo");
   return { archive, manifest: validated.manifest };
