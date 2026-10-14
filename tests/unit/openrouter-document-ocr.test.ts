@@ -79,6 +79,24 @@ test("sends scanned PDFs through the bounded Mistral OCR parser and keeps its so
   assert.equal(content?.[1]?.type, "file");
 });
 
+test("reuses the local page-count preflight instead of parsing the PDF a second time", async () => {
+  const bytes = new TextEncoder().encode("%PDF-1.4\n%%EOF");
+  let requested = false;
+  const result = await ocrDocumentWithOpenRouter({
+    bytes, mime: "application/pdf", name: "catalogo.pdf", model: "deepseek/deepseek-v4.1-flash", pageCount: 1,
+    keyProvider: async () => "test-key",
+    fetcher: async () => {
+      requested = true;
+      return new Response(JSON.stringify({
+        id: "gen-pdf-preflight", model: "deepseek/deepseek-v4.1-flash", usage: {prompt_tokens: 20, completion_tokens: 10},
+        choices: [{message: {content: "Catalogo prodotti\nCrema viso 50 ml — € 19,90"}}]
+      }), {status: 200});
+    }
+  });
+  assert.equal(result.pageCount, 1);
+  assert.equal(requested, true);
+});
+
 test("requires a configured key and rejects unrelated document types", async () => {
   const png = new Uint8Array([137,80,78,71,13,10,26,10]);
   const text = new TextEncoder().encode("testo valido");

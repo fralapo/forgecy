@@ -2,7 +2,7 @@
 
 **Decisione:** Forgecy adotta una memoria locale centrata sulle evidenze e un recupero ibrido progressivo. SQLite resta la fonte di verità; i dati strutturati e approvati restano strutturati; la ricerca sui documenti lavora sui singoli passaggi. FTS5 è sempre disponibile. La ricerca semantica locale è attiva per impostazione predefinita e si combina con il ranking lessicale; il proprietario può disattivarla. Il modello si scarica e l'indice si costruisce in background solo quando esistono passaggi da indicizzare. Non serve introdurre un database RAG ospitato o inviare automaticamente i documenti a un servizio di embeddings.
 
-Per l'OCR Forgecy legge in locale il testo già incorporato nei documenti. Se un PDF scannerizzato o un'immagine non contiene testo leggibile, invia il file a OpenRouter per un'elaborazione una tantum durante il caricamento. Non installa né esegue un motore OCR locale. La fase successiva di estrazione strutturata del catalogo è separata e può inviare testo e immagini al modello AI selezionato.
+Per l'OCR Forgecy legge in locale il testo già incorporato nei PDF. Questa è estrazione del testo nativo, non OCR. Se un PDF scannerizzato o un'immagine non contiene testo leggibile, invia il file a OpenRouter per un'elaborazione una tantum durante il caricamento. Il conteggio pagine del PDF viene riutilizzato dalla prelettura locale, evitando una seconda scansione del file. Non installa né esegue un motore OCR locale. La fase successiva di estrazione strutturata del catalogo è separata e può inviare testo e immagini al modello AI selezionato.
 
 ## Perché questa scelta
 

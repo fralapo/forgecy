@@ -8,7 +8,7 @@ import { reserveAiRequest } from "@/lib/ai-request-budget";
 import {withAiUsageScope} from "@/lib/ai-usage";
 import { crawlWebsite, fetchWebsiteFile, publicHttpsUrl } from "@/lib/site-ingest";
 import { requireWebsiteCrawlingEnabled, reserveWebsiteCrawl } from "@/lib/crawl-budget";
-import { extractDocument } from "@/lib/document-extract";
+import { extractDocumentWithMetadata, type Extraction } from "@/lib/document-extract";
 import { assertSafeDocument, DocumentSafetyError } from "@/lib/document-safety";
 import { readMultipartForm } from "@/lib/request-body";
 import { slidePreflight } from "@/lib/carousel-layout";
@@ -25,7 +25,7 @@ type Params={params:Promise<{parts:string[]}>};
 
 const uuid=z.uuid();
 type CatalogImportResult={status:"processed"|"not_catalog"|"no_products"|"ai_not_configured"|"analysis_failed";added:number;updated:number;skippedManual:number;invalid:number;message?:string};
-type DocumentProcessingResult={extraction:Awaited<ReturnType<typeof extractDocument>>;ocr:OcrResult|null};
+type DocumentProcessingResult={extraction:Extraction;ocr:OcrResult|null};
 function emptyCatalogResult(status:CatalogImportResult["status"],message?:string):CatalogImportResult{
  return {status,added:0,updated:0,skippedManual:0,invalid:0,...(message?{message}:{})};
 }
@@ -36,14 +36,14 @@ function safeCatalogError(error:unknown):string{
 }
 
 async function extractDocumentWithOcr(ctx:Awaited<ReturnType<typeof auth>>,clientId:string,bytes:Uint8Array,mime:string,name:string):Promise<DocumentProcessingResult>{
- const extraction=await extractDocument(bytes,mime,name);
+ const {extraction,pageCount}=await extractDocumentWithMetadata(bytes,mime,name);
  if(extraction.status==="ready")return {extraction,ocr:null};
  if(mime!=="application/pdf"&&!mime.startsWith("image/"))return {extraction,ocr:null};
  try{
   const model=await currentOcrModel(ctx.user.id);
   await reserveAiRequest(ctx,clientId,"dossier");
   const ocr=await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"dossier"},()=>
-   ocrDocumentWithOpenRouter({bytes,mime,name,model}));
+   ocrDocumentWithOpenRouter({bytes,mime,name,model,pageCount:pageCount??undefined}));
   return {extraction:{status:"ready",body:ocr.body,error:null},ocr};
  }catch(error){
   const message=error instanceof ApiFailure?error.message:"OCR non riuscito. Il file resta salvato e puoi riprovare.";
@@ -339,7 +339,7 @@ export async function POST(request:Request,{params}:Params){
          }
          const uploaded=await ctx.db.storage.from(bucket).upload(path,saved.bytes,{contentType:saved.contentType,upsert:false});
          if(uploaded.error)return;
-         let extraction:Awaited<ReturnType<typeof extractDocument>>;
+         let extraction:Extraction;
          let ocr:OcrResult|null=null;
          if(file.kind==="document"){
           const processed=await extractDocumentWithOcr(ctx,id,saved.bytes,saved.contentType,file.title+"."+saved.extension);

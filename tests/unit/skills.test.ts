@@ -2,7 +2,7 @@ import {test} from "node:test";
 import {strict as assert} from "node:assert";
 import {playbook,routedSkills,stageSkills} from "../../lib/skills/playbooks";
 import {reviewStaticAssets,type StaticAsset} from "../../lib/skills/quality";
-import {extractDocument} from "../../lib/document-extract";
+import {extractDocument,extractDocumentWithMetadata} from "../../lib/document-extract";
 import {PDFDocument,StandardFonts} from "pdf-lib";
 const proofId="11111111-1111-4111-8111-111111111111";
 function asset(channel:"instagram"|"linkedin",format:"post"|"carousel"|"document"):StaticAsset{
@@ -62,4 +62,10 @@ test("page boundary markers alone do not make a multi-page scan look like extrac
  const result=await extractDocument(await doc.save(),"application/pdf","scan.pdf");
  assert.equal(result.status,"error");
  assert.equal(result.error,"PDF senza testo leggibile: serve OCR o una trascrizione");
+});
+test("PDF preflight returns its page count for reuse by API-only OCR",async()=>{
+ const doc=await PDFDocument.create();doc.addPage([450,500]);doc.addPage([450,500]);
+ const result=await extractDocumentWithMetadata(await doc.save(),"application/pdf","scan.pdf");
+ assert.equal(result.pageCount,2);
+ assert.equal(result.extraction.status,"error");
 });

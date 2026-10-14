@@ -15,6 +15,7 @@ type OcrOptions = {
   mime: string;
   name: string;
   model: string;
+  pageCount?: number | null;
   keyProvider?: () => Promise<string | null>;
   fetcher?: typeof fetch;
 };
@@ -112,7 +113,11 @@ export async function ocrDocumentWithOpenRouter(options: OcrOptions): Promise<Oc
   const apiKey = await (options.keyProvider || getOpenRouterApiKey)();
   if (!apiKey) throw new ApiFailure(503, "Configura la chiave OpenRouter per elaborare scansioni e immagini.");
 
-  const pageCount = isPdf ? await pdfPages(bytes) : null;
+  const pageCount = isPdf ? options.pageCount === undefined ? await pdfPages(bytes) : options.pageCount : null;
+  if (isPdf && pageCount === null)
+    throw new ApiFailure(422, "Non riesco a determinare il numero di pagine del PDF.");
+  if (isPdf && pageCount! > MAX_OCR_PDF_PAGES)
+    throw new ApiFailure(413, `OCR limitato a ${MAX_OCR_PDF_PAGES} pagine per documento; dividi il PDF e riprova.`);
   const base64 = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString("base64");
   const prompt = [
     "Trascrivi fedelmente il testo leggibile del documento, in italiano quando presente.",
