@@ -1,105 +1,56 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Cloud, Download, LoaderCircle, RefreshCw, Upload, Unplug } from "lucide-react";
+import { Download, FolderSync, LoaderCircle, Upload } from "lucide-react";
 import { requestJson } from "./types";
 
-type Status = { configured: boolean; clientIdSource: "environment" | "local" | "missing"; connected: boolean; folderId: string | null; lastSyncedAt: string | null; hasPreviousSync: boolean };
+type BackupSettings = { directory: string; intervalHours: number; retention: number };
 type LocalBackup = { id: string; createdAt: string; size: number; hashPrefix: string };
-type Branch = { id: string; name: string; hash: string; parentHash: string };
-type SyncResult = { status: string; message: string; branches?: Branch[] };
 
 export default function DriveSettings() {
-  const [status, setStatus] = useState<Status | null>(null);
+  const [settings, setSettings] = useState<BackupSettings | null>(null);
+  const [draft, setDraft] = useState<BackupSettings | null>(null);
+  const [backups, setBackups] = useState<LocalBackup[]>([]);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [clientIdInput, setClientIdInput] = useState("");
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [backups, setBackups] = useState<LocalBackup[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const loadStatus = useCallback(async () => {
-    try { setStatus(await requestJson<Status>("/api/sync/google")); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Impossibile leggere lo stato Drive"); }
+  const load = useCallback(async () => {
+    try {
+      const [config, backupList] = await Promise.all([
+        requestJson<{ settings: BackupSettings }>("/api/sync/backups/settings"),
+        requestJson<{ backups: LocalBackup[] }>("/api/sync/backups"),
+      ]);
+      setSettings(config.settings);
+      setDraft(config.settings);
+      setBackups(backupList.backups);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Impossibile leggere le impostazioni di backup"); }
   }, []);
-  const loadBackups = useCallback(async () => {
+  useEffect(() => { queueMicrotask(() => { void load(); }); }, [load]);
+
+  async function saveSettings() {
+    if (!draft) return;
+    setBusy("Verifica cartella…"); setError(""); setMessage("");
+    try {
+      const result = await requestJson<{ settings: BackupSettings }>("/api/sync/backups/settings", { method: "POST", body: JSON.stringify(draft) });
+      setSettings(result.settings); setDraft(result.settings);
+      await loadBackups();
+      setMessage("Impostazioni salvate. I prossimi backup useranno questa cartella.");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Impossibile salvare le impostazioni"); }
+    finally { setBusy(""); }
+  }
+
+  const loadBackups = async () => {
     try { setBackups((await requestJson<{ backups: LocalBackup[] }>("/api/sync/backups")).backups); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Impossibile leggere i backup locali"); }
-  }, []);
-  useEffect(() => { queueMicrotask(() => { void loadStatus(); void loadBackups(); }); }, [loadStatus, loadBackups]);
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Impossibile leggere i backup"); }
+  };
 
   async function createBackup() {
-    setBusy("Creazione backup locale…"); setError(""); setMessage("");
+    setBusy("Creazione backup…"); setError(""); setMessage("");
     try {
       await requestJson<{ backup: LocalBackup }>("/api/sync/backups", { method: "POST" });
-      await loadBackups(); setMessage("Backup locale creato e verificato.");
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Backup locale non riuscito"); }
-    finally { setBusy(""); }
-  }
-
-  async function saveClientId() {
-    setBusy("Salvataggio Client ID…"); setError(""); setMessage("");
-    try {
-      await requestJson<{ configured: boolean; source: string }>("/api/sync/google/client-id", { method: "POST", body: JSON.stringify({ clientId: clientIdInput }) });
-      setClientIdInput(""); setMessage("Client ID salvato nella configurazione locale di Forgecy. Ora puoi collegare Google Drive."); await loadStatus();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Salvataggio Client ID non riuscito"); }
-    finally { setBusy(""); }
-  }
-
-  async function connect() {
-    const mobileBrowser = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-      || (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
-    if (window.location.hostname.endsWith(".ts.net") && mobileBrowser) {
-      setError("Il primo collegamento Google va avviato nel browser sul computer che ospita Forgecy. Google restituisce l’autorizzazione a 127.0.0.1, che dal telefono indica il telefono stesso. Dopo il collegamento, puoi usare Drive anche da remoto.");
-      return;
-    }
-    const popup = window.open("about:blank", "forgecy-google-drive", "popup,width=620,height=760");
-    setBusy("Collegamento Google Drive…"); setError(""); setMessage("");
-    try {
-      const flow = await requestJson<{ flowId: string; authorizationUrl: string }>("/api/sync/google/connect", { method: "POST" });
-      if (popup) popup.location.href = flow.authorizationUrl;
-      else window.location.href = flow.authorizationUrl;
-      const deadline = Date.now() + 5 * 60_000;
-      while (Date.now() < deadline) {
-        await new Promise(resolve => setTimeout(resolve, 1200));
-        const result = await requestJson<{ status: string; message?: string }>(`/api/sync/google/flows/${flow.flowId}`);
-        if (result.status === "connected") { popup?.close(); setMessage("Google Drive collegato."); await loadStatus(); return; }
-        if (result.status === "error" || result.status === "expired") throw new Error(result.message || "Collegamento scaduto o annullato");
-      }
-      throw new Error("Collegamento scaduto. Riprova.");
-    } catch (cause) { popup?.close(); setError(cause instanceof Error ? cause.message : "Collegamento non riuscito"); }
-    finally { setBusy(""); }
-  }
-
-  async function synchronize() {
-    setBusy("Sincronizzazione…"); setError(""); setMessage(""); setBranches([]);
-    try {
-      const result = await requestJson<SyncResult>("/api/sync/google/sync", { method: "POST" });
-      setMessage(result.message);
-      setBranches(result.branches || []);
-      await loadStatus();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Sincronizzazione non riuscita"); }
-    finally { setBusy(""); }
-  }
-
-  async function resolve(choice: "local" | "remote", remoteFileId?: string) {
-    const prompt = choice === "remote"
-      ? "Aprire questa copia di Drive? La versione locale corrente verrà conservata come archivio di conflitto."
-      : "Salvare la copia locale come nuovo ramo su Drive? Le altre copie resteranno disponibili.";
-    if (!window.confirm(prompt)) return;
-    setBusy("Risoluzione conflitto…"); setError("");
-    try {
-      const result = await requestJson<SyncResult>("/api/sync/google/resolve", { method: "POST", body: JSON.stringify({ choice, ...(remoteFileId ? { remoteFileId } : {}) }) });
-      setMessage(result.message); setBranches([]); await loadStatus();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Risoluzione non riuscita"); }
-    finally { setBusy(""); }
-  }
-
-  async function disconnect() {
-    if (!window.confirm("Scollegare Google Drive da questo computer? Gli snapshot già salvati su Drive restano disponibili.")) return;
-    setBusy("Disconnessione…"); setError("");
-    try { await requestJson("/api/sync/google/disconnect", { method: "POST" }); setMessage("Google Drive scollegato da questo computer."); setBranches([]); await loadStatus(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Disconnessione non riuscita"); }
+      await loadBackups(); setMessage("Backup creato nella cartella selezionata.");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Creazione backup non riuscita"); }
     finally { setBusy(""); }
   }
 
@@ -114,65 +65,57 @@ export default function DriveSettings() {
       const response = await fetch("/api/sync/import", { method: "POST", headers: { "Content-Type": "application/zip" }, body: file, cache: "no-store" });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Importazione non riuscita");
-      setMessage(result.message); setBranches([]);
-      // Reload the page to release any UI state tied to the previous workspace.
+      setMessage(result.message);
       window.location.reload();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Importazione non riuscita"); }
     finally { setBusy(""); if (fileInput.current) fileInput.current.value = ""; }
   }
 
+  const dirty = Boolean(settings && draft && (settings.directory !== draft.directory || settings.intervalHours !== draft.intervalHours || settings.retention !== draft.retention));
+
   return <article className="card stack">
-    <div className="flex center gap8"><Cloud size={18}/><h2>Workspace e Google Drive</h2></div>
-    <p className="caption">I dati di lavoro restano sul computer. Drive conserva snapshot versionati; Forgecy non apre né sincronizza il database SQLite mentre è in uso.</p>
-    <section className="stack" aria-labelledby="local-backups-title">
-      <div className="flex center gap8"><Download size={16}/><h3 id="local-backups-title">Backup automatici su questo computer</h3></div>
-      <p className="caption">Forgecy crea un backup locale ogni 8 ore mentre l’app è in uso e conserva gli ultimi 7. Gli archivi restano nella cartella dati privata del computer e non vengono caricati su GitHub o Drive.</p>
+    <div className="flex center gap8"><FolderSync size={18}/><h2>Backup e trasferimento</h2></div>
+    <p className="caption">Forgecy salva copie complete e verificabili del workspace. Per trasferirlo, esporta un archivio e importalo sull’altro computer. I backup automatici possono essere salvati in una cartella sincronizzata da Google Drive per desktop o da un altro servizio: Forgecy non richiede un account Google.</p>
+    <section className="stack" aria-labelledby="automatic-backups-title">
+      <h3 id="automatic-backups-title">Backup automatici</h3>
+      {draft && <>
+        <label className="stack">Cartella sul computer che ospita Forgecy
+          <input autoComplete="off" spellCheck={false} value={draft.directory} onChange={event => setDraft({ ...draft, directory: event.target.value })} placeholder="Percorso assoluto della cartella" />
+        </label>
+        <p className="caption">Inserisci un percorso locale completo, per esempio la cartella Forgecy dentro Google Drive per desktop. La cartella deve essere disponibile al computer che esegue Forgecy; da telefono non puoi selezionare una cartella del server.</p>
+        <div className="flex gap8" style={{ flexWrap: "wrap" }}>
+          <label className="stack">Crea una copia ogni
+            <select value={draft.intervalHours} onChange={event => setDraft({ ...draft, intervalHours: Number(event.target.value) })}>
+              <option value={4}>4 ore</option><option value={8}>8 ore</option><option value={12}>12 ore</option><option value={24}>Ogni giorno</option><option value={72}>Ogni 3 giorni</option><option value={168}>Ogni settimana</option>
+            </select>
+          </label>
+          <label className="stack">Conserva le ultime
+            <select value={draft.retention} onChange={event => setDraft({ ...draft, retention: Number(event.target.value) })}>
+              <option value={3}>3 copie</option><option value={7}>7 copie</option><option value={14}>14 copie</option><option value={30}>30 copie</option>
+            </select>
+          </label>
+        </div>
+        <div className="flex gap8" style={{ flexWrap: "wrap" }}>
+          <button className="button primary" onClick={() => void saveSettings()} disabled={Boolean(busy) || !dirty}>Salva destinazione e frequenza</button>
+          <button className="button" onClick={() => void createBackup()} disabled={Boolean(busy)}>Crea backup ora</button>
+        </div>
+      </>}
+      {backups.length ? <ul className="stack" style={{ paddingLeft: 20, margin: 0 }}>
+        {backups.map(backup => <li key={backup.id} className="caption">{new Date(backup.createdAt).toLocaleString("it-IT")} · {(backup.size / 1024 / 1024).toFixed(1)} MB · <a href={`/api/sync/backups/${encodeURIComponent(backup.id)}`}>Scarica</a></li>)}
+      </ul> : <p className="caption">Il primo backup verrà creato all’avvio di Forgecy.</p>}
+      <p className="caption">I backup contengono database e documenti dei clienti: proteggi la cartella come gli altri dati dell’app. Se la cartella scelta non è disponibile, Forgecy segnala l’errore e non elimina le copie esistenti.</p>
+    </section>
+    <section className="stack" aria-labelledby="workspace-transfer-title">
+      <h3 id="workspace-transfer-title">Trasferisci il workspace</h3>
+      <p className="caption">Esporta un archivio, trasferisci il file all’altro computer con il metodo che preferisci e importalo in Forgecy.</p>
       <div className="flex gap8" style={{ flexWrap: "wrap" }}>
-        <button className="button" onClick={() => void createBackup()} disabled={Boolean(busy)}><Download size={15}/> Crea backup ora</button>
-        <a className="button" href="/api/sync/export"><Upload size={15}/> Esporta archivio</a>
+        <a className="button" href="/api/sync/export"><Download size={15}/> Esporta archivio</a>
         <button className="button" onClick={() => fileInput.current?.click()} disabled={Boolean(busy)}><Upload size={15}/> Importa archivio</button>
         <input ref={fileInput} type="file" accept=".zip,.forgecy.zip,application/zip" hidden onChange={event => void importArchive(event.target.files?.[0])}/>
       </div>
-      {backups.length ? <ul className="stack" style={{ paddingLeft: 20, margin: 0 }}>
-        {backups.map(backup => <li key={backup.id} className="caption">
-          {new Date(backup.createdAt).toLocaleString("it-IT")} · {(backup.size / 1024 / 1024).toFixed(1)} MB · <a href={`/api/sync/backups/${encodeURIComponent(backup.id)}`}>Scarica</a>
-        </li>)}
-      </ul> : <p className="caption">Il primo backup viene creato automaticamente all’avvio dell’app.</p>}
-      <p className="caption">Per ripristinarne uno, scaricalo e usa <strong>Importa archivio</strong>. I backup contengono il workspace e i documenti dei clienti: restano locali e vanno protetti come gli altri dati dell’app.</p>
     </section>
-    {status && <div className="caption" role="status">{status.connected ? "Drive collegato su questo computer" : "Drive non collegato"}{status.lastSyncedAt ? ` · ultima sincronizzazione ${new Date(status.lastSyncedAt).toLocaleString("it-IT")}` : ""}</div>}
     {error && <div className="notice error" role="alert">{error}</div>}
     {message && <div className="notice" role="status">{message}</div>}
-    {status && status.clientIdSource !== "environment" && <div className={status.clientIdSource === "missing" ? "notice warn stack" : "notice stack"}>
-      <strong>{status.clientIdSource === "local" ? "Client ID Google configurato" : "Configura Google Drive"}</strong>
-      {status.clientIdSource === "local" && <span>Per sostituire il Client ID configurato, incolla quello nuovo qui sotto.</span>}
-      <span>Crea nella Google Cloud Console un OAuth Client ID di tipo <strong>applicazione desktop</strong> e abilita Google Drive API. Incolla qui il Client ID: è un identificativo pubblico, non la tua chiave API.</span>
-      <label className="stack">Client ID Google
-        <input autoComplete="off" inputMode="url" value={clientIdInput} onChange={event => setClientIdInput(event.target.value)} placeholder="123456789-abc.apps.googleusercontent.com" aria-describedby="drive-client-id-help" />
-      </label>
-      <span id="drive-client-id-help" className="caption">Viene salvato solo nella cartella dati privata di questo computer, non nel workspace, nei backup o su Drive.</span>
-      <button className="button" onClick={() => void saveClientId()} disabled={Boolean(busy) || !clientIdInput.trim()}><Check size={15}/> Salva Client ID</button>
-      <span className="caption">Istruzioni dettagliate nella <a href="https://github.com/fralapo/forgecy/blob/main/docs/LOCAL_SETUP.md" target="_blank" rel="noreferrer">guida di configurazione</a>.</span>
-    </div>}
-    {status?.clientIdSource === "environment" && <p className="caption">Client ID Google configurato in <code>.env.local</code>.</p>}
-    <p className="caption">Per il primo consenso OAuth apri Forgecy nel browser del computer che lo ospita; il callback Google usa l’indirizzo locale <code>127.0.0.1</code>. Dopo aver collegato Drive dal computer, puoi avviare la sincronizzazione anche accedendo da remoto.</p>
-    <div className="flex gap8" style={{ flexWrap: "wrap" }}>
-      {!status?.connected
-        ? <button className="button primary" onClick={() => void connect()} disabled={Boolean(busy) || !status?.configured}><Cloud size={15}/> Collega Google Drive</button>
-        : <>
-          <button className="button primary" onClick={() => void synchronize()} disabled={Boolean(busy)}><RefreshCw size={15}/> Sincronizza adesso</button>
-          <button className="button" onClick={() => void disconnect()} disabled={Boolean(busy)}><Unplug size={15}/> Scollega</button>
-        </>}
-    </div>
     {busy && <p className="caption" role="status"><LoaderCircle className="spin" size={14}/> {busy}</p>}
-    {branches.length > 0 && <div className="stack">
-      <div className="notice warn">Forgecy ha rilevato modifiche indipendenti. Scegli quale ramo aprire oppure salva il locale come ramo separato. Le altre copie restano su Drive.</div>
-      {branches.map(branch => <div key={branch.id} className="flex center gap8" style={{ justifyContent: "space-between", flexWrap: "wrap" }}>
-        <span className="caption"><strong>{branch.name}</strong><br/>Hash <code>{branch.hash.slice(0, 12)}</code></span>
-        <button className="button small" onClick={() => void resolve("remote", branch.id)} disabled={Boolean(busy)}><Check size={14}/> Apri questa copia</button>
-      </div>)}
-      <button className="button" onClick={() => void resolve("local")} disabled={Boolean(busy)}>Conserva il locale come ramo separato</button>
-    </div>}
-    <p className="caption">La sincronizzazione è manuale. Usa un solo computer alla volta e sincronizza prima di passare a un altro; se due copie divergono, Forgecy conserva i rami e ti chiede come risolverli.</p>
   </article>;
 }

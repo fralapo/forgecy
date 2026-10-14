@@ -1,6 +1,6 @@
 # Installazione locale e sincronizzazione
 
-Forgecy è un'applicazione single-user eseguita sul computer. Database, file caricati, preferenze AI e attività in coda sono locali. Ogni installazione usa le credenziali API del proprietario; non richiede un servizio Forgecy o un database remoto. OpenRouter e Google Drive ricevono solo le richieste necessarie alle funzioni che abiliti.
+Forgecy è un'applicazione single-user eseguita sul computer. Database, file caricati, preferenze AI e attività in coda sono locali. Ogni installazione usa le credenziali API del proprietario; non richiede un servizio Forgecy o un database remoto. I documenti vengono inviati a OpenRouter solo per le funzioni AI che abiliti.
 
 ## Requisiti e primo avvio
 
@@ -38,7 +38,6 @@ Apri **Impostazioni** nell'app, anche prima di creare il primo cliente, incolla 
 | `APP_ORIGIN` | Origine esatta locale, necessaria con `npm run start`; esempio `http://localhost:3000`. |
 | `FORGECY_TAILSCALE_ALLOWED_USER` | Facoltativa; login Tailscale esatto autorizzato a passare da Serve. Non è una chiave e resta in `.env.local`. |
 | `FORGECY_TAILSCALE_HOST` | Facoltativa; hostname MagicDNS HTTPS esatto mostrato da `tailscale serve status`, senza schema né porta. |
-| `GOOGLE_DRIVE_CLIENT_ID` | Facoltativo; OAuth Client ID Google di tipo applicazione desktop, richiesto solo per Drive. |
 | `ENABLE_WEBSITE_INGEST` | Facoltativa; l'importazione dei siti è attiva per impostazione predefinita. Imposta `false` per disabilitarla. |
 
 Non usare il prefisso `NEXT_PUBLIC_` per chiavi private.
@@ -63,33 +62,17 @@ In **Risultati** aggiungi uno username come etichetta locale, poi importa uno sn
 
 In **Impostazioni → OCR e lettura dei documenti** selezioni il modello OpenRouter per l'OCR. Forgecy non usa OCR locale: il testo già incorporato nei PDF e i formati testuali vengono letti senza OCR, mentre scansioni e immagini vengono inviate a OpenRouter. CSV e tabelle Markdown prodotte dall'OCR con colonne prodotto/modello e prezzo vengono riconciliati localmente con le offerte; cataloghi non tabellari possono usare una fase AI separata che invia testo e immagini a OpenRouter. L'elaborazione remota può comportare costi in base al modello e al numero di pagine; controlla le tariffe correnti nel tuo account OpenRouter. I PDF OCR sono limitati a 40 pagine e il parser può restituire fino a 8 immagini.
 
-## Configurare Google Drive
+## Usare Google Drive per desktop come destinazione
 
-Drive è una destinazione di snapshot opzionale. L'integrazione usa OAuth per applicazioni native con PKCE e callback loopback `127.0.0.1`; non richiede un client secret nel progetto. Forgecy richiede lo scope `drive.file`, crea una cartella visibile `Forgecy` e accede ai file creati o aperti con l'app. Non può leggere l'intero Drive.
+Forgecy non richiede un login Google. Installa e configura **Google Drive per desktop** sul computer che ospita Forgecy, attendi che la cartella Drive sia disponibile in Esplora file e seleziona in **Impostazioni → Backup e trasferimento** una sottocartella dedicata, per esempio `Forgecy Backups`. Forgecy scrive lì archivi autonomi; il client Google Drive li sincronizza come normali file. Puoi usare allo stesso modo una cartella sincronizzata da un altro servizio.
 
-1. Apri [Google Cloud Console](https://console.cloud.google.com/) e crea o seleziona un progetto personale.
-2. In **APIs & Services → Library**, abilita **Google Drive API**.
-3. Configura **Google Auth Platform**: branding e audience secondo il tuo account. Se l'app è External e resta in stato **Testing**, aggiungi il tuo account come test user.
-4. In **Clients**, crea un OAuth client di tipo **Desktop app** e copia il Client ID.
-5. Nel browser del computer host, apri **Impostazioni → Collega Google Drive** e incolla il Client ID nel campo **Client ID Google**. Forgecy lo conserva nella cartella dati privata di quel computer, separato dal workspace e dai backup. In alternativa puoi impostare `GOOGLE_DRIVE_CLIENT_ID` in `.env.local` e riavviare Forgecy; questa variabile ha precedenza sul valore locale.
-6. Scegli l'account Google e approva il consenso. Il collegamento usa il callback desktop `127.0.0.1`; se Forgecy è aperto dal telefono tramite Tailscale, `127.0.0.1` indicherebbe il telefono e il primo collegamento non può completarsi. Dopo aver collegato Drive dal computer, puoi sincronizzare da remoto. Google documenta il loopback per app desktop Windows/macOS/Linux e lo depreca per client mobili ([guida OAuth desktop](https://developers.google.com/identity/protocols/oauth2/native-app)). I token sono conservati nel portachiavi di macOS/Windows/Linux quando disponibile; altrimenti Forgecy usa un file nella cartella dati con permessi privati.
-7. Premi **Sincronizza adesso** dopo il lavoro e prima di passare a un altro computer. Sul secondo computer installa Forgecy, configura un OAuth client (può essere lo stesso Client ID desktop), collega lo stesso Drive e sincronizza. Un workspace vuoto scarica automaticamente l'unico ramo remoto.
-
-Google può revocare i refresh token quando l'utente rimuove l'accesso o quando il client OAuth cambia. Per un'app External lasciata in Testing, Google documenta la scadenza dei refresh token dopo sette giorni quando vengono richiesti scope oltre ai soli profili base; se il token scade, ricollega Drive. La pubblicazione/verification dell'app OAuth dipende dall'audience e dagli scope configurati nel tuo progetto Google.
-
-### Come Forgecy evita conflitti e perdita dati
-
-Ogni sincronizzazione crea uno ZIP autonomo con un'immagine coerente di SQLite, gli allegati e un manifest con versione e hash. I file non vengono aggiornati o cancellati per sovrascrittura: Drive conserva snapshot separati con hash del contenuto, hash del genitore e ID dispositivo. Forgecy calcola i rami non discendenti per rilevare divergenze. In caso di conflitto puoi aprire uno snapshot Drive, salvando prima il locale in `conflicts/`, oppure caricare il locale come ramo separato.
-
-Gli snapshot e gli archivi includono anche l'indice vettoriale semantico per evitare una reindicizzazione costosa sul computer di destinazione. I vettori occupano circa 1,5 KB per passaggio, oltre all'overhead SQLite, e sono inclusi nel limite archivio Forgecy di 250 MB. I pesi del modello MiniLM non vengono copiati: ogni computer li scarica una volta nella propria cache locale quando il worker inizia a creare l'indice. Nel frattempo FTS5 continua a funzionare.
-
-Il flusso è pensato per usare un solo computer alla volta. Sincronizza prima di passare all'altro; non esiste un merge automatico né la modifica simultanea dello stesso workspace. Gli snapshot remoti occupano spazio nel tuo Drive e vanno eliminati manualmente da quella cartella quando non servono più. La cronologia delle revisioni Drive non è usata come archivio, perché Google non garantisce che tutte le revisioni restino disponibili.
+La cartella scelta deve essere locale al computer che esegue Forgecy e scrivibile dal tuo utente. Non selezionare la cartella dati di Forgecy o una sua cartella genitore. Se il computer è spento o Drive non è disponibile, il client sincronizzerà i file quando torna online. Per usare i backup su un altro computer, scarica o copia un file `.forgecy.zip` e importalo dall'app: non aprire il database attivo da una cartella cloud e non lavorare contemporaneamente sullo stesso workspace da due computer.
 
 ## Esportare e importare
 
-Forgecy crea automaticamente uno snapshot locale all'avvio e poi ogni 8 ore mentre l'app è in uso; conserva i 7 più recenti nella sottocartella `automatic-backups` della cartella dati. Da **Impostazioni → Workspace e Google Drive** puoi vedere quando sono stati creati, scaricarli o crearne uno subito. Per ripristinarne uno, scaricalo e usa **Importa archivio**. I backup automatici non escono dal computer e quindi non proteggono da guasto, furto o perdita del disco: per una copia esterna usa Drive o esporta e conserva l'archivio altrove.
+Forgecy crea un backup all'avvio e poi all'intervallo impostato, mentre l'app è in uso. Da **Impostazioni → Backup e trasferimento** scegli la cartella locale di destinazione, una frequenza da 4 ore a una settimana e quante copie conservare (3, 7, 14 o 30). Il valore predefinito resta 8 ore e 7 copie nella cartella dati privata. Se scegli una cartella sincronizzata da Google Drive per desktop, il client la carica automaticamente senza accesso Google dentro Forgecy. La configurazione della cartella è specifica del computer e non viene esportata.
 
-In **Impostazioni**, usa **Esporta archivio** per scaricare un backup `.forgecy.zip`, oppure **Importa archivio** su un'altra installazione. L'import sostituisce il workspace corrente dopo i controlli e conserva un backup locale in `pre-restore`. Puoi cancellare o copiare questi backup dalla cartella dati usando gli strumenti del sistema operativo. Proteggi gli archivi: contengono il database e i documenti del workspace, anche se Forgecy rimuove i token dei social durante l'export.
+Nella stessa schermata puoi creare una copia subito, scaricare gli archivi elencati, esportare un archivio o importarne uno su un altro computer. L'import sostituisce il workspace corrente dopo i controlli e conserva una copia pre-ripristino in `pre-restore`. Proteggi gli archivi: contengono il database e i documenti del workspace, anche se Forgecy rimuove i token dei social durante l'export.
 
 I workspace delle versioni precedenti non vengono convertiti automaticamente dal nuovo runtime. Prima di abbandonare una vecchia installazione, conserva una copia dei suoi dati e file; l'archivio `.forgecy.zip` della nuova versione è il formato supportato per trasferimenti e backup. Il progetto personale convertito durante lo sviluppo non conteneva record di lavoro o allegati.
 
@@ -111,8 +94,5 @@ Per `npm run start`, imposta `APP_ORIGIN=http://localhost:3000`. Il worker local
 | --- | --- |
 | Cataloghi o generazione AI non disponibili | `OPENROUTER_API_KEY`, connessione Internet e saldo/limiti del tuo account OpenRouter. |
 | Errore SQLite o disco pieno | Chiudi Forgecy, controlla spazio e permessi della cartella dati; fai una copia prima di intervenire sul database. |
-| Drive non configurato | Verifica `GOOGLE_DRIVE_CLIENT_ID`, API Drive abilitata e riavvio del server locale. |
-| OAuth Drive rifiutato | Controlla audience, stato Testing e lista test user nella Google Cloud Console. |
-| Token Drive scaduto | Ricollega l'account dalle Impostazioni. |
-| Conflitto Drive | Scegli uno dei rami remoti oppure conserva il locale come ramo separato; nessuno viene unito automaticamente. |
-| Impossibile usare l'app su un altro dispositivo | Esporta un archivio oppure collega Drive, sincronizza sul primo computer e poi sul secondo. |
+| Backup non riuscito | Verifica che la cartella selezionata sia collegata, scrivibile e abbia spazio libero. |
+| Impossibile usare l'app su un altro dispositivo | Esporta un archivio, trasferiscilo e importalo nell'altra installazione. |

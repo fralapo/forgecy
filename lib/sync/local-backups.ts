@@ -1,22 +1,90 @@
-import { chmodSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { getLocalDataDirectory } from "../local-db";
 import { createWorkspaceArchive } from "./archive";
 
-export const AUTOMATIC_BACKUP_INTERVAL_MS = 8 * 60 * 60 * 1000;
-export const AUTOMATIC_BACKUP_RETENTION = 7;
+export const DEFAULT_AUTOMATIC_BACKUP_INTERVAL_HOURS = 8;
+export const DEFAULT_AUTOMATIC_BACKUP_RETENTION = 7;
+export const BACKUP_INTERVAL_OPTIONS_HOURS = [4, 8, 12, 24, 72, 168] as const;
+export const BACKUP_RETENTION_OPTIONS = [3, 7, 14, 30] as const;
 const BACKUP_NAME = /^forgecy-auto-(\d{13})-([a-f0-9]{12})\.forgecy\.zip$/;
+const CONFIG_FILE = "automatic-backup-settings.json";
 
 export type AutomaticBackupInfo = { id: string; createdAt: string; size: number; hashPrefix: string };
+export type AutomaticBackupSettings = { directory: string; intervalHours: number; retention: number };
 
 declare global {
   var __forgecyAutomaticBackupSchedulerStarted: boolean | undefined;
   var __forgecyAutomaticBackupInProgress: boolean | undefined;
 }
 
+function defaultSettings(): AutomaticBackupSettings {
+  return { directory: join(getLocalDataDirectory(), "automatic-backups"), intervalHours: DEFAULT_AUTOMATIC_BACKUP_INTERVAL_HOURS, retention: DEFAULT_AUTOMATIC_BACKUP_RETENTION };
+}
+
+function configPath() { return join(getLocalDataDirectory(), CONFIG_FILE); }
+
+function pathOverlapsDataDirectory(path: string) {
+  const data = resolve(getLocalDataDirectory());
+  const target = resolve(path);
+  const isWithin = (parent: string, child: string) => {
+    const rel = relative(parent, child);
+    return rel === "" || (!rel.startsWith(`..${sep}`) && rel !== ".." && !isAbsolute(rel));
+  };
+  return isWithin(data, target) || isWithin(target, data);
+}
+
+function normalizeSettings(input: Partial<AutomaticBackupSettings>): AutomaticBackupSettings {
+  const defaults = defaultSettings();
+  const requestedDirectory = typeof input.directory === "string" ? input.directory.trim() : "";
+  if (requestedDirectory && !isAbsolute(requestedDirectory)) throw new Error("Inserisci un percorso assoluto valido per la cartella dei backup.");
+  const directory = requestedDirectory ? resolve(requestedDirectory) : defaults.directory;
+  const intervalHours = Number(input.intervalHours);
+  const retention = Number(input.retention);
+  if (resolve(directory) !== resolve(defaults.directory) && pathOverlapsDataDirectory(directory))
+    throw new Error("La cartella dei backup deve restare separata dalla cartella dati di Forgecy.");
+  if (!(BACKUP_INTERVAL_OPTIONS_HOURS as readonly number[]).includes(intervalHours)) throw new Error("Frequenza backup non valida.");
+  if (!(BACKUP_RETENTION_OPTIONS as readonly number[]).includes(retention)) throw new Error("Numero di copie da conservare non valido.");
+  return { directory, intervalHours, retention };
+}
+
+export function getAutomaticBackupSettings(): AutomaticBackupSettings {
+  const path = configPath();
+  if (!existsSync(path)) return defaultSettings();
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as Partial<AutomaticBackupSettings>;
+    return normalizeSettings(parsed);
+  } catch (error) {
+    console.error("[automatic backup] Configurazione non valida; uso la cartella predefinita.", error instanceof Error ? error.message : "errore");
+    return defaultSettings();
+  }
+}
+
+export function saveAutomaticBackupSettings(input: Partial<AutomaticBackupSettings>): AutomaticBackupSettings {
+  const settings = normalizeSettings(input);
+  const localDirectory = getLocalDataDirectory();
+  mkdirSync(localDirectory, { recursive: true, mode: 0o700 });
+  mkdirSync(settings.directory, { recursive: true, mode: 0o700 });
+  const probe = join(settings.directory, `.forgecy-write-check-${randomUUID()}`);
+  try {
+    writeFileSync(probe, "", { flag: "wx", mode: 0o600 });
+    rmSync(probe, { force: true });
+  } catch {
+    rmSync(probe, { force: true });
+    throw new Error("Forgecy non riesce a scrivere nella cartella selezionata. Verifica che esista e che il tuo utente abbia i permessi necessari.");
+  }
+  const temporary = `${configPath()}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(temporary, JSON.stringify(settings), { flag: "wx", mode: 0o600 });
+    try { chmodSync(temporary, 0o600); } catch { /* Windows inherits the private app data ACL. */ }
+    renameSync(temporary, configPath());
+  } finally { rmSync(temporary, { force: true }); }
+  return settings;
+}
+
 function backupDirectory() {
-  const directory = join(getLocalDataDirectory(), "automatic-backups");
+  const directory = getAutomaticBackupSettings().directory;
   mkdirSync(directory, { recursive: true, mode: 0o700 });
   try { chmodSync(directory, 0o700); } catch { /* Windows inherits the private app data ACL. */ }
   return directory;
@@ -54,7 +122,7 @@ export async function createAutomaticBackup(): Promise<AutomaticBackupInfo> {
       renameSync(temporary, target);
     } finally { rmSync(temporary, { force: true }); }
 
-    for (const expired of listAutomaticBackups().slice(AUTOMATIC_BACKUP_RETENTION)) {
+    for (const expired of listAutomaticBackups().slice(getAutomaticBackupSettings().retention)) {
       if (isBackupId(expired.id)) rmSync(join(directory, expired.id), { force: true });
     }
     return { id, createdAt: new Date(timestamp).toISOString(), size: archive.byteLength, hashPrefix: manifest.hash.slice(0, 12) };
@@ -73,7 +141,8 @@ export function startAutomaticBackupScheduler() {
     if (globalThis.__forgecyAutomaticBackupInProgress) return;
     try {
       const latest = listAutomaticBackups()[0];
-      if (latest && Date.now() - Date.parse(latest.createdAt) < AUTOMATIC_BACKUP_INTERVAL_MS) return;
+      const { intervalHours } = getAutomaticBackupSettings();
+      if (latest && Date.now() - Date.parse(latest.createdAt) < intervalHours * 60 * 60 * 1000) return;
       await createAutomaticBackup();
     }
     catch (error) { console.error("[automatic backup] Backup locale non riuscito:", error instanceof Error ? error.message : "errore"); }

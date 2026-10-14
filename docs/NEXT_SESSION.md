@@ -16,7 +16,7 @@ Apri `http://localhost:3000`, poi vai in Impostazioni per inserire la tua chiave
 
 ## Portare il workspace sul nuovo PC
 
-GitHub non contiene il database né i documenti locali. Sul vecchio computer, apri **Impostazioni → Google Drive**, collega il tuo Drive e premi **Sincronizza adesso**. Sul nuovo computer configura `GOOGLE_DRIVE_CLIENT_ID`, collega lo stesso account e sincronizza il workspace. La sincronizzazione trasferisce snapshot completi e versionati: va usata un computer alla volta, sincronizzando prima di cambiare dispositivo. Se Forgecy rileva copie divergenti, conserva i rami e chiede quale aprire; non fonde automaticamente i record.
+GitHub non contiene il database né i documenti locali. Sul vecchio computer, apri **Impostazioni → Backup e trasferimento**, usa **Esporta archivio** e trasferisci il file `.forgecy.zip` in modo sicuro; sul nuovo computer usa **Importa archivio**. In alternativa, configura un backup automatico in una cartella sincronizzata dal client desktop di Google Drive o da un servizio simile e copia l'archivio sull'altro computer. Forgecy non richiede il login Google. La cartella di destinazione è specifica del computer e non viene esportata.
 
 In alternativa, sul vecchio computer usa **Esporta archivio** e trasferisci il file `.forgecy.zip` in modo sicuro; sul nuovo computer usa **Importa archivio**. Proteggi l'archivio: contiene database e documenti dei clienti. Le chiavi API e i token non fanno parte degli snapshot, quindi vanno configurati di nuovo sul nuovo computer.
 
@@ -27,8 +27,8 @@ In alternativa, sul vecchio computer usa **Esporta archivio** e trasferisci il f
 - Memoria basata su fonti e passaggi, con ricerca ibrida FTS5 + MiniLM locale attiva per default e indicizzata in background; i vettori sono inclusi nei backup/Drive e il modello resta nella cache per dispositivo. Vedere [architettura della conoscenza](KNOWLEDGE_ARCHITECTURE.md).
 - Impostazioni OpenRouter per cataloghi aggiornati, modelli testo/immagini e chiavi locali.
 - Nessun motore OCR locale: i PDF scannerizzati e le immagini vengono elaborati esclusivamente via API OpenRouter. La lettura del testo nativo nei PDF e dei formati testuali non richiede OCR; il conteggio pagine è riutilizzato per evitare di riparsare localmente le scansioni. L'OCR API si esegue una volta durante il caricamento; l'estrazione strutturata del catalogo è un passaggio AI separato. Consulta [configurazione locale](LOCAL_SETUP.md) e [stato della conoscenza](KNOWLEDGE_ARCHITECTURE.md).
-- Google Drive opzionale per trasferire snapshot tra computer, senza sincronizzazione simultanea o merge automatico.
-- Backup locali automatici ogni 8 ore, con rotazione a 7 copie; per protezione da perdita del dispositivo resta necessario esportare o sincronizzare su Drive.
+- Trasferimento del workspace tramite archivi `.forgecy.zip` esportabili e importabili.
+- Backup automatici con destinazione, intervallo e rotazione configurabili; la cartella può essere sincronizzata da un client cloud desktop.
 
 ## Verifica e limiti noti
 
@@ -41,6 +41,6 @@ npm test
 npm run build
 ```
 
-I test locali non convalidano le credenziali OpenRouter o il consenso OAuth Google dell'installazione. Non inserire chiavi reali in issue, documenti o file versionati; su ciascun computer configurale nell'app o nel proprio `.env.local`.
+I test locali non convalidano le credenziali OpenRouter dell'installazione. Non inserire chiavi reali in issue, documenti o file versionati; su ciascun computer configurale nell'app o nel proprio `.env.local`.
 
-Per i dettagli aggiornati su requisiti, backup, Drive e troubleshooting, iniziare da [LOCAL_SETUP.md](LOCAL_SETUP.md). La [roadmap](CURRENT_ROADMAP.md) e lo [stato implementazione](IMPLEMENTATION_STATUS.md) descrivono il prodotto e i controlli automatici.
+Per i dettagli aggiornati su requisiti, backup e troubleshooting, iniziare da [LOCAL_SETUP.md](LOCAL_SETUP.md). La [roadmap](CURRENT_ROADMAP.md) e lo [stato implementazione](IMPLEMENTATION_STATUS.md) descrivono il prodotto e i controlli automatici.
