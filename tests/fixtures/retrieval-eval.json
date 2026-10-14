@@ -153,5 +153,26 @@
     "passage": "U-Power VELAR PLUS s ESD: classe di protezione S3S CI FO SR; articolo 0RP10124; normativa EN ISO 20345:2022.",
     "query": "Qual è la classe di protezione della scarpa U-Power VELAR PLUS articolo 0RP10124?",
     "source_url": "https://www.u-power.it/it/calzature/velar-plus"
+  },
+  {
+    "id": "caleffi-vmc-unit-320-price",
+    "category": "catalog-sku-price",
+    "passage": "Listino Caleffi VMC 2026, pagina 16: codice AIR113000, variante 320 m³/h, unità VMC universale R.S., prezzo 3.126,00 EUR.",
+    "query": "Quanto costa l'unità Caleffi VMC universale R.S. da 320 m³/h, codice AIR113000?",
+    "source_url": "https://www.caleffi.com/sites/default/files/media/external-file/05070_IT_26_Listino%20prezzi%20VMC.pdf"
+  },
+  {
+    "id": "caleffi-plenum-size-6-price",
+    "category": "catalog-sku-price",
+    "passage": "Listino Caleffi VMC 2026, pagina 16: codice AIR400003, corpo plenum VMC size 6, prezzo 160,00 EUR.",
+    "query": "Qual è il prezzo del corpo plenum VMC Caleffi di misura 6, codice AIR400003?",
+    "source_url": "https://www.caleffi.com/sites/default/files/media/external-file/05070_IT_26_Listino%20prezzi%20VMC.pdf"
+  },
+  {
+    "id": "caleffi-epe-curve-45-dn160-price",
+    "category": "catalog-sku-price",
+    "passage": "Listino Caleffi VMC 2026, pagina 16: codice AIR917270, curva EPE 45° DN160, prezzo 30,50 EUR.",
+    "query": "Quanto costa la curva Caleffi EPE a 45 gradi DN160, codice AIR917270?",
+    "source_url": "https://www.caleffi.com/sites/default/files/media/external-file/05070_IT_26_Listino%20prezzi%20VMC.pdf"
   }
 ]

@@ -272,12 +272,61 @@ export function parseNativeCodePriceRows(title:string,text:string):CatalogProduc
  return products;
 }
 
+/** Parse OCR family headings followed by repeated variant-label and `Cod.` lines. */
+export function parseMarkdownCatalogCodeVariants(text:string):CatalogProduct[]{
+ const lines=text.split(/\r?\n/u);
+ const headings=lines.flatMap((line,index)=>{
+  const match=/^\s*#{1,6}\s+(.+?)\s*#*\s*$/u.exec(line);
+  return match?[{index,title:match[1]!.trim()}]:[];
+ });
+ const products:CatalogProduct[]=[];
+ const seen=new Set<string>();
+ for(let headingIndex=0;headingIndex<headings.length;headingIndex++){
+  const heading=headings[headingIndex]!;
+  if(/^(?:campo d impiego|codici confezione|catalogo|listino|price list|descrizione|dosi|istruzioni d uso)$/u.test(normalizeCatalogName(heading.title)))continue;
+  const sectionEnd=headings[headingIndex+1]?.index??lines.length;
+  const pairs:Array<{variant:string;codeLine:string;imageIndex:number|null}>=[];
+  let previousCodeIndex=heading.index;
+  for(let lineIndex=heading.index+1;lineIndex<sectionEnd;lineIndex++){
+   const codeMatch=/^\s*cod(?:ice)?\.?\s*(?:articolo\s*)?:?\s*([A-Z0-9][A-Z0-9/-]{3,19})\s*$/iu.exec(lines[lineIndex]!);
+   if(!codeMatch)continue;
+   let variantIndex=lineIndex-1;
+   while(variantIndex>previousCodeIndex&&(!lines[variantIndex]!.trim()||/^\s*!\[img-\d+\.[^\]]+\]\(/iu.test(lines[variantIndex]!)))variantIndex--;
+   const variant=lines[variantIndex]?.trim()||"";
+   previousCodeIndex=lineIndex;
+   if(!variant||variantIndex<=heading.index||variant.length>120||!/[\p{L}]/u.test(variant)||/^#{1,6}\s/u.test(variant))continue;
+   let imageIndex:number|null=null;
+   for(let imageLine=variantIndex-1;imageLine>heading.index;imageLine--){
+    if(/^\s*cod(?:ice)?\.?\s*(?:articolo\s*)?:?\s*[A-Z0-9][A-Z0-9/-]{3,19}\s*$/iu.test(lines[imageLine]!))break;
+    const imageMatch=/^\s*!\[img-(\d+)\.[^\]]+\]\(/iu.exec(lines[imageLine]!);
+    if(imageMatch){const index=Number(imageMatch[1]);if(index<=7)imageIndex=index;break;}
+   }
+   pairs.push({variant,codeLine:lines[lineIndex]!.trim(),imageIndex});
+  }
+  if(pairs.length<2)continue;
+  for(const pair of pairs){
+   const code=/(?:cod(?:ice)?\.?\s*(?:articolo\s*)?:?\s*)([A-Z0-9][A-Z0-9/-]{3,19})/iu.exec(pair.codeLine)?.[1];
+   if(!code)continue;
+   const name=`${heading.title} — ${pair.variant}`;
+   const identity=normalizeCatalogName(name)+"|"+code.toLocaleUpperCase("en-US");
+   if(seen.has(identity))continue;
+   seen.add(identity);
+   products.push({name,description:`${pair.variant} — ${pair.codeLine}`,price:null,currency:"EUR",
+    nameQuote:JSON.stringify([heading.title,pair.variant]),descriptionQuote:JSON.stringify([pair.variant,pair.codeLine]),
+    priceQuote:"",existingOfferId:null,imageIndex:pair.imageIndex});
+  }
+ }
+ return products;
+}
+
 /** Parse deterministic catalog formats before asking an AI model to interpret the document. */
 export function parseLocalCatalogProducts(title:string,text:string):CatalogProduct[]{
  const csvProducts=parseCsvCatalog(text);
  if(csvProducts.length)return csvProducts;
  const markdownProducts=looksLikeCatalog(title,text)?parseMarkdownCatalogTable(text):[];
  if(markdownProducts.length)return markdownProducts;
+ const markdownCodeVariants=/catalog|catalogo|listino|price[ -]?list/i.test(title)?parseMarkdownCatalogCodeVariants(text):[];
+ if(markdownCodeVariants.length)return markdownCodeVariants;
  const catalogCards=parseMarkdownCatalogCards(text);
  if(catalogCards.length)return catalogCards;
  const nativeRows=looksLikeCatalog(title,text)?parseNativeCatalogRows(text):[];

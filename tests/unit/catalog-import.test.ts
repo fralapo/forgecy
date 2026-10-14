@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseLocalCatalogProducts,parseMarkdownCatalogCards,parseMarkdownCatalogTable,parseMarkdownImageVariants,parsePositionedNativeCatalogRows} from "../../lib/catalog-import";
+import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseLocalCatalogProducts,parseMarkdownCatalogCards,parseMarkdownCatalogCodeVariants,parseMarkdownCatalogTable,parseMarkdownImageVariants,parsePositionedNativeCatalogRows} from "../../lib/catalog-import";
 
 test("catalog names normalize accents and punctuation for safe matching",()=>{
  assert.equal(normalizeCatalogName("Caffè — Espresso 100%"),"caffe espresso 100");
@@ -184,6 +184,22 @@ test("OCR product cards import printed codes and package variants while linking 
  assert.equal(catalogEvidenceIsValid(products[2],source),true);
  const incomplete=source.replace("10203007 flacone da 750 ml","Codice non leggibile");
  assert.deepEqual(parseMarkdownCatalogCards(incomplete),[]);
+});
+
+test("OCR family variant lists import every label/code pair and preserve only explicit image links",()=>{
+ const source="[Pagine PDF 1–2]\n# Detergente concentrato\n![img-0.jpeg](img-0.jpeg)\nLavanda\nCod.ZX101\n![img-1.jpeg](img-1.jpeg)\nFresco\nCod.ZX102\n## Benefici\nTesto descrittivo\n# Detergente delicato\nNeutro\nCod.ZX103\nAgrumi\nCod.ZX104\nAlba\nCod.ZX105\n## Benefici\nTesto descrittivo";
+ const products=parseMarkdownCatalogCodeVariants(source);
+ assert.equal(products.length,5);
+ assert.equal(parseLocalCatalogProducts("Catalogo detergenti.pdf",source).length,5);
+ assert.equal(products[0].name,"Detergente concentrato — Lavanda");
+ assert.equal(products[0].imageIndex,0);
+ assert.equal(products[1].name,"Detergente concentrato — Fresco");
+ assert.equal(products[1].imageIndex,1);
+ assert.equal(products[2].name,"Detergente delicato — Neutro");
+ assert.equal(products[2].imageIndex,null);
+ assert.equal(products[2].price,null);
+ assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
+ assert.deepEqual(parseMarkdownCatalogCodeVariants("# Manuale tecnico\nVariante unica\nCod.AB123"),[]);
 });
 
 test("positioned PDF catalog rows join measurements, SKU and price within each column",()=>{
