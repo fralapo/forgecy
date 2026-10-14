@@ -1,14 +1,52 @@
 import { assertSafeDocument, DocumentSafetyError } from "./document-safety";
+import { createHash } from "node:crypto";
+import { parseLocalCatalogProducts, normalizeCatalogName } from "./catalog-import";
+import type { DocumentImage } from "./document-image";
+import { createPdfParser } from "./pdf-runtime";
 /**
  * Bound client-upload text extraction. Original binary always remains in private
  * Local private storage; extracted text is separate, untrusted evidence.
  */
 export type Extraction={status:"ready"|"pending"|"error";body:string;error:string|null};
-export type DocumentExtraction={extraction:Extraction;pageCount:number|null};
+export type DocumentExtraction={extraction:Extraction;pageCount:number|null;nativeImages?:DocumentImage[]};
 export const MAX_EXTRACT_CHARS=80000;
 const MIN_NATIVE_PDF_TEXT_CHARS=80;
+const MAX_NATIVE_PDF_IMAGES=8;
+const MAX_NATIVE_PDF_IMAGE_BYTES=10_000_000;
+const MAX_NATIVE_PDF_IMAGE_PIXELS=12_000_000;
 function clean(value:string):string{
  return value.replace(/\u0000/g,"").replace(/\r\n?/g,"\n").trim().slice(0,MAX_EXTRACT_CHARS);
+}
+export async function extractNativeCatalogImages(parser:Awaited<ReturnType<typeof createPdfParser>>,pages:Array<{num:number;text:string}>,title:string,body:string):Promise<DocumentImage[]>{
+ const products=parseLocalCatalogProducts(title,body);
+ if(!products.length)return [];
+ const candidates=pages.map(page=>({page:page.num,names:[...new Set(products
+  .filter(product=>normalizeCatalogName(page.text).includes(normalizeCatalogName(product.name)))
+  .map(product=>product.name))]})).filter(page=>page.page>0&&page.names.length)
+  .sort((a,b)=>b.names.length-a.names.length||a.page-b.page);
+ const found:DocumentImage[]=[];const hashes=new Set<string>();let totalBytes=0;
+ for(const candidate of candidates){
+  if(found.length>=MAX_NATIVE_PDF_IMAGES)break;
+  let result;
+  try{result=await parser.getImage({partial:[candidate.page],imageBuffer:true,imageDataUrl:false,imageThreshold:100});}
+  catch{continue;}
+  const pageImages=result.pages.find(page=>page.pageNumber===candidate.page)?.images||[];
+  // Keep only pages whose image objects and locally verified product headings map one-to-one.
+  if(!pageImages.length||pageImages.length!==candidate.names.length||pageImages.length>MAX_NATIVE_PDF_IMAGES-found.length)continue;
+  const prepared=pageImages.map(image=>({image,bytes:Buffer.from(image.data)}));
+  if(prepared.some(({image,bytes})=>image.width*image.height>MAX_NATIVE_PDF_IMAGE_PIXELS||!bytes.length||bytes.length>5_000_000||
+   bytes[0]!==0x89||bytes[1]!==0x50||bytes[2]!==0x4e||bytes[3]!==0x47))continue;
+  const pageTotal=prepared.reduce((sum,item)=>sum+item.bytes.length,0);
+  if(totalBytes+pageTotal>MAX_NATIVE_PDF_IMAGE_BYTES)continue;
+  for(const {bytes} of prepared){
+   const sha256=createHash("sha256").update(bytes).digest("hex");
+   if(hashes.has(sha256))continue;
+   hashes.add(sha256);totalBytes+=bytes.length;
+   found.push({dataUrl:`data:image/png;base64,${bytes.toString("base64")}`,mime:"image/png",sha256,
+    origin:"native-pdf",pageNumber:candidate.page,candidateProductNames:candidate.names});
+  }
+ }
+ return found;
 }
 export async function extractDocumentWithMetadata(bytes:Uint8Array,mime:string,name:string):Promise<DocumentExtraction>{
  const ext=name.toLowerCase().split(".").pop();
@@ -22,17 +60,16 @@ export async function extractDocumentWithMetadata(bytes:Uint8Array,mime:string,n
   if(ext==="pdf"&&mime==="application/pdf"){
    if(new TextDecoder().decode(bytes.subarray(0,5))!=="%PDF-")
     return {extraction:{status:"error",body:"",error:"File PDF non valido"},pageCount:null};
-   await import("pdf-parse/worker");
-   const {PDFParse}=await import("pdf-parse");
-   const parser=new PDFParse({data:Uint8Array.from(bytes)});
+   const parser=await createPdfParser(bytes);
    try {
     const info=await parser.getInfo({parsePageInfo:false});
     const pageCount=Number.isInteger(info.total)&&info.total>0?info.total:null;
     // Extract a bounded prefix; scanned PDFs need explicit OCR (not silently guessed).
     const text=await parser.getText({first:40,pageJoiner:""});
     const body=clean(text.text||"");
-    return {extraction:body.length>=MIN_NATIVE_PDF_TEXT_CHARS?{status:"ready",body,error:null}:
-     {status:"error",body:"",error:"PDF senza testo nativo sufficiente: serve OCR o una trascrizione"},pageCount};
+    if(body.length<MIN_NATIVE_PDF_TEXT_CHARS)return {extraction:{status:"error",body:"",error:"PDF senza testo nativo sufficiente: serve OCR o una trascrizione"},pageCount};
+    const nativeImages=await extractNativeCatalogImages(parser,text.pages||[],name,body);
+    return {extraction:{status:"ready",body,error:null},pageCount,...(nativeImages.length?{nativeImages}:{})};
    }finally{await parser.destroy();}
   }
   if(ext==="docx"&&mime==="application/vnd.openxmlformats-officedocument.wordprocessingml.document"){

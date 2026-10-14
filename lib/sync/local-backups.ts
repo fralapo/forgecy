@@ -26,8 +26,8 @@ function defaultSettings(): AutomaticBackupSettings {
 function configPath() { return join(getLocalDataDirectory(), CONFIG_FILE); }
 
 function pathOverlapsDataDirectory(path: string) {
-  const data = resolve(getLocalDataDirectory());
-  const target = resolve(path);
+  const data = resolve(/*turbopackIgnore: true*/ getLocalDataDirectory());
+  const target = resolve(/*turbopackIgnore: true*/ path);
   const isWithin = (parent: string, child: string) => {
     const rel = relative(parent, child);
     return rel === "" || (!rel.startsWith(`..${sep}`) && rel !== ".." && !isAbsolute(rel));
@@ -39,10 +39,10 @@ function normalizeSettings(input: Partial<AutomaticBackupSettings>): AutomaticBa
   const defaults = defaultSettings();
   const requestedDirectory = typeof input.directory === "string" ? input.directory.trim() : "";
   if (requestedDirectory && !isAbsolute(requestedDirectory)) throw new Error("Inserisci un percorso assoluto valido per la cartella dei backup.");
-  const directory = requestedDirectory ? resolve(requestedDirectory) : defaults.directory;
+  const directory = requestedDirectory ? resolve(/*turbopackIgnore: true*/ requestedDirectory) : defaults.directory;
   const intervalHours = Number(input.intervalHours);
   const retention = Number(input.retention);
-  if (resolve(directory) !== resolve(defaults.directory) && pathOverlapsDataDirectory(directory))
+  if (resolve(/*turbopackIgnore: true*/ directory) !== resolve(/*turbopackIgnore: true*/ defaults.directory) && pathOverlapsDataDirectory(directory))
     throw new Error("La cartella dei backup deve restare separata dalla cartella dati di Forgecy.");
   if (!(BACKUP_INTERVAL_OPTIONS_HOURS as readonly number[]).includes(intervalHours)) throw new Error("Frequenza backup non valida.");
   if (!(BACKUP_RETENTION_OPTIONS as readonly number[]).includes(retention)) throw new Error("Numero di copie da conservare non valido.");
@@ -94,7 +94,7 @@ function isBackupId(value: string) { return BACKUP_NAME.test(value); }
 
 export function listAutomaticBackups(): AutomaticBackupInfo[] {
   const directory = backupDirectory();
-  return readdirSync(directory).flatMap((id) => {
+  return readdirSync(/*turbopackIgnore: true*/ directory).flatMap((id) => {
     const match = BACKUP_NAME.exec(id);
     if (!match) return [];
     try {

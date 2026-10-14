@@ -1,7 +1,8 @@
-import { PDFParse } from "pdf-parse";
 import { createHash } from "node:crypto";
 import { ApiFailure } from "./http";
 import { assertSafeDocument, MAX_UPLOAD_BYTES } from "./document-safety";
+import type { DocumentImage } from "./document-image";
+import { createPdfParser } from "./pdf-runtime";
 import { getOpenRouterApiKey } from "./openrouter-credentials";
 import { recordAiProviderUsage } from "./ai-usage";
 
@@ -19,7 +20,7 @@ type OcrOptions = {
   keyProvider?: () => Promise<string | null>;
   fetcher?: typeof fetch;
 };
-export type OcrImage = { dataUrl: string; mime: "image/png" | "image/jpeg" | "image/webp"; sha256: string };
+export type OcrImage = DocumentImage;
 export type OcrResult = { body: string; images: OcrImage[]; pageCount: number | null; model: string; engine: "mistral-ocr" | "vision-model"; provider: "openrouter" };
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -91,8 +92,7 @@ export function parsedDocumentImages(value: unknown): OcrImage[] {
 }
 
 async function pdfPages(bytes: Uint8Array): Promise<number> {
-  await import("pdf-parse/worker");
-  const parser = new PDFParse({ data: Uint8Array.from(bytes) });
+  const parser = await createPdfParser(bytes);
   try {
     const info = await parser.getInfo({ parsePageInfo: false });
     if (!Number.isInteger(info.total) || info.total < 1) throw new ApiFailure(422, "Non riesco a determinare il numero di pagine del PDF.");
