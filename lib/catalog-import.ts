@@ -225,6 +225,52 @@ export function parseNativeCatalogRows(text:string):CatalogProduct[]{
  return products;
 }
 
+/** Parse native PDF tables with a product-family header and inline code/price rows. */
+export function parseNativeCodePriceRows(title:string,text:string):CatalogProduct[]{
+ if(!looksLikeCatalog(title,text))return [];
+ const lines=text.split(/\r?\n/u).map(line=>line.trim()).filter(Boolean);
+ const families=lines.flatMap((line,index)=>{
+  const cells=line.split("\t").map(value=>value.trim());
+  const fields=cells.map(normalizeCatalogName);
+  const hasPriceTableHeader=fields.some(value=>/^(?:prezzo|prezzo listino|listino)$/u.test(value))&&fields.some(value=>/^(?:codice|cod|sku)$/u.test(value));
+  const candidate=cells[0]||"";
+  const hasTechnicalTableHeader=/\b(?:potenza|portata|alimentazione|scop|seer|cop|eer)\b/iu.test(cells.slice(1).join(" "));
+  if(!hasPriceTableHeader&&!hasTechnicalTableHeader)return [];
+  const normalized=normalizeCatalogName(candidate);
+  if(!candidate||/^(?:codice|prezzo|accessori|catalogo|listino|sistemi ibridi|pompe di calore|caldaie|climatizzazione)$/iu.test(normalized)||
+   /\b(?:a\d+w\d+|eer|cop|scop|seer)\b/iu.test(candidate))return [];
+  return [{index,name:candidate}];
+ });
+ const products:CatalogProduct[]=[];
+ const seen=new Set<string>();
+ for(let index=0;index<lines.length&&products.length<1000;index++){
+  const line=lines[index]!;
+  const codePattern=/\b(?=[A-Z0-9/-]{5,14}\b)(?=[A-Z0-9/-]*\d)[A-Z0-9][A-Z0-9/-]{4,13}\b/iu;
+  const codeMatch=codePattern.exec(line);
+  if(!codeMatch)continue;
+  const pricePattern=/(?<![\d,])\d{1,3}(?:\.\d{3})*,\d{2}(?!\d)/gu;
+  const priceMatch=[...line.matchAll(pricePattern)].find(match=>(match.index??-1)>codeMatch.index);
+  if(!priceMatch)continue;
+  const cells=line.split("\t").map(value=>value.trim());
+  const codeCell=cells.findIndex(value=>value.includes(codeMatch[0]));
+  if(codeCell<0)continue;
+  const rowLabel=cells.slice(0,codeCell).find(value=>value&&value!=="•")||"";
+  if(!rowLabel||!/[\p{L}\d]/u.test(rowLabel))continue;
+  const family=[...families].reverse().find(header=>header.index<index&&index-header.index<=80)?.name||"";
+  const code=codeMatch[0];
+  const identity=`${family}\n${rowLabel}\n${code}\n${priceMatch[0]}`;
+  if(seen.has(identity))continue;
+  seen.add(identity);
+  const name=`${family?`${family} `:""}${rowLabel} (${code})`.slice(0,180);
+  const nameEvidence=[...(family?[family]:[]),rowLabel,code];
+  const descriptionEvidence=[rowLabel,code];
+  products.push({name,description:descriptionEvidence.join(" — "),price:parsePrice(priceMatch[0]),currency:"EUR",
+   nameQuote:JSON.stringify(nameEvidence),descriptionQuote:JSON.stringify(descriptionEvidence),priceQuote:priceMatch[0],
+   existingOfferId:null,imageIndex:null});
+ }
+ return products;
+}
+
 /** Parse deterministic catalog formats before asking an AI model to interpret the document. */
 export function parseLocalCatalogProducts(title:string,text:string):CatalogProduct[]{
  const csvProducts=parseCsvCatalog(text);
@@ -235,6 +281,8 @@ export function parseLocalCatalogProducts(title:string,text:string):CatalogProdu
  if(catalogCards.length)return catalogCards;
  const nativeRows=looksLikeCatalog(title,text)?parseNativeCatalogRows(text):[];
  if(nativeRows.length)return nativeRows;
+ const nativePricedRows=parseNativeCodePriceRows(title,text);
+ if(nativePricedRows.length)return nativePricedRows;
  return looksLikeCatalog(title,text)?parseMarkdownImageVariants(text):[];
 }
 

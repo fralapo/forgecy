@@ -102,6 +102,19 @@ test("native PDF catalog tables with vertically extracted columns import coded p
  assert.deepEqual(parseLocalCatalogProducts("Catalogo.pdf","Cod.\nDescrizione Prodotto\nDD107\n1 LT\n8388776980149"),[]);
 });
 
+test("native PDF code/price tables import deterministic product variants with exact evidence",()=>{
+ const source="Listino Prezzi Marzo 2026\nOMNIA LIFE M \tPotenza termica A7W35 / COP\tCodice\tPrezzo\n04\t4,50 kW / 5,15\t2CP100AF\t8.705,84\n06\t6,20 kW / 4,90\t2CP100BF\t9.760,40";
+ const products=parseLocalCatalogProducts("Listino Ferroli",source);
+ assert.equal(products.length,2);
+ assert.equal(products[0].name,"OMNIA LIFE M 04 (2CP100AF)");
+ assert.equal(products[0].price,8705.84);
+ assert.equal(products[0].priceQuote,"8.705,84");
+ assert.equal(catalogEvidenceIsValid(products[0],source),true);
+ assert.equal(catalogEvidenceIsValid({...products[0],price:9000},source),false);
+ assert.equal(products[1].name,"OMNIA LIFE M 06 (2CP100BF)");
+ assert.equal(catalogEvidenceIsValid(products[1],source),true);
+});
+
 test("OCR tables with only dimensions, product code and euro price import verifiable items",()=>{
  const source="USAG catalog 2026\n| mm | mm | mm | Cod. | immagine | € |\n| --- | --- | --- | --- | --- | --- |\n| 15÷35 | 3,5 | 168 | U02820301 | ![img-0.jpg](img-0.jpg) | 25,00 |\n| 35÷50 | 4 | 202 | U02820302 | ![img-0.jpg](img-0.jpg) | 29,00 |";
  const products=parseLocalCatalogProducts("Catalogo USAG",source);

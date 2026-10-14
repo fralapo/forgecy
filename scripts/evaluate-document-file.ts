@@ -121,7 +121,11 @@ async function main() {
         imageIndex: linked ? Number(/\((\d+)\)$/.exec(String(linked.title || ""))?.[1] || 0) || null : null,
       };
     });
+    const imageAssignmentSummary = imageAssignments.length > 80
+      ? { count: imageAssignments.length, linked: imageAssignments.filter(item => item.linked).length, samples: imageAssignments.slice(0, 10) }
+      : imageAssignments;
     const usage = db.connection.prepare("SELECT count(*) requests,sum(reported_cost_usd) reported_cost_usd FROM ai_provider_usage WHERE client_id=?").get(clientId) as { requests: number; reported_cost_usd: number | null };
+    const usageDetails = db.connection.prepare("SELECT operation,model,prompt_tokens,completion_tokens,reported_cost_usd FROM ai_provider_usage WHERE client_id=? ORDER BY created_at").all(clientId) as Array<{ operation: string; model: string; prompt_tokens: number | null; completion_tokens: number | null; reported_cost_usd: number | null }>;
     console.log(JSON.stringify({
       isolatedWorkspace: true,
       inputFile: "provided-pdf",
@@ -139,13 +143,14 @@ async function main() {
       productRows: offers.data?.length || 0,
       visualProductAssets: productImages.length,
       offersLinkedToVisualAssets: linkedProductImages.size,
-      imageAssignments,
+      imageAssignments: imageAssignmentSummary,
       seededProductMatched: expectedOffer ? expectedOffer.source_id === payload.source?.id : null,
       seededProductImageLinked: expectedOffer ? Boolean(expectedOffer.image_source_id && productImages.some((image: Record<string, unknown>) => image.id === expectedOffer.image_source_id)) : null,
       retainedSeedImagePath: retainedSeedImage,
       retainedImageEvidencePaths: retainedImages,
       providerRequestsRecorded: usage.requests,
       reportedCostUsd: usage.reported_cost_usd,
+      providerUsageDetails: usageDetails,
       userWorkspaceModified: false,
       credentialPrintedOrWritten: false,
     }, null, 2));

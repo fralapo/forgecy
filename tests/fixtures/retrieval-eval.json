@@ -106,5 +106,17 @@
     "category": "catalog-sku-price",
     "passage": "Catalogo-listino USAG 2026, pagina 110: chiave poligonale doppia curva, misura 6x7 mm, codice U02831302, prezzo 9,15 EUR.",
     "query": "Qual è il prezzo della chiave poligonale doppia curva USAG 6x7 codice U02831302?"
+  },
+  {
+    "id": "ferroli-omnia-life-m-sku-price",
+    "category": "catalog-sku-price",
+    "passage": "Listino Ferroli marzo 2026: pompa di calore OMNIA LIFE M taglia 04, codice 2CP100AF, prezzo di listino 8.705,84 EUR.",
+    "query": "Quanto costa la pompa di calore OMNIA LIFE M da 4,5 kW? Qual è il suo codice?"
+  },
+  {
+    "id": "ferroli-omnia-m32-sku-price",
+    "category": "catalog-sku-price",
+    "passage": "Listino Ferroli marzo 2026: pompa di calore OMNIA M 3.2 taglia 04, codice 2CP000AF, prezzo di listino 6.964,88 EUR.",
+    "query": "Quanto costa la pompa di calore Ferroli OMNIA M 3.2 da 4,20 kW?"
   }
 ]
