@@ -224,11 +224,12 @@ export default function Workspace(){
     </div>
     <main className="page-scroll"><div className="page-body">
      {error&&<div className="notice error" role="alert" style={{marginBottom:18,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>{error}<button className="button small" onClick={()=>setError("")}>Chiudi</button></div>}
-     {!current?<div className="stack-lg" style={{maxWidth:640,margin:"10vh auto"}}>
+     {view==="settings"?<ModelSettings/>:!current?<div className="stack-lg" style={{maxWidth:640,margin:"10vh auto"}}>
       <div className="eyebrow">BENVENUTO IN FORGECY</div><h1>Il lavoro inizia da un cliente.</h1><p className="tagline">Crea uno spazio dedicato: potrai aggiungere sito, fonti, prodotti e servizi, costruire un dossier approvato e parlare con il Leader.</p>
-      <div><button className="button primary" onClick={baseModal}><Plus size={16}/> Crea il primo cliente</button></div>
+      <p className="caption">Prima o dopo, puoi configurare i modelli AI e collegare Google Drive dalle Impostazioni. Non serve creare un cliente per accedervi.</p>
+      <div className="flex gap8 wrap"><button className="button" onClick={()=>setView("settings")}><Settings2 size={16}/> Configura API e modelli AI</button><button className="button primary" onClick={baseModal}><Plus size={16}/> Crea il primo cliente</button></div>
      </div>:!data?<div className="empty">Caricamento dati di {current.name}…</div>:
-      view==="settings"?<ModelSettings/>:<Views data={data} view={view} onView={setView} onModal={(kind,item)=>setModal({kind,item})} onAction={onAction} onChat={()=>setChatOpen(true)} busy={busy}/>}
+      <Views data={data} view={view} onView={setView} onModal={(kind,item)=>setModal({kind,item})} onAction={onAction} onChat={()=>setChatOpen(true)} busy={busy}/>}
     </div></main>
    </div>
    <aside className={"chat-panel "+(chatOpen?"open":"")}>

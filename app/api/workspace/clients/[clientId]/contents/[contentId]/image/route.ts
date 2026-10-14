@@ -6,6 +6,7 @@ import { reserveAiRequest } from "@/lib/ai-request-budget";
 import {withAiUsageScope,recordAiProviderUsage} from "@/lib/ai-usage";
 import {loadOpenRouterCatalog} from "@/lib/ai-model-settings";
 import {decodeOpenRouterImage} from "@/lib/openrouter-image";
+import {getOpenRouterApiKey} from "@/lib/openrouter-credentials";
 export const runtime="nodejs";
 export const maxDuration=120;
 
@@ -38,7 +39,7 @@ export async function POST(request:Request,{params}:{params:Promise<{clientId:st
    "Framing: "+(content.channel==="linkedin"?"landscape image with wide margins suitable for a 16:9 document":"portrait image with generous negative space suitable for a 4:5 social post")+".",
    "Do NOT forge a product label, exact packaging, logos, claims, prices, endorsements or recognizable real people. If no validated product reference is uploaded, use symbolic unbranded still life. Leave headline, CTA and all typography for the editable layout."
   ].join("\n");
-  const key=process.env.OPENROUTER_API_KEY;
+  const key=await getOpenRouterApiKey();
   if(!key)throw new ApiFailure(503,"Configura OPENROUTER_API_KEY nel server per generare immagini");
   const {data:preference,error:preferenceError}=await ctx.db.from("ai_preferences")
    .select("image_model").eq("owner_id",ctx.user.id).maybeSingle();

@@ -2,11 +2,12 @@ import { z } from "zod";
 import { ApiFailure } from "./http";
 import {recordAiProviderUsage} from "./ai-usage";
 import {currentTextModel} from "./ai-model-settings";
+import {getOpenRouterApiKey} from "./openrouter-credentials";
 
 type Msg = { role:"system"|"user"|"assistant"; content:string };
 export async function modelText(messages:Msg[], timeout=25000):Promise<string>{
   const model=currentTextModel();
-  const apiKey=process.env.OPENROUTER_API_KEY;
+  const apiKey=await getOpenRouterApiKey();
   if(!apiKey) throw new ApiFailure(503,"OpenRouter non configurato. Inserisci OPENROUTER_API_KEY sul server.");
   const response=await fetch("https://openrouter.ai/api/v1/chat/completions",{
     method:"POST",
@@ -36,7 +37,7 @@ export async function modelText(messages:Msg[], timeout=25000):Promise<string>{
 export async function modelJson<T>(system:string,user:string,schema:z.ZodType<T>):Promise<T>{
   const model=currentTextModel();
   const jsonSchema=z.toJSONSchema(schema,{target:"draft-7"});
-  const apiKey=process.env.OPENROUTER_API_KEY;
+  const apiKey=await getOpenRouterApiKey();
   if(!apiKey)throw new ApiFailure(503,"OpenRouter non configurato. Inserisci OPENROUTER_API_KEY sul server.");
   const response=await fetch("https://openrouter.ai/api/v1/chat/completions",{
     method:"POST",
@@ -92,7 +93,7 @@ export async function modelStructuredJson<T>(
   system:string,user:string,schema:z.ZodType<T>,name="forgecy_dossier"
 ):Promise<T>{
   const model=currentTextModel();
-  const key=process.env.OPENROUTER_API_KEY;
+  const key=await getOpenRouterApiKey();
   if(!key)throw new ApiFailure(503,"OpenRouter non configurato. Inserisci OPENROUTER_API_KEY sul server.");
   const jsonSchema=z.toJSONSchema(schema,{target:"draft-7"});
   const response=await fetch("https://openrouter.ai/api/v1/chat/completions",{

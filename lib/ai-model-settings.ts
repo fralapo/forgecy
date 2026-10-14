@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { ApiFailure } from "./http";
 import { workerDb } from "./worker-db";
+import { getOpenRouterApiKey } from "./openrouter-credentials";
 
 export type OpenRouterModel = {
   id: string;
@@ -66,7 +67,7 @@ export function normalizeImageModels(payload: unknown): OpenRouterImageModel[] {
 }
 
 async function catalogRequest(path: string, fetcher: Fetcher): Promise<unknown> {
-  const key = process.env.OPENROUTER_API_KEY;
+  const key = await getOpenRouterApiKey();
   if (!key) throw new ApiFailure(503, "Configura OPENROUTER_API_KEY nel server per caricare i modelli");
   let response: Response;
   try {

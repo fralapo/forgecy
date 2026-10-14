@@ -12,7 +12,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Apri [http://localhost:3000](http://localhost:3000). L'app crea il database al primo avvio. Per usare le funzioni AI, inserisci la tua chiave `OPENROUTER_API_KEY` in `.env.local`; la chiave resta sul server locale. Consulta [Configurazione locale](docs/LOCAL_SETUP.md) per API, dati, backup e collegamento a Google Drive.
+Apri [http://localhost:3000](http://localhost:3000). L'app crea il database al primo avvio. Puoi aprire **Impostazioni** anche prima di creare un cliente: inserisci lì la tua chiave OpenRouter e scegli i modelli AI. In alternativa, puoi impostare `OPENROUTER_API_KEY` in `.env.local`. Consulta [Configurazione locale](docs/LOCAL_SETUP.md) per API, dati, backup e collegamento a Google Drive.
 
 Il database si trova nella cartella dati utente del sistema operativo. `FORGECY_DATA_DIR` consente di sceglierne un'altra. Le impostazioni dei modelli e i dati del workspace restano locali; ogni computer configura le proprie chiavi AI e social.
 
