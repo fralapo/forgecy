@@ -1,4 +1,6 @@
-# Forgecy local-first workspace and Google Drive sync
+# STORICO — Forgecy local-first workspace and Google Drive sync
+
+> Questo design è superato. Forgecy non integra più OAuth o sincronizzazione Google diretta: usa export/import e backup automatici locali, che un client cloud desktop può sincronizzare. Conservato solo come registro delle decisioni precedenti; non seguire le istruzioni OAuth qui sotto.
 
 ## Goal
 
@@ -14,7 +16,7 @@ Import validates the complete archive before changing local data and preserves t
 
 ## Delivery record
 
-Implemented in the local-first migration: SQLite schema/versioning, local storage and worker, owner-only settings, live OpenRouter text/image catalogs, archive export/import, OAuth Drive connection, manual sync and branch conflict resolution. Local checks and production build pass. Live Google authorization still requires the owner to create a Desktop OAuth client and set `GOOGLE_DRIVE_CLIENT_ID` in `.env.local`.
+The original local-first migration implemented OAuth Drive connection, manual sync and branch conflict resolution. Those endpoints and modules have since been removed. The current supported transfer flow is archive export/import plus automatic local backups in a folder synchronized by the user's desktop cloud client; no Google OAuth client ID is required.
 
 The owner’s previous hosted project was checked during implementation and had no Forgecy workspace records or stored assets. The new runtime does not depend on that project. Its available control can pause it but cannot permanently delete it.
 

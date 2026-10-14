@@ -6,7 +6,7 @@ import { requestJson } from "./types";
 type BackupSettings = { directory: string; intervalHours: number; retention: number };
 type LocalBackup = { id: string; createdAt: string; size: number; hashPrefix: string };
 
-export default function DriveSettings() {
+export default function BackupSettings() {
   const [settings, setSettings] = useState<BackupSettings | null>(null);
   const [draft, setDraft] = useState<BackupSettings | null>(null);
   const [backups, setBackups] = useState<LocalBackup[]>([]);

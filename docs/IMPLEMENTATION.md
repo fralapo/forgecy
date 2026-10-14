@@ -8,7 +8,7 @@ Forgecy è una web app locale single-user. Next.js serve l'interfaccia solo su l
 - `lib/local-files.ts` e `app/api/local-files/` conservano gli allegati in locale e li servono con URL firmati a breve durata.
 - `lib/local-worker.ts` processa i job persistenti; `instrumentation.ts` lo avvia nel runtime Node quando parte il server.
 - `lib/sync/archive.ts` crea e valida archivi portabili con backup SQLite coerente, manifest, hash e file del workspace.
-- `lib/sync/local-backups.ts` gestisce archivi periodici configurabili e la loro rotazione. Le cartelle cloud si sincronizzano tramite il client installato sul computer; i vecchi endpoint OAuth Drive non sono collegati all'interfaccia corrente.
+- `lib/sync/local-backups.ts` gestisce archivi periodici configurabili e la loro rotazione. Le cartelle cloud si sincronizzano tramite il client installato sul computer; Forgecy non integra il login OAuth Drive.
 - `proxy.ts` limita il server alle richieste loopback e protegge le mutazioni da richieste cross-origin.
 
 Il runtime corrente non richiede autenticazione remota, account condivisi, database ospitato, job scheduler o servizio cloud di Forgecy. Le preferenze dei modelli OpenRouter sono locali: ogni installazione configura la propria chiave e seleziona i propri modelli.

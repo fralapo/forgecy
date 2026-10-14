@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -154,37 +153,20 @@ test("local database persists records, preserves invariants, searches evidence, 
     assert.equal(getAutomaticBackupSettings().retention, 3);
     for (let index = 0; index < 4; index++) await createAutomaticBackup();
     assert.equal(listAutomaticBackups().length, 3);
-    const { saveLocalConflictCopy } = await import("../../lib/sync/conflict-backup");
-    const { branchHeads } = await import("../../lib/sync/drive");
-    const commonAncestor = manifest.hash;
-    await db.from("clients").update({ industry: "Variazione locale da recuperare" }).eq("id", clientId);
-    const localBranch = await createWorkspaceArchive({ parentHash: commonAncestor, deviceId: randomUUID() });
     await db.from("clients").update({ industry: "Variazione remota" }).eq("id", clientId);
-    const remoteBranch = await createWorkspaceArchive({ parentHash: commonAncestor, deviceId: randomUUID() });
-    assert.notEqual(localBranch.manifest.contentHash, remoteBranch.manifest.contentHash);
-    const divergentHeads = branchHeads([
-      { id: "common", name: "common.forgecy.zip", appProperties: { forgecy: "snapshot", hash: commonAncestor, parentHash: "" } },
-      { id: "local", name: "local.forgecy.zip", appProperties: { forgecy: "snapshot", hash: localBranch.manifest.hash, parentHash: commonAncestor } },
-      { id: "remote", name: "remote.forgecy.zip", appProperties: { forgecy: "snapshot", hash: remoteBranch.manifest.hash, parentHash: commonAncestor } },
-    ]);
-    assert.deepEqual(divergentHeads.map(head => head.id).sort(), ["local", "remote"]);
-    const conflictCopyPath = saveLocalConflictCopy(directory, localBranch.archive, localBranch.manifest.createdAt, localBranch.manifest.hash);
-    assert.equal(validateWorkspaceArchive(readFileSync(conflictCopyPath)).manifest.hash, localBranch.manifest.hash);
-    assert.equal(validateWorkspaceArchive(readFileSync(conflictCopyPath)).manifest.parentHash, commonAncestor);
-    const preservedConflict = validateWorkspaceArchive(readFileSync(conflictCopyPath));
-    const preservedDbPath = join(directory, "preserved-conflict.sqlite");
-    writeFileSync(preservedDbPath, Buffer.from(preservedConflict.entries["database/forgecy.sqlite"]));
-    const preservedDb = new (await import("better-sqlite3")).default(preservedDbPath, { readonly: true });
-    assert.equal((preservedDb.prepare("SELECT industry FROM clients WHERE id=?").get(clientId) as { industry: string }).industry, "Variazione locale da recuperare");
-    preservedDb.close();
+    const transferArchive = await createWorkspaceArchive();
+    await db.from("clients").update({ industry: "Modificata solo sul computer di destinazione" }).eq("id", clientId);
     assert.throws(() => validateWorkspaceArchive(zipSync({ "../escape": Buffer.from("bad") })), /percorso ZIP/i);
-    await restoreWorkspaceArchive(remoteBranch.archive);
+    const restoredWorkspace = await restoreWorkspaceArchive(transferArchive.archive);
     const restored = localDb();
     const afterRestore = await restored.from("clients").select("id,name").eq("id", clientId).single();
     assert.equal(afterRestore.data.name, "Studio aggiornato");
     const remoteIndustry = await restored.from("clients").select("industry").eq("id", clientId).single();
     assert.equal(remoteIndustry.data.industry, "Variazione remota");
-    assert.equal(validateWorkspaceArchive(readFileSync(conflictCopyPath)).manifest.hash, localBranch.manifest.hash);
+    assert.ok(restoredWorkspace.backup);
+    const beforeRestore = new (await import("better-sqlite3")).default(restoredWorkspace.backup!, { readonly: true });
+    assert.equal((beforeRestore.prepare("SELECT industry FROM clients WHERE id=?").get(clientId) as { industry: string }).industry, "Modificata solo sul computer di destinazione");
+    beforeRestore.close();
     const restoredFile = await restored.storage.from("forgecy-assets").download(`${clientId}/sample.png`);
     assert.equal(Buffer.from(await restoredFile.data!.arrayBuffer()).toString(), "png");
 

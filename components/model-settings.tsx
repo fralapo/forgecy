@@ -4,7 +4,7 @@ import { Cpu, Download, HardDrive, LoaderCircle, RefreshCw, Search, Settings2 } 
 import { requestJson } from "./types";
 import type { OpenRouterImageModel, OpenRouterModel } from "@/lib/ai-model-settings";
 import { DEFAULT_IMAGE_MODEL, DEFAULT_OCR_MODEL, DEFAULT_TEXT_MODEL } from "@/lib/ai-model-defaults";
-import DriveSettings from "./drive-settings";
+import BackupSettings from "./backup-settings";
 
 type Preferences = { textModel: string; imageModel: string | null; ocrModel: string };
 type KeyStatus = { configured: boolean; source: "app" | "environment" | null };
@@ -372,6 +372,6 @@ export default function ModelSettings() {
     </article>
     {saving && <p className="caption" role="status"><LoaderCircle className="spin" size={14}/> Salvataggio preferenza…</p>}
     <div className="notice warn">Le preferenze dei modelli e la chiave API restano su questo computer. Per usare Forgecy su un altro PC, configura lì la tua chiave personale.</div>
-    <DriveSettings />
+    <BackupSettings />
   </section>;
 }

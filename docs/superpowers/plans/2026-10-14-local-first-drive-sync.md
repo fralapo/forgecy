@@ -1,4 +1,6 @@
-# Local-first workspace and Drive sync — completed
+# STORICO — Local-first workspace and Drive sync
+
+> Il piano originario includeva un login OAuth Drive che è stato rimosso. La soluzione corrente è export/import e backup locali sincronizzati dal client cloud desktop; non seguire più le attività OAuth riportate sotto.
 
 ## Delivery
 
@@ -14,4 +16,4 @@
 
 `npm ci`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build` and a temporary-directory local server smoke test passed on the available macOS ARM64 environment. CI targets Node 22.18. The local shell has Node 22.14, which emits the expected `engines` warning; use Node 22.18 or later for supported development.
 
-Live Google Drive consent remains an owner setup step: create a Google Cloud OAuth Desktop client, enable Drive API, configure audience/test users and set `GOOGLE_DRIVE_CLIENT_ID` in `.env.local`. The installed project controls permit pausing the owner’s unused backend project, but do not offer permanent deletion.
+The OAuth consent setup described in the original plan was never adopted as the supported user flow and is superseded by Drive Desktop folder synchronization. No Google OAuth client ID is needed by the current application.
