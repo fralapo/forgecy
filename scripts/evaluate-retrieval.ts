@@ -5,7 +5,7 @@ import { loadEnvConfig } from "@next/env";
 
 loadEnvConfig(process.cwd());
 
-type Example = { id: string; category: string; passage: string; query: string };
+type Example = { id: string; category: string; passage: string; query: string; source_url?: string | null };
 type Candidate = {id:string;passage:string;source_url:string|null};
 type Hit = { source_id: string; source_title: string; source_url: string | null; chunk_ordinal: number; excerpt: string; relevance: number };
 type Rank = { rank: number; reciprocalRank: number; recallAt3: number };
@@ -28,7 +28,7 @@ function rankingMetrics(ranks: Rank[]) {
 async function main() {
   const examples = JSON.parse(readFileSync(join(process.cwd(), "tests/fixtures/retrieval-eval.json"), "utf8")) as Example[];
   const distractors = JSON.parse(readFileSync(join(process.cwd(), "tests/fixtures/retrieval-eval-candidates.json"), "utf8")) as Candidate[];
-  const candidates:Candidate[]=[...examples.map(({id,passage})=>({id,passage,source_url:null})),...distractors];
+  const candidates:Candidate[]=[...examples.map(({id,passage,source_url})=>({id,passage,source_url:source_url??null})),...distractors];
   if(new Set(candidates.map(candidate=>candidate.id)).size!==candidates.length)throw new Error("Retrieval fixture contains duplicate candidate IDs");
   const distractorsBySource=distractors.reduce<Record<string,number>>((counts,candidate)=>{
     const source=candidate.source_url??"unsourced";
@@ -85,7 +85,7 @@ async function main() {
 
   console.log(JSON.stringify({
     model: `${LOCAL_EMBEDDING_MODEL_ID}@${LOCAL_EMBEDDING_MODEL_REVISION}`,
-    corpus: `public-safe fixture: ${examples.length} annotated queries over ${candidates.length} passages, including ${Object.values(distractorsBySource).reduce((sum,count)=>sum+count,0)} sourced distractors across ${Object.keys(distractorsBySource).length} public catalogs`,
+    corpus: `public-safe fixture: ${examples.length} annotated queries over ${candidates.length} passages, including ${Object.values(distractorsBySource).reduce((sum,count)=>sum+count,0)} sourced distractors across ${Object.keys(distractorsBySource).length} public sources`,
     distractorsBySource,
     count: results.length,
     candidateCount:candidates.length,

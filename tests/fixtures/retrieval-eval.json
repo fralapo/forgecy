@@ -118,5 +118,12 @@
     "category": "catalog-sku-price",
     "passage": "Listino Ferroli marzo 2026: pompa di calore OMNIA M 3.2 taglia 04, codice 2CP000AF, prezzo di listino 6.964,88 EUR.",
     "query": "Quanto costa la pompa di calore Ferroli OMNIA M 3.2 da 4,20 kW?"
+  },
+  {
+    "id": "upower-velar-protection-class",
+    "category": "catalog-attribute",
+    "passage": "U-Power VELAR PLUS s ESD: classe di protezione S3S CI FO SR; articolo 0RP10124; normativa EN ISO 20345:2022.",
+    "query": "Qual è la classe di protezione della scarpa U-Power VELAR PLUS articolo 0RP10124?",
+    "source_url": "https://www.u-power.it/it/calzature/velar-plus"
   }
 ]
