@@ -94,5 +94,17 @@
     "category": "catalog-technical-value",
     "passage": "Il prodotto Vaillant ecoCOMPACT VSC 256/4-5 100 (H-IT) ha codice 0010014667 e prezzo di listino 4.511,00 EUR; è classificato nel segmento Basamento Condensing.",
     "query": "Trova il codice e il prezzo del modello ecoCOMPACT VSC 256/4-5 100 (H-IT)."
+  },
+  {
+    "id": "usag-282sn-sku-price",
+    "category": "catalog-sku-price",
+    "passage": "Catalogo-listino USAG 2026, pagina 110: chiave a settore snodata con nasello quadro, misura 15-35 mm, codice U02820301, prezzo 25,00 EUR.",
+    "query": "Quanto costa la chiave a settore USAG U02820301?"
+  },
+  {
+    "id": "usag-283-curved-sku-price",
+    "category": "catalog-sku-price",
+    "passage": "Catalogo-listino USAG 2026, pagina 110: chiave poligonale doppia curva, misura 6x7 mm, codice U02831302, prezzo 9,15 EUR.",
+    "query": "Qual è il prezzo della chiave poligonale doppia curva USAG 6x7 codice U02831302?"
   }
 ]

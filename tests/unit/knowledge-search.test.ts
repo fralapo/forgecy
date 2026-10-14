@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {test} from "node:test";
 import {
   knowledgeQueryFromQuestion,
+  knowledgeQueryContainsIdentifier,
   contextFromKnowledgeHits,
   retrieveClientKnowledge,
   fuseKnowledgeHits
@@ -15,6 +16,9 @@ test("retrieval terms are bounded, unique and skip generic filler",()=>{
  assert.equal(knowledgeQueryFromQuestion("A quale segmento appartiene il prodotto Vaillant con codice 0010013146?"),
   "segmento OR appartiene OR prodotto OR vaillant OR codice OR 0010013146");
   assert.ok(knowledgeQueryFromQuestion("Termine ".repeat(100))!.length<=200);
+ assert.equal(knowledgeQueryContainsIdentifier("Quanto costa il prodotto 0010013146?"),true);
+ assert.equal(knowledgeQueryContainsIdentifier("Quanto costa la chiave U02831302?"),true);
+ assert.equal(knowledgeQueryContainsIdentifier("Quanto costa la chiave poligonale?"),false);
 });
 
 test("search evidence context retains source IDs and avoids copying scores",()=>{
@@ -38,6 +42,14 @@ test("hybrid fusion combines lexical and semantic ranks without comparing score 
  const semantic=[hit("paraphrase",2,0.97),hit("exact",0,0.55)];
  const fused=fuseKnowledgeHits(lexical,semantic,3);
  assert.deepEqual(fused.map(value=>value.source_id),["exact","paraphrase","other"]);
+});
+
+test("hybrid fusion prioritizes exact product identifiers when the lexical match is strongest",()=>{
+ const hit=(source_id:string,chunk_ordinal:number)=>({source_id,source_title:source_id,source_url:null,chunk_ordinal,excerpt:source_id,relevance:1});
+ const lexical=[hit("exact-code",0),hit("similar-product",0)];
+ const semantic=[hit("similar-product",0),hit("nearby-product",0),hit("exact-code",0)];
+ assert.equal(fuseKnowledgeHits(lexical,semantic,3,1)[0].source_id,"similar-product");
+ assert.equal(fuseKnowledgeHits(lexical,semantic,3,3)[0].source_id,"exact-code");
 });
 
 

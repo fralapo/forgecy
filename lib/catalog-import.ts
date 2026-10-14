@@ -31,7 +31,8 @@ export function normalizeCatalogName(value:string){
 
 export function looksLikeCatalog(title:string,body:string){
  return /catalog|catalogo|listino|prodott|price[ -]?list|sku/i.test(title+"\n"+body)&&
-  /\b(product|prodotto|prodotti|prezzo|price|€|sku|codice|codici|articolo|articoli|confezione)\b/i.test(body);
+  (/\b(product|prodotto|prodotti|prezzo|price|sku|codice|codici|articolo|articoli|confezione)\b/i.test(body)||
+   /(?:€|\bEUR\b)\s*\d|\b(?:cod\.?|art\.?)\s*\|/iu.test(body));
 }
 
 function parsePrice(value:string):number|null{
@@ -117,7 +118,8 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
   const hasSeparator=Boolean(separators&&headers.length===separators.length&&separators.every(cell=>/^:?-{3,}:?$/u.test(cell.replace(/\s/gu,""))));
   const normalizedHeaders=headers.map(normalizeCatalogName);
   let nameIndex=headerIndex(normalizedHeaders,["nome","nome prodotto","prodotto","product","product name","name","articolo","nome articolo","item","modello","model"]);
-  const priceIndex=headerIndex(normalizedHeaders,["prezzo listino","prezzo","price","costo","listino"]);
+  let priceIndex=headerIndex(normalizedHeaders,["prezzo listino","prezzo","price","costo","listino","eur"]);
+  if(priceIndex<0)priceIndex=headers.findIndex(header=>/^\s*€\s*$/u.test(header));
   let descriptionIndex=headerIndex(normalizedHeaders,["descrizione prodotto","descrizione","description","dettagli","details"]);
   const codeIndex=headerIndex(normalizedHeaders,["cod","codice","code","sku","codice prodotto","product code"]);
   const segmentIndex=headerIndex(normalizedHeaders,["segmento","segment","categoria","category"]);
@@ -128,8 +130,10 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
    nameIndex=descriptionIndex;
    descriptionIndex=codeIndex;
   }
+  const productByCode=nameIndex<0&&codeIndex>=0&&priceIndex>=0;
+  if(productByCode)nameIndex=codeIndex;
   const productMatrix=priceIndex<0&&nameFromDescription&&contentIndex>=0;
-  if(nameIndex<0||priceIndex<0&&!productMatrix||!hasSeparator&&!productMatrix)continue;
+  if(nameIndex<0||priceIndex<0&&!productMatrix||!hasSeparator&&!productMatrix&&!productByCode)continue;
   const currencyIndex=headerIndex(normalizedHeaders,["valuta","currency"]);
   const products:CatalogProduct[]=[];
   for(let rowLine=headerLine+(hasSeparator?2:1);rowLine<lines.length;rowLine++){
@@ -137,18 +141,26 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
    if(!cells||cells.length!==headers.length){if(products.length)break;continue;}
    const name=(cells[nameIndex]||"").trim();
    if(name.length<2||/^[-—–]+$/u.test(name))continue;
-   const rowCode=nameFromDescription?(cells[codeIndex]||"").trim():"";
-   if(productMatrix&&!/(?=.*\d)[A-Z0-9][A-Z0-9./-]{2,}/iu.test(rowCode))continue;
+   const rowCode=codeIndex>=0?(cells[codeIndex]||"").trim():"";
+   if((productMatrix&&!/(?=.*\d)[A-Z0-9][A-Z0-9./-]{2,}/iu.test(rowCode))||
+      (productByCode&&!/(?=.*\d)[A-Z0-9][A-Z0-9./-]{5,}/iu.test(rowCode)))continue;
    const evidenceQuotes=nameFromDescription
     ?[rowCode,segmentIndex>=0?cells[segmentIndex]||"":"",contentIndex>=0?cells[contentIndex]||"":"",barcodeIndex>=0?cells[barcodeIndex]||"":""].map(value=>value.trim()).filter(Boolean)
     :[];
+   const productCodeDescription=productByCode?cells.map((value,index)=>({value:value.trim(),index}))
+    .filter(({value,index})=>value&&index!==codeIndex&&index!==priceIndex&&!/^!?\[?img-\d+\./iu.test(value))
+    .map(({value})=>value):[];
    const description=nameFromDescription
     ?[rowCode,segmentIndex>=0?cells[segmentIndex]||"":"",contentIndex>=0?cells[contentIndex]||"":"",barcodeIndex>=0?cells[barcodeIndex]||"":""].map(value=>value.trim()).filter(Boolean).join(" — ").slice(0,1200)
-    :(descriptionIndex>=0?cells[descriptionIndex]||"":"").trim().slice(0,1200);
+    :productByCode?productCodeDescription.join(" — ").slice(0,1200):(descriptionIndex>=0?cells[descriptionIndex]||"":"").trim().slice(0,1200);
    const priceQuote=(cells[priceIndex]||"").trim();
    const price=parsePrice(priceQuote);
+   if(productByCode&&price===null)continue;
+   const imageReference=productByCode?cells.map(value=>/!?\[img-(\d+)\.[^\]]+\]\(/iu.exec(value)).find(Boolean):null;
+   const imageIndex=imageReference?Number(imageReference[1]):null;
    products.push({name,description,price,currency:(currencyIndex>=0?cells[currencyIndex]||"EUR":"EUR").trim().toUpperCase().slice(0,3)||"EUR",
-    nameQuote:name,descriptionQuote:nameFromDescription?JSON.stringify(evidenceQuotes):description,priceQuote:price===null?"":priceQuote,existingOfferId:null,imageIndex:null});
+    nameQuote:name,descriptionQuote:nameFromDescription?JSON.stringify(evidenceQuotes):productByCode?JSON.stringify(productCodeDescription):description,
+    priceQuote:price===null?"":priceQuote,existingOfferId:null,imageIndex:imageIndex!==null&&imageIndex<=7?imageIndex:null});
   }
   found.push(...products);
   if(found.length>=1000)return found.slice(0,1000);

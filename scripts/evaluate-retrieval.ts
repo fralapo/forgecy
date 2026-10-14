@@ -9,6 +9,14 @@ type Example = { id: string; category: string; passage: string; query: string };
 type Hit = { source_id: string; source_title: string; source_url: string | null; chunk_ordinal: number; excerpt: string; relevance: number };
 type Rank = { rank: number; reciprocalRank: number; recallAt3: number };
 
+async function embedInBatches(texts: string[], embedTexts: (batch: string[]) => Promise<number[][]>, batchSize = 32) {
+  const embeddings: number[][] = [];
+  for (let offset = 0; offset < texts.length; offset += batchSize) {
+    embeddings.push(...await embedTexts(texts.slice(offset, offset + batchSize)));
+  }
+  return embeddings;
+}
+
 function rankingMetrics(ranks: Rank[]) {
   return {
     mrr: ranks.reduce((sum, item) => sum + item.reciprocalRank, 0) / ranks.length,
@@ -19,8 +27,8 @@ function rankingMetrics(ranks: Rank[]) {
 async function main() {
   const examples = JSON.parse(readFileSync(join(process.cwd(), "tests/fixtures/retrieval-eval.json"), "utf8")) as Example[];
   const { embedLocalTexts, LOCAL_EMBEDDING_MODEL_ID, LOCAL_EMBEDDING_MODEL_REVISION } = await import("../lib/local-embeddings");
-  const { fuseKnowledgeHits, knowledgeQueryFromQuestion } = await import("../lib/knowledge-search");
-  const vectors = await embedLocalTexts([...examples.map(example => example.passage), ...examples.map(example => example.query)]);
+  const { fuseKnowledgeHits, knowledgeQueryContainsIdentifier, knowledgeQueryFromQuestion } = await import("../lib/knowledge-search");
+  const vectors = await embedInBatches([...examples.map(example => example.passage), ...examples.map(example => example.query)], embedLocalTexts);
   const passages = vectors.slice(0, examples.length);
   const queries = vectors.slice(examples.length);
   const fts = new Database(":memory:");
@@ -44,7 +52,7 @@ async function main() {
       chunk_ordinal: 0, excerpt: examples[passageIndex].passage,
       relevance: vector.reduce((sum, value, dimension) => sum + value * queries[index][dimension], 0),
     })).sort((a, b) => b.relevance - a.relevance);
-    const hybrid = fuseKnowledgeHits(lexical, semantic, 8);
+    const hybrid = fuseKnowledgeHits(lexical, semantic, 8, knowledgeQueryContainsIdentifier(example.query) ? 3 : 1);
     const rank = (hits: Hit[]): Rank => {
       const index = hits.findIndex(hit => hit.source_id === example.id);
       const value = index < 0 ? 0 : index + 1;
@@ -68,7 +76,7 @@ async function main() {
 
   console.log(JSON.stringify({
     model: `${LOCAL_EMBEDDING_MODEL_ID}@${LOCAL_EMBEDDING_MODEL_REVISION}`,
-    corpus: "annotated public-safe fixture: synthetic examples plus Bosch and Vaillant Italian price catalogs",
+    corpus: "annotated public-safe fixture: synthetic examples plus Bosch, Vaillant, and USAG Italian price catalogs",
     count: results.length,
     ...Object.fromEntries(strategies.map(strategy => [strategy, rankingMetrics(results.map(item => item[strategy]))])),
     categories,

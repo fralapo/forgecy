@@ -90,6 +90,22 @@ test("OCR product matrices without prices import coded products and package evid
  assert.deepEqual(parseMarkdownCatalogTable("Catalogo\n| Cod. | Descrizione |\n| --- | --- |\n| DD107 | Nome prodotto |"),[]);
 });
 
+test("OCR tables with only dimensions, product code and euro price import verifiable items",()=>{
+ const source="USAG catalog 2026\n| mm | mm | mm | Cod. | immagine | € |\n| --- | --- | --- | --- | --- | --- |\n| 15÷35 | 3,5 | 168 | U02820301 | ![img-0.jpg](img-0.jpg) | 25,00 |\n| 35÷50 | 4 | 202 | U02820302 | ![img-0.jpg](img-0.jpg) | 29,00 |";
+ const products=parseLocalCatalogProducts("Catalogo USAG",source);
+ assert.equal(looksLikeCatalog("Catalogo USAG",source),true);
+ assert.equal(products.length,2);
+ assert.equal(products[0].name,"U02820301");
+ assert.equal(products[0].description,"15÷35 — 3,5 — 168");
+ assert.equal(products[0].price,25);
+ assert.equal(products[0].imageIndex,0);
+ assert.equal(catalogEvidenceIsValid(products[0],source),true);
+ assert.equal(products[1].name,"U02820302");
+ assert.equal(catalogEvidenceIsValid(products[1],source),true);
+ const noPrice=source.replace("| 15÷35 | 3,5 | 168 | U02820301 | ![img-0.jpg](img-0.jpg) | 25,00 |","| 15÷35 | 3,5 | 168 | U02820301 | ![img-0.jpg](img-0.jpg) | |" );
+ assert.equal(parseMarkdownCatalogTable(noPrice).some(product=>product.name==="U02820301"),false);
+});
+
 test("OCR product tables headed Codice, Descrizione and Listino import locally with exact code and price evidence",()=>{
  const source="LISTINO GUANTI 2025\n| Codice | Descrizione | Listino |\n| --- | --- | --- |\n| GUG00009 | ATLAS Conf=12 Pa | 138,65 € |\n| GUG14409 | ATLAS Conf=144 Pa | 1.569,60 € |\n| GUG00020 | BACHATA Conf=12 Pa | 61,70 € |";
  const products=parseMarkdownCatalogTable(source);

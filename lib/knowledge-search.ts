@@ -34,6 +34,11 @@ export function knowledgeQueryFromQuestion(value:string):string|null {
   return distinct.join(" OR ").slice(0,200);
 }
 
+export function knowledgeQueryContainsIdentifier(value:string):boolean {
+  return (value.normalize("NFKC").match(/[\p{L}\p{N}][\p{L}\p{N}./-]{3,}/gu)||[])
+    .some(token=>/\d/u.test(token)&&(/[\p{L}]/u.test(token)||/^\d{7,}$/u.test(token)));
+}
+
 export async function retrieveClientKnowledge(
  ctx:Context,clientId:string,question:string,limit=8
 ):Promise<KnowledgeHit[]> {
@@ -68,7 +73,7 @@ export async function retrieveClientKnowledge(
     const counts=knowledgeEmbeddingCounts(clientId,LOCAL_EMBEDDING_INDEX_ID);
     if(counts.indexed===0)return lexical.slice(0,boundedLimit);
     const semantic=await searchSemanticKnowledge(clientId,question,Math.min(boundedLimit*3,20));
-    return fuseKnowledgeHits(lexical,semantic,boundedLimit);
+    return fuseKnowledgeHits(lexical,semantic,boundedLimit,knowledgeQueryContainsIdentifier(question)?3:1);
   }catch(error){
     console.error("[knowledge search] Local semantic search unavailable; using FTS5",error instanceof Error?error.message:"unknown error");
     return lexical.slice(0,boundedLimit);
@@ -76,13 +81,13 @@ export async function retrieveClientKnowledge(
 }
 
 /** Merge independent ranked lists without making their score scales comparable. */
-export function fuseKnowledgeHits(lexical:KnowledgeHit[],semantic:KnowledgeHit[],limit=8):KnowledgeHit[]{
+export function fuseKnowledgeHits(lexical:KnowledgeHit[],semantic:KnowledgeHit[],limit=8,lexicalWeight=1):KnowledgeHit[]{
  const fused=new Map<string,{hit:KnowledgeHit;score:number;lexicalScore:number}>();
  for(const [ranked,kind] of [[lexical,"lexical"],[semantic,"semantic"]] as const){
   ranked.forEach((hit,index)=>{
    const key=hit.source_id+":"+hit.chunk_ordinal;
    const current=fused.get(key);
-   const score=1/(60+index+1);
+   const score=(kind==="lexical"?lexicalWeight:1)/(60+index+1);
    if(current){current.score+=score;if(kind==="lexical")current.lexicalScore=hit.relevance;}
    else fused.set(key,{hit,score,lexicalScore:kind==="lexical"?hit.relevance:0});
   });
