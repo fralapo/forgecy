@@ -30,6 +30,11 @@ async function main() {
   const distractors = JSON.parse(readFileSync(join(process.cwd(), "tests/fixtures/retrieval-eval-candidates.json"), "utf8")) as Candidate[];
   const candidates:Candidate[]=[...examples.map(({id,passage})=>({id,passage,source_url:null})),...distractors];
   if(new Set(candidates.map(candidate=>candidate.id)).size!==candidates.length)throw new Error("Retrieval fixture contains duplicate candidate IDs");
+  const distractorsBySource=distractors.reduce<Record<string,number>>((counts,candidate)=>{
+    const source=candidate.source_url??"unsourced";
+    counts[source]=(counts[source]??0)+1;
+    return counts;
+  },{});
   const { embedLocalTexts, LOCAL_EMBEDDING_MODEL_ID, LOCAL_EMBEDDING_MODEL_REVISION } = await import("../lib/local-embeddings");
   const { fuseKnowledgeHits, knowledgeQueryContainsIdentifier, knowledgeQueryFromQuestion } = await import("../lib/knowledge-search");
   const vectors = await embedInBatches([...candidates.map(candidate => candidate.passage), ...examples.map(example => example.query)], embedLocalTexts);
@@ -80,7 +85,8 @@ async function main() {
 
   console.log(JSON.stringify({
     model: `${LOCAL_EMBEDDING_MODEL_ID}@${LOCAL_EMBEDDING_MODEL_REVISION}`,
-    corpus: `public-safe fixture: ${examples.length} annotated queries over ${candidates.length} passages (${distractors.length} additional USAG product distractors), including Bosch, Vaillant, USAG, and Ferroli catalogs`,
+    corpus: `public-safe fixture: ${examples.length} annotated queries over ${candidates.length} passages, including ${Object.values(distractorsBySource).reduce((sum,count)=>sum+count,0)} sourced distractors across ${Object.keys(distractorsBySource).length} public catalogs`,
+    distractorsBySource,
     count: results.length,
     candidateCount:candidates.length,
     ...Object.fromEntries(strategies.map(strategy => [strategy, rankingMetrics(results.map(item => item[strategy]))])),
