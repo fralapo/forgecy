@@ -46,5 +46,29 @@
     "category": "exact-identifier",
     "passage": "Il prodotto con codice FRC-4821 ha un prezzo di 29,90 EUR.",
     "query": "Qual è il prezzo del prodotto FRC-4821?"
+  },
+  {
+    "id": "bosch-sku-price",
+    "category": "catalog-sku-price",
+    "passage": "CL5000iL-Set 35 4CCE unità interna a cassetta, codice 7733701908, prezzo di listino IVA esclusa 1.690,00 euro.",
+    "query": "Qual è il prezzo IVA esclusa del modello CL5000iL-Set 35 4CCE, codice 7733701908?"
+  },
+  {
+    "id": "bosch-cooling-capacity",
+    "category": "catalog-technical-value",
+    "passage": "Principali dati tecnici CL5000iL-Set 35 4CCE: capacità nominale in raffrescamento 3,5 kW; EER 3,35; capacità nominale in riscaldamento 3,81 kW; COP 3,74.",
+    "query": "Qual è la capacità di raffreddamento del CL5000iL-Set 35 4CCE?"
+  },
+  {
+    "id": "bosch-refrigerant",
+    "category": "catalog-attribute",
+    "passage": "I climatizzatori CL5000iL-Set 35 4CCE e CL5000iL-Set 53 4CCE usano refrigerante R32; le quantità di riempimento indicate sono rispettivamente 0,72 kg e 1,15 kg.",
+    "query": "Quale refrigerante usa il climatizzatore Bosch CL5000iL-Set 53 4CCE?"
+  },
+  {
+    "id": "bosch-twin-sku-price",
+    "category": "catalog-sku-price",
+    "passage": "Climatizzatori Largesplit configurazione Twin: CL5000iL-Set 2x70 4CE, codice 7733701968, prezzo 4.830,00 euro; CL5000iL-Set 2x88 4CE, codice 7733701969, prezzo 5.500,00 euro.",
+    "query": "Quanto costa il sistema CL5000iL-Set 2x88 4CE codice 7733701969?"
   }
 ]
