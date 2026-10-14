@@ -69,13 +69,6 @@ export default function Workspace(){
  },[]);
  useEffect(()=>{
   let active=true;
-  const checkLocalOcrUpdate=()=>{if(active)void requestJson("/api/workspace/settings/ocr").catch(()=>undefined);};
-  const initial=window.setTimeout(checkLocalOcrUpdate,1800);
-  const timer=window.setInterval(checkLocalOcrUpdate,30*60_000);
-  return()=>{active=false;window.clearTimeout(initial);window.clearInterval(timer);};
- },[]);
- useEffect(()=>{
-  let active=true;
   void requestJson<{key:{configured:boolean}}>("/api/workspace/settings/openrouter-key")
    .then(result=>{if(active)setApiConfigured(result.key.configured);})
    .catch(()=>{if(active)setApiConfigured(false);});
@@ -377,7 +370,7 @@ export default function Workspace(){
      <div><label>Contesto (facoltativo)</label><textarea name="context" maxLength={1200} defaultValue={String((modal.item as Record<string,unknown>|undefined)?.context||"")} rows={2} placeholder="A quale post, prodotto o discussione si riferisce?"/></div>
     </>}
     {modal.kind==="source"&&<><div><label>Tipo di fonte</label><select name="kind" defaultValue="note"><option value="note">Nota / Brief</option><option value="website">Sito web</option><option value="social">Profilo social (riferimento)</option></select></div><div><label>Titolo</label><input name="title" placeholder="Es. Brief commerciale"/></div><div><label>URL (opzionale)</label><input name="url" type="url" placeholder="https://esempio.it"/></div><div><label>Contenuto / annotazioni</label><textarea name="body" rows={5} placeholder="Informazioni attendibili, prodotti, tone of voice, obiettivi…"/></div><label style={{display:"flex",alignItems:"center",gap:8,fontWeight:500}}><input type="checkbox" name="auto"/> Acquisisci automaticamente da HTTPS (richiede crawler abilitato)</label></>}
-    {modal.kind==="upload"&&<><div><label>Documento del cliente (max 10 MB)</label><input type="file" name="file" required accept=".txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg,.webp"/></div><div className="notice warn">Per PDF e immagini scannerizzati Forgecy usa la modalità OCR scelta in Impostazioni: parser locale o OpenRouter. L’OCR API invia il file a provider esterni e Mistral applica una tariffa per pagina sui PDF; l’OCR locale mantiene il file sul computer. L’estrazione AI di un catalogo è una fase separata e può inviare testo e immagini a OpenRouter. I prodotti vengono confrontati con quelli presenti e le modifiche manuali restano protette.</div></>}
+    {modal.kind==="upload"&&<><div><label>Documento del cliente (max 10 MB)</label><input type="file" name="file" required accept=".txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg,.webp"/></div><div className="notice warn">Forgecy legge in locale il testo già presente nel documento. Se un PDF è scannerizzato o un’immagine non contiene testo estraibile, il file viene inviato a OpenRouter per l’OCR e può comportare costi del provider. L’estrazione AI di un catalogo è una fase separata e può inviare testo e immagini a OpenRouter. I prodotti vengono confrontati con quelli presenti e le modifiche manuali restano protette.</div></>}
     {modal.kind==="offer"&&(()=>{
       const o=(modal.item||{}) as Partial<Offer>;
       return <><div className="cols"><div><label>Tipologia</label><select name="kind" defaultValue={o.kind||"service"}><option value="product">Prodotto fisico</option><option value="service">Servizio</option></select></div><div><label>Prezzo EUR (vuoto = preventivo)</label><input name="price" inputMode="decimal" defaultValue={o.price??""} placeholder="19.90"/></div></div><div><label>Nome prodotto / servizio *</label><input required name="name" defaultValue={o.name||""}/></div><div><label>Descrizione</label><textarea rows={4} name="description" defaultValue={o.description||""}/></div><div><label>Pubblico</label><input name="audience" defaultValue={o.audience||""}/></div><div><label>Benefici verificabili (uno per riga)</label><textarea name="benefits" rows={4} defaultValue={(o.benefits||[]).join("\n")}/></div><div><label>Call to action</label><input name="cta" defaultValue={o.cta||""} placeholder="Scopri di più"/></div></>;

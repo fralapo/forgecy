@@ -55,9 +55,9 @@ async function main() {
 
     const textModel = preferences.text_model || process.env.OPENROUTER_MODEL || "~deepseek/deepseek-flash-latest";
     const ocrModel = preferences.ocr_model || "deepseek/deepseek-v4.1-flash";
-    db.connection.prepare(`INSERT INTO ai_preferences(owner_id,text_model,ocr_model,ocr_provider,ocr_auto_update,semantic_enabled,updated_at)
-      VALUES(?,?,?,'openrouter',0,1,?) ON CONFLICT(owner_id) DO UPDATE SET
-      text_model=excluded.text_model,ocr_model=excluded.ocr_model,ocr_provider='openrouter',ocr_auto_update=0,updated_at=excluded.updated_at`)
+    db.connection.prepare(`INSERT INTO ai_preferences(owner_id,text_model,ocr_model,semantic_enabled,updated_at)
+      VALUES(?,?,?,1,?) ON CONFLICT(owner_id) DO UPDATE SET
+      text_model=excluded.text_model,ocr_model=excluded.ocr_model,updated_at=excluded.updated_at`)
       .run(LOCAL_OWNER_ID, textModel, ocrModel, new Date().toISOString());
 
     const canvas = createCanvas(1500, 2100);
@@ -92,7 +92,7 @@ async function main() {
     const payload = await response.json() as {
       error?: string;
       extracted?: boolean;
-      source?: { status?: string; source_metadata?: { document_processing?: { method?: string; per_page_ocr_fee_usd?: number } } };
+      source?: { status?: string; source_metadata?: { document_processing?: { method?: string } } };
       catalog?: { status?: string; added?: number; updated?: number; invalid?: number };
     };
     if (!response.ok) throw new Error(payload.error || `Upload sintetico fallito (HTTP ${response.status}).`);
@@ -107,7 +107,6 @@ async function main() {
       httpStatus: response.status,
       extracted: payload.extracted === true,
       ocrMethod: payload.source?.source_metadata?.document_processing?.method || null,
-      ocrPageFeeUsd: payload.source?.source_metadata?.document_processing?.per_page_ocr_fee_usd ?? null,
       catalog: payload.catalog || null,
       productRows: offers.data?.length || 0,
       existingProductPriceUpdated: existingAfter?.price === 19.9,

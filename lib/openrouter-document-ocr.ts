@@ -19,7 +19,7 @@ type OcrOptions = {
   fetcher?: typeof fetch;
 };
 export type OcrImage = { dataUrl: string; mime: "image/png" | "image/jpeg" | "image/webp"; sha256: string };
-export type OcrResult = { body: string; images: OcrImage[]; pageCount: number | null; model: string; engine: "mistral-ocr" | "vision-model" | "paddleocr-vl-local"; provider?: "openrouter" | "local" };
+export type OcrResult = { body: string; images: OcrImage[]; pageCount: number | null; model: string; engine: "mistral-ocr" | "vision-model"; provider: "openrouter" };
 
 function asObject(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -157,5 +157,5 @@ export async function ocrDocumentWithOpenRouter(options: OcrOptions): Promise<Oc
   await recordAiProviderUsage("openrouter", model, payload);
   if (extracted.length < 20 || extracted.toLocaleUpperCase("it").includes("TESTO_NON_LEGGIBILE"))
     throw new ApiFailure(422, "OCR completato, ma non è stato trovato testo leggibile nel documento.");
-  return { body: extracted, images, pageCount, model, engine: isPdf ? "mistral-ocr" : "vision-model" };
+  return { body: extracted, images, pageCount, model, engine: isPdf ? "mistral-ocr" : "vision-model", provider: "openrouter" };
 }

@@ -205,8 +205,6 @@ CREATE TABLE IF NOT EXISTS ai_preferences (
  owner_id TEXT PRIMARY KEY, text_model TEXT CHECK(text_model IS NULL OR length(text_model) BETWEEN 1 AND 180),
  image_model TEXT CHECK(image_model IS NULL OR length(image_model) BETWEEN 1 AND 180),
  ocr_model TEXT CHECK(ocr_model IS NULL OR length(ocr_model) BETWEEN 1 AND 180),
- ocr_provider TEXT NOT NULL DEFAULT 'auto' CHECK(ocr_provider IN ('auto','openrouter','local')),
- ocr_auto_update INTEGER NOT NULL DEFAULT 1 CHECK(ocr_auto_update IN (0,1)),
  semantic_enabled INTEGER NOT NULL DEFAULT 1 CHECK(semantic_enabled IN (0,1)), updated_at TEXT NOT NULL
 );
 

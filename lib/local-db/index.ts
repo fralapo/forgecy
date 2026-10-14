@@ -102,17 +102,6 @@ function configure(db: Database.Database) {
       db.pragma("user_version = 9");
     })();
   }
-  const localOcrSchemaVersion=Number(db.pragma("user_version",{simple:true}));
-  if(localOcrSchemaVersion<10){
-    db.transaction(()=>{
-      const preferenceColumns=db.pragma("table_info(ai_preferences)") as {name:string}[];
-      if(!preferenceColumns.some(column=>column.name==="ocr_provider"))
-        db.exec("ALTER TABLE ai_preferences ADD COLUMN ocr_provider TEXT NOT NULL DEFAULT 'auto' CHECK(ocr_provider IN ('auto','openrouter','local'))");
-      if(!preferenceColumns.some(column=>column.name==="ocr_auto_update"))
-        db.exec("ALTER TABLE ai_preferences ADD COLUMN ocr_auto_update INTEGER NOT NULL DEFAULT 1 CHECK(ocr_auto_update IN (0,1))");
-      db.pragma("user_version = 10");
-    })();
-  }
   const semanticDefaultVersion=Number(db.pragma("user_version",{simple:true}));
   if(semanticDefaultVersion<11){
     db.transaction(()=>{

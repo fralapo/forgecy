@@ -15,7 +15,6 @@ type ModelResponse = {
   preferences: Preferences;
 };
 type KnowledgeSettings={enabled:boolean;modelId:string;total:number;indexed:number;runtime:{state:string;model:string}};
-type OcrSettings={preferences:{provider:"auto"|"openrouter"|"local";autoUpdate:boolean};hardware:{platform:string;architecture:string;memoryGb:number;freeMemoryGb:number;cores:number;diskFreeGb:number|null;uvPath:string|null;supported:boolean;installReady:boolean;recommendation:"local"|"api";reasons:string[]};installedVersion:string|null;latestVersion:string|null;updateAvailable:boolean;operation:{id:string;status:"installing"|"ready"|"failed";stage:string;version:string;error?:string}|null};
 
 type SelectableModel = OpenRouterModel | OpenRouterImageModel;
 
@@ -121,8 +120,6 @@ export default function ModelSettings() {
   const [knowledge,setKnowledge]=useState<KnowledgeSettings|null>(null);
   const [savingKnowledge,setSavingKnowledge]=useState(false);
   const [indexingKnowledge,setIndexingKnowledge]=useState(false);
-  const [ocrSettings,setOcrSettings]=useState<OcrSettings|null>(null);
-  const [ocrBusy,setOcrBusy]=useState(false);
 
   useEffect(() => {
     if (!confirmRemoveKey) return;
@@ -182,41 +179,6 @@ export default function ModelSettings() {
     },4000);
     return()=>window.clearInterval(timer);
   },[knowledge?.enabled,knowledge?.indexed,knowledge?.total,indexingKnowledge]);
-
-  const loadOcrSettings=useCallback(async()=>{
-    try{setOcrSettings(await requestJson<OcrSettings>("/api/workspace/settings/ocr"));}
-    catch(cause){setError(cause instanceof Error?cause.message:"Impossibile controllare il parser OCR locale");}
-  },[]);
-  useEffect(()=>{
-    const initial=window.setTimeout(()=>void loadOcrSettings(),0);
-    const timer=window.setInterval(()=>void loadOcrSettings(),15_000);
-    return()=>{window.clearTimeout(initial);window.clearInterval(timer);};
-  },[loadOcrSettings]);
-
-  async function saveOcrPreference(patch:{provider?:OcrSettings["preferences"]["provider"];autoUpdate?:boolean}){
-    if(!ocrSettings||ocrBusy)return;
-    const previous=ocrSettings;
-    setOcrSettings({...previous,preferences:{...previous.preferences,...patch}});setOcrBusy(true);setError("");setSaved("");
-    try{
-      const result=await requestJson<{preferences:OcrSettings["preferences"]}>("/api/workspace/settings/ocr",{method:"PATCH",body:JSON.stringify(patch)});
-      setOcrSettings(current=>current?{...current,preferences:result.preferences}:current);
-      setSaved("Preferenze OCR salvate");
-    }catch(cause){setOcrSettings(previous);setError(cause instanceof Error?cause.message:"Impossibile salvare le preferenze OCR");}
-    finally{setOcrBusy(false);}
-  }
-
-  async function startOcrAction(action:"install"|"update"|"check"){
-    if(ocrBusy)return;
-    setOcrBusy(true);setError("");setSaved("");
-    try{
-      const result=await requestJson<Partial<OcrSettings>&{operation?:OcrSettings["operation"];message?:string}>("/api/workspace/settings/ocr",{method:"POST",body:JSON.stringify({action})});
-      if(result.operation)setOcrSettings(current=>current?{...current,operation:result.operation!,updateAvailable:current.updateAvailable}:current);
-      if(result.message)setSaved(result.message);
-      else if(action==="check")setSaved("Controllo versione completato");
-      await loadOcrSettings();
-    }catch(cause){setError(cause instanceof Error?cause.message:"Operazione sul parser locale non riuscita");}
-    finally{setOcrBusy(false);}
-  }
 
   async function toggleSemantic(enabled:boolean){
     if(!knowledge||savingKnowledge)return;
@@ -383,26 +345,11 @@ export default function ModelSettings() {
     </div>}
     <article className="card stack">
       <div className="flex center gap8"><Settings2 size={18}/><h2>OCR e lettura dei documenti</h2></div>
-      <p className="caption">Forgecy estrae prima il testo nativo dei PDF in locale. Per scansioni e immagini puoi usare PaddleOCR-VL sul computer, OpenRouter via API oppure lasciare decidere in base all’hardware. Il parser locale non invia il documento a un servizio OCR. L’eventuale estrazione AI dei campi prodotto da un catalogo resta una fase separata e può inviare a OpenRouter il testo e le immagini estratti.</p>
-      <label htmlFor="forgecy-ocr-provider">Motore OCR</label>
-      <select id="forgecy-ocr-provider" value={ocrSettings?.preferences.provider||"auto"} disabled={!ocrSettings||ocrBusy} onChange={event=>void saveOcrPreference({provider:event.target.value as OcrSettings["preferences"]["provider"]})}>
-        <option value="auto">Automatico · raccomandazione hardware</option><option value="local">Solo parser locale · non inviare via API</option><option value="openrouter">OpenRouter · usa la mia chiave API</option>
-      </select>
-      {ocrSettings&&<div className="notice"><Cpu size={15}/> {ocrSettings.hardware.platform} {ocrSettings.hardware.architecture} · {ocrSettings.hardware.memoryGb} GB RAM · {ocrSettings.hardware.cores} core · {ocrSettings.hardware.diskFreeGb===null?"spazio disco non rilevato":`${ocrSettings.hardware.diskFreeGb} GB liberi`}<br/>
-        In modalità automatica: <strong>{ocrSettings.installedVersion&&ocrSettings.hardware.recommendation==="local"?"parser locale":"OpenRouter"}</strong> · compatibilità hardware: <strong>{ocrSettings.hardware.recommendation==="local"?"locale consigliato":"API consigliata"}</strong>{ocrSettings.hardware.uvPath?" · uv disponibile":" · uv non rilevato"}{ocrSettings.hardware.reasons.map(reason=><span key={reason}><br/>{reason}</span>)}
-      </div>}
-      {ocrSettings&&<div className="notice" role="status"><HardDrive size={15}/> PaddleOCR-VL {ocrSettings.installedVersion?`· installato ${ocrSettings.installedVersion}`:"· non installato"}{ocrSettings.latestVersion?` · versione stabile attuale ${ocrSettings.latestVersion}`:" · versione online non verificata"}{ocrSettings.updateAvailable?" · aggiornamento disponibile":""}{ocrSettings.operation&&<><br/>{ocrSettings.operation.stage}{ocrSettings.operation.status==="failed"&&ocrSettings.operation.error?` — ${ocrSettings.operation.error}`:""}</>}</div>}
-      <label className="flex center gap8" style={{fontWeight:650}}><input type="checkbox" checked={ocrSettings?.preferences.autoUpdate??true} disabled={!ocrSettings||ocrBusy} onChange={event=>void saveOcrPreference({autoUpdate:event.target.checked})} style={{width:18,height:18}}/> Controlla e installa automaticamente le nuove versioni stabili</label>
-      <div className="flex gap8 wrap">
-        {!ocrSettings?.installedVersion&&<button className="button primary" onClick={()=>void startOcrAction("install")} disabled={!ocrSettings?.hardware.installReady||ocrBusy||ocrSettings.operation?.status==="installing"}><Download size={15}/> Installa parser locale</button>}
-        {ocrSettings?.updateAvailable&&<button className="button primary" onClick={()=>void startOcrAction("update")} disabled={ocrBusy||ocrSettings.operation?.status==="installing"}><Download size={15}/> Aggiorna ora</button>}
-        <button className="button" onClick={()=>void startOcrAction("check")} disabled={ocrBusy}><RefreshCw size={15}/> Controlla versione</button>
-      </div>
-      {ocrSettings?.operation?.status==="installing"&&<p className="caption" role="status"><LoaderCircle className="spin" size={14}/> Preparazione ambiente isolato e verifica del motore. Il primo avvio scarica il runtime e i modelli necessari.</p>}
+      <p className="caption">Forgecy estrae in locale il testo già incorporato nei PDF e legge in locale i formati testuali. Solo quando un PDF scannerizzato o un’immagine non contiene testo estraibile, invia il file a OpenRouter per l’OCR. L’estrazione AI dei campi prodotto da un catalogo è una fase separata e può inviare il testo e le immagini estratti.</p>
       {catalog&&<><ModelSelector kind="vision" label="Modello OpenRouter per OCR API e documenti" selectedId={catalog.preferences.ocrModel||DEFAULT_OCR_MODEL}
           models={catalog.visionModels} unavailable={!catalog.visionModels.some(model=>model.id===(catalog.preferences.ocrModel||DEFAULT_OCR_MODEL))}
           recommendedId={DEFAULT_OCR_MODEL} disabled={Boolean(saving)} onChange={id=>void selectModel("ocr",id)} />
-        <p className="caption">{catalog.visionModels.length} modelli visivi OpenRouter disponibili. Per i PDF scannerizzati il parser Mistral costa circa 0,002 $ per pagina, oltre ai token del modello. Ogni PDF è limitato a 40 pagine. L’API invia documenti e immagini a provider esterni.</p></>}
+        <p className="caption">{catalog.visionModels.length} modelli visivi OpenRouter disponibili. Il provider può applicare costi secondo modello e numero di pagine; controlla la tariffa corrente sul tuo account. I PDF OCR sono limitati a 40 pagine. I documenti scannerizzati e le immagini vengono inviati a provider esterni solo quando serve l’OCR.</p></>}
     </article>
     <article className="card stack">
       <div className="flex center gap8"><Cpu size={18}/><h2>Ricerca nella memoria dei clienti</h2></div>

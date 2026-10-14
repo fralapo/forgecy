@@ -18,7 +18,6 @@ import { catalogEvidenceIsValid,catalogExtractionSchema,catalogNameSimilarity,lo
 import { getOpenRouterApiKey } from "@/lib/openrouter-credentials";
 import { currentOcrModel } from "@/lib/ai-model-settings";
 import { ocrDocumentWithOpenRouter, type OcrImage, type OcrResult } from "@/lib/openrouter-document-ocr";
-import { ocrDocumentLocally, localOcrStatus, selectOcrProvider, type OcrProvider } from "@/lib/local-ocr";
 
 export const runtime="nodejs";
 export const maxDuration=900;
@@ -36,15 +35,6 @@ async function extractDocumentWithOcr(ctx:Awaited<ReturnType<typeof auth>>,clien
  if(extraction.status==="ready")return {extraction,ocr:null};
  if(mime!=="application/pdf"&&!mime.startsWith("image/"))return {extraction,ocr:null};
  try{
-  const preference=await ctx.db.from("ai_preferences").select("ocr_provider").eq("owner_id",ctx.user.id).maybeSingle();
-  dbError(preference.error,"Impossibile leggere la modalità OCR");
-  const provider=(preference.data?.ocr_provider||"auto") as OcrProvider;
-  const localStatus=provider==="openrouter"?null:await localOcrStatus();
-  const selectedProvider=selectOcrProvider(provider,Boolean(localStatus?.installedVersion),localStatus?.hardware.recommendation||"api");
-  if(selectedProvider==="local"){
-   const ocr=await ocrDocumentLocally({bytes,mime,name});
-   return {extraction:{status:"ready",body:ocr.body,error:null},ocr};
-  }
   const model=await currentOcrModel(ctx.user.id);
   await reserveAiRequest(ctx,clientId,"dossier");
   const ocr=await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"dossier"},()=>
@@ -57,8 +47,7 @@ async function extractDocumentWithOcr(ctx:Awaited<ReturnType<typeof auth>>,clien
 }
 
 function documentProcessingMetadata(ocr:OcrResult|null){
- return ocr?{document_processing:{method:ocr.engine,provider:ocr.provider||"openrouter",model:ocr.model,page_count:ocr.pageCount,
-  per_page_ocr_fee_usd:ocr.engine==="mistral-ocr"?0.002:null}}:{};
+ return ocr?{document_processing:{method:ocr.engine,provider:ocr.provider,model:ocr.model,page_count:ocr.pageCount}}:{};
 }
 
 async function reconcileCatalogDocument(ctx:Awaited<ReturnType<typeof auth>>,clientId:string,sourceId:string,title:string,body:string,visualImages:OcrImage[]=[]):Promise<CatalogImportResult>{

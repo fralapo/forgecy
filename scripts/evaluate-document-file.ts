@@ -65,19 +65,21 @@ async function main() {
     }
     const textModel = preferences.text_model || process.env.OPENROUTER_MODEL || "~deepseek/deepseek-flash-latest";
     const ocrModel = preferences.ocr_model || "deepseek/deepseek-v4.1-flash";
-    db.connection.prepare(`INSERT INTO ai_preferences(owner_id,text_model,ocr_model,ocr_provider,ocr_auto_update,semantic_enabled,updated_at)
-      VALUES(?,?,?,'openrouter',0,1,?) ON CONFLICT(owner_id) DO UPDATE SET
-      text_model=excluded.text_model,ocr_model=excluded.ocr_model,ocr_provider='openrouter',ocr_auto_update=0,updated_at=excluded.updated_at`)
+    db.connection.prepare(`INSERT INTO ai_preferences(owner_id,text_model,ocr_model,semantic_enabled,updated_at)
+      VALUES(?,?,?,1,?) ON CONFLICT(owner_id) DO UPDATE SET
+      text_model=excluded.text_model,ocr_model=excluded.ocr_model,updated_at=excluded.updated_at`)
       .run(LOCAL_OWNER_ID, textModel, ocrModel, new Date().toISOString());
 
     const form = new FormData();
     form.append("file", new File([bytes], basename(pdfPath).slice(0, 120), { type: "application/pdf" }));
     const { POST } = await import("../app/api/workspace/[...parts]/route");
+    const uploadStartedAt = performance.now();
     const response = await POST(new Request(`http://localhost/api/workspace/clients/${clientId}/upload`, { method: "POST", body: form }), {
       params: Promise.resolve({ parts: ["clients", clientId, "upload"] }),
     });
+    const pipelineElapsedMs = Math.round(performance.now() - uploadStartedAt);
     const payload = await response.json() as {
-      error?: string; extracted?: boolean; source?: { id?: string; body?: string; source_metadata?: { document_processing?: { method?: string; page_count?: number; per_page_ocr_fee_usd?: number } } };
+      error?: string; extracted?: boolean; source?: { id?: string; body?: string; source_metadata?: { document_processing?: { method?: string; page_count?: number } } };
       catalog?: { status?: string; added?: number; updated?: number; skippedManual?: number; invalid?: number };
     };
     if (!response.ok) throw new Error(payload.error || `Upload di valutazione fallito (HTTP ${response.status}).`);
@@ -122,7 +124,7 @@ async function main() {
       extracted: payload.extracted === true,
       ocrMethod: payload.source?.source_metadata?.document_processing?.method || null,
       ocrPages: payload.source?.source_metadata?.document_processing?.page_count || null,
-      ocrPageFeeUsd: payload.source?.source_metadata?.document_processing?.per_page_ocr_fee_usd ?? null,
+      pipelineElapsedMs,
       expectedTextMarkersFound: expectedText.filter(marker => (payload.source?.body || "").replace(/\s+/g, " ").toLocaleLowerCase("it").includes(marker.replace(/\s+/g, " ").toLocaleLowerCase("it"))).length,
       expectedTextMarkerCount: expectedText.length,
       expectedTableRowsFound: expectedRows.filter(row => (payload.source?.body || "").replace(/\s+/g, "").toLocaleLowerCase("it").includes(row.replace(/\s+/g, "").toLocaleLowerCase("it"))).length,

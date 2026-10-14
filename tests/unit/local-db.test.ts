@@ -16,9 +16,6 @@ test("local database persists records, preserves invariants, searches evidence, 
     assert.equal(db.connection.pragma("journal_mode", { simple: true }), "wal");
     assert.equal(db.connection.pragma("user_version", { simple: true }), 12);
     assert.ok((db.connection.pragma("table_info(ai_preferences)") as {name:string}[]).some(column=>column.name==="ocr_model"));
-    const preferenceColumns=db.connection.pragma("table_info(ai_preferences)") as {name:string}[];
-    assert.ok(preferenceColumns.some(column=>column.name==="ocr_provider"));
-    assert.ok(preferenceColumns.some(column=>column.name==="ocr_auto_update"));
     assert.equal((db.connection.pragma("table_info(social_accounts)") as { name: string }[]).some(column => column.name === "needs_reauth"), true);
     const created = await db.from("clients").insert({ owner_id: LOCAL_OWNER_ID, name: "Studio", industry: "Design", profile: { tone: "preciso" } }).select().single();
     assert.equal(created.error, null);
