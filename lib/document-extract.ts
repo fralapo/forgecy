@@ -6,6 +6,7 @@ import { assertSafeDocument, DocumentSafetyError } from "./document-safety";
 export type Extraction={status:"ready"|"pending"|"error";body:string;error:string|null};
 export type DocumentExtraction={extraction:Extraction;pageCount:number|null};
 export const MAX_EXTRACT_CHARS=80000;
+const MIN_NATIVE_PDF_TEXT_CHARS=80;
 function clean(value:string):string{
  return value.replace(/\u0000/g,"").replace(/\r\n?/g,"\n").trim().slice(0,MAX_EXTRACT_CHARS);
 }
@@ -30,8 +31,8 @@ export async function extractDocumentWithMetadata(bytes:Uint8Array,mime:string,n
     // Extract a bounded prefix; scanned PDFs need explicit OCR (not silently guessed).
     const text=await parser.getText({first:40,pageJoiner:""});
     const body=clean(text.text||"");
-    return {extraction:body.length>20?{status:"ready",body,error:null}:
-     {status:"error",body:"",error:"PDF senza testo leggibile: serve OCR o una trascrizione"},pageCount};
+    return {extraction:body.length>=MIN_NATIVE_PDF_TEXT_CHARS?{status:"ready",body,error:null}:
+     {status:"error",body:"",error:"PDF senza testo nativo sufficiente: serve OCR o una trascrizione"},pageCount};
    }finally{await parser.destroy();}
   }
   if(ext==="docx"&&mime==="application/vnd.openxmlformats-officedocument.wordprocessingml.document"){

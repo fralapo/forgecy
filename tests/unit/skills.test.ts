@@ -53,6 +53,7 @@ test("genuine text PDF is extracted without OCR",async()=>{
  const doc=await PDFDocument.create();
  const page=doc.addPage([450,500]),font=await doc.embedFont(StandardFonts.Helvetica);
  page.drawText("Verified product information from a customer brief.",{x:50,y:420,size:14,font});
+ page.drawText("Product code SAMPLE-123; quantity 2; delivery in five business days.",{x:50,y:400,size:14,font});
  const result=await extractDocument(await doc.save(),"application/pdf","brief.pdf");
  assert.equal(result.status,"ready",result.error||"");
  assert.match(result.body,/Verified product information/);
@@ -61,7 +62,16 @@ test("page boundary markers alone do not make a multi-page scan look like extrac
  const doc=await PDFDocument.create();doc.addPage([450,500]);doc.addPage([450,500]);
  const result=await extractDocument(await doc.save(),"application/pdf","scan.pdf");
  assert.equal(result.status,"error");
- assert.equal(result.error,"PDF senza testo leggibile: serve OCR o una trascrizione");
+ assert.equal(result.error,"PDF senza testo nativo sufficiente: serve OCR o una trascrizione");
+});
+test("PDF with only a short header/footer does not suppress API OCR",async()=>{
+ const doc=await PDFDocument.create();
+ const page=doc.addPage([450,500]),font=await doc.embedFont(StandardFonts.Helvetica);
+ page.drawText("linea cucina linea cucina linea cucina pagina 17",{x:50,y:420,size:12,font});
+ const result=await extractDocumentWithMetadata(await doc.save(),"application/pdf","scanned-catalog-page.pdf");
+ assert.equal(result.pageCount,1);
+ assert.equal(result.extraction.status,"error");
+ assert.equal(result.extraction.error,"PDF senza testo nativo sufficiente: serve OCR o una trascrizione");
 });
 test("PDF preflight returns its page count for reuse by API-only OCR",async()=>{
  const doc=await PDFDocument.create();doc.addPage([450,500]);doc.addPage([450,500]);

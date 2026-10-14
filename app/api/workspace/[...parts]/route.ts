@@ -14,7 +14,7 @@ import { readMultipartForm } from "@/lib/request-body";
 import { slidePreflight } from "@/lib/carousel-layout";
 import { createHash } from "node:crypto";
 import { planLinkedOfferCleanup } from "@/lib/source-management";
-import { catalogEvidenceIsValid,catalogExtractionModelSchema,catalogNameSimilarity,looksLikeCatalog,parseCsvCatalog,parseMarkdownCatalogTable,parseMarkdownImageVariants,type CatalogProduct } from "@/lib/catalog-import";
+import { catalogEvidenceIsValid,catalogExtractionModelSchema,catalogNameSimilarity,looksLikeCatalog,parseCsvCatalog,parseMarkdownCatalogCards,parseMarkdownCatalogTable,parseMarkdownImageVariants,type CatalogProduct } from "@/lib/catalog-import";
 import { getOpenRouterApiKey } from "@/lib/openrouter-credentials";
 import { currentOcrModel } from "@/lib/ai-model-settings";
 import { ocrDocumentWithOpenRouter, type OcrImage, type OcrResult } from "@/lib/openrouter-document-ocr";
@@ -59,8 +59,10 @@ async function reconcileCatalogDocument(ctx:Awaited<ReturnType<typeof auth>>,cli
  const empty=(status:CatalogImportResult["status"],message?:string):CatalogImportResult=>({status,added:0,updated:0,skippedManual:0,invalid:0,...(message?{message}:{})});
  const csvProducts=parseCsvCatalog(body);
  const markdownProducts=looksLikeCatalog(title,body)?parseMarkdownCatalogTable(body):[];
- const imageVariants=markdownProducts.length?[]:looksLikeCatalog(title,body)?parseMarkdownImageVariants(body):[];
- const localProducts=csvProducts.length?csvProducts:markdownProducts.length?markdownProducts:imageVariants;
+ // Complete heading/code card structures are strong catalog evidence even when a generic filename omits "catalog".
+ const catalogCards=markdownProducts.length?[]:parseMarkdownCatalogCards(body);
+ const imageVariants=markdownProducts.length||catalogCards.length?[]:looksLikeCatalog(title,body)?parseMarkdownImageVariants(body):[];
+ const localProducts=csvProducts.length?csvProducts:markdownProducts.length?markdownProducts:catalogCards.length?catalogCards:imageVariants;
  let products:CatalogProduct[];
  let usedTextOnlyFallback=false;
  if(localProducts.length)products=localProducts;

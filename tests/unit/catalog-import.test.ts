@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseMarkdownCatalogTable,parseMarkdownImageVariants} from "../../lib/catalog-import";
+import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseMarkdownCatalogCards,parseMarkdownCatalogTable,parseMarkdownImageVariants} from "../../lib/catalog-import";
 
 test("catalog names normalize accents and punctuation for safe matching",()=>{
  assert.equal(normalizeCatalogName("Caffè — Espresso 100%"),"caffe espresso 100");
@@ -26,6 +26,7 @@ test("catalog evidence rejects invented names, prices and descriptions",()=>{
  assert.equal(catalogEvidenceIsValid({...valid,name:"Crema inventata"},source),false);
  assert.equal(catalogEvidenceIsValid({...valid,price:199},source),false);
  assert.equal(looksLikeCatalog("listino.pdf","Elenco prodotti con prezzo e codice"),true);
+ assert.equal(looksLikeCatalog("Elios_Catalog_2025_page20.pdf","LEMON PLUS\nCodici\n10201000\nConfezione"),true);
  assert.equal(looksLikeCatalog("brief.txt","Presentazione aziendale e valori del brand"),false);
 });
 
@@ -106,4 +107,20 @@ test("OCR product image blocks retain exact variant labels, printed codes and im
  assert.equal(catalogEvidenceIsValid(products[1],source),true);
  assert.equal(catalogEvidenceIsValid({...products[0],name:"Invented Surface Cleaner Blue"},source),false);
  assert.deepEqual(parseMarkdownImageVariants("# Scheda tecnica 2026\n![img-0.jpeg](img-0.jpeg)\nBlue\nCod.AC-100"),[]);
+});
+
+test("OCR product cards import printed codes and package variants while linking the product image",()=>{
+ const source="# LEMON PLUS\n![img-0.jpeg](img-0.jpeg)\n# Detergente stoviglie concentrato\nDetergente manuale\n# CAMPO D'IMPIEGO\nMense e cucine\nCodici Confezione\n10201000 cartone da 4 taniche\n10201001 tanica da 10 kg\n# PIATTI AGRUMI\n![img-2.jpeg](img-2.jpeg)\n# Detergente stoviglie\nFormula agli agrumi\n# CAMPO D'IMPIEGO\nMense e cucine\nCodici Confezione\n10201006 cartone da 4 taniche\n# SPEZIAL GEL\n# Sgrassante concentrato gel\nUso professionale\n# CAMPO D'IMPIEGO\nRistoranti e cucine\nCodici Confezione\n10203007 flacone da 750 ml";
+ const products=parseMarkdownCatalogCards(source);
+ assert.equal(products.length,3);
+ assert.equal(products[0].name,"LEMON PLUS");
+ assert.equal(products[0].description,"Detergente stoviglie concentrato — 10201000 cartone da 4 taniche — 10201001 tanica da 10 kg");
+ assert.equal(products[0].imageIndex,0);
+ assert.equal(catalogEvidenceIsValid(products[0],source),true);
+ assert.equal(products[1].name,"PIATTI AGRUMI");
+ assert.equal(products[1].imageIndex,2);
+ assert.equal(catalogEvidenceIsValid(products[1],source),true);
+ assert.equal(products[2].name,"SPEZIAL GEL");
+ assert.equal(products[2].imageIndex,null);
+ assert.equal(catalogEvidenceIsValid(products[2],source),true);
 });

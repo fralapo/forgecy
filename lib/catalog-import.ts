@@ -31,7 +31,7 @@ export function normalizeCatalogName(value:string){
 
 export function looksLikeCatalog(title:string,body:string){
  return /catalog|catalogo|listino|prodott|price[ -]?list|sku/i.test(title+"\n"+body)&&
-  /\b(product|prodotto|prodotti|prezzo|price|€|sku|codice)\b/i.test(body);
+  /\b(product|prodotto|prodotti|prezzo|price|€|sku|codice|codici|articolo|articoli|confezione)\b/i.test(body);
 }
 
 function parsePrice(value:string):number|null{
@@ -141,6 +141,41 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
   if(found.length>=1000)return found.slice(0,1000);
  }
  return found;
+}
+
+/** Parse OCR product cards: a short product heading, details, then a printed code/packaging block. */
+export function parseMarkdownCatalogCards(text:string):CatalogProduct[]{
+ const lines=text.split(/\r?\n/u);
+ const headings=lines.flatMap((line,index)=>{
+  const title=/^#\s+(.+?)\s*#*$/u.exec(line)?.[1]?.trim();
+  return title?[{index,title}]:[];
+ });
+ const productStarts=headings.filter(({index,title})=>{
+  const normalized=normalizeCatalogName(title);
+  if(/^(?:campo d impiego|codici confezione|catalogo|listino|price list|descrizione|dosi|istruzioni d uso)$/u.test(normalized))return false;
+  const next=lines.slice(index+1).find(line=>line.trim())?.trim()||"";
+  return /^!\[img-\d+\.[^\]]+\]\(/iu.test(next)||/^#\s+\S/u.test(next);
+ });
+ if(productStarts.length<2)return [];
+ const products:CatalogProduct[]=[];
+ for(let index=0;index<productStarts.length;index++){
+  const start=productStarts[index]!;
+  const end=productStarts[index+1]?.index??lines.length;
+  const block=lines.slice(start.index+1,end);
+  const codeHeader=block.findIndex(line=>/^\s*(?:codici|codice)\s+(?:confezione|packaging)\s*$/iu.test(line.trim()));
+  if(codeHeader<0)continue;
+  const codeRows=block.slice(codeHeader+1).map(line=>line.trim()).filter(line=>/^((?=[A-Z0-9/-]*\d)[A-Z0-9][A-Z0-9/-]{4,})\s+\S/iu.test(line));
+  if(!codeRows.length)continue;
+  const detailTitle=headings.find(heading=>heading.index>start.index&&heading.index<end&&
+   !/^(?:campo d impiego|codici confezione|catalogo|listino)$/u.test(normalizeCatalogName(heading.title)))?.title;
+  const descriptionQuotes=[...(detailTitle?[detailTitle]:[]),...codeRows];
+  const imageMatch=block.map(line=>/^\s*!\[img-(\d+)\.[^\]]+\]\(/iu.exec(line)).find(Boolean);
+  const imageIndex=imageMatch?Number(imageMatch[1]):null;
+  products.push({name:start.title,description:descriptionQuotes.join(" — "),price:null,currency:"EUR",
+   nameQuote:start.title,descriptionQuote:JSON.stringify(descriptionQuotes),priceQuote:"",existingOfferId:null,
+   imageIndex:imageIndex!==null&&imageIndex<=7?imageIndex:null});
+ }
+ return products.length===productStarts.length?products:[];
 }
 
 /** Parse OCR catalog variants where each product image is followed by a short label and a printed code. */

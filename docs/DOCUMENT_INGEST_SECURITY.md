@@ -4,7 +4,7 @@
 
 Il primo passaggio su file caricati da un cliente è la validazione di **tipo + firma + struttura**. Solo dopo l'esito positivo il backend salva il file nella cartella privata locale. La stessa validazione viene rieseguita nella libreria di estrazione, compreso il comando di rielaborazione.
 
-I normali PDF testuali, Word DOCX, TXT/MD/CSV UTF-8 e immagini JPEG/PNG/WebP restano formati supportati. Forgecy estrae localmente il testo nativo; solo quando un PDF scannerizzato o un'immagine non ha testo leggibile invia il file a OpenRouter per l'OCR. Non esiste un motore OCR locale né un fallback locale.
+I normali PDF testuali, Word DOCX, TXT/MD/CSV UTF-8 e immagini JPEG/PNG/WebP restano formati supportati. Forgecy estrae localmente il testo nativo; se un PDF restituisce meno di 80 caratteri di testo o un'immagine non contiene testo leggibile, invia il file a OpenRouter per l'OCR. Non esiste un motore OCR locale né un fallback locale.
 
 ## Controlli DOCX
 
@@ -22,7 +22,7 @@ Non effettua estrazione dei file sul disco, non esegue macro o link. Non conside
 ## Altri formati
 
 - Max **10 MB** per file (limite esistente, rafforzato nel validatore centrale).
-- PDF: firma \`%PDF-\`, terminatore \`%%EOF\` e una sola prelettura locale del testo nativo limitata alle prime 40 pagine. Se non estrae testo, il conteggio pagine già ottenuto viene riutilizzato e il file-parser OpenRouter esegue Mistral OCR; il PDF non viene riparsato localmente. I file oltre le 40 pagine restano archiviati e possono essere divisi e ricaricati.
+- PDF: firma \`%PDF-\`, terminatore \`%%EOF\` e una sola prelettura locale del testo nativo limitata alle prime 40 pagine. Meno di 80 caratteri nativi fanno scattare l'OCR; il conteggio pagine già ottenuto viene riutilizzato e il file-parser OpenRouter esegue Mistral OCR, senza riparsare localmente il PDF. I file oltre le 40 pagine restano archiviati e possono essere divisi e ricaricati.
 - Immagini: firma del formato verificata prima dell'invio a OpenRouter per l'OCR. Per i PDF il parser può restituire al massimo 8 immagini; l'eventuale passaggio di immagini al modello AI per estrarre i prodotti è distinto dall'OCR. Forgecy collega una foto a un prodotto solo quando l'associazione è chiara.
 - OCR: viene eseguito esclusivamente tramite API OpenRouter, senza motori OCR locali. Il testo già incorporato nei PDF e i formati testuali vengono letti senza OCR; PDF scannerizzati e immagini sono elaborati fuori dal computer da OpenRouter e dai provider da esso selezionati. Possono applicarsi tariffe per pagina e/o modello secondo il piano corrente. Le chiamate AI registrabili entrano nel registro utilizzo OpenRouter.
 - Tabelle: CSV e tabelle Markdown OCR con intestazioni riconosciute per prodotto/modello e prezzo sono interpretati localmente. L'import conserva citazioni letterali di ogni riga e riconcilia al massimo 1.000 voci; i cataloghi non tabellari possono richiedere un passaggio AI distinto.
