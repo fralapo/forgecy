@@ -4,6 +4,7 @@ import {playbook,routedSkills,stageSkills} from "../../lib/skills/playbooks";
 import {reviewStaticAssets,type StaticAsset} from "../../lib/skills/quality";
 import {extractDocument,extractDocumentWithMetadata} from "../../lib/document-extract";
 import {PDFDocument,StandardFonts} from "pdf-lib";
+import {catalogEvidenceIsValid} from "../../lib/catalog-import";
 const proofId="11111111-1111-4111-8111-111111111111";
 function asset(channel:"instagram"|"linkedin",format:"post"|"carousel"|"document"):StaticAsset{
  return {
@@ -57,6 +58,18 @@ test("genuine text PDF is extracted without OCR",async()=>{
  const result=await extractDocument(await doc.save(),"application/pdf","brief.pdf");
  assert.equal(result.status,"ready",result.error||"");
  assert.match(result.body,/Verified product information/);
+});
+test("native PDF catalog extraction keeps positioned row products and exact evidence",async()=>{
+ const doc=await PDFDocument.create(),page=doc.addPage([600,800]),font=await doc.embedFont(StandardFonts.Helvetica);
+ page.drawText("Catalogo USAG - product data and technical specifications for the professional tools range.",{x:30,y:750,size:12,font});
+ for(const [value,x] of [["15-35",30],["3.5",65],["168",83],["U02820301",115],["1",160],["25,00",187]] as const)
+  page.drawText(value,{x,y:673,size:8,font});
+ const result=await extractDocumentWithMetadata(await doc.save(),"application/pdf","Catalogo USAG.pdf");
+ assert.equal(result.extraction.status,"ready");
+ assert.equal(result.nativeCatalogProducts?.length,1);
+ const product=result.nativeCatalogProducts![0];
+ assert.equal(product.price,25);
+ assert.equal(catalogEvidenceIsValid(product,result.extraction.body),true);
 });
 test("page boundary markers alone do not make a multi-page scan look like extracted text",async()=>{
  const doc=await PDFDocument.create();doc.addPage([450,500]);doc.addPage([450,500]);

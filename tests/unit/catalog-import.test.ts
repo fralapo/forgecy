@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseLocalCatalogProducts,parseMarkdownCatalogCards,parseMarkdownCatalogTable,parseMarkdownImageVariants} from "../../lib/catalog-import";
+import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseLocalCatalogProducts,parseMarkdownCatalogCards,parseMarkdownCatalogTable,parseMarkdownImageVariants,parsePositionedNativeCatalogRows} from "../../lib/catalog-import";
 
 test("catalog names normalize accents and punctuation for safe matching",()=>{
  assert.equal(normalizeCatalogName("Caffè — Espresso 100%"),"caffe espresso 100");
@@ -184,4 +184,26 @@ test("OCR product cards import printed codes and package variants while linking 
  assert.equal(catalogEvidenceIsValid(products[2],source),true);
  const incomplete=source.replace("10203007 flacone da 750 ml","Codice non leggibile");
  assert.deepEqual(parseMarkdownCatalogCards(incomplete),[]);
+});
+
+test("positioned PDF catalog rows join measurements, SKU and price within each column",()=>{
+ const source="Catalogo USAG 282 SN 15÷35 3,5 168 U02820301 25,00 6x7 167 U02831302 9,15";
+ const products=parsePositionedNativeCatalogRows("Catalogo USAG 2026.pdf",[
+  {str:"15÷35",x:30,y:100},{str:"3,5",x:65,y:100},{str:"168",x:83,y:100},{str:"U02820301",x:115,y:100},{str:"1",x:160,y:100},{str:"25,00",x:187,y:100},
+  {str:"6x7",x:220,y:100},{str:"167",x:265,y:100},{str:"U02831302",x:296,y:100},{str:"1",x:340,y:100},{str:"9,15",x:369,y:100}
+ ]);
+ assert.equal(products.length,2);
+ assert.equal(products[0].name,"15÷35 3,5 168 (U02820301)");
+ assert.equal(products[0].price,25);
+ assert.equal(catalogEvidenceIsValid(products[0],source),true);
+ assert.equal(products[1].name,"6x7 167 (U02831302)");
+ assert.equal(products[1].price,9.15);
+ assert.equal(catalogEvidenceIsValid(products[1],source),true);
+});
+
+test("positioned PDF rows reject ambiguous prices and unlabelled codes",()=>{
+ assert.deepEqual(parsePositionedNativeCatalogRows("Catalogo.pdf",[
+  {str:"U02820301",x:115,y:100},{str:"25,00",x:150,y:100},{str:"30,00",x:170,y:100},
+  {str:"U02820302",x:115,y:90},{str:"25,00",x:150,y:90}
+ ]),[]);
 });

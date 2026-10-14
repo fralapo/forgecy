@@ -4,6 +4,7 @@ export type CatalogProduct={
  name:string;description:string;price:number|null;currency:string;
  nameQuote:string;descriptionQuote:string;priceQuote:string;existingOfferId:string|null;imageIndex:number|null;
 };
+export type PositionedPdfTextItem={str:string;x:number;y:number};
 
 const productSchema=z.object({
  name:z.string().trim().min(2).max(180).default("Nome non verificato"),
@@ -284,6 +285,37 @@ export function parseLocalCatalogProducts(title:string,text:string):CatalogProdu
  const nativePricedRows=parseNativeCodePriceRows(title,text);
  if(nativePricedRows.length)return nativePricedRows;
  return looksLikeCatalog(title,text)?parseMarkdownImageVariants(text):[];
+}
+
+/** Recover priced rows from native PDF coordinates when plain-text order loses table columns. */
+export function parsePositionedNativeCatalogRows(title:string,items:PositionedPdfTextItem[]):CatalogProduct[]{
+ if(!/catalog|catalogo|listino|price[ -]?list/i.test(title))return [];
+ const rows=items.filter(item=>item.str.trim()&&Number.isFinite(item.x)&&Number.isFinite(item.y))
+  .map(item=>({...item,str:item.str.trim()}));
+ const codes=rows.filter(item=>/^U\d{8}$/i.test(item.str)).sort((a,b)=>b.y-a.y||a.x-b.x);
+ const products:CatalogProduct[]=[];const seen=new Set<string>();
+ for(const code of codes){
+  const sameLine=rows.filter(item=>Math.abs(item.y-code.y)<=0.75).sort((a,b)=>a.x-b.x);
+  const nextCode=codes.filter(item=>Math.abs(item.y-code.y)<=0.75&&item.x>code.x).sort((a,b)=>a.x-b.x)[0];
+  const columnLeft=code.x<200?0:code.x<380?200:380;
+  const columnRight=code.x<200?200:code.x<380?380:620;
+  const lineEnd=Math.min(columnRight,nextCode?.x??columnRight);
+  const priceItems=sameLine.filter(item=>item.x>code.x&&item.x<lineEnd&&/(?<![\d,])\d{1,3}(?:\.\d{3})*,\d{2}(?!\d)/u.test(item.str));
+  if(priceItems.length!==1)continue;
+  const priceMatch=/(?<![\d,])(\d{1,3}(?:\.\d{3})*,\d{2})(?!\d)/u.exec(priceItems[0].str);
+  if(!priceMatch)continue;
+  const dimensionItems=sameLine.filter(item=>item.x>=columnLeft&&item.x<code.x&&item.str!=="•");
+  const dimensions=dimensionItems.map(item=>item.str).filter(value=>/[\p{L}\d]/u.test(value));
+  if(!dimensions.length)continue;
+  const identity=`${code.str}|${code.y}|${priceMatch[1]}`;
+  if(seen.has(identity))continue;
+  seen.add(identity);
+  const name=`${dimensions.join(" ")} (${code.str})`.slice(0,180);
+  const evidence=[...dimensions,code.str];
+  products.push({name,description:dimensions.join(" — "),price:parsePrice(priceMatch[1]),currency:"EUR",
+   nameQuote:JSON.stringify(evidence),descriptionQuote:JSON.stringify(dimensions),priceQuote:priceMatch[1],existingOfferId:null,imageIndex:null});
+ }
+ return products;
 }
 
 /** Parse OCR catalog variants where each product image is followed by a short label and a printed code. */

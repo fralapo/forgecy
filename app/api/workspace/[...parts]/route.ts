@@ -27,7 +27,7 @@ function uploadLimitForMime(mime:string){return mime==="application/pdf"?MAX_PDF
 
 const uuid=z.uuid();
 type CatalogImportResult={status:"processed"|"not_catalog"|"no_products"|"ai_not_configured"|"analysis_failed";added:number;updated:number;skippedManual:number;invalid:number;message?:string};
-type DocumentProcessingResult={extraction:Extraction;ocr:OcrResult|null;nativeImages:OcrImage[];pageCount:number|null;pagesProcessed:number|null;textTruncated:boolean};
+type DocumentProcessingResult={extraction:Extraction;ocr:OcrResult|null;nativeImages:OcrImage[];nativeCatalogProducts:CatalogProduct[];pageCount:number|null;pagesProcessed:number|null;textTruncated:boolean};
 function emptyCatalogResult(status:CatalogImportResult["status"],message?:string):CatalogImportResult{
  return {status,added:0,updated:0,skippedManual:0,invalid:0,...(message?{message}:{})};
 }
@@ -38,18 +38,18 @@ function safeCatalogError(error:unknown):string{
 }
 
 async function extractDocumentWithOcr(ctx:Awaited<ReturnType<typeof auth>>,clientId:string,bytes:Uint8Array,mime:string,name:string):Promise<DocumentProcessingResult>{
- const {extraction,pageCount,pagesProcessed,textTruncated=false,nativeImages=[]}=await extractDocumentWithMetadata(bytes,mime,name);
- if(extraction.status==="ready")return {extraction,ocr:null,nativeImages,pageCount,pagesProcessed:pagesProcessed??null,textTruncated};
- if(mime!=="application/pdf"&&!mime.startsWith("image/"))return {extraction,ocr:null,nativeImages:[],pageCount,pagesProcessed:pagesProcessed??null,textTruncated};
+ const {extraction,pageCount,pagesProcessed,textTruncated=false,nativeImages=[],nativeCatalogProducts=[]}=await extractDocumentWithMetadata(bytes,mime,name);
+ if(extraction.status==="ready")return {extraction,ocr:null,nativeImages,nativeCatalogProducts,pageCount,pagesProcessed:pagesProcessed??null,textTruncated};
+ if(mime!=="application/pdf"&&!mime.startsWith("image/"))return {extraction,ocr:null,nativeImages:[],nativeCatalogProducts:[],pageCount,pagesProcessed:pagesProcessed??null,textTruncated};
  try{
   const model=await currentOcrModel(ctx.user.id);
   await reserveAiRequest(ctx,clientId,"dossier");
   const ocr=await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"dossier"},()=>
    ocrDocumentWithOpenRouter({bytes,mime,name,model,pageCount:pageCount??undefined}));
-  return {extraction:{status:"ready",body:ocr.body,error:null},ocr,nativeImages:[],pageCount:ocr.pageCount,pagesProcessed:ocr.pageCount,textTruncated};
+  return {extraction:{status:"ready",body:ocr.body,error:null},ocr,nativeImages:[],nativeCatalogProducts:[],pageCount:ocr.pageCount,pagesProcessed:ocr.pageCount,textTruncated};
  }catch(error){
   const message=error instanceof ApiFailure?error.message:"OCR non riuscito. Il file resta salvato e puoi riprovare.";
-  return {extraction:{status:"pending",body:"",error:message},ocr:null,nativeImages:[],pageCount,pagesProcessed:pagesProcessed??null,textTruncated};
+  return {extraction:{status:"pending",body:"",error:message},ocr:null,nativeImages:[],nativeCatalogProducts:[],pageCount,pagesProcessed:pagesProcessed??null,textTruncated};
  }
 }
 
@@ -61,14 +61,14 @@ function documentProcessingMetadata(processing:DocumentProcessingResult){
   text_truncated:processing.textTruncated||pageLimitReached,...(pageLimitReached?{truncation_reason:"page_limit"}:processing.textTruncated?{truncation_reason:"character_limit"}:{})}};
 }
 
-async function reconcileCatalogDocument(ctx:Awaited<ReturnType<typeof auth>>,clientId:string,sourceId:string,title:string,body:string,visualImages:OcrImage[]=[]):Promise<CatalogImportResult>{
+async function reconcileCatalogDocument(ctx:Awaited<ReturnType<typeof auth>>,clientId:string,sourceId:string,title:string,body:string,visualImages:OcrImage[]=[],positionedProducts:CatalogProduct[]=[]):Promise<CatalogImportResult>{
  const empty=(status:CatalogImportResult["status"],message?:string):CatalogImportResult=>({status,added:0,updated:0,skippedManual:0,invalid:0,...(message?{message}:{})});
  // Complete heading/code card structures are strong catalog evidence even when a generic filename omits "catalog".
  const localProducts=parseLocalCatalogProducts(title,body);
  let products:CatalogProduct[];
  let usedTextOnlyFallback=false;
- if(localProducts.length){
-  products=localProducts;
+ if(localProducts.length||positionedProducts.length){
+  products=localProducts.length?localProducts:positionedProducts;
   const nativeImages=visualImages.filter(image=>image.origin==="native-pdf");
   if(nativeImages.length){
    const candidates=products.filter(product=>nativeImages.some(image=>image.candidateProductNames?.some(name=>normalizeCatalogName(name)===normalizeCatalogName(product.name))));
@@ -395,7 +395,7 @@ export async function POST(request:Request,{params}:Params){
           if(existingFile)documentsUpdated++;else documentsImported++;
           const savedSourceId=row.data?.id||existingFile?.id;
           if(extraction.status==="ready"&&savedSourceId)try{
-           const catalog=await reconcileCatalogDocument(ctx,id,String(savedSourceId),file.title,extraction.body,[...(ocr?.images||[]),...nativeImages]);
+           const catalog=await reconcileCatalogDocument(ctx,id,String(savedSourceId),file.title,extraction.body,[...(ocr?.images||[]),...nativeImages],documentProcessing?.nativeCatalogProducts);
            offersImported+=catalog.added;offersUpdated+=catalog.updated;
            }catch(error){console.warn("[catalog-import] website document analysis failed",safeCatalogError(error));}
          }
@@ -597,7 +597,7 @@ export async function POST(request:Request,{params}:Params){
    dbError(error);if(!data)throw new ApiFailure(404,"Documento non trovato");
    let catalog:CatalogImportResult=emptyCatalogResult("not_catalog");
    if(extraction.status==="ready"){
-    try{catalog=await reconcileCatalogDocument(ctx,id,sourceId,source.title,extraction.body,[...(ocr?.images||[]),...processed.nativeImages]);}
+    try{catalog=await reconcileCatalogDocument(ctx,id,sourceId,source.title,extraction.body,[...(ocr?.images||[]),...processed.nativeImages],processed.nativeCatalogProducts);}
     catch(error){console.warn("[catalog-import] document analysis failed",error instanceof ApiFailure?error.status:"unknown",error instanceof Error?error.message:"unknown error");catalog=emptyCatalogResult("analysis_failed","Documento archiviato; analisi del catalogo non riuscita. Puoi ripetere la scansione.");}
    }
    await audit(ctx,id,"document_reprocessed",sourceId,{status:extraction.status});
@@ -631,7 +631,7 @@ export async function POST(request:Request,{params}:Params){
    await audit(ctx,id,"document_uploaded",data.id,{status:extraction.status});
    let catalog:CatalogImportResult=emptyCatalogResult("not_catalog");
    if(extraction.status==="ready"){
-    try{catalog=await reconcileCatalogDocument(ctx,id,data.id,file.name,extraction.body,[...(ocr?.images||[]),...processed.nativeImages]);}
+    try{catalog=await reconcileCatalogDocument(ctx,id,data.id,file.name,extraction.body,[...(ocr?.images||[]),...processed.nativeImages],processed.nativeCatalogProducts);}
     catch(error){console.warn("[catalog-import] document analysis failed",safeCatalogError(error));catalog=emptyCatalogResult("analysis_failed","Documento archiviato; analisi del catalogo non riuscita. Puoi ripetere la scansione.");}
    }
    return json({source:data,extracted:extraction.status==="ready",message:extraction.error,catalog},201);

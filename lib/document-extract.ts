@@ -1,14 +1,14 @@
 import { assertSafeDocument, DocumentSafetyError } from "./document-safety";
 import { createHash } from "node:crypto";
-import { parseLocalCatalogProducts, normalizeCatalogName } from "./catalog-import";
+import { parseLocalCatalogProducts, parsePositionedNativeCatalogRows, normalizeCatalogName, looksLikeCatalog, type CatalogProduct } from "./catalog-import";
 import type { DocumentImage } from "./document-image";
-import { createPdfParser } from "./pdf-runtime";
+import { createPdfParser, getPositionedPdfText } from "./pdf-runtime";
 /**
  * Bound client-upload text extraction. Original binary always remains in private
  * Local private storage; extracted text is separate, untrusted evidence.
  */
 export type Extraction={status:"ready"|"pending"|"error";body:string;error:string|null};
-export type DocumentExtraction={extraction:Extraction;pageCount:number|null;pagesProcessed?:number|null;textTruncated?:boolean;nativeImages?:DocumentImage[]};
+export type DocumentExtraction={extraction:Extraction;pageCount:number|null;pagesProcessed?:number|null;textTruncated?:boolean;nativeImages?:DocumentImage[];nativeCatalogProducts?:CatalogProduct[]};
 export const MAX_EXTRACT_CHARS=80000;
 const MIN_NATIVE_PDF_TEXT_CHARS=80;
 const MAX_NATIVE_PDF_IMAGES=8;
@@ -71,7 +71,13 @@ export async function extractDocumentWithMetadata(bytes:Uint8Array,mime:string,n
     const textTruncated=(pageCount!==null&&pageCount>pagesProcessed)||(text.text||"").length>MAX_EXTRACT_CHARS;
     if(body.length<MIN_NATIVE_PDF_TEXT_CHARS)return {extraction:{status:"error",body:"",error:"PDF senza testo nativo sufficiente: serve OCR o una trascrizione"},pageCount,pagesProcessed,textTruncated};
     const nativeImages=await extractNativeCatalogImages(parser,text.pages||[],name,body);
-    return {extraction:{status:"ready",body,error:null},pageCount,pagesProcessed,textTruncated,...(nativeImages.length?{nativeImages}:{})};
+    const nativeCatalogProducts:CatalogProduct[]=[];
+    if(looksLikeCatalog(name,body))for(const page of text.pages||[]){
+     if(nativeCatalogProducts.length>=200)break;
+     try{nativeCatalogProducts.push(...parsePositionedNativeCatalogRows(name,await getPositionedPdfText(parser,page.num)));}
+     catch(error){console.warn("[document-extract] positioned catalog extraction skipped for page",page.num,error instanceof Error?error.message:"unknown");}
+    }
+    return {extraction:{status:"ready",body,error:null},pageCount,pagesProcessed,textTruncated,...(nativeImages.length?{nativeImages}:{}),...(nativeCatalogProducts.length?{nativeCatalogProducts:nativeCatalogProducts.slice(0,200)}:{})};
    }finally{await parser.destroy();}
   }
   if(ext==="docx"&&mime==="application/vnd.openxmlformats-officedocument.wordprocessingml.document"){
