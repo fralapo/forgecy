@@ -6,6 +6,7 @@ import { loadEnvConfig } from "@next/env";
 loadEnvConfig(process.cwd());
 
 type Example = { id: string; category: string; passage: string; query: string };
+type Candidate = {id:string;passage:string;source_url:string|null};
 type Hit = { source_id: string; source_title: string; source_url: string | null; chunk_ordinal: number; excerpt: string; relevance: number };
 type Rank = { rank: number; reciprocalRank: number; recallAt3: number };
 
@@ -26,15 +27,18 @@ function rankingMetrics(ranks: Rank[]) {
 
 async function main() {
   const examples = JSON.parse(readFileSync(join(process.cwd(), "tests/fixtures/retrieval-eval.json"), "utf8")) as Example[];
+  const distractors = JSON.parse(readFileSync(join(process.cwd(), "tests/fixtures/retrieval-eval-candidates.json"), "utf8")) as Candidate[];
+  const candidates:Candidate[]=[...examples.map(({id,passage})=>({id,passage,source_url:null})),...distractors];
+  if(new Set(candidates.map(candidate=>candidate.id)).size!==candidates.length)throw new Error("Retrieval fixture contains duplicate candidate IDs");
   const { embedLocalTexts, LOCAL_EMBEDDING_MODEL_ID, LOCAL_EMBEDDING_MODEL_REVISION } = await import("../lib/local-embeddings");
   const { fuseKnowledgeHits, knowledgeQueryContainsIdentifier, knowledgeQueryFromQuestion } = await import("../lib/knowledge-search");
-  const vectors = await embedInBatches([...examples.map(example => example.passage), ...examples.map(example => example.query)], embedLocalTexts);
-  const passages = vectors.slice(0, examples.length);
-  const queries = vectors.slice(examples.length);
+  const vectors = await embedInBatches([...candidates.map(candidate => candidate.passage), ...examples.map(example => example.query)], embedLocalTexts);
+  const passages = vectors.slice(0, candidates.length);
+  const queries = vectors.slice(candidates.length);
   const fts = new Database(":memory:");
   fts.exec("CREATE VIRTUAL TABLE source_chunk_fts USING fts5(chunk_id UNINDEXED, source_id UNINDEXED, title, body, tokenize='unicode61 remove_diacritics 2')");
   const insert = fts.prepare("INSERT INTO source_chunk_fts(chunk_id,source_id,title,body) VALUES(?,?,?,?)");
-  examples.forEach((example, index) => insert.run(String(index), example.id, "", example.passage));
+  candidates.forEach((candidate, index) => insert.run(String(index), candidate.id, "", candidate.passage));
   const lexicalSearch = fts.prepare(`SELECT chunk_id,source_id,(-bm25(source_chunk_fts,0,0,4.0,1.0)) relevance
     FROM source_chunk_fts WHERE source_chunk_fts MATCH ?
     ORDER BY bm25(source_chunk_fts,0,0,4.0,1.0),CAST(chunk_id AS INTEGER) LIMIT 20`);
@@ -43,13 +47,13 @@ async function main() {
     const lexicalQuery = knowledgeQueryFromQuestion(example.query);
     const lexical: Hit[] = lexicalQuery
       ? (lexicalSearch.all(lexicalQuery) as Array<{ chunk_id: string; source_id: string; relevance: number }>).map(row => ({
-        source_id: row.source_id, source_title: "Evaluation fixture", source_url: null,
-        chunk_ordinal: 0, excerpt: examples[Number(row.chunk_id)].passage, relevance: row.relevance,
+        source_id: row.source_id, source_title: "Evaluation fixture", source_url: candidates[Number(row.chunk_id)].source_url,
+        chunk_ordinal: 0, excerpt: candidates[Number(row.chunk_id)].passage, relevance: row.relevance,
       }))
       : [];
     const semantic: Hit[] = passages.map((vector, passageIndex) => ({
-      source_id: examples[passageIndex].id, source_title: "Evaluation fixture", source_url: null,
-      chunk_ordinal: 0, excerpt: examples[passageIndex].passage,
+      source_id: candidates[passageIndex].id, source_title: "Evaluation fixture", source_url: candidates[passageIndex].source_url,
+      chunk_ordinal: 0, excerpt: candidates[passageIndex].passage,
       relevance: vector.reduce((sum, value, dimension) => sum + value * queries[index][dimension], 0),
     })).sort((a, b) => b.relevance - a.relevance);
     const hybrid = fuseKnowledgeHits(lexical, semantic, 8, knowledgeQueryContainsIdentifier(example.query) ? 3 : 1);
@@ -76,8 +80,9 @@ async function main() {
 
   console.log(JSON.stringify({
     model: `${LOCAL_EMBEDDING_MODEL_ID}@${LOCAL_EMBEDDING_MODEL_REVISION}`,
-    corpus: "annotated public-safe fixture: synthetic examples plus Bosch, Vaillant, USAG, and Ferroli Italian catalogs",
+    corpus: `public-safe fixture: ${examples.length} annotated queries over ${candidates.length} passages (${distractors.length} additional USAG product distractors), including Bosch, Vaillant, USAG, and Ferroli catalogs`,
     count: results.length,
+    candidateCount:candidates.length,
     ...Object.fromEntries(strategies.map(strategy => [strategy, rankingMetrics(results.map(item => item[strategy]))])),
     categories,
     ranks: results.map(({ id, category, lexical, semantic, hybrid }) => ({ id, category, lexical: lexical.rank, semantic: semantic.rank, hybrid: hybrid.rank })),
