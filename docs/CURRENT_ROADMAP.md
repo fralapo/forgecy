@@ -11,6 +11,7 @@ Aggiornato il 14 ottobre 2026. Forgecy è un progetto open source per uso person
 - Dossier, strategie e proposte AI con stati e approvazione esplicita.
 - Coda persistente in SQLite e worker locale, con quote, lease, retry e recupero dopo riavvio.
 - Editor statico per Instagram/LinkedIn, calendario editoriale e export.
+- Importazione manuale di snapshot Instagram e conteggio follower dall'archivio JSON dell'account proprietario; i nomi restano nel browser. Nessuno scraping o accesso automatico alla piattaforma.
 - Cataloghi OpenRouter correnti per modelli testo e immagini, selezionabili da Impostazioni e salvati nel workspace.
 - Export/import verificato, backup locali automatici a rotazione e snapshot immutabili Google Drive con scelta manuale in caso di conflitto.
 - Importazione locale di snapshot JSON Instagram, confronto storico e export CSV; nessun accesso automatico alla piattaforma.
@@ -26,4 +27,4 @@ Drive sincronizza solo quando richiesto e trasferisce snapshot completi, inclusi
 3. Aggiungere una prova controllata della gestione conflitti con due snapshot divergenti e verificare la copia locale di recupero.
 4. Ampliare l'evaluation con documenti rappresentativi reali: accuratezza OCR, copertura delle tabelle e qualità del collegamento delle foto prodotto.
 
-I controlli automatizzati sono in GitHub Actions. Google Drive e OpenRouter richiedono credenziali configurate dall'utente. Instagram usa snapshot JSON importati manualmente; il formato è descritto in INSTAGRAM_SNAPSHOTS.md.
+I controlli automatizzati sono in GitHub Actions. Google Drive e OpenRouter richiedono credenziali configurate dall'utente. Instagram accetta snapshot manuali e conteggi follower dall'archivio JSON dell'account proprietario; non estrae metriche dei post dall'archivio e non raccoglie dati da altri profili. Dettagli e limiti sono in INSTAGRAM_SNAPSHOTS.md.

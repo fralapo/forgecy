@@ -5,10 +5,12 @@ Forgecy does not log in to Instagram, scrape its pages, use private mobile endpo
 ## Workflow
 
 1. In Results, add the account username as a local label.
-2. Prepare a JSON snapshot with the structure below from data you are authorized to use.
-3. Select **Importa rilevazione** and choose the JSON file.
-4. Import a later snapshot to compare follower counts and content metrics over time.
-5. Export the current account history as CSV when needed.
+2. For your own account, request a JSON download from Instagram's Accounts Center. Meta documents that Download Your Information is available there ([Meta announcement](https://about.fb.com/news/2023/10/manage-your-information-across-apps/)).
+3. Unzip the download locally, open its `connections/followers_and_following` folder (the path can vary), and select every `followers*.json` file with **Importa archivio Instagram**. Forgecy parses the files in the browser and submits only the unique follower count to the local workspace; follower names and the archive itself are not sent or saved.
+4. For post metrics, select **Importa rilevazione** and provide a JSON snapshot in Forgecy's format below. The official account download does not supply a reliable substitute for likes, comments, reach, saves or shares.
+5. Import a fresh count or snapshot later to compare observations. The archive count is dated when imported, not when Instagram generated the archive, so use a current download for meaningful history. Export the current account history as CSV when needed.
+
+The archive importer accepts `followers.json` and numbered parts such as `followers_1.json`, `followers_2.json`. It deduplicates usernames across selected files, understands the common `string_list_data` format, and stops with an error if it finds unrecognized entries rather than reporting a potentially incomplete count. It does not import the following list or infer unfollowers. It is intended for an account whose archive you are authorized to download; it is not a way to collect data from other accounts.
 
 An Instagram account data download can contain account-owned follower/following information, but it does not automatically provide the post performance fields shown in Forgecy's Results dashboard. Those fields must be present in the imported snapshot. Counts absent from the source must be omitted or set to \`null\`, never guessed or represented as zero.
 

@@ -8,6 +8,7 @@ import AiUsagePanel from "./ai-usage-panel";
 import { audiencePatterns } from "@/lib/audience";
 import { brandStyle } from "@/lib/brand";
 import { summarizeInstagram } from "@/lib/social-analytics";
+import { countInstagramArchiveFollowers } from "@/lib/instagram-archive";
 import EditorialCalendar from "./editorial-calendar";
 import {resolvedLayout,layoutStyle,slidePreflight,slideHistoryReducer} from "@/lib/carousel-layout";
 
@@ -407,12 +408,18 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
  return <>
   <Header k="PERFORMANCE / MEMORIA" title="I risultati guidano la prossima scelta."
    sub="Snapshot importati, confrontabili nel tempo e attribuiti al profilo corretto."
-   actions={<div className="flex gap8 wrap">{selected&&<label className="button primary" style={{cursor:busy?"wait":"pointer",opacity:busy ? .65 : 1}}><UploadCloud size={15}/> Importa rilevazione<input type="file" accept="application/json,.json" disabled={Boolean(busy)} hidden onChange={async event=>{
+   actions={<div className="flex gap8 wrap">{selected&&<><label className="button primary" style={{cursor:busy?"wait":"pointer",opacity:busy ? .65 : 1}}><UploadCloud size={15}/> Importa rilevazione<input type="file" accept="application/json,.json" disabled={Boolean(busy)} hidden onChange={async event=>{
       const file=event.currentTarget.files?.[0];event.currentTarget.value="";if(!file||!selected)return;
       try{setImportError("");const parsed=JSON.parse(await file.text()) as Record<string,unknown>;const snapshot=(parsed.snapshot&&typeof parsed.snapshot==="object"?parsed.snapshot:parsed) as Record<string,unknown>;
        const result=await onAction("syncSocial",{accountId:selected,snapshot});if(!result)setImportError("Importazione non riuscita. Controlla che il file sia un JSON nel formato indicato qui sotto.");
       }catch{setImportError("File JSON non valido o illeggibile.");}
-    }}/></label>}
+    }}/></label><label className="button" style={{cursor:busy?"wait":"pointer",opacity:busy ? .65 : 1}}>Importa archivio Instagram<input type="file" accept="application/json,.json" multiple disabled={Boolean(busy)} hidden onChange={async event=>{
+      const files=Array.from(event.currentTarget.files||[]);event.currentTarget.value="";if(!files.length||!selected)return;
+      try{setImportError("");const followers_count=countInstagramArchiveFollowers(await Promise.all(files.map(async file=>({name:file.name,text:await file.text()}))));
+       const result=await onAction("syncSocial",{accountId:selected,snapshot:{account:{followers_count}}});
+       if(!result)setImportError("Importazione non riuscita. Seleziona i file followers dell’account collegato.");
+      }catch(error){setImportError(error instanceof Error?error.message:"Archivio non leggibile.");}
+    }}/></label></>}
      {snap&&selected&&<a className="button" href={"/api/workspace/clients/"+data.client.id+"/reports/instagram?accountId="+encodeURIComponent(selected)} target="_blank" rel="noopener noreferrer"><FileText size={15}/> Esporta CSV</a>}</div>}/>
   <div className="card" style={{marginBottom:16}}>
    <form className="flex center gap8 wrap" onSubmit={async event=>{
@@ -424,7 +431,7 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
     <input id="instagram-public-handle" value={instagramHandle} onChange={event=>setInstagramHandle(event.target.value)} placeholder="username Instagram" autoCapitalize="none" autoCorrect="off" style={{flex:"1 1 220px",maxWidth:340}} aria-describedby="instagram-public-hint"/>
     <button className="button" type="submit" disabled={!instagramHandle.trim()||Boolean(busy)}><Plus size={15}/> Aggiungi profilo</button>
    </form>
-   <p id="instagram-public-hint" className="caption" style={{margin:"8px 0 0"}}>Forgecy non accede a Instagram e non chiede credenziali. Importa una rilevazione raccolta o preparata da te; i dati restano nel workspace locale.</p>
+   <p id="instagram-public-hint" className="caption" style={{margin:"8px 0 0"}}>Forgecy non accede a Instagram e non chiede credenziali. Puoi importare uno snapshot oppure i file followers_*.json del tuo archivio ufficiale. I nomi dei follower vengono contati nel browser e non sono salvati né inviati; il conteggio viene associato all’account selezionato.</p>
    {importError&&<p role="alert" className="caption" style={{color:"var(--danger)",marginTop:8}}>{importError}</p>}
    <details style={{marginTop:10}}><summary className="caption" style={{cursor:"pointer"}}>Formato JSON accettato</summary><pre className="caption" style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",marginTop:8}}>{JSON.stringify({account:{username:"nomeaccount",followers_count:1200,media_count:80},media:[{id:"post-1",caption:"Testo",permalink:"https://www.instagram.com/p/ABC/",media_type:"IMAGE",timestamp:"2026-10-14T12:00:00.000Z",like_count:42,comments_count:3}]},null,2)}</pre></details>
   </div>
