@@ -39,7 +39,7 @@ export type EditorialEntry={
 export type Snapshot={
  client:Client;sources:Source[];community_signals:CommunitySignal[];offers:Offer[];dossiers:Dossier[];campaigns:Campaign[];
  contents:Content[];messages:Message[];missions:Mission[];agent_events:AgentEvent[];ai_jobs:AiJob[];strategies:StrategyRecord[];editorial_entries:EditorialEntry[];
- social_accounts:Array<{id:string;username:string;remote_id:string;token_expires_at?:string}>;
+ social_accounts:Array<{id:string;username:string;remote_id:string;token_expires_at?:string;needs_reauth?:boolean}>;
  social_snapshots:ObservedSnapshot[];
 };
 export type View="today"|"knowledge"|"offers"|"projects"|"results"|"settings";
@@ -49,7 +49,6 @@ export async function requestJson<T=Record<string,unknown>>(url:string,init:Requ
  const response=await fetch(url,{...init,headers:{...headers,...init.headers},cache:"no-store"});
  let data:Record<string,unknown>={};
  try{data=await response.json() as Record<string,unknown>}catch{}
- if(response.status===401 && typeof window!=="undefined")window.location.assign("/login");
  if(!response.ok)throw new Error(typeof data.error==="string"?data.error:("Richiesta non riuscita: HTTP "+response.status));
  return data as T;
 }

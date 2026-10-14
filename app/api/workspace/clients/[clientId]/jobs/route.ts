@@ -70,6 +70,6 @@ export async function POST(request:Request,{params}:P){
     p_client_id:clientId,p_kind:input.kind,p_payload:input.payload
   });
   dbError(error,"Non è possibile mettere in coda il lavoro: controlla limiti e configurazione");
-  return json({job_id:data,status:"queued",message:"Lavoro accodato. Un worker configurato lo elaborerà."},202);
+  return json({job_id:data,status:"queued",message:"Lavoro accodato. Forgecy lo elaborerà in locale."},202);
  }catch(e){return fail(e);}
 }

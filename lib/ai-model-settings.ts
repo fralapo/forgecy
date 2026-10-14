@@ -118,11 +118,11 @@ export function defaultTextModel() {
 }
 
 async function readTextPreference(userId: string): Promise<string | null> {
-  const { data, error } = await workerDb().from("user_ai_preferences")
-    .select("text_model").eq("user_id", userId).maybeSingle();
+  const { data, error } = await workerDb().from("ai_preferences")
+    .select("text_model").eq("owner_id", userId).maybeSingle();
   if (error) {
     console.error("[ai settings] Could not read text model preference", error.code || "database error");
-    throw new ApiFailure(503, "Impossibile leggere il modello AI salvato. Verifica la migration 0019.");
+    throw new ApiFailure(503, "Impossibile leggere il modello AI salvato dal workspace locale.");
   }
   return data?.text_model || null;
 }
@@ -130,7 +130,6 @@ async function readTextPreference(userId: string): Promise<string | null> {
 export async function withUserTextModel<T>(
   userId: string, work: () => Promise<T>, reader = readTextPreference
 ): Promise<T> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return withTextModel(null, work);
   const selected = await reader(userId);
   return withTextModel(selected, work);
 }

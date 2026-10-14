@@ -8,7 +8,7 @@ export type AiRequestKind=(typeof AI_REQUEST_KINDS)[number];
 
 /**
  * Protect the API BEFORE any expensive provider call, even when running on
- * several app instances. PostgreSQL owns the atomic per-client/owner counters.
+ * several app instances. SQLite owns the atomic per-client/owner counters.
  *
  * Reservations represent attempts, not currency costs, and are intentionally
  * not refunded on provider failure (to prevent repeated failed-request abuse).

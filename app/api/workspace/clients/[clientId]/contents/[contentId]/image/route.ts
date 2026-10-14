@@ -20,7 +20,7 @@ export async function POST(request:Request,{params}:{params:Promise<{clientId:st
   }));
   const {data:content,error}=await ctx.db.from("contents").select("id,slides,revision,channel,offer_id").eq("id",contentId).eq("client_id",clientId).maybeSingle();
   dbError(error);if(!content)throw new ApiFailure(404,"Contenuto non trovato");
-  const slides=Array.isArray(content.slides)?content.slides:[];
+  const slides:Array<{headline?:string;body?:string;visual_prompt?:string;image_path?:string}>=Array.isArray(content.slides)?content.slides:[];
   if(input.slideIndex>=slides.length)throw new ApiFailure(400,"Slide inesistente");
   const palette=brandStyle(client.profile);
   let offerContext:null|{name:string;description:string;benefits:string[]}=null;
@@ -40,8 +40,8 @@ export async function POST(request:Request,{params}:{params:Promise<{clientId:st
   ].join("\n");
   const key=process.env.OPENROUTER_API_KEY;
   if(!key)throw new ApiFailure(503,"Configura OPENROUTER_API_KEY nel server per generare immagini");
-  const {data:preference,error:preferenceError}=await ctx.db.from("user_ai_preferences")
-   .select("image_model").eq("user_id",ctx.user.id).maybeSingle();
+  const {data:preference,error:preferenceError}=await ctx.db.from("ai_preferences")
+   .select("image_model").eq("owner_id",ctx.user.id).maybeSingle();
   dbError(preferenceError,"Impossibile leggere il modello immagini selezionato");
   const imageModelId=preference?.image_model;
   if(!imageModelId)throw new ApiFailure(409,"Scegli un modello per le immagini in Impostazioni prima di generare");

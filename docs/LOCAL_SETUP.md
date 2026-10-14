@@ -1,169 +1,92 @@
-# Run Forgecy on your own computer
+# Installazione locale e sincronizzazione
 
-Forgecy is an open-source personal project. Each person runs their own copy with their own Supabase project and API keys. There is no centrally operated Forgecy account, subscription or shared backend; you sign in through your own Supabase project. One Supabase project is enough; separate staging and production projects are optional.
+Forgecy è un'applicazione single-user eseguita sul computer. Database, file caricati, preferenze AI e attività in coda sono locali. Ogni installazione usa le credenziali API del proprietario; non richiede un servizio Forgecy o un database remoto. OpenRouter, Meta e Google Drive ricevono solo le richieste necessarie alle funzioni che abiliti.
 
-The web application runs locally. Supabase provides remote Auth, PostgreSQL and private file storage; enabled AI/social integrations send requests to their providers. This setup needs internet access. Providers may charge for usage.
+## Requisiti e primo avvio
 
-## 1. Install and clone
-
-Use Node.js **22.18 or later** and npm. `.nvmrc` pins the version used in CI for nvm users; Docker is not required for the application.
+Installa Node.js **22.18 o successivo**, poi dalla cartella del progetto esegui:
 
 ```sh
-git clone https://github.com/fralapo/forgecy.git
-cd forgecy
-# If you use nvm: nvm install && nvm use
 npm install
 cp .env.example .env.local
+npm run dev
 ```
 
-Keep `.env.local` untracked. On macOS/Linux you can restrict local access with `chmod 600 .env.local`. The code under `old/` is an archive, not the current installation entry point.
+Apri `http://localhost:3000`. Il server si lega all'interfaccia loopback per impostazione predefinita. Non esporre Forgecy su una rete pubblica: è un'app personale locale, senza autenticazione multiutente.
 
-## 2. Initialize your Supabase project
+Il database è creato automaticamente e aggiornato all'avvio. Percorsi predefiniti:
 
-Create a project in your own Supabase account. In its **SQL Editor**, apply every file in `supabase/migrations/` in filename order: `0001_init.sql` through `0019_user_ai_preferences.sql` (19 migrations at this revision). Use the repository files directly, not the old application's migrations.
-
-The migrations create tables, owner/client RLS policies, RPCs and two **private** Storage buckets: `forgecy-sources` and `forgecy-assets`. Do not make them public. The publishable/secret API keys are not PostgreSQL passwords and cannot execute arbitrary migration SQL through the normal REST API.
-
-For a fresh project only, you can generate a single SQL Editor script with Python 3:
-
-```sh
-python3 - <<'PY'
-from pathlib import Path
-files = sorted(Path('supabase/migrations').glob('*.sql'))
-output = Path('.local/forgecy-initial-setup.sql')
-output.parent.mkdir(exist_ok=True)
-output.write_text('BEGIN;\n' + '\n'.join(
-    '\n-- ' + p.name + '\n' + p.read_text() for p in files
-) + '\nCOMMIT;\n')
-print(output)
-PY
-```
-
-Paste the generated SQL into the editor and run it once. The transaction rolls back if any statement fails. Record which migration files were applied; later upgrades must apply only new files. Do not rerun the initial script on an initialized project. Back up existing database records and files before upgrades. The `.local/` directory is ignored by Git.
-
-**Do not run `tests/sql/bootstrap.sql` or the SQL smoke suites on this project.** They are fixtures for a disposable CI database, not installation or live-data validation scripts.
-
-## 3. Configure local authentication and keys
-
-In Supabase **Authentication → URL Configuration**, set your local Site URL to `http://localhost:3000` and allow this redirect:
-
-```text
-http://localhost:3000/auth/callback
-```
-
-Keep email sign-in enabled. Sign in with an address accepted by your Supabase email configuration; restrictions and rate limits of Supabase's default mail service may require custom SMTP for additional recipients. Do not disable authentication to avoid email setup.
-
-Find the project URL in Supabase **Project Settings → Data API** (or the **Connect** dialog), and the publishable/secret keys in **Project Settings → API Keys**. Copy only your own project's values. In `.env.local`, set:
-
-| Variable | Value / purpose |
+| Sistema | Cartella dati |
 | --- | --- |
-| `APP_ORIGIN` | `http://localhost:3000` (exact origin, no final slash) |
-| `NEXT_PUBLIC_SUPABASE_URL` | Your project URL, `https://<project-ref>.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your `sb_publishable_…` key, or legacy anon JWT |
-| `SUPABASE_SERVICE_ROLE_KEY` | Your **private** `sb_secret_…` key, or legacy service-role JWT; server-only worker, text preference lookup and usage ledger |
-| `OPENROUTER_API_KEY` | Your OpenRouter key for chat, dossiers, strategies and specialist missions |
-| `OPENROUTER_MODEL` | Optional fallback text model; default `openai/gpt-4.1-mini`. Choose active text and image models in **Impostazioni** |
-| `OPENROUTER_SITE_URL` | `http://localhost:3000` |
-| `CRON_SECRET` | A private random string of at least 24 characters protecting the dispatcher |
-| `ENABLE_WEBSITE_INGEST` | Keep `false` until network isolation is configured |
+| macOS | `~/Library/Application Support/Forgecy` |
+| Windows | `%LOCALAPPDATA%\Forgecy` |
+| Linux | `$XDG_DATA_HOME/forgecy` oppure `~/.local/share/forgecy` |
 
-Generate a cron secret locally and paste the output into `.env.local`:
+La cartella contiene `forgecy.sqlite`, i file privati, lo stato Drive e, se il portachiavi del sistema non è disponibile, le credenziali OAuth protette dai permessi locali. `FORGECY_DATA_DIR` permette di usare una cartella personalizzata. Mantieni il database attivo su un disco locale: non aprirlo da Google Drive, Dropbox, NAS o cartelle di rete.
+
+## Chiavi dei provider
+
+Modifica `.env.local`, che non va mai aggiunto a Git:
+
+| Variabile | Uso |
+| --- | --- |
+| `OPENROUTER_API_KEY` | Chiave personale usata per cataloghi, generazione testo e immagini. |
+| `OPENROUTER_MODEL` | Modello testo di ripiego se non è impostato un modello nelle preferenze locali. |
+| `OPENROUTER_SITE_URL` | Identificativo facoltativo inviato nei metadati OpenRouter. |
+| `APP_ORIGIN` | Origine esatta locale, necessaria con `npm run start`; esempio `http://localhost:3000`. |
+| `GOOGLE_DRIVE_CLIENT_ID` | Facoltativo; OAuth Client ID Google di tipo applicazione desktop, richiesto solo per Drive. |
+| `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`, `META_GRAPH_VERSION` | Facoltativi, per collegare un account Instagram Professional. |
+| `TOKEN_ENCRYPTION_KEY_BASE64` | Chiave casuale per cifrare i token social salvati localmente. |
+| `ENABLE_WEBSITE_INGEST` | Lascia `false` salvo che tu abbia configurato e compreso la raccolta web. |
+
+Non usare il prefisso `NEXT_PUBLIC_` per chiavi private. Per generare una chiave di cifratura Meta, esegui `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"` e copia l'output solo nel `.env.local` di quel computer.
+
+## Configurare Google Drive
+
+Drive è una destinazione di snapshot opzionale. L'integrazione usa OAuth per applicazioni native con PKCE e callback loopback `127.0.0.1`; non richiede un client secret nel progetto. Forgecy richiede lo scope `drive.file`, crea una cartella visibile `Forgecy` e accede ai file creati o aperti con l'app. Non può leggere l'intero Drive.
+
+1. Apri [Google Cloud Console](https://console.cloud.google.com/) e crea o seleziona un progetto personale.
+2. In **APIs & Services → Library**, abilita **Google Drive API**.
+3. Configura **Google Auth Platform**: branding e audience secondo il tuo account. Se l'app è External e resta in stato **Testing**, aggiungi il tuo account come test user.
+4. In **Clients**, crea un OAuth client di tipo **Desktop app** e copia il Client ID.
+5. Inserisci `GOOGLE_DRIVE_CLIENT_ID=...` nel `.env.local` e riavvia Forgecy.
+6. Apri **Impostazioni → Collega Google Drive**, scegli l'account Google e approva il consenso. I token sono conservati nel portachiavi di macOS/Windows/Linux quando disponibile; altrimenti Forgecy usa un file nella cartella dati con permessi privati.
+7. Premi **Sincronizza adesso** dopo il lavoro e prima di passare a un altro computer. Sul secondo computer installa Forgecy, configura un OAuth client (può essere lo stesso Client ID desktop), collega lo stesso Drive e sincronizza. Un workspace vuoto scarica automaticamente l'unico ramo remoto.
+
+Google può revocare i refresh token quando l'utente rimuove l'accesso o quando il client OAuth cambia. Per un'app External lasciata in Testing, Google documenta la scadenza dei refresh token dopo sette giorni quando vengono richiesti scope oltre ai soli profili base; se il token scade, ricollega Drive. La pubblicazione/verification dell'app OAuth dipende dall'audience e dagli scope configurati nel tuo progetto Google.
+
+### Come Forgecy evita conflitti e perdita dati
+
+Ogni sincronizzazione crea uno ZIP autonomo con un'immagine coerente di SQLite, gli allegati e un manifest con versione e hash. I file non vengono aggiornati o cancellati per sovrascrittura: Drive conserva snapshot separati con hash del contenuto, hash del genitore e ID dispositivo. Forgecy calcola i rami non discendenti per rilevare divergenze. In caso di conflitto puoi aprire uno snapshot Drive, salvando prima il locale in `conflicts/`, oppure caricare il locale come ramo separato.
+
+Il flusso è pensato per usare un solo computer alla volta. Sincronizza prima di passare all'altro; non esiste un merge automatico né la modifica simultanea dello stesso workspace. Gli snapshot remoti occupano spazio nel tuo Drive e vanno eliminati manualmente da quella cartella quando non servono più. La cronologia delle revisioni Drive non è usata come archivio, perché Google non garantisce che tutte le revisioni restino disponibili.
+
+## Esportare e importare
+
+In **Impostazioni**, usa **Esporta archivio** per scaricare un backup `.forgecy.zip`, oppure **Importa archivio** su un'altra installazione. L'import sostituisce il workspace corrente dopo i controlli e conserva un backup locale in `pre-restore`. Puoi cancellare o copiare questi backup dalla cartella dati usando gli strumenti del sistema operativo. Proteggi gli archivi: contengono il database e i documenti del workspace, anche se Forgecy rimuove i token dei social durante l'export.
+
+I workspace delle versioni precedenti non vengono convertiti automaticamente dal nuovo runtime. Prima di abbandonare una vecchia installazione, conserva una copia dei suoi dati e file; l'archivio `.forgecy.zip` della nuova versione è il formato supportato per trasferimenti e backup. Il progetto personale convertito durante lo sviluppo non conteneva record di lavoro o allegati.
+
+## Build locale
 
 ```sh
-node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
-```
-
-Do not put private keys into any variable beginning `NEXT_PUBLIC_`. The name `SUPABASE_SERVICE_ROLE_KEY` is retained for compatibility and accepts the current secret-key format. Do not copy secrets into issues, commits, logs, screenshots or exported reports. Restart the app and dispatcher after changing environment variables.
-
-## 4. Start the app
-
-```sh
-npm run dev -- --hostname 127.0.0.1
-```
-
-Open **http://localhost:3000**, request the email sign-in link, and open it in the same browser that requested it (the login uses PKCE). Use `localhost` consistently; switching to `127.0.0.1` in the browser changes the cookie origin and callback configuration.
-
-For normal use with an optimized build, stop the dev server first, then:
-
-```sh
+npm run typecheck
+npm run lint
+npm test
 npm run build
-npm run start -- --hostname 127.0.0.1
+npm run start
 ```
 
-Next.js calls this a production build even when it runs on your laptop. `APP_ORIGIN=http://localhost:3000` must be set for authenticated writes in this mode. You do not need a public domain or a second database. The loopback bind keeps the server off your local network.
+Per `npm run start`, imposta `APP_ORIGIN=http://localhost:3000`. Il worker locale delle attività AI viene avviato con il server e non richiede cron, token di servizio o un processo database separato.
 
-## 5. Run queued AI work locally
+## Risoluzione problemi
 
-Dossiers, strategies and campaign missions queued by the UI need a dispatcher while the app is running. In a **second terminal in the repository**, run the following Node command. It reads the secret from the private env file, sends dispatcher requests sequentially and waits 15 seconds between completed requests. Ctrl+C stops it. No Vercel account, system cron installation or cloud scheduler is needed.
-
-```sh
-node --env-file=.env.local --input-type=module <<'JS'
-import { setTimeout as delay } from 'node:timers/promises';
-const origin = process.env.APP_ORIGIN || 'http://localhost:3000';
-const url = new URL(origin);
-if (!['localhost', '127.0.0.1'].includes(url.hostname)) {
-  throw new Error('This example dispatcher is for a local app only.');
-}
-const secret = process.env.CRON_SECRET;
-if (!secret || secret.length < 24) throw new Error('Set CRON_SECRET (24+ characters).');
-for (;;) {
-  try {
-    const response = await fetch(new URL('/api/jobs/dispatch', url), {
-      headers: { Authorization: `Bearer ${secret}` },
-      signal: AbortSignal.timeout(240_000),
-      redirect: 'error',
-    });
-    if (response.ok) {
-      const data = await response.json();
-      if (data.processed) console.log(new Date().toISOString(), data.kind, data.status);
-    } else {
-      console.error('Dispatcher HTTP', response.status, '(check local server logs).');
-    }
-  } catch {
-    console.error('Dispatcher cannot reach the local app or request timed out.');
-  }
-  await delay(15_000);
-}
-JS
-```
-
-The computer and both terminals must remain running. Stopping them pauses dispatch; expired leases can be recovered on a later invocation. A client-side timeout does not cancel server execution, so a later request may overlap a still-running attempt; database leases protect claims, but do not guarantee only one active job globally. Long interrupted model calls may still incur provider charges; the queue does not guarantee exactly-once billing or resume each individual agent step. See [AI_JOB_RUNNER.md](AI_JOB_RUNNER.md).
-
-## 6. Check your installation
-
-Start with a sample client/brand profile and text notes or a supported document:
-
-1. Create a profile, add sources and verified products/services; search your uploaded text.
-2. Queue a dossier, wait for the dispatcher, inspect evidence and approve it.
-3. Generate and approve the separate company strategy.
-4. Request a static campaign, inspect the agents' hand-offs and approve the proposal.
-5. Edit content and inspect the downloaded PNG/PDF/TXT, especially long text and symbols.
-6. Check Results → AI usage. Unknown costs stay unknown; compare usage with your provider dashboard.
-7. Change a source and verify that outdated dossiers/strategy/content require review.
-
-Without an OpenRouter key, AI and model catalogs fail with a configuration error; the app does not generate sample answers. Without a configured dispatcher, queued jobs remain queued. Without the private Supabase key, the worker cannot execute, saved per-user text models are not applied to AI requests, and provider observations cannot be saved.
-
-For code changes, run `npm run typecheck`, `npm run lint`, `npm test` and `npm run build`. CI additionally uses a disposable PostgreSQL database for migrations and RLS tests. These checks do not verify your external accounts or visual exports.
-
-## Optional integrations
-
-- **Generated images:** choose a model in **Impostazioni**. Forgecy uses the same server-only `OPENROUTER_API_KEY` as text generation; OpenRouter reports token counts and costs when available. Each user's selected model IDs sync through Supabase, while the key remains local to each installation.
-- **Instagram:** configure your Meta app, authorized Professional account, permissions, callback variables and a 32-byte base64 `TOKEN_ENCRYPTION_KEY_BASE64`. The local callback in `.env.example` must be allowed by your Meta app. This is optional and requires Meta's setup/review rules. Expired credentials currently require reconnection. Local disconnect does not revoke Meta consent remotely.
-- **Website import:** disabled by default. Code URL/DNS checks are not a substitute for public-only outbound network isolation, even on a personal computer. Use manually supplied notes/documents until that isolation is configured. See [SOURCE_INTELLIGENCE_BACKEND.md](SOURCE_INTELLIGENCE_BACKEND.md) and [CRAWL_BUDGETS.md](CRAWL_BUDGETS.md).
-- **Public hosting/collaboration:** a separate decision. Configure HTTPS origin, auth callbacks, secrets, scheduler, request limits, backups and monitoring for that deployment. Organizations, billing and a client portal are not needed to run Forgecy personally.
-
-## Troubleshooting
-
-| Symptom | Check |
+| Sintomo | Cosa controllare |
 | --- | --- |
-| Supabase reports `PGRST205` / table not found | Migrations were not applied to the configured project, or the API schema cache needs to refresh. |
-| Writes return 503 about `APP_ORIGIN` | Set the exact local origin and restart, especially after `npm run build`/`start`. |
-| Writes return 403 about origin | Open the configured hostname/port; API scripts must also send the exact `Origin` header and authenticate. |
-| Magic link goes to the wrong page or cannot exchange session | Check Site URL/redirect allowlist and open the link in the requesting browser. |
-| Login email is not delivered | Check Supabase email restrictions, rate limits and SMTP configuration. |
-| Jobs stay queued | Start both terminals and check private Supabase key, cron secret and server errors. |
-| AI returns 503 or schema errors | Set an OpenRouter key and choose a text model advertising structured outputs for dossiers and campaigns; check provider balance/access. |
-| Usage is incomplete | Check migration 0017, server-only key and provider response usage; the panel is not a complete bill. |
-| PDF differs from preview or loses symbols | Current PDF renderer has font/line limits; inspect exports before use. |
-
-When reporting a bug, include the failing step, app revision and sanitized error text. Never attach `.env.local`, raw tokens or customer documents.
+| Cataloghi o generazione AI non disponibili | `OPENROUTER_API_KEY`, connessione Internet e saldo/limiti del tuo account OpenRouter. |
+| Errore SQLite o disco pieno | Chiudi Forgecy, controlla spazio e permessi della cartella dati; fai una copia prima di intervenire sul database. |
+| Drive non configurato | Verifica `GOOGLE_DRIVE_CLIENT_ID`, API Drive abilitata e riavvio del server locale. |
+| OAuth Drive rifiutato | Controlla audience, stato Testing e lista test user nella Google Cloud Console. |
+| Token Drive scaduto | Ricollega l'account dalle Impostazioni. |
+| Conflitto Drive | Scegli uno dei rami remoti oppure conserva il locale come ramo separato; nessuno viene unito automaticamente. |
+| Impossibile usare l'app su un altro dispositivo | Esporta un archivio oppure collega Drive, sincronizza sul primo computer e poi sul secondo. |

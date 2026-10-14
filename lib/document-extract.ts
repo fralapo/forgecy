@@ -1,7 +1,7 @@
 import { assertSafeDocument, DocumentSafetyError } from "./document-safety";
 /**
  * Bound client-upload text extraction. Original binary always remains in private
- * Supabase Storage; extracted text is separate, untrusted evidence.
+ * Local private storage; extracted text is separate, untrusted evidence.
  */
 export type Extraction={status:"ready"|"pending"|"error";body:string;error:string|null};
 export const MAX_EXTRACT_CHARS=80000;

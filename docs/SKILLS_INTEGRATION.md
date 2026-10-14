@@ -37,19 +37,19 @@ Code: lib/skills/playbooks.ts, lib/skills/quality.ts and lib/agent-team.ts.
 
 Each model-generated proposal is validated with programmatic channel/format/page/count/source checks before a critical review. If there are structural blockers, Creative may revise ONCE. Brand Guard then returns reasoned scores, warnings and blocking issues; numbers are subjective editorial assessments, **not** predictive performance metrics.
 
-The Leader displays warnings and blocking issues. The Postgres approval RPC rejects proposals with unresolved blocking issues. User can request a new corrected proposal rather than bypass the gate. The existing audit trail preserves all agent hand-offs.
+The Leader displays warnings and blocking issues. The local database rejects proposals with unresolved blocking issues. User can request a new corrected proposal rather than bypass the gate. The existing audit trail preserves all agent hand-offs.
 
 ## Documents and client memory
 
-Client uploads retain immutable originals in private Supabase Storage. Text-based PDFs (bounded to the first 40 pages), DOCX, plain text, Markdown and CSV are converted into limited evidence text. Up to 10 MB per file and 80,000 extracted characters; invalid files or scanned PDFs do not turn into fabricated evidence. A source shows ready, pending, or error and offers retry.
+Client uploads retain immutable originals in the private local data folder. Text-based PDFs (bounded to the first 40 pages), DOCX, plain text, Markdown and CSV are converted into limited evidence text. Up to 10 MB per file and 80,000 extracted characters; invalid files or scanned PDFs do not turn into fabricated evidence. A source shows ready, pending, or error and offers retry.
 
 OCR, PDF images, advanced tabular extraction, background workers and full concept/entity wiki remain future work. Client documents should be scanned for malicious content and processed within restricted memory/CPU and outbound network limits before using this pipeline for arbitrary high-volume customer uploads.
 
 ## Validation
 
-GitHub CI installs dependencies, typechecks, runs unit tests for playbook/quality and PDF extraction, applies SQL migrations 0001 through 0006 on PostgreSQL with RLS tests, and builds the Next.js production app.
+GitHub CI installs dependencies, typechecks, runs unit tests and repository invariant tests, and builds the Next.js production app.
 
-This does not test live Supabase, OpenRouter image generation, Meta OAuth or full client workflow; those require managed credentials and an acceptance environment. No videos/reels are enabled.
+This does not test live OpenRouter image generation, Meta OAuth or full client workflow; those require credentials configured on the local installation. No videos/reels are enabled.
 
 ## Next prioritized work
 

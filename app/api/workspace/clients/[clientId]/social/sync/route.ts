@@ -13,12 +13,13 @@ export async function POST(_request:Request,{params}:{params:Promise<{clientId:s
  try{
   const id=(await params).clientId,ctx=await auth();
   await requireClient(ctx,id);
-  const {data,error}=await ctx.db.from("social_accounts").select("id,remote_id,username,token_ciphertext,token_expires_at").eq("client_id",id).eq("platform","instagram");
+  const {data,error}=await ctx.db.from("social_accounts").select("id,remote_id,username,token_ciphertext,token_expires_at,needs_reauth").eq("client_id",id).eq("platform","instagram");
   dbError(error);
   if(!data?.length)throw new ApiFailure(409,"Collega prima Instagram");
   const ver=process.env.META_GRAPH_VERSION||"v23.0";
   const snapshots=[];
   for(const a of data){
+   if(a.needs_reauth||!a.token_ciphertext)throw new ApiFailure(409,"Questo account va ricollegato su questo computer prima di sincronizzare Instagram");
    if(a.token_expires_at && Date.parse(a.token_expires_at)<Date.now())throw new ApiFailure(401,"Token Meta scaduto: ricollega l'account");
    const token=decrypt(a.token_ciphertext);
    const accountUrl=new URL("https://graph.facebook.com/"+ver+"/"+encodeURIComponent(a.remote_id));

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { LoaderCircle, RefreshCw, Settings2 } from "lucide-react";
 import { requestJson } from "./types";
 import type { OpenRouterImageModel, OpenRouterModel } from "@/lib/ai-model-settings";
+import DriveSettings from "./drive-settings";
 
 type Preferences = { textModel: string; imageModel: string | null };
 type ModelResponse = {
@@ -70,7 +71,7 @@ export default function ModelSettings() {
   return <section className="stack-lg" style={{ maxWidth: 900 }}>
     <div className="page-head">
       <div>
-        <div className="eyebrow">FORGECY / ACCOUNT</div>
+        <div className="eyebrow">FORGECY / WORKSPACE LOCALE</div>
         <h1 style={{ marginTop: 7 }}>Impostazioni</h1>
         <p className="tagline" style={{ marginTop: 7 }}>Scegli i modelli OpenRouter per il testo e per la generazione delle immagini.</p>
       </div>
@@ -119,6 +120,7 @@ export default function ModelSettings() {
       </article>
     </div>}
     {saving && <p className="caption" role="status"><LoaderCircle className="spin" size={14}/> Salvataggio preferenza…</p>}
-    <div className="notice warn">La scelta si sincronizza con il tuo account Supabase sugli altri dispositivi. Ogni installazione Forgecy deve configurare una propria chiave server-only <code>OPENROUTER_API_KEY</code>.</div>
+    <div className="notice warn">Le preferenze sono salvate sul computer. Ogni installazione Forgecy configura la propria chiave server-only <code>OPENROUTER_API_KEY</code>.</div>
+    <DriveSettings />
   </section>;
 }

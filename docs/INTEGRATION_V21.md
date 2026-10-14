@@ -1,27 +1,7 @@
-# Forgecy V21: note storiche di integrazione del backend
+# Forgecy V21 — nota storica
 
-Integrata su `main` dalla release V24 (#100). Per installare la versione corrente seguire [LOCAL_SETUP.md](LOCAL_SETUP.md): la sequenza completa arriva a **0018**, non si ferma a V21.
+Questo documento conserva il contesto di un'integrazione precedente. La linea attuale è stata convertita a SQLite locale; i dettagli di installazione storici non sono più istruzioni operative. Seguire [LOCAL_SETUP.md](LOCAL_SETUP.md) per la versione corrente.
 
-## Perché
-Le PR precedenti avevano introdotto due migrazioni diverse con numero **0012**. La nuova linea di integrazione parte dal lavoro V20 (PR #94), conserva il budget crawler e la ricerca a estratti e porta i controlli worker della PR #95 su una numerazione non ambigua.
+Il lavoro V21 consolidava ricerca di fonti, quote di acquisizione web e job AI con lease e token di fencing. Le stesse garanzie applicative sono ora implementate nel runtime locale e verificate con test SQLite.
 
-## Sequenza canonica delle migrazioni
-0001–0011 (base); **0012_website_crawl_budgets.sql**; **0013_source_chunks.sql**; **0014_source_chunks_backfill.sql**; **0015_ai_worker_fencing.sql**.
-
-Non rinominare o riapplicare migrazioni già eseguite in un database di produzione senza verificarne lo stato. Questa sequenza vale per una nuova installazione e per ambienti che hanno ricevuto i numeri precedenti coerentemente. Prima del deploy, fare inventario della cronologia del database e un backup verificato.
-
-## Che cosa si unisce
-- Knowledge retrieval, chunk search e dossier con citazioni di fonti del cliente.
-- Quote condivise per acquisizioni web e difese SSRF (crawling **disabilitato** senza firewall di uscita).
-- AI job con token riservato al worker, rinnovo della lease, rejection dei worker scaduti.
-- Rimozione del SELECT * nella lista dei job del workspace, che dopo 0015 non deve esporre `lease_token`.
-
-## Test di accettazione
-1. Typecheck, lint, test Node.
-2. PostgreSQL 16: migrazioni 0001–0015, smoke test RLS, ricerca a estratti e test concorrenza worker.
-3. Build Next.js.
-4. Verifica della propria installazione con Supabase/OpenRouter reali, worker e Meta autorizzato se abilitato; CI non dimostra l'integrazione esterna. Un progetto di test separato è facoltativo.
-5. Monitorare race e processi interrotti con almeno due dispatcher concorrenti prima del rilascio.
-
-## Limiti
-Il heartbeat evita che un tentativo scaduto confermi l'esito di un altro; non rende esattamente una volta le richieste al modello e non rende atomiche tutte le azioni di ogni agente. Scheduler, egress firewall, budget token/€, OCR, token Meta e osservabilità restano da completare. Nessuna migrazione è stata applicata automaticamente a database utenti da questa PR.
+Le garanzie rimangono limitate alle transazioni del database locale: non rendono atomiche le richieste a un provider AI né impediscono costi ripetuti dopo un arresto durante una chiamata.

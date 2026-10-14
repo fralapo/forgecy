@@ -24,7 +24,7 @@ test("request reservation is scoped to a client and a known action only",async()
  assert.deepEqual(args,{p_client_id:clientId,p_kind:"chat"});
 });
 
-test("shared SQL rate limit is mapped to 429 without exposing internals",async()=>{
+test("local rate limit is mapped to 429 without exposing internals",async()=>{
  const ctx=context(async()=>({data:null,error:{code:"P0429",message:"sensitive policy details"}}));
  await assert.rejects(()=>reserveAiRequest(ctx,"id","image"),(err:unknown)=>
    err instanceof ApiFailure&&err.status===429&&!err.message.includes("sensitive"));
