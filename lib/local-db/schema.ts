@@ -207,7 +207,7 @@ CREATE TABLE IF NOT EXISTS ai_preferences (
  ocr_model TEXT CHECK(ocr_model IS NULL OR length(ocr_model) BETWEEN 1 AND 180),
  ocr_provider TEXT NOT NULL DEFAULT 'auto' CHECK(ocr_provider IN ('auto','openrouter','local')),
  ocr_auto_update INTEGER NOT NULL DEFAULT 1 CHECK(ocr_auto_update IN (0,1)),
- semantic_enabled INTEGER NOT NULL DEFAULT 0 CHECK(semantic_enabled IN (0,1)), updated_at TEXT NOT NULL
+ semantic_enabled INTEGER NOT NULL DEFAULT 1 CHECK(semantic_enabled IN (0,1)), updated_at TEXT NOT NULL
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS source_fts USING fts5(id UNINDEXED, title, body, tokenize='unicode61 remove_diacritics 2');

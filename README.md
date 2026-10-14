@@ -16,7 +16,7 @@ Apri [http://localhost:3000](http://localhost:3000). L'app crea il database al p
 
 Se riprendi il progetto su un altro computer, segui la [guida per la prossima sessione](docs/NEXT_SESSION.md), che spiega come clonare il codice e trasferire separatamente il workspace locale.
 
-Il database si trova nella cartella dati utente del sistema operativo. `FORGECY_DATA_DIR` consente di sceglierne un'altra. Le impostazioni dei modelli e i dati del workspace restano locali; ogni computer configura le proprie chiavi AI e social.
+Il database si trova nella cartella dati utente del sistema operativo. `FORGECY_DATA_DIR` consente di sceglierne un'altra. Le impostazioni dei modelli e i dati del workspace restano locali; ogni computer configura le proprie chiavi AI. Le statistiche Instagram si importano come snapshot JSON forniti da chi utilizza Forgecy, senza login né raccolta automatica dal sito.
 
 ## Dati e sincronizzazione
 

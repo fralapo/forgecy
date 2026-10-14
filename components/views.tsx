@@ -1,7 +1,7 @@
 "use client";
 import { useEffect,useReducer,useState } from "react";
 import Image from "next/image";
-import { ArrowRight,BookOpen,CalendarDays,Check,ChevronLeft,ChevronRight,FileText,Globe,Instagram,Layers3,Plus,RefreshCw,Sparkles,UploadCloud,Image as ImageIcon,ExternalLink,Trash2 } from "lucide-react";
+import { ArrowRight,BookOpen,CalendarDays,Check,ChevronLeft,ChevronRight,FileText,Globe,Layers3,Plus,RefreshCw,Sparkles,UploadCloud,Image as ImageIcon,ExternalLink,Trash2 } from "lucide-react";
 import type { Snapshot,View,Content,Slide,EditorialBrief } from "./types";
 import { offerLabel,statusLabel,requestJson } from "./types";
 import AiUsagePanel from "./ai-usage-panel";
@@ -72,8 +72,8 @@ function Today({data,onView,onChat,onAction}:{data:Snapshot;onView:(v:View)=>voi
     <p className="tagline">Ogni nuova strategia può utilizzare le campagne precedenti e i dati importati dai social. Non vengono mostrati numeri inventati.</p>
     <div className="separator"/>
     <div className="info-pair"><span>Campagne nello storico</span><strong>{data.campaigns.length}</strong></div>
-    <div className="info-pair"><span>Rilevazioni Instagram reali</span><strong>{data.social_snapshots.length}</strong></div>
-    <div className="info-pair"><span>Account Instagram collegati</span><strong>{data.social_accounts.length}</strong></div>
+    <div className="info-pair"><span>Snapshot Instagram importati</span><strong>{data.social_snapshots.length}</strong></div>
+    <div className="info-pair"><span>Account Instagram in archivio</span><strong>{data.social_accounts.length}</strong></div>
    </div>
   </div>
   <div className="card" style={{marginTop:18}}><div className="section-title"><h2>Come lavora Forgecy</h2></div>
@@ -397,6 +397,8 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
 }
 function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAction"];onChat:()=>void;busy:string|null}){
  const [requested,setRequested]=useState("");
+ const [instagramHandle,setInstagramHandle]=useState("");
+ const [importError,setImportError]=useState("");
  const selected=data.social_accounts.some(a=>a.id===requested)?requested:data.social_accounts[0]?.id;
  const stats=summarizeInstagram(data.social_snapshots,selected);
  const snap=stats.latest;
@@ -404,27 +406,44 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
  const maxFollowers=Math.max(1,...stats.history.map(p=>p.count));
  return <>
   <Header k="PERFORMANCE / MEMORIA" title="I risultati guidano la prossima scelta."
-   sub="Metriche reali del singolo account, fonti tracciate e nessun numero simulato."
-   actions={<div className="flex gap8 wrap"><a className="button" href={"/api/integrations/instagram/connect?clientId="+data.client.id}><Instagram size={16}/> Collega Instagram</a>
-     <button className="button primary" disabled={!data.social_accounts.length||Boolean(busy)} onClick={()=>onAction("syncSocial")}><RefreshCw size={15}/> Sincronizza</button>
+   sub="Snapshot importati, confrontabili nel tempo e attribuiti al profilo corretto."
+   actions={<div className="flex gap8 wrap">{selected&&<label className="button primary" style={{cursor:busy?"wait":"pointer",opacity:busy ? .65 : 1}}><UploadCloud size={15}/> Importa rilevazione<input type="file" accept="application/json,.json" disabled={Boolean(busy)} hidden onChange={async event=>{
+      const file=event.currentTarget.files?.[0];event.currentTarget.value="";if(!file||!selected)return;
+      try{setImportError("");const parsed=JSON.parse(await file.text()) as Record<string,unknown>;const snapshot=(parsed.snapshot&&typeof parsed.snapshot==="object"?parsed.snapshot:parsed) as Record<string,unknown>;
+       const result=await onAction("syncSocial",{accountId:selected,snapshot});if(!result)setImportError("Importazione non riuscita. Controlla che il file sia un JSON nel formato indicato qui sotto.");
+      }catch{setImportError("File JSON non valido o illeggibile.");}
+    }}/></label>}
      {snap&&selected&&<a className="button" href={"/api/workspace/clients/"+data.client.id+"/reports/instagram?accountId="+encodeURIComponent(selected)} target="_blank" rel="noopener noreferrer"><FileText size={15}/> Esporta CSV</a>}</div>}/>
-  {!data.social_accounts.length?<div className="notice warn">Instagram non è collegato. Per leggere dati veri è necessario un account Professional autorizzato su Meta.</div>:
+  <div className="card" style={{marginBottom:16}}>
+   <form className="flex center gap8 wrap" onSubmit={async event=>{
+    event.preventDefault();const username=instagramHandle.trim();if(!username)return;
+    const result=await onAction("addInstagramProfile",{username});
+    if(result)setInstagramHandle("");
+   }}>
+    <label htmlFor="instagram-public-handle" style={{fontWeight:650}}>Aggiungi account da monitorare</label>
+    <input id="instagram-public-handle" value={instagramHandle} onChange={event=>setInstagramHandle(event.target.value)} placeholder="username Instagram" autoCapitalize="none" autoCorrect="off" style={{flex:"1 1 220px",maxWidth:340}} aria-describedby="instagram-public-hint"/>
+    <button className="button" type="submit" disabled={!instagramHandle.trim()||Boolean(busy)}><Plus size={15}/> Aggiungi profilo</button>
+   </form>
+   <p id="instagram-public-hint" className="caption" style={{margin:"8px 0 0"}}>Forgecy non accede a Instagram e non chiede credenziali. Importa una rilevazione raccolta o preparata da te; i dati restano nel workspace locale.</p>
+   {importError&&<p role="alert" className="caption" style={{color:"var(--danger)",marginTop:8}}>{importError}</p>}
+   <details style={{marginTop:10}}><summary className="caption" style={{cursor:"pointer"}}>Formato JSON accettato</summary><pre className="caption" style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",marginTop:8}}>{JSON.stringify({account:{username:"nomeaccount",followers_count:1200,media_count:80},media:[{id:"post-1",caption:"Testo",permalink:"https://www.instagram.com/p/ABC/",media_type:"IMAGE",timestamp:"2026-10-14T12:00:00.000Z",like_count:42,comments_count:3}]},null,2)}</pre></details>
+  </div>
+  {!data.social_accounts.length?<div className="notice">Aggiungi un account come riferimento locale, poi importa il primo snapshot JSON.</div>:
    <div className="card"><div className="flex between center wrap gap12"><div><h2>Account Instagram</h2><p className="caption">La dashboard non mescola mai account differenti</p></div>
     <div className="flex center gap8 wrap">
      <select aria-label="Account Instagram" value={selected||""} onChange={e=>setRequested(e.target.value)} style={{maxWidth:240}}>
-      {data.social_accounts.map(a=><option value={a.id} key={a.id}>@{a.username}{a.needs_reauth?" · ricollega": ""}</option>)}
+      {data.social_accounts.map(a=><option value={a.id} key={a.id}>@{a.username}</option>)}
      </select>
-     {data.social_accounts.some(a=>a.needs_reauth)&&<span className="caption">I token social non vengono inclusi nei backup. Ricollega Instagram su questo computer per aggiornare i dati.</span>}
      <button className="button small" disabled={!selected||Boolean(busy)} onClick={()=>{
-       if(window.confirm("Scollegare Instagram? Credenziali e statistiche locali verranno eliminate. Il consenso Meta remoto va revocato separatamente."))
+       if(window.confirm("Rimuovere questo profilo e cancellare le rilevazioni salvate localmente?"))
          onAction("disconnectSocial",{id:selected});
-     }}>Scollega</button>
+      }}>Rimuovi profilo</button>
     </div></div></div>}
   <div className="grid3" style={{marginTop:18}}>
    <div className="card metric-card"><span className="muted">Follower · ultima lettura</span>
     <strong>{num(stats.followers)}</strong><small>{stats.delta===null?"Variazione non disponibile":(stats.delta>=0?"+":"")+num(stats.delta)+" rispetto alla lettura precedente"}</small></div>
    <div className="card metric-card"><span className="muted">Contenuti dell&apos;account</span>
-    <strong>{num(stats.media_count)}</strong><small>Conteggio riportato dall&apos;API Meta</small></div>
+    <strong>{num(stats.media_count)}</strong><small>Conteggio contenuto nello snapshot importato</small></div>
    <div className="card metric-card"><span className="muted">Interazioni del campione</span>
     <strong>{num(stats.total_sampled_interactions)}</strong><small>Like + commenti per {stats.sampled_posts_with_interactions} contenuti con dati disponibili</small></div>
   </div>
@@ -437,14 +456,14 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
        <div title={p.count+" follower · "+new Date(p.date).toLocaleDateString("it-IT")} style={{height:Math.max(6,Math.round(p.count/maxFollowers*82)),borderRadius:"5px 5px 0 0",background:"var(--accent)",opacity:.75}}/>
        <small className="caption" style={{fontSize:10}}>{new Date(p.date).toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit"})}</small>
       </div>)}</div>:
-      <Empty title="Servono almeno due rilevazioni" text="Sincronizza nuovamente in un giorno successivo per confrontare valori reali."/>}
+      <Empty title="Servono almeno due rilevazioni" text="Importa un altro snapshot in un momento successivo per confrontare i dati."/>}
     <div className="separator"/>
-    <div className="info-pair"><span>Ultima sincronizzazione</span><strong>{snap?new Date(snap.collected_at).toLocaleString("it-IT"):"—"}</strong></div>
+    <div className="info-pair"><span>Ultimo snapshot importato</span><strong>{snap?new Date(snap.collected_at).toLocaleString("it-IT"):"—"}</strong></div>
     <div className="info-pair"><span>Copertura insight post disponibili</span><strong>{stats.sampled_posts_with_reach===null?"Non disponibile":stats.sampled_posts_with_reach+" su "+stats.sampled_posts}</strong></div>
-    {snap?.data.insights_status==="unavailable"&&<div className="notice warn">Gli insight avanzati non sono disponibili per questo account o per i permessi correnti. Like, commenti e follower rimangono utilizzabili.</div>}
+    {snap?.data.insights_status==="unavailable"&&<div className="notice">Lo snapshot non include insight privati come copertura, salvataggi e condivisioni.</div>}
    </div>
    <div className="card">
-    <div className="section-title"><h2>Contenuti con più interazioni</h2><span className="caption">Ultimo campione Meta</span></div>
+    <div className="section-title"><h2>Contenuti con più interazioni</h2><span className="caption">Ultimo snapshot importato</span></div>
     {stats.top.length?stats.top.map((p,i)=><div className="list-row" key={p.id}>
       <div className="stack" style={{gap:4,minWidth:0}}>
        <strong>{i+1}. {p.caption?.slice(0,85)||p.media_type||"Post Instagram"}</strong>
@@ -452,7 +471,7 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
        {(p.reach!==null||p.saves!==null||p.shares!==null)&&<div className="caption">{p.reach!==null?"Copertura "+num(p.reach)+" · ":""}{p.saves!==null?"Salvataggi "+num(p.saves)+" · ":""}{p.shares!==null?"Condivisioni "+num(p.shares):""}</div>}
       </div>
       {p.permalink&&<a target="_blank" rel="noreferrer" href={p.permalink} aria-label="Apri su Instagram"><ExternalLink size={15}/></a>}
-     </div>):<Empty title="Nessun contenuto con dati utilizzabili" text="Collega e sincronizza un account professionale per ottenere contenuti reali."/>}
+     </div>):<Empty title="Nessun contenuto con dati utilizzabili" text="Importa uno snapshot che contenga i dati dei contenuti da analizzare."/>}
    </div>
   </div>
   <div className="grid2" style={{marginTop:18}}>

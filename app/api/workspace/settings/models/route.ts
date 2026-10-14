@@ -42,13 +42,14 @@ export async function PATCH(request: Request) {
       throw new ApiFailure(409, "Il modello non è più disponibile nel catalogo OpenRouter. Aggiorna la lista.");
 
     const existing = await ctx.db.from("ai_preferences")
-      .select("text_model,image_model,ocr_model").eq("owner_id", ctx.user.id).maybeSingle();
+      .select("text_model,image_model,ocr_model,semantic_enabled").eq("owner_id", ctx.user.id).maybeSingle();
     dbError(existing.error, "Impossibile leggere le preferenze AI");
     const row = {
       owner_id: ctx.user.id,
       text_model: selection.kind === "text" ? selection.modelId : existing.data?.text_model || null,
       image_model: selection.kind === "image" ? selection.modelId : existing.data?.image_model || null,
       ocr_model: selection.kind === "ocr" ? selection.modelId : existing.data?.ocr_model || null,
+      semantic_enabled: existing.data?.semantic_enabled ?? 1,
       updated_at: new Date().toISOString()
     };
     const saved = await ctx.db.from("ai_preferences").upsert(row, { onConflict: "owner_id" })

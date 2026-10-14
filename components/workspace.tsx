@@ -22,7 +22,10 @@ export default function Workspace(){
  const [clientId,setClientId]=useState<string|null>(null);
  const [data,setData]=useState<Snapshot|null>(null);
  const [view,setView]=useState<View>("today");
+ const [apiConfigured,setApiConfigured]=useState<boolean|null>(null);
  const [modal,setModal]=useState<Modal>(null);
+ const modalRef=useRef<HTMLDivElement>(null);
+ const modalTriggerRef=useRef<HTMLElement|null>(null);
  const [switchOpen,setSwitchOpen]=useState(false);
  const [chatOpen,setChatOpen]=useState(false);
  const [chatText,setChatText]=useState("");
@@ -70,6 +73,13 @@ export default function Workspace(){
   const initial=window.setTimeout(checkLocalOcrUpdate,1800);
   const timer=window.setInterval(checkLocalOcrUpdate,30*60_000);
   return()=>{active=false;window.clearTimeout(initial);window.clearInterval(timer);};
+ },[]);
+ useEffect(()=>{
+  let active=true;
+  void requestJson<{key:{configured:boolean}}>("/api/workspace/settings/openrouter-key")
+   .then(result=>{if(active)setApiConfigured(result.key.configured);})
+   .catch(()=>{if(active)setApiConfigured(false);});
+  return()=>{active=false;};
  },[]);
  useEffect(()=>{if(!clientId)return;let active=true;
   refresh(clientId).catch(e=>{if(active)setError(getError(e))});
@@ -122,7 +132,8 @@ export default function Workspace(){
   if(name==="revalidateContent")return mutate(name,()=>requestJson(root+"/contents/"+body.id+"/revalidate",{method:"POST",body:"{}"}),"Bozza riaperta: verifica i dati e richiedi l’approvazione");
   if(name==="adapt")return mutate(name,()=>requestJson(root+"/contents/"+body.id+"/adapt",{method:"POST",body:"{}"}),"Variante LinkedIn creata");
   if(name==="image")return mutate(name,()=>requestJson(root+"/contents/"+body.id+"/image",{method:"POST",body:JSON.stringify({slideIndex:body.slideIndex,prompt:body.prompt})}),"Immagine generata e salvata");
-  if(name==="syncSocial")return mutate(name,()=>requestJson(root+"/social/sync",{method:"POST",body:"{}"}),"Dati Instagram aggiornati");
+  if(name==="addInstagramProfile")return mutate(name,()=>requestJson(root+"/social/accounts",{method:"POST",body:JSON.stringify({username:body.username})}),"Profilo Instagram aggiunto");
+  if(name==="syncSocial")return mutate(name,()=>requestJson(root+"/social/sync",{method:"POST",body:JSON.stringify({accountId:body.accountId,snapshot:body.snapshot})}),"Rilevazione importata");
   if(name==="disconnectSocial")return mutate(name,()=>requestJson(root+"/social/accounts/"+body.id,{method:"DELETE"}),"Account Instagram scollegato e statistiche locali cancellate");
   if(name==="calendarCreate")return mutate(name,()=>requestJson(root+"/editorial",{method:"POST",body:JSON.stringify(body)}),"Voce aggiunta al calendario");
   if(name==="calendarUpdate")return mutate(name,()=>requestJson(root+"/editorial/"+body.id,{method:"PATCH",body:JSON.stringify({status:body.status})}),"Stato editoriale aggiornato");
@@ -239,11 +250,31 @@ export default function Workspace(){
   if(!result)setChatText(body);
  }
  const current=clients.find(c=>c.id===clientId);
+ useEffect(()=>{
+  if(!modal)return;
+  const previousFocus=modalTriggerRef.current;
+  const panel=modalRef.current;
+  const focusable=()=>panel?Array.from(panel.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])')):[];
+  const firstField=panel?.querySelector<HTMLElement>('[autofocus], form input:not([disabled]), form select:not([disabled]), form textarea:not([disabled])');
+  (firstField||focusable()[0]||panel)?.focus();
+  function handleKeyDown(event:KeyboardEvent){
+   if(event.key==="Escape"){event.preventDefault();setModal(null);return;}
+   if(event.key!=="Tab")return;
+   const items=focusable();
+   if(!items.length){event.preventDefault();panel?.focus();return;}
+   const first=items[0],last=items[items.length-1];
+   if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+   else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+  }
+  document.addEventListener("keydown",handleKeyDown);
+  return()=>{document.removeEventListener("keydown",handleKeyDown);previousFocus?.focus();};
+ },[modal]);
  const latestDossier=data?.dossiers?.[0];
  const latestStrategy=data?.strategies?.[0];
  const canCampaign=latestDossier?.status==="approved" && latestDossier.knowledge_revision===data?.client.knowledge_revision && latestStrategy?.status==="approved" && latestStrategy.knowledge_revision===data?.client.knowledge_revision;
  const pendingMissions=(data?.missions||[]).filter(x=>x.status==="proposed");
- const baseModal=()=>setModal({kind:"client"});
+ const openModal=(next:Exclude<Modal,null>)=>{if(!modal)modalTriggerRef.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setModal(next);};
+ const baseModal=()=>openModal({kind:"client"});
 
  if(loading)return <main className="login-panel" style={{minHeight:"100vh"}}><div className="stack"><LoaderCircle className="spin"/> Caricamento Forgecy…</div></main>;
  if(error && !clients.length)return <main className="login-panel" style={{minHeight:"100vh"}}><div className="card stack"><h2>Workspace locale non disponibile</h2><p className="tagline">{error}</p><p className="caption">Controlla i log locali e la configurazione indicata nel README.</p><button className="button" onClick={()=>window.location.reload()}>Riprova</button></div></main>;
@@ -252,7 +283,7 @@ export default function Workspace(){
    <aside className="sidebar">
     <div className="wordmark"><span className="logo-icon">f.</span><strong>forgecy</strong></div>
     <div className="nav-label">IL TUO WORKSPACE</div>
-    <nav className="side-nav">{nav.map(n=><button key={n.key} className={"side-link "+(view===n.key?"active":"")} onClick={()=>setView(n.key)}><n.icon size={18}/>{n.label}</button>)}</nav>
+    <nav className="side-nav" aria-label="Navigazione workspace">{nav.map(n=><button key={n.key} aria-current={view===n.key?"page":undefined} className={"side-link "+(view===n.key?"active":"")} onClick={()=>setView(n.key)}><n.icon size={18}/>{n.label}</button>)}</nav>
     <div className="sidebar-bottom">
      <button className="side-link" onClick={()=>setChatOpen(true)}><Sparkles size={17}/> Leader AI</button>
      <div className="separator"/>
@@ -268,17 +299,17 @@ export default function Workspace(){
    </aside>
    <div className="main-area">
     <div className="topbar">
-     <div className="flex center gap8"><button className="mobile-client-button" onClick={()=>setSwitchOpen(x=>!x)}>{current?initials(current.name):"＋"} <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{current?.name||"Scegli cliente"}</span><ChevronDown size={13}/></button><span className="muted" style={{fontSize:12}}>Workspace <ChevronRight size={12} style={{display:"inline"}}/> {nav.find(n=>n.key===view)?.label}</span></div>
-     <div className="flex center gap8"><span className="pill muted" style={{maxWidth:190,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{current?.name||"Nessun cliente"}</span><button className="button small mobile-chat-toggle" onClick={()=>setChatOpen(true)}><MessageCircle size={15}/> Chat</button></div>
+     <div className="flex center gap8"><button className="mobile-client-button" aria-label={current?`Cambia cliente, attuale ${current.name}`:"Scegli un cliente"} aria-expanded={switchOpen} onClick={()=>setSwitchOpen(x=>!x)}>{current?initials(current.name):"＋"} <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{current?.name||"Scegli cliente"}</span><ChevronDown size={13}/></button><span className="muted topbar-crumb" style={{fontSize:12}}>Workspace <ChevronRight size={12} style={{display:"inline"}}/> {nav.find(n=>n.key===view)?.label}</span></div>
+     <div className="flex center gap8"><span className="pill muted topbar-client" style={{maxWidth:190,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{current?.name||"Nessun cliente"}</span><button className="button small mobile-chat-toggle" aria-label="Apri chat con Leader AI" onClick={()=>setChatOpen(true)}><MessageCircle size={15}/> <span>Chat</span></button></div>
     </div>
     <main className="page-scroll"><div className="page-body">
      {error&&<div className="notice error" role="alert" style={{marginBottom:18,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>{error}<button className="button small" onClick={()=>setError("")}>Chiudi</button></div>}
-     {view==="settings"?<ModelSettings/>:!current?<div className="stack-lg" style={{maxWidth:640,margin:"10vh auto"}}>
+     {view==="settings"?<ModelSettings/>:!current?<div className="stack-lg welcome-empty" style={{maxWidth:640,margin:"10vh auto"}}>
       <div className="eyebrow">BENVENUTO IN FORGECY</div><h1>Il lavoro inizia da un cliente.</h1><p className="tagline">Crea uno spazio dedicato: potrai aggiungere sito, fonti, prodotti e servizi, costruire un dossier approvato e parlare con il Leader.</p>
-      <p className="caption">Prima o dopo, puoi configurare i modelli AI e collegare Google Drive dalle Impostazioni. Non serve creare un cliente per accedervi.</p>
-      <div className="flex gap8 wrap"><button className="button" onClick={()=>setView("settings")}><Settings2 size={16}/> Configura API e modelli AI</button><button className="button primary" onClick={baseModal}><Plus size={16}/> Crea il primo cliente</button></div>
+      <p className="caption">Crea uno spazio dedicato per organizzare fonti, prodotti, servizi e progetti. Le impostazioni dei modelli AI sono disponibili nella sezione Impostazioni.</p>
+      <div className="flex gap8 wrap welcome-actions">{apiConfigured===false&&<button className="button" onClick={()=>setView("settings")}><Settings2 size={16}/> Configura API e modelli AI</button>}<button className="button primary" onClick={baseModal}><Plus size={16}/> Aggiungi cliente</button></div>
      </div>:!data?<div className="empty">Caricamento dati di {current.name}…</div>:
-      <Views data={data} view={view} onView={setView} onModal={(kind,item)=>setModal({kind,item})} onAction={onAction} onChat={()=>setChatOpen(true)} busy={busy}/>}
+      <Views data={data} view={view} onView={setView} onModal={(kind,item)=>openModal({kind,item})} onAction={onAction} onChat={()=>setChatOpen(true)} busy={busy}/>}
     </div></main>
    </div>
    <aside className={"chat-panel "+(chatOpen?"open":"")}>
@@ -288,7 +319,7 @@ export default function Workspace(){
      <div className="chat-bubble leader">Ciao! Sono il Leader di Forgecy. Conosco esclusivamente le informazioni del cliente attivo. Posso rispondere a domande o coordinare una campagna con un&apos;approvazione esplicita.</div>
      {data?.messages?.map(m=><div key={m.id} style={{display:"contents"}}>
       <div className={"chat-bubble "+(m.role==="user"?"user":"leader")}>{m.body}</div>
-      {m.role==="leader"&&m.metadata?.kind==="signal_proposal"&&m.metadata.signal&&<button style={{alignSelf:"flex-start"}} className="button small" onClick={()=>setModal({kind:"signal",item:m.metadata?.signal})}><Check size={14}/> Rivedi e registra il feedback</button>}
+      {m.role==="leader"&&m.metadata?.kind==="signal_proposal"&&m.metadata.signal&&<button style={{alignSelf:"flex-start"}} className="button small" onClick={()=>openModal({kind:"signal",item:m.metadata?.signal})}><Check size={14}/> Rivedi e registra il feedback</button>}
      </div>)}
      {pendingMissions.map(m=>{const qa=((m.payload?.campaign as Record<string,unknown>|undefined)?.strategy as Record<string,unknown>|undefined)?.qa as Record<string,unknown>|undefined;
        const blockers=Array.isArray(qa?.blocking_issues)?qa.blocking_issues as string[]:[];
@@ -302,7 +333,7 @@ export default function Workspace(){
       {warnings.length>0&&<details><summary className="caption" style={{cursor:"pointer"}}>Osservazioni da verificare ({warnings.length})</summary><div className="stack" style={{marginTop:7}}>{warnings.map((v,i)=><p className="caption" key={i}>• {v}</p>)}</div></details>}
       {blockers.length>0&&<div className="notice error"><strong>Proposta bloccata: {blockers.length} problemi</strong><div className="stack" style={{marginTop:8}}>{blockers.map((v,i)=><p key={i} className="caption">{v}</p>)}</div><p className="caption" style={{marginTop:8}}>Richiedi una nuova proposta corretta; questa versione non può essere approvata.</p></div>}
       <div className="stack" style={{gap:2}}>{data?.agent_events.filter(x=>x.mission_id===m.id).slice(-4).map(ev=><div className="agent-event" key={ev.id}>{ev.agent} → {ev.recipient}: {ev.summary}</div>)}</div>
-      <div className="flex gap8 wrap">{blockers.length>0&&<button className="button primary small" disabled={Boolean(busy)} onClick={()=>setModal({kind:"mission",item:{
+      <div className="flex gap8 wrap">{blockers.length>0&&<button className="button primary small" disabled={Boolean(busy)} onClick={()=>openModal({kind:"mission",item:{
        request:(m.request+"\\nCorreggi questi problemi: "+blockers.join("; ")).slice(0,2900),
        period:String(((m.payload?.campaign as Record<string,unknown>|undefined)?.period)||"Prossimi 30 giorni"),
        offer_id:((m.payload?.campaign as Record<string,unknown>|undefined)?.offer_id as string|null)||""
@@ -311,18 +342,18 @@ export default function Workspace(){
      <div ref={railEnd}/>
     </div>
     {current&&<div className="chat-prompt"><div className="eyebrow">AZIONI RAPIDE</div>
-     <button className="button small" style={{justifyContent:"start"}} disabled={Boolean(busy)} onClick={()=>setModal({kind:"signal"})}><Plus size={14}/> Registra un feedback della community</button>
-     <button className="button small" style={{justifyContent:"start"}} disabled={!canCampaign||Boolean(busy)} onClick={()=>setModal({kind:"mission"})}><Sparkles size={14}/> Proponi una campagna completa</button>
+     <button className="button small" style={{justifyContent:"start"}} disabled={Boolean(busy)} onClick={()=>openModal({kind:"signal"})}><Plus size={14}/> Registra un feedback della community</button>
+     <button className="button small" style={{justifyContent:"start"}} disabled={!canCampaign||Boolean(busy)} onClick={()=>openModal({kind:"mission"})}><Sparkles size={14}/> Proponi una campagna completa</button>
      {!canCampaign&&<span className="caption">Per generare campagne devi approvare il dossier e il piano strategico aziendale aggiornati.</span>}
     </div>}
     <form className="chat-compose" onSubmit={sendMessage}><textarea value={chatText} disabled={!current||Boolean(busy)} onChange={e=>setChatText(e.target.value)} placeholder={current?"Chiedi qualsiasi cosa sul cliente…":"Prima seleziona un cliente"} maxLength={4000} rows={3}/>
-     <div className="chat-footer"><button type="button" className="button small" disabled={!current||Boolean(busy)} onClick={()=>setModal({kind:"upload"})}><Plus size={14}/> Allega file</button><span className="caption">{busy?"Elaborazione…":"OpenRouter"}</span><button className="button primary small" type="submit" disabled={!chatText.trim()||!current||Boolean(busy)}><Send size={15}/> Invia</button></div>
+     <div className="chat-footer"><button type="button" className="button small" disabled={!current||Boolean(busy)} onClick={()=>openModal({kind:"upload"})}><Plus size={14}/> Allega file</button><span className="caption">{busy?"Elaborazione…":"OpenRouter"}</span><button className="button primary small" type="submit" disabled={!chatText.trim()||!current||Boolean(busy)}><Send size={15}/> Invia</button></div>
     </form>
    </aside>
   </div>
-  <nav className="mobile-bottom">{[nav[0],nav[1],nav[2],nav[3],nav[4]].map(n=><button key={n.key} aria-label={n.label} title={n.label} className={view===n.key?"active":""} onClick={()=>{setView(n.key);setChatOpen(false)}}><n.icon size={19}/>{n.label}</button>)}<button aria-label="Impostazioni" title="Impostazioni" className={view==="settings"?"active":""} onClick={()=>{setView("settings");setChatOpen(false)}}><Settings2 size={19}/><span>Impost.</span></button></nav>
+  <nav className="mobile-bottom" aria-label="Navigazione principale">{[nav[0],nav[1],nav[2],nav[3],nav[4]].map(n=><button key={n.key} aria-current={view===n.key?"page":undefined} aria-label={n.label} title={n.label} className={view===n.key?"active":""} onClick={()=>{setView(n.key);setChatOpen(false)}}><n.icon size={19}/><span>{n.label}</span></button>)}<button aria-current={view==="settings"?"page":undefined} aria-label="Impostazioni" title="Impostazioni" className={view==="settings"?"active":""} onClick={()=>{setView("settings");setChatOpen(false)}}><Settings2 size={19}/><span>Impost.</span></button></nav>
   {switchOpen&&<div className="switch-popover mobile-switch"><div className="eyebrow" style={{padding:8}}>CLIENTI</div>{clients.map(c=><button key={c.id} onClick={()=>choose(c.id)}><span className="client-avatar">{initials(c.name)}</span>{c.name}</button>)}<button onClick={()=>{setSwitchOpen(false);baseModal()}}><Plus size={14}/> Nuovo cliente</button></div>}
-  {modal&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setModal(null)}}><div className="modal"><div className="modal-head"><div><div className="eyebrow">FORGECY / {current?.name||"NUOVO CLIENTE"}</div><h2 style={{marginTop:7}}>{({client:"Aggiungi un cliente",source:"Nuova fonte",signal:"Ascolto della community",upload:"Carica documento",offer:"Prodotto o servizio",profile:"Profilo del cliente",campaign:"Nuova campagna",content:"Nuovo contenuto",mission:"Affida un obiettivo al Leader"} as Record<string,string>)[modal.kind]||"Nuovo elemento"}</h2></div><button className="button ghost small" aria-label="Chiudi" onClick={()=>setModal(null)}><X size={18}/></button></div>
+  {modal&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setModal(null)}}><div ref={modalRef} className="modal" role="dialog" aria-modal="true" aria-labelledby="forgecy-modal-title" tabIndex={-1}><div className="modal-head"><div><div className="eyebrow">FORGECY / {current?.name||"NUOVO CLIENTE"}</div><h2 id="forgecy-modal-title" style={{marginTop:7}}>{({client:"Aggiungi un cliente",source:"Nuova fonte",signal:"Ascolto della community",upload:"Carica documento",offer:"Prodotto o servizio",profile:"Profilo del cliente",campaign:"Nuova campagna",content:"Nuovo contenuto",mission:"Affida un obiettivo al Leader"} as Record<string,string>)[modal.kind]||"Nuovo elemento"}</h2></div><button className="button ghost small" aria-label="Chiudi" onClick={()=>setModal(null)}><X size={18}/></button></div>
    <form onSubmit={modal.kind==="client"?createClient:submitModal}>
     {modal.kind==="client"&&<><div><label>Nome del cliente *</label><input required name="name" autoFocus maxLength={160} placeholder="Es. CasaLuce"/></div><div className="cols"><div><label>Settore</label><input name="industry" placeholder="Es. Cura della casa"/></div><div><label>Modalità di partenza</label><select name="intake" defaultValue="site"><option value="site">Importa il sito (consigliato)</option><option value="files">Carica documenti</option><option value="both">Sito e documenti</option><option value="later">Lo configuro più tardi</option></select></div></div><div><label>Sito web da analizzare</label><input name="website" type="url" placeholder="https://azienda.it"/><p className="caption" style={{marginTop:5}}>Acquisisce pagine pubbliche, catalogo prodotti, immagini e documenti trovati sullo stesso dominio.</p></div><div><label>Documenti integrativi (facoltativi, max 10 MB ciascuno)</label><input type="file" name="files" multiple accept=".txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg,.webp"/><p className="caption" style={{marginTop:5}}>Il sito basta per iniziare. Il dossier viene preparato automaticamente dopo l’importazione.</p></div></>}
     {modal.kind==="profile"&&<><div><label>Nome</label><input required name="name" defaultValue={current?.name}/></div><div className="cols"><div><label>Settore</label><input name="industry" defaultValue={current?.industry}/></div><div><label>Sito web</label><input name="website" defaultValue={current?.website||""}/></div></div><div><label>Descrizione</label><textarea name="description" rows={4} defaultValue={String(data?.client.profile?.description||"")}/></div><div><label>Tono di voce</label><textarea name="tone" rows={2} defaultValue={String(data?.client.profile?.tone||"")}/></div>

@@ -4,6 +4,7 @@ import { getLocalDataDirectory } from "./local-db";
 
 export const LOCAL_EMBEDDING_MODEL_ID="Xenova/paraphrase-multilingual-MiniLM-L12-v2";
 export const LOCAL_EMBEDDING_MODEL_REVISION="b9e20f0c6dd7e5f88c72259765011e6a3a9196bc";
+export const LOCAL_EMBEDDING_INDEX_ID=`${LOCAL_EMBEDDING_MODEL_ID}@${LOCAL_EMBEDDING_MODEL_REVISION}`;
 export const LOCAL_EMBEDDING_DIMENSIONS=384;
 
 type Tensor={data:Float32Array;dims:number[]};

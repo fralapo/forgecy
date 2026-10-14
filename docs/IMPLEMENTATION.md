@@ -15,10 +15,10 @@ Il runtime corrente non richiede autenticazione remota, account condivisi, datab
 
 ## Dati e ripristino
 
-SQLite usa foreign key, WAL, `synchronous=FULL` e timeout limitato. Lo schema viene inizializzato localmente. Le modifiche operative non sono sincronizzate come file SQLite live: l'export usa l'API di backup, rimuove i token social, raccoglie gli allegati e calcola gli hash.
+SQLite usa foreign key, WAL, `synchronous=FULL` e timeout limitato. Lo schema viene inizializzato localmente. Le modifiche operative non sono sincronizzate come file SQLite live: l'export usa l'API di backup, raccoglie gli allegati e calcola gli hash. I profili Instagram memorizzati non contengono credenziali o cookie.
 
 Prima di importare o aprire un ramo Drive, Forgecy controlla ZIP, versione, percorsi, dimensioni, hash, integrità del database e foreign key. Il ripristino prepara i file in una directory temporanea e conserva il precedente workspace in `pre-restore`. Quando si apre un ramo Drive in conflitto, la copia locale diventa anche un archivio in `conflicts/`.
 
 ## Verifica
 
-Esegui `npm run typecheck`, `npm run lint`, `npm test` e `npm run build`. I test locali coprono schema e vincoli SQLite, query, coda, backup, archivi, storage e validazione. Le chiamate reali a OpenRouter, Google e Meta richiedono credenziali proprie e vanno verificate nell'installazione dell'utente.
+Esegui `npm run typecheck`, `npm run lint`, `npm test` e `npm run build`. I test locali coprono schema e vincoli SQLite, query, coda, backup, archivi, storage e validazione. Le chiamate reali a OpenRouter e Google richiedono credenziali proprie e vanno verificate nell'installazione dell'utente.

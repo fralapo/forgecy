@@ -1,57 +1,69 @@
-import { auth,requireClient,fail,json,ApiFailure,dbError,audit } from "@/lib/http";
-import { decrypt } from "@/lib/crypto";
-import { optionalMetaInsights } from "@/lib/instagram-insights";
-export const runtime="nodejs";
-export const maxDuration=45;
+import { auth, requireClient, fail, json, ApiFailure, dbError, audit, read } from "@/lib/http";
+import { z } from "zod";
 
-async function graph(url:URL){
- const response=await fetch(url.toString(),{signal:AbortSignal.timeout(12000),cache:"no-store"});
- if(!response.ok)throw new ApiFailure(502,"Impossibile leggere i dati Instagram (HTTP "+response.status+")");
- return response.json();
-}
-export async function POST(_request:Request,{params}:{params:Promise<{clientId:string}>}){
- try{
-  const id=(await params).clientId,ctx=await auth();
-  await requireClient(ctx,id);
-  const {data,error}=await ctx.db.from("social_accounts").select("id,remote_id,username,token_ciphertext,token_expires_at,needs_reauth").eq("client_id",id).eq("platform","instagram");
-  dbError(error);
-  if(!data?.length)throw new ApiFailure(409,"Collega prima Instagram");
-  const ver=process.env.META_GRAPH_VERSION||"v23.0";
-  const snapshots=[];
-  for(const a of data){
-   if(a.needs_reauth||!a.token_ciphertext)throw new ApiFailure(409,"Questo account va ricollegato su questo computer prima di sincronizzare Instagram");
-   if(a.token_expires_at && Date.parse(a.token_expires_at)<Date.now())throw new ApiFailure(401,"Token Meta scaduto: ricollega l'account");
-   const token=decrypt(a.token_ciphertext);
-   const accountUrl=new URL("https://graph.facebook.com/"+ver+"/"+encodeURIComponent(a.remote_id));
-   accountUrl.searchParams.set("fields","id,username,followers_count,media_count");
-   accountUrl.searchParams.set("access_token",token);
-   const mediaUrl=new URL("https://graph.facebook.com/"+ver+"/"+encodeURIComponent(a.remote_id)+"/media");
-   mediaUrl.searchParams.set("fields","id,caption,media_type,permalink,timestamp,like_count,comments_count");
-   mediaUrl.searchParams.set("limit","50");mediaUrl.searchParams.set("access_token",token);
-   const [account,media]=await Promise.all([graph(accountUrl),graph(mediaUrl)]);
-   const items=(media.data||[]) as Array<{
-     id:string;caption?:string;media_type?:string;permalink?:string;
-     like_count?:number;comments_count?:number;timestamp?:string
-   }>;
-   // Insights are permission- and media-type-dependent. Unavailable = null, never zero.
-   const withInsights=await Promise.all(items.map(async(item,index)=>{
-     if(index>=8)return item;
-     const metrics=item.media_type==="STORY"?["reach","shares"]:["reach","saved","shares"];
-     const optional=await optionalMetaInsights(item.id,token,ver,metrics);
-     return {...item,...(optional.available?{insights:optional.insights}:{})};
-   }));
-   const collected={
-     account,media:withInsights,source:"Meta Instagram Graph API",measured:true,
-     insights_status:withInsights.some(item=>"insights" in item)?"partial":"unavailable",
-     metric_scope:"latest_50_posts; optional insights requested for first 8 media"
-   };
-   const {data:row,error:saveError}=await ctx.db.from("social_snapshots").insert({
-    client_id:id,account_id:a.id,data:collected,period:"latest_50_posts"
-   }).select("id,collected_at").single();
-   dbError(saveError,"Statistiche non salvate");
-   snapshots.push({username:a.username,...row});
+export const runtime = "nodejs";
+
+const mediaSchema = z.object({
+  id: z.string().min(1).max(300),
+  caption: z.string().max(10_000).nullable().optional(),
+  permalink: z.string().url().max(2_000).nullable().optional(),
+  media_type: z.string().max(80).nullable().optional(),
+  timestamp: z.string().datetime().nullable().optional(),
+  like_count: z.number().int().nonnegative().nullable().optional(),
+  comments_count: z.number().int().nonnegative().nullable().optional(),
+  insights: z.record(z.string(), z.number().nonnegative().nullable()).optional(),
+}).strict();
+const snapshotSchema = z.object({
+  account: z.object({
+    username: z.string().max(30).optional(),
+    followers_count: z.number().int().nonnegative().nullable().optional(),
+    media_count: z.number().int().nonnegative().nullable().optional(),
+  }).optional(),
+  media: z.array(mediaSchema).max(500).optional(),
+  account_insights: z.record(z.string(), z.number().nonnegative().nullable()).optional(),
+}).strict().superRefine((snapshot, context) => {
+  const hasAccountMetric = snapshot.account && (
+    snapshot.account.followers_count !== undefined || snapshot.account.media_count !== undefined
+  );
+  const hasInsights = Boolean(snapshot.account_insights && Object.keys(snapshot.account_insights).length);
+  if (!hasAccountMetric && !snapshot.media?.length && !hasInsights) {
+    context.addIssue({ code: "custom", message: "Lo snapshot non contiene metriche da importare." });
   }
-  await audit(ctx,id,"instagram_synced",undefined,{accounts:snapshots.length});
-  return json({snapshots});
- }catch(e){return fail(e)}
+});
+const payloadSchema = z.object({ accountId: z.uuid(), snapshot: snapshotSchema });
+
+export async function POST(request: Request, { params }: { params: Promise<{ clientId: string }> }) {
+  try {
+    const id = (await params).clientId;
+    const ctx = await auth();
+    await requireClient(ctx, id);
+    const input = await read(request, payloadSchema);
+    const { data: selected, error: accountError } = await ctx.db.from("social_accounts")
+      .select("id,username").eq("id", input.accountId).eq("client_id", id)
+      .eq("platform", "instagram").maybeSingle();
+    dbError(accountError);
+    if (!selected) throw new ApiFailure(404, "Profilo non trovato nel cliente selezionato");
+    if (input.snapshot.account?.username && input.snapshot.account.username.toLowerCase() !== selected.username.toLowerCase()) {
+      throw new ApiFailure(400, "Lo username del file non corrisponde al profilo selezionato.");
+    }
+    const profile = {
+      ...input.snapshot,
+      account: { ...input.snapshot.account, username: selected.username },
+      source: "Import manuale dell’utente",
+      measured: true,
+      insights_status: input.snapshot.account_insights ? "imported" : "unavailable",
+      metric_scope: "user_supplied_snapshot",
+    };
+    const { data: row, error: saveError } = await ctx.db.from("social_snapshots").insert({
+      client_id: id,
+      account_id: selected.id,
+      data: profile,
+      period: "user_import",
+    }).select("id,collected_at").single();
+    dbError(saveError, "Rilevazione importata non salvata");
+    await audit(ctx, id, "instagram_snapshot_imported", selected.id, { source: "user_supplied_json" });
+    return json({ snapshot: { username: selected.username, ...row }, message: "Rilevazione importata" });
+  } catch (error) {
+    return fail(error);
+  }
 }

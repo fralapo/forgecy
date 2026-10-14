@@ -5,5 +5,6 @@ export const metadata:Metadata={
  description:"Client intelligence, strategy and creative work, coordinated by AI."
 };
 export default function RootLayout({children}:{children:React.ReactNode}){
- return <html lang="it"><body>{children}</body></html>;
+ // Browsers can inject root-level attributes before React hydrates the page.
+ return <html lang="it" suppressHydrationWarning><body>{children}</body></html>;
 }

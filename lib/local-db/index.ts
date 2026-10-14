@@ -26,7 +26,7 @@ function configure(db: Database.Database) {
   db.pragma("synchronous = FULL");
   db.exec(LOCAL_SCHEMA);
   const version = Number(db.pragma("user_version", { simple: true }));
-  if (version > 10) throw new Error(`Database Forgecy v${version} non supportato da questa versione dell'app`);
+  if (version > 12) throw new Error(`Database Forgecy v${version} non supportato da questa versione dell'app`);
   if (version < 2) {
     db.transaction(() => {
       const columns = db.pragma("table_info(social_accounts)") as { name: string }[];
@@ -111,6 +111,26 @@ function configure(db: Database.Database) {
       if(!preferenceColumns.some(column=>column.name==="ocr_auto_update"))
         db.exec("ALTER TABLE ai_preferences ADD COLUMN ocr_auto_update INTEGER NOT NULL DEFAULT 1 CHECK(ocr_auto_update IN (0,1))");
       db.pragma("user_version = 10");
+    })();
+  }
+  const semanticDefaultVersion=Number(db.pragma("user_version",{simple:true}));
+  if(semanticDefaultVersion<11){
+    db.transaction(()=>{
+      // The former default was opt-in. Make the hybrid retriever the default;
+      // users can still turn it off from Settings.
+      db.exec("UPDATE ai_preferences SET semantic_enabled=1 WHERE semantic_enabled=0");
+      // Older vector rows did not record the pinned model revision. Rebuild
+      // them so backups and search never mix embeddings from unknown revisions.
+      db.exec("DELETE FROM source_chunk_embeddings WHERE model_id='Xenova/paraphrase-multilingual-MiniLM-L12-v2'");
+      db.pragma("user_version = 11");
+    })();
+  }
+  const publicInstagramVersion=Number(db.pragma("user_version",{simple:true}));
+  if(publicInstagramVersion<12){
+    db.transaction(()=>{
+      // The app no longer uses Meta OAuth; erase previously saved encrypted access tokens.
+      db.exec("UPDATE social_accounts SET token_ciphertext='',token_expires_at=NULL,needs_reauth=0");
+      db.pragma("user_version = 12");
     })();
   }
   return db;

@@ -1,7 +1,7 @@
 import type {Context} from "./http";
 import {ApiFailure} from "./http";
 import {knowledgeEmbeddingCounts,searchSemanticKnowledge} from "./knowledge-index";
-import {LOCAL_EMBEDDING_MODEL_ID} from "./local-embeddings";
+import {LOCAL_EMBEDDING_INDEX_ID} from "./local-embeddings";
 
 export type KnowledgeHit={
   source_id:string;
@@ -62,9 +62,9 @@ export async function retrieveClientKnowledge(
     console.error("[knowledge search] Could not read local retrieval preference");
     return lexical.slice(0,boundedLimit);
   }
-  if(!preferences.data?.semantic_enabled)return lexical.slice(0,boundedLimit);
+  if(preferences.data?.semantic_enabled===0)return lexical.slice(0,boundedLimit);
   try{
-    const counts=knowledgeEmbeddingCounts(clientId,LOCAL_EMBEDDING_MODEL_ID);
+    const counts=knowledgeEmbeddingCounts(clientId,LOCAL_EMBEDDING_INDEX_ID);
     if(counts.indexed===0)return lexical.slice(0,boundedLimit);
     const semantic=await searchSemanticKnowledge(clientId,question,Math.min(boundedLimit*3,20));
     return fuseKnowledgeHits(lexical,semantic,boundedLimit);

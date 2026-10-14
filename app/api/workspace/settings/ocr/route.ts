@@ -23,10 +23,10 @@ export async function PATCH(request: Request) {
     const ctx = await auth();
     const value = await read(request, preferencesSchema);
     const db = getLocalDatabase();
-    const previous = db.prepare("SELECT ocr_provider,ocr_auto_update FROM ai_preferences WHERE owner_id=?").get(ctx.user.id) as { ocr_provider?: string; ocr_auto_update?: number } | undefined;
-    db.prepare(`INSERT INTO ai_preferences(owner_id,ocr_provider,ocr_auto_update,updated_at) VALUES(?,?,?,?)
+    const previous = db.prepare("SELECT ocr_provider,ocr_auto_update,semantic_enabled FROM ai_preferences WHERE owner_id=?").get(ctx.user.id) as { ocr_provider?: string; ocr_auto_update?: number; semantic_enabled?: number } | undefined;
+    db.prepare(`INSERT INTO ai_preferences(owner_id,ocr_provider,ocr_auto_update,semantic_enabled,updated_at) VALUES(?,?,?,?,?)
       ON CONFLICT(owner_id) DO UPDATE SET ocr_provider=excluded.ocr_provider,ocr_auto_update=excluded.ocr_auto_update,updated_at=excluded.updated_at`)
-      .run(ctx.user.id, value.provider || previous?.ocr_provider || "auto", value.autoUpdate === undefined ? previous?.ocr_auto_update ?? 1 : Number(value.autoUpdate), new Date().toISOString());
+      .run(ctx.user.id, value.provider || previous?.ocr_provider || "auto", value.autoUpdate === undefined ? previous?.ocr_auto_update ?? 1 : Number(value.autoUpdate), previous?.semantic_enabled ?? 1, new Date().toISOString());
     return json({ preferences: { provider: value.provider || previous?.ocr_provider || "auto", autoUpdate: value.autoUpdate ?? previous?.ocr_auto_update !== 0 } });
   } catch (error) { return fail(error); }
 }

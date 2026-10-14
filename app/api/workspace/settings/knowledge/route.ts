@@ -11,7 +11,7 @@ export async function GET(){
   const {data,error}=await ctx.db.from("ai_preferences").select("semantic_enabled")
    .eq("owner_id",ctx.user.id).maybeSingle();
   dbError(error,"Impossibile leggere le preferenze di ricerca");
-  return json({enabled:Boolean(data?.semantic_enabled),...knowledgeEmbeddingCounts(),
+  return json({enabled:data?.semantic_enabled!==0,...knowledgeEmbeddingCounts(),
    modelId:LOCAL_EMBEDDING_MODEL_ID,runtime:localEmbeddingRuntimeStatus()});
  }catch(error){return fail(error);}
 }
@@ -42,7 +42,7 @@ export async function POST(request:Request){
   const {data,error}=await ctx.db.from("ai_preferences").select("semantic_enabled")
    .eq("owner_id",ctx.user.id).maybeSingle();
   dbError(error,"Impossibile leggere le preferenze di ricerca");
-  if(!data?.semantic_enabled)throw new ApiFailure(409,"Attiva prima la ricerca semantica locale");
+  if(data?.semantic_enabled===0)throw new ApiFailure(409,"La ricerca semantica locale è disattivata");
   return json({...await indexNextKnowledgeBatch(null,batchSize),runtime:localEmbeddingRuntimeStatus()});
  }catch(error){return fail(error);}
 }

@@ -1,6 +1,6 @@
 # Installazione locale e sincronizzazione
 
-Forgecy è un'applicazione single-user eseguita sul computer. Database, file caricati, preferenze AI e attività in coda sono locali. Ogni installazione usa le credenziali API del proprietario; non richiede un servizio Forgecy o un database remoto. OpenRouter, Meta e Google Drive ricevono solo le richieste necessarie alle funzioni che abiliti.
+Forgecy è un'applicazione single-user eseguita sul computer. Database, file caricati, preferenze AI e attività in coda sono locali. Ogni installazione usa le credenziali API del proprietario; non richiede un servizio Forgecy o un database remoto. OpenRouter e Google Drive ricevono solo le richieste necessarie alle funzioni che abiliti.
 
 ## Requisiti e primo avvio
 
@@ -37,11 +37,13 @@ Apri **Impostazioni** nell'app, anche prima di creare il primo cliente, incolla 
 | `OPENROUTER_SITE_URL` | Identificativo facoltativo inviato nei metadati OpenRouter. |
 | `APP_ORIGIN` | Origine esatta locale, necessaria con `npm run start`; esempio `http://localhost:3000`. |
 | `GOOGLE_DRIVE_CLIENT_ID` | Facoltativo; OAuth Client ID Google di tipo applicazione desktop, richiesto solo per Drive. |
-| `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`, `META_GRAPH_VERSION` | Facoltativi, per collegare un account Instagram Professional. |
-| `TOKEN_ENCRYPTION_KEY_BASE64` | Chiave casuale per cifrare i token social salvati localmente. |
 | `ENABLE_WEBSITE_INGEST` | Facoltativa; l'importazione dei siti è attiva per impostazione predefinita. Imposta `false` per disabilitarla. |
 
-Non usare il prefisso `NEXT_PUBLIC_` per chiavi private. Per generare una chiave di cifratura Meta, esegui `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"` e copia l'output solo nel `.env.local` di quel computer.
+Non usare il prefisso `NEXT_PUBLIC_` per chiavi private.
+
+### Snapshot Instagram
+
+In **Risultati** aggiungi uno username come etichetta locale, poi importa uno snapshot JSON preparato con dati che sei autorizzato a usare. Forgecy non effettua login né richieste automatiche a Instagram. Ogni import crea uno snapshot datato; i successivi si confrontano nello storico e si possono esportare in CSV. Il formato e i limiti sono descritti in INSTAGRAM_SNAPSHOTS.md.
 
 Nelle **Impostazioni → OCR e lettura dei documenti** puoi scegliere **Automatico**, **Solo parser locale** o **OpenRouter**. Forgecy estrae sempre localmente il testo già incorporato nei PDF. Per scansioni e immagini, Automatico raccomanda il parser locale solo su piattaforme idonee con il modello già installato; altrimenti sceglie OpenRouter. **Solo locale** è rigoroso: se il parser manca o fallisce, il file resta in sospeso e non viene inviato all'API. OpenRouter usa il modello visivo scelto; il parser Mistral OCR costa circa 0,002 USD per pagina, oltre ai token. I PDF OCR sono limitati a 40 pagine e fino a 8 immagini inoltrate al modello. L'OCR locale non invia il file a un servizio OCR; l'estrazione strutturata dei campi catalogo è una fase AI separata e può inviare testo e immagini a OpenRouter.
 
@@ -64,6 +66,8 @@ Google può revocare i refresh token quando l'utente rimuove l'accesso o quando 
 ### Come Forgecy evita conflitti e perdita dati
 
 Ogni sincronizzazione crea uno ZIP autonomo con un'immagine coerente di SQLite, gli allegati e un manifest con versione e hash. I file non vengono aggiornati o cancellati per sovrascrittura: Drive conserva snapshot separati con hash del contenuto, hash del genitore e ID dispositivo. Forgecy calcola i rami non discendenti per rilevare divergenze. In caso di conflitto puoi aprire uno snapshot Drive, salvando prima il locale in `conflicts/`, oppure caricare il locale come ramo separato.
+
+Gli snapshot e gli archivi includono anche l'indice vettoriale semantico per evitare una reindicizzazione costosa sul computer di destinazione. I vettori occupano circa 1,5 KB per passaggio, oltre all'overhead SQLite, e sono inclusi nel limite archivio Forgecy di 250 MB. I pesi del modello MiniLM non vengono copiati: ogni computer li scarica una volta nella propria cache locale quando il worker inizia a creare l'indice. Nel frattempo FTS5 continua a funzionare.
 
 Il flusso è pensato per usare un solo computer alla volta. Sincronizza prima di passare all'altro; non esiste un merge automatico né la modifica simultanea dello stesso workspace. Gli snapshot remoti occupano spazio nel tuo Drive e vanno eliminati manualmente da quella cartella quando non servono più. La cronologia delle revisioni Drive non è usata come archivio, perché Google non garantisce che tutte le revisioni restino disponibili.
 

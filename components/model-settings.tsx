@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Cpu, Download, HardDrive, LoaderCircle, RefreshCw, Search, Settings2 } from "lucide-react";
 import { requestJson } from "./types";
 import type { OpenRouterImageModel, OpenRouterModel } from "@/lib/ai-model-settings";
@@ -115,11 +115,21 @@ export default function ModelSettings() {
   const [keyStatus, setKeyStatus] = useState<KeyStatus | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [savingKey, setSavingKey] = useState(false);
+  const [replaceKeyOpen, setReplaceKeyOpen] = useState(false);
+  const [confirmRemoveKey, setConfirmRemoveKey] = useState(false);
+  const removalConfirmationRef = useRef<HTMLDivElement>(null);
   const [knowledge,setKnowledge]=useState<KnowledgeSettings|null>(null);
   const [savingKnowledge,setSavingKnowledge]=useState(false);
   const [indexingKnowledge,setIndexingKnowledge]=useState(false);
   const [ocrSettings,setOcrSettings]=useState<OcrSettings|null>(null);
   const [ocrBusy,setOcrBusy]=useState(false);
+
+  useEffect(() => {
+    if (!confirmRemoveKey) return;
+    const confirmation = removalConfirmationRef.current;
+    confirmation?.scrollIntoView({ block: "end", behavior: "auto" });
+    confirmation?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
+  }, [confirmRemoveKey]);
 
   const loadCatalog = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true);
@@ -162,6 +172,16 @@ export default function ModelSettings() {
       .catch(cause=>{if(active)setError(cause instanceof Error?cause.message:"Impossibile leggere la ricerca nella conoscenza");});
     return ()=>{active=false;};
   },[]);
+
+  useEffect(()=>{
+    if(!knowledge?.enabled||knowledge.indexed>=knowledge.total||indexingKnowledge)return;
+    const timer=window.setInterval(()=>{
+      void requestJson<KnowledgeSettings>("/api/workspace/settings/knowledge")
+        .then(value=>setKnowledge(value))
+        .catch(()=>undefined);
+    },4000);
+    return()=>window.clearInterval(timer);
+  },[knowledge?.enabled,knowledge?.indexed,knowledge?.total,indexingKnowledge]);
 
   const loadOcrSettings=useCallback(async()=>{
     try{setOcrSettings(await requestJson<OcrSettings>("/api/workspace/settings/ocr"));}
@@ -240,7 +260,7 @@ export default function ModelSettings() {
       const result = await requestJson<{ key: KeyStatus; message: string }>("/api/workspace/settings/openrouter-key", {
         method: "PATCH", body: JSON.stringify({ apiKey: apiKey.trim() })
       });
-      setKeyStatus(result.key); setApiKey(""); setSaved(result.message);
+      setKeyStatus(result.key); setApiKey(""); setReplaceKeyOpen(false); setSaved(result.message);
       await loadCatalog(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Impossibile salvare la chiave OpenRouter");
@@ -252,7 +272,7 @@ export default function ModelSettings() {
     setSavingKey(true); setError(""); setSaved("");
     try {
       const result = await requestJson<{ key: KeyStatus; message: string }>("/api/workspace/settings/openrouter-key", { method: "DELETE" });
-      setKeyStatus(result.key); setSaved(result.message);
+      setKeyStatus(result.key); setSaved(result.message); setConfirmRemoveKey(false); setReplaceKeyOpen(false);
       if (result.key.configured) await loadCatalog(true);
       else { setCatalog(null); setLoading(false); }
     } catch (cause) {
@@ -307,18 +327,35 @@ export default function ModelSettings() {
 
     <article className="card stack">
       <h2>Chiave API OpenRouter</h2>
-      <p className="caption">Inserisci qui la tua chiave personale. Forgecy la verifica e la conserva sul computer nel portachiavi di sistema; se non disponibile, usa un file accessibile solo al tuo utente. La chiave non viene mostrata di nuovo né sincronizzata su Drive.</p>
-      {keyStatus?.configured && <p className="caption" role="status">Chiave configurata{keyStatus.source === "environment" ? " nel file .env.local" : " nell'app"}.</p>}
+      <p className="caption">Forgecy conserva la chiave su questo computer, nel portachiavi di sistema o in un file accessibile solo al tuo utente. Non la mostra di nuovo né la sincronizza su Drive.</p>
+      {keyStatus === null && <p className="caption" role="status">Controllo configurazione API…</p>}
+      {keyStatus?.configured && <p className="caption" role="status"><strong>API già configurata</strong>{keyStatus.source === "environment" ? " tramite il file .env.local." : " in Forgecy su questo computer."}</p>}
       <form className="stack" onSubmit={event => void saveKey(event)}>
-        <label htmlFor="forgecy-openrouter-key">{keyStatus?.configured ? "Sostituisci chiave" : "La tua chiave OpenRouter"}</label>
-        <input id="forgecy-openrouter-key" type="password" autoComplete="new-password" value={apiKey}
-          onChange={event => setApiKey(event.target.value)} placeholder="Incolla la tua chiave personale" minLength={20} maxLength={512} required />
-        <div className="flex gap8 wrap">
-          <button className="button primary" type="submit" disabled={savingKey || apiKey.trim().length < 20}>
-            {savingKey ? <LoaderCircle className="spin" size={15}/> : <Settings2 size={15}/>} Verifica e salva chiave
-          </button>
-          {keyStatus?.source === "app" && <button className="button" type="button" onClick={() => void removeKey()} disabled={savingKey}>Rimuovi chiave salvata</button>}
-        </div>
+        {keyStatus && (!keyStatus.configured || replaceKeyOpen) && <>
+          {keyStatus.configured && <p className="caption">La chiave attuale resta attiva finché la nuova non viene verificata e salvata.</p>}
+          <label htmlFor="forgecy-openrouter-key">{keyStatus.configured ? "Nuova chiave OpenRouter" : "La tua chiave OpenRouter"}</label>
+          <input id="forgecy-openrouter-key" type="password" autoComplete="new-password" value={apiKey}
+            onChange={event => setApiKey(event.target.value)} placeholder="Incolla la tua chiave personale" minLength={20} maxLength={512} required />
+          <div className="flex gap8 wrap">
+            <button className="button primary" type="submit" disabled={savingKey || apiKey.trim().length < 20}>
+              {savingKey ? <LoaderCircle className="spin" size={15}/> : <Settings2 size={15}/>} {keyStatus.configured ? "Verifica e salva sostituzione" : "Verifica e salva chiave"}
+            </button>
+            {keyStatus.configured && <button className="button" type="button" onClick={() => {setReplaceKeyOpen(false);setApiKey("");}} disabled={savingKey}>Annulla</button>}
+          </div>
+        </>}
+        {keyStatus?.configured && <div className="flex gap8 wrap">
+          {!replaceKeyOpen && <button className="button primary" type="button" onClick={() => setReplaceKeyOpen(true)} disabled={savingKey}>Sostituisci chiave</button>}
+          {keyStatus.source === "app" && <button className="button" type="button" onClick={() => setConfirmRemoveKey(true)} disabled={savingKey}>Rimuovi da questo computer</button>}
+        </div>}
+        {keyStatus?.source === "app" && <p className="caption">Rimuove solo la copia locale in Forgecy; non revoca la chiave nel tuo account OpenRouter.</p>}
+        {confirmRemoveKey && <div ref={removalConfirmationRef} className="notice warn key-removal-confirmation" role="group" aria-labelledby="forgecy-key-removal-title">
+          <strong id="forgecy-key-removal-title">Rimuovere la chiave salvata su questo computer?</strong>
+          <p>Forgecy non potrà più usare i modelli finché non inserirai e verificherai un’altra chiave. La chiave nel tuo account OpenRouter resterà attiva.</p>
+          <div className="flex gap8 wrap">
+            <button className="button" type="button" onClick={() => setConfirmRemoveKey(false)} disabled={savingKey}>Annulla</button>
+            <button className="button danger" type="button" onClick={() => void removeKey()} disabled={savingKey}>{savingKey ? "Rimozione…" : "Conferma rimozione"}</button>
+          </div>
+        </div>}
       </form>
     </article>
 
@@ -369,21 +406,22 @@ export default function ModelSettings() {
     </article>
     <article className="card stack">
       <div className="flex center gap8"><Cpu size={18}/><h2>Ricerca nella memoria dei clienti</h2></div>
-      <p className="caption">La ricerca testuale SQLite resta sempre attiva. Puoi affiancarle la ricerca semantica locale per trovare anche concetti espressi con parole diverse. Il modello gira sul computer: il testo dei documenti non viene inviato a un servizio di embedding.</p>
+      <p className="caption">Ricerca ibrida consigliata: SQLite trova termini e valori esatti; l’indice semantico locale aiuta con sinonimi e parafrasi. Il testo non viene inviato a un servizio di embedding. Puoi disattivarla qui.</p>
       <label className="flex center gap8" style={{fontWeight:650}}>
         <input type="checkbox" checked={Boolean(knowledge?.enabled)} disabled={!knowledge||savingKnowledge||indexingKnowledge}
           onChange={event=>void toggleSemantic(event.target.checked)} style={{width:18,height:18}}/>
-        Attiva ricerca semantica locale
+        Ricerca semantica locale (consigliata)
       </label>
-      <div className="notice" role="status"><HardDrive size={15}/> Modello multilingue quantizzato · {knowledge?.modelId||"caricamento…"} · download iniziale circa 130 MB da Hugging Face</div>
+      <div className="notice" role="status"><HardDrive size={15}/> Modello multilingue quantizzato · {knowledge?.modelId||"caricamento…"} · download iniziale circa 120–130 MB da Hugging Face</div>
       {knowledge&&<div className="caption">Passaggi indicizzati: {knowledge.indexed.toLocaleString("it-IT")} su {knowledge.total.toLocaleString("it-IT")} · runtime {knowledge.runtime.state==="ready"?"pronto":knowledge.runtime.state==="loading"?"in caricamento":"non ancora caricato"}</div>}
+      {knowledge?.enabled&&knowledge.indexed<knowledge.total&&<p className="caption" role="status">Indice in preparazione automatica in background. La ricerca testuale resta disponibile durante il download e l’indicizzazione.</p>}
       <div className="flex center gap8 wrap">
         <button className="button" onClick={()=>void indexKnowledge()} disabled={!knowledge?.enabled||indexingKnowledge||!knowledge.total}>
-          {indexingKnowledge?<LoaderCircle className="spin" size={15}/>:<Download size={15}/>} {indexingKnowledge?"Indicizzazione…":"Genera o aggiorna indice locale"}
+          {indexingKnowledge?<LoaderCircle className="spin" size={15}/>:<Download size={15}/>} {indexingKnowledge?"Indicizzazione…":"Completa indice ora"}
         </button>
         {indexingKnowledge&&knowledge&&<span className="caption">{knowledge.indexed.toLocaleString("it-IT")} / {knowledge.total.toLocaleString("it-IT")} passaggi</span>}
       </div>
-      {!knowledge?.enabled&&<p className="caption">Facoltativa e disattivata all’inizio. Attivandola, Forgecy scarica il modello e crea gli embeddings sul computer. Le risposte AI continuano a inviare al modello OpenRouter solo il contesto selezionato per la richiesta.</p>}
+      {knowledge?.enabled&&<p className="caption">Al primo avvio Forgecy scarica il modello e crea l’indice sul computer. I vettori vengono inclusi negli archivi Forgecy e Drive; i file del modello restano nella cache locale del computer.</p>}
     </article>
     {saving && <p className="caption" role="status"><LoaderCircle className="spin" size={14}/> Salvataggio preferenza…</p>}
     <div className="notice warn">Le preferenze dei modelli e la chiave API restano su questo computer. Per usare Forgecy su un altro PC, configura lì la tua chiave personale.</div>

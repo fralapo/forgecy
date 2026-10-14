@@ -49,7 +49,7 @@ The current pipeline performs local-first PDF/DOCX/CSV extraction, optional remo
 
 GitHub CI installs dependencies, typechecks, runs unit tests and repository invariant tests, and builds the Next.js production app.
 
-This does not test live OpenRouter image generation, Meta OAuth or full client workflow; those require credentials configured on the local installation. No videos/reels are enabled.
+This does not test live OpenRouter image generation or the full client workflow; these require credentials configured on the local installation. No videos/reels are enabled.
 
 ## Next prioritized work
 
@@ -59,5 +59,5 @@ This does not test live OpenRouter image generation, Meta OAuth or full client w
 - GEO audit with real page crawling and source-grounded findings; never synthetic rankings.
 - Rich design layers/templates with export parity.
 - Authenticated organizations and human reviewer roles.
-- Meta integration token refresh, live authorization tests, attribution.
+- Instagram statistics are user-supplied JSON snapshots. Forgecy does not sign in to Instagram or collect data from its site.
 - Document extraction stress tests, ZIP-bomb protection and serverless monitoring.

@@ -13,7 +13,7 @@ test("local database persists records, preserves invariants, searches evidence, 
   try {
     assert.equal(db.connection.pragma("foreign_keys", { simple: true }), 1);
     assert.equal(db.connection.pragma("journal_mode", { simple: true }), "wal");
-    assert.equal(db.connection.pragma("user_version", { simple: true }), 10);
+    assert.equal(db.connection.pragma("user_version", { simple: true }), 12);
     assert.ok((db.connection.pragma("table_info(ai_preferences)") as {name:string}[]).some(column=>column.name==="ocr_model"));
     const preferenceColumns=db.connection.pragma("table_info(ai_preferences)") as {name:string}[];
     assert.ok(preferenceColumns.some(column=>column.name==="ocr_provider"));
@@ -126,7 +126,7 @@ test("local database persists records, preserves invariants, searches evidence, 
     const exportedDbPath=join(directory,"exported.sqlite");
     writeFileSync(exportedDbPath,Buffer.from(validated.entries["database/forgecy.sqlite"]));
     const exportedDb=new (await import("better-sqlite3")).default(exportedDbPath,{readonly:true});
-    assert.equal((exportedDb.prepare("SELECT count(*) n FROM source_chunk_embeddings").get() as {n:number}).n,0);
+    assert.equal((exportedDb.prepare("SELECT count(*) n FROM source_chunk_embeddings").get() as {n:number}).n,1);
     exportedDb.close();
     assert.equal((db.connection.prepare("SELECT count(*) n FROM source_chunk_embeddings").get() as {n:number}).n,1);
     assert.equal(Buffer.from(validated.entries[`files/forgecy-assets/${clientId}/sample.png`]).toString(), "png");
@@ -135,7 +135,7 @@ test("local database persists records, preserves invariants, searches evidence, 
     writeFileSync(scrubbedDbPath, scrubbedBytes);
     const scrubbed = new (await import("better-sqlite3")).default(scrubbedDbPath, { readonly: true });
     assert.equal((scrubbed.prepare("SELECT token_ciphertext FROM social_accounts WHERE remote_id='meta-account'").get() as { token_ciphertext: string }).token_ciphertext, "");
-    assert.equal((scrubbed.prepare("SELECT needs_reauth FROM social_accounts WHERE remote_id='meta-account'").get() as { needs_reauth: number }).needs_reauth, 1);
+    assert.equal((scrubbed.prepare("SELECT needs_reauth FROM social_accounts WHERE remote_id='meta-account'").get() as { needs_reauth: number }).needs_reauth, 0);
     scrubbed.close();
     assert.throws(() => validateWorkspaceArchive(zipSync({ "../escape": Buffer.from("bad") })), /percorso ZIP/i);
     await restoreWorkspaceArchive(archive);

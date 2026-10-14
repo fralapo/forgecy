@@ -65,10 +65,10 @@ export async function createWorkspaceArchive(options: { parentHash?: string; dev
     const databasePath = join(scratch, "forgecy.sqlite");
     await localDb().snapshot(databasePath);
     const image = new Database(databasePath);
-    image.prepare("UPDATE social_accounts SET token_ciphertext='',token_expires_at=NULL,needs_reauth=1").run();
-    // Embeddings are a derived, model-versioned cache. Keep them on this device;
-    // a receiving computer can rebuild its index from the synchronized sources.
-    image.prepare("DELETE FROM source_chunk_embeddings").run();
+    image.prepare("UPDATE social_accounts SET token_ciphertext='',token_expires_at=NULL,needs_reauth=0").run();
+    // Keep the derived vector index in workspace archives so another device can
+    // use semantic retrieval immediately without rebuilding CPU-heavy vectors.
+    // The model files themselves remain in each device's local Hugging Face cache.
     image.pragma("wal_checkpoint(TRUNCATE)");
     image.close();
     const database = readFileSync(databasePath);
