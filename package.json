@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "node --test tests/*.test.mjs && tsx --test tests/unit/*.test.ts",
+    "evaluate:retrieval": "tsx scripts/evaluate-retrieval.ts",
     "security:scan": "node scripts/secret-scan.mjs --tracked",
     "security:hooks": "git config core.hooksPath .githooks"
   },

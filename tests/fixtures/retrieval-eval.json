@@ -1,0 +1,50 @@
+[
+  {
+    "id": "ingredients",
+    "category": "paraphrase-cross-language",
+    "passage": "Il balsamo viso contiene estratto di calendula e olio di jojoba, ingredienti vegetali pensati per la pelle sensibile.",
+    "query": "Which plant-derived ingredients are recommended for reactive skin?"
+  },
+  {
+    "id": "delivery-time-packaging",
+    "category": "paraphrase-cross-language",
+    "passage": "Gli ordini vengono preparati entro 48 ore lavorative e spediti in scatole di carta riciclata.",
+    "query": "How quickly is an order dispatched and what packaging is used?"
+  },
+  {
+    "id": "fragrance-silicones",
+    "category": "paraphrase-cross-language",
+    "passage": "La crema non contiene profumo aggiunto né siliconi.",
+    "query": "Is the face cream fragrance free and silicone free?"
+  },
+  {
+    "id": "bottle-capacity-cold",
+    "category": "paraphrase-cross-language",
+    "passage": "La borraccia in acciaio contiene 750 ml e mantiene le bevande fredde fino a 12 ore.",
+    "query": "Quanta acqua contiene la bottiglia e per quanto tempo mantiene il freddo?"
+  },
+  {
+    "id": "delivery-areas",
+    "category": "paraphrase-cross-language",
+    "passage": "Le consegne sono disponibili soltanto in Toscana, Umbria e Lazio.",
+    "query": "Does this shop deliver to Umbria and Lazio?"
+  },
+  {
+    "id": "serum-storage",
+    "category": "paraphrase-cross-language",
+    "passage": "Conservare il siero per il viso lontano dalla luce solare diretta e a una temperatura inferiore a 25 gradi.",
+    "query": "Where should facial serum be kept to maintain quality?"
+  },
+  {
+    "id": "returns",
+    "category": "paraphrase",
+    "passage": "Il reso è accettato entro 30 giorni per prodotti non aperti; le spese di restituzione sono a carico del cliente.",
+    "query": "What is the return window and which condition must the product meet?"
+  },
+  {
+    "id": "exact-product-code",
+    "category": "exact-identifier",
+    "passage": "Il prodotto con codice FRC-4821 ha un prezzo di 29,90 EUR.",
+    "query": "Qual è il prezzo del prodotto FRC-4821?"
+  }
+]
