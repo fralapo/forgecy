@@ -178,6 +178,17 @@ export function parseMarkdownCatalogCards(text:string):CatalogProduct[]{
  return products.length===productStarts.length?products:[];
 }
 
+/** Parse deterministic catalog formats before asking an AI model to interpret the document. */
+export function parseLocalCatalogProducts(title:string,text:string):CatalogProduct[]{
+ const csvProducts=parseCsvCatalog(text);
+ if(csvProducts.length)return csvProducts;
+ const markdownProducts=looksLikeCatalog(title,text)?parseMarkdownCatalogTable(text):[];
+ if(markdownProducts.length)return markdownProducts;
+ const catalogCards=parseMarkdownCatalogCards(text);
+ if(catalogCards.length)return catalogCards;
+ return looksLikeCatalog(title,text)?parseMarkdownImageVariants(text):[];
+}
+
 /** Parse OCR catalog variants where each product image is followed by a short label and a printed code. */
 export function parseMarkdownImageVariants(text:string):CatalogProduct[]{
  const lines=text.split(/\r?\n/u);

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseMarkdownCatalogCards,parseMarkdownCatalogTable,parseMarkdownImageVariants} from "../../lib/catalog-import";
+import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseLocalCatalogProducts,parseMarkdownCatalogCards,parseMarkdownCatalogTable,parseMarkdownImageVariants} from "../../lib/catalog-import";
 
 test("catalog names normalize accents and punctuation for safe matching",()=>{
  assert.equal(normalizeCatalogName("Caffè — Espresso 100%"),"caffe espresso 100");
@@ -112,6 +112,7 @@ test("OCR product image blocks retain exact variant labels, printed codes and im
 test("OCR product cards import printed codes and package variants while linking the product image",()=>{
  const source="# LEMON PLUS\n![img-0.jpeg](img-0.jpeg)\n# Detergente stoviglie concentrato\nDetergente manuale\n# CAMPO D'IMPIEGO\nMense e cucine\nCodici Confezione\n10201000 cartone da 4 taniche\n10201001 tanica da 10 kg\n# PIATTI AGRUMI\n![img-2.jpeg](img-2.jpeg)\n# Detergente stoviglie\nFormula agli agrumi\n# CAMPO D'IMPIEGO\nMense e cucine\nCodici Confezione\n10201006 cartone da 4 taniche\n# SPEZIAL GEL\n# Sgrassante concentrato gel\nUso professionale\n# CAMPO D'IMPIEGO\nRistoranti e cucine\nCodici Confezione\n10203007 flacone da 750 ml";
  const products=parseMarkdownCatalogCards(source);
+ assert.equal(parseLocalCatalogProducts("forgecy-elios-sample-20.pdf",source).length,3);
  assert.equal(products.length,3);
  assert.equal(products[0].name,"LEMON PLUS");
  assert.equal(products[0].description,"Detergente stoviglie concentrato — 10201000 cartone da 4 taniche — 10201001 tanica da 10 kg");
@@ -123,4 +124,6 @@ test("OCR product cards import printed codes and package variants while linking 
  assert.equal(products[2].name,"SPEZIAL GEL");
  assert.equal(products[2].imageIndex,null);
  assert.equal(catalogEvidenceIsValid(products[2],source),true);
+ const incomplete=source.replace("10203007 flacone da 750 ml","Codice non leggibile");
+ assert.deepEqual(parseMarkdownCatalogCards(incomplete),[]);
 });
