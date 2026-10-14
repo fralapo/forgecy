@@ -76,6 +76,8 @@ L'aggiornamento segue il rilascio stabile ufficiale, usa versioni puntate e inst
 5. **OCR locale + API — implementati.** PaddleOCR-VL versionato, setup CPU isolato, analisi hardware, selezione automatica e override esplicito, aggiornamento stable staged, smoke test prima dell'attivazione e rimozione differita delle versioni non attive.
 6. **Evaluation OCR — da ampliare con dati locali dell'utente.** Misurare qualità, tempo e RAM su documenti italiani rappresentativi; il test sintetico dell'installer controlla solo che il nuovo runtime funzioni. I documenti riservati del workspace non vengono inclusi nei test o nei report automatici.
 
+Per una prova live isolata della pipeline documentale è disponibile `npm run evaluate:document-live -- --live`: usa un PDF scansionato sintetico di una pagina, la chiave già configurata nel portachiavi locale e i modelli attualmente selezionati, ma crea il cliente e i prodotti solo in un database temporaneo che viene eliminato al termine. Invia fino a due richieste a OpenRouter (OCR e catalogo) e stampa l'eventuale costo riportato dal provider. Il 14 ottobre 2026 la prova ha letto il PDF con Mistral OCR, aggiornato un prodotto, aggiunto il secondo e rifiutato zero righe; il costo riportato è stato 0,002825 USD. È una verifica end-to-end della pipeline, non una misura generale dell'accuratezza OCR. Non usare documenti o testi riservati in questo comando.
+
 ## Criteri di accettazione
 
 - Ogni passaggio recuperato ha un ID fonte valido e ogni citazione può risalire al testo originale.

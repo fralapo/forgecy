@@ -158,6 +158,17 @@ test("local database persists records, preserves invariants, searches evidence, 
     const invalid = await db.from("campaigns").insert({ client_id: clientId, offer_id: "missing", title: "Bad", objective: "Bad", period: "30 giorni" }).select().single();
     assert.ok(invalid.error);
     assert.equal(readFileSync(join(directory, "files", "forgecy-assets", clientId, "sample.png")).toString(), "png");
+
+    const live = localDb();
+    live.connection.prepare("UPDATE ai_jobs SET locked_until=? WHERE id=? AND status='running'")
+      .run(new Date(Date.now() - 1000).toISOString(), reservation.data);
+    live.connection.close();
+    delete (globalThis as typeof globalThis & { __forgecyLocalDb?: unknown }).__forgecyLocalDb;
+    const restarted = localDb();
+    const reclaimed = await restarted.rpc("forgecy_claim_ai_job");
+    assert.equal(reclaimed.error, null);
+    assert.equal(reclaimed.data[0].id, reservation.data);
+    assert.equal(reclaimed.data[0].attempts, 2);
   } finally {
     if (db.connection.open) db.connection.close();
     const current = (globalThis as typeof globalThis & { __forgecyLocalDb?: import("better-sqlite3").Database }).__forgecyLocalDb;

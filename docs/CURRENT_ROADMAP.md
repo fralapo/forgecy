@@ -22,7 +22,7 @@ Drive sincronizza solo quando richiesto e trasferisce snapshot completi, inclusi
 ## Priorità successive
 
 1. Provare la configurazione Google OAuth su un progetto Cloud personale e completare un ciclo export/import fra due computer.
-2. Eseguire un flusso end-to-end con una chiave OpenRouter personale, includendo OCR di un PDF scannerizzato, riconciliazione delle offerte e ripartenza di un job dopo arresto.
+2. **Completata su dati sintetici.** Prova live isolata con la chiave OpenRouter locale: PDF scannerizzato di una pagina, OCR Mistral, estrazione e riconciliazione AI (1 prodotto aggiornato, 1 aggiunto, 0 invalidi; costo riportato 0,002825 USD). Il test SQLite chiude e riapre il database e recupera il job scaduto con lease rinnovata. Nessun dato cliente è stato usato e la chiave non è stata stampata o scritta nel workspace.
 3. Aggiungere una prova controllata della gestione conflitti con due snapshot divergenti e verificare la copia locale di recupero.
 4. Ampliare l'evaluation con documenti rappresentativi reali: accuratezza OCR, copertura delle tabelle e qualità del collegamento delle foto prodotto.
 
