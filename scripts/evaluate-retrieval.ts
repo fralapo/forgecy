@@ -2,13 +2,13 @@ import Database from "better-sqlite3";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadEnvConfig } from "@next/env";
+import { rankTarget, rankingMetrics } from "./retrieval-eval-metrics";
 
 loadEnvConfig(process.cwd());
 
 type Example = { id: string; category: string; passage: string; query: string; source_url?: string | null };
 type Candidate = {id:string;passage:string;source_url:string|null};
 type Hit = { source_id: string; source_title: string; source_url: string | null; chunk_ordinal: number; excerpt: string; relevance: number };
-type Rank = { rank: number; reciprocalRank: number; recallAt3: number; citationAvailable: boolean; citationCoveredAt3: boolean };
 
 async function embedInBatches(texts: string[], embedTexts: (batch: string[]) => Promise<number[][]>, batchSize = 32) {
   const embeddings: number[][] = [];
@@ -16,18 +16,6 @@ async function embedInBatches(texts: string[], embedTexts: (batch: string[]) => 
     embeddings.push(...await embedTexts(texts.slice(offset, offset + batchSize)));
   }
   return embeddings;
-}
-
-function rankingMetrics(ranks: Rank[]) {
-  const citedTargets = ranks.filter(item => item.citationAvailable);
-  return {
-    mrr: ranks.reduce((sum, item) => sum + item.reciprocalRank, 0) / ranks.length,
-    recallAt3: ranks.reduce((sum, item) => sum + item.recallAt3, 0) / ranks.length,
-    citationCoverageAt3: citedTargets.length
-      ? citedTargets.filter(item => item.citationCoveredAt3).length / citedTargets.length
-      : null,
-    citedTargetCount: citedTargets.length,
-  };
 }
 
 async function main() {
@@ -69,25 +57,12 @@ async function main() {
       relevance: vector.reduce((sum, value, dimension) => sum + value * queries[index][dimension], 0),
     })).sort((a, b) => b.relevance - a.relevance);
     const hybrid = fuseKnowledgeHits(lexical, semantic, 8, knowledgeQueryContainsIdentifier(example.query) ? IDENTIFIER_LEXICAL_WEIGHT : 1);
-    const rank = (hits: Hit[]): Rank => {
-      const index = hits.findIndex(hit => hit.source_id === example.id);
-      const value = index < 0 ? 0 : index + 1;
-      const target = value ? hits[index] : undefined;
-      const citationAvailable = Boolean(target?.source_url);
-      return {
-        rank: value,
-        reciprocalRank: value ? 1 / value : 0,
-        recallAt3: value > 0 && value <= 3 ? 1 : 0,
-        citationAvailable,
-        citationCoveredAt3: citationAvailable && value > 0 && value <= 3,
-      };
-    };
     return {
       id: example.id,
       category: example.category,
-      lexical: rank(lexical),
-      semantic: rank(semantic),
-      hybrid: rank(hybrid),
+      lexical: rankTarget(lexical, example.id, example.source_url),
+      semantic: rankTarget(semantic, example.id, example.source_url),
+      hybrid: rankTarget(hybrid, example.id, example.source_url),
     };
   });
   fts.close();
