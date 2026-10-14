@@ -70,5 +70,29 @@
     "category": "catalog-sku-price",
     "passage": "Climatizzatori Largesplit configurazione Twin: CL5000iL-Set 2x70 4CE, codice 7733701968, prezzo 4.830,00 euro; CL5000iL-Set 2x88 4CE, codice 7733701969, prezzo 5.500,00 euro.",
     "query": "Quanto costa il sistema CL5000iL-Set 2x88 4CE codice 7733701969?"
+  },
+  {
+    "id": "vaillant-ecovit-sku-price",
+    "category": "catalog-sku-price",
+    "passage": "Listino Vaillant giugno 2026: ecoVIT exclusive VKK 476/4-7, codice 0010007523, segmento Basamento Condensing, prezzo 5.239,00 EUR.",
+    "query": "Qual è il prezzo del modello ecoVIT exclusive VKK 476/4-7 con codice 0010007523?"
+  },
+  {
+    "id": "vaillant-ecotec-sku-price",
+    "category": "catalog-sku-price",
+    "passage": "Listino Vaillant giugno 2026: ecoTEC plus VM 806/5-5 H, codice 0010010759, segmento Murali Condensing Alta Potenza, prezzo 6.307,00 EUR.",
+    "query": "Quanto costa la caldaia Vaillant ecoTEC plus VM 806/5-5 H codice 0010010759?"
+  },
+  {
+    "id": "vaillant-auroflow-segment",
+    "category": "catalog-attribute",
+    "passage": "Nel listino Vaillant giugno 2026, il codice 0010013146 identifica auroFLOW plus VPM 15 D - staz. drain bac, segmento Stazioni Solari, prezzo 2.107,00 EUR.",
+    "query": "A quale segmento appartiene il prodotto Vaillant con codice 0010013146?"
+  },
+  {
+    "id": "vaillant-ecocompact-product",
+    "category": "catalog-technical-value",
+    "passage": "Il prodotto Vaillant ecoCOMPACT VSC 256/4-5 100 (H-IT) ha codice 0010014667 e prezzo di listino 4.511,00 EUR; è classificato nel segmento Basamento Condensing.",
+    "query": "Trova il codice e il prezzo del modello ecoCOMPACT VSC 256/4-5 100 (H-IT)."
   }
 ]

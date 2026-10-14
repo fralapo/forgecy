@@ -16,6 +16,7 @@ export type KnowledgeHit={
 const STOP_WORDS=new Set([
   "come","cosa","quale","quali","quando","dove","perche","perché","quanto",
   "sai","del","dei","degli","dello","dell","dati","parlami","anche",
+  "con",
   "quanta","quanti","della","delle","degli","questo","questa","questi",
   "quello","quella","sono","avere","dalla","dello","sulla","sulle",
   "dovrei","vorrei","posso","potrei","puoi","fai","cliente","azienda",

@@ -68,7 +68,7 @@ async function main() {
 
   console.log(JSON.stringify({
     model: `${LOCAL_EMBEDDING_MODEL_ID}@${LOCAL_EMBEDDING_MODEL_REVISION}`,
-    corpus: "annotated public-safe fixture: synthetic examples plus Bosch Italian price catalog",
+    corpus: "annotated public-safe fixture: synthetic examples plus Bosch and Vaillant Italian price catalogs",
     count: results.length,
     ...Object.fromEntries(strategies.map(strategy => [strategy, rankingMetrics(results.map(item => item[strategy]))])),
     categories,

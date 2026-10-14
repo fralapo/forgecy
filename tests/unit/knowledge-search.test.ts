@@ -12,6 +12,8 @@ test("retrieval terms are bounded, unique and skip generic filler",()=>{
     "posizionamento OR target");
   assert.equal(knowledgeQueryFromQuestion("  COME  COSA  QUANDO  "),null);
   assert.equal(knowledgeQueryFromQuestion("prodotti prodotti SERVIZI"),"prodotti OR servizi");
+ assert.equal(knowledgeQueryFromQuestion("A quale segmento appartiene il prodotto Vaillant con codice 0010013146?"),
+  "segmento OR appartiene OR prodotto OR vaillant OR codice OR 0010013146");
   assert.ok(knowledgeQueryFromQuestion("Termine ".repeat(100))!.length<=200);
 });
 
