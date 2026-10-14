@@ -4,7 +4,7 @@ import { playbook } from "@/lib/skills/playbooks";
 import { brandStyle } from "@/lib/brand";
 import { reserveAiRequest } from "@/lib/ai-request-budget";
 import {withAiUsageScope,recordAiProviderUsage} from "@/lib/ai-usage";
-import {loadOpenRouterCatalog} from "@/lib/ai-model-settings";
+import {defaultImageModel,loadOpenRouterCatalog} from "@/lib/ai-model-settings";
 import {decodeOpenRouterImage} from "@/lib/openrouter-image";
 import {getOpenRouterApiKey} from "@/lib/openrouter-credentials";
 export const runtime="nodejs";
@@ -44,8 +44,7 @@ export async function POST(request:Request,{params}:{params:Promise<{clientId:st
   const {data:preference,error:preferenceError}=await ctx.db.from("ai_preferences")
    .select("image_model").eq("owner_id",ctx.user.id).maybeSingle();
   dbError(preferenceError,"Impossibile leggere il modello immagini selezionato");
-  const imageModelId=preference?.image_model;
-  if(!imageModelId)throw new ApiFailure(409,"Scegli un modello per le immagini in Impostazioni prima di generare");
+  const imageModelId=preference?.image_model||defaultImageModel();
   const imageModels=await loadOpenRouterCatalog("image");
   const imageModel=imageModels.find(model=>model.id===imageModelId);
   if(!imageModel)throw new ApiFailure(409,"Il modello immagini salvato non è più disponibile. Scegline uno aggiornato in Impostazioni");

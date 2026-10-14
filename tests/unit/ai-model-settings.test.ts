@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import {
-  defaultTextModel, loadOpenRouterCatalogs, normalizeImageModels,
+  defaultImageModel, defaultTextModel, loadOpenRouterCatalogs, normalizeImageModels,
   normalizeTextModels, withTextModel, withUserTextModel, currentTextModel
 } from "../../lib/ai-model-settings";
 import { decodeOpenRouterImage } from "../../lib/openrouter-image";
@@ -84,8 +84,11 @@ describe("text model selection", () => {
       assert.equal(currentTextModel(), "user/model");
     });
     assert.equal(currentTextModel(), "fallback/model");
+    process.env.OPENROUTER_MODEL = "openai/gpt-4.1-mini";
+    assert.equal(defaultTextModel(), "~deepseek/deepseek-flash-latest");
     delete process.env.OPENROUTER_MODEL;
-    assert.equal(defaultTextModel(), "openai/gpt-4.1-mini");
+    assert.equal(defaultTextModel(), "~deepseek/deepseek-flash-latest");
+    assert.equal(defaultImageModel(), "openai/gpt-image-2.5-sunburst");
   });
 
   it("restores the prior model after a rejected request", async () => {
@@ -93,7 +96,7 @@ describe("text model selection", () => {
       assert.equal(currentTextModel(), "temporary/model");
       throw new Error("provider failed");
     }), /provider failed/);
-    assert.equal(currentTextModel(), "openai/gpt-4.1-mini");
+    assert.equal(currentTextModel(), "~deepseek/deepseek-flash-latest");
   });
 
   it("loads the local owner's saved model before entering the request scope", async () => {

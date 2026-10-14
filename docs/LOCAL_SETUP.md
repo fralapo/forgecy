@@ -31,7 +31,7 @@ Apri **Impostazioni** nell'app, anche prima di creare il primo cliente, incolla 
 | Variabile | Uso |
 | --- | --- |
 | `OPENROUTER_API_KEY` | Alternativa alla configurazione dalle Impostazioni; chiave personale per cataloghi e generazione testo e immagini. |
-| `OPENROUTER_MODEL` | Modello testo di ripiego se non è impostato un modello nelle preferenze locali. |
+| `OPENROUTER_MODEL` | Modello testo di ripiego se non è impostato un modello nelle preferenze locali. Il valore predefinito è DeepSeek Flash Latest. |
 | `OPENROUTER_SITE_URL` | Identificativo facoltativo inviato nei metadati OpenRouter. |
 | `APP_ORIGIN` | Origine esatta locale, necessaria con `npm run start`; esempio `http://localhost:3000`. |
 | `GOOGLE_DRIVE_CLIENT_ID` | Facoltativo; OAuth Client ID Google di tipo applicazione desktop, richiesto solo per Drive. |
