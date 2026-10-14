@@ -21,9 +21,9 @@ Drive sincronizza solo quando richiesto e trasferisce snapshot completi, inclusi
 
 ## Priorità successive
 
-1. Provare la configurazione Google OAuth su un progetto Cloud personale e completare un ciclo export/import fra due computer.
+1. **In attesa di configurazione locale.** Il flusso desktop PKCE e il rifiuto dello state OAuth errato hanno un test isolato. Per il ciclo reale servono il Client ID del progetto Cloud personale, il consenso sul primo computer e una prova di sincronizzazione dal secondo; il primo consenso va avviato sul computer host, non dal telefono.
 2. **Completata su dati sintetici.** Prova live isolata con la chiave OpenRouter locale: PDF scannerizzato di una pagina, OCR Mistral, estrazione e riconciliazione AI (1 prodotto aggiornato, 1 aggiunto, 0 invalidi; costo riportato 0,002825 USD). Il test SQLite chiude e riapre il database e recupera il job scaduto con lease rinnovata. Nessun dato cliente è stato usato e la chiave non è stata stampata o scritta nel workspace.
-3. **Completata in test isolato.** Due rami figli dello stesso snapshot sono rilevati come teste divergenti; la copia locale è salvata prima del ripristino, resta valida dopo il ripristino dell'altro snapshot e conserva il contenuto specifico del ramo locale. La sincronizzazione Google reale resta da provare con OAuth.
+3. **Completata in test isolato.** Due archivi completi con contenuti diversi e lo stesso snapshot antenato sono rilevati come teste divergenti; la copia locale è salvata prima del ripristino del ramo remoto, resta valida dopo il ripristino e conserva le modifiche specifiche del ramo locale. La sincronizzazione Google reale resta da provare con OAuth.
 4. Ampliare l'evaluation con documenti rappresentativi reali: accuratezza OCR, copertura delle tabelle e qualità del collegamento delle foto prodotto.
 
 I controlli automatizzati sono in GitHub Actions. Google Drive e OpenRouter richiedono credenziali configurate dall'utente. Instagram accetta snapshot manuali e conteggi follower dall'archivio JSON dell'account proprietario; non estrae metriche dei post dall'archivio e non raccoglie dati da altri profili. Dettagli e limiti sono in INSTAGRAM_SNAPSHOTS.md.

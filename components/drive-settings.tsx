@@ -37,6 +37,12 @@ export default function DriveSettings() {
   }
 
   async function connect() {
+    const mobileBrowser = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      || (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+    if (window.location.hostname.endsWith(".ts.net") && mobileBrowser) {
+      setError("Il primo collegamento Google va avviato nel browser sul computer che ospita Forgecy. Google restituisce l’autorizzazione a 127.0.0.1, che dal telefono indica il telefono stesso. Dopo il collegamento, puoi usare Drive anche da remoto.");
+      return;
+    }
     const popup = window.open("about:blank", "forgecy-google-drive", "popup,width=620,height=760");
     setBusy("Collegamento Google Drive…"); setError(""); setMessage("");
     try {
@@ -128,6 +134,7 @@ export default function DriveSettings() {
     {error && <div className="notice error" role="alert">{error}</div>}
     {message && <div className="notice" role="status">{message}</div>}
     {!status?.configured && <div className="notice warn">Per collegare Drive, crea un OAuth Client ID di tipo applicazione desktop nella Google Cloud Console, abilita Google Drive API e aggiungi <code>GOOGLE_DRIVE_CLIENT_ID</code> al file <code>.env.local</code>. I passaggi sono nella <a href="https://github.com/fralapo/forgecy/blob/main/docs/LOCAL_SETUP.md" target="_blank" rel="noreferrer">guida di configurazione</a>.</div>}
+    <p className="caption">Per il primo consenso OAuth apri Forgecy nel browser del computer che lo ospita; il callback Google usa l’indirizzo locale <code>127.0.0.1</code>. Dopo aver collegato Drive dal computer, puoi avviare la sincronizzazione anche accedendo da remoto.</p>
     <div className="flex gap8" style={{ flexWrap: "wrap" }}>
       {!status?.connected
         ? <button className="button primary" onClick={() => void connect()} disabled={Boolean(busy) || !status?.configured}><Cloud size={15}/> Collega Google Drive</button>
