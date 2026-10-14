@@ -14,7 +14,7 @@ export type KnowledgeHit={
 };
 
 const STOP_WORDS=new Set([
-  "come","cosa","quale","quali","quando","dove","perche","perché","quanto",
+  "come","cosa","quale","quali","quando","dove","perche","perché","quanto","per",
   "sai","del","dei","degli","dello","dell","dati","parlami","anche",
   "con",
   "quanta","quanti","della","delle","degli","questo","questa","questi",
@@ -27,9 +27,11 @@ const STOP_WORDS=new Set([
 /** Keep retrieval bounded and forgiving: a disjunction of meaningful terms. */
 export function knowledgeQueryFromQuestion(value:string):string|null {
   const words=(value.normalize("NFKC").toLocaleLowerCase("it")
-    .match(/[\p{L}\p{N}]{3,}/gu)||[])
-    .filter(v=>!STOP_WORDS.has(v));
-  const distinct=[...new Set(words)].slice(0,6);
+    .match(/[\p{L}\p{N}]{2,}/gu)||[])
+    .filter(v=>!STOP_WORDS.has(v)&&(v.length>=3||/\d/u.test(v)));
+  // Preserve short numeric measurements and model sizes instead of letting
+  // early generic words crowd them out of the bounded lexical query.
+  const distinct=[...new Set(words)].slice(0,10);
   if(!distinct.length)return null;
   return distinct.join(" OR ").slice(0,200);
 }

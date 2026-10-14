@@ -109,6 +109,27 @@
     "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
   },
   {
+    "id": "usag-282sn-square-120-180-price",
+    "category": "catalog-sku-price",
+    "passage": "Catalogo-listino USAG 2026, pagina 110: chiave a settore snodata con nasello quadro per ghiere da 120-180 mm, valori riga 120÷180 | 9,5 | 492, codice U02820305, prezzo 66,00 EUR.",
+    "query": "Quanto costa la chiave USAG con nasello quadro per le ghiere da 120 a 180 mm?",
+    "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
+  },
+  {
+    "id": "usag-282tsn-round-15-35-code",
+    "category": "catalog-attribute",
+    "passage": "Catalogo-listino USAG 2026, pagina 110: chiave a settore snodata 282 TSN con nasello tondo, per ghiere da 15-35 mm; codice U02820321, prezzo 25,60 EUR.",
+    "query": "Which USAG 282 TSN pin spanner covers rings from 15 to 35 mm, and what is its code?",
+    "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
+  },
+  {
+    "id": "usag-282tsn-round-35-50-price",
+    "category": "catalog-sku-price",
+    "passage": "Catalogo-listino USAG 2026, pagina 110: chiave a settore snodata 282 TSN con nasello tondo per ghiere da 35-50 mm, valori riga 35÷50 | 4 | 202, codice U02820322, prezzo 30,70 EUR.",
+    "query": "Quanto costa la chiave USAG 282 TSN con nasello tondo per ghiere da 35 a 50 mm?",
+    "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
+  },
+  {
     "id": "usag-283-curved-sku-price",
     "category": "catalog-sku-price",
     "passage": "Catalogo-listino USAG 2026, pagina 110: chiave poligonale doppia curva, misura 6x7 mm, codice U02831302, prezzo 9,15 EUR.",

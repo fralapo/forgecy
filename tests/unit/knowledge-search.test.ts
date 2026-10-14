@@ -13,6 +13,8 @@ test("retrieval terms are bounded, unique and skip generic filler",()=>{
     "posizionamento OR target");
   assert.equal(knowledgeQueryFromQuestion("  COME  COSA  QUANDO  "),null);
   assert.equal(knowledgeQueryFromQuestion("prodotti prodotti SERVIZI"),"prodotti OR servizi");
+  assert.equal(knowledgeQueryFromQuestion("Quanto costa la chiave USAG 282 TSN con nasello tondo per ghiere da 35 a 50 mm?"),
+    "costa OR chiave OR usag OR 282 OR tsn OR nasello OR tondo OR ghiere OR 35 OR 50");
  assert.equal(knowledgeQueryFromQuestion("A quale segmento appartiene il prodotto Vaillant con codice 0010013146?"),
   "segmento OR appartiene OR prodotto OR vaillant OR codice OR 0010013146");
   assert.ok(knowledgeQueryFromQuestion("Termine ".repeat(100))!.length<=200);

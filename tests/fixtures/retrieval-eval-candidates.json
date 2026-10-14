@@ -40,11 +40,6 @@
     "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
   },
   {
-    "id": "usag-candidate-u02820305",
-    "passage": "Catalogo-listino USAG 2026, pagina 110: valori riga 120÷180 | 9,5 | 492, codice U02820305, prezzo 66,00 EUR.",
-    "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
-  },
-  {
     "id": "usag-candidate-u02831311",
     "passage": "Catalogo-listino USAG 2026, pagina 110: valori riga 16x17 | 258, codice U02831311, prezzo 13,90 EUR.",
     "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
@@ -125,16 +120,6 @@
     "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
   },
   {
-    "id": "usag-candidate-u02820321",
-    "passage": "Catalogo-listino USAG 2026, pagina 110: valori riga 15÷35 | 3 | 168, codice U02820321, prezzo 25,60 EUR.",
-    "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
-  },
-  {
-    "id": "usag-candidate-u02820322",
-    "passage": "Catalogo-listino USAG 2026, pagina 110: valori riga 35÷50 | 4 | 202, codice U02820322, prezzo 30,70 EUR.",
-    "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
-  },
-  {
     "id": "usag-candidate-u02820323",
     "passage": "Catalogo-listino USAG 2026, pagina 110: valori riga 50÷80 | 5 | 280, codice U02820323, prezzo 39,70 EUR.",
     "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
@@ -146,7 +131,7 @@
   },
   {
     "id": "usag-candidate-u02820325",
-    "passage": "Catalogo-listino USAG 2026, pagina 110: valori riga 120÷180 | 8 | 492, codice U02820325, prezzo 69,00 EUR.",
+    "passage": "Catalogo-listino USAG 2026, pagina 110: chiave a settore snodata 282 TSN con nasello tondo, valori riga 120÷180 | 8 | 492, codice U02820325, prezzo 69,00 EUR.",
     "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
   },
   {

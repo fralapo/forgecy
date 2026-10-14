@@ -10,8 +10,8 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
  const queryPath=join(process.cwd(),"tests/fixtures/retrieval-eval.json");
  const candidates=JSON.parse(readFileSync(fixturePath,"utf8")) as Candidate[];
  const targets=JSON.parse(readFileSync(queryPath,"utf8")) as Array<{id:string;passage:string}>;
- assert.equal(targets.length,22);
- assert.equal(candidates.length,92);
+ assert.equal(targets.length,25);
+ assert.equal(candidates.length,89);
  assert.equal(new Set(candidates.map(candidate=>candidate.id)).size,candidates.length);
  const targetIds=new Set(targets.map(target=>target.id));
  const targetProductCodes=new Set(targets.flatMap(target=>[...target.passage.matchAll(/(?:codice|articolo)\s+([A-Z0-9-]+)/giu)].map(match=>match[1].toUpperCase())));
@@ -49,5 +49,5 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
    assert.equal(targetProductCodes.has(productCode.toUpperCase()),false,candidate.id);
   }
  }
- assert.deepEqual([...sources.values()].sort((a,b)=>a-b),[1,1,1,24,24,41]);
+ assert.deepEqual([...sources.values()].sort((a,b)=>a-b),[1,1,1,24,24,38]);
 });
