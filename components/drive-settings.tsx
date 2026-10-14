@@ -4,6 +4,7 @@ import { Check, Cloud, Download, LoaderCircle, RefreshCw, Upload, Unplug } from 
 import { requestJson } from "./types";
 
 type Status = { configured: boolean; connected: boolean; folderId: string | null; lastSyncedAt: string | null; hasPreviousSync: boolean };
+type LocalBackup = { id: string; createdAt: string; size: number; hashPrefix: string };
 type Branch = { id: string; name: string; hash: string; parentHash: string };
 type SyncResult = { status: string; message: string; branches?: Branch[] };
 
@@ -13,13 +14,27 @@ export default function DriveSettings() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [backups, setBackups] = useState<LocalBackup[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const loadStatus = useCallback(async () => {
     try { setStatus(await requestJson<Status>("/api/sync/google")); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Impossibile leggere lo stato Drive"); }
   }, []);
-  useEffect(() => { queueMicrotask(() => { void loadStatus(); }); }, [loadStatus]);
+  const loadBackups = useCallback(async () => {
+    try { setBackups((await requestJson<{ backups: LocalBackup[] }>("/api/sync/backups")).backups); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Impossibile leggere i backup locali"); }
+  }, []);
+  useEffect(() => { queueMicrotask(() => { void loadStatus(); void loadBackups(); }); }, [loadStatus, loadBackups]);
+
+  async function createBackup() {
+    setBusy("Creazione backup locale…"); setError(""); setMessage("");
+    try {
+      await requestJson<{ backup: LocalBackup }>("/api/sync/backups", { method: "POST" });
+      await loadBackups(); setMessage("Backup locale creato e verificato.");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Backup locale non riuscito"); }
+    finally { setBusy(""); }
+  }
 
   async function connect() {
     const popup = window.open("about:blank", "forgecy-google-drive", "popup,width=620,height=760");
@@ -93,6 +108,22 @@ export default function DriveSettings() {
   return <article className="card stack">
     <div className="flex center gap8"><Cloud size={18}/><h2>Workspace e Google Drive</h2></div>
     <p className="caption">I dati di lavoro restano sul computer. Drive conserva snapshot versionati; Forgecy non apre né sincronizza il database SQLite mentre è in uso.</p>
+    <section className="stack" aria-labelledby="local-backups-title">
+      <div className="flex center gap8"><Download size={16}/><h3 id="local-backups-title">Backup automatici su questo computer</h3></div>
+      <p className="caption">Forgecy crea un backup locale ogni 8 ore mentre l’app è in uso e conserva gli ultimi 7. Gli archivi restano nella cartella dati privata del computer e non vengono caricati su GitHub o Drive.</p>
+      <div className="flex gap8" style={{ flexWrap: "wrap" }}>
+        <button className="button" onClick={() => void createBackup()} disabled={Boolean(busy)}><Download size={15}/> Crea backup ora</button>
+        <a className="button" href="/api/sync/export"><Upload size={15}/> Esporta archivio</a>
+        <button className="button" onClick={() => fileInput.current?.click()} disabled={Boolean(busy)}><Upload size={15}/> Importa archivio</button>
+        <input ref={fileInput} type="file" accept=".zip,.forgecy.zip,application/zip" hidden onChange={event => void importArchive(event.target.files?.[0])}/>
+      </div>
+      {backups.length ? <ul className="stack" style={{ paddingLeft: 20, margin: 0 }}>
+        {backups.map(backup => <li key={backup.id} className="caption">
+          {new Date(backup.createdAt).toLocaleString("it-IT")} · {(backup.size / 1024 / 1024).toFixed(1)} MB · <a href={`/api/sync/backups/${encodeURIComponent(backup.id)}`}>Scarica</a>
+        </li>)}
+      </ul> : <p className="caption">Il primo backup viene creato automaticamente all’avvio dell’app.</p>}
+      <p className="caption">Per ripristinarne uno, scaricalo e usa <strong>Importa archivio</strong>. I backup contengono il workspace e i documenti dei clienti: restano locali e vanno protetti come gli altri dati dell’app.</p>
+    </section>
     {status && <div className="caption" role="status">{status.connected ? "Drive collegato su questo computer" : "Drive non collegato"}{status.lastSyncedAt ? ` · ultima sincronizzazione ${new Date(status.lastSyncedAt).toLocaleString("it-IT")}` : ""}</div>}
     {error && <div className="notice error" role="alert">{error}</div>}
     {message && <div className="notice" role="status">{message}</div>}
@@ -104,9 +135,6 @@ export default function DriveSettings() {
           <button className="button primary" onClick={() => void synchronize()} disabled={Boolean(busy)}><RefreshCw size={15}/> Sincronizza adesso</button>
           <button className="button" onClick={() => void disconnect()} disabled={Boolean(busy)}><Unplug size={15}/> Scollega</button>
         </>}
-      <a className="button" href="/api/sync/export"><Download size={15}/> Esporta archivio</a>
-      <button className="button" onClick={() => fileInput.current?.click()} disabled={Boolean(busy)}><Upload size={15}/> Importa archivio</button>
-      <input ref={fileInput} type="file" accept=".zip,.forgecy.zip,application/zip" hidden onChange={event => void importArchive(event.target.files?.[0])}/>
     </div>
     {busy && <p className="caption" role="status"><LoaderCircle className="spin" size={14}/> {busy}</p>}
     {branches.length > 0 && <div className="stack">

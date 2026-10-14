@@ -12,12 +12,12 @@ Aggiornato il 14 ottobre 2026. Forgecy è un progetto open source per uso person
 - Coda persistente in SQLite e worker locale, con quote, lease, retry e recupero dopo riavvio.
 - Editor statico per Instagram/LinkedIn, calendario editoriale e export.
 - Cataloghi OpenRouter correnti per modelli testo e immagini, selezionabili da Impostazioni e salvati nel workspace.
-- Export/import verificato e snapshot immutabili Google Drive con scelta manuale in caso di conflitto.
+- Export/import verificato, backup locali automatici a rotazione e snapshot immutabili Google Drive con scelta manuale in caso di conflitto.
 - Importazione locale di snapshot JSON Instagram, confronto storico e export CSV; nessun accesso automatico alla piattaforma.
 
 ## Limiti conosciuti
 
-Drive sincronizza solo quando richiesto e trasferisce snapshot completi, inclusi i vettori semantici; non supporta modifica simultanea o merge automatico. Ogni dispositivo conserva le proprie API key. I documenti escono dal dispositivo quando si seleziona OpenRouter; l'estrazione AI dei cataloghi è una fase separata. I dati d'uso restituiti sono parziali e non costituiscono un tetto monetario. Il modello semantico si scarica nella cache locale di ciascun computer; FTS5 resta sempre disponibile come fallback.
+Drive sincronizza solo quando richiesto e trasferisce snapshot completi, inclusi i vettori semantici; non supporta modifica simultanea o merge automatico. I backup locali vengono creati all'avvio e poi ogni 8 ore mentre Forgecy è in uso; ne restano gli ultimi 7 sullo stesso computer. Non proteggono da guasto o perdita del disco: per una copia esterna usa esportazione o Drive. Ogni dispositivo conserva le proprie API key. I documenti escono dal dispositivo quando si seleziona OpenRouter; l'estrazione AI dei cataloghi è una fase separata. I dati d'uso restituiti sono parziali e non costituiscono un tetto monetario. Il modello semantico si scarica nella cache locale di ciascun computer; FTS5 resta sempre disponibile come fallback.
 
 ## Priorità successive
 

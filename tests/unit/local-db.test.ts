@@ -137,6 +137,11 @@ test("local database persists records, preserves invariants, searches evidence, 
     assert.equal((scrubbed.prepare("SELECT token_ciphertext FROM social_accounts WHERE remote_id='meta-account'").get() as { token_ciphertext: string }).token_ciphertext, "");
     assert.equal((scrubbed.prepare("SELECT needs_reauth FROM social_accounts WHERE remote_id='meta-account'").get() as { needs_reauth: number }).needs_reauth, 0);
     scrubbed.close();
+    const { createAutomaticBackup, listAutomaticBackups, readAutomaticBackup } = await import("../../lib/sync/local-backups");
+    const automaticBackup = await createAutomaticBackup();
+    assert.equal(listAutomaticBackups()[0].id, automaticBackup.id);
+    assert.equal(validateWorkspaceArchive(readAutomaticBackup(automaticBackup.id)).manifest.hash.slice(0, 12), automaticBackup.hashPrefix);
+    assert.throws(() => readAutomaticBackup("../../forgecy.sqlite"), /non valido/i);
     assert.throws(() => validateWorkspaceArchive(zipSync({ "../escape": Buffer.from("bad") })), /percorso ZIP/i);
     await restoreWorkspaceArchive(archive);
     const restored = localDb();

@@ -89,6 +89,8 @@ Il flusso è pensato per usare un solo computer alla volta. Sincronizza prima di
 
 ## Esportare e importare
 
+Forgecy crea automaticamente uno snapshot locale all'avvio e poi ogni 8 ore mentre l'app è in uso; conserva i 7 più recenti nella sottocartella `automatic-backups` della cartella dati. Da **Impostazioni → Workspace e Google Drive** puoi vedere quando sono stati creati, scaricarli o crearne uno subito. Per ripristinarne uno, scaricalo e usa **Importa archivio**. I backup automatici non escono dal computer e quindi non proteggono da guasto, furto o perdita del disco: per una copia esterna usa Drive o esporta e conserva l'archivio altrove.
+
 In **Impostazioni**, usa **Esporta archivio** per scaricare un backup `.forgecy.zip`, oppure **Importa archivio** su un'altra installazione. L'import sostituisce il workspace corrente dopo i controlli e conserva un backup locale in `pre-restore`. Puoi cancellare o copiare questi backup dalla cartella dati usando gli strumenti del sistema operativo. Proteggi gli archivi: contengono il database e i documenti del workspace, anche se Forgecy rimuove i token dei social durante l'export.
 
 I workspace delle versioni precedenti non vengono convertiti automaticamente dal nuovo runtime. Prima di abbandonare una vecchia installazione, conserva una copia dei suoi dati e file; l'archivio `.forgecy.zip` della nuova versione è il formato supportato per trasferimenti e backup. Il progetto personale convertito durante lo sviluppo non conteneva record di lavoro o allegati.
