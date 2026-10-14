@@ -140,16 +140,14 @@ test("local database persists records, preserves invariants, searches evidence, 
     assert.equal(getAutomaticBackupSettings().intervalHours, 8);
     assert.equal(getAutomaticBackupSettings().retention, 7);
     assert.throws(() => saveAutomaticBackupSettings({ directory: "relative-backups", intervalHours: 8, retention: 7 }), /percorso assoluto/i);
-    assert.throws(() => saveAutomaticBackupSettings({ directory: tmpdir(), intervalHours: 8, retention: 7 }), /solo nella cartella locale privata/i);
     let automaticBackup = await createAutomaticBackup();
     for (let index = 1; index < 8; index++) automaticBackup = await createAutomaticBackup();
     assert.equal(listAutomaticBackups().length, 7);
     assert.equal(listAutomaticBackups()[0].id, automaticBackup.id);
     assert.equal(validateWorkspaceArchive(readAutomaticBackup(automaticBackup.id)).manifest.hash.slice(0, 12), automaticBackup.hashPrefix);
     assert.throws(() => readAutomaticBackup("../../forgecy.sqlite"), /non valido/i);
-    assert.throws(() => saveAutomaticBackupSettings({ directory: externalBackupDirectory, intervalHours: 24, retention: 3 }), /solo nella cartella locale privata/i);
-    writeFileSync(join(directory, "automatic-backup-settings.json"), JSON.stringify({ directory: externalBackupDirectory, intervalHours: 24, retention: 3 }));
-    assert.equal(getAutomaticBackupSettings().directory, join(directory, "automatic-backups"));
+    saveAutomaticBackupSettings({ directory: externalBackupDirectory, intervalHours: 24, retention: 3 });
+    assert.equal(getAutomaticBackupSettings().directory, externalBackupDirectory);
     assert.equal(getAutomaticBackupSettings().intervalHours, 24);
     assert.equal(getAutomaticBackupSettings().retention, 3);
     for (let index = 0; index < 4; index++) await createAutomaticBackup();

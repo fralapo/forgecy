@@ -30,8 +30,6 @@ function normalizeSettings(input: Partial<AutomaticBackupSettings>): AutomaticBa
   const requestedDirectory = typeof input.directory === "string" ? input.directory.trim() : "";
   if (requestedDirectory && !isAbsolute(requestedDirectory)) throw new Error("Inserisci un percorso assoluto valido per la cartella dei backup.");
   const directory = requestedDirectory ? resolve(/*turbopackIgnore: true*/ requestedDirectory) : defaults.directory;
-  if (directory !== resolve(/*turbopackIgnore: true*/ defaults.directory))
-    throw new Error("I backup automatici vengono salvati solo nella cartella locale privata di Forgecy. Per trasferirli, scarica o esporta l'archivio e copialo manualmente.");
   const intervalHours = Number(input.intervalHours);
   const retention = Number(input.retention);
   if (!(BACKUP_INTERVAL_OPTIONS_HOURS as readonly number[]).includes(intervalHours)) throw new Error("Frequenza backup non valida.");
@@ -44,9 +42,7 @@ export function getAutomaticBackupSettings(): AutomaticBackupSettings {
   if (!existsSync(path)) return defaultSettings();
   try {
     const parsed = JSON.parse(readFileSync(path, "utf8")) as Partial<AutomaticBackupSettings>;
-    // Older versions allowed choosing a cloud-synced folder. Keep its schedule,
-    // but put future automatic backups in this computer's private data folder.
-    return normalizeSettings({ ...parsed, directory: defaultSettings().directory });
+    return normalizeSettings(parsed);
   } catch (error) {
     console.error("[automatic backup] Configurazione non valida; uso la cartella predefinita.", error instanceof Error ? error.message : "errore");
     return defaultSettings();
@@ -57,6 +53,9 @@ export function saveAutomaticBackupSettings(input: Partial<AutomaticBackupSettin
   const settings = normalizeSettings(input);
   const localDirectory = getLocalDataDirectory();
   mkdirSync(localDirectory, { recursive: true, mode: 0o700 });
+  // The user may choose a folder managed by a desktop cloud-sync client such
+  // as Google Drive for desktop. Forgecy writes immutable ZIP snapshots there;
+  // the live SQLite database always remains in its local data directory.
   mkdirSync(settings.directory, { recursive: true, mode: 0o700 });
   const probe = join(settings.directory, `.forgecy-write-check-${randomUUID()}`);
   try {
@@ -64,7 +63,7 @@ export function saveAutomaticBackupSettings(input: Partial<AutomaticBackupSettin
     rmSync(probe, { force: true });
   } catch {
     rmSync(probe, { force: true });
-    throw new Error("Forgecy non riesce a scrivere nella cartella selezionata. Verifica che esista e che il tuo utente abbia i permessi necessari.");
+    throw new Error("Forgecy non riesce a scrivere nella cartella selezionata. Verifica che il percorso esista o sia creabile, che il disco sia collegato e che il tuo utente abbia i permessi necessari.");
   }
   const temporary = `${configPath()}.${randomUUID()}.tmp`;
   try {

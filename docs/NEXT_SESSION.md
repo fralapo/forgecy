@@ -16,7 +16,7 @@ Apri `http://localhost:3000`, poi vai in Impostazioni per inserire la tua chiave
 
 ## Portare il workspace sul nuovo PC
 
-GitHub non contiene il database né i documenti locali. Sul vecchio computer, apri **Impostazioni → Backup e trasferimento**, usa **Esporta archivio** e trasferisci il file `.forgecy.zip` in modo sicuro; sul nuovo computer usa **Importa archivio**. I backup automatici restano nella cartella locale privata di Forgecy. Per conservare una copia su Google Drive, carica o copia manualmente un archivio. Forgecy non richiede il login Google.
+GitHub non contiene il database né i documenti locali. Sul vecchio computer, apri **Impostazioni → Backup e trasferimento**, usa **Esporta archivio** e trasferisci il file `.forgecy.zip` in modo sicuro; sul nuovo computer usa **Importa archivio**. I backup automatici possono essere salvati in una cartella assoluta scelta dall'utente. Se il client Drive per desktop sincronizza quella cartella, le copie vengono caricate automaticamente senza login Google nell'app.
 
 Proteggi gli archivi: contengono database e documenti dei clienti. Le chiavi API non vengono esportate e vanno configurate di nuovo sul nuovo computer.
 
@@ -28,7 +28,7 @@ Proteggi gli archivi: contengono database e documenti dei clienti. Le chiavi API
 - Impostazioni OpenRouter per cataloghi aggiornati, modelli testo/immagini e chiavi locali.
 - Nessun motore OCR locale: i PDF scannerizzati e le immagini vengono elaborati esclusivamente via API OpenRouter. La lettura nativa dei PDF è a intervalli (40 pagine), fino a 500 pagine e 80.000 caratteri; l'OCR API segmenta PDF fino a 200 pagine e 64 MiB in richieste da massimo 40 pagine/10 MB. Ogni segmento OCR ha quota e costo separati; un retry riprende dai blocchi mancanti senza ripetere quelli riusciti. L'estrazione strutturata del catalogo resta un passaggio AI separato. Consulta [configurazione locale](LOCAL_SETUP.md) e [stato della conoscenza](KNOWLEDGE_ARCHITECTURE.md).
 - Trasferimento del workspace tramite archivi `.forgecy.zip` esportabili e importabili.
-- Backup automatici nella cartella locale privata, con intervallo e rotazione configurabili; copia su cloud solo manuale.
+- Backup automatici in una cartella scelta dall'utente, con intervallo e rotazione configurabili; un client desktop come Google Drive può sincronizzare gli archivi.
 
 ## Verifica e limiti noti
 
