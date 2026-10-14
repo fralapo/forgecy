@@ -73,6 +73,23 @@ test("OCR lists with description, code, segment and price columns keep identifie
  assert.equal(catalogEvidenceIsValid({...products[0],descriptionQuote:JSON.stringify(["0010007523","Segmento inventato"])},source),false);
 });
 
+test("OCR product matrices without prices import coded products and package evidence deterministically",()=>{
+ const source="Catalogo prodotti\n| Cod. | Descrizione Prodotto | Contenuto | Barcode | ITF-14 | Pz Crt |\n| --- | --- | --- | --- | --- | --- |\n| AMMORBIDENTE DEO DUE | | | | | |\n| DD107 | DEO DUE MORBIDO FIORI D'ACQUA | 1 LT | 8388776980149 | 18388776980146 | 6 |\n| DD103 | DEO DUE MORBIDO FIORI ROSA | 1 LT | 8388776980026 | 18388776980023 | 6 |";
+ const products=parseMarkdownCatalogTable(source);
+ assert.equal(products.length,2);
+ assert.equal(products[0].name,"DEO DUE MORBIDO FIORI D'ACQUA");
+ assert.equal(products[0].description,"DD107 — 1 LT — 8388776980149");
+ assert.equal(products[0].price,null);
+ assert.equal(catalogEvidenceIsValid(products[0],source),true);
+ assert.equal(products[1].name,"DEO DUE MORBIDO FIORI ROSA");
+ assert.equal(catalogEvidenceIsValid({...products[0],description:"DD999 — 2 LT"},source),false);
+ const withoutMarkdownSeparator=source.replace("| --- | --- | --- | --- | --- | --- |\n","");
+ const scannedRows=parseMarkdownCatalogTable(withoutMarkdownSeparator);
+ assert.equal(scannedRows.length,2);
+ assert.equal(catalogEvidenceIsValid(scannedRows[0],withoutMarkdownSeparator),true);
+ assert.deepEqual(parseMarkdownCatalogTable("Catalogo\n| Cod. | Descrizione |\n| --- | --- |\n| DD107 | Nome prodotto |"),[]);
+});
+
 test("OCR product tables headed Codice, Descrizione and Listino import locally with exact code and price evidence",()=>{
  const source="LISTINO GUANTI 2025\n| Codice | Descrizione | Listino |\n| --- | --- | --- |\n| GUG00009 | ATLAS Conf=12 Pa | 138,65 € |\n| GUG14409 | ATLAS Conf=144 Pa | 1.569,60 € |\n| GUG00020 | BACHATA Conf=12 Pa | 61,70 € |";
  const products=parseMarkdownCatalogTable(source);

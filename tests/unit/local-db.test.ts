@@ -8,6 +8,7 @@ import { zipSync } from "fflate";
 
 test("local database persists records, preserves invariants, searches evidence, queues work and snapshots", async () => {
   const directory = mkdtempSync(join(tmpdir(), "forgecy-local-db-"));
+  const externalBackupDirectory = mkdtempSync(join(tmpdir(), "forgecy-backup-destination-"));
   process.env.FORGECY_DATA_DIR = directory;
   const { localDb, LOCAL_OWNER_ID } = await import("../../lib/local-db/index");
   const db = localDb();
@@ -136,13 +137,23 @@ test("local database persists records, preserves invariants, searches evidence, 
     assert.equal((scrubbed.prepare("SELECT token_ciphertext FROM social_accounts WHERE remote_id='meta-account'").get() as { token_ciphertext: string }).token_ciphertext, "");
     assert.equal((scrubbed.prepare("SELECT needs_reauth FROM social_accounts WHERE remote_id='meta-account'").get() as { needs_reauth: number }).needs_reauth, 0);
     scrubbed.close();
-    const { createAutomaticBackup, listAutomaticBackups, readAutomaticBackup } = await import("../../lib/sync/local-backups");
+    const { createAutomaticBackup, getAutomaticBackupSettings, listAutomaticBackups, readAutomaticBackup, saveAutomaticBackupSettings } = await import("../../lib/sync/local-backups");
+    assert.equal(getAutomaticBackupSettings().intervalHours, 8);
+    assert.equal(getAutomaticBackupSettings().retention, 7);
+    assert.throws(() => saveAutomaticBackupSettings({ directory: "relative-backups", intervalHours: 8, retention: 7 }), /percorso assoluto/i);
+    assert.throws(() => saveAutomaticBackupSettings({ directory: tmpdir(), intervalHours: 8, retention: 7 }), /separata/i);
     let automaticBackup = await createAutomaticBackup();
     for (let index = 1; index < 8; index++) automaticBackup = await createAutomaticBackup();
     assert.equal(listAutomaticBackups().length, 7);
     assert.equal(listAutomaticBackups()[0].id, automaticBackup.id);
     assert.equal(validateWorkspaceArchive(readAutomaticBackup(automaticBackup.id)).manifest.hash.slice(0, 12), automaticBackup.hashPrefix);
     assert.throws(() => readAutomaticBackup("../../forgecy.sqlite"), /non valido/i);
+    saveAutomaticBackupSettings({ directory: externalBackupDirectory, intervalHours: 24, retention: 3 });
+    assert.equal(getAutomaticBackupSettings().directory, externalBackupDirectory);
+    assert.equal(getAutomaticBackupSettings().intervalHours, 24);
+    assert.equal(getAutomaticBackupSettings().retention, 3);
+    for (let index = 0; index < 4; index++) await createAutomaticBackup();
+    assert.equal(listAutomaticBackups().length, 3);
     const { saveLocalConflictCopy } = await import("../../lib/sync/conflict-backup");
     const { branchHeads } = await import("../../lib/sync/drive");
     const commonAncestor = manifest.hash;
@@ -198,5 +209,6 @@ test("local database persists records, preserves invariants, searches evidence, 
     delete (globalThis as typeof globalThis & { __forgecyLocalDb?: unknown }).__forgecyLocalDb;
     delete process.env.FORGECY_DATA_DIR;
     rmSync(directory, { recursive: true, force: true });
+    rmSync(externalBackupDirectory, { recursive: true, force: true });
   }
 });

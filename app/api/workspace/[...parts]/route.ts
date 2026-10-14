@@ -3,7 +3,7 @@ import { auth,requireClient,read,json,fail,ApiFailure,dbError,audit } from "@/li
 import { clientSchema,sourceSchema,offerSchema,campaignSchema,missionSchema,chatSchema,updateContentSchema,signalSchema } from "@/lib/schemas";
 import { draftDossier,executeMission,contextForAI } from "@/lib/agent-team";
 import { handleLeaderMessage } from "@/lib/leader-intent";
-import { modelJson,modelJsonWithImages,modelStructuredJson,lowTrustRule } from "@/lib/ai";
+import { modelJson,modelJsonWithImages,lowTrustRule } from "@/lib/ai";
 import { reserveAiRequest } from "@/lib/ai-request-budget";
 import {withAiUsageScope} from "@/lib/ai-usage";
 import { crawlWebsite, fetchWebsiteFile, publicHttpsUrl } from "@/lib/site-ingest";
@@ -91,7 +91,11 @@ async function reconcileCatalogDocument(ctx:Awaited<ReturnType<typeof auth>>,cli
     if(extracted)console.warn("[catalog-import] visual extraction produced no products with verifiable text; retrying with OCR text only");
     await reserveAiRequest(ctx,clientId,"dossier");
     usedTextOnlyFallback=true;
-    extracted=await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"dossier"},()=>modelStructuredJson(textOnlyPrompt,user,catalogExtractionModelSchema,"catalog_extraction",6200,undefined,false,45_000));
+    // Some OpenRouter providers accept json_object but return the supplied
+    // JSON Schema itself for strict json_schema requests. The text-only retry
+    // deliberately uses the compatible JSON-object mode and validates the
+    // decoded result against the same Zod schema locally.
+    extracted=await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"dossier"},()=>modelJson(textOnlyPrompt,user,catalogExtractionModelSchema,{maxTokens:6200,timeoutMs:45_000,temperature:0.1,reasoningEnabled:false}));
    }
   }else{
    extracted=await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"dossier"},()=>modelJson(prompt,user,catalogExtractionModelSchema,{maxTokens:6200,timeoutMs:45_000,temperature:0.1,reasoningEnabled:false}));

@@ -24,11 +24,11 @@ Il database è creato automaticamente e aggiornato all'avvio. Percorsi predefini
 | Windows | `%LOCALAPPDATA%\Forgecy` |
 | Linux | `$XDG_DATA_HOME/forgecy` oppure `~/.local/share/forgecy` |
 
-La cartella contiene `forgecy.sqlite`, i file privati, lo stato Drive e, se il portachiavi del sistema non è disponibile, le credenziali protette dai permessi locali. `FORGECY_DATA_DIR` permette di usare una cartella personalizzata. Mantieni il database attivo su un disco locale: non aprirlo da Google Drive, Dropbox, NAS o cartelle di rete.
+La cartella contiene `forgecy.sqlite`, i file privati, le impostazioni locali dei backup e, se il portachiavi del sistema non è disponibile, le credenziali protette dai permessi locali. `FORGECY_DATA_DIR` permette di usare una cartella personalizzata. Mantieni il database attivo su un disco locale: non aprirlo da Google Drive, Dropbox, NAS o cartelle di rete.
 
 ## Chiavi dei provider
 
-Apri **Impostazioni** nell'app, anche prima di creare il primo cliente, incolla la chiave OpenRouter e premi **Verifica e salva chiave**. Forgecy la prova con OpenRouter prima di conservarla nel portachiavi del sistema operativo; se il portachiavi non è disponibile, la salva nella cartella dati privata con permessi limitati al tuo utente. La chiave non viene esportata né sincronizzata su Drive. In alternativa, puoi configurarla in `.env.local`, che non va mai aggiunto a Git:
+Apri **Impostazioni** nell'app, anche prima di creare il primo cliente, incolla la chiave OpenRouter e premi **Verifica e salva chiave**. Forgecy la prova con OpenRouter prima di conservarla nel portachiavi del sistema operativo; se il portachiavi non è disponibile, la salva nella cartella dati privata con permessi limitati al tuo utente. La chiave non viene inclusa negli archivi di trasferimento. In alternativa, puoi configurarla in `.env.local`, che non va mai aggiunto a Git:
 
 | Variabile | Uso |
 | --- | --- |

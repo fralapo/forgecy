@@ -18,13 +18,13 @@ Apri `http://localhost:3000`, poi vai in Impostazioni per inserire la tua chiave
 
 GitHub non contiene il database né i documenti locali. Sul vecchio computer, apri **Impostazioni → Backup e trasferimento**, usa **Esporta archivio** e trasferisci il file `.forgecy.zip` in modo sicuro; sul nuovo computer usa **Importa archivio**. In alternativa, configura un backup automatico in una cartella sincronizzata dal client desktop di Google Drive o da un servizio simile e copia l'archivio sull'altro computer. Forgecy non richiede il login Google. La cartella di destinazione è specifica del computer e non viene esportata.
 
-In alternativa, sul vecchio computer usa **Esporta archivio** e trasferisci il file `.forgecy.zip` in modo sicuro; sul nuovo computer usa **Importa archivio**. Proteggi l'archivio: contiene database e documenti dei clienti. Le chiavi API e i token non fanno parte degli snapshot, quindi vanno configurati di nuovo sul nuovo computer.
+Proteggi gli archivi: contengono database e documenti dei clienti. Le chiavi API non vengono esportate e vanno configurate di nuovo sul nuovo computer.
 
 ## Cosa contiene questa versione
 
 - App single-user local-first, con SQLite locale, chiavi personali e nessun backend Supabase.
 - Importazione di siti e fonti, acquisizione di asset, immagini e cataloghi, aggiornamento o rimozione delle fonti e riconciliazione dei prodotti con i documenti.
-- Memoria basata su fonti e passaggi, con ricerca ibrida FTS5 + MiniLM locale attiva per default e indicizzata in background; i vettori sono inclusi nei backup/Drive e il modello resta nella cache per dispositivo. Vedere [architettura della conoscenza](KNOWLEDGE_ARCHITECTURE.md).
+- Memoria basata su fonti e passaggi, con ricerca ibrida FTS5 + MiniLM locale attiva per default e indicizzata in background; i vettori sono inclusi negli archivi e il modello resta nella cache per dispositivo. Vedere [architettura della conoscenza](KNOWLEDGE_ARCHITECTURE.md).
 - Impostazioni OpenRouter per cataloghi aggiornati, modelli testo/immagini e chiavi locali.
 - Nessun motore OCR locale: i PDF scannerizzati e le immagini vengono elaborati esclusivamente via API OpenRouter. La lettura del testo nativo nei PDF e dei formati testuali non richiede OCR; il conteggio pagine è riutilizzato per evitare di riparsare localmente le scansioni. L'OCR API si esegue una volta durante il caricamento; l'estrazione strutturata del catalogo è un passaggio AI separato. Consulta [configurazione locale](LOCAL_SETUP.md) e [stato della conoscenza](KNOWLEDGE_ARCHITECTURE.md).
 - Trasferimento del workspace tramite archivi `.forgecy.zip` esportabili e importabili.

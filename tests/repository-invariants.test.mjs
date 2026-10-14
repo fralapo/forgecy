@@ -14,7 +14,10 @@ test("local-first runtime has no Supabase package or connection configuration", 
   assert.ok(!Object.keys({ ...manifest.dependencies, ...manifest.devDependencies }).some(name => name.includes("supabase")));
   assert.ok(!env.toLowerCase().includes("supabase"));
   assert.ok(env.includes("OPENROUTER_API_KEY="));
-  assert.ok(env.includes("GOOGLE_DRIVE_CLIENT_ID="));
+  assert.ok(!env.includes("GOOGLE_DRIVE_CLIENT_ID="));
+  const backupSettings = readFileSync("components/drive-settings.tsx", "utf8");
+  assert.match(backupSettings, /Backup e trasferimento/);
+  assert.doesNotMatch(backupSettings, /Collega Google Drive|Client ID Google/);
 });
 
 test("local storage and loopback worker are the active architecture", () => {

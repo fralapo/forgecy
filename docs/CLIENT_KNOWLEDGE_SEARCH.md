@@ -2,7 +2,7 @@
 
 Quando un client accumula pagine e documenti, Forgecy estrae prima il contenuto sul dispositivo, poi suddivide i testi in passaggi attribuibili alla fonte. La ricerca ibrida è attiva per impostazione predefinita: FTS5 di SQLite è subito disponibile e il worker locale prepara in background l'indice MiniLM multilingue in lotti. Quando i vettori sono pronti, i ranking lessicale e semantico vengono fusi. Il proprietario può disattivare la semantica dalle Impostazioni; in assenza del modello o durante il primo indice resta attiva la ricerca lessicale. La ricerca semantica aiuta con sinonimi e parafrasi, ma non verifica da sola la veridicità delle affermazioni.
 
-Il primo utilizzo scarica una volta per computer il modello quantizzato (118 MB per il file ONNX principale, circa 120–130 MB con i file necessari) e calcola i vettori localmente. Gli archivi `.forgecy.zip` e gli snapshot Drive conservano i vettori insieme al database, evitando la reindicizzazione su un altro computer. I pesi del modello restano nella cache locale e vengono scaricati sul nuovo computer quando servono.
+Il primo utilizzo scarica una volta per computer il modello quantizzato (118 MB per il file ONNX principale, circa 120–130 MB con i file necessari) e calcola i vettori localmente. Gli archivi `.forgecy.zip` conservano i vettori insieme al database, evitando la reindicizzazione su un altro computer. I pesi del modello restano nella cache locale e vengono scaricati sul nuovo computer quando servono.
 
 La reindicizzazione segue la creazione, modifica o estrazione di una fonte. Le risposte AI ricevono gli estratti con i relativi riferimenti; i contenuti originali restano file locali. Nuove revisioni della conoscenza rendono obsolete le analisi approvate precedenti.
 
