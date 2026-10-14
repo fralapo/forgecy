@@ -51,7 +51,7 @@ Sul computer server:
 1. Accedi a Tailscale con lo stesso account autorizzato anche sul telefono e abilita HTTPS/Serve per il tailnet.
 2. Imposta in `.env.local` il login esatto in `FORGECY_TAILSCALE_ALLOWED_USER` e l'hostname `*.ts.net` mostrato da Serve in `FORGECY_TAILSCALE_HOST`.
 3. Avvia `npm run dev:tailscale` durante lo sviluppo oppure esegui `npm run build` e `npm run start:tailscale` per la versione di produzione.
-4. Controlla `tailscale serve status`: il proxy HTTPS deve puntare a `http://127.0.0.1:7693` ed essere disponibile solo nel tailnet.
+4. Controlla `tailscale serve status`: il proxy HTTPS deve puntare a `http://127.0.0.1:7694` ed essere disponibile solo nel tailnet.
 5. Dal telefono, con Tailscale connesso, apri il nome HTTPS `*.ts.net` mostrato da Serve.
 
 La regola di accesso Tailscale deve consentire al tuo telefono di raggiungere il nodo server. Il solo fatto che il telefono sia nel tailnet non autorizza altri account: Forgecy verifica anche l'identità inoltrata da Serve.

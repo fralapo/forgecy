@@ -34,5 +34,7 @@ test("local storage and loopback worker are the active architecture", () => {
   assert.match(worker, /processNextJob/);
   assert.match(access, /localhost.*127\.0\.0\.1/);
   assert.match(manifest.scripts["start:tailscale"], /--hostname 127\.0\.0\.1/);
+  assert.match(manifest.scripts["start:tailscale"], /--port 7694/);
+  assert.match(manifest.scripts["dev:tailscale"], /--port 7694/);
   assert.match(config, /FORGECY_TAILSCALE_ALLOWED_USER/);
 });
