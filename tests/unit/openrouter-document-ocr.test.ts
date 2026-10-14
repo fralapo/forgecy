@@ -1,7 +1,52 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { deflateSync } from "node:zlib";
 import { PDFDocument } from "pdf-lib";
 import { ocrDocumentWithOpenRouter, parsedDocumentImages, parsedDocumentText } from "../../lib/openrouter-document-ocr";
+
+function pngChunk(type: string, body: Uint8Array) {
+  const name = Buffer.from(type, "ascii");
+  const output = Buffer.alloc(body.length + 12);
+  output.writeUInt32BE(body.length, 0);
+  name.copy(output, 4);
+  Buffer.from(body).copy(output, 8);
+  let crc = 0xffffffff;
+  for (const byte of output.subarray(4, body.length + 8)) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+  }
+  output.writeUInt32BE((crc ^ 0xffffffff) >>> 0, body.length + 8);
+  return output;
+}
+
+function noisyPng(size: number, seed: number) {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(size, 0);
+  header.writeUInt32BE(size, 4);
+  header[8] = 8;
+  header[9] = 2;
+  const pixels = Buffer.alloc(size * size * 3);
+  let state = (seed + 1) >>> 0;
+  for (let index = 0; index < pixels.length; index++) {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    pixels[index] = state & 0xff;
+  }
+  const scanlines = Buffer.alloc(size * (size * 3 + 1));
+  for (let row = 0; row < size; row++) {
+    scanlines[row * (size * 3 + 1)] = 0;
+    pixels.copy(scanlines, row * (size * 3 + 1) + 1, row * size * 3, (row + 1) * size * 3);
+  }
+  // Make each page's image distinct so the PDF cannot share one image stream.
+  scanlines[seed + 1] = (scanlines[seed + 1]! + seed + 1) & 0xff;
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    pngChunk("IHDR", header),
+    pngChunk("IDAT", deflateSync(scanlines)),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
+}
 
 test("prefers exact parsed PDF text annotations over the model's summary", () => {
   const text = parsedDocumentText({
@@ -135,6 +180,51 @@ test("splits scanned PDFs over 40 pages into ordered OCR requests", async () => 
   assert.equal(result.textTruncated, false);
   assert.match(result.body, /Pagine PDF 1–40/);
   assert.match(result.body, /Pagine PDF 41–42/);
+});
+
+test("splits OCR PDF segments by serialized size as well as page count", async () => {
+  const pdf = await PDFDocument.create();
+  for (let page = 0; page < 15; page++) {
+    const image = await pdf.embedPng(noisyPng(500, page));
+    const target = pdf.addPage([500, 500]);
+    target.drawImage(image, { x: 0, y: 0, width: 500, height: 500 });
+  }
+  const bytes = new Uint8Array(await pdf.save());
+  assert.ok(bytes.byteLength > 10_000_000, "fixture must exceed the per-segment 10 MB bound");
+  assert.ok(bytes.byteLength < 64 * 1024 * 1024, "fixture must remain below the document upload bound");
+
+  const chunks: Array<{pages: number; bytes: number; name: string}> = [];
+  const result = await ocrDocumentWithOpenRouter({
+    bytes, mime: "application/pdf", name: "catalogo-grande.pdf", model: "deepseek/deepseek-v4.1-flash",
+    keyProvider: async () => "test-key",
+    fetcher: async (_input, init) => {
+      const request = JSON.parse(String(init?.body)) as {messages:Array<{content:Array<{file?:{file_data:string;filename:string}}>}>};
+      const file = request.messages[0]!.content[1]!.file!;
+      const chunkBytes = Buffer.from(file.file_data.split(",")[1]!, "base64");
+      const chunk = await PDFDocument.load(chunkBytes);
+      chunks.push({pages: chunk.getPageCount(), bytes: chunkBytes.byteLength, name: file.filename});
+      return new Response(JSON.stringify({
+        id: `gen-large-${chunks.length}`, model: "deepseek/deepseek-v4.1-flash", usage: {prompt_tokens: 20, completion_tokens: 10},
+        choices: [{message: {annotations: [{type: "file", file: {content: [
+          {type: "text", text: `Testo OCR valido dal segmento ${chunks.length} del documento sintetico.`}
+        ]}}]}}]
+      }), {status: 200});
+    }
+  });
+
+  assert.ok(chunks.length > 1, "size bound should split the 15-page document");
+  assert.deepEqual(chunks.map(chunk => chunk.pages).reduce((sum, pages) => sum + pages, 0), 15);
+  assert.ok(chunks.every(chunk => chunk.bytes <= 10_000_000), "no serialized OCR segment may exceed 10 MB");
+  let nextPage = 1;
+  for (const chunk of chunks) {
+    const range = /-p(\d+)-(\d+)\.pdf$/u.exec(chunk.name);
+    assert.ok(range, `expected page range in ${chunk.name}`);
+    assert.equal(Number(range[1]), nextPage, "segments must not overlap or skip pages");
+    nextPage = Number(range[2]) + 1;
+  }
+  assert.equal(nextPage, 16);
+  assert.equal(result.pagesProcessed, 15);
+  assert.equal(result.partialFailure, false);
 });
 
 test("keeps completed OCR segments when a later provider request fails", async () => {
