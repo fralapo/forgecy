@@ -143,8 +143,46 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
  return found;
 }
 
+/** Parse OCR catalog variants where each product image is followed by a short label and a printed code. */
+export function parseMarkdownImageVariants(text:string):CatalogProduct[]{
+ const lines=text.split(/\r?\n/u);
+ const firstImage=lines.findIndex(line=>/^\s*!\[img-\d+\.[^\]]+\]\(/iu.test(line));
+ if(firstImage<0)return [];
+ const familyHeading=lines.slice(0,firstImage).map(line=>/^#\s+(.+?)\s*#*$/u.exec(line)?.[1]?.trim()||"")
+  .filter(heading=>heading.length>=5&&!/^(?:catalog(?:ue|o)?(?: products?)?|listino(?: prezzi)?|price list|document(?:o)?|pagina|page|scheda tecnica|technical specification|manuale d uso|indice|contents)(?:\s+\d{4})?$/iu.test(normalizeCatalogName(heading)))[0];
+ if(!familyHeading)return [];
+ const found:CatalogProduct[]=[];
+ for(let i=firstImage;i<lines.length;i++){
+  const match=/^\s*!\[img-(\d+)\.[^\]]+\]\(/iu.exec(lines[i]);
+  if(!match)continue;
+  const imageIndex=Number(match[1]);
+  if(!Number.isInteger(imageIndex)||imageIndex>7)continue;
+  const block:string[]=[];
+  for(let j=i+1;j<lines.length&&!/^\s*(?:!\[img-|#{1,6}\s)/u.test(lines[j]);j++){
+   const value=lines[j].trim();
+   if(value)block.push(value);
+  }
+  const codeLine=block.find(value=>/\bcod(?:ice)?\.?\s*[A-Z0-9][A-Z0-9/-]{2,}/iu.test(value));
+  if(!codeLine)continue;
+  const variant=block.find(value=>value!==codeLine&&/\p{L}/u.test(value)&&value.length<=100&&!/^\d/u.test(value));
+  if(!variant)continue;
+  const code=/(?:cod(?:ice)?\.?\s*)([A-Z0-9][A-Z0-9/-]{2,})/iu.exec(codeLine)?.[1];
+  if(!code)continue;
+  const nameQuotes=[familyHeading,variant];
+  found.push({name:`${familyHeading} ${variant}`,description:codeLine,price:null,currency:"EUR",
+   nameQuote:JSON.stringify(nameQuotes),descriptionQuote:codeLine,priceQuote:"",existingOfferId:null,imageIndex});
+ }
+ return found;
+}
+
 export function catalogEvidenceIsValid(product:CatalogProduct,sourceText:string){
  const exact=(quote:string)=>!!quote&&sourceText.includes(quote);
+ let nameQuotes=[product.nameQuote];
+ try{
+  const parsed:unknown=JSON.parse(product.nameQuote);
+  if(Array.isArray(parsed)&&parsed.length>0&&parsed.every(quote=>typeof quote==="string"&&quote.trim()))
+   nameQuotes=parsed as string[];
+ }catch{/* Existing model output uses a single literal quote. */}
  let descriptionQuotes=[product.descriptionQuote];
  try{
   const parsed:unknown=JSON.parse(product.descriptionQuote);
@@ -152,8 +190,8 @@ export function catalogEvidenceIsValid(product:CatalogProduct,sourceText:string)
    descriptionQuotes=parsed as string[];
  }catch{/* Existing model output uses a single literal quote. */}
  const normalizedName=normalizeCatalogName(product.name);
- return exact(product.nameQuote)&&
-   normalizeCatalogName(product.nameQuote).includes(normalizedName)&&
+ return nameQuotes.every(exact)&&
+   normalizeCatalogName(nameQuotes.join(" ")).includes(normalizedName)&&
    (product.description===""||(descriptionQuotes.every(exact)&&product.descriptionQuote.length>=Math.min(8,product.description.length)&&
     normalizeCatalogName(descriptionQuotes.join(" ")).includes(normalizeCatalogName(product.description))))&&
    (product.price===null||(exact(product.priceQuote)&&parsePrice(product.priceQuote)===product.price));

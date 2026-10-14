@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseMarkdownCatalogTable} from "../../lib/catalog-import";
+import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseMarkdownCatalogTable,parseMarkdownImageVariants} from "../../lib/catalog-import";
 
 test("catalog names normalize accents and punctuation for safe matching",()=>{
  assert.equal(normalizeCatalogName("Caffè — Espresso 100%"),"caffe espresso 100");
@@ -89,4 +89,21 @@ test("OCR product tables headed Codice, Descrizione and Listino import locally w
  assert.equal(csvProducts[0].description,"GUG00009");
  assert.equal(csvProducts[0].price,138.65);
  assert.equal(catalogEvidenceIsValid(csvProducts[0],csv),true);
+});
+
+test("OCR product image blocks retain exact variant labels, printed codes and image references",()=>{
+ const source="# Acme Surface Cleaner\n## Product variations\n![img-0.jpeg](img-0.jpeg)\nBlue\nCod.AC-100\nEAN OCR noise\n\n![img-1.jpeg](img-1.jpeg)\nGreen\nCod.AC-101\nEAN OCR noise";
+ const products=parseMarkdownImageVariants(source);
+ assert.equal(products.length,2);
+ assert.equal(products[0].name,"Acme Surface Cleaner Blue");
+ assert.equal(products[0].description,"Cod.AC-100");
+ assert.equal(products[0].price,null);
+ assert.equal(products[0].imageIndex,0);
+ assert.equal(catalogEvidenceIsValid(products[0],source),true);
+ assert.equal(products[1].name,"Acme Surface Cleaner Green");
+ assert.equal(products[1].description,"Cod.AC-101");
+ assert.equal(products[1].imageIndex,1);
+ assert.equal(catalogEvidenceIsValid(products[1],source),true);
+ assert.equal(catalogEvidenceIsValid({...products[0],name:"Invented Surface Cleaner Blue"},source),false);
+ assert.deepEqual(parseMarkdownImageVariants("# Scheda tecnica 2026\n![img-0.jpeg](img-0.jpeg)\nBlue\nCod.AC-100"),[]);
 });

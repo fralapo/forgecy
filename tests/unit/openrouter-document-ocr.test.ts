@@ -77,6 +77,7 @@ test("sends scanned PDFs through the bounded Mistral OCR parser and keeps its so
   assert.deepEqual(body?.plugins, [{id:"file-parser",pdf:{engine:"mistral-ocr"}}]);
   const content = (body?.messages as Array<{content:Array<Record<string, unknown>>}>)[0]?.content;
   assert.equal(content?.[1]?.type, "file");
+  assert.match(String(content?.[0]?.text),/quantità, misure e unità di misura/);
 });
 
 test("reuses the local page-count preflight instead of parsing the PDF a second time", async () => {
