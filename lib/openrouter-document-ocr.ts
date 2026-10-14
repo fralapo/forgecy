@@ -25,6 +25,14 @@ function asObject(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
+function safeProviderError(value: unknown): string {
+  const message=asObject(asObject(value).error).message;
+  if(typeof message!=="string")return "provider error details unavailable";
+  return message.replace(/data:[^,\s]+;base64,[A-Za-z0-9+/=]+/gu,"[file]")
+    .replace(/sk-or-v1-[A-Za-z0-9_-]+/gu,"[redacted]").replace(/Bearer\s+\S+/giu,"Bearer [redacted]")
+    .replace(/[\r\n\t]+/gu," ").slice(0,240);
+}
+
 export function parsedDocumentText(value: unknown): string {
   const root = asObject(value);
   const choices = Array.isArray(root.choices) ? root.choices : [];
@@ -93,7 +101,7 @@ async function pdfPages(bytes: Uint8Array): Promise<number> {
   } finally { await parser.destroy(); }
 }
 
-/** OCR is called only after local extraction found no readable text. Uploaded data is never logged. */
+/** OCR is exclusively remote. Native document text extraction is handled separately; uploads are never logged. */
 export async function ocrDocumentWithOpenRouter(options: OcrOptions): Promise<OcrResult> {
   const { bytes, mime, name, model } = options;
   if (bytes.byteLength > MAX_UPLOAD_BYTES) throw new ApiFailure(413, "Il documento supera il limite di 10 MB.");
@@ -145,7 +153,9 @@ export async function ocrDocumentWithOpenRouter(options: OcrOptions): Promise<Oc
     throw new ApiFailure(502, "OpenRouter non è raggiungibile per l'OCR. Il file resta salvato e puoi riprovare.");
   }
   if (!response.ok) {
-    console.error("[openrouter ocr] HTTP", response.status);
+    let details="provider error details unavailable";
+    try { details=safeProviderError(await response.clone().json()); } catch { /* Preserve the generic response below. */ }
+    console.error("[openrouter ocr] HTTP", response.status, details);
     throw new ApiFailure(response.status === 429 ? 429 : 502,
       response.status === 429 ? "OpenRouter ha raggiunto un limite temporaneo per l'OCR. Puoi riprovare." : "OpenRouter non ha completato l'OCR. Il file resta salvato e puoi riprovare.");
   }

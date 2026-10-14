@@ -24,7 +24,7 @@ Non effettua estrazione dei file sul disco, non esegue macro o link. Non conside
 - Max **10 MB** per file (limite esistente, rafforzato nel validatore centrale).
 - PDF: firma \`%PDF-\`, terminatore \`%%EOF\` e parser testuale limitato alle prime 40 pagine. Se non estrae testo, viene invocato il file-parser OpenRouter con Mistral OCR; i file oltre le 40 pagine restano archiviati e possono essere divisi e ricaricati.
 - Immagini: firma del formato verificata prima dell'invio a OpenRouter per l'OCR. Per i PDF il parser può restituire al massimo 8 immagini; l'eventuale passaggio di immagini al modello AI per estrarre i prodotti è distinto dall'OCR. Forgecy collega una foto a un prodotto solo quando l'associazione è chiara.
-- OCR API: è usato esclusivamente se l'estrazione locale non trova testo leggibile. PDF scannerizzati e immagini sono elaborati fuori dal computer da OpenRouter e dai provider da esso selezionati; possono applicarsi tariffe per pagina e/o modello secondo il piano corrente. Le chiamate AI registrabili entrano nel registro utilizzo OpenRouter.
+- OCR: viene eseguito esclusivamente tramite API OpenRouter, senza motori OCR locali. Il testo già incorporato nei PDF e i formati testuali vengono letti senza OCR; PDF scannerizzati e immagini sono elaborati fuori dal computer da OpenRouter e dai provider da esso selezionati. Possono applicarsi tariffe per pagina e/o modello secondo il piano corrente. Le chiamate AI registrabili entrano nel registro utilizzo OpenRouter.
 - Ogni estrazione AI resta evidenza non attendibile. L'importazione prodotti conserva solo campi con citazioni letterali verificate sul testo estratto e non sovrascrive campi bloccati da modifiche manuali.
 - TXT/MD/CSV: codifica UTF-8 valida, senza byte NUL.
 - PNG/JPEG/WebP: verifica delle firme standard, senza dichiarare che il resto della struttura dell'immagine sia completamente valido.
@@ -33,7 +33,7 @@ Non effettua estrazione dei file sul disco, non esegue macro o link. Non conside
 
 ### OCR tramite API
 
-- L'OCR è eseguito da OpenRouter soltanto per PDF scannerizzati e immagini che non hanno testo estraibile localmente. Richiede una chiave configurata e il modello selezionato; se la chiamata fallisce, la fonte resta in sospeso e può essere riprovata.
+- L'OCR è eseguito solo tramite OpenRouter per PDF scannerizzati e immagini. Non è previsto un motore OCR locale. Richiede una chiave configurata e il modello selezionato; se la chiamata fallisce, la fonte resta in sospeso e può essere riprovata.
 - L'upload a OpenRouter comporta elaborazione esterna e può comportare costi del provider. L'estrazione AI strutturata di cataloghi è una fase separata e può trasmettere testo e immagini al modello configurato.
 
 \`tests/unit/document-safety.test.ts\` produce un ZIP DOCX reale e verifica estrazione Mammoth. Testa anche:

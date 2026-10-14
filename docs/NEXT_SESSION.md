@@ -26,7 +26,7 @@ In alternativa, sul vecchio computer usa **Esporta archivio** e trasferisci il f
 - Importazione di siti e fonti, acquisizione di asset, immagini e cataloghi, aggiornamento o rimozione delle fonti e riconciliazione dei prodotti con i documenti.
 - Memoria basata su fonti e passaggi, con ricerca ibrida FTS5 + MiniLM locale attiva per default e indicizzata in background; i vettori sono inclusi nei backup/Drive e il modello resta nella cache per dispositivo. Vedere [architettura della conoscenza](KNOWLEDGE_ARCHITECTURE.md).
 - Impostazioni OpenRouter per cataloghi aggiornati, modelli testo/immagini e chiavi locali.
-- OCR con estrazione PDF nativa locale e API OpenRouter solo per PDF scannerizzati o immagini senza testo estraibile. Il file viene elaborato una volta durante il caricamento; l'estrazione strutturata del catalogo è un passaggio AI separato. Consulta [configurazione locale](LOCAL_SETUP.md) e [stato della conoscenza](KNOWLEDGE_ARCHITECTURE.md).
+- Nessun motore OCR locale: i PDF scannerizzati e le immagini vengono elaborati esclusivamente via API OpenRouter. La lettura del testo nativo nei PDF e dei formati testuali non richiede OCR. Il file viene elaborato una volta durante il caricamento; l'estrazione strutturata del catalogo è un passaggio AI separato. Consulta [configurazione locale](LOCAL_SETUP.md) e [stato della conoscenza](KNOWLEDGE_ARCHITECTURE.md).
 - Google Drive opzionale per trasferire snapshot tra computer, senza sincronizzazione simultanea o merge automatico.
 - Backup locali automatici ogni 8 ore, con rotazione a 7 copie; per protezione da perdita del dispositivo resta necessario esportare o sincronizzare su Drive.
 

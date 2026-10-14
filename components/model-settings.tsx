@@ -345,11 +345,11 @@ export default function ModelSettings() {
     </div>}
     <article className="card stack">
       <div className="flex center gap8"><Settings2 size={18}/><h2>OCR e lettura dei documenti</h2></div>
-      <p className="caption">Forgecy estrae in locale il testo già incorporato nei PDF e legge in locale i formati testuali. Solo quando un PDF scannerizzato o un’immagine non contiene testo estraibile, invia il file a OpenRouter per l’OCR. L’estrazione AI dei campi prodotto da un catalogo è una fase separata e può inviare il testo e le immagini estratti.</p>
+      <p className="caption">L’OCR viene eseguito solo tramite OpenRouter: Forgecy non usa motori OCR locali. Per velocizzare l’elaborazione, i PDF con testo incorporato e i formati testuali vengono letti senza OCR; PDF scannerizzati e immagini sono inviati al modello API selezionato. L’estrazione AI dei campi prodotto da un catalogo è una fase separata e può inviare il testo e le immagini estratti.</p>
       {catalog&&<><ModelSelector kind="vision" label="Modello OpenRouter per OCR API e documenti" selectedId={catalog.preferences.ocrModel||DEFAULT_OCR_MODEL}
           models={catalog.visionModels} unavailable={!catalog.visionModels.some(model=>model.id===(catalog.preferences.ocrModel||DEFAULT_OCR_MODEL))}
           recommendedId={DEFAULT_OCR_MODEL} disabled={Boolean(saving)} onChange={id=>void selectModel("ocr",id)} />
-        <p className="caption">{catalog.visionModels.length} modelli visivi OpenRouter disponibili. Il provider può applicare costi secondo modello e numero di pagine; controlla la tariffa corrente sul tuo account. I PDF OCR sono limitati a 40 pagine. I documenti scannerizzati e le immagini vengono inviati a provider esterni solo quando serve l’OCR.</p></>}
+        <p className="caption">{catalog.visionModels.length} modelli visivi OpenRouter disponibili. Il provider può applicare costi secondo modello e numero di pagine; controlla la tariffa corrente sul tuo account. I PDF OCR sono limitati a 40 pagine. Ogni OCR di scansioni e immagini viene elaborato dal provider API selezionato.</p></>}
     </article>
     <article className="card stack">
       <div className="flex center gap8"><Cpu size={18}/><h2>Ricerca nella memoria dei clienti</h2></div>
