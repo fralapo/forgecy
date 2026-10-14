@@ -20,6 +20,16 @@ function strictOrigin(value:string):string|null{
   }catch{return null;}
 }
 
+function equivalentLoopbackOrigins(left:string,right:string):boolean{
+  try{
+    const a=new URL(left);
+    const b=new URL(right);
+    const loopbacks=new Set(["localhost","127.0.0.1","[::1]"]);
+    return a.protocol===b.protocol && a.port===b.port &&
+      loopbacks.has(a.hostname) && loopbacks.has(b.hostname);
+  }catch{return false;}
+}
+
 export function guardApiMutation(
  request:MutationRequest,
  options:{appOrigin?:string;production?:boolean}={}
@@ -43,7 +53,9 @@ export function guardApiMutation(
     return {ok:false,status:503,error:"L'origine dell'applicazione deve usare HTTPS"};
 
   const from=request.headers.get("origin")||"";
-  if(!strictOrigin(from)||from!==expected)
+  const requestOrigin=strictOrigin(from);
+  if(!requestOrigin ||
+     (requestOrigin!==expected && !equivalentLoopbackOrigins(requestOrigin,expected)))
     return {ok:false,status:403,error:"Origine della richiesta non autorizzata"};
   const fetchSite=request.headers.get("sec-fetch-site");
   if(fetchSite && fetchSite!=="same-origin" && fetchSite!=="none")
