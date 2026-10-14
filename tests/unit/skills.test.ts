@@ -92,7 +92,7 @@ test("PDF preflight returns its page count for reuse by API-only OCR",async()=>{
  assert.equal(result.pageCount,2);
  assert.equal(result.extraction.status,"error");
 });
-test("native PDF extraction reports when pages beyond the processing limit were not read",async()=>{
+test("native PDF extraction reads later pages in bounded ranges",async()=>{
  const doc=await PDFDocument.create(),font=await doc.embedFont(StandardFonts.Helvetica);
  for(let pageNumber=1;pageNumber<=42;pageNumber++){
   const page=doc.addPage([450,500]);
@@ -101,9 +101,9 @@ test("native PDF extraction reports when pages beyond the processing limit were 
  const result=await extractDocumentWithMetadata(await doc.save(),"application/pdf","long-catalog.pdf");
  assert.equal(result.extraction.status,"ready");
  assert.equal(result.pageCount,42);
- assert.equal(result.pagesProcessed,40);
- assert.equal(result.textTruncated,true);
- assert.doesNotMatch(result.extraction.body,/CONTENT AFTER THE EXTRACTION LIMIT/);
+ assert.equal(result.pagesProcessed,42);
+ assert.equal(result.textTruncated,false);
+ assert.match(result.extraction.body,/CONTENT AFTER THE EXTRACTION LIMIT/);
 });
 test("text extraction reports when it reaches the stored evidence character limit",async()=>{
  const result=await extractDocumentWithMetadata(new TextEncoder().encode("a".repeat(80_001)),"text/plain","long-brief.txt");

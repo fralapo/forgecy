@@ -11,6 +11,7 @@ export type Extraction={status:"ready"|"pending"|"error";body:string;error:strin
 export type DocumentExtraction={extraction:Extraction;pageCount:number|null;pagesProcessed?:number|null;textTruncated?:boolean;nativeImages?:DocumentImage[];nativeCatalogProducts?:CatalogProduct[]};
 export const MAX_EXTRACT_CHARS=80000;
 const MIN_NATIVE_PDF_TEXT_CHARS=80;
+export const MAX_NATIVE_PDF_PAGES=500;
 const MAX_NATIVE_PDF_IMAGES=8;
 const MAX_NATIVE_PDF_IMAGE_BYTES=10_000_000;
 const MAX_NATIVE_PDF_IMAGE_PIXELS=12_000_000;
@@ -64,15 +65,30 @@ export async function extractDocumentWithMetadata(bytes:Uint8Array,mime:string,n
    try {
     const info=await parser.getInfo({parsePageInfo:false});
     const pageCount=Number.isInteger(info.total)&&info.total>0?info.total:null;
-    // Extract a bounded prefix; scanned PDFs need explicit OCR (not silently guessed).
-    const text=await parser.getText({first:40,pageJoiner:""});
-    const body=clean(text.text||"");
-    const pagesProcessed=Math.min(40,text.pages?.length||0,pageCount||40);
-    const textTruncated=(pageCount!==null&&pageCount>pagesProcessed)||(text.text||"").length>MAX_EXTRACT_CHARS;
+    // Process native text in bounded ranges to cover long PDFs without one unbounded parser call.
+    const pages:Array<{num:number;text:string}> = [];
+    let textLength=0;
+    const lastPage=Math.min(pageCount||MAX_NATIVE_PDF_PAGES,MAX_NATIVE_PDF_PAGES);
+    for(let first=1;first<=lastPage;first+=40){
+     const last=Math.min(first+39,lastPage);
+     const batch=await parser.getText({first,last,pageJoiner:""});
+     for(const page of batch.pages||[]){
+      if(textLength>=MAX_EXTRACT_CHARS)break;
+      const marker=`\n[Pagina PDF ${page.num}]\n`;
+      const remaining=MAX_EXTRACT_CHARS-textLength-marker.length;
+      const pageText=page.text.slice(0,Math.max(0,remaining));
+      pages.push({...page,text:pageText});
+      textLength+=marker.length+pageText.length;
+     }
+     if(textLength>=MAX_EXTRACT_CHARS)break;
+    }
+    const pagesProcessed=pages.length;
+    const body=clean(pages.map(page=>`[Pagina PDF ${page.num}]\n${page.text}`).join("\n\n"));
+    const textTruncated=(pageCount!==null&&pageCount>pagesProcessed)||textLength>=MAX_EXTRACT_CHARS;
     if(body.length<MIN_NATIVE_PDF_TEXT_CHARS)return {extraction:{status:"error",body:"",error:"PDF senza testo nativo sufficiente: serve OCR o una trascrizione"},pageCount,pagesProcessed,textTruncated};
-    const nativeImages=await extractNativeCatalogImages(parser,text.pages||[],name,body);
+    const nativeImages=await extractNativeCatalogImages(parser,pages,name,body);
     const nativeCatalogProducts:CatalogProduct[]=[];
-    if(looksLikeCatalog(name,body))for(const page of text.pages||[]){
+    if(looksLikeCatalog(name,body))for(const page of pages){
      if(nativeCatalogProducts.length>=200)break;
      try{nativeCatalogProducts.push(...parsePositionedNativeCatalogRows(name,await getPositionedPdfText(parser,page.num)));}
      catch(error){console.warn("[document-extract] positioned catalog extraction skipped for page",page.num,error instanceof Error?error.message:"unknown");}

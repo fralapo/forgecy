@@ -37,16 +37,16 @@ function safeCatalogError(error:unknown):string{
  return `unexpected ${typeof error}`;
 }
 
-async function extractDocumentWithOcr(ctx:Awaited<ReturnType<typeof auth>>,clientId:string,bytes:Uint8Array,mime:string,name:string):Promise<DocumentProcessingResult>{
+async function extractDocumentWithOcr(ctx:Awaited<ReturnType<typeof auth>>,clientId:string,bytes:Uint8Array,mime:string,name:string,resume?:{afterPage:number;body:string}):Promise<DocumentProcessingResult>{
  const {extraction,pageCount,pagesProcessed,textTruncated=false,nativeImages=[],nativeCatalogProducts=[]}=await extractDocumentWithMetadata(bytes,mime,name);
  if(extraction.status==="ready")return {extraction,ocr:null,nativeImages,nativeCatalogProducts,pageCount,pagesProcessed:pagesProcessed??null,textTruncated};
  if(mime!=="application/pdf"&&!mime.startsWith("image/"))return {extraction,ocr:null,nativeImages:[],nativeCatalogProducts:[],pageCount,pagesProcessed:pagesProcessed??null,textTruncated};
  try{
   const model=await currentOcrModel(ctx.user.id);
-  await reserveAiRequest(ctx,clientId,"dossier");
   const ocr=await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"dossier"},()=>
-   ocrDocumentWithOpenRouter({bytes,mime,name,model,pageCount:pageCount??undefined}));
-  return {extraction:{status:"ready",body:ocr.body,error:null},ocr,nativeImages:[],nativeCatalogProducts:[],pageCount:ocr.pageCount,pagesProcessed:ocr.pageCount,textTruncated};
+   ocrDocumentWithOpenRouter({bytes,mime,name,model,pageCount:pageCount??undefined,beforeRequest:async()=>{await reserveAiRequest(ctx,clientId,"dossier");},
+    ...(resume?{resumeAfterPage:resume.afterPage,previousBody:resume.body}:{})}));
+  return {extraction:{status:"ready",body:ocr.body,error:null},ocr,nativeImages:[],nativeCatalogProducts:[],pageCount:ocr.pageCount,pagesProcessed:ocr.pagesProcessed,textTruncated:ocr.textTruncated};
  }catch(error){
   const message=error instanceof ApiFailure?error.message:"OCR non riuscito. Il file resta salvato e puoi riprovare.";
   return {extraction:{status:"pending",body:"",error:message},ocr:null,nativeImages:[],nativeCatalogProducts:[],pageCount,pagesProcessed:pagesProcessed??null,textTruncated};
@@ -56,9 +56,10 @@ async function extractDocumentWithOcr(ctx:Awaited<ReturnType<typeof auth>>,clien
 function documentProcessingMetadata(processing:DocumentProcessingResult){
  if(!processing.ocr&&processing.pageCount===null&&!processing.textTruncated)return {};
  const pageLimitReached=processing.pageCount!==null&&processing.pagesProcessed!==null&&processing.pagesProcessed<processing.pageCount;
+ const ocrInterrupted=processing.ocr?.partialFailure===true;
  return {document_processing:{method:processing.ocr?.engine||"native-text",...(processing.ocr?{provider:processing.ocr.provider,model:processing.ocr.model}:{}),
   ...(processing.pageCount!==null?{page_count:processing.pageCount}:{}),...(processing.pagesProcessed!==null?{pages_processed:processing.pagesProcessed}:{}),
-  text_truncated:processing.textTruncated||pageLimitReached,...(pageLimitReached?{truncation_reason:"page_limit"}:processing.textTruncated?{truncation_reason:"character_limit"}:{})}};
+  text_truncated:processing.textTruncated||pageLimitReached,...(ocrInterrupted?{truncation_reason:"ocr_partial"}:pageLimitReached?{truncation_reason:"page_limit"}:processing.textTruncated?{truncation_reason:"character_limit"}:{})}};
 }
 
 async function reconcileCatalogDocument(ctx:Awaited<ReturnType<typeof auth>>,clientId:string,sourceId:string,title:string,body:string,visualImages:OcrImage[]=[],positionedProducts:CatalogProduct[]=[]):Promise<CatalogImportResult>{
@@ -588,7 +589,11 @@ export async function POST(request:Request,{params}:Params){
    if(!file||file.size>uploadLimitForMime(mime))throw new ApiFailure(413,"Documento troppo grande");
    const extension=mime==="application/pdf"?"pdf":mime==="image/png"?"png":mime==="image/jpeg"?"jpg":mime==="image/webp"?"webp":"";
    const name=extension&&!source.title.toLowerCase().endsWith("."+extension)?source.title+"."+extension:source.title;
-   const processed=await extractDocumentWithOcr(ctx,id,new Uint8Array(await file.arrayBuffer()),mime,name);
+   const savedProcessing=source.source_metadata?.document_processing;
+   const savedPages=savedProcessing&&typeof savedProcessing==="object"?(savedProcessing as Record<string,unknown>):{};
+   const resumeAfterPage=savedPages.truncation_reason==="ocr_partial"&&Number.isInteger(savedPages.pages_processed)?Number(savedPages.pages_processed):null;
+   const processed=await extractDocumentWithOcr(ctx,id,new Uint8Array(await file.arrayBuffer()),mime,name,
+    resumeAfterPage!==null?{afterPage:resumeAfterPage,body:source.body||""}:undefined);
    const {extraction,ocr}=processed;
    const {data,error}=await ctx.db.from("sources").update({
     ...extraction,source_metadata:{...(source.source_metadata||{}),...documentProcessingMetadata(processed)},
