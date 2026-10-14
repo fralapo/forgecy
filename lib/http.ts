@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { serverDb } from "./supabase";
+import { localDb, LOCAL_OWNER_ID } from "./local-db";
 
 export class ApiFailure extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -56,10 +56,7 @@ export async function read<T>(request: Request, schema: z.ZodType<T>): Promise<T
   return schema.parse(raw);
 }
 export async function auth() {
-  const db = await serverDb();
-  const { data, error } = await db.auth.getUser();
-  if (error || !data.user) throw new ApiFailure(401,"Accedi per continuare");
-  return { db, user: data.user };
+  return { db: localDb(), user: { id: LOCAL_OWNER_ID, app_metadata: {}, user_metadata: {}, aud: "local", created_at: "" } };
 }
 export type Context = Awaited<ReturnType<typeof auth>> & {
   /** Set only by the privileged worker after checking job/client ownership. */

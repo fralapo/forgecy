@@ -14,7 +14,7 @@ export type AiUsageRecord = {
 type Scope = {
   clientId:string;requestedBy:string;operation:AiUsageOperation;
   jobId?:string;
-  /** Test-only dependency injection; production always uses the server-only service role. */
+  /** Test-only dependency injection; production records locally in SQLite. */
   writer?:(record:AiUsageRecord)=>Promise<void>;
 };
 const storage=new AsyncLocalStorage<Scope>();
@@ -70,10 +70,6 @@ export async function recordAiProviderUsage(
   const record=providerUsageRecord(scope,provider,model,response);
   try{
     if(scope.writer){await scope.writer(record);return;}
-    if(!process.env.SUPABASE_SERVICE_ROLE_KEY){
-      console.warn("[ai-usage] Usage ledger inactive: service-role key missing");
-      return;
-    }
     const db=workerDb();
     const {error}=await db.from("ai_provider_usage").insert(record);
     // An idempotent provider response may be observed twice after a retry.

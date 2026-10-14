@@ -8,14 +8,11 @@ import { decodeOpenRouterImage } from "../../lib/openrouter-image";
 
 const originalKey = process.env.OPENROUTER_API_KEY;
 const originalModel = process.env.OPENROUTER_MODEL;
-const originalServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 afterEach(() => {
   if (originalKey === undefined) delete process.env.OPENROUTER_API_KEY;
   else process.env.OPENROUTER_API_KEY = originalKey;
   if (originalModel === undefined) delete process.env.OPENROUTER_MODEL;
   else process.env.OPENROUTER_MODEL = originalModel;
-  if (originalServiceKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-  else process.env.SUPABASE_SERVICE_ROLE_KEY = originalServiceKey;
 });
 
 describe("OpenRouter catalog normalization", () => {
@@ -78,7 +75,7 @@ describe("OpenRouter image response", () => {
 });
 
 describe("text model selection", () => {
-  it("uses user scope, then environment, then the current default", async () => {
+  it("uses the selected workspace model, then environment, then the current default", async () => {
     process.env.OPENROUTER_MODEL = "fallback/model";
     assert.equal(defaultTextModel(), "fallback/model");
     await withTextModel("user/model", async () => {
@@ -99,8 +96,7 @@ describe("text model selection", () => {
     assert.equal(currentTextModel(), "openai/gpt-4.1-mini");
   });
 
-  it("loads only the requesting user's saved model before entering the request scope", async () => {
-    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-key";
+  it("loads the local owner's saved model before entering the request scope", async () => {
     let requestedUser = "";
     await withUserTextModel("user-a", async () => {
       assert.equal(currentTextModel(), "saved/model-a");

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect,useReducer,useState } from "react";
-import { ArrowRight,Archive,BookOpen,CalendarDays,Check,ChevronLeft,ChevronRight,Clock,FileText,Globe,Instagram,Layers3,Package,Plus,RefreshCw,Sparkles,Target,UploadCloud,AlertTriangle,Image as ImageIcon,ExternalLink } from "lucide-react";
-import type { Snapshot,View,Offer,Content,Slide,EditorialBrief } from "./types";
+import { ArrowRight,BookOpen,CalendarDays,Check,ChevronLeft,ChevronRight,FileText,Globe,Instagram,Layers3,Plus,RefreshCw,Sparkles,UploadCloud,Image as ImageIcon,ExternalLink } from "lucide-react";
+import type { Snapshot,View,Content,Slide,EditorialBrief } from "./types";
 import { offerLabel,statusLabel,requestJson } from "./types";
 import AiUsagePanel from "./ai-usage-panel";
 import { audiencePatterns } from "@/lib/audience";
@@ -34,7 +34,7 @@ export default function Views(props:Props){
  if(view==="projects")return <Projects key={data.client.id} {...props}/>;
  return <Results {...props}/>;
 }
-function Today({data,onView,onChat,onModal,onAction}:{data:Snapshot;onView:(v:View)=>void;onChat:()=>void;onModal:(name:string)=>void;onAction:Props["onAction"]}){
+function Today({data,onView,onChat,onAction}:{data:Snapshot;onView:(v:View)=>void;onChat:()=>void;onAction:Props["onAction"]}){
  const dossier=data.dossiers[0],strategy=data.strategies?.[0],verified=data.offers.filter(o=>o.status==="verified").length;
  const pending=data.missions.filter(x=>x.status==="proposed").length;
  const step=!data.sources.length&&!data.offers.length?{title:"Costruiamo la conoscenza del cliente",detail:"Aggiungi sito, documenti e informazioni fondamentali per permettere agli agenti di lavorare con dati reali.",action:"Aggiungi informazioni",view:"knowledge" as View}:
@@ -342,7 +342,7 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
       <button className="button small" disabled={idx>=slides.length-1} onClick={()=>{const next=[...slides];[next[idx+1],next[idx]]=[next[idx],next[idx+1]];setSlides(next);setIdx(idx+1)}}>Sposta →</button>
       <button className="button small" disabled={slides.length<=1} onClick={()=>{setSlides(s=>s.filter((_,i)=>i!==idx));setIdx(0)}}>Rimuovi</button>
      </div>
-     <button className="button small" disabled={Boolean(busy)} onClick={async()=>{if(await save())await onAction("image",{id:content.id,slideIndex:idx,prompt:current?.visual_prompt||current?.headline||""})}}><ImageIcon size={14}/> Genera immagine con OpenAI</button>
+     <button className="button small" disabled={Boolean(busy)} onClick={async()=>{if(await save())await onAction("image",{id:content.id,slideIndex:idx,prompt:current?.visual_prompt||current?.headline||""})}}><ImageIcon size={14}/> Genera immagine con OpenRouter</button>
     </>}
     <div className="separator"/><div className="flex gap8 wrap"><button className="button primary" disabled={Boolean(busy)} onClick={()=>save()}>Salva modifiche</button><button className="button" disabled={Boolean(busy)||content.status==="stale"} onClick={()=>save("approved")}><Check size={14}/> Approva</button></div>
     {content.channel==="instagram"&&<button className="button" disabled={Boolean(busy)||content.status==="stale"} onClick={()=>onAction("adapt",{id:content.id})}><Layers3 size={15}/> Riadatta per LinkedIn</button>}
@@ -379,8 +379,9 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
    <div className="card"><div className="flex between center wrap gap12"><div><h2>Account Instagram</h2><p className="caption">La dashboard non mescola mai account differenti</p></div>
     <div className="flex center gap8 wrap">
      <select aria-label="Account Instagram" value={selected||""} onChange={e=>setRequested(e.target.value)} style={{maxWidth:240}}>
-      {data.social_accounts.map(a=><option value={a.id} key={a.id}>@{a.username}</option>)}
+      {data.social_accounts.map(a=><option value={a.id} key={a.id}>@{a.username}{a.needs_reauth?" · ricollega": ""}</option>)}
      </select>
+     {data.social_accounts.some(a=>a.needs_reauth)&&<span className="caption">I token social non vengono inclusi nei backup. Ricollega Instagram su questo computer per aggiornare i dati.</span>}
      <button className="button small" disabled={!selected||Boolean(busy)} onClick={()=>{
        if(window.confirm("Scollegare Instagram? Credenziali e statistiche locali verranno eliminate. Il consenso Meta remoto va revocato separatamente."))
          onAction("disconnectSocial",{id:selected});

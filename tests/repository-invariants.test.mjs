@@ -2,34 +2,27 @@ import { test } from "node:test";
 import { strict as assert } from "node:assert";
 import { readFileSync, existsSync } from "node:fs";
 
-const migration=(n)=>readFileSync("supabase/migrations/"+n,"utf8");
-test("entire previous application retained at old/",()=>{
- assert.ok(existsSync("old/README.md"));
- assert.ok(existsSync("old/apps/web"));
- assert.ok(existsSync("old/LICENSE"));
+test("previous application remains available as a historical archive", () => {
+  assert.ok(existsSync("old/README.md"));
+  assert.ok(existsSync("old/apps/web"));
+  assert.ok(existsSync("old/LICENSE"));
 });
-test("tenant tables have row-level security enabled",()=>{
- const s=migration("0001_init.sql");
- assert.match(s,/alter table public\.clients enable row level security/i);
- assert.match(s,/owns_forgecy_client/i);
- assert.match(s,/foreach t in array/i);
- assert.match(s,/storage\.buckets/i);
+
+test("local-first runtime has no Supabase package or connection configuration", () => {
+  const manifest = JSON.parse(readFileSync("package.json", "utf8"));
+  const env = readFileSync(".env.example", "utf8");
+  assert.ok(!Object.keys({ ...manifest.dependencies, ...manifest.devDependencies }).some(name => name.includes("supabase")));
+  assert.ok(!env.toLowerCase().includes("supabase"));
+  assert.ok(env.includes("OPENROUTER_API_KEY="));
+  assert.ok(env.includes("GOOGLE_DRIVE_CLIENT_ID="));
 });
-test("mission approval is atomic and guarded",()=>{
- const s=migration("0003_knowledge_versions.sql");
- assert.match(s,/for update/i);
- assert.match(s,/m\.status<>'proposed'/i);
- assert.match(s,/doc_rev<>knowledge_rev/i);
- assert.match(s,/insert into public\.contents/i);
-});
-test("new knowledge invalidates current dossier and linked content",()=>{
- const s=migration("0003_knowledge_versions.sql");
- assert.match(s,/knowledge_revision=knowledge_revision\+1/i);
- assert.match(s,/update public\.dossiers set status='stale'/i);
- assert.match(s,/update public\.contents set status='stale'/i);
-});
-test("provider secrets are only in server environment variables",()=>{
- const env=readFileSync(".env.example","utf8");
- assert.ok(env.includes("OPENROUTER_API_KEY="));
- assert.ok(!env.includes("NEXT_PUBLIC_OPENROUTER_API_KEY"));
+
+test("local storage and loopback worker are the active architecture", () => {
+  const database = readFileSync("lib/local-db/index.ts", "utf8");
+  const worker = readFileSync("lib/local-worker.ts", "utf8");
+  const config = readFileSync("proxy.ts", "utf8");
+  assert.match(database, /forgecy\.sqlite/);
+  assert.match(database, /journal_mode = WAL/i);
+  assert.match(worker, /processNextJob/);
+  assert.match(config, /localhost|127\.0\.0\.1/);
 });

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- ImageResponse renders this remote signed image into a generated PNG. */
 import { z } from "zod";
 import { ImageResponse } from "next/og";
 import { PDFDocument,StandardFonts,rgb } from "pdf-lib";

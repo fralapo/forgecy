@@ -3,7 +3,7 @@ import { ApiFailure } from "./http";
 
 /**
  * Crawler must remain opt-in until egress filtering blocks private/link-local
- * destinations at the hosting-network boundary.
+ * destinations at the machine/network boundary.
  */
 export function requireWebsiteCrawlingEnabled(
   enabled=process.env.ENABLE_WEBSITE_INGEST
@@ -13,8 +13,8 @@ export function requireWebsiteCrawlingEnabled(
 }
 
 /**
- * Reserve shared per-client and per-owner capacity BEFORE any DNS or HTTP work.
- * Never fall back to in-memory counters or allow crawling if the RPC fails.
+ * Reserve per-client and per-owner capacity BEFORE any DNS or HTTP work.
+ * Never fall back to in-memory counters or allow crawling if the transaction fails.
  */
 export async function reserveWebsiteCrawl(
   ctx:Context,clientId:string,hostname:string,maxPages:number

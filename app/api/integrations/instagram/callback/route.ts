@@ -61,7 +61,8 @@ export async function GET(request:Request){
    const saved=await ctx.db.from("social_accounts").upsert({
     client_id:clientId,platform:"instagram",remote_id:ig.id,username:ig.username||"",
     token_ciphertext:encrypt(page.access_token||long.access_token),
-    token_expires_at:long.expires_in?new Date(Date.now()+long.expires_in*1000).toISOString():null
+    token_expires_at:long.expires_in?new Date(Date.now()+long.expires_in*1000).toISOString():null,
+    needs_reauth:0
    },{onConflict:"client_id,platform,remote_id"});
    if(saved.error)throw new ApiFailure(500,"Impossibile salvare il collegamento Instagram");
    count++;

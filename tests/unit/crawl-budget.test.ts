@@ -18,7 +18,7 @@ test("ingestion remains opt-in and unavailable when server egress is not explici
   assert.doesNotThrow(()=>requireWebsiteCrawlingEnabled("true"));
 });
 
-test("website crawl reservation passes only tenant ID, hostname and bounded page count to SQL RPC",async()=>{
+test("website crawl reservation passes only client ID, hostname and bounded page count to the local operation",async()=>{
   let args:Record<string,unknown>={};
   const ctx=fakeContext(async(name,payload)=>{
     assert.equal(name,"forgecy_reserve_website_crawl");
@@ -33,7 +33,7 @@ test("website crawl reservation passes only tenant ID, hostname and bounded page
   });
 });
 
-test("PostgreSQL P0429 maps to HTTP 429 without exposing internal SQL text",async()=>{
+test("local quota errors map to HTTP 429 without exposing internal messages",async()=>{
   const ctx=fakeContext(async()=>({data:null,error:{code:"P0429",message:"private sql error"}}));
   await assert.rejects(()=>reserveWebsiteCrawl(ctx,"id","example.com",1),(e:unknown)=>
     e instanceof ApiFailure && e.status===429 && !e.message.includes("private"));

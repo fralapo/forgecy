@@ -1,11 +1,10 @@
 "use client";
 import { useCallback,useEffect,useRef,useState } from "react";
-import { Activity,BookOpen,BriefcaseBusiness,Check,ChevronDown,ChevronRight,FileText,FolderKanban,LayoutDashboard,LoaderCircle,LogOut,Menu,MessageCircle,Package,Plus,Send,Settings2,ShieldCheck,Sparkles,Users,X } from "lucide-react";
+import { Activity,BookOpen,Check,ChevronDown,ChevronRight,FolderKanban,LayoutDashboard,LoaderCircle,MessageCircle,Package,Plus,Send,Settings2,Sparkles,Users,X } from "lucide-react";
 import Views from "./views";
 import ModelSettings from "./model-settings";
-import type { Client,Offer,Snapshot,View,Mission } from "./types";
-import { initials,requestJson,statusLabel } from "./types";
-import { browserDb } from "@/lib/supabase-browser";
+import type { Client,Offer,Snapshot,View } from "./types";
+import { initials,requestJson } from "./types";
 
 type Modal={kind:string;item?:unknown}|null;
 const nav:Array<{key:View;label:string;icon:typeof LayoutDashboard}>=[
@@ -30,7 +29,6 @@ export default function Workspace(){
  const [busy,setBusy]=useState<string|null>(null);
  const [error,setError]=useState("");
  const [toast,setToast]=useState("");
- const [email,setEmail]=useState("");
  const currentId=useRef<string|null>(null);
  const [loading,setLoading]=useState(true);
  const railEnd=useRef<HTMLDivElement|null>(null);
@@ -59,7 +57,6 @@ export default function Workspace(){
      const stored=window.localStorage.getItem("forgecy-active-client");
      const chosen=[query,stored,r.clients[0]?.id].find(id=>r.clients.some(c=>c.id===id));
      if(chosen){currentId.current=chosen;setClientId(chosen);}
-     try{const db=browserDb();const {data}=await db.auth.getUser();if(active)setEmail(data.user?.email||"");}catch{}
      const integration=new URLSearchParams(window.location.search).get("integration");
      if(integration)flash(integration);
     }catch(e){if(active)setError(getError(e));}
@@ -192,9 +189,6 @@ export default function Workspace(){
   const result=await mutate("chat",()=>requestJson(endpoint(clientId)+"/messages",{method:"POST",body:JSON.stringify({body})}));
   if(!result)setChatText(body);
  }
- async function logout(){
-  try{await browserDb().auth.signOut()}finally{window.location.assign("/login")}
- }
  const current=clients.find(c=>c.id===clientId);
  const latestDossier=data?.dossiers?.[0];
  const latestStrategy=data?.strategies?.[0];
@@ -203,7 +197,7 @@ export default function Workspace(){
  const baseModal=()=>setModal({kind:"client"});
 
  if(loading)return <main className="login-panel" style={{minHeight:"100vh"}}><div className="stack"><LoaderCircle className="spin"/> Caricamento Forgecy…</div></main>;
- if(error && !clients.length)return <main className="login-panel" style={{minHeight:"100vh"}}><div className="card stack"><h2>Forgecy non è ancora configurato</h2><p className="tagline">{error}</p><p className="caption">Configura Supabase ed esegui le migration seguendo il README.</p><a className="button" href="/login">Vai all&apos;accesso</a></div></main>;
+ if(error && !clients.length)return <main className="login-panel" style={{minHeight:"100vh"}}><div className="card stack"><h2>Workspace locale non disponibile</h2><p className="tagline">{error}</p><p className="caption">Controlla i log locali e la configurazione indicata nel README.</p><button className="button" onClick={()=>window.location.reload()}>Riprova</button></div></main>;
  return <>
   <div className="app-shell">
    <aside className="sidebar">
@@ -219,7 +213,7 @@ export default function Workspace(){
      </button>
      {switchOpen&&<div className="switch-popover"><div className="eyebrow" style={{margin:"6px 8px 10px"}}>SELEZIONA CLIENTE</div>
       {clients.map(c=><button key={c.id} onClick={()=>choose(c.id)}><span className="client-avatar">{initials(c.name)}</span><span style={{flex:1}}><strong>{c.name}</strong><small style={{display:"block"}}>{c.industry}</small></span>{c.id===clientId&&<Check size={16}/>}</button>)}
-      <div className="separator"/><button onClick={()=>{setSwitchOpen(false);baseModal()}}><Plus size={17}/> Nuovo cliente</button><button onClick={logout}><LogOut size={16}/> Esci {email?"("+email.split("@")[0]+")":""}</button>
+      <div className="separator"/><button onClick={()=>{setSwitchOpen(false);baseModal()}}><Plus size={17}/> Nuovo cliente</button><div className="caption" style={{padding:"10px 12px"}}>Workspace locale · dati su questo computer</div>
      </div>}
     </div>
    </aside>
@@ -277,7 +271,7 @@ export default function Workspace(){
    </aside>
   </div>
   <nav className="mobile-bottom">{[nav[0],nav[1],nav[2],nav[3],nav[4]].map(n=><button key={n.key} aria-label={n.label} title={n.label} className={view===n.key?"active":""} onClick={()=>{setView(n.key);setChatOpen(false)}}><n.icon size={19}/>{n.label}</button>)}<button aria-label="Impostazioni" title="Impostazioni" className={view==="settings"?"active":""} onClick={()=>{setView("settings");setChatOpen(false)}}><Settings2 size={19}/><span>Impost.</span></button></nav>
-  {switchOpen&&<div className="switch-popover mobile-switch"><div className="eyebrow" style={{padding:8}}>CLIENTI</div>{clients.map(c=><button key={c.id} onClick={()=>choose(c.id)}><span className="client-avatar">{initials(c.name)}</span>{c.name}</button>)}<button onClick={()=>{setSwitchOpen(false);baseModal()}}><Plus size={14}/> Nuovo cliente</button><button onClick={logout}><LogOut size={14}/> Esci</button></div>}
+  {switchOpen&&<div className="switch-popover mobile-switch"><div className="eyebrow" style={{padding:8}}>CLIENTI</div>{clients.map(c=><button key={c.id} onClick={()=>choose(c.id)}><span className="client-avatar">{initials(c.name)}</span>{c.name}</button>)}<button onClick={()=>{setSwitchOpen(false);baseModal()}}><Plus size={14}/> Nuovo cliente</button></div>}
   {modal&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setModal(null)}}><div className="modal"><div className="modal-head"><div><div className="eyebrow">FORGECY / {current?.name||"NUOVO CLIENTE"}</div><h2 style={{marginTop:7}}>{({client:"Aggiungi un cliente",source:"Nuova fonte",signal:"Ascolto della community",upload:"Carica documento",offer:"Prodotto o servizio",profile:"Profilo del cliente",campaign:"Nuova campagna",content:"Nuovo contenuto",mission:"Affida un obiettivo al Leader"} as Record<string,string>)[modal.kind]||"Nuovo elemento"}</h2></div><button className="button ghost small" aria-label="Chiudi" onClick={()=>setModal(null)}><X size={18}/></button></div>
    <form onSubmit={modal.kind==="client"?createClient:submitModal}>
     {modal.kind==="client"&&<><div><label>Nome del cliente *</label><input required name="name" autoFocus maxLength={160} placeholder="Es. CasaLuce"/></div><div className="cols"><div><label>Settore</label><input name="industry" placeholder="Es. Cura della casa"/></div><div><label>Sito web</label><input name="website" placeholder="https://azienda.it"/></div></div></>}

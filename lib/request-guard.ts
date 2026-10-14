@@ -1,7 +1,8 @@
 /**
- * Origin verification for cookie-authenticated API writes.
+ * Origin verification for local workspace API writes.
  * Browsers cannot forge Origin or Sec-Fetch-Site; an external API client must set
- * an approved Origin explicitly. The check does not replace authentication or RLS.
+ * an approved Origin explicitly. Loopback binding and the Host guard provide the
+ * workspace boundary; this check blocks cross-origin browser mutations.
  */
 export type MutationRequest = Pick<Request,"method"|"url"|"headers">;
 export type GuardResult = {ok:true}|{ok:false;status:403|503;error:string};

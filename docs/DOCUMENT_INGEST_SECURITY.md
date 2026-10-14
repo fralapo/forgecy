@@ -2,7 +2,7 @@
 
 ## Modifica
 
-Il primo passaggio su file caricati da un cliente è ora la validazione di **tipo + firma + struttura**. Solo dopo l'esito positivo il backend salva il file nel bucket privato Supabase. La stessa validazione viene rieseguita nella libreria di estrazione, compreso il comando di rielaborazione.
+Il primo passaggio su file caricati da un cliente è la validazione di **tipo + firma + struttura**. Solo dopo l'esito positivo il backend salva il file nella cartella privata locale. La stessa validazione viene rieseguita nella libreria di estrazione, compreso il comando di rielaborazione.
 
 I normali PDF testuali, Word DOCX, TXT/MD/CSV UTF-8 e immagini JPEG/PNG/WebP restano formati supportati. Le immagini restano **pending**: nessuna inferenza OCR è stata introdotta.
 
