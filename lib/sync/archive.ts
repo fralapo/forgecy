@@ -7,6 +7,7 @@ import { dirname, join, resolve, sep } from "node:path";
 import { z } from "zod";
 import { getLocalDataDirectory, localDb } from "../local-db";
 import { withLocalWorkerPaused } from "../local-worker";
+import { MAX_PDF_UPLOAD_BYTES } from "../document-safety";
 
 export const ARCHIVE_FORMAT = 1;
 export const MAX_ARCHIVE_BYTES = 250 * 1024 * 1024;
@@ -24,7 +25,7 @@ const manifestSchema = z.object({
   parentHash: z.string().regex(/^(?:|[a-f0-9]{64})$/),
   deviceId: z.string().uuid(),
   database: z.object({ path: z.literal("database/forgecy.sqlite"), sha256: z.string().regex(/^[a-f0-9]{64}$/) }),
-  assets: z.array(z.object({ path: z.string().min(1).max(1024), sha256: z.string().regex(/^[a-f0-9]{64}$/), size: z.number().int().nonnegative().max(MAX_ASSET_BYTES) })).max(MAX_ARCHIVE_ENTRIES),
+  assets: z.array(z.object({ path: z.string().min(1).max(1024), sha256: z.string().regex(/^[a-f0-9]{64}$/), size: z.number().int().nonnegative().max(MAX_PDF_UPLOAD_BYTES) })).max(MAX_ARCHIVE_ENTRIES),
 }).strict();
 export type SnapshotManifest = z.infer<typeof manifestSchema>;
 export type ValidatedArchive = { manifest: SnapshotManifest; entries: Record<string, Uint8Array> };
@@ -39,6 +40,11 @@ function snapshotHash(content: string, snapshotId: string, parentHash: string, d
 function safeArchivePath(path: string) {
   return !!path && !path.startsWith("/") && !path.includes("\\") && !path.includes("\0") && path.split("/").every(segment => segment && segment !== "." && segment !== "..");
 }
+function maxStoredFileBytes(path: string) {
+  return path.startsWith("forgecy-sources/") && path.toLowerCase().endsWith(".pdf")
+    ? MAX_PDF_UPLOAD_BYTES
+    : MAX_ASSET_BYTES;
+}
 function listAssets(root: string, base = "", output: { path: string; bytes: Buffer }[] = [], total = { value: 0 }) {
   if (!exists(root)) return output;
   for (const entry of readdirSync(root, { withFileTypes: true })) {
@@ -48,7 +54,8 @@ function listAssets(root: string, base = "", output: { path: string; bytes: Buff
     if (stat.isSymbolicLink()) throw new Error("L'archivio locale contiene un collegamento file non supportato");
     if (entry.isDirectory()) listAssets(full, path, output, total);
     else if (entry.isFile()) {
-      if (!safeArchivePath(path) || stat.size > MAX_ASSET_BYTES) throw new Error("File locale fuori dai limiti dell'archivio");
+      const maxSize = maxStoredFileBytes(path);
+      if (!safeArchivePath(path) || stat.size > maxSize) throw new Error("File locale fuori dai limiti dell'archivio");
       if (output.length >= MAX_ARCHIVE_ENTRIES || total.value + stat.size > MAX_UNCOMPRESSED_BYTES)
         throw new Error("Workspace oltre i limiti massimi dell'archivio");
       output.push({ path, bytes: readFileSync(full) });
@@ -127,7 +134,8 @@ function validateZipDirectory(buffer: Buffer) {
     if (!safeArchivePath(name) || names.has(name) || (mode & 0xf000) === 0xa000) throw new Error("Percorso ZIP non consentito");
     names.add(name);
     total += uncompressed;
-    const perFileLimit = name.startsWith("files/") ? MAX_ASSET_BYTES : MAX_ARCHIVE_BYTES;
+    const assetPath = name.startsWith("files/") ? name.slice("files/".length) : "";
+    const perFileLimit = assetPath ? maxStoredFileBytes(assetPath) : MAX_ARCHIVE_BYTES;
     if (total > MAX_UNCOMPRESSED_BYTES || uncompressed > perFileLimit) throw new Error("Archivio decompresso troppo grande");
     offset += 46 + nameLength + extraLength + commentLength;
   }

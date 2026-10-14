@@ -3,6 +3,7 @@ import Database from "better-sqlite3";
 import { readFileSync, statSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { MAX_PDF_UPLOAD_BYTES } from "../lib/document-safety";
 
 loadEnvConfig(process.cwd());
 
@@ -20,8 +21,8 @@ async function main() {
   if (!inputPath) throw new Error("Specifica --input-pdf <percorso>.");
   const pdfPath = resolve(inputPath);
   const inputStat = statSync(pdfPath);
-  if (!inputStat.isFile() || inputStat.size < 1 || inputStat.size > 10_000_000 || !pdfPath.toLowerCase().endsWith(".pdf")) {
-    throw new Error("Il PDF deve essere un file esistente di dimensione compresa tra 1 byte e 10 MB.");
+  if (!inputStat.isFile() || inputStat.size < 1 || inputStat.size > MAX_PDF_UPLOAD_BYTES || !pdfPath.toLowerCase().endsWith(".pdf")) {
+    throw new Error("Il PDF deve essere un file esistente di dimensione compresa tra 1 byte e 64 MB.");
   }
   const bytes = new Uint8Array(readFileSync(pdfPath));
   if (new TextDecoder().decode(bytes.subarray(0, 5)) !== "%PDF-") throw new Error("Il file selezionato non ha una firma PDF valida.");

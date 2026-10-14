@@ -9,7 +9,7 @@ import {withAiUsageScope} from "@/lib/ai-usage";
 import { crawlWebsite, fetchWebsiteFile, publicHttpsUrl } from "@/lib/site-ingest";
 import { requireWebsiteCrawlingEnabled, reserveWebsiteCrawl } from "@/lib/crawl-budget";
 import { extractDocumentWithMetadata, type Extraction } from "@/lib/document-extract";
-import { assertSafeDocument, DocumentSafetyError } from "@/lib/document-safety";
+import { assertSafeDocument, DocumentSafetyError, MAX_PDF_UPLOAD_BYTES, MAX_UPLOAD_BYTES } from "@/lib/document-safety";
 import { readMultipartForm } from "@/lib/request-body";
 import { slidePreflight } from "@/lib/carousel-layout";
 import { createHash } from "node:crypto";
@@ -22,6 +22,7 @@ import { ocrDocumentWithOpenRouter, type OcrImage, type OcrResult } from "@/lib/
 export const runtime="nodejs";
 export const maxDuration=900;
 type Params={params:Promise<{parts:string[]}>};
+function uploadLimitForMime(mime:string){return mime==="application/pdf"?MAX_PDF_UPLOAD_BYTES:MAX_UPLOAD_BYTES;}
 
 const uuid=z.uuid();
 type CatalogImportResult={status:"processed"|"not_catalog"|"no_products"|"ai_not_configured"|"analysis_failed";added:number;updated:number;skippedManual:number;invalid:number;message?:string};
@@ -555,8 +556,8 @@ export async function POST(request:Request,{params}:Params){
    const sourceBucket=source.source_metadata?.storage_bucket==="forgecy-assets"?"forgecy-assets":"forgecy-sources";
    const {data:file,error:storageError}=await ctx.db.storage.from(sourceBucket).download(source.file_path);
    dbError(storageError,"Non è possibile leggere il documento");
-   if(!file||file.size>10_000_000)throw new ApiFailure(413,"Documento troppo grande");
-   const mime=file.type||"";
+   const mime=file?.type||"";
+   if(!file||file.size>uploadLimitForMime(mime))throw new ApiFailure(413,"Documento troppo grande");
    const extension=mime==="application/pdf"?"pdf":mime==="image/png"?"png":mime==="image/jpeg"?"jpg":mime==="image/webp"?"webp":"";
    const name=extension&&!source.title.toLowerCase().endsWith("."+extension)?source.title+"."+extension:source.title;
    const processed=await extractDocumentWithOcr(ctx,id,new Uint8Array(await file.arrayBuffer()),mime,name);
@@ -575,9 +576,9 @@ export async function POST(request:Request,{params}:Params){
    return json({source:data,extracted:extraction.status==="ready",catalog});
   }
   if(p.length===3 && p[2]==="upload"){
-   const form=await readMultipartForm(request,11_000_000),file=form.get("file");
+   const form=await readMultipartForm(request,MAX_PDF_UPLOAD_BYTES+1_000_000),file=form.get("file");
    if(!(file instanceof File))throw new ApiFailure(400,"Seleziona un file");
-   if(file.size>10_000_000||file.size===0)throw new ApiFailure(413,"Dimensione non valida");
+   if(file.size>uploadLimitForMime(file.type)||file.size===0)throw new ApiFailure(413,"Il PDF può essere al massimo 64 MB; gli altri file 10 MB");
    const allowed=["text/plain","text/markdown","text/csv","application/pdf","application/vnd.openxmlformats-officedocument.wordprocessingml.document","image/png","image/jpeg","image/webp"];
    if(!allowed.includes(file.type))throw new ApiFailure(415,"Formato file non supportato");
    const safeName=file.name.replace(/[^a-z0-9._-]/gi,"_").slice(0,90);

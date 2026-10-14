@@ -212,3 +212,30 @@ test("local database persists records, preserves invariants, searches evidence, 
     rmSync(externalBackupDirectory, { recursive: true, force: true });
   }
 });
+
+test("large PDF sources remain in local storage and transferable archives", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "forgecy-large-pdf-"));
+  process.env.FORGECY_DATA_DIR = directory;
+  const { localDb, LOCAL_OWNER_ID } = await import("../../lib/local-db/index");
+  const db = localDb();
+  try {
+    const created = await db.from("clients").insert({ owner_id: LOCAL_OWNER_ID, name: "Catalogo test", industry: "Test", profile: {} }).select().single();
+    assert.equal(created.error, null);
+    const clientId = String(created.data.id);
+    const pdfBytes = Buffer.alloc(10_000_001, 0x44);
+    const path = `${clientId}/large-catalog.pdf`;
+    const uploaded = await db.storage.from("forgecy-sources").upload(path, pdfBytes, { contentType: "application/pdf" });
+    assert.equal(uploaded.error, null);
+    const { createWorkspaceArchive, validateWorkspaceArchive } = await import("../../lib/sync/archive");
+    const { archive } = await createWorkspaceArchive();
+    const validated = validateWorkspaceArchive(archive);
+    assert.equal(validated.entries[`files/forgecy-sources/${path}`].byteLength, pdfBytes.byteLength);
+  } finally {
+    if (db.connection.open) db.connection.close();
+    const current = (globalThis as typeof globalThis & { __forgecyLocalDb?: import("better-sqlite3").Database }).__forgecyLocalDb;
+    if (current?.open) current.close();
+    delete (globalThis as typeof globalThis & { __forgecyLocalDb?: unknown }).__forgecyLocalDb;
+    delete process.env.FORGECY_DATA_DIR;
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

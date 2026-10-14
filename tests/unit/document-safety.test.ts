@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { deflateRawSync } from "node:zlib";
-import { assertSafeDocument, DocumentSafetyError, inspectDocxArchive } from "../../lib/document-safety";
+import { assertSafeDocument, DocumentSafetyError, inspectDocxArchive, MAX_PDF_UPLOAD_BYTES, MAX_UPLOAD_BYTES, validateUploadType } from "../../lib/document-safety";
 import { extractDocument } from "../../lib/document-extract";
 
 const MIME="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -119,4 +119,11 @@ test("plain text and UTF-8 content remain valid",async()=>{
  const result=await extractDocument(Buffer.from(text),"text/plain","brief.txt");
  assert.equal(result.status,"ready");
  assert.match(result.body,/brand positioning/);
+});
+
+test("native PDF catalogs can exceed 10 MB while other document types keep the smaller limit",()=>{
+ assert.equal(validateUploadType("catalog.pdf","application/pdf",57_107_013),"pdf");
+ assert.equal(validateUploadType("catalog.pdf","application/pdf",MAX_PDF_UPLOAD_BYTES),"pdf");
+ assert.throws(()=>validateUploadType("catalog.pdf","application/pdf",MAX_PDF_UPLOAD_BYTES+1),/64 MB/);
+ assert.throws(()=>validateUploadType("catalog.docx",MIME,MAX_UPLOAD_BYTES+1),/10 MB/);
 });

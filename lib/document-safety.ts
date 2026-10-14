@@ -1,6 +1,7 @@
 import { inflateRawSync } from "node:zlib";
 
 export const MAX_UPLOAD_BYTES = 10_000_000;
+export const MAX_PDF_UPLOAD_BYTES = 64 * 1024 * 1024;
 export const MAX_DOCX_ENTRIES = 400;
 export const MAX_DOCX_EXPANDED = 64 * 1024 * 1024;
 export const MAX_DOCX_ENTRY_BYTES = 24 * 1024 * 1024;
@@ -19,9 +20,10 @@ const mimeForExtension: Record<string, string[]> = {
 };
 
 export function validateUploadType(name: string, mime: string, length: number): string {
-  if (!Number.isInteger(length) || length < 1 || length > MAX_UPLOAD_BYTES)
-    reject("Il documento è vuoto o supera il limite di 10 MB");
   const ext = name.toLowerCase().split(".").pop() || "";
+  const limit = ext === "pdf" && mime === "application/pdf" ? MAX_PDF_UPLOAD_BYTES : MAX_UPLOAD_BYTES;
+  if (!Number.isInteger(length) || length < 1 || length > limit)
+    reject("Il documento supera il limite consentito: 64 MB per i PDF, 10 MB per gli altri file");
   if (!mimeForExtension[ext]?.includes(mime))
     reject("Estensione e tipo MIME del documento non corrispondono");
   return ext;

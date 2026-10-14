@@ -2,8 +2,9 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync, unlinkSync, existsSync } from "node:fs";
 import { dirname, extname, join, normalize, resolve, sep } from "node:path";
 import { getLocalDataDirectory } from "./index";
+import { MAX_PDF_UPLOAD_BYTES } from "../document-safety";
 
-const LIMITS: Record<string, number> = { "forgecy-sources": 10 * 1024 * 1024, "forgecy-assets": 15 * 1024 * 1024 };
+const LIMITS: Record<string, number> = { "forgecy-sources": MAX_PDF_UPLOAD_BYTES, "forgecy-assets": 15 * 1024 * 1024 };
 const MIME: Record<string, string> = {
   ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
   ".gif": "image/gif", ".avif": "image/avif", ".svg": "image/svg+xml", ".pdf": "application/pdf", ".txt": "text/plain",

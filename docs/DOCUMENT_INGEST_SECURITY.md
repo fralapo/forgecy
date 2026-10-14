@@ -21,8 +21,8 @@ Non effettua estrazione dei file sul disco, non esegue macro o link. Non conside
 
 ## Altri formati
 
-- Max **10 MB** per file (limite esistente, rafforzato nel validatore centrale).
-- PDF: firma \`%PDF-\`, terminatore \`%%EOF\` e una sola prelettura locale del testo nativo limitata alle prime 40 pagine. Meno di 80 caratteri nativi fanno scattare l'OCR; il conteggio pagine già ottenuto viene riutilizzato e il file-parser OpenRouter esegue Mistral OCR, senza riparsare localmente il PDF. I file oltre le 40 pagine restano archiviati e possono essere divisi e ricaricati.
+- Max **64 MiB per PDF** e **10 MB per gli altri file**. La cartella fonti e gli archivi di trasferimento applicano lo stesso limite ai PDF.
+- PDF: firma \`%PDF-\`, terminatore \`%%EOF\` e una sola prelettura locale del testo nativo limitata alle prime 40 pagine. Meno di 80 caratteri nativi fanno scattare l'OCR; il conteggio pagine già ottenuto viene riutilizzato e il file-parser OpenRouter esegue Mistral OCR, senza riparsare localmente il PDF. L'OCR API resta limitato a 10 MB; se una scansione è più grande, va ridotta o divisa. I file oltre le 40 pagine restano archiviati e possono essere divisi e ricaricati.
 - Immagini: firma del formato verificata prima dell'invio a OpenRouter per l'OCR. Per i PDF il parser può restituire al massimo 8 immagini; l'eventuale passaggio di immagini al modello AI per estrarre i prodotti è distinto dall'OCR. Forgecy collega una foto a un prodotto solo quando l'associazione è chiara.
 - OCR: viene eseguito esclusivamente tramite API OpenRouter, senza motori OCR locali. Il testo già incorporato nei PDF e i formati testuali vengono letti senza OCR; PDF scannerizzati e immagini sono elaborati fuori dal computer da OpenRouter e dai provider da esso selezionati. Possono applicarsi tariffe per pagina e/o modello secondo il piano corrente. Le chiamate AI registrabili entrano nel registro utilizzo OpenRouter.
 - Tabelle: CSV e tabelle Markdown OCR con intestazioni riconosciute per prodotto/modello e prezzo sono interpretati localmente. L'import conserva citazioni letterali di ogni riga e riconcilia al massimo 1.000 voci; i cataloghi non tabellari possono richiedere un passaggio AI distinto.
@@ -50,7 +50,7 @@ Non effettua estrazione dei file sul disco, non esegue macro o link. Non conside
 
 ## Limitazioni e requisiti per la produzione
 
-La pipeline usa limiti di upload e di pagine, ma non implementa antivirus, cancellazione sicura o un processo isolato separato per l'OCR. Un PDF complesso può ancora richiedere risorse locali durante il controllo pagina. Per installazioni esposte a file non fidati ad alto volume servono scansione antivirus, isolamento CPU/memoria, rate limit e retention più stretti.
+La pipeline usa limiti di upload e di pagine, ma non implementa antivirus, cancellazione sicura o un processo isolato separato per l'OCR. Un PDF complesso fino a 64 MiB può ancora richiedere risorse locali durante il controllo pagina. Per installazioni esposte a file non fidati ad alto volume servono scansione antivirus, isolamento CPU/memoria, rate limit e retention più stretti.
 
 Per elaborare file non fidati ad alto volume servono un threat model e test in un ambiente isolato. Queste difese sono integrate su `main` dalla release V24 (#100); non aggiungono migrazioni SQL o variabili d'ambiente. Per l'installazione personale corrente seguire [LOCAL_SETUP.md](LOCAL_SETUP.md) e applicare le migrazioni 0001–0018.
 
