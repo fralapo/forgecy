@@ -167,6 +167,7 @@ export async function modelStructuredJson<T>(
   const model=currentTextModel();
   const key=await keyProvider();
   if(!key)throw new ApiFailure(503,"OpenRouter non configurato. Inserisci OPENROUTER_API_KEY sul server.");
+  const retryAsJsonObject=()=>modelJson(system,user,schema,{maxTokens,timeoutMs,temperature:0.1});
   const jsonSchema=z.toJSONSchema(schema,{target:"draft-7"});
   const response=await openRouterFetch({
     method:"POST",
@@ -193,26 +194,35 @@ export async function modelStructuredJson<T>(
       // selected provider may still reject strict JSON Schema for a particular
       // schema. Retry once in JSON-object mode; Zod validation remains strict.
       console.warn("[openrouter structured] Provider rejected strict JSON Schema; retrying with validated JSON mode");
-      return modelJson(system,user,schema,{maxTokens,timeoutMs,temperature:0.1});
+      return retryAsJsonObject();
     }
     console.error("[openrouter structured] HTTP",response.status);
     throw new ApiFailure(502,"OpenRouter non ha generato il dossier strutturato (HTTP "+response.status+"). Verifica che il modello supporti JSON Schema.");
   }
   let answer:{choices?:Array<{message?:{content?:unknown;refusal?:string}}>};
   try{answer=await response.json() as typeof answer;}
-  catch(error){throw new ApiFailure(502,error instanceof DOMException&&error.name==="TimeoutError"?"OpenRouter ha superato il tempo limite durante il dossier JSON.":"OpenRouter ha restituito una risposta JSON non valida.");}
+  catch(error){
+    if(error instanceof DOMException&&error.name==="TimeoutError")throw new ApiFailure(502,"OpenRouter ha superato il tempo limite durante il dossier JSON.");
+    console.warn("[openrouter structured] Invalid response body; retrying with validated JSON mode");
+    return retryAsJsonObject();
+  }
   await recordAiProviderUsage("openrouter",model,answer);
   const content=responseContentText(answer.choices?.[0]?.message?.content);
-  if(!content)throw new ApiFailure(502,"Il modello non ha restituito un dossier");
+  if(!content){
+    console.warn("[openrouter structured] Empty response; retrying with validated JSON mode");
+    return retryAsJsonObject();
+  }
   let parsed:unknown;
   try{parsed=JSON.parse(content);}catch{
-    throw new ApiFailure(502,"Il modello ha restituito un documento non JSON");
+    console.warn("[openrouter structured] Non-JSON response; retrying with validated JSON mode");
+    return retryAsJsonObject();
   }
   const result=schema.safeParse(parsed);
   if(!result.success){
     const issues=result.error.issues.map(issue=>`${issue.path.length?issue.path.join("."):"<root>"}: ${issue.message}`).join("; ").slice(0,600);
     console.error("[openrouter structured] schema validation failed",issues);
-    throw new ApiFailure(502,"Il dossier AI non rispetta lo schema richiesto");
+    console.warn("[openrouter structured] Invalid schema response; retrying with validated JSON mode");
+    return retryAsJsonObject();
   }
   return result.data;
 }

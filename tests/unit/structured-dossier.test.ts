@@ -84,6 +84,39 @@ test("strict JSON Schema rejection falls back once to validated JSON-object mode
  }
 });
 
+test("empty strict-schema responses retry once in validated JSON-object mode",async()=>{
+ const oldFetch=globalThis.fetch;
+ const requests:Record<string,unknown>[]=[];
+ globalThis.fetch=async(_url,init)=>{
+  requests.push(JSON.parse(String(init?.body)));
+  if(requests.length===1)return new Response(JSON.stringify({choices:[{message:{content:""}}]}),{status:200});
+  return new Response(JSON.stringify({choices:[{message:{content:'{"summary":"Dossier recuperato"}'}}]}),{status:200});
+ };
+ try{
+  const result=await modelStructuredJson("Sistema","Fonte",z.object({summary:z.string().min(10)}),"forgecy_dossier",6200,async()=>"test-server-only-token");
+  assert.deepEqual(result,{summary:"Dossier recuperato"});
+  assert.equal(requests.length,2);
+  assert.equal((requests[0].response_format as {type:string}).type,"json_schema");
+  assert.equal((requests[1].response_format as {type:string}).type,"json_object");
+ }finally{globalThis.fetch=oldFetch;}
+});
+
+test("invalid strict-schema responses retry once and still enforce Zod validation",async()=>{
+ const oldFetch=globalThis.fetch;
+ const requests:Record<string,unknown>[]=[];
+ globalThis.fetch=async(_url,init)=>{
+  requests.push(JSON.parse(String(init?.body)));
+  if(requests.length===1)return new Response(JSON.stringify({choices:[{message:{content:'{"summary":3}'}}]}),{status:200});
+  return new Response(JSON.stringify({choices:[{message:{content:'{"summary":"Schema verificato"}'}}]}),{status:200});
+ };
+ try{
+  const result=await modelStructuredJson("Sistema","Fonte",z.object({summary:z.string().min(10)}),"forgecy_dossier",6200,async()=>"test-server-only-token");
+  assert.deepEqual(result,{summary:"Schema verificato"});
+  assert.equal(requests.length,2);
+  assert.equal((requests[1].response_format as {type:string}).type,"json_object");
+ }finally{globalThis.fetch=oldFetch;}
+});
+
 test("catalog extraction can disable reasoning and use a bounded timeout with strict JSON schema",async()=>{
  const oldFetch=globalThis.fetch;
  let outgoing:Record<string,unknown>|null=null;
@@ -108,7 +141,7 @@ test("invalid model JSON is never accepted as a real dossier",async()=>{
  globalThis.fetch=async()=>new Response(JSON.stringify({choices:[{message:{content:'inventato'}}]}),
    {status:200,headers:{"Content-Type":"application/json"}});
  try{
-   await assert.rejects(()=>modelStructuredJson("a","b",z.object({summary:z.string()})),/non JSON/);
+   await assert.rejects(()=>modelStructuredJson("a","b",z.object({summary:z.string()})),/JSON non valido/);
  }finally{
    globalThis.fetch=oldFetch;
    if(oldKey===undefined)delete process.env.OPENROUTER_API_KEY;
