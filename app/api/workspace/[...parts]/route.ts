@@ -15,7 +15,7 @@ import { slidePreflight } from "@/lib/carousel-layout";
 import { createHash } from "node:crypto";
 import { applyNativeImageAssociations, nativeImageAssociationSchema } from "@/lib/catalog-image-association";
 import { planLinkedOfferCleanup } from "@/lib/source-management";
-import { catalogEvidenceIsValid,catalogExtractionModelSchema,catalogNameSimilarity,hasVariantPriceMatrix,looksLikeCatalog,normalizeCatalogName,parseLocalCatalogProducts,type CatalogProduct } from "@/lib/catalog-import";
+import { catalogEvidenceIsValid,catalogExtractionModelSchema,catalogNameSimilarity,hasVariantPriceMatrix,looksLikeCatalog,mergePositionedNativeMatrixPrices,normalizeCatalogName,parseLocalCatalogProducts,type CatalogProduct } from "@/lib/catalog-import";
 import { getOpenRouterApiKey } from "@/lib/openrouter-credentials";
 import { currentOcrModel } from "@/lib/ai-model-settings";
 import { ocrDocumentWithOpenRouter, type OcrImage, type OcrResult } from "@/lib/openrouter-document-ocr";
@@ -66,10 +66,10 @@ async function reconcileCatalogDocument(ctx:Awaited<ReturnType<typeof auth>>,cli
  const empty=(status:CatalogImportResult["status"],message?:string):CatalogImportResult=>({status,added:0,updated:0,skippedManual:0,invalid:0,...(message?{message}:{})});
  // Complete heading/code card structures are strong catalog evidence even when a generic filename omits "catalog".
  const localProducts=parseLocalCatalogProducts(title,body);
- let products:CatalogProduct[];
+  let products:CatalogProduct[];
  let usedTextOnlyFallback=false;
  if(localProducts.length||positionedProducts.length){
-  products=localProducts.length?localProducts:positionedProducts;
+   products=mergePositionedNativeMatrixPrices(localProducts,positionedProducts);
   const nativeImages=visualImages.filter(image=>image.origin==="native-pdf");
   if(nativeImages.length){
    const candidates=products.filter(product=>nativeImages.some(image=>image.candidateProductNames?.some(name=>normalizeCatalogName(name)===normalizeCatalogName(product.name))));

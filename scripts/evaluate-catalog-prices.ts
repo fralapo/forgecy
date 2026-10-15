@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { parseLocalCatalogProducts } from "../lib/catalog-import";
+import { parseLocalCatalogProducts, parsePositionedNativeCatalogRows } from "../lib/catalog-import";
 
 type GroundTruth = {
   source: string;
@@ -45,16 +45,24 @@ export function evaluateCatalogPrices(): CatalogPriceEvaluation {
   for (const expected of groundTruth) {
     const fixtureStats = byFixture[expected.fixture] ??= { total: 0, rowMatches: 0, correctPrices: 0, exactVariants: 0, exactCodes: 0 };
     fixtureStats.total += 1;
-    uniqueCells.add(`${expected.url}|${expected.code.replace(/\s+/gu, "").toUpperCase()}`);
+    uniqueCells.add(`${expected.url}|${expected.code.replace(/\s+/gu, "").toUpperCase()}|${expected.variant.replace(/\s+/gu, "").toUpperCase()}`);
     let products = fixtureProducts.get(expected.fixture);
     if (!products) {
-      const text = readFileSync(join(process.cwd(), "tests/fixtures", expected.fixture), "utf8");
+      const fixturePath=join(process.cwd(), "tests/fixtures", expected.fixture);
       const title = expected.fixture === "stanley-2026-page-54-native.txt"
         ? "Stanley-listino-2026-page-54.pdf"
         : expected.fixture === "sicutool-2025-page-1108-native.txt"
           ? "Sicutool catalogo 2025 pagina 1108.pdf"
+          : expected.fixture === "sicutool-2025-page-1112-native-positioned.json"
+            ? "Sicutool catalogo 2025 pagina 1112.pdf"
           : expected.fixture;
-      products = parseLocalCatalogProducts(title, text);
+      if(expected.fixture==="sicutool-2025-page-1112-native-positioned.json"){
+        const positioned=JSON.parse(readFileSync(fixturePath,"utf8")) as {items:Array<{str:string;x:number;y:number}>};
+        products=parsePositionedNativeCatalogRows(title,positioned.items);
+      }else{
+        const text=readFileSync(fixturePath,"utf8");
+        products = parseLocalCatalogProducts(title, text);
+      }
       fixtureProducts.set(expected.fixture, products);
     }
 
@@ -70,7 +78,8 @@ export function evaluateCatalogPrices(): CatalogPriceEvaluation {
         offset = index + 1;
       }
     };
-    const matchByCode = products.find((product) => containsExactCode(product, expected.code));
+    const matchByCode = products.find((product) => containsExactCode(product, expected.code) && variantMatches(product.name))
+      ?? products.find((product) => containsExactCode(product, expected.code));
     // OCR can corrupt a SKU while leaving the family and size intact. Count
     // that row as found, but report exact-code accuracy separately below.
     const match = matchByCode ?? products.find((product) => product.name.includes(expected.family) && variantMatches(product.name));

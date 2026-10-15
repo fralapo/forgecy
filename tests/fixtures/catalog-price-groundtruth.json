@@ -3490,5 +3490,860 @@
     "family": "Briani Listino prezzi 2026",
     "variant": "201.150.25.28",
     "price": 48.86
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 33",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "6 mm",
+    "price": 33.7
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 33",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "8 mm",
+    "price": 33.7
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 33",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "10 mm",
+    "price": 33.7
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 33",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "12 mm",
+    "price": 36.1
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 33",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "16 mm",
+    "price": 37.1
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 34",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "2 mm",
+    "price": 56.3
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 34",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "4 mm",
+    "price": 54.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 34",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "6 mm",
+    "price": 54.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 34",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "8 mm",
+    "price": 54.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 34",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "10 mm",
+    "price": 54.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 34",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "12 mm",
+    "price": 58.4
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 34",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "14 mm",
+    "price": 58.4
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 34",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "16 mm",
+    "price": 60.3
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 35",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "2 mm",
+    "price": 56.3
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 35",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "4 mm",
+    "price": 54.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 35",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "6 mm",
+    "price": 54.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 35",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "8 mm",
+    "price": 54.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 35",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "10 mm",
+    "price": 54.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 35",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "12 mm",
+    "price": 58.4
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 35",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "14 mm",
+    "price": 58.4
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 35",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "16 mm",
+    "price": 60.3
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 36",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "2 mm",
+    "price": 59.9
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 36",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "4 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 36",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "6 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 36",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "8 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 36",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "10 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 36",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "12 mm",
+    "price": 62.1
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 36",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "14 mm",
+    "price": 62.1
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 36",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "16 mm",
+    "price": 65.7
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 37",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "2 mm",
+    "price": 59.9
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 37",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "4 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 37",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "6 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 37",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "8 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 37",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "10 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 37",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "12 mm",
+    "price": 62.1
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 37",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "14 mm",
+    "price": 62.1
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 37",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "16 mm",
+    "price": 65.7
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 38",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "2 mm",
+    "price": 59.9
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 38",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "4 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 38",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "6 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 38",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "8 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 38",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "10 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 38",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "12 mm",
+    "price": 62.1
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 38",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "14 mm",
+    "price": 62.1
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 38",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "16 mm",
+    "price": 65.7
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 39",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "2 mm",
+    "price": 59.9
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 39",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "4 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 39",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "6 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 39",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "8 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 39",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "10 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 39",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "12 mm",
+    "price": 72.9
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 39",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "14 mm",
+    "price": 72.9
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 39",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "16 mm",
+    "price": 80.2
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 40",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "2 mm",
+    "price": 65.3
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 40",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "4 mm",
+    "price": 63.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 40",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "6 mm",
+    "price": 63.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 40",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "8 mm",
+    "price": 63.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 40",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "10 mm",
+    "price": 63.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 40",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "12 mm",
+    "price": 80.2
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 41",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "2 mm",
+    "price": 59.9
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 41",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "4 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 41",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "6 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 41",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "8 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 41",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "10 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 41",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "12 mm",
+    "price": 72.9
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 42",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "2 mm",
+    "price": 65.3
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 42",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "4 mm",
+    "price": 63.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 42",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "6 mm",
+    "price": 63.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 42",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "8 mm",
+    "price": 63.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 42",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "10 mm",
+    "price": 63.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 42",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "12 mm",
+    "price": 80.2
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 43",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "2 mm",
+    "price": 67.1
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 43",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "4 mm",
+    "price": 65.3
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 43",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "6 mm",
+    "price": 65.3
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 43",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "8 mm",
+    "price": 65.3
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 43",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "10 mm",
+    "price": 65.3
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 43",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "12 mm",
+    "price": 83.9
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 44",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "2 mm",
+    "price": 67.1
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 44",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "4 mm",
+    "price": 65.3
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 44",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "6 mm",
+    "price": 65.3
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 44",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "8 mm",
+    "price": 65.3
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 44",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "10 mm",
+    "price": 65.3
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 44",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "12 mm",
+    "price": 83.9
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 45",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "2 mm",
+    "price": 59.9
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 45",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "4 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 45",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "6 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 45",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "8 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 45",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "10 mm",
+    "price": 58
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 45",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "12 mm",
+    "price": 72.9
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 46",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "2 mm",
+    "price": 65.3
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 46",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "4 mm",
+    "price": 63.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 46",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "6 mm",
+    "price": 63.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 46",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "8 mm",
+    "price": 63.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 46",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "10 mm",
+    "price": 63.5
+  },
+  {
+    "source": "Sicutool Utensili 2025 con prezzi, pagina stampata 1112 (PDF nativo posizionato; valori verificati sulla pagina renderizzata)",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1112-native-positioned.json",
+    "code": "5234G 46",
+    "family": "Sicutool Sgorbie per intaglio",
+    "variant": "12 mm",
+    "price": 80.2
   }
 ]

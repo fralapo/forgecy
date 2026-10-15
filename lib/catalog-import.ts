@@ -397,6 +397,13 @@ export function parseMarkdownVariantPriceMatrices(text:string):CatalogProduct[]{
     plainCode=headerContent;
     continue;
    }
+  const nativeDottedWidthHeader=/^\.{3,}\s+mm\s+(.+)$/iu.exec(headerContent);
+  if(nativeDottedWidthHeader){
+   plainUnit="mm";
+   plainWidths=nativeDottedWidthHeader[1]!.trim().split(/\s+/u).filter(value=>/^\d+(?:[.,]\d+)?$/u.test(value));
+   addPlainVariants(plainCode);
+   continue;
+  }
    const dimensions=/^(\S+)\s+(?:Cad\.?\s+)?(.+)$/iu.exec(headerContent);
    if(dimensions&&/^mm$/iu.test(dimensions[1]!)){
     plainUnit=dimensions[1]!.trim();
@@ -808,6 +815,49 @@ export function parsePositionedNativeCatalogRows(title:string,items:PositionedPd
   products.push({name:description,description:code.str,price:parsePrice(priceMatch[1]),currency:"EUR",
    nameQuote:description,descriptionQuote:code.str,priceQuote:priceMatch[1],existingOfferId:null,imageIndex:null});
  }
+ // Sicutool's illustrated catalog prints each variant's width header above a
+ // separate price row. Trust native PDF coordinates only when the same SKU is
+ // repeated in the row, widths map one-to-one to every visible price cell,
+ // and a matching product heading is present. OCR matrices remain unpriced.
+ if(/sicutool/iu.test(title)){
+  const matrixCodes=rows.filter(item=>item.x>=220&&item.x<300&&/^\d{4}G\s+\d{1,2}$/iu.test(item.str))
+   .sort((a,b)=>b.y-a.y||a.x-b.x);
+  for(const code of matrixCodes){
+   const sku=code.str.replace(/\s+/gu," ").trim();
+   const hasHeading=rows.some(item=>item.x<160&&item.str===sku&&Math.abs(item.y-code.y-13.98)<0.8);
+   if(!hasHeading)continue;
+   const priceLine=rows.filter(item=>Math.abs(item.y-code.y)<0.25&&item.x>330&&item.x<590)
+    .sort((a,b)=>a.x-b.x);
+   const priceItems=priceLine.filter(item=>/^\d{1,3}(?:\.\d{3})*,\d{2}$/u.test(item.str));
+   const widthLine=rows.filter(item=>Math.abs(item.y-code.y-9)<0.85&&item.x>340&&item.x<580)
+    .sort((a,b)=>a.x-b.x);
+   const widthItems=widthLine.filter(item=>/^\d{1,2}$/u.test(item.str));
+   const unitPresent=rows.some(item=>item.str==="mm"&&Math.abs(item.y-code.y-9)<0.85);
+   if(!unitPresent||!priceItems.length||priceItems.length!==widthItems.length)continue;
+   const matchedWidths=new Set<number>();
+   const aligned=priceItems.map(priceItem=>{
+    const matches=widthItems.map((widthItem,index)=>({index,distance:Math.abs(widthItem.x-priceItem.x)}))
+     .filter(match=>match.distance<=8).sort((a,b)=>a.distance-b.distance);
+    if(!matches.length||matches[1]?.distance===matches[0]?.distance)return null;
+    const match=matches[0]!;
+    if(matchedWidths.has(match.index))return null;
+    matchedWidths.add(match.index);
+    return {width:widthItems[match.index]!.str,priceQuote:priceItem.str};
+   });
+   if(aligned.some(item=>!item)||matchedWidths.size!==widthItems.length)continue;
+   for(const cell of aligned as Array<{width:string;priceQuote:string}>){
+    const price=parsePrice(cell.priceQuote);
+    if(price===null)continue;
+    const variant=`${cell.width} mm`;
+    const identity=`sicutool-matrix|${sku}|${variant}`;
+    if(seen.has(identity))continue;
+    seen.add(identity);
+    products.push({name:`${sku} — ${variant}`,description:sku,price,currency:"EUR",
+     nameQuote:JSON.stringify([sku,cell.width,"mm"]),descriptionQuote:sku,priceQuote:cell.priceQuote,
+     existingOfferId:null,imageIndex:null});
+   }
+  }
+ }
  const codes=rows.filter(item=>/^U\d{8}$/i.test(item.str)).sort((a,b)=>b.y-a.y||a.x-b.x);
  for(const code of codes){
   const sameLine=rows.filter(item=>Math.abs(item.y-code.y)<=0.75).sort((a,b)=>a.x-b.x);
@@ -831,6 +881,16 @@ export function parsePositionedNativeCatalogRows(title:string,items:PositionedPd
    nameQuote:JSON.stringify(evidence),descriptionQuote:JSON.stringify(dimensions),priceQuote:priceMatch[1],existingOfferId:null,imageIndex:null});
  }
  return products;
+}
+
+/** Prefer verified native coordinate prices for matrix variants over text-only rows. */
+export function mergePositionedNativeMatrixPrices(localProducts:CatalogProduct[],positionedProducts:CatalogProduct[]):CatalogProduct[]{
+ if(!localProducts.length)return positionedProducts;
+ const nativeMatrixProducts=positionedProducts.filter(product=>product.price!==null&&
+  /^(?=.*[A-Z])(?=.*\d)[A-Z0-9]+\s+\d+\s+—\s+\d+(?:[.,]\d+)?\s+mm$/iu.test(product.name));
+ if(!nativeMatrixProducts.length)return localProducts;
+ const nativeNames=new Set(nativeMatrixProducts.map(product=>normalizeCatalogName(product.name)));
+ return [...localProducts.filter(product=>!nativeNames.has(normalizeCatalogName(product.name))),...nativeMatrixProducts];
 }
 
 /** Parse OCR catalog variants where each product image is followed by a short label and a printed code. */

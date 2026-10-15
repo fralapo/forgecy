@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {test} from "node:test";
-import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,hasVariantPriceMatrix,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseLocalCatalogProducts,parseMarkdownCatalogCards,parseMarkdownCatalogCodePriceCards,parseMarkdownCatalogCodeVariants,parseMarkdownCatalogTable,parseMarkdownImageVariants,parseMarkdownVariantPriceMatrices,parsePositionedNativeCatalogRows} from "../../lib/catalog-import";
+import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,hasVariantPriceMatrix,looksLikeCatalog,mergePositionedNativeMatrixPrices,normalizeCatalogName,parseCsvCatalog,parseLocalCatalogProducts,parseMarkdownCatalogCards,parseMarkdownCatalogCodePriceCards,parseMarkdownCatalogCodeVariants,parseMarkdownCatalogTable,parseMarkdownImageVariants,parseMarkdownVariantPriceMatrices,parsePositionedNativeCatalogRows} from "../../lib/catalog-import";
 
 test("catalog names normalize accents and punctuation for safe matching",()=>{
  assert.equal(normalizeCatalogName("Caffè — Espresso 100%"),"caffe espresso 100");
@@ -387,6 +387,33 @@ test("Sicutool page 1112 OCR variants survive split headers and omitted price ce
  assert.equal(hasVariantPriceMatrix(source),true);
  assert.equal(parseLocalCatalogProducts("Sicutool-catalog-page-1112.pdf",source).length,21);
  assert.ok(products.every(product=>product.price===null&&product.priceQuote===""));
+});
+
+test("Sicutool native positioned matrix prices map widths to the correct product cells",()=>{
+ const fixture=JSON.parse(readFileSync(join(process.cwd(),"tests/fixtures/sicutool-2025-page-1112-native-positioned.json"),"utf8")) as {items:Array<{str:string;x:number;y:number}>};
+ const products=parsePositionedNativeCatalogRows("Sicutool catalogo prezzi 2025.pdf",fixture.items);
+ const source=fixture.items.map(item=>item.str).join(" ");
+ assert.equal(products.length,95);
+ const price=(code:string,width:number)=>products.find(item=>item.name===`${code} — ${width} mm`)?.price;
+ assert.equal(price("5234G 34",12),58.4);
+ assert.equal(price("5234G 34",16),60.3);
+ assert.equal(price("5234G 39",12),72.9);
+ assert.equal(price("5234G 43",12),83.9);
+ assert.equal(price("5234G 46",12),80.2);
+ assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
+ assert.ok(products.every(product=>product.currency==="EUR"&&product.priceQuote));
+});
+
+test("native PDF matrix prices replace the corresponding unpriced text variants",()=>{
+ const text="5234G 34\nLarg. ................................ mm 2 4 6 8 10 12 14 16\n5234G 34 Cad. 56,30 54,50 54,50 54,50 54,50 58,40 58,40 60,30";
+ const local=parseLocalCatalogProducts("Sicutool catalogo prezzi 2025.pdf",text);
+ const fixture=JSON.parse(readFileSync(join(process.cwd(),"tests/fixtures/sicutool-2025-page-1112-native-positioned.json"),"utf8")) as {items:Array<{str:string;x:number;y:number}>};
+ const positioned=parsePositionedNativeCatalogRows("Sicutool catalogo prezzi 2025.pdf",fixture.items);
+ const merged=mergePositionedNativeMatrixPrices(local,positioned);
+ assert.equal(local.length,8);
+ assert.equal(merged.length,95);
+ assert.equal(merged.find(product=>product.name==="5234G 34 — 12 mm")?.price,58.4);
+ assert.equal(new Set(merged.map(product=>product.name)).size,merged.length);
 });
 
 test("variant matrix review warning recognizes padded Markdown and plain-text layouts",()=>{
