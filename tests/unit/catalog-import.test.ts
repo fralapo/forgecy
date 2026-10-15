@@ -481,3 +481,18 @@ test("ACO D25 OCR pairs repeated SKU and price columns by row and preserves sect
  assert.match(byCode("12334")?.name||"",/Canale con guarnizione/u);
  assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
 });
+
+test("Briani OCR price lists preserve code and price pairs across split tables",()=>{
+ const source=readFileSync(join(process.cwd(),"tests/fixtures/briani-listino-2026-page-1-ocr.md"),"utf8");
+ const products=parseLocalCatalogProducts("Briani-listino-prezzi-2026.pdf",source);
+ assert.equal(products.length,12);
+ assert.deepEqual(products.slice(0,6).map(product=>[product.name,product.price]),[
+  ["101.080.25.28",41.5],["101.100.25.28",44.86],["101.100.40.28",48.51],
+  ["101.120.25.28",41.03],["101.120.40.28",51.59],["101.120.45.28",52.26],
+ ]);
+ assert.deepEqual(products.slice(6).map(product=>[product.name,product.price]),[
+  ["153.160.30.08",243.58],["153.200.30.08",243.58],["155.190.50.08",190.18],
+  ["155.190.50.09",190.18],["158.450.12.08",73.7],["158.450.20.08",85.06],
+ ]);
+ assert.ok(products.every(product=>product.currency==="EUR"&&catalogEvidenceIsValid(product,source)));
+});

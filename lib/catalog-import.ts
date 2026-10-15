@@ -133,6 +133,39 @@ function markdownCells(line:string):string[]|null{
  return cells.length>=3?cells:null;
 }
 
+/** Parse compact two-column OCR lists whose only fields are product code and price. */
+export function parseMarkdownCodePriceLists(text:string):CatalogProduct[]{
+ const cellsOf=(line:string)=>{
+  const trimmed=line.trim();
+  if(!trimmed.includes("|"))return null;
+  const cells=trimmed.replace(/^\|/u,"").replace(/\|$/u,"").split(/(?<!\\)\|/u).map(cell=>cell.replace(/\\\|/gu,"|").trim());
+  return cells.length===2?cells:null;
+ };
+ const lines=text.split(/\r?\n/u);
+ const products:CatalogProduct[]=[];
+ for(let headerLine=0;headerLine<lines.length-1;headerLine++){
+  const headers=cellsOf(lines[headerLine]!);
+  if(!headers)continue;
+  const normalized=headers.map(normalizeCatalogName);
+  const codeIndex=headerIndex(normalized,["code","cod","codice","sku","codice prodotto"]);
+  const priceIndex=headerIndex(normalized,["price","prezzo","prezzo listino","listino","eur"]);
+  const separator=cellsOf(lines[headerLine+1]!);
+  if(codeIndex<0||priceIndex<0||!separator?.every(cell=>/^:?-{3,}:?$/u.test(cell.replace(/\s/gu,""))))continue;
+  for(let rowLine=headerLine+2;rowLine<lines.length;rowLine++){
+   const row=cellsOf(lines[rowLine]!);
+   if(!row)break;
+   const code=(row[codeIndex]||"").trim();
+   const priceQuote=(row[priceIndex]||"").trim();
+   const price=parsePrice(priceQuote);
+   const currencyEvidence=`${headers[priceIndex]} ${priceQuote}`;
+   const currency=/€|\beur\b/iu.test(currencyEvidence)?"EUR":/\$|\busd\b/iu.test(currencyEvidence)?"USD":/£|\bgbp\b/iu.test(currencyEvidence)?"GBP":"";
+   if(!/(?=.*\d)[A-Z0-9][A-Z0-9./-]{4,}/iu.test(code)||price===null||!currency)continue;
+   products.push({name:code,description:"",price,currency,nameQuote:code,descriptionQuote:"",priceQuote,existingOfferId:null,imageIndex:null});
+  }
+ }
+ return products.slice(0,1000);
+}
+
 /** Parse OCR tables with multiple independent SKU and unit-price columns. */
 export function parseMarkdownRepeatedCodePriceTable(text:string):CatalogProduct[]{
  const lines=text.split(/\r?\n/u);
@@ -691,6 +724,8 @@ export function parseMarkdownCatalogCodeVariants(text:string):CatalogProduct[]{
 export function parseLocalCatalogProducts(title:string,text:string):CatalogProduct[]{
  const csvProducts=parseCsvCatalog(text);
  if(csvProducts.length)return csvProducts;
+ const compactCodePriceProducts=parseMarkdownCodePriceLists(text);
+ if(compactCodePriceProducts.length)return compactCodePriceProducts;
  // The deliberately narrow repeated SKU/price headers are sufficient catalog
  // evidence even when the OCR filename and surrounding text are generic.
  const repeatedMarkdownProducts=parseMarkdownRepeatedCodePriceTable(text);

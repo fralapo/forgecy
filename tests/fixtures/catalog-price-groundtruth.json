@@ -1834,5 +1834,113 @@
     "family": "Multiline V 100",
     "variant": "0.0.2",
     "price": 156.22
+  },
+  {
+    "source": "Briani Listino prezzi 2026, pagina stampata 1 OCR API",
+    "url": "https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf",
+    "fixture": "briani-listino-2026-page-1-ocr.md",
+    "code": "101.080.25.28",
+    "family": "Briani Listino prezzi 2026",
+    "variant": "101.080.25.28",
+    "price": 41.5
+  },
+  {
+    "source": "Briani Listino prezzi 2026, pagina stampata 1 OCR API",
+    "url": "https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf",
+    "fixture": "briani-listino-2026-page-1-ocr.md",
+    "code": "101.100.25.28",
+    "family": "Briani Listino prezzi 2026",
+    "variant": "101.100.25.28",
+    "price": 44.86
+  },
+  {
+    "source": "Briani Listino prezzi 2026, pagina stampata 1 OCR API",
+    "url": "https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf",
+    "fixture": "briani-listino-2026-page-1-ocr.md",
+    "code": "101.100.40.28",
+    "family": "Briani Listino prezzi 2026",
+    "variant": "101.100.40.28",
+    "price": 48.51
+  },
+  {
+    "source": "Briani Listino prezzi 2026, pagina stampata 1 OCR API",
+    "url": "https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf",
+    "fixture": "briani-listino-2026-page-1-ocr.md",
+    "code": "101.120.25.28",
+    "family": "Briani Listino prezzi 2026",
+    "variant": "101.120.25.28",
+    "price": 41.03
+  },
+  {
+    "source": "Briani Listino prezzi 2026, pagina stampata 1 OCR API",
+    "url": "https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf",
+    "fixture": "briani-listino-2026-page-1-ocr.md",
+    "code": "101.120.40.28",
+    "family": "Briani Listino prezzi 2026",
+    "variant": "101.120.40.28",
+    "price": 51.59
+  },
+  {
+    "source": "Briani Listino prezzi 2026, pagina stampata 1 OCR API",
+    "url": "https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf",
+    "fixture": "briani-listino-2026-page-1-ocr.md",
+    "code": "101.120.45.28",
+    "family": "Briani Listino prezzi 2026",
+    "variant": "101.120.45.28",
+    "price": 52.26
+  },
+  {
+    "source": "Briani Listino prezzi 2026, pagina stampata 1 OCR API",
+    "url": "https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf",
+    "fixture": "briani-listino-2026-page-1-ocr.md",
+    "code": "153.160.30.08",
+    "family": "Briani Listino prezzi 2026",
+    "variant": "153.160.30.08",
+    "price": 243.58
+  },
+  {
+    "source": "Briani Listino prezzi 2026, pagina stampata 1 OCR API",
+    "url": "https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf",
+    "fixture": "briani-listino-2026-page-1-ocr.md",
+    "code": "153.200.30.08",
+    "family": "Briani Listino prezzi 2026",
+    "variant": "153.200.30.08",
+    "price": 243.58
+  },
+  {
+    "source": "Briani Listino prezzi 2026, pagina stampata 1 OCR API",
+    "url": "https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf",
+    "fixture": "briani-listino-2026-page-1-ocr.md",
+    "code": "155.190.50.08",
+    "family": "Briani Listino prezzi 2026",
+    "variant": "155.190.50.08",
+    "price": 190.18
+  },
+  {
+    "source": "Briani Listino prezzi 2026, pagina stampata 1 OCR API",
+    "url": "https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf",
+    "fixture": "briani-listino-2026-page-1-ocr.md",
+    "code": "155.190.50.09",
+    "family": "Briani Listino prezzi 2026",
+    "variant": "155.190.50.09",
+    "price": 190.18
+  },
+  {
+    "source": "Briani Listino prezzi 2026, pagina stampata 1 OCR API",
+    "url": "https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf",
+    "fixture": "briani-listino-2026-page-1-ocr.md",
+    "code": "158.450.12.08",
+    "family": "Briani Listino prezzi 2026",
+    "variant": "158.450.12.08",
+    "price": 73.7
+  },
+  {
+    "source": "Briani Listino prezzi 2026, pagina stampata 1 OCR API",
+    "url": "https://www.briani.it/FILE/429BRIANI_LISTINO_STAMPA_20260501.pdf",
+    "fixture": "briani-listino-2026-page-1-ocr.md",
+    "code": "158.450.20.08",
+    "family": "Briani Listino prezzi 2026",
+    "variant": "158.450.20.08",
+    "price": 85.06
   }
 ]
