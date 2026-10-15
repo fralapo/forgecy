@@ -837,11 +837,23 @@ export async function PATCH(request:Request,{params}:Params){
    if(input.slides?.some(slide=>slide.image_path && (!slide.image_path.startsWith(id+"/")||slide.image_path.includes(".."))))throw new ApiFailure(403,"Immagine fuori dal profilo cliente");
    if(input.status==="approved" && current.offer_id){
      const {data:offer}=await ctx.db.from("offers").select("version,status").eq("id",current.offer_id).eq("client_id",id).maybeSingle();
-     if(!offer||offer.status!=="verified"||offer.version!==current.offer_version)throw new ApiFailure(409,"Offerta cambiata: aggiorna il contenuto");
+     if(!offer||offer.status!=="verified"||offer.version!==current.offer_version){
+       if(current.status!=="stale"){
+         const {error:staleError}=await ctx.db.from("contents").update({status:"stale"}).eq("id",contentId).eq("client_id",id).eq("revision",current.revision);
+         dbError(staleError,"Impossibile aggiornare lo stato del contenuto");
+       }
+       throw new ApiFailure(409,"Offerta cambiata: aggiorna il contenuto");
+     }
    }
    if(input.status==="approved" && current.parent_id){
      const {data:parent}=await ctx.db.from("contents").select("revision").eq("id",current.parent_id).eq("client_id",id).maybeSingle();
-     if(!parent||parent.revision!==current.source_revision)throw new ApiFailure(409,"Originale Instagram cambiato: riadatta LinkedIn");
+     if(!parent||parent.revision!==current.source_revision){
+       if(current.status!=="stale"){
+         const {error:staleError}=await ctx.db.from("contents").update({status:"stale"}).eq("id",contentId).eq("client_id",id).eq("revision",current.revision);
+         dbError(staleError,"Impossibile aggiornare lo stato del contenuto");
+       }
+       throw new ApiFailure(409,"Originale Instagram cambiato: riadatta LinkedIn");
+     }
    }
    const {data,error}=await ctx.db.from("contents").update(input).eq("id",contentId).eq("client_id",id).eq("revision",current.revision).select().maybeSingle();
    dbError(error,"Modifica non salvata");if(!data)throw new ApiFailure(409,"Il contenuto è cambiato: aggiorna la pagina");

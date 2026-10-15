@@ -150,7 +150,13 @@ export default function Workspace(){
   if(busy)return undefined;
   setBusy(name);setError("");
   try{const res=await work();if(clientId)await reloadAll();if(success)flash(success);return res;}
-  catch(e){setError(getError(e));return undefined;}
+  catch(e){
+   const message=getError(e);
+   setError(message);
+   if(clientId&&/Offerta cambiata|Originale Instagram cambiato|bozza è obsoleta|contenuto è cambiato/i.test(message))
+    await reloadAll().catch(()=>undefined);
+   return undefined;
+  }
   finally{setBusy(null);}
  }
  async function onAction(name:string,body:Record<string,unknown>={}):Promise<unknown>{
