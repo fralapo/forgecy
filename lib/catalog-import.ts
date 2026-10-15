@@ -242,6 +242,56 @@ export function parseMarkdownVariantPriceMatrices(text:string):CatalogProduct[]{
  return products.slice(0,1000);
 }
 
+/** Parse OCR product cards whose printed SKU and `Cad.` price share a small table row. */
+export function parseMarkdownCatalogCodePriceCards(text:string):CatalogProduct[]{
+ const isCode=(value:string)=>/^(?:(?=.*[\p{L}])(?=.*\d)[A-Z0-9][A-Z0-9./-]*(?:\s+[A-Z0-9]{1,8}){0,2}|\d{4,14})$/iu.test(value.trim());
+ const lines=text.split(/\r?\n/u);
+ const products:CatalogProduct[]=[];
+ const seen=new Set<string>();
+ let headingCode="";
+ let imageIndex:number|null=null;
+ let evidence:string[]=[];
+ for(const line of lines){
+  const heading=/^\s*#{1,6}\s+(.+?)\s*#*\s*$/u.exec(line)?.[1]?.trim()||"";
+  if(heading){
+   if(isCode(heading)){headingCode=heading;imageIndex=null;evidence=[];}
+   else if(headingCode)evidence.push(heading);
+   continue;
+  }
+  const image=/^\s*!\[img-(\d+)\.[^\]]+\]\(/iu.exec(line);
+  if(image){const index=Number(image[1]);if(index<=7&&headingCode)imageIndex=index;continue;}
+  const cells=markdownCells(line);
+  if(cells){
+   if(cells.every(cell=>/^:?-{3,}:?$/u.test(cell.replace(/\s/gu,""))))continue;
+   const code=(cells[0]||"").trim();
+   const unit=(cells[1]||"").trim();
+   const priceQuote=(cells.at(-1)||"").trim();
+   if(headingCode&&isCode(code)&&/^(?:cad\.?|la\s+conf\.?)$/iu.test(unit)){
+    const price=parsePrice(priceQuote);
+    if(price!==null){
+     const identity=`${normalizeCatalogName(code)}|${priceQuote}`;
+     if(!seen.has(identity)){
+      seen.add(identity);
+      const usefulEvidence=evidence.filter(value=>value.trim()).slice(-24);
+      const description=usefulEvidence.join(" — ").slice(0,1200);
+      products.push({name:code,description,price,currency:"EUR",nameQuote:code,
+       descriptionQuote:JSON.stringify(usefulEvidence),priceQuote,existingOfferId:null,
+       imageIndex:normalizeCatalogName(code)===normalizeCatalogName(headingCode)?imageIndex:null});
+     }
+    }
+    evidence=[];
+    continue;
+   }
+   // Preserve property labels and values as separate literal evidence.
+   evidence.push(...cells.filter(Boolean));
+   continue;
+  }
+  const plain=line.trim();
+  if(plain&&!/^\[Pagine PDF\b/iu.test(plain))evidence.push(plain.replace(/^\s*#{1,6}\s+/u,""));
+ }
+ return products.slice(0,1000);
+}
+
 export function hasVariantPriceMatrix(text:string){
  const markdownHeader=/^\s*\|[^\n]*\bLarg(?:h(?:e)?)?\b[^\n]*\bmm\b/imu.test(text);
  const markdownPrice=/^\s*\|[^\n]*\bCad\.?\b/mu.test(text);
@@ -410,6 +460,8 @@ export function parseLocalCatalogProducts(title:string,text:string):CatalogProdu
  // when both lines have the same cell count. Prefer the conservative matrix
  // result and never let the generic table parser persist those prices.
  if(matrixProducts.length)return matrixProducts.slice(0,1000);
+ const codePriceCards=parseMarkdownCatalogCodePriceCards(text);
+ if(codePriceCards.length)return codePriceCards.slice(0,1000);
  if(markdownProducts.length)return markdownProducts.slice(0,1000);
  const markdownCodeVariants=/catalog|catalogo|listino|price[ -]?list/i.test(title)?parseMarkdownCatalogCodeVariants(text):[];
  if(markdownCodeVariants.length)return markdownCodeVariants;

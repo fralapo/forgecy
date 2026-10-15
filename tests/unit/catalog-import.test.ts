@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,hasVariantPriceMatrix,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseLocalCatalogProducts,parseMarkdownCatalogCards,parseMarkdownCatalogCodeVariants,parseMarkdownCatalogTable,parseMarkdownImageVariants,parseMarkdownVariantPriceMatrices,parsePositionedNativeCatalogRows} from "../../lib/catalog-import";
+import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,hasVariantPriceMatrix,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseLocalCatalogProducts,parseMarkdownCatalogCards,parseMarkdownCatalogCodePriceCards,parseMarkdownCatalogCodeVariants,parseMarkdownCatalogTable,parseMarkdownImageVariants,parseMarkdownVariantPriceMatrices,parsePositionedNativeCatalogRows} from "../../lib/catalog-import";
 
 test("catalog names normalize accents and punctuation for safe matching",()=>{
  assert.equal(normalizeCatalogName("Caffè — Espresso 100%"),"caffe espresso 100");
@@ -267,4 +267,18 @@ test("variant matrix review warning recognizes padded Markdown and plain-text la
  assert.equal(hasVariantPriceMatrix("| | Larghe | mm | 2 |\n| | 5234G 1 | Cad. | 38,10 |"),true);
  assert.equal(hasVariantPriceMatrix("Larg. mm 2 4\n5234G 1 Cad. 38,10 36,30"),true);
  assert.equal(hasVariantPriceMatrix("| Codice | Descrizione | Prezzo |\n| ABC123 | Guanto | 4,50 |"),false);
+});
+
+test("OCR catalog cards import inline SKU prices and keep accessory images unassigned",()=>{
+ const source="# 5233TP\n![img-0.jpeg](img-0.jpeg)\nDescrizione di riferimento vedi Art. 5233TL\nLama con movimento a vite.\n| Lungh. totale | mm | 195 |\n| --- | --- | --- |\n| 5233TP | Cad. | 10,10 |\nLAME DI RICAMBIO per Art. 5233 TL - TP. Confezione minima fornibile 10 lame.\n| Larghezza lama | mm | 25 |\n| --- | --- | --- |\n| O5233TP | Cad. | 1,30 |";
+ const products=parseMarkdownCatalogCodePriceCards(source);
+ assert.equal(parseLocalCatalogProducts("Sicutool catalogo 2025.pdf",source).length,2);
+ assert.equal(products.length,2);
+ assert.equal(products[0]?.name,"5233TP");
+ assert.equal(products[0]?.price,10.1);
+ assert.equal(products[0]?.imageIndex,0);
+ assert.equal(products[1]?.name,"O5233TP");
+ assert.equal(products[1]?.price,1.3);
+ assert.equal(products[1]?.imageIndex,null);
+ assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
 });
