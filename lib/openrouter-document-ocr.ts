@@ -29,7 +29,7 @@ type OcrOptions = {
   previousBody?: string;
 };
 export type OcrImage = DocumentImage;
-export type OcrResult = { body: string; images: OcrImage[]; pageCount: number | null; pagesProcessed: number | null; textTruncated: boolean; partialFailure: boolean; model: string; engine: "mistral-ocr" | "vision-model"; provider: "openrouter" };
+export type OcrResult = { body: string; images: OcrImage[]; pageCount: number | null; pagesProcessed: number | null; textTruncated: boolean; partialFailure: boolean; error?: string; model: string; engine: "mistral-ocr" | "vision-model"; provider: "openrouter" };
 type PdfChunk={bytes:Uint8Array;pages:number[]};
 
 function pageRangeLabel(pages:number[]):string{
@@ -188,6 +188,7 @@ export async function ocrDocumentWithOpenRouter(options: OcrOptions): Promise<Oc
   let pagesProcessed = resumeAfterPage;
   let textTruncated = false;
   let partialFailure = false;
+  let partialError: string | undefined;
   let totalChars = blocks.reduce((sum, block) => sum + block.length, 0);
   for (const chunk of pdfChunks) {
     const firstPage=chunk.pages[0]||1;
@@ -249,6 +250,7 @@ export async function ocrDocumentWithOpenRouter(options: OcrOptions): Promise<Oc
       if (!blocks.length) throw error;
       console.warn("[openrouter ocr] interrupted after page",pagesProcessed,"of",pageCount,
         error instanceof ApiFailure?`HTTP ${error.status}`:"unexpected request failure");
+      partialError=error instanceof ApiFailure?error.message:"Connessione al servizio OCR interrotta. Riprova tra poco.";
       textTruncated = true;
       partialFailure = true;
       break;
@@ -257,5 +259,5 @@ export async function ocrDocumentWithOpenRouter(options: OcrOptions): Promise<Oc
   if(isPdf&&pageCount!==null&&!partialFailure)pagesProcessed=pageCount;
   const body = blocks.join("\n\n").slice(0, MAX_OCR_TEXT_CHARS);
   return { body, images, pageCount,
-    pagesProcessed: isPdf ? pagesProcessed : null, textTruncated, partialFailure, model, engine: isPdf ? "mistral-ocr" : "vision-model", provider: "openrouter" };
+    pagesProcessed: isPdf ? pagesProcessed : null, textTruncated, partialFailure,...(partialError?{error:partialError}:{}), model, engine: isPdf ? "mistral-ocr" : "vision-model", provider: "openrouter" };
 }

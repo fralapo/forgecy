@@ -26,8 +26,10 @@ function sourceCoverageNotice(source:Snapshot["sources"][number]):string|null{
  const value=source.source_metadata?.document_processing;
  if(!value||typeof value!=="object")return null;
  const processing=value as Record<string,unknown>;
+ if(processing.state==="queued"||processing.state==="running")return null;
  if(processing.truncation_reason==="ocr_partial"){
   const read=Number(processing.pages_processed)||0,total=Number(processing.page_count)||0;
+  if(read===0)return `Nessuna pagina OCR completata (0/${total}). Puoi riprovare l’OCR; il messaggio qui sopra indica il motivo dell’interruzione.`;
   return `OCR parziale: Forgecy ha elaborato fino a pagina ${read} di ${total}. Usa “Riprova OCR” per completare la lettura.`;
  }
  if(processing.truncation_reason==="page_limit"){
