@@ -305,5 +305,26 @@
     "passage": "Listino ufficiale Stanley 2026, pagina 54: flessometro FATMAX XTREME largo 32 mm, codice FMHT38232-0, lunghezza 10 m, prezzo 39,20 EUR.",
     "query": "Qual è il prezzo del modello FMHT38232-0 lungo 10 metri?",
     "source_url": "https://bynder.sbdinc.com/m/61870d470e95fbff/original/ST_Listino-2026-WEB-IT_DMK1.pdf"
+  },
+  {
+    "id": "usag-111-size-10",
+    "category": "catalog-sku-price",
+    "query": "Qual è il prezzo della chiave combinata USAG misura 10 mm, codice U02850705?",
+    "passage": "Catalogo-listino USAG 2026, pagina stampata 111: chiave combinata misura 10 mm, lunghezza 145 mm, spessore 5,1 mm, codice U02850705, prezzo 7,60 EUR.",
+    "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
+  },
+  {
+    "id": "usag-111-size-20",
+    "category": "catalog-variant-price",
+    "query": "Mi serve una chiave USAG da 20 mm, lunga 224 mm e con spessore 7,5 mm: trova codice e prezzo.",
+    "passage": "Catalogo-listino USAG 2026, pagina stampata 111: chiave combinata misura 20 mm, lunghezza 224 mm, spessore 7,5 mm, codice U02850715, prezzo 13,50 EUR.",
+    "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
+  },
+  {
+    "id": "usag-111-size-32",
+    "category": "catalog-variant-price",
+    "query": "Quanto costa la chiave combinata USAG taglia 32 mm, lunghezza 355 mm?",
+    "passage": "Catalogo-listino USAG 2026, pagina stampata 111: chiave combinata misura 32 mm, lunghezza 355 mm, spessore 11,0 mm, codice U02850726, prezzo 27,80 EUR.",
+    "source_url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf"
   }
 ]

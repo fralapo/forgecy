@@ -10,11 +10,15 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
  const queryPath=join(process.cwd(),"tests/fixtures/retrieval-eval.json");
  const candidates=JSON.parse(readFileSync(fixturePath,"utf8")) as Candidate[];
  const targets=JSON.parse(readFileSync(queryPath,"utf8")) as Array<{id:string;passage:string;category:string;source_url?:string}>;
- assert.equal(targets.length,45);
- assert.equal(candidates.length,160);
+ assert.equal(targets.length,48);
+ assert.equal(candidates.length,189);
  const catalogTargets=targets.filter(target=>target.category.startsWith("catalog-"));
- assert.equal(catalogTargets.length,37);
+ assert.equal(catalogTargets.length,40);
  assert.ok(catalogTargets.every(target=>target.source_url),"every public catalog target must have a citation source");
+ const usagPage111Targets=catalogTargets.filter(target=>target.id.startsWith("usag-111-"));
+ assert.deepEqual(usagPage111Targets.map(target=>/codice (U\d{8}), prezzo ([\d,]+) EUR\./u.exec(target.passage)?.slice(1).join("|")).sort(),[
+  "U02850705|7,60","U02850715|13,50","U02850726|27,80",
+ ]);
  assert.equal(new Set(candidates.map(candidate=>candidate.id)).size,candidates.length);
  const targetIds=new Set(targets.map(target=>target.id));
  const targetProductCodes=new Set(targets.flatMap(target=>[...target.passage.matchAll(/(?:codice|articolo)\s+([A-Z0-9]+(?:[.-][A-Z0-9]+)*)/giu)].map(match=>match[1].toUpperCase())));
@@ -98,5 +102,5 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
    assert.equal(targetProductCodes.has(productCode.toUpperCase()),false,candidate.id);
   }
  }
- assert.deepEqual([...sources.values()].sort((a,b)=>a-b),[1,1,1,4,6,9,15,15,22,24,24,38]);
+ assert.deepEqual([...sources.values()].sort((a,b)=>a-b),[1,1,1,4,6,9,15,15,22,24,24,67]);
 });
