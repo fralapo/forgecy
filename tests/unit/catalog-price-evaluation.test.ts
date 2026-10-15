@@ -8,7 +8,7 @@ test("public catalog price benchmark separates prices, OCR variants and exact co
   assert.equal(result.uniquePriceCells, 383);
   assert.equal(result.rowMatches, 551);
   assert.equal(result.correctPrices, 551);
-  assert.equal(result.exactVariants, 551);
+  assert.equal(result.exactVariants, 549);
   assert.equal(result.exactCodes, 546);
   assert.deepEqual(result.byFixture["stanley-2026-page-54-native.txt"], {
     total: 7, rowMatches: 7, correctPrices: 7, exactVariants: 7, exactCodes: 7,
@@ -26,7 +26,7 @@ test("public catalog price benchmark separates prices, OCR variants and exact co
     total: 5, rowMatches: 5, correctPrices: 5, exactVariants: 5, exactCodes: 5,
   });
   assert.deepEqual(result.byFixture["vaillant-price-2026-page-2-ocr.md"], {
-    total: 41, rowMatches: 41, correctPrices: 41, exactVariants: 41, exactCodes: 41,
+    total: 41, rowMatches: 41, correctPrices: 41, exactVariants: 39, exactCodes: 41,
   });
   assert.deepEqual(result.byFixture["vaillant-price-2026-page-3-native.txt"], {
     total: 41, rowMatches: 41, correctPrices: 41, exactVariants: 41, exactCodes: 41,
@@ -69,6 +69,8 @@ test("public catalog price benchmark separates prices, OCR variants and exact co
     { code: "XTHT0-33501", reason: "codice estratto non esatto" },
     { code: "FMHT0-33864", reason: "codice estratto non esatto" },
     { code: "FMHT0-33868", reason: "codice estratto non esatto" },
+    { code: "0010015141", reason: "variante estratta non esatta" },
+    { code: "0010015142", reason: "variante estratta non esatta" },
     { code: "AIR917080", reason: "codice estratto non esatto" },
   ]);
 });

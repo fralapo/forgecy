@@ -82,15 +82,22 @@ export function evaluateCatalogPrices(): CatalogPriceEvaluation {
         if (!/[A-Z0-9]/iu.test(next)) return true;
         offset = index + 1;
       }
-      // Some OCR layouts keep dimensions in the description rather than the
-      // display name. Strip appended SKU tokens before token-level matching so
-      // a digit inside a product code cannot masquerade as a size.
+      // Some layouts keep dimensions in the description rather than the
+      // display name. Treat multiplication marks and table dashes as equivalent
+      // separators, but preserve meaningful symbols such as inch marks.
       const appendedCode = /\(([^()]*)\)\s*$/u.exec(name)?.[1] || "";
       const description = appendedCode ? product.description.replaceAll(appendedCode, " ") : product.description;
       const searchable = `${name.replace(/\s*\([^)]*\)\s*$/u, " ")} ${description}`;
-      const expectedTokens = expected.variant.normalize("NFKD").replace(/[\u0300-\u036f]/gu, "").toLocaleLowerCase("it").match(/[\p{L}\p{N}]+/gu) || [];
-      const evidenceTokens = searchable.normalize("NFKD").replace(/[\u0300-\u036f]/gu, "").toLocaleLowerCase("it").match(/[\p{L}\p{N}]+/gu) || [];
-      return expectedTokens.length > 0 && evidenceTokens.some((_, start) => expectedTokens.every((token, index) => evidenceTokens[start + index] === token));
+      const normalizeVariant = (value: string) => value.normalize("NFKD")
+        .replace(/[\u0300-\u036f]/gu, "")
+        .toLocaleLowerCase("it")
+        .replace(/[×x—–]/gu, " | ")
+        .replace(/\s+/gu, " ")
+        .trim();
+      const expectedVariant = normalizeVariant(expected.variant);
+      const evidence = normalizeVariant(searchable);
+      const exactVariantPattern = expectedVariant.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&").replace(/\s+/gu, "\\s+");
+      return new RegExp(`(?<![\\p{L}\\p{N}])${exactVariantPattern}(?![\\p{L}\\p{N}])`, "u").test(evidence);
     };
     const matchByCode = products.find((product) => containsExactCode(product, expected.code) && variantMatches(product))
       ?? products.find((product) => containsExactCode(product, expected.code));
