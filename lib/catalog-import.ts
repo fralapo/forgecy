@@ -647,8 +647,29 @@ export function parsePositionedNativeCatalogRows(title:string,items:PositionedPd
  if(!/catalog|catalogo|listino|price[ -]?list/i.test(title))return [];
  const rows=items.filter(item=>item.str.trim()&&Number.isFinite(item.x)&&Number.isFinite(item.y))
   .map(item=>({...item,str:item.str.trim()}));
- const codes=rows.filter(item=>/^U\d{8}$/i.test(item.str)).sort((a,b)=>b.y-a.y||a.x-b.x);
  const products:CatalogProduct[]=[];const seen=new Set<string>();
+ // Caleffi's native VMC lists are two side-by-side tables, with code, name and
+ // price placed by coordinates instead of tabs. Read each AIR row within its
+ // own column so numeric page/category cells cannot be mistaken for prices.
+ const airCodes=rows.filter(item=>/^AIR[A-Z]?\d{4,7}(?:\s+[A-Z0-9]{2,4})?$/iu.test(item.str))
+  .sort((a,b)=>b.y-a.y||a.x-b.x);
+ for(const code of airCodes){
+  const sameLine=rows.filter(item=>Math.abs(item.y-code.y)<=0.75&&item.x>=code.x&&item.x<code.x+245).sort((a,b)=>a.x-b.x);
+  const priceItems=sameLine.filter(item=>item.x>code.x&&/(?<![\d,])\d{1,3}(?:\.\d{3})*,\d{2}(?!\d)/u.test(item.str));
+  if(priceItems.length!==1)continue;
+  const priceItem=priceItems[0]!;
+  const priceMatch=/(?<![\d,])(\d{1,3}(?:\.\d{3})*,\d{2})(?!\d)/u.exec(priceItem.str);
+  if(!priceMatch)continue;
+  const description=sameLine.filter(item=>item.x>code.x&&item.x<priceItem.x&&item.str!=="•")
+   .map(item=>item.str).join(" ").replace(/\s+/gu," ").trim();
+  if(description.length<3||description.length>180)continue;
+  const identity=`${code.str}|${description}|${priceMatch[1]}`;
+  if(seen.has(identity))continue;
+  seen.add(identity);
+  products.push({name:description,description:code.str,price:parsePrice(priceMatch[1]),currency:"EUR",
+   nameQuote:description,descriptionQuote:code.str,priceQuote:priceMatch[1],existingOfferId:null,imageIndex:null});
+ }
+ const codes=rows.filter(item=>/^U\d{8}$/i.test(item.str)).sort((a,b)=>b.y-a.y||a.x-b.x);
  for(const code of codes){
   const sameLine=rows.filter(item=>Math.abs(item.y-code.y)<=0.75).sort((a,b)=>a.x-b.x);
   const nextCode=codes.filter(item=>Math.abs(item.y-code.y)<=0.75&&item.x>code.x).sort((a,b)=>a.x-b.x)[0];

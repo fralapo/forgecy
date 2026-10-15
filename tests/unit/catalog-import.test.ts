@@ -310,6 +310,34 @@ test("positioned PDF catalog rows join measurements, SKU and price within each c
  assert.equal(catalogEvidenceIsValid(products[1],source),true);
 });
 
+test("positioned Caleffi rows read code, description and price from both native table columns",()=>{
+ const products=parsePositionedNativeCatalogRows("Caleffi listino VMC 2026.pdf",[
+  {str:"AIR400003",x:37,y:200},{str:"CORPO PLENUM",x:79,y:200},{str:"VMC SIZE 6",x:142,y:200},{str:"160,00",x:224,y:200},{str:"49",x:261,y:200},
+  {str:"AIR917150",x:312,y:200},{str:"CURVA EPE 90°",x:354,y:200},{str:"DN125",x:426,y:200},{str:"34,30",x:499,y:200},{str:"49",x:536,y:200},
+  {str:"AIR113000 150",x:37,y:190},{str:"KIT VMC SIZE 6",x:105,y:190},{str:"295,00",x:224,y:190}
+ ]);
+ assert.equal(products.length,3);
+ assert.deepEqual(products.map(product=>[product.description,product.name,product.price]),[
+  ["AIR400003","CORPO PLENUM VMC SIZE 6",160],
+  ["AIR917150","CURVA EPE 90° DN125",34.3],
+  ["AIR113000 150","KIT VMC SIZE 6",295]
+ ]);
+ assert.ok(products.every(product=>product.priceQuote&&catalogEvidenceIsValid(product,`${product.name} ${product.description} ${product.priceQuote}`)));
+});
+
+test("Caleffi positioned PDF fixture recovers exact SKUs and prices from the source page",()=>{
+ const fixture=JSON.parse(readFileSync(join(process.cwd(),"tests/fixtures/caleffi-vmc-2026-page-16-native-positioned.json"),"utf8")) as {items:Array<{str:string;x:number;y:number}>};
+ const products=parsePositionedNativeCatalogRows("Caleffi listino VMC 2026.pdf",fixture.items);
+ const expected=new Map([["AIR400003",160],["AIR400103",295],["AIR917080",167],["AIR917150",34.3],["AIR990055",12.3],["AIR990077",12.5],["AIR990088",13.1],["AIR990150",150]]);
+ assert.equal(products.length,expected.size);
+ for(const [code,price] of expected){
+  const product=products.find(item=>item.description===code);
+  assert.ok(product,`missing ${code}`);
+  assert.equal(product.price,price,`wrong price for ${code}`);
+  assert.ok(catalogEvidenceIsValid(product,`${product.name} ${product.description} ${product.priceQuote}`));
+ }
+});
+
 test("positioned PDF rows reject ambiguous prices and unlabelled codes",()=>{
  assert.deepEqual(parsePositionedNativeCatalogRows("Catalogo.pdf",[
   {str:"U02820301",x:115,y:100},{str:"25,00",x:150,y:100},{str:"30,00",x:170,y:100},
