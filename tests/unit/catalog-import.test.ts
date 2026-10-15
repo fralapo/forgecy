@@ -440,3 +440,29 @@ test("native Vaillant price page splits aligned code, description, segment and p
  ]);
  assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
 });
+
+test("ACO R25 native price rows preserve their product section headings",()=>{
+ const source=readFileSync(join(process.cwd(),"tests/fixtures/aco-r25-2026-page-2-native.txt"),"utf8");
+ const products=parseLocalCatalogProducts("ACO-Listino-R25-2026.pdf",source);
+ assert.deepEqual(products.map(product=>[product.name,product.price]),[
+  ["Multiline V 100 — Corpo canale V 100 — 0.0 (12330)",75.06],
+  ["Multiline V 100 — Corpo canale V 100 — H 60 (12325)",62.54],
+  ["Multiline V 100 — Corpo canale V 100 — H 80 (12323)",64.96],
+  ["Multiline V 100 — Corpo canale V 100 — H 100 (12321)",68.53],
+  ["Pozzetto di scarico per Multiline V 100 — Con guarnizione a labbro e preforma di collegamento ritagliabile — 100 (12391)",222.87],
+ ]);
+ assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
+});
+
+test("ACO R25 OCR tables parse Euro/pz columns with section and variant evidence",()=>{
+ const source=readFileSync(join(process.cwd(),"tests/fixtures/aco-r25-2026-page-2-ocr.md"),"utf8");
+ const products=parseLocalCatalogProducts("aco-r25-scanned-page-2.pdf",source);
+ assert.deepEqual(products.map(product=>[product.name,product.price]),[
+  ["Corpo canale V 100 — 0.0 (12330)",75.06],
+  ["Corpo canale V 100 — H 60 (12325)",62.54],
+  ["Corpo canale V 100 — H 80 (12323)",64.96],
+  ["Corpo canale V 100 — H 100 (12321)",68.53],
+  ["Pozzetto di scarico per Multiline V 100 — 100 (12391)",222.87],
+ ]);
+ assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
+});

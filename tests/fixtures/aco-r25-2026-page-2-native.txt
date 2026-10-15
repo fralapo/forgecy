@@ -1,0 +1,17 @@
+Listino RETAILER ACO R25 2025, con applicazione del +5%, valido dal 1° maggio 2026
+Multiline
+Multiline V 100
+Corpo canale V 100
+Lunghezza 1000 mm, larghezza 135 mm
+Immagine	Disegno tecnico	Tipo	Hi	He	Pz/Pal	Peso	Cod. art.	Euro/pz
+[mm]	[mm]	[Kg]
+0.0	110	150	36	16,80	12330	75,06
+H 60	20	60	60	8,20	12325	62,54
+H 80	40	80	42	11,90	12323	64,96
+H 100	60	100	42	13,80	12321	68,53
+Pozzetto di scarico per Multiline V 100
+Lunghezza 500 mm, larghezza 135 mm
+Immagine	Disegno tecnico	DN	H	Pz/Pal	Peso	Cod. art.	Euro/pz
+[mm]	[Kg]
+Con guarnizione a labbro e preforma di collegamento ritagliabile
+100	450	10	26,60	12391	222,87

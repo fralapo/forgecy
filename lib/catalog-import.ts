@@ -33,7 +33,8 @@ export function normalizeCatalogName(value:string){
 export function looksLikeCatalog(title:string,body:string){
  const titleOrBodySuggestsCatalog=/catalog|catalogo|listino|prodott|price[ -]?list|sku/i.test(title+"\n"+body)&&
   (/\b(product|prodott\w*|prezz[oi]|price|sku|codic\w*|articol\w*|confezion\w*)\b|\bcad\.?\b|\bprod\./i.test(body)||
-   /(?:€|\bEUR\b)\s*\d|\b(?:cod\.?|art\.?)\s*\|/iu.test(body));
+   /(?:€|\bEUR\b)\s*\d|\b(?:cod\.?|art\.?)\s*\|/iu.test(body)||
+   /\bcod\.?\s*art\.?\b/iu.test(body)&&/\beuro\s*\/\s*(?:pz|cad)\b/iu.test(body));
  if(titleOrBodySuggestsCatalog)return true;
 
  // Scanned price lists often omit “catalogo/listino” from their visible text
@@ -145,6 +146,7 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
   let nameIndex=headerIndex(normalizedHeaders,["nome","nome prodotto","prodotto","product","product name","name","articolo","nome articolo","item","modello","model"]);
   let priceIndex=headerIndex(normalizedHeaders,["prezzo listino","prezzo","price","costo","listino","eur"]);
   if(priceIndex<0)priceIndex=headers.findIndex(header=>/^(?:€|eur|euro)\s*\/\s*(?:cad\.?|pezzo|unità|unita)$/iu.test(header.trim()));
+  if(priceIndex<0)priceIndex=headers.findIndex(header=>/^(?:€|eur|euro)\s*\/\s*(?:pz\.?|pezzo|cad\.?)$/iu.test(header.trim()));
   if(priceIndex<0)priceIndex=headers.findIndex(header=>/^\s*€\s*$/u.test(header));
   let descriptionIndex=headerIndex(normalizedHeaders,["descrizione prodotto","descrizione","description","dettagli","details"]);
   const codeIndex=headerIndex(normalizedHeaders,["cod","codice","code","sku","codice prodotto","product code"]);
@@ -160,9 +162,10 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
   }
   const productByCode=nameIndex<0&&codeIndex>=0&&priceIndex>=0;
   if(productByCode)nameIndex=codeIndex;
-  const variantIndex=productByCode?headerIndex(normalizedHeaders,["lunghezza","larghezza","dimensione","misura","taglia","variante","size","length","width"]):-1;
+  const variantIndex=productByCode?headerIndex(normalizedHeaders,["lunghezza","larghezza","dimensione","misura","taglia","variante","tipo","type","dn","size","length","width"]):-1;
   const markdownFamilyHeading=productByCode?lines.slice(0,headerLine).reverse()
-   .map(line=>/^\s*#{1,6}\s+(.+?)\s*#*\s*$/u.exec(line)?.[1]?.trim()||"").find(Boolean)||"":"";
+   .map(line=>/^\s*#{1,6}\s+(.+?)\s*#*\s*$/u.exec(line)?.[1]?.trim()||"")
+   .find(value=>value&&!/^(?:lunghezza|larghezza|dimensione|misura|dettagli|informazioni sul prodotto)\b/iu.test(value))||"":"";
   const familyHeading=perItemFamilyHeading||markdownFamilyHeading;
   const productMatrix=priceIndex<0&&nameFromDescription&&contentIndex>=0;
   if(nameIndex<0||priceIndex<0&&!productMatrix||!hasSeparator&&!productMatrix&&!productByCode)continue;
@@ -175,7 +178,7 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
    if(name.length<2||/^[-—–]+$/u.test(name))continue;
    const rowCode=codeIndex>=0?(cells[codeIndex]||"").trim():"";
    if((productMatrix&&!/(?=.*\d)[A-Z0-9][A-Z0-9./-]{2,}/iu.test(rowCode))||
-      (productByCode&&!/(?=.*\d)[A-Z0-9][A-Z0-9./-]{5,}/iu.test(rowCode)))continue;
+      (productByCode&&!/(?=.*\d)[A-Z0-9][A-Z0-9./-]{4,}/iu.test(rowCode)))continue;
    const evidenceQuotes=nameFromDescription
     ?[rowCode,segmentIndex>=0?cells[segmentIndex]||"":"",contentIndex>=0?cells[contentIndex]||"":"",barcodeIndex>=0?cells[barcodeIndex]||"":""].map(value=>value.trim()).filter(Boolean)
     :[];
@@ -425,6 +428,14 @@ export function parseNativeCatalogRows(text:string):CatalogProduct[]{
  return products;
 }
 
+function nativeCatalogSectionHeadings(lines:string[],rowIndex:number):string[]{
+ const candidates=lines.slice(Math.max(0,rowIndex-40),rowIndex).reverse().map(line=>line.trim())
+  .filter(line=>line.length>=5&&line.length<=120&&!line.includes("\t")&&/[\p{L}]{4}/u.test(line)
+   &&!/^(?:cataloghi e listini|informazioni sul prodotto|informazioni tecniche|catalogo|listino|prezzi|www\.|https?:|lunghezza\b|larghezza\b|altezza\b|peso\b|dimensioni?\b|portata\b|alimentazione\b|\d+(?:[.,]\d+)?\s*(?:mm|cm|m|kg|g|l|ml)\b)/iu.test(line)
+   &&!/^(?:[•▪n]|[-–—])\s*/u.test(line));
+ return candidates.slice(0,2).reverse();
+}
+
 /** Parse native PDF tables with a product-family header and inline code/price rows. */
 export function parseNativeCodePriceRows(title:string,text:string):CatalogProduct[]{
  if(!looksLikeCatalog(title,text))return [];
@@ -456,14 +467,17 @@ export function parseNativeCodePriceRows(title:string,text:string):CatalogProduc
   if(codeCell<0)continue;
   const rowLabel=cells.slice(0,codeCell).find(value=>value&&value!=="•")||"";
   if(!rowLabel||!/[\p{L}\d]/u.test(rowLabel))continue;
-  const family=[...families].reverse().find(header=>header.index<index&&index-header.index<=80)?.name||"";
+  const familyHeader=[...families].reverse().find(header=>header.index<index&&index-header.index<=80)?.name||"";
+  const sectionHeadings=familyHeader?[]:nativeCatalogSectionHeadings(lines,index);
+  const familyParts=familyHeader?[familyHeader]:sectionHeadings;
+  const family=familyParts.join(" — ");
   const code=codeMatch[0];
   const identity=`${family}\n${rowLabel}\n${code}\n${priceMatch[0]}`;
   if(seen.has(identity))continue;
   seen.add(identity);
-  const name=`${family?`${family} `:""}${rowLabel} (${code})`.slice(0,180);
-  const nameEvidence=[...(family?[family]:[]),rowLabel,code];
-  const descriptionEvidence=[rowLabel,code];
+  const name=`${family?`${family}${sectionHeadings.length?" — ":" "}`:""}${rowLabel} (${code})`.slice(0,180);
+  const nameEvidence=[...familyParts,rowLabel,code];
+  const descriptionEvidence=[...familyParts,rowLabel,code];
   products.push({name,description:descriptionEvidence.join(" — "),price:parsePrice(priceMatch[0]),currency:"EUR",
    nameQuote:JSON.stringify(nameEvidence),descriptionQuote:JSON.stringify(descriptionEvidence),priceQuote:priceMatch[0],
    existingOfferId:null,imageIndex:null});

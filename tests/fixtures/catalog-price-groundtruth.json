@@ -1636,5 +1636,95 @@
     "family": "SILENZIATORE CIRCOLARE DN125",
     "variant": "SILENZIATORE CIRCOLARE DN125",
     "price": 150
+  },
+  {
+    "source": "ACO Listino RETAILER R25 2025, pagina stampata 2 (valori riportati con aumento 5%, valido dal 1 maggio 2026)",
+    "url": "https://www.aco.it/download/listini",
+    "fixture": "aco-r25-2026-page-2-native.txt",
+    "code": "12330",
+    "family": "Multiline V 100 — Corpo canale V 100",
+    "variant": "0.0",
+    "price": 75.06
+  },
+  {
+    "source": "ACO Listino RETAILER R25 2025, pagina stampata 2 (valori riportati con aumento 5%, valido dal 1 maggio 2026)",
+    "url": "https://www.aco.it/download/listini",
+    "fixture": "aco-r25-2026-page-2-native.txt",
+    "code": "12325",
+    "family": "Multiline V 100 — Corpo canale V 100",
+    "variant": "H 60",
+    "price": 62.54
+  },
+  {
+    "source": "ACO Listino RETAILER R25 2025, pagina stampata 2 (valori riportati con aumento 5%, valido dal 1 maggio 2026)",
+    "url": "https://www.aco.it/download/listini",
+    "fixture": "aco-r25-2026-page-2-native.txt",
+    "code": "12323",
+    "family": "Multiline V 100 — Corpo canale V 100",
+    "variant": "H 80",
+    "price": 64.96
+  },
+  {
+    "source": "ACO Listino RETAILER R25 2025, pagina stampata 2 (valori riportati con aumento 5%, valido dal 1 maggio 2026)",
+    "url": "https://www.aco.it/download/listini",
+    "fixture": "aco-r25-2026-page-2-native.txt",
+    "code": "12321",
+    "family": "Multiline V 100 — Corpo canale V 100",
+    "variant": "H 100",
+    "price": 68.53
+  },
+  {
+    "source": "ACO Listino RETAILER R25 2025, pagina stampata 2 (valori riportati con aumento 5%, valido dal 1 maggio 2026)",
+    "url": "https://www.aco.it/download/listini",
+    "fixture": "aco-r25-2026-page-2-native.txt",
+    "code": "12391",
+    "family": "Pozzetto di scarico per Multiline V 100 — Con guarnizione a labbro e preforma di collegamento ritagliabile",
+    "variant": "100",
+    "price": 222.87
+  },
+  {
+    "source": "ACO Listino RETAILER R25 2025, pagina stampata 2 OCR API (valori riportati con aumento 5%, valido dal 1 maggio 2026)",
+    "url": "https://www.aco.it/download/listini",
+    "fixture": "aco-r25-2026-page-2-ocr.md",
+    "code": "12330",
+    "family": "Corpo canale V 100",
+    "variant": "0.0",
+    "price": 75.06
+  },
+  {
+    "source": "ACO Listino RETAILER R25 2025, pagina stampata 2 OCR API (valori riportati con aumento 5%, valido dal 1 maggio 2026)",
+    "url": "https://www.aco.it/download/listini",
+    "fixture": "aco-r25-2026-page-2-ocr.md",
+    "code": "12325",
+    "family": "Corpo canale V 100",
+    "variant": "H 60",
+    "price": 62.54
+  },
+  {
+    "source": "ACO Listino RETAILER R25 2025, pagina stampata 2 OCR API (valori riportati con aumento 5%, valido dal 1 maggio 2026)",
+    "url": "https://www.aco.it/download/listini",
+    "fixture": "aco-r25-2026-page-2-ocr.md",
+    "code": "12323",
+    "family": "Corpo canale V 100",
+    "variant": "H 80",
+    "price": 64.96
+  },
+  {
+    "source": "ACO Listino RETAILER R25 2025, pagina stampata 2 OCR API (valori riportati con aumento 5%, valido dal 1 maggio 2026)",
+    "url": "https://www.aco.it/download/listini",
+    "fixture": "aco-r25-2026-page-2-ocr.md",
+    "code": "12321",
+    "family": "Corpo canale V 100",
+    "variant": "H 100",
+    "price": 68.53
+  },
+  {
+    "source": "ACO Listino RETAILER R25 2025, pagina stampata 2 OCR API (valori riportati con aumento 5%, valido dal 1 maggio 2026)",
+    "url": "https://www.aco.it/download/listini",
+    "fixture": "aco-r25-2026-page-2-ocr.md",
+    "code": "12391",
+    "family": "Pozzetto di scarico per Multiline V 100",
+    "variant": "100",
+    "price": 222.87
   }
 ]
