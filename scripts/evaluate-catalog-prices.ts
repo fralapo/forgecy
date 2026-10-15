@@ -51,7 +51,8 @@ export function evaluateCatalogPrices(): CatalogPriceEvaluation {
     }
 
     const variantMatches = (name: string) => name.includes(`— ${expected.variant}`)
-      || name.endsWith(`(${expected.variant})`);
+      || name.endsWith(`(${expected.variant})`)
+      || name === expected.variant;
     const match = products.find((product) => product.name.includes(expected.family) && variantMatches(product.name));
     if (!match) {
       failures.push({ code: expected.code, source: expected.source, reason: "variante non trovata" });
@@ -66,7 +67,7 @@ export function evaluateCatalogPrices(): CatalogPriceEvaluation {
     else failures.push({ code: expected.code, source: expected.source, reason: `prezzo atteso ${expected.price}, trovato ${match.price ?? "vuoto"}` });
 
     const normalizedExpected = expected.code.replace(/\s+/gu, "").toUpperCase();
-    const normalizedActual = match.name.replace(/\s+/gu, "").toUpperCase();
+    const normalizedActual = `${match.name} ${match.description}`.replace(/\s+/gu, "").toUpperCase();
     if (normalizedActual.includes(normalizedExpected)) {
       exactCodes += 1;
       fixtureStats.exactCodes += 1;

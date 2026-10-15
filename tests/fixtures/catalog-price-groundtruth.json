@@ -412,5 +412,50 @@
     "family": "COLTELLI PER POLISTIROLO",
     "variant": "5234",
     "price": 18.5
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-native.txt",
+    "code": "0010007527",
+    "family": "ecoVIT exclusive VKK 656/4-7",
+    "variant": "ecoVIT exclusive VKK 656/4-7",
+    "price": 6185
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-native.txt",
+    "code": "0010010784",
+    "family": "ecoTEC plus VM 1206/5-5 H",
+    "variant": "ecoTEC plus VM 1206/5-5 H",
+    "price": 8807
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-native.txt",
+    "code": "0010014130",
+    "family": "ecoCRAFT exclusive VKK 806/3-E",
+    "variant": "ecoCRAFT exclusive VKK 806/3-E",
+    "price": 10148
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-native.txt",
+    "code": "0010015123",
+    "family": "allSTOR plus VPS 2000/3-5",
+    "variant": "allSTOR plus VPS 2000/3-5",
+    "price": 4280
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-native.txt",
+    "code": "0010015940",
+    "family": "uniSTOR VIH R 120/6 M ACI - monovalente",
+    "variant": "uniSTOR VIH R 120/6 M ACI - monovalente",
+    "price": 1301
   }
 ]

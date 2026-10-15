@@ -516,6 +516,28 @@ export function parseNativeDimensionPriceTables(title:string,text:string):Catalo
  return products;
 }
 
+/** Parse native text PDFs with aligned Code / Description / Segment / Price columns. */
+export function parseNativeAlignedCodeSegmentPriceRows(title:string,text:string):CatalogProduct[]{
+ if(!looksLikeCatalog(title,text))return [];
+ const lines=text.split(/\r?\n/u);
+ const header=lines.findIndex(line=>/^\s*Codice\s{2,}Descrizione\s{2,}Segmento\s{2,}Prezzo\s*€/iu.test(line));
+ if(header<0)return [];
+ const products:CatalogProduct[]=[];
+ for(const line of lines.slice(header+1)){
+  const cells=line.trim().split(/\s{2,}/u);
+  if(cells.length!==4||!/^\d{6,10}$/u.test(cells[0]||""))continue;
+  const [code,name,segment,priceQuote]=cells as [string,string,string,string];
+  if(name.length<2||name.length>180||segment.length<2||segment.length>120
+   ||!/^(?:\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})$/u.test(priceQuote))continue;
+  const price=parsePrice(priceQuote);
+  if(price===null)continue;
+  products.push({name,description:`${code} — ${segment}`,price,currency:"EUR",
+   nameQuote:name,descriptionQuote:JSON.stringify([code,segment]),priceQuote,
+   existingOfferId:null,imageIndex:null});
+ }
+ return products.length>=2?products.slice(0,1000):[];
+}
+
 /** Parse OCR family headings followed by repeated variant-label and `Cod.` lines. */
 export function parseMarkdownCatalogCodeVariants(text:string):CatalogProduct[]{
  const lines=text.split(/\r?\n/u);
@@ -582,6 +604,8 @@ export function parseLocalCatalogProducts(title:string,text:string):CatalogProdu
  if(catalogCards.length)return catalogCards;
  const nativeDimensionProducts=parseNativeDimensionPriceTables(title,text);
  if(nativeDimensionProducts.length)return nativeDimensionProducts;
+ const nativeSegmentedPriceProducts=parseNativeAlignedCodeSegmentPriceRows(title,text);
+ if(nativeSegmentedPriceProducts.length)return nativeSegmentedPriceProducts;
  const nativeRows=looksLikeCatalog(title,text)?parseNativeCatalogRows(text):[];
  if(nativeRows.length)return nativeRows;
  const nativePricedRows=parseNativeCodePriceRows(title,text);

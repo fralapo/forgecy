@@ -373,3 +373,24 @@ test("native text Sicutool product cards import inline unit and pack prices with
  ]);
  assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
 });
+
+test("native Vaillant price page splits aligned code, description, segment and price columns",()=>{
+ const source=readFileSync(join(process.cwd(),"tests/fixtures/vaillant-price-2026-page-2-native.txt"),"utf8");
+ const products=parseLocalCatalogProducts("Vaillant Listino prezzi giugno 2026.pdf",source);
+ assert.equal(products.length,41);
+ const byCode=(code:string)=>products.find(product=>product.description.includes(code));
+ assert.deepEqual([
+  [byCode("0010007527")?.name,byCode("0010007527")?.price,byCode("0010007527")?.description],
+  [byCode("0010010784")?.name,byCode("0010010784")?.price],
+  [byCode("0010014130")?.name,byCode("0010014130")?.price],
+  [byCode("0010015123")?.name,byCode("0010015123")?.price],
+  [byCode("0010015940")?.name,byCode("0010015940")?.price],
+ ],[
+  ["ecoVIT exclusive VKK 656/4-7",6185,"0010007527 — Basamento Condensing"],
+  ["ecoTEC plus VM 1206/5-5 H",8807],
+  ["ecoCRAFT exclusive VKK 806/3-E",10148],
+  ["allSTOR plus VPS 2000/3-5",4280],
+  ["uniSTOR VIH R 120/6 M ACI - monovalente",1301],
+ ]);
+ assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
+});

@@ -4,11 +4,11 @@ import { evaluateCatalogPrices } from "../../scripts/evaluate-catalog-prices";
 
 test("public catalog price benchmark distinguishes correct prices from OCR code errors", () => {
   const result = evaluateCatalogPrices();
-  assert.equal(result.total, 46);
-  assert.equal(result.uniquePriceCells, 39);
-  assert.equal(result.rowMatches, 46);
-  assert.equal(result.correctPrices, 46);
-  assert.equal(result.exactCodes, 42);
+  assert.equal(result.total, 51);
+  assert.equal(result.uniquePriceCells, 44);
+  assert.equal(result.rowMatches, 51);
+  assert.equal(result.correctPrices, 51);
+  assert.equal(result.exactCodes, 47);
   assert.deepEqual(result.byFixture["stanley-2026-page-54-native.txt"], {
     total: 7, rowMatches: 7, correctPrices: 7, exactCodes: 7,
   });
@@ -20,6 +20,9 @@ test("public catalog price benchmark distinguishes correct prices from OCR code 
   });
   assert.deepEqual(result.byFixture["sicutool-2025-page-1108-native.txt"], {
     total: 9, rowMatches: 9, correctPrices: 9, exactCodes: 9,
+  });
+  assert.deepEqual(result.byFixture["vaillant-price-2026-page-2-native.txt"], {
+    total: 5, rowMatches: 5, correctPrices: 5, exactCodes: 5,
   });
   assert.equal(result.failures.filter((failure) => failure.reason === "codice estratto non esatto").length, 4);
 });
