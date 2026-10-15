@@ -127,7 +127,7 @@ export default function Workspace(){
    return mutate(name,()=>requestJson<{message:string}>(root+"/website",{method:"POST",body:JSON.stringify({url:website,maxPages:100})}).then(result=>{flash(result.message);return result;}));
   }
   if(name==="reprocessDocument"){
-   const result=await mutate<{queued?:boolean;message?:string}>(name,()=>requestJson(root+"/sources/"+body.id+"/process",{method:"POST",body:"{}"}));
+   const result=await mutate<{queued?:boolean;message?:string}>(name,()=>requestJson(root+"/sources/"+body.id+"/process",{method:"POST",body:JSON.stringify({mode:body.mode||"ocr"})}));
    if(result?.queued)flash(result.message||"Documento in elaborazione. Puoi continuare a usare Forgecy.");
    return result;
   }

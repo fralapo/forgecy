@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { deflateSync } from "node:zlib";
 import { PDFDocument, StandardFonts } from "pdf-lib";
-import { applyNativeImageAssociations, inferUniqueNativeImageAssociations, nativeImageAssociationSchema } from "../../lib/catalog-image-association";
+import { applyDocumentImageAssociations, applyNativeImageAssociations, documentImageAssociationSchema, inferUniqueNativeImageAssociations, nativeImageAssociationSchema } from "../../lib/catalog-image-association";
 import { extractDocumentWithMetadata, extractNativeCatalogImages } from "../../lib/document-extract";
 import type { CatalogProduct } from "../../lib/catalog-import";
 import { createPdfParser, getPositionedPdfText, pdfWasmUrl } from "../../lib/pdf-runtime";
@@ -255,6 +255,30 @@ test("native image sections with a unique exact product candidate link without a
  assert.deepEqual(associations,[{product_name:names[0],image_index:0},{product_name:names[1],image_index:1}]);
  const linked=applyNativeImageAssociations(products,images,associations);
  assert.deepEqual(linked.map(product=>product.imageIndex),[0,1,null]);
+});
+
+test("OCR image associations use the full image index and require exact known product names",()=>{
+ const names=["Gocce di Deo Due Oriental","Detergente Alpha"];
+ const products:CatalogProduct[]=names.map(name=>({name,description:"",price:null,currency:"EUR",nameQuote:name,descriptionQuote:"",priceQuote:"",existingOfferId:null,imageIndex:null}));
+ const images:DocumentImage[]=[
+  {dataUrl:"data:image/jpeg;base64,AA==",mime:"image/jpeg",sha256:"1".padStart(64,"0"),origin:"openrouter-ocr"},
+  {dataUrl:"data:image/png;base64,AA==",mime:"image/png",sha256:"2".padStart(64,"0"),origin:"native-pdf",pageNumber:4,candidateProductNames:[names[1]!]}
+ ];
+ const result=applyDocumentImageAssociations(products,images,[
+  {product_name:names[0]!,image_index:0},
+  {product_name:names[1]!,image_index:1},
+  {product_name:"Invented product",image_index:0},
+ ]);
+ assert.deepEqual(result.map(product=>product.imageIndex),[0,1]);
+ assert.equal(documentImageAssociationSchema.safeParse({associations:[{product_name:names[0],image_index:0},{product_name:null,image_index:1}]}).success,true);
+ assert.equal(documentImageAssociationSchema.safeParse({associations:[{product_name:names[0],image_index:8}]}).success,false);
+});
+
+test("document image associations do not reuse one image for multiple products",()=>{
+ const products:CatalogProduct[]=["Alpha","Beta"].map(name=>({name,description:"",price:null,currency:"EUR",nameQuote:name,descriptionQuote:"",priceQuote:"",existingOfferId:null,imageIndex:null}));
+ const images:DocumentImage[]=[{dataUrl:"data:image/jpeg;base64,AA==",mime:"image/jpeg",sha256:"1".padStart(64,"0"),origin:"openrouter-ocr"}];
+ const result=applyDocumentImageAssociations(products,images,[{product_name:"Alpha",image_index:0},{product_name:"Beta",image_index:0}]);
+ assert.deepEqual(result.map(product=>product.imageIndex),[0,null]);
 });
 
 test("native image association schema accepts large pages with many priced variants", () => {

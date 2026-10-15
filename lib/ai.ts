@@ -188,6 +188,13 @@ export async function modelStructuredJson<T>(
     signal:AbortSignal.timeout(timeoutMs),cache:"no-store"
   });
   if(!response.ok){
+    if(response.status===400){
+      // Some models in the live catalog advertise structured outputs, but a
+      // selected provider may still reject strict JSON Schema for a particular
+      // schema. Retry once in JSON-object mode; Zod validation remains strict.
+      console.warn("[openrouter structured] Provider rejected strict JSON Schema; retrying with validated JSON mode");
+      return modelJson(system,user,schema,{maxTokens,timeoutMs,temperature:0.1});
+    }
     console.error("[openrouter structured] HTTP",response.status);
     throw new ApiFailure(502,"OpenRouter non ha generato il dossier strutturato (HTTP "+response.status+"). Verifica che il modello supporti JSON Schema.");
   }

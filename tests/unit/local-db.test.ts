@@ -23,6 +23,21 @@ test("local database persists records, preserves invariants, searches evidence, 
     const clientId = created.data.id as string;
     assert.equal(created.data.knowledge_revision, 0);
 
+    const firstPreferences = await db.from("ai_preferences").upsert({
+      owner_id: LOCAL_OWNER_ID, text_model: "provider/first-model", image_model: null,
+      ocr_model: null, semantic_enabled: 1, updated_at: new Date().toISOString()
+    }, { onConflict: "owner_id" }).select("owner_id,text_model,semantic_enabled").single();
+    assert.equal(firstPreferences.error, null);
+    assert.equal(firstPreferences.data.text_model, "provider/first-model");
+    const updatedPreferences = await db.from("ai_preferences").upsert({
+      owner_id: LOCAL_OWNER_ID, text_model: "provider/second-model", image_model: null,
+      ocr_model: "provider/vision-model", semantic_enabled: 1, updated_at: new Date().toISOString()
+    }, { onConflict: "owner_id" }).select("owner_id,text_model,ocr_model,semantic_enabled").single();
+    assert.equal(updatedPreferences.error, null);
+    assert.equal(updatedPreferences.data.text_model, "provider/second-model");
+    assert.equal(updatedPreferences.data.ocr_model, "provider/vision-model");
+    assert.equal(updatedPreferences.data.semantic_enabled, 1);
+
     const source = await db.from("sources").insert({ client_id: clientId, kind: "note", title: "Mercato", body: "Il progetto Forgecy aiuta i clienti con strategia editoriale e contenuti", status: "ready" }).select().single();
     assert.equal(source.error, null);
     assert.equal((db.connection.prepare("SELECT knowledge_revision FROM clients WHERE id=?").get(clientId) as { knowledge_revision: number }).knowledge_revision, 1);

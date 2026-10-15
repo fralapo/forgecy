@@ -61,6 +61,29 @@ test("dossier inference requests server-only structured OpenRouter output",async
   }
 });
 
+test("strict JSON Schema rejection falls back once to validated JSON-object mode",async()=>{
+ const oldKey=process.env.OPENROUTER_API_KEY;
+ const oldFetch=globalThis.fetch;
+ process.env.OPENROUTER_API_KEY="test-server-only-token";
+ const requests:Record<string,unknown>[]=[];
+ globalThis.fetch=async(_url,init)=>{
+  requests.push(JSON.parse(String(init?.body)));
+  if(requests.length===1)return new Response('{"error":{"message":"unsupported strict schema"}}',{status:400});
+  return new Response(JSON.stringify({choices:[{message:{content:'{"summary":"Valido con fallback"}'}}]}),{status:200});
+ };
+ try{
+  const result=await modelStructuredJson("Sistema","Fonte",z.object({summary:z.string()}),"forgecy_dossier",6200,async()=>"test-server-only-token");
+  assert.deepEqual(result,{summary:"Valido con fallback"});
+  assert.equal(requests.length,2);
+  assert.equal((requests[0].response_format as {type:string}).type,"json_schema");
+  assert.equal((requests[1].response_format as {type:string}).type,"json_object");
+  assert.equal(requests[1].max_tokens,6200);
+ }finally{
+  globalThis.fetch=oldFetch;
+  if(oldKey===undefined)delete process.env.OPENROUTER_API_KEY;else process.env.OPENROUTER_API_KEY=oldKey;
+ }
+});
+
 test("catalog extraction can disable reasoning and use a bounded timeout with strict JSON schema",async()=>{
  const oldFetch=globalThis.fetch;
  let outgoing:Record<string,unknown>|null=null;

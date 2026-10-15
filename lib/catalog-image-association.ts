@@ -6,6 +6,9 @@ export type ImageAssociation = { product_name: string; image_index: number | nul
 export const nativeImageAssociationSchema=z.object({associations:z.array(z.object({
   product_name:z.string().trim().min(2).max(180),image_index:z.number().int().min(0).max(7).nullable(),
 })).max(200)}).strict();
+export const documentImageAssociationSchema=z.object({associations:z.array(z.object({
+  product_name:z.string().trim().min(2).max(180).nullable(),image_index:z.number().int().min(0).max(7),
+})).max(8)}).strict();
 
 /** Return exact image-to-product links only when one native PDF image names one unique product. */
 export function inferUniqueNativeImageAssociations(products:CatalogProduct[],images:DocumentImage[]):ImageAssociation[]{
@@ -51,5 +54,35 @@ export function applyNativeImageAssociations(
   return products.map(product => ({
     ...product,
     imageIndex: assignments.get(normalizeCatalogName(product.name)) ?? product.imageIndex,
+  }));
+}
+
+/** Apply model-verified OCR/native image matches with exact product names and one-to-one links. */
+export function applyDocumentImageAssociations(
+  products: CatalogProduct[],
+  images: DocumentImage[],
+  associations: ImageAssociation[],
+): CatalogProduct[] {
+  const productsByName = new Map(products.map(product => [normalizeCatalogName(product.name), product.name]));
+  const usedProducts = new Set<string>();
+  const usedImages = new Set<number>();
+  const assignments = new Map<string, number>();
+
+  for (const association of associations) {
+    const productKey = normalizeCatalogName(association.product_name);
+    const index = association.image_index;
+    const canonicalName = productsByName.get(productKey);
+    const image = index === null ? undefined : images[index];
+    if (!canonicalName || !image || usedProducts.has(productKey) || usedImages.has(index!)) continue;
+    if (image.origin === "native-pdf" && !image.candidateProductNames?.some(name => normalizeCatalogName(name) === productKey)) continue;
+    if (image.origin !== "native-pdf" && image.origin !== "openrouter-ocr") continue;
+    usedProducts.add(productKey);
+    usedImages.add(index!);
+    assignments.set(productKey, index!);
+  }
+
+  return products.map(product => ({
+    ...product,
+    imageIndex: product.imageIndex ?? assignments.get(normalizeCatalogName(product.name)) ?? null,
   }));
 }

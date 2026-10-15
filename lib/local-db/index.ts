@@ -282,14 +282,19 @@ class LocalQuery<T = Record<string, any>[]> implements PromiseLike<DbResult<T>> 
       const match = upsert ? this.db.connection.prepare(`SELECT * FROM ${quote(this.table)} WHERE ${this.conflictFields.map(f => `${quote(this.db.column(this.table, f))} IS ?`).join(" AND ")}`).get(...this.conflictFields.map(f => value[f])) as Record<string, unknown> | undefined : undefined;
       if (match) {
         const next = this.db.beforeUpdate(this.table, match, value);
-        const entries = Object.entries(next).filter(([key]) => key !== "id");
-        this.db.connection.prepare(`UPDATE ${quote(this.table)} SET ${entries.map(([key]) => `${quote(this.db.column(this.table, key))}=?`).join(",")} WHERE id=?`).run(...entries.map(([key, v]) => jsonEncode(this.table, key, v)), match.id);
-        const updated = this.db.connection.prepare(`SELECT * FROM ${quote(this.table)} WHERE id=?`).get(match.id) as Record<string, unknown>;
+        const entries = Object.entries(next).filter(([key]) => key !== "id" && !this.conflictFields.includes(key));
+        const identity = this.conflictFields.map(field => `${quote(this.db.column(this.table, field))} IS ?`).join(" AND ");
+        const identityValues = this.conflictFields.map(field => jsonEncode(this.table, field, match[field]));
+        this.db.connection.prepare(`UPDATE ${quote(this.table)} SET ${entries.map(([key]) => `${quote(this.db.column(this.table, key))}=?`).join(",")} WHERE ${identity}`).run(...entries.map(([key, v]) => jsonEncode(this.table, key, v)), ...identityValues);
+        const updated = this.db.connection.prepare(`SELECT * FROM ${quote(this.table)} WHERE ${identity}`).get(...identityValues) as Record<string, unknown>;
         this.db.afterMutation(this.table, match, updated); rows.push(updated); continue;
       }
       const entries = Object.entries(value);
       this.db.connection.prepare(`INSERT INTO ${quote(this.table)} (${entries.map(([key]) => quote(this.db.column(this.table, key))).join(",")}) VALUES (${entries.map(() => "?").join(",")})`).run(...entries.map(([key, v]) => jsonEncode(this.table, key, v)));
-      const inserted = this.db.connection.prepare(`SELECT * FROM ${quote(this.table)} WHERE id=?`).get(value.id) as Record<string, unknown>;
+      const identityFields = upsert ? this.conflictFields : ["id"];
+      const identity = identityFields.map(field => `${quote(this.db.column(this.table, field))} IS ?`).join(" AND ");
+      const identityValues = identityFields.map(field => jsonEncode(this.table, field, value[field]));
+      const inserted = this.db.connection.prepare(`SELECT * FROM ${quote(this.table)} WHERE ${identity}`).get(...identityValues) as Record<string, unknown>;
       this.db.afterMutation(this.table, null, inserted); rows.push(inserted);
     }
     return rows;
