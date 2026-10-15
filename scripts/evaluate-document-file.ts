@@ -128,6 +128,7 @@ async function main() {
       const imageOrdinal = linked ? Number(/\((\d+)\)$/.exec(String(linked.title || ""))?.[1] || productImages.indexOf(linked) + 1) : null;
       return {
         productRecord: index + 1,
+        productName: String(offer.name || ""),
         seededProduct: offer.id === expectedOfferId,
         linked: Boolean(linked),
         imageIndex: imageOrdinal === null ? null : imageOrdinal - 1,

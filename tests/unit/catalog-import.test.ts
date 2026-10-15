@@ -138,11 +138,30 @@ test("generic filenames are recognized when OCR yields explicit code-and-price M
   ["FMHT38232-0",39.2],
  ].map(([code])=>{
   const product=products.find(row=>row.name.includes(String(code))||row.description.includes(String(code)));
-  return [product?.name,product?.price];
+  return [product?.name,product?.description,product?.price];
  }),[
+  ["FATMAX® XTREME™ — 5 (FMHT38214-0)","LUNGHEZZA (M): 5; LARGHEZZA (MM): 32",32.9],
+  ["FATMAX® XTREME™ — 8 (FMHT38217-0)","LUNGHEZZA (M): 8; LARGHEZZA (MM): 32",36],
+  ["FATMAX® XTREME™ — 10 (FMHT38232-0)","LUNGHEZZA (M): 10; LARGHEZZA (MM): 32",39.2],
+ ]);
+ assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
+});
+
+test("native price tables with tab-separated measurements retain family, dimensions, prices and evidence",()=>{
+ const source=readFileSync(join(process.cwd(),"tests/fixtures/stanley-2026-page-54-native.txt"),"utf8");
+ const products=parseLocalCatalogProducts("Stanley-listino-2026-page-54.pdf",source);
+ assert.equal(products.length,7);
+ assert.deepEqual([
   ["FMHT38214-0",32.9],
   ["FMHT38217-0",36],
   ["FMHT38232-0",39.2],
+ ].map(([code])=>{
+  const product=products.find(row=>row.name.includes(String(code)));
+  return [product?.name,product?.description,product?.price];
+ }),[
+  ["FATMAX® XTREME™ — 5 × 32 (FMHT38214-0)","LUNGHEZZA (M): 5; LARGHEZZA (MM): 32",32.9],
+  ["FATMAX® XTREME™ — 8 × 32 (FMHT38217-0)","LUNGHEZZA (M): 8; LARGHEZZA (MM): 32",36],
+  ["FATMAX® XTREME™ — 10 × 32 (FMHT38232-0)","LUNGHEZZA (M): 10; LARGHEZZA (MM): 32",39.2],
  ]);
  assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
 });

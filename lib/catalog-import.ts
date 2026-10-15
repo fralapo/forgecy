@@ -149,7 +149,7 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
   let descriptionIndex=headerIndex(normalizedHeaders,["descrizione prodotto","descrizione","description","dettagli","details"]);
   const codeIndex=headerIndex(normalizedHeaders,["cod","codice","code","sku","codice prodotto","product code"]);
   const perItemPriceHeader=priceIndex>=0&&/^(?:€|eur|euro)\s*\/\s*(?:cad\.?|pezzo|unità|unita)$/iu.test(headers[priceIndex]!.trim());
-  const familyHeading=perItemPriceHeader?lines.slice(0,headerLine).reverse().map(line=>line.trim()).find(line=>/^[A-Z0-9]{3,8}\s+\p{L}/iu.test(line))||"":"";
+  const perItemFamilyHeading=perItemPriceHeader?lines.slice(0,headerLine).reverse().map(line=>line.trim()).find(line=>/^[A-Z0-9]{3,8}\s+\p{L}/iu.test(line))||"":"";
   const segmentIndex=headerIndex(normalizedHeaders,["segmento","segment","categoria","category"]);
   const contentIndex=headerIndex(normalizedHeaders,["contenuto","content","formato","confezione","packaging"]);
   const barcodeIndex=headerIndex(normalizedHeaders,["barcode","ean","itf-14"]);
@@ -160,6 +160,10 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
   }
   const productByCode=nameIndex<0&&codeIndex>=0&&priceIndex>=0;
   if(productByCode)nameIndex=codeIndex;
+  const variantIndex=productByCode?headerIndex(normalizedHeaders,["lunghezza","larghezza","dimensione","misura","taglia","variante","size","length","width"]):-1;
+  const markdownFamilyHeading=productByCode?lines.slice(0,headerLine).reverse()
+   .map(line=>/^\s*#{1,6}\s+(.+?)\s*#*\s*$/u.exec(line)?.[1]?.trim()||"").find(Boolean)||"":"";
+  const familyHeading=perItemFamilyHeading||markdownFamilyHeading;
   const productMatrix=priceIndex<0&&nameFromDescription&&contentIndex>=0;
   if(nameIndex<0||priceIndex<0&&!productMatrix||!hasSeparator&&!productMatrix&&!productByCode)continue;
   const currencyIndex=headerIndex(normalizedHeaders,["valuta","currency"]);
@@ -178,18 +182,26 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
    const productCodeDescription=productByCode?cells.map((value,index)=>({value:value.trim(),index}))
     .filter(({value,index})=>value&&index!==codeIndex&&index!==priceIndex&&!/^!?\[?img-\d+\./iu.test(value))
     .map(({value})=>value):[];
+   const dimensionalDescription=markdownFamilyHeading?headers.flatMap((header,index)=>
+    /\b(?:lunghezza|larghezza|dimensione|misura|taglia|size|length|width)\b/iu.test(normalizedHeaders[index]||"")&&cells[index]?.trim()
+     ?[{header:header.trim(),value:cells[index]!.trim()}]:[]):[];
    const description=nameFromDescription
     ?[rowCode,segmentIndex>=0?cells[segmentIndex]||"":"",contentIndex>=0?cells[contentIndex]||"":"",barcodeIndex>=0?cells[barcodeIndex]||"":""].map(value=>value.trim()).filter(Boolean).join(" — ").slice(0,1200)
-    :productByCode?productCodeDescription.join(" — ").slice(0,1200):(descriptionIndex>=0?cells[descriptionIndex]||"":"").trim().slice(0,1200);
+    :productByCode&&dimensionalDescription.length?dimensionalDescription.map(item=>`${item.header}: ${item.value}`).join("; ").slice(0,1200)
+     :productByCode?productCodeDescription.join(" — ").slice(0,1200):(descriptionIndex>=0?cells[descriptionIndex]||"":"").trim().slice(0,1200);
    const priceQuote=(cells[priceIndex]||"").trim();
    const price=parsePrice(priceQuote);
    if(productByCode&&price===null)continue;
    const imageReference=productByCode?cells.map(value=>/!?\[img-(\d+)\.[^\]]+\]\(/iu.exec(value)).find(Boolean):null;
    const imageIndex=imageReference?Number(imageReference[1]):null;
-   const displayName=familyHeading&&productByCode?`${familyHeading} — ${(cells[0]||"").trim()} (${name})`.slice(0,180):name;
-   const nameQuote=familyHeading&&productByCode?JSON.stringify([familyHeading,(cells[0]||"").trim(),name]):name;
+   const variantQuote=variantIndex>=0?(cells[variantIndex]||"").trim():"";
+   const familyVariant=perItemFamilyHeading?(cells[0]||"").trim():variantQuote;
+   const displayName=familyHeading&&productByCode?`${familyHeading}${familyVariant?` — ${familyVariant}`:""} (${name})`.slice(0,180):name;
+   const nameQuote=familyHeading&&productByCode?JSON.stringify([familyHeading,...(familyVariant?[familyVariant]:[]),name]):name;
+   const descriptionQuote=productByCode&&dimensionalDescription.length?JSON.stringify(dimensionalDescription.flatMap(item=>[item.header,item.value]))
+    :nameFromDescription?JSON.stringify(evidenceQuotes):productByCode?JSON.stringify(productCodeDescription):description;
    products.push({name:displayName,description,price,currency:(currencyIndex>=0?cells[currencyIndex]||"EUR":"EUR").trim().toUpperCase().slice(0,3)||"EUR",
-    nameQuote,descriptionQuote:nameFromDescription?JSON.stringify(evidenceQuotes):productByCode?JSON.stringify(productCodeDescription):description,
+    nameQuote,descriptionQuote,
     priceQuote:price===null?"":priceQuote,existingOfferId:null,imageIndex:imageIndex!==null&&imageIndex<=7?imageIndex:null});
   }
   found.push(...products);
@@ -432,6 +444,46 @@ export function parseNativeCodePriceRows(title:string,text:string):CatalogProduc
  return products;
 }
 
+/** Parse native PDF price tables whose header and rows are tab-separated. */
+export function parseNativeDimensionPriceTables(title:string,text:string):CatalogProduct[]{
+ if(!looksLikeCatalog(title,text))return [];
+ const lines=text.split(/\r?\n/u);
+ const products:CatalogProduct[]=[];const seen=new Set<string>();
+ for(let headerLine=0;headerLine<lines.length;headerLine++){
+  const headers=(lines[headerLine]||"").split("\t").map(value=>value.trim());
+  const normalized=headers.map(normalizeCatalogName);
+  const codeIndex=headerIndex(normalized,["codice","cod","sku"]);
+  const dimensionIndices=headers.flatMap((header,index)=>/\b(?:lunghezza|larghezza|dimensione|misura|taglia|size|length|width)\b/iu.test(normalized[index]||"")?[index]:[]);
+  if(codeIndex<0||dimensionIndices.length===0||!headers.some(header=>/^(?:€|eur|euro|prezzo|listino)$/iu.test(header)))continue;
+  const family=lines.slice(Math.max(0,headerLine-40),headerLine).reverse().map(line=>{
+   const candidate=line.trim().split(/\s+\.\s+(?=\p{Lu})/u,1)[0]!.trim();
+   return candidate===candidate.toLocaleUpperCase("it")&&/[\p{Lu}]{2}/u.test(candidate)&&candidate.length<=100?candidate:"";
+  }).find(candidate=>candidate&&!/^(?:FLESSOMETRI|CODICE|LISTINO|CATALOGO|ACCESSORI)$/iu.test(normalizeCatalogName(candidate)))||"";
+  if(!family)continue;
+  let rowCount=0;
+  for(let rowLine=headerLine+1;rowLine<lines.length;rowLine++){
+   const cells=(lines[rowLine]||"").split("\t").map(value=>value.trim());
+   if(cells.length<headers.length){if(rowCount)break;continue;}
+   const code=cells[codeIndex]||"";
+   if(!/^(?=.*\d)[A-Z0-9][A-Z0-9./-]{4,}$/iu.test(code))continue;
+   const priceMatches=[...cells.slice(codeIndex+1).join(" ").matchAll(/(?<![\d,])(\d{1,3}(?:\.\d{3})*,\d{2})(?!\d)/gu)];
+   if(priceMatches.length!==1)continue;
+   const dimensions=dimensionIndices.map(index=>({header:headers[index]!,value:cells[index]||""})).filter(item=>item.value);
+   if(dimensions.length!==dimensionIndices.length)continue;
+   const name=`${family} — ${dimensions.map(item=>item.value).join(" × ")} (${code})`.slice(0,180);
+   const identity=normalizeCatalogName(name);
+   if(seen.has(identity))continue;
+   seen.add(identity);rowCount++;
+   const description=dimensions.map(item=>`${item.header}: ${item.value}`).join("; ").slice(0,1200);
+   const dimensionQuotes=dimensions.flatMap(item=>[item.header,item.value]);
+   products.push({name,description,price:parsePrice(priceMatches[0]![1]!),currency:"EUR",
+   nameQuote:JSON.stringify([family,...dimensions.map(item=>item.value),code]),descriptionQuote:JSON.stringify(dimensionQuotes),
+    priceQuote:priceMatches[0]![1]!,existingOfferId:null,imageIndex:null});
+  }
+ }
+ return products;
+}
+
 /** Parse OCR family headings followed by repeated variant-label and `Cod.` lines. */
 export function parseMarkdownCatalogCodeVariants(text:string):CatalogProduct[]{
  const lines=text.split(/\r?\n/u);
@@ -496,6 +548,8 @@ export function parseLocalCatalogProducts(title:string,text:string):CatalogProdu
  if(markdownCodeVariants.length)return markdownCodeVariants;
  const catalogCards=parseMarkdownCatalogCards(text);
  if(catalogCards.length)return catalogCards;
+ const nativeDimensionProducts=parseNativeDimensionPriceTables(title,text);
+ if(nativeDimensionProducts.length)return nativeDimensionProducts;
  const nativeRows=looksLikeCatalog(title,text)?parseNativeCatalogRows(text):[];
  if(nativeRows.length)return nativeRows;
  const nativePricedRows=parseNativeCodePriceRows(title,text);
