@@ -136,7 +136,7 @@ test("local database persists records, preserves invariants, searches evidence, 
     assert.equal((scrubbed.prepare("SELECT token_ciphertext FROM social_accounts WHERE remote_id='meta-account'").get() as { token_ciphertext: string }).token_ciphertext, "");
     assert.equal((scrubbed.prepare("SELECT needs_reauth FROM social_accounts WHERE remote_id='meta-account'").get() as { needs_reauth: number }).needs_reauth, 0);
     scrubbed.close();
-    const { createAutomaticBackup, getAutomaticBackupSettings, listAutomaticBackups, readAutomaticBackup, saveAutomaticBackupSettings } = await import("../../lib/sync/local-backups");
+    const { createAutomaticBackup, getAutomaticBackupSettings, getAutomaticBackupStatus, listAutomaticBackups, readAutomaticBackup, saveAutomaticBackupSettings } = await import("../../lib/sync/local-backups");
     assert.equal(getAutomaticBackupSettings().intervalHours, 8);
     assert.equal(getAutomaticBackupSettings().retention, 7);
     assert.throws(() => saveAutomaticBackupSettings({ directory: "relative-backups", intervalHours: 8, retention: 7 }), /percorso assoluto/i);
@@ -144,6 +144,8 @@ test("local database persists records, preserves invariants, searches evidence, 
     for (let index = 1; index < 8; index++) automaticBackup = await createAutomaticBackup();
     assert.equal(listAutomaticBackups().length, 7);
     assert.equal(listAutomaticBackups()[0].id, automaticBackup.id);
+    assert.equal(getAutomaticBackupStatus().lastSuccessAt, automaticBackup.createdAt);
+    assert.equal(getAutomaticBackupStatus().lastError, null);
     assert.equal(validateWorkspaceArchive(readAutomaticBackup(automaticBackup.id)).manifest.hash.slice(0, 12), automaticBackup.hashPrefix);
     assert.throws(() => readAutomaticBackup("../../forgecy.sqlite"), /non valido/i);
     saveAutomaticBackupSettings({ directory: externalBackupDirectory, intervalHours: 24, retention: 3 });
@@ -152,6 +154,14 @@ test("local database persists records, preserves invariants, searches evidence, 
     assert.equal(getAutomaticBackupSettings().retention, 3);
     for (let index = 0; index < 4; index++) await createAutomaticBackup();
     assert.equal(listAutomaticBackups().length, 3);
+    const blockedBackupPath = join(directory, "blocked-backups");
+    saveAutomaticBackupSettings({ directory: blockedBackupPath, intervalHours: 24, retention: 3 });
+    rmSync(blockedBackupPath, { recursive: true, force: true });
+    writeFileSync(blockedBackupPath, "not a directory");
+    await assert.rejects(createAutomaticBackup());
+    assert.match(getAutomaticBackupStatus().lastError || "", /Backup non riuscito/);
+    saveAutomaticBackupSettings({ directory: externalBackupDirectory, intervalHours: 24, retention: 3 });
+    assert.equal(getAutomaticBackupStatus().lastSuccessAt !== null, true);
     await db.from("clients").update({ industry: "Variazione remota" }).eq("id", clientId);
     const transferArchive = await createWorkspaceArchive();
     await db.from("clients").update({ industry: "Modificata solo sul computer di destinazione" }).eq("id", clientId);

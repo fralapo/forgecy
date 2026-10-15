@@ -28,7 +28,7 @@ Proteggi gli archivi: contengono database e documenti dei clienti. Le chiavi API
 - Impostazioni OpenRouter per cataloghi aggiornati, modelli testo/immagini e chiavi locali.
 - Nessun motore OCR locale: i PDF scannerizzati e le immagini vengono elaborati esclusivamente via API OpenRouter. La lettura nativa dei PDF è a intervalli (40 pagine), fino a 500 pagine e 80.000 caratteri; l'OCR API segmenta PDF fino a 200 pagine e 64 MiB in richieste da massimo 40 pagine/10 MB. Ogni segmento OCR ha quota e costo separati; un retry riprende dai blocchi mancanti senza ripetere quelli riusciti. L'estrazione strutturata del catalogo resta un passaggio AI separato. Consulta [configurazione locale](LOCAL_SETUP.md) e [stato della conoscenza](KNOWLEDGE_ARCHITECTURE.md).
 - Trasferimento del workspace tramite archivi `.forgecy.zip` esportabili e importabili.
-- Backup automatici in una cartella scelta dall'utente, con intervallo e rotazione configurabili; un client desktop come Google Drive può sincronizzare gli archivi.
+- Backup automatici in una cartella scelta dall'utente, con intervallo e rotazione configurabili; la schermata mostra l'ultimo successo e segnala gli errori. Un client desktop come Google Drive può sincronizzare gli archivi.
 
 ## Verifica e limiti noti
 

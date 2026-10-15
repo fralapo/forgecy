@@ -10,9 +10,11 @@ export const BACKUP_INTERVAL_OPTIONS_HOURS = [4, 8, 12, 24, 72, 168] as const;
 export const BACKUP_RETENTION_OPTIONS = [3, 7, 14, 30] as const;
 const BACKUP_NAME = /^forgecy-auto-(\d{13})-([a-f0-9]{12})\.forgecy\.zip$/;
 const CONFIG_FILE = "automatic-backup-settings.json";
+const STATUS_FILE = "automatic-backup-status.json";
 
 export type AutomaticBackupInfo = { id: string; createdAt: string; size: number; hashPrefix: string };
 export type AutomaticBackupSettings = { directory: string; intervalHours: number; retention: number };
+export type AutomaticBackupStatus = { lastAttemptAt: string | null; lastSuccessAt: string | null; lastErrorAt: string | null; lastError: string | null };
 
 declare global {
   var __forgecyAutomaticBackupSchedulerStarted: boolean | undefined;
@@ -24,6 +26,39 @@ function defaultSettings(): AutomaticBackupSettings {
 }
 
 function configPath() { return join(getLocalDataDirectory(), CONFIG_FILE); }
+function statusPath() { return join(getLocalDataDirectory(), STATUS_FILE); }
+
+function readBackupStatus(): AutomaticBackupStatus {
+  const empty: AutomaticBackupStatus = { lastAttemptAt: null, lastSuccessAt: null, lastErrorAt: null, lastError: null };
+  try {
+    const parsed = JSON.parse(readFileSync(statusPath(), "utf8")) as Partial<AutomaticBackupStatus>;
+    return {
+      lastAttemptAt: typeof parsed.lastAttemptAt === "string" ? parsed.lastAttemptAt : null,
+      lastSuccessAt: typeof parsed.lastSuccessAt === "string" ? parsed.lastSuccessAt : null,
+      lastErrorAt: typeof parsed.lastErrorAt === "string" ? parsed.lastErrorAt : null,
+      lastError: typeof parsed.lastError === "string" ? parsed.lastError : null,
+    };
+  } catch { return empty; }
+}
+
+let backupStatus = readBackupStatus();
+
+function persistBackupStatus() {
+  try {
+    const directory = getLocalDataDirectory();
+    mkdirSync(directory, { recursive: true, mode: 0o700 });
+    const temporary = `${statusPath()}.${randomUUID()}.tmp`;
+    try {
+      writeFileSync(temporary, JSON.stringify(backupStatus), { flag: "wx", mode: 0o600 });
+      try { chmodSync(temporary, 0o600); } catch { /* Windows inherits the private app data ACL. */ }
+      renameSync(temporary, statusPath());
+    } finally { rmSync(temporary, { force: true }); }
+  } catch (error) {
+    console.error("[automatic backup] Impossibile salvare lo stato del backup:", error instanceof Error ? error.message : "errore");
+  }
+}
+
+export function getAutomaticBackupStatus(): AutomaticBackupStatus { return { ...backupStatus }; }
 
 function normalizeSettings(input: Partial<AutomaticBackupSettings>): AutomaticBackupSettings {
   const defaults = defaultSettings();
@@ -100,6 +135,8 @@ export async function createAutomaticBackup(): Promise<AutomaticBackupInfo> {
   if (globalThis.__forgecyAutomaticBackupInProgress)
     throw new Error("È già in corso un backup locale.");
   globalThis.__forgecyAutomaticBackupInProgress = true;
+  backupStatus = { ...backupStatus, lastAttemptAt: new Date().toISOString(), lastErrorAt: null, lastError: null };
+  persistBackupStatus();
   try {
     const { archive, manifest } = await createWorkspaceArchive();
     const directory = backupDirectory();
@@ -116,7 +153,13 @@ export async function createAutomaticBackup(): Promise<AutomaticBackupInfo> {
     for (const expired of listAutomaticBackups().slice(getAutomaticBackupSettings().retention)) {
       if (isBackupId(expired.id)) rmSync(join(directory, expired.id), { force: true });
     }
+    backupStatus = { ...backupStatus, lastSuccessAt: new Date(timestamp).toISOString(), lastErrorAt: null, lastError: null };
+    persistBackupStatus();
     return { id, createdAt: new Date(timestamp).toISOString(), size: archive.byteLength, hashPrefix: manifest.hash.slice(0, 12) };
+  } catch (error) {
+    backupStatus = { ...backupStatus, lastErrorAt: new Date().toISOString(), lastError: "Backup non riuscito. Verifica che la cartella di destinazione sia disponibile e scrivibile." };
+    persistBackupStatus();
+    throw error;
   } finally { globalThis.__forgecyAutomaticBackupInProgress = false; }
 }
 

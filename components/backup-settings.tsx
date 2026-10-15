@@ -5,11 +5,13 @@ import { requestJson } from "./types";
 
 type BackupSettings = { directory: string; intervalHours: number; retention: number };
 type LocalBackup = { id: string; createdAt: string; size: number; hashPrefix: string };
+type BackupStatus = { lastAttemptAt: string | null; lastSuccessAt: string | null; lastErrorAt: string | null; lastError: string | null };
 
 export default function BackupSettings() {
   const [settings, setSettings] = useState<BackupSettings | null>(null);
   const [draft, setDraft] = useState<BackupSettings | null>(null);
   const [backups, setBackups] = useState<LocalBackup[]>([]);
+  const [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -19,11 +21,12 @@ export default function BackupSettings() {
     try {
       const [config, backupList] = await Promise.all([
         requestJson<{ settings: BackupSettings }>("/api/sync/backups/settings"),
-        requestJson<{ backups: LocalBackup[] }>("/api/sync/backups"),
+        requestJson<{ backups: LocalBackup[]; status: BackupStatus }>("/api/sync/backups"),
       ]);
       setSettings(config.settings);
       setDraft(config.settings);
       setBackups(backupList.backups);
+      setBackupStatus(backupList.status);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Impossibile leggere le impostazioni di backup"); }
   }, []);
   useEffect(() => { queueMicrotask(() => { void load(); }); }, [load]);
@@ -41,7 +44,10 @@ export default function BackupSettings() {
   }
 
   const loadBackups = async () => {
-    try { setBackups((await requestJson<{ backups: LocalBackup[] }>("/api/sync/backups")).backups); }
+    try {
+      const result = await requestJson<{ backups: LocalBackup[]; status: BackupStatus }>("/api/sync/backups");
+      setBackups(result.backups); setBackupStatus(result.status);
+    }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Impossibile leggere i backup"); }
   };
 
@@ -111,6 +117,8 @@ export default function BackupSettings() {
       {backups.length ? <ul className="stack" style={{ paddingLeft: 20, margin: 0 }}>
         {backups.map(backup => <li key={backup.id} className="caption">{new Date(backup.createdAt).toLocaleString("it-IT")} · {(backup.size / 1024 / 1024).toFixed(1)} MB · <a href={`/api/sync/backups/${encodeURIComponent(backup.id)}`}>Scarica</a></li>)}
       </ul> : <p className="caption">Il primo backup verrà creato all’avvio di Forgecy.</p>}
+      {backupStatus?.lastError && <p className="notice error" role="status">Ultimo tentativo non riuscito ({new Date(backupStatus.lastErrorAt || backupStatus.lastAttemptAt || "").toLocaleString("it-IT")}): {backupStatus.lastError}</p>}
+      {!backupStatus?.lastError && backupStatus?.lastSuccessAt && <p className="caption" role="status">Ultimo backup riuscito: {new Date(backupStatus.lastSuccessAt).toLocaleString("it-IT")}.</p>}
       <p className="caption">I backup contengono database e documenti dei clienti. Forgecy crea la prima copia all’avvio e poi rispetta la frequenza scelta mentre il server è in esecuzione. Gli archivi sono protetti con permessi locali; se scegli una cartella cloud, anche il servizio cloud ne conserva una copia.</p>
     </section>
     <section className="stack" aria-labelledby="workspace-transfer-title">
