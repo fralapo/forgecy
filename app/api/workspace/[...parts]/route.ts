@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { auth,requireClient,read,json,fail,ApiFailure,dbError,audit } from "@/lib/http";
-import { clientSchema,sourceSchema,offerSchema,campaignSchema,missionSchema,chatSchema,updateContentSchema,signalSchema } from "@/lib/schemas";
+import { clientSchema,sourceSchema,offerSchema,offerPatchSchema,campaignSchema,missionSchema,chatSchema,updateContentSchema,signalSchema } from "@/lib/schemas";
 import { draftDossier,executeMission,contextForAI } from "@/lib/agent-team";
 import { handleLeaderMessage } from "@/lib/leader-intent";
 import { modelJson,modelJsonWithImages,lowTrustRule } from "@/lib/ai";
@@ -299,8 +299,20 @@ export async function GET(request:Request,{params}:Params){
    const bucket=new URL(request.url).searchParams.get("bucket")==="forgecy-sources"?"forgecy-sources":"forgecy-assets";
    if(!path.startsWith(id+"/") || path.includes("..")) throw new ApiFailure(403,"Percorso non autorizzato");
    const {data:owned,error:ownedError}=await ctx.db.from("sources").select("id,source_metadata").eq("client_id",id).eq("file_path",path).maybeSingle();
-   dbError(ownedError);if(!owned)throw new ApiFailure(404,"File non trovato");
-   const storedBucket=owned.source_metadata?.storage_bucket||"forgecy-sources";
+   dbError(ownedError);
+   let storedBucket:string|undefined;
+   if(owned)storedBucket=owned.source_metadata?.storage_bucket||"forgecy-sources";
+   else if(bucket==="forgecy-assets"){
+    const [pathClientId,contentId]=path.split("/");
+    if(pathClientId===id&&z.uuid().safeParse(contentId).success){
+     const {data:content,error:contentError}=await ctx.db.from("contents").select("id,image_path,slides")
+      .eq("id",contentId).eq("client_id",id).maybeSingle();
+     dbError(contentError);
+     const slides=Array.isArray(content?.slides)?content.slides as Array<{image_path?:unknown}>:[];
+     if(content&&(content.image_path===path||slides.some(slide=>slide?.image_path===path)))storedBucket="forgecy-assets";
+    }
+   }
+   if(!storedBucket)throw new ApiFailure(404,"File non trovato");
    if(storedBucket!==bucket)throw new ApiFailure(403,"Archivio file non autorizzato");
    const {data,error}=await ctx.db.storage.from(bucket).createSignedUrl(path,120);
    dbError(error,"Impossibile firmare il file");
@@ -660,9 +672,18 @@ export async function POST(request:Request,{params}:Params){
      format:z.enum(["post","carousel","document"]),title:z.string().min(1).max(240),
      caption:z.string().max(12000).default(""),offer_id:uuid.nullable().optional()
    }).refine(v=>v.channel==="instagram"?(v.format==="post"||v.format==="carousel"):(v.format==="post"||v.format==="document"),"Formato non disponibile per questo canale"));
-   const {data:campaign}=await ctx.db.from("campaigns").select("id").eq("client_id",id).eq("id",input.campaign_id).maybeSingle();
+   const {data:campaign}=await ctx.db.from("campaigns").select("id,offer_id").eq("client_id",id).eq("id",input.campaign_id).maybeSingle();
    if(!campaign)throw new ApiFailure(404,"Campagna non trovata");
-   const {data,error}=await ctx.db.from("contents").insert({...input,client_id:id,slides:[],status:"draft"}).select().single();
+   const offerId=input.offer_id===undefined?(campaign.offer_id||null):input.offer_id;
+   let offerVersion:number|null=null;
+   if(offerId){
+    const {data:offer,error:offerError}=await ctx.db.from("offers").select("status,version")
+      .eq("client_id",id).eq("id",offerId).maybeSingle();
+    dbError(offerError);
+    if(!offer||offer.status!=="verified")throw new ApiFailure(409,"L'offerta deve essere verificata prima di collegarla a un contenuto");
+    offerVersion=offer.version;
+   }
+   const {data,error}=await ctx.db.from("contents").insert({...input,offer_id:offerId,offer_version:offerVersion,client_id:id,slides:[],status:"draft"}).select().single();
    dbError(error);return json({content:data},201);
   }
   if(p.length===5 && p[2]==="sources" && p[4]==="process"){
@@ -775,7 +796,7 @@ export async function PATCH(request:Request,{params}:Params){
   }
   if(p.length===4 && p[2]==="offers"){
    const offerId=validId(p[3]);
-   const input=await read(request,offerSchema.partial().refine(x=>Object.keys(x).length>0));
+   const input=await read(request,offerPatchSchema);
    const catalogFields=["kind","name","description","audience","benefits","price","currency","cta"];
    const manuallyEdited=catalogFields.some(field=>field in input);
    const {data,error}=await ctx.db.from("offers").update({...input,...(manuallyEdited?{catalog_locked:1}:{})}).eq("id",offerId).eq("client_id",id).select().maybeSingle();

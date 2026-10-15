@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element -- ImageResponse renders this remote signed image into a generated PNG. */
+/* eslint-disable @next/next/no-img-element -- ImageResponse renders the stored slide image into a generated PNG. */
 import { z } from "zod";
 import { ImageResponse } from "next/og";
 import { PDFDocument,StandardFonts,rgb } from "pdf-lib";
@@ -28,7 +28,11 @@ async function pdfExport(name:string,slides:Slide[],caption:string,clientId:stri
    if(!current.image_path.startsWith(clientId+"/") || current.image_path.includes(".."))throw new ApiFailure(403,"Risorsa fuori dal profilo");
    const {data:asset,error:assetError}=await db.storage.from("forgecy-assets").download(current.image_path);
    if(assetError||!asset)throw new ApiFailure(502,"Impossibile caricare l'immagine del documento");
-   const embedded=await doc.embedPng(await asset.arrayBuffer());
+   const imageBytes=await asset.arrayBuffer();
+   const contentType=asset.type.toLowerCase();
+   const embedded=contentType==="image/jpeg"?await doc.embedJpg(imageBytes):
+     contentType==="image/png"?await doc.embedPng(imageBytes):
+     (()=>{throw new ApiFailure(422,"Il formato dell'immagine non è supportato nell'esportazione PDF")})();
    const scale=Math.max(w/embedded.width,h/embedded.height);
    page.drawImage(embedded,{x:(w-embedded.width*scale)/2,y:(h-embedded.height*scale)/2,width:embedded.width*scale,height:embedded.height*scale});
    page.drawRectangle({x:0,y:0,width:w,height:h,color:rgb(...rgbFromHex(palette.background)),opacity:.72});
@@ -82,9 +86,11 @@ export async function GET(request:Request,{params}:Params){
   let signedImage:string|null=null;
   if(slide.image_path){
    if(!slide.image_path.startsWith(clientId+"/")||slide.image_path.includes(".."))throw new ApiFailure(403,"Risorsa non autorizzata");
-   const {data:image,error:imageError}=await ctx.db.storage.from("forgecy-assets").createSignedUrl(slide.image_path,60);
+   const {data:image,error:imageError}=await ctx.db.storage.from("forgecy-assets").download(slide.image_path);
    if(imageError||!image)throw new ApiFailure(502,"Immagine di pagina non disponibile");
-   signedImage=image.signedUrl;
+   const contentType=image.type.toLowerCase();
+   if(!["image/png","image/jpeg","image/webp"].includes(contentType))throw new ApiFailure(422,"Il formato dell'immagine non è supportato nell'esportazione PNG");
+   signedImage=`data:${contentType};base64,${Buffer.from(await image.arrayBuffer()).toString("base64")}`;
   }
   const palette=brandStyle(client.profile);
   const dims=data.channel==="linkedin"?STATIC_FORMATS.linkedin:STATIC_FORMATS.instagram;

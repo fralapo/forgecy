@@ -101,7 +101,13 @@ export async function modelJson<T>(system:string,user:string,schema:z.ZodType<T>
   catch(error){throw new ApiFailure(502,error instanceof DOMException&&error.name==="TimeoutError"?"Il provider AI ha superato il tempo limite durante la risposta JSON.":"Il provider AI ha restituito una risposta JSON non valida.");}
   await recordAiProviderUsage("openrouter",model,answer);
   const content=responseContentText(answer.choices?.[0]?.message?.content);
-  if(!content){console.warn("[openrouter json] empty response",safeResponseShape(answer));throw new ApiFailure(502,"Il provider AI non ha restituito JSON");}
+  if(!content){
+    const shape=safeResponseShape(answer);
+    console.warn("[openrouter json] empty response",shape);
+    const detail=shape.finishReason==="length"?" La risposta è stata interrotta dal limite di token.":
+      shape.hasReasoning?" Il provider ha restituito il ragionamento senza il contenuto finale.":"";
+    throw new ApiFailure(502,"Il provider AI non ha restituito JSON."+detail);
+  }
   let parsed:unknown;
   try {parsed=JSON.parse(content);}
   catch {throw new ApiFailure(502,"Il provider ha restituito JSON non valido");}
@@ -111,7 +117,7 @@ export async function modelJson<T>(system:string,user:string,schema:z.ZodType<T>
       `${issue.path.length?issue.path.join("."):"<root>"}: ${issue.message}`
     ).join("; ").slice(0,600);
     console.error("[ai json] schema validation failed",issues);
-    throw new ApiFailure(502,"La risposta del modello non rispetta lo schema richiesto");
+    throw new ApiFailure(502,"La risposta del modello non rispetta lo schema richiesto: "+issues);
   }
   return checked.data;
 }

@@ -24,6 +24,22 @@ test("JSON extraction options disable reasoning and cap latency while preserving
  }
 });
 
+test("empty JSON responses distinguish provider token truncation",async()=>{
+ const oldKey=process.env.OPENROUTER_API_KEY;
+ const oldFetch=globalThis.fetch;
+ process.env.OPENROUTER_API_KEY="test-server-only-token";
+ globalThis.fetch=async()=>new Response(JSON.stringify({
+  choices:[{finish_reason:"length",message:{content:null,reasoning:"internal reasoning"}}],
+  usage:{completion_tokens:3000}
+ }),{status:200});
+ try{
+  await assert.rejects(()=>modelJson("Sistema","Fonte",z.object({summary:z.string()})),/interrotta dal limite di token/);
+ }finally{
+  globalThis.fetch=oldFetch;
+  if(oldKey===undefined)delete process.env.OPENROUTER_API_KEY;else process.env.OPENROUTER_API_KEY=oldKey;
+ }
+});
+
 test("dossier inference requests server-only structured OpenRouter output",async()=>{
   const oldKey=process.env.OPENROUTER_API_KEY;
   const oldFetch=globalThis.fetch;

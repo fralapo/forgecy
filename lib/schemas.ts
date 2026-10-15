@@ -19,6 +19,16 @@ export const offerSchema=z.object({
  status:z.enum(["draft","verified","archived"]).default("draft"),
  source_id:z.uuid().nullable().optional()
 });
+// PATCH payloads must not inherit creation defaults: omitted fields are kept as-is.
+export const offerPatchSchema=z.object({
+ kind:z.enum(["product","service"]).optional(),name:bounded(180).min(1).optional(),
+ description:bounded(12000).optional(),audience:bounded(3000).optional(),
+ benefits:z.array(bounded(300)).max(20).optional(),
+ price:z.number().nonnegative().max(99999999).nullable().optional(),
+ currency:z.string().length(3).optional(),cta:bounded(400).optional(),
+ status:z.enum(["draft","verified","archived"]).optional(),
+ source_id:z.uuid().nullable().optional()
+}).refine(x=>Object.keys(x).length>0);
 export const campaignSchema=z.object({
  title:bounded(180).min(1),objective:bounded(3000).min(1),period:bounded(80).min(1),
  offer_id:z.uuid().nullable().optional()

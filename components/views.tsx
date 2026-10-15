@@ -333,6 +333,10 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
  const current=slides[idx];
  const slidePreset=layoutStyle(resolvedLayout(current?.layout));
  const slideIssues=current?slidePreflight(current):[];
+ const isMultiPage=content.format==="carousel"||content.format==="document";
+ const approvalProblem=isMultiPage&&(slides.length<3||slides.length>8)
+   ?slides.length<3?"Aggiungi almeno 3 pagine per approvare un carosello o un documento.":"Riduci il contenuto a un massimo di 8 pagine prima di approvarlo."
+   :slides.flatMap(slidePreflight).find(issue=>issue.severity==="blocking")?.message||"";
  const [resolvedImage,setResolvedImage]=useState<{path:string;url:string}|null>(null);
  // A new slide must never temporarily show the previous slide's image.
  const imageSrc=resolvedImage && resolvedImage.path===current?.image_path?resolvedImage.url:"";
@@ -399,7 +403,8 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
      </div>
      <button className="button small" disabled={Boolean(busy)} onClick={async()=>{if(await save())await onAction("image",{id:content.id,slideIndex:idx,prompt:current?.visual_prompt||current?.headline||""})}}><ImageIcon size={14}/> Genera immagine con OpenRouter</button>
     </>}
-    <div className="separator"/><div className="flex gap8 wrap"><button className="button primary" disabled={Boolean(busy)} onClick={()=>save()}>Salva modifiche</button><button className="button" disabled={Boolean(busy)||content.status==="stale"} onClick={()=>save("approved")}><Check size={14}/> Approva</button></div>
+    <div className="separator"/><div className="flex gap8 wrap"><button className="button primary" disabled={Boolean(busy)} onClick={()=>save()}>Salva modifiche</button><button className="button" disabled={Boolean(busy)||content.status==="stale"||Boolean(approvalProblem)} aria-describedby={approvalProblem?"forgecy-content-approval-hint":undefined} onClick={()=>save("approved")}><Check size={14}/> Approva</button></div>
+    {approvalProblem&&<p id="forgecy-content-approval-hint" className="caption" role="status">{approvalProblem}</p>}
     {content.channel==="instagram"&&<button className="button" disabled={Boolean(busy)||content.status==="stale"} onClick={()=>onAction("adapt",{id:content.id})}><Layers3 size={15}/> Riadatta per LinkedIn</button>}
    </div>
    <div className="card" style={{background:"#f5f8f4"}}>
