@@ -403,7 +403,7 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
      </div>
      <button className="button small" disabled={Boolean(busy)} onClick={async()=>{if(await save())await onAction("image",{id:content.id,slideIndex:idx,prompt:current?.visual_prompt||current?.headline||""})}}><ImageIcon size={14}/> Genera immagine con OpenRouter</button>
     </>}
-    <div className="separator"/><div className="flex gap8 wrap"><button className="button primary" disabled={Boolean(busy)} onClick={()=>save()}>Salva modifiche</button><button className="button" disabled={Boolean(busy)||content.status==="stale"||Boolean(approvalProblem)} aria-describedby={approvalProblem?"forgecy-content-approval-hint":undefined} onClick={()=>save("approved")}><Check size={14}/> Approva</button></div>
+    <div className="separator"/><div className="flex gap8 wrap"><button className="button primary" disabled={Boolean(busy)} onClick={()=>save()}>Salva modifiche</button><button className="button" disabled={Boolean(busy)||content.status==="stale"||Boolean(approvalProblem)} aria-describedby={approvalProblem?"forgecy-content-approval-hint":undefined} onClick={()=>save("approved")}><Check size={14}/> Approva</button>{content.status==="stale"&&<button className="button" disabled={Boolean(busy)} onClick={()=>onAction("revalidateContent",{id:content.id})}><RefreshCw size={14}/> Rivedi versione attuale</button>}</div>
     {approvalProblem&&<p id="forgecy-content-approval-hint" className="caption" role="status">{approvalProblem}</p>}
     {content.channel==="instagram"&&<button className="button" disabled={Boolean(busy)||content.status==="stale"} onClick={()=>onAction("adapt",{id:content.id})}><Layers3 size={15}/> Riadatta per LinkedIn</button>}
    </div>

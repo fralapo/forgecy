@@ -652,13 +652,23 @@ export async function POST(request:Request,{params}:Params){
    const {data:original,error}=await ctx.db.from("contents").select("*").eq("id",contentId).eq("client_id",id).maybeSingle();
    dbError(error);
    if(!original||original.channel!=="instagram"||original.status==="stale")throw new ApiFailure(409,"Apri un contenuto Instagram valido");
+   let offerVersion:number|null=null,offerContext:Record<string,unknown>|null=null;
+   if(original.offer_id){
+    const {data:offer,error:offerError}=await ctx.db.from("offers")
+     .select("name,description,audience,benefits,price,currency,cta,version,status")
+     .eq("client_id",id).eq("id",original.offer_id).maybeSingle();
+    dbError(offerError);
+    if(!offer||offer.status!=="verified")throw new ApiFailure(409,"Verifica l’offerta collegata prima di riadattare il contenuto");
+    offerVersion=offer.version;
+    offerContext=offer as Record<string,unknown>;
+   }
    const docFormat=original.format==="carousel"?"document":"post";
    const schema=z.object({title:z.string().min(1).max(240),caption:z.string().max(12000),
     slides:z.array(z.object({headline:z.string().max(240),body:z.string().max(1000),visual_prompt:z.string().max(1000).optional()})).max(20)});
    const revised=await withAiUsageScope({clientId:id,requestedBy:ctx.user.id,operation:"adapt"},()=>modelJson(lowTrustRule+"\nRole: LinkedIn editor. Reframe an Instagram asset for LinkedIn professionals; not just a literal translation. Output professional copy and document pages when original carousel. No unsupported claims.",
-      "ORIGINALE JSON:\n"+JSON.stringify(original).slice(0,24000),schema));
+      "ORIGINALE JSON:\n"+JSON.stringify(original).slice(0,24000)+"\nOFFERTA VERIFICATA CORRENTE (usa questi dati per correggere eventuali dettagli superati nella bozza):\n"+JSON.stringify(offerContext),schema));
    const {data,error:writeError}=await ctx.db.from("contents").insert({
-    client_id:id,campaign_id:original.campaign_id,offer_id:original.offer_id,offer_version:original.offer_version,
+    client_id:id,campaign_id:original.campaign_id,offer_id:original.offer_id,offer_version:offerVersion,
     parent_id:original.id,source_revision:original.revision,
     channel:"linkedin",format:docFormat,title:revised.title,caption:revised.caption,
     slides:docFormat==="document"?revised.slides:[],status:"draft"
