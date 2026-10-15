@@ -55,10 +55,12 @@ export function evaluateCatalogPrices(): CatalogPriceEvaluation {
           ? "Sicutool catalogo 2025 pagina 1108.pdf"
           : expected.fixture === "sicutool-2025-page-1112-native-positioned.json"
             ? "Sicutool catalogo 2025 pagina 1112.pdf"
+            : expected.fixture === "usag-2026-page-111-native-positioned.json"
+              ? "USAG catalogo listino 2026.pdf"
             : expected.fixture === "fip-actuated-valves-2026-page-206.txt" || expected.fixture === "fip-actuated-valves-2026-page-206-ocr.md"
               ? "Listino FIP valvole attuate 2026.pdf"
           : expected.fixture;
-      if(expected.fixture==="sicutool-2025-page-1112-native-positioned.json"){
+      if(expected.fixture==="sicutool-2025-page-1112-native-positioned.json" || expected.fixture==="usag-2026-page-111-native-positioned.json"){
         const positioned=JSON.parse(readFileSync(fixturePath,"utf8")) as {items:Array<{str:string;x:number;y:number}>};
         products=parsePositionedNativeCatalogRows(title,positioned.items);
       }else{

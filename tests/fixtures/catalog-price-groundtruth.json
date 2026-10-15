@@ -4669,5 +4669,293 @@
     "family": "Power Quick/CE",
     "variant": "63 × 50 × F05-07 × 14 × VKD-TKD",
     "price": 99.43
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850700",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "5,5 × 115 × 3,8",
+    "price": 6.1
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850701",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "6 × 115 × 4,0",
+    "price": 6.3
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850702",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "7 × 122 × 4,1",
+    "price": 6.4
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850703",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "8 × 133 × 4,6",
+    "price": 6.55
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850704",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "9 × 138 × 4,6",
+    "price": 6.75
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850705",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "10 × 145 × 5,1",
+    "price": 7.6
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850706",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "11 × 155 × 5,2",
+    "price": 7.9
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850707",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "12 × 162 × 5,4",
+    "price": 8.15
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850708",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "13 × 170 × 5,7",
+    "price": 8.3
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850709",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "14 × 180 × 5,9",
+    "price": 9.05
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850710",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "15 × 185 × 6,1",
+    "price": 10
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850711",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "16 × 195 × 6,6",
+    "price": 10.6
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850712",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "17 × 202 × 6,6",
+    "price": 11.3
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850713",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "18 × 208 × 7,4",
+    "price": 12.2
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850714",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "19 × 216 × 7,4",
+    "price": 12.5
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850715",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "20 × 224 × 7,5",
+    "price": 13.5
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850716",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "21 × 233 × 8,3",
+    "price": 14.4
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850717",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "22 × 248 × 8,6",
+    "price": 14.8
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850718",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "23 × 257 × 8,9",
+    "price": 16.3
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850719",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "24 × 267 × 8,9",
+    "price": 17.8
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850720",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "25 × 274 × 9,8",
+    "price": 18.5
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850721",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "26 × 285 × 9,8",
+    "price": 19.7
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850722",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "27 × 295 × 9,8",
+    "price": 20.6
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850723",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "28 × 305 × 9,8",
+    "price": 22.2
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850724",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "29 × 320 × 10,5",
+    "price": 23.3
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850725",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "30 × 340 × 10,5",
+    "price": 25.2
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850726",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "32 × 355 × 11,0",
+    "price": 27.8
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850727",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "34 × 390 × 11,0",
+    "price": 39.9
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850728",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "35 × 430 × 11,5",
+    "price": 45.2
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850729",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "36 × 440 × 12,8",
+    "price": 46.9
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850730",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "38 × 450 × 13,0",
+    "price": 53
+  },
+  {
+    "source": "USAG Catalogo listino 2026, pagina stampata 111",
+    "url": "https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf",
+    "fixture": "usag-2026-page-111-native-positioned.json",
+    "code": "U02850731",
+    "family": "Chiavi combinate USAG serie 285",
+    "variant": "41 × 460 × 14,0",
+    "price": 63
   }
 ]

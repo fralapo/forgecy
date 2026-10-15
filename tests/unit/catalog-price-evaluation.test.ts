@@ -4,12 +4,12 @@ import { evaluateCatalogPrices } from "../../scripts/evaluate-catalog-prices";
 
 test("public catalog price benchmark separates prices, OCR variants and exact codes", () => {
   const result = evaluateCatalogPrices();
-  assert.equal(result.total, 519);
-  assert.equal(result.uniquePriceCells, 351);
-  assert.equal(result.rowMatches, 519);
-  assert.equal(result.correctPrices, 519);
-  assert.equal(result.exactVariants, 519);
-  assert.equal(result.exactCodes, 514);
+  assert.equal(result.total, 551);
+  assert.equal(result.uniquePriceCells, 383);
+  assert.equal(result.rowMatches, 551);
+  assert.equal(result.correctPrices, 551);
+  assert.equal(result.exactVariants, 551);
+  assert.equal(result.exactCodes, 546);
   assert.deepEqual(result.byFixture["stanley-2026-page-54-native.txt"], {
     total: 7, rowMatches: 7, correctPrices: 7, exactVariants: 7, exactCodes: 7,
   });
@@ -60,6 +60,9 @@ test("public catalog price benchmark separates prices, OCR variants and exact co
   });
   assert.deepEqual(result.byFixture["fip-actuated-valves-2026-page-206-ocr.md"], {
     total: 18, rowMatches: 18, correctPrices: 18, exactVariants: 18, exactCodes: 18,
+  });
+  assert.deepEqual(result.byFixture["usag-2026-page-111-native-positioned.json"], {
+    total: 32, rowMatches: 32, correctPrices: 32, exactVariants: 32, exactCodes: 32,
   });
   assert.deepEqual(result.failures.map(({ code, reason }) => ({ code, reason })), [
     { code: "XTHT0-33671", reason: "codice estratto non esatto" },
