@@ -247,11 +247,11 @@ export async function executeMission(ctx:Context,clientId:string,missionId:strin
    await record(ctx,clientId,missionId,"Strategist","Copywriter","Strategia e KPI consegnati",strategy);
    const creativeEvidence=await retrieveClientKnowledge(ctx,clientId,
      [offer?.name,offer?.description,offer?.benefits.join(" "),strategy.positioning,strategy.audience,request].filter(Boolean).join(" "),8);
-   let creative=await modelJson(lowTrustRule+"\nRole: Copywriter and Art Director.\n"+playbook("creative")+"\nPropose 2 to 8 high-quality static assets covering Instagram and LinkedIn. Carousel/document has 3-8 pages. For each piece fill editorial_brief: hook, audience_need, promise, value_delivered, emotional_angle, rational_proof, single_cta (empty if not needed), community_signal_ids. Prefer clarity and evidence over sensationalism. Use only confirmed product benefits. Do not infer ordering channels, availability, preparation methods, ingredients, freshness, taste or comparative quality. Leave unknown logistics out of the copy. Follow:\n"+EDITORIAL_PLAYBOOK+"\nPLATFORM DIMENSIONS:\n"+JSON.stringify(STATIC_FORMATS)+".",
+   let creative=await modelStructuredJson(lowTrustRule+"\nRole: Copywriter and Art Director.\n"+playbook("creative")+"\nPropose 2 to 8 high-quality static assets covering Instagram and LinkedIn. Carousel/document has 3-8 pages. For each piece fill editorial_brief: hook, audience_need, promise, value_delivered, emotional_angle, rational_proof, single_cta (empty if not needed), community_signal_ids. Prefer clarity and evidence over sensationalism. Use only confirmed product benefits. Do not infer ordering channels, availability, preparation methods, ingredients, freshness, taste or comparative quality. Leave unknown logistics out of the copy. Follow:\n"+EDITORIAL_PLAYBOOK+"\nPLATFORM DIMENSIONS:\n"+JSON.stringify(STATIC_FORMATS)+".",
      "RICHIESTA ESPLICITA DELL'UTENTE: "+request+"\nPERIODO: "+period+"\nSTRATEGIA: "+JSON.stringify(strategy)+"\nOFFERTA: "+JSON.stringify(offer)+"\nCONTESTO: "+ctxJson+
      "\nEVIDENZE RECUPERATE PER I CONTENUTI: "+JSON.stringify(contextFromKnowledgeHits(creativeEvidence))+
      "\nRispetta ogni formato e numero di pagine esplicitamente richiesti; un post singolo non sostituisce un carosello o un documento multipagina.",contentSchema,
-     {reasoningEnabled:false,maxTokens:6200});
+     "forgecy_campaign_contents",6200,undefined,false);
    const knownSignals=new Set(all.community_signals.map(v=>v.id));
    for(const piece of creative.contents){
      for(const sourceId of piece.editorial_brief.community_signal_ids){
@@ -264,11 +264,11 @@ export async function executeMission(ctx:Context,clientId:string,missionId:strin
    await record(ctx,clientId,missionId,"Quality Preflight","Copywriter / Art Director","Il controllo strutturale ha richiesto una sola revisione",{
        stage_skills:routedSkills("quality"),issues:initialIssues
      });
-     creative=await modelJson(lowTrustRule+"\nRole: Creative Revision Editor.\n"+playbook("creative")+
+     creative=await modelStructuredJson(lowTrustRule+"\nRole: Creative Revision Editor.\n"+playbook("creative")+
        "\nCorrect the blocking format/coverage issues, preserving only verified facts and all supported editorial rationale. Return the SAME JSON schema.",
        "CAMPAIGN CONTEXT:\n"+ctxJson+"\nORIGINAL:\n"+JSON.stringify(creative)+
        "\nSTRUCTURAL ISSUES:\n"+JSON.stringify(initialIssues),contentSchema,
-       {reasoningEnabled:false,maxTokens:6200});
+       "forgecy_campaign_content_revision",6200,undefined,false);
    }
    const finalIssues=reviewStaticAssets(creative.contents,new Set(all.community_signals.map(v=>v.id)));
    await assertLease?.();
