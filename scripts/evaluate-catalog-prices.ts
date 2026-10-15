@@ -55,7 +55,7 @@ export function evaluateCatalogPrices(): CatalogPriceEvaluation {
           ? "Sicutool catalogo 2025 pagina 1108.pdf"
           : expected.fixture === "sicutool-2025-page-1112-native-positioned.json"
             ? "Sicutool catalogo 2025 pagina 1112.pdf"
-            : expected.fixture === "fip-actuated-valves-2026-page-206.txt"
+            : expected.fixture === "fip-actuated-valves-2026-page-206.txt" || expected.fixture === "fip-actuated-valves-2026-page-206-ocr.md"
               ? "Listino FIP valvole attuate 2026.pdf"
           : expected.fixture;
       if(expected.fixture==="sicutool-2025-page-1112-native-positioned.json"){
@@ -68,30 +68,40 @@ export function evaluateCatalogPrices(): CatalogPriceEvaluation {
       fixtureProducts.set(expected.fixture, products);
     }
 
-    const variantMatches = (name: string) => {
+    const variantMatches = (product: { name: string; description: string }) => {
+      const name = product.name;
       if (name === expected.variant || name.endsWith(`(${expected.variant})`)) return true;
       const marker = `— ${expected.variant}`;
       let offset = 0;
       while (true) {
         const index = name.indexOf(marker, offset);
-        if (index < 0) return false;
+        if (index < 0) break;
         const next = name[index + marker.length] || "";
         if (!/[A-Z0-9]/iu.test(next)) return true;
         offset = index + 1;
       }
+      // Some OCR layouts keep dimensions in the description rather than the
+      // display name. Strip appended SKU tokens before token-level matching so
+      // a digit inside a product code cannot masquerade as a size.
+      const appendedCode = /\(([^()]*)\)\s*$/u.exec(name)?.[1] || "";
+      const description = appendedCode ? product.description.replaceAll(appendedCode, " ") : product.description;
+      const searchable = `${name.replace(/\s*\([^)]*\)\s*$/u, " ")} ${description}`;
+      const expectedTokens = expected.variant.normalize("NFKD").replace(/[\u0300-\u036f]/gu, "").toLocaleLowerCase("it").match(/[\p{L}\p{N}]+/gu) || [];
+      const evidenceTokens = searchable.normalize("NFKD").replace(/[\u0300-\u036f]/gu, "").toLocaleLowerCase("it").match(/[\p{L}\p{N}]+/gu) || [];
+      return expectedTokens.length > 0 && evidenceTokens.some((_, start) => expectedTokens.every((token, index) => evidenceTokens[start + index] === token));
     };
-    const matchByCode = products.find((product) => containsExactCode(product, expected.code) && variantMatches(product.name))
+    const matchByCode = products.find((product) => containsExactCode(product, expected.code) && variantMatches(product))
       ?? products.find((product) => containsExactCode(product, expected.code));
     // OCR can corrupt a SKU while leaving the family and size intact. Count
     // that row as found, but report exact-code accuracy separately below.
-    const match = matchByCode ?? products.find((product) => product.name.includes(expected.family) && variantMatches(product.name));
+    const match = matchByCode ?? products.find((product) => product.name.includes(expected.family) && variantMatches(product));
     if (!match) {
       failures.push({ code: expected.code, source: expected.source, reason: "variante non trovata" });
       continue;
     }
     rowMatches += 1;
     fixtureStats.rowMatches += 1;
-    if (variantMatches(match.name)) {
+    if (variantMatches(match)) {
       exactVariants += 1;
       fixtureStats.exactVariants += 1;
     }

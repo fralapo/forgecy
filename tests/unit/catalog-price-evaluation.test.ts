@@ -4,12 +4,12 @@ import { evaluateCatalogPrices } from "../../scripts/evaluate-catalog-prices";
 
 test("public catalog price benchmark separates prices, OCR variants and exact codes", () => {
   const result = evaluateCatalogPrices();
-  assert.equal(result.total, 501);
+  assert.equal(result.total, 519);
   assert.equal(result.uniquePriceCells, 351);
-  assert.equal(result.rowMatches, 501);
-  assert.equal(result.correctPrices, 501);
-  assert.equal(result.exactVariants, 499);
-  assert.equal(result.exactCodes, 496);
+  assert.equal(result.rowMatches, 519);
+  assert.equal(result.correctPrices, 519);
+  assert.equal(result.exactVariants, 519);
+  assert.equal(result.exactCodes, 514);
   assert.deepEqual(result.byFixture["stanley-2026-page-54-native.txt"], {
     total: 7, rowMatches: 7, correctPrices: 7, exactVariants: 7, exactCodes: 7,
   });
@@ -26,7 +26,7 @@ test("public catalog price benchmark separates prices, OCR variants and exact co
     total: 5, rowMatches: 5, correctPrices: 5, exactVariants: 5, exactCodes: 5,
   });
   assert.deepEqual(result.byFixture["vaillant-price-2026-page-2-ocr.md"], {
-    total: 41, rowMatches: 41, correctPrices: 41, exactVariants: 39, exactCodes: 41,
+    total: 41, rowMatches: 41, correctPrices: 41, exactVariants: 41, exactCodes: 41,
   });
   assert.deepEqual(result.byFixture["vaillant-price-2026-page-3-native.txt"], {
     total: 41, rowMatches: 41, correctPrices: 41, exactVariants: 41, exactCodes: 41,
@@ -58,13 +58,14 @@ test("public catalog price benchmark separates prices, OCR variants and exact co
   assert.deepEqual(result.byFixture["fip-actuated-valves-2026-page-206.txt"], {
     total: 18, rowMatches: 18, correctPrices: 18, exactVariants: 18, exactCodes: 18,
   });
+  assert.deepEqual(result.byFixture["fip-actuated-valves-2026-page-206-ocr.md"], {
+    total: 18, rowMatches: 18, correctPrices: 18, exactVariants: 18, exactCodes: 18,
+  });
   assert.deepEqual(result.failures.map(({ code, reason }) => ({ code, reason })), [
     { code: "XTHT0-33671", reason: "codice estratto non esatto" },
     { code: "XTHT0-33501", reason: "codice estratto non esatto" },
     { code: "FMHT0-33864", reason: "codice estratto non esatto" },
     { code: "FMHT0-33868", reason: "codice estratto non esatto" },
-    { code: "0010015141", reason: "variante estratta non esatta" },
-    { code: "0010015142", reason: "variante estratta non esatta" },
     { code: "AIR917080", reason: "codice estratto non esatto" },
   ]);
 });
