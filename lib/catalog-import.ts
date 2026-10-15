@@ -166,6 +166,29 @@ export function parseMarkdownCodePriceLists(text:string):CatalogProduct[]{
  return products.slice(0,1000);
 }
 
+/** Parse native PDF text from compact two-column price lists (code, price, code, price). */
+export function parseNativeDualCodePriceRows(text:string):CatalogProduct[]{
+ const lines=text.split(/\r?\n/u);
+ const headerIndex=lines.findIndex(line=>normalizeCatalogName(line)==="code price code price");
+ if(headerIndex<0)return [];
+ const products:CatalogProduct[]=[];
+ const pairPattern=/([A-Z0-9][A-Z0-9./-]{4,31})\s+(\d+(?:\.\d{3})*,\d{2})\s*€/giu;
+ for(const line of lines.slice(headerIndex+1)){
+  const trimmed=line.trim();
+  if(!trimmed||/^page\s+\d+/iu.test(trimmed))break;
+  const pairs=[...trimmed.matchAll(pairPattern)];
+  if(pairs.length!==2)break;
+  for(const pair of pairs){
+   const code=pair[1]!.trim();
+   const priceQuote=`${pair[2]!.trim()} €`;
+   const price=parsePrice(priceQuote);
+   if(price===null)continue;
+   products.push({name:code,description:"",price,currency:"EUR",nameQuote:code,descriptionQuote:"",priceQuote,existingOfferId:null,imageIndex:null});
+  }
+ }
+ return products.slice(0,1000);
+}
+
 /** Parse OCR tables with multiple independent SKU and unit-price columns. */
 export function parseMarkdownRepeatedCodePriceTable(text:string):CatalogProduct[]{
  const lines=text.split(/\r?\n/u);
@@ -724,6 +747,8 @@ export function parseMarkdownCatalogCodeVariants(text:string):CatalogProduct[]{
 export function parseLocalCatalogProducts(title:string,text:string):CatalogProduct[]{
  const csvProducts=parseCsvCatalog(text);
  if(csvProducts.length)return csvProducts;
+ const nativeDualCodeProducts=parseNativeDualCodePriceRows(text);
+ if(nativeDualCodeProducts.length)return nativeDualCodeProducts;
  const compactCodePriceProducts=parseMarkdownCodePriceLists(text);
  if(compactCodePriceProducts.length)return compactCodePriceProducts;
  // The deliberately narrow repeated SKU/price headers are sufficient catalog

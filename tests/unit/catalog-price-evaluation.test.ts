@@ -4,12 +4,12 @@ import { evaluateCatalogPrices } from "../../scripts/evaluate-catalog-prices";
 
 test("public catalog price benchmark separates prices, OCR variants and exact codes", () => {
   const result = evaluateCatalogPrices();
-  assert.equal(result.total, 216);
-  assert.equal(result.uniquePriceCells, 158);
-  assert.equal(result.rowMatches, 216);
-  assert.equal(result.correctPrices, 216);
-  assert.equal(result.exactVariants, 214);
-  assert.equal(result.exactCodes, 211);
+  assert.equal(result.total, 388);
+  assert.equal(result.uniquePriceCells, 238);
+  assert.equal(result.rowMatches, 388);
+  assert.equal(result.correctPrices, 388);
+  assert.equal(result.exactVariants, 386);
+  assert.equal(result.exactCodes, 383);
   assert.deepEqual(result.byFixture["stanley-2026-page-54-native.txt"], {
     total: 7, rowMatches: 7, correctPrices: 7, exactVariants: 7, exactCodes: 7,
   });
@@ -46,8 +46,11 @@ test("public catalog price benchmark separates prices, OCR variants and exact co
   assert.deepEqual(result.byFixture["aco-d25-2026-page-4-ocr.md"], {
     total: 12, rowMatches: 12, correctPrices: 12, exactVariants: 12, exactCodes: 12,
   });
-  assert.deepEqual(result.byFixture["briani-listino-2026-page-1-ocr.md"], {
-    total: 12, rowMatches: 12, correctPrices: 12, exactVariants: 12, exactCodes: 12,
+  assert.deepEqual(result.byFixture["briani-listino-2026-page-1-native.txt"], {
+    total: 92, rowMatches: 92, correctPrices: 92, exactVariants: 92, exactCodes: 92,
+  });
+  assert.deepEqual(result.byFixture["briani-listino-2026-page-1-ocr-full.md"], {
+    total: 92, rowMatches: 92, correctPrices: 92, exactVariants: 92, exactCodes: 92,
   });
   assert.deepEqual(result.failures.map(({ code, reason }) => ({ code, reason })), [
     { code: "XTHT0-33671", reason: "codice estratto non esatto" },

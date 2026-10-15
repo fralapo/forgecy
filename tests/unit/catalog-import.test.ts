@@ -496,3 +496,15 @@ test("Briani OCR price lists preserve code and price pairs across split tables",
  ]);
  assert.ok(products.every(product=>product.currency==="EUR"&&catalogEvidenceIsValid(product,source)));
 });
+
+test("Briani full-page OCR and native text parse all 92 code-price pairs",()=>{
+ const ocr=readFileSync(join(process.cwd(),"tests/fixtures/briani-listino-2026-page-1-ocr-full.md"),"utf8");
+ const native=readFileSync(join(process.cwd(),"tests/fixtures/briani-listino-2026-page-1-native.txt"),"utf8");
+ const ocrProducts=parseLocalCatalogProducts("briani-listino-2026-page-1-ocr-full.md",ocr);
+ const nativeProducts=parseLocalCatalogProducts("briani-listino-2026-page-1-native.txt",native);
+ assert.equal(ocrProducts.length,92);
+ assert.equal(nativeProducts.length,92);
+ const nativeByCode=new Map(nativeProducts.map(product=>[product.name,product.price]));
+ assert.ok(ocrProducts.every(product=>nativeByCode.get(product.name)===product.price));
+ assert.ok(nativeProducts.every(product=>product.currency==="EUR"&&catalogEvidenceIsValid(product,native)));
+});
