@@ -163,6 +163,8 @@ async function main() {
       expectationsPassed: evidenceEvaluation.expectationsPassed,
       catalog: payload.catalog || null,
       productRows: offers.data?.length || 0,
+      productRowsWithPrice: (offers.data || []).filter((offer: Record<string, unknown>) => typeof offer.price === "number").length,
+      productRowsWithDescription: (offers.data || []).filter((offer: Record<string, unknown>) => typeof offer.description === "string" && offer.description.trim().length > 0).length,
       visualProductAssets: productImages.length,
       offersLinkedToVisualAssets: linkedProductImages.size,
       imageAssignments: imageAssignmentSummary,
