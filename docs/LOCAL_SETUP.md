@@ -35,7 +35,7 @@ Apri **Impostazioni** nell'app, anche prima di creare il primo cliente, incolla 
 | `OPENROUTER_API_KEY` | Alternativa alla configurazione dalle Impostazioni; chiave personale per cataloghi e generazione testo e immagini. |
 | `OPENROUTER_MODEL` | Modello testo di ripiego se non è impostato un modello nelle preferenze locali. Il valore predefinito è DeepSeek Flash Latest. |
 | `OPENROUTER_SITE_URL` | Identificativo facoltativo inviato nei metadati OpenRouter. |
-| `APP_ORIGIN` | Origine esatta locale, necessaria con `npm run start`; esempio `http://localhost:3000`. |
+| `APP_ORIGIN` | Facoltativa: override dell'origine locale esatta. In assenza di override, Forgecy usa l'origine loopback della richiesta, inclusa la porta effettiva. |
 | `FORGECY_TAILSCALE_ALLOWED_USER` | Facoltativa; login Tailscale esatto autorizzato a passare da Serve. Non è una chiave e resta in `.env.local`. |
 | `FORGECY_TAILSCALE_HOST` | Facoltativa; hostname MagicDNS HTTPS esatto mostrato da `tailscale serve status`, senza schema né porta. |
 | `ENABLE_WEBSITE_INGEST` | Facoltativa; l'importazione dei siti è attiva per impostazione predefinita. Imposta `false` per disabilitarla. |
@@ -82,7 +82,7 @@ npm run build
 npm run start
 ```
 
-Per `npm run start`, imposta `APP_ORIGIN=http://localhost:3000`. Il worker locale delle attività AI viene avviato con il server e non richiede cron, token di servizio o un processo database separato.
+L'origine locale delle richieste viene derivata automaticamente da host e porta; non è necessario configurare `APP_ORIGIN` per `npm run start` o per una porta locale diversa. Il percorso Tailscale continua a confrontare identità, hostname e origine HTTPS configurati. Il worker locale delle attività AI viene avviato con il server e non richiede cron, token di servizio o un processo database separato.
 
 ## Risoluzione problemi
 

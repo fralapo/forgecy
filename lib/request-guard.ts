@@ -43,8 +43,10 @@ export function guardApiMutation(
   if(!destination.pathname.startsWith("/api/"))return {ok:true};
 
   const configured=options.appOrigin?.trim();
-  if(options.production&&!configured)
-    return {ok:false,status:503,error:"APP_ORIGIN non configurata sul server"};
+  // This app only permits loopback or the explicitly configured Tailscale
+  // host at the proxy boundary. On loopback, the request URL is therefore a
+  // safe default for installations using a nonstandard port. Tailscale uses
+  // its separately validated HTTPS origin before reaching this guard.
   const expected=strictOrigin(configured||destination.origin);
   if(!expected)
     return {ok:false,status:503,error:"Origine applicazione configurata in modo non valido"};

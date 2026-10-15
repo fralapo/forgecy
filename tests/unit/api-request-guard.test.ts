@@ -47,14 +47,13 @@ test("localhost and IPv4 loopback are equivalent only on the same scheme and por
    appOrigin:"http://localhost:3000"
  }).ok,true);
 });
-test("only API writes are origin gated; production requires a configured host",()=>{
+test("only API writes are origin gated; local production derives the exact request origin",()=>{
  assert.equal(guardApiMutation(request("GET","https://evil.example"),{production:true}).ok,true);
  assert.equal(guardApiMutation(request("POST",undefined,undefined,"https://forgecy.example/workspace"),{
    production:true
  }).ok,true);
- const missing=guardApiMutation(request("POST","https://forgecy.example"),{production:true});
- assert.equal(missing.ok,false);
- if(!missing.ok)assert.equal(missing.status,503);
+ assert.equal(guardApiMutation(request("POST","https://forgecy.example"),{production:true}).ok,true);
+ assert.equal(guardApiMutation(request("POST","https://attacker.example"),{production:true}).ok,false);
  assert.equal(guardApiMutation(request("POST","http://forgecy.example"),{
    production:true,appOrigin:"http://forgecy.example"
  }).ok,false);
