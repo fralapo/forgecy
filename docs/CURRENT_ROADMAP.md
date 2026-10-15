@@ -9,7 +9,7 @@ Aggiornato il 15 ottobre 2026. Forgecy è un progetto open source per uso person
 - Memoria locale in SQLite con passaggi citabili e recupero ibrido: FTS5 sempre disponibile e ricerca semantica MiniLM locale attiva di default, indicizzata in background e disattivabile.
 - Riconciliazione dei cataloghi con le offerte esistenti, protezione dei campi modificati manualmente e associazione delle immagini prodotto quando l'evidenza è chiara.
 - Dossier, strategie e proposte AI con stati e approvazione esplicita.
-- Coda persistente in SQLite e worker locale, con quote, lease, retry e recupero dopo riavvio.
+- Coda persistente in SQLite e worker locale, con lease, retry di affidabilità e recupero dopo riavvio; Forgecy non applica quote alle richieste AI.
 - Editor statico per Instagram/LinkedIn, calendario editoriale e export.
 - Importazione manuale di snapshot Instagram e conteggio follower dall'archivio JSON dell'account proprietario; i nomi restano nel browser. Nessuno scraping o accesso automatico alla piattaforma.
 - Cataloghi OpenRouter correnti per modelli testo e immagini, selezionabili da Impostazioni e salvati nel workspace.
