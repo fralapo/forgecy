@@ -17,7 +17,7 @@ select{cursor:pointer}input[type="file"]{padding:9px}input[type="checkbox"]{widt
 .card{border:1px solid var(--border);background:white;border-radius:14px;padding:21px}
 .pill{display:inline-flex;gap:5px;align-items:center;border-radius:20px;padding:5px 9px;background:#eaf3eb;color:#3b7551;font-size:11px;font-weight:750;max-width:100%}
 .pill.warn{background:#fff4e3;color:#916528}.pill.muted{background:#eef1ed;color:#52665a}.pill.danger{background:#ffebe8;color:#a24438}
-.eyebrow{font-size:10px;font-weight:850;letter-spacing:.115em;text-transform:uppercase;color:#65776b}
+.eyebrow{font-size:10px;font-weight:850;letter-spacing:.115em;text-transform:uppercase;color:#52685a}
 .muted{color:var(--muted)}.caption{font-size:12px;color:var(--muted);line-height:1.55}
 .flex{display:flex}.between{justify-content:space-between}.center{align-items:center}.gap8{gap:8px}.gap12{gap:12px}.gap16{gap:16px}.wrap{flex-wrap:wrap}
 .stack{display:flex;flex-direction:column;gap:12px}.stack-lg{display:flex;flex-direction:column;gap:20px}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
@@ -55,7 +55,7 @@ select{cursor:pointer}input[type="file"]{padding:9px}input[type="checkbox"]{widt
 .page-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .metric-card{min-height:115px;display:flex;flex-direction:column;justify-content:space-between}.metric-card strong{font-size:31px;font-family:Manrope,sans-serif;letter-spacing:-.045em}
 .stat-line{display:flex;align-items:center;gap:8px}.stat-line span{color:var(--muted);font-size:12px}
-.next-step{border:1px solid #d8e8dd;background:#f0f7f0;border-radius:14px;padding:24px;display:flex;justify-content:space-between;align-items:center;gap:18px}.next-step h2{margin:9px 0;font-size:21px}.next-step p{max-width:550px;color:#60806b;font-size:13px;line-height:1.55}
+.next-step{border:1px solid #d8e8dd;background:#f0f7f0;border-radius:14px;padding:24px;display:flex;justify-content:space-between;align-items:center;gap:18px}.next-step h2{margin:9px 0;font-size:21px}.next-step p{max-width:550px;color:#506b59;font-size:13px;line-height:1.55}
 .card-title{font-weight:800;font-size:14px;margin:4px 0 8px}.card-subtitle{font-size:12px;color:var(--muted);line-height:1.55}
 .tabs{display:flex;gap:23px;border-bottom:1px solid var(--border);overflow-x:auto;white-space:nowrap;margin-bottom:20px}.tab{border:0;border-bottom:2px solid transparent;color:var(--muted);background:none;padding:12px 0;font-weight:700}.tab.active{border-color:var(--green2);color:var(--green)}
 .offer-type{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}
