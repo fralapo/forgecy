@@ -5,7 +5,7 @@ import { PDFDocument, StandardFonts } from "pdf-lib";
 import { applyNativeImageAssociations, nativeImageAssociationSchema } from "../../lib/catalog-image-association";
 import { extractNativeCatalogImages } from "../../lib/document-extract";
 import type { CatalogProduct } from "../../lib/catalog-import";
-import { createPdfParser, pdfWasmUrl } from "../../lib/pdf-runtime";
+import { createPdfParser, getPositionedPdfText, pdfWasmUrl } from "../../lib/pdf-runtime";
 import type { DocumentImage } from "../../lib/document-image";
 
 function crc32(bytes: Uint8Array) {
@@ -50,13 +50,14 @@ function solidPng(width: number, height: number, color: [number, number, number]
   ]);
 }
 
-async function productPdf(names: string[], imageCountForProduct: number[]) {
+async function productPdf(names: string[], imageCountForProduct: number[], codes: string[] = []) {
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([612, 792]);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   for (let index = 0; index < names.length; index++) {
     const y = 650 - index * 210;
     page.drawText(names[index]!, { x: 40, y: y + 40, size: 16, font });
+    if (codes[index]) page.drawText("Cod." + codes[index], { x: 360, y: y - 10, size: 9, font });
     for (let image = 0; image < imageCountForProduct[index]!; image++) {
       const color: [number, number, number] = [(index * 80 + image * 25 + 40) % 255, (index * 50 + image * 30 + 60) % 255, (index * 35 + image * 40 + 80) % 255];
       const asset = await pdf.embedPng(solidPng(120, 200, color));
@@ -102,6 +103,29 @@ test("native PDF images stay page-scoped and ambiguous surplus images are exclud
     assert.equal(images.length, 0);
   } finally {
     await ambiguous.destroy();
+  }
+});
+
+test("native PDF images match product codes found in offer descriptions", async () => {
+  const names = ["Alpha Cleaner", "Beta Polish"];
+  const codes = ["DD074", "DD080"];
+  const parser = await createPdfParser(await productPdf(names, [1, 1], codes));
+  try {
+    const extracted = await parser.getText({ first: 1, pageJoiner: "" });
+    const products: CatalogProduct[] = names.map((name, index) => ({
+      name, description: codes[index] + " — 750 ML", price: null, currency: "EUR",
+      nameQuote: name, descriptionQuote: codes[index] + " — 750 ML", priceQuote: "",
+      existingOfferId: null, imageIndex: null,
+    }));
+    const items = await getPositionedPdfText(parser, 1);
+    const images = await extractNativeCatalogImages(
+      parser, extracted.pages, "catalogo.pdf", bodyFor(names),
+      new Map([[1, products]]), new Map([[1, items]]),
+    );
+    assert.equal(images.length, 2);
+    assert.deepEqual(images.map(image => image.candidateProductNames), [[names[0]], [names[1]]]);
+  } finally {
+    await parser.destroy();
   }
 });
 

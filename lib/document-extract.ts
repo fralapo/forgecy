@@ -20,11 +20,11 @@ function clean(value:string):string{
 }
 function imageSectionCandidates(image:{x:number;y:number;width:number;height:number},items:PositionedPdfTextItem[],products:CatalogProduct[]):string[]{
  const productCodeNames=new Map(products.flatMap(product=>{
-  const parenthesized=/\(([^()]+)\)\s*$/u.exec(product.name)?.[1];
-  const tokens=parenthesized?[parenthesized]:product.name.match(/\b(?=[A-Z0-9./-]{5,}\b)(?=[A-Z0-9./-]*\d)[A-Z0-9][A-Z0-9./-]{4,}\b/giu)||[];
+  const tokens=(product.name+" "+product.description).match(/\b(?=[A-Z0-9./-]{4,}\b)(?=[A-Z0-9./-]*\d)[A-Z0-9][A-Z0-9./-]{3,}\b/giu)||[];
   return tokens.map(code=>[normalizeCatalogName(code),product.name] as const);
  }));
- const codeItems=items.filter(item=>productCodeNames.has(normalizeCatalogName(item.str)));
+ const codesForItem=(item:PositionedPdfTextItem)=>[...productCodeNames.keys()].filter(code=>normalizeCatalogName(item.str).includes(code));
+ const codeItems=items.filter(item=>codesForItem(item).length>0);
  if(!codeItems.length)return [];
  const centerX=image.x+image.width/2;
  const columns:number[]=[];
@@ -46,8 +46,10 @@ function imageSectionCandidates(image:{x:number;y:number;width:number;height:num
   .sort((a,b)=>Math.abs(a.centerY-imageCenterY)-Math.abs(b.centerY-imageCenterY))[0]?.rows;
  if(!group)return [];
  const matched=[...new Set(group.flatMap(item=>{
-  const productName=productCodeNames.get(normalizeCatalogName(item.str));
-  return productName?[productName]:[];
+  return codesForItem(item).flatMap(code=>{
+   const productName=productCodeNames.get(code);
+   return productName?[productName]:[];
+  });
  }))];
  return matched;
 }
