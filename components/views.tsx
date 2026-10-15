@@ -416,7 +416,7 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
       <div style={{textAlign:slidePreset.textAlign}}><h3>{current?.headline}</h3><p style={{marginTop:14}}>{current?.body}</p></div>
       <div style={{fontSize:11,fontWeight:750}}>DESIGN CONTESTUALE · {idx+1}</div>
      </div>
-     <div className="slide-nav"><button className="button small" disabled={idx===0} onClick={()=>setIdx(i=>i-1)}><ChevronLeft size={15}/></button><span className="caption">{idx+1} / {slides.length}</span><button className="button small" disabled={idx===slides.length-1} onClick={()=>setIdx(i=>i+1)}><ChevronRight size={15}/></button></div>
+     <div className="slide-nav"><button className="button small" aria-label="Pagina precedente" disabled={idx===0} onClick={()=>setIdx(i=>i-1)}><ChevronLeft size={15}/></button><span className="caption">{idx+1} / {slides.length}</span><button className="button small" aria-label="Pagina successiva" disabled={idx===slides.length-1} onClick={()=>setIdx(i=>i+1)}><ChevronRight size={15}/></button></div>
      <div className="flex center gap8 wrap" style={{justifyContent:"center",marginTop:14}}><a className="button small" href={exportRoot+"?format=png&slide="+idx} target="_blank" rel="noreferrer">Esporta PNG</a>{content.channel==="linkedin"&&<a className="button small" href={exportRoot+"?format=pdf"} target="_blank" rel="noreferrer">Esporta PDF</a>}</div>
      <p className="caption" style={{marginTop:8,textAlign:"center"}}>Esportazione basata sull’ultima versione salvata.</p>
     </>:<div className="empty"><FileText size={24} style={{margin:"auto auto 12px"}}/><p>Post testuale: lavora sulla didascalia e sul titolo.</p></div>}
