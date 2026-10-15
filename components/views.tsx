@@ -443,8 +443,8 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
   <div className="card" style={{marginBottom:16}}>
    <form className="flex center gap8 wrap" onSubmit={async event=>{
     event.preventDefault();const username=instagramHandle.trim();if(!username)return;
-    const result=await onAction("addInstagramProfile",{username});
-    if(result)setInstagramHandle("");
+    const result=await onAction("addInstagramProfile",{username}) as {account?:{id?:string}}|undefined;
+    if(result){if(result.account?.id)setRequested(result.account.id);setInstagramHandle("");}
    }}>
     <label htmlFor="instagram-public-handle" style={{fontWeight:650}}>Aggiungi account da monitorare</label>
     <input id="instagram-public-handle" value={instagramHandle} onChange={event=>setInstagramHandle(event.target.value)} placeholder="username Instagram" autoCapitalize="none" autoCorrect="off" style={{flex:"1 1 220px",maxWidth:340}} aria-describedby="instagram-public-hint"/>
@@ -465,6 +465,7 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
          onAction("disconnectSocial",{id:selected});
       }}>Rimuovi profilo</button>
     </div></div></div>}
+  {selected&&!snap&&<div className="notice" role="status" style={{marginTop:12}}>Profilo @{data.social_accounts.find(a=>a.id===selected)?.username} aggiunto. Instagram non viene interrogato automaticamente: importa una rilevazione JSON o l’archivio follower usando i pulsanti qui sopra per visualizzare i dati.</div>}
   <div className="grid3" style={{marginTop:18}}>
    <div className="card metric-card"><span className="muted">Follower · ultima lettura</span>
     <strong>{num(stats.followers)}</strong><small>{stats.delta===null?"Variazione non disponibile":(stats.delta>=0?"+":"")+num(stats.delta)+" rispetto alla lettura precedente"}</small></div>

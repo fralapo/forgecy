@@ -84,6 +84,8 @@ npm run start
 
 L'origine locale delle richieste viene derivata automaticamente da host e porta; non è necessario configurare `APP_ORIGIN` per `npm run start` o per una porta locale diversa. Il percorso Tailscale continua a confrontare identità, hostname e origine HTTPS configurati. Il worker locale delle attività AI viene avviato con il server e non richiede cron, token di servizio o un processo database separato.
 
+Il proxy Next.js accetta corpi fino a 66 MB per consentire PDF fino al limite applicativo di 64 MiB, includendo gli overhead multipart. Le altre route mantengono i propri limiti applicativi.
+
 ## Risoluzione problemi
 
 | Sintomo | Cosa controllare |
