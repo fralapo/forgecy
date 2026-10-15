@@ -142,6 +142,63 @@ test("native PDF images match product codes found in offer descriptions", async 
   }
 });
 
+test("native catalog photos match headings separated by a small vertical gap", async () => {
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage([612, 792]);
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const names = ["Cutter (5233TE)", "Cutter (5233V)"];
+  const products: CatalogProduct[] = names.map(name => ({
+    name, description: "", price: null, currency: "EUR", nameQuote: name, descriptionQuote: name, priceQuote: "",
+    existingOfferId: null, imageIndex: null,
+  }));
+  for (const [index, y] of [400, 160].entries()) {
+    page.drawText(names[index]!, { x: 40, y: y + 100, size: 12, font });
+    const photo = await pdf.embedPng(solidPng(120, 200, [40 + index * 80, 90, 130]));
+    page.drawImage(photo, { x: 70, y, width: 80, height: 34 });
+  }
+  const parser = await createPdfParser(await pdf.save());
+  try {
+    const extracted = await parser.getText({ first: 1, pageJoiner: "" });
+    const items = await getPositionedPdfText(parser, 1);
+    const images = await extractNativeCatalogImages(
+      parser, extracted.pages, "catalogo.pdf", bodyFor(names), new Map([[1, products]]), new Map([[1, items]]),
+    );
+    assert.equal(images.length, 2);
+    assert.deepEqual(images.map(image => image.candidateProductNames), names.map(name => [name]));
+  } finally {
+    await parser.destroy();
+  }
+});
+
+test("native catalog photos group price codes and nearby accessory columns", async () => {
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage([612, 792]);
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const primary = "Cutter (5233TE)";
+  const accessory = "Cutter (5233TL)";
+  page.drawText("5233TL", { x: 229, y: 620, size: 9, font });
+  page.drawText("5233TE", { x: 260, y: 662, size: 9, font });
+  const photo = await pdf.embedPng(solidPng(120, 200, [50, 100, 150]));
+  page.drawImage(photo, { x: 73, y: 673, width: 145, height: 34 });
+  const products: CatalogProduct[] = [primary, accessory].map(name => ({
+    name, description: "", price: null, currency: "EUR", nameQuote: name, descriptionQuote: name, priceQuote: "",
+    existingOfferId: null, imageIndex: null,
+  }));
+  const parser = await createPdfParser(await pdf.save());
+  try {
+    const extracted = await parser.getText({ first: 1, pageJoiner: "" });
+    const items = await getPositionedPdfText(parser, 1);
+    const images = await extractNativeCatalogImages(
+      parser, extracted.pages, "catalogo.pdf", bodyFor([primary, accessory]),
+      new Map([[1, products]]), new Map([[1, items]]),
+    );
+    assert.equal(images.length, 1);
+    assert.deepEqual(images[0]?.candidateProductNames, [primary]);
+  } finally {
+    await parser.destroy();
+  }
+});
+
 test("native catalog images are retained when one family photo represents several priced variants", async () => {
   const names = ["15÷35 3,5 168 (U02820301)", "35÷50 4 202 (U02820302)", "50÷80 5 280 (U02820303)"];
   const parser = await createPdfParser(await productPdf(names, [1, 0, 0]));

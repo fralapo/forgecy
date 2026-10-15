@@ -29,9 +29,9 @@ function imageSectionCandidates(image:{x:number;y:number;width:number;height:num
  const centerX=image.x+image.width/2;
  const columns:number[]=[];
  for(const x of codeItems.map(item=>item.x).sort((a,b)=>a-b))
-  if(!columns.length||Math.abs(x-columns[columns.length-1]!)>30)columns.push(x);
+  if(!columns.length||Math.abs(x-columns[columns.length-1]!)>40)columns.push(x);
  const columnCenter=columns.reduce((closest,current)=>Math.abs(current-centerX)<Math.abs(closest-centerX)?current:closest,columns[0]!);
- const columnItems=codeItems.filter(item=>Math.abs(item.x-columnCenter)<=30).sort((a,b)=>b.y-a.y);
+ const columnItems=codeItems.filter(item=>Math.abs(item.x-columnCenter)<=40).sort((a,b)=>b.y-a.y);
  const groups:Array<typeof columnItems>=[];
  for(const item of columnItems){
   const group=groups[groups.length-1];
@@ -42,7 +42,9 @@ function imageSectionCandidates(image:{x:number;y:number;width:number;height:num
  // even when the table is beside the image rather than underneath it.
  const imageCenterY=image.y+image.height/2;
  const group=groups.map(rows=>({rows,centerY:rows.reduce((sum,row)=>sum+row.y,0)/rows.length}))
-  .filter(candidate=>Math.abs(candidate.centerY-imageCenterY)<=image.height/2+40)
+  // Some catalogs place a product heading above its photo with a small gap;
+  // allow that gap while still selecting only the nearest text group.
+  .filter(candidate=>Math.abs(candidate.centerY-imageCenterY)<=image.height/2+68)
   .sort((a,b)=>Math.abs(a.centerY-imageCenterY)-Math.abs(b.centerY-imageCenterY))[0]?.rows;
  if(!group)return [];
  const matched=[...new Set(group.flatMap(item=>{
