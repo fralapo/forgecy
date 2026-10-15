@@ -609,6 +609,56 @@ export function parseNativeCodePriceRows(title:string,text:string):CatalogProduc
  return products;
 }
 
+/** Parse PDF tables whose multi-line header wraps the code and price columns. */
+export function parseNativeWrappedTabularCodePriceRows(title:string,text:string):CatalogProduct[]{
+ if(!looksLikeCatalog(title,text))return [];
+ const lines=text.split(/\r?\n/u);
+ const products:CatalogProduct[]=[];
+ const seen=new Set<string>();
+ const isCodeHeader=(value:string)=>/^(?:codice|cod|sku)$/iu.test(normalizeCatalogName(value));
+ const isPriceHeader=(value:string)=>/^(?:€|eur|euro|prezzo|listino)$/iu.test(value.trim())||/^(?:eur|euro|prezzo|listino)$/u.test(normalizeCatalogName(value));
+ for(let index=0;index<lines.length;index++){
+  const cells=(lines[index]||"").split("\t").map(value=>value.trim());
+  let header=cells;
+  let codeIndex=cells.findIndex(isCodeHeader);
+  let priceIndex=cells.findIndex(isPriceHeader);
+  let dataStart=index+1;
+  if(codeIndex<0||priceIndex<0){
+   const continuation=(lines[index+1]||"").split("\t").map(value=>value.trim());
+   const continuationCodeIndex=continuation.findIndex(isCodeHeader);
+   const continuationPriceIndex=continuation.findIndex(isPriceHeader);
+   if(cells.length<2||continuationCodeIndex<1||continuationPriceIndex<=continuationCodeIndex||!/(?:serie|valvole|utilizzo)/iu.test(continuation[0]||""))continue;
+   header=[...cells.slice(0,-1),`${cells.at(-1)} ${continuation[0]}`,...continuation.slice(1)];
+   codeIndex=cells.length-1+continuationCodeIndex;
+   priceIndex=cells.length-1+continuationPriceIndex;
+   dataStart=index+2;
+  }
+  if(codeIndex<4||priceIndex<=codeIndex||priceIndex!==header.length-1||!/(?:diametro|\bd\b|\bdn\b)/iu.test(header.slice(0,codeIndex).join(" ")))continue;
+  const familyParts=lines.slice(Math.max(0,index-4),index).map(line=>line.trim()).filter(Boolean).slice(-2);
+  if(!familyParts.length||familyParts.some(part=>part.length>120))continue;
+  for(let rowIndex=dataStart;rowIndex<lines.length;rowIndex++){
+   const row=(lines[rowIndex]||"").split("\t").map(value=>value.trim());
+   if(row.length<=priceIndex){if(rowIndex>dataStart)break;continue;}
+   const code=row[codeIndex]||"";
+   const priceQuote=row[priceIndex]||"";
+   if(!/^(?=.*[A-Z])(?=.*\d)[A-Z0-9][A-Z0-9./-]{4,}$/iu.test(code)||!/^(?:\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})$/u.test(priceQuote))continue;
+   const attributes=row.slice(0,codeIndex).filter(Boolean);
+   if(attributes.length<2||attributes.some(value=>value.length>100))continue;
+   const family=familyParts.join(" — ");
+   const name=`${family} — ${attributes.join(" × ")} (${code})`.slice(0,180);
+   const identity=normalizeCatalogName(name);
+   if(seen.has(identity))continue;
+   seen.add(identity);
+   const price=parsePrice(priceQuote);
+   if(price===null)continue;
+   products.push({name,description:`${family} — ${attributes.join(" — ")} — ${code}`.slice(0,1200),price,currency:"EUR",
+    nameQuote:JSON.stringify([...familyParts,...attributes,code]),descriptionQuote:JSON.stringify([...familyParts,...attributes,code]),
+    priceQuote,existingOfferId:null,imageIndex:null});
+  }
+ }
+ return products.slice(0,1000);
+}
+
 /** Parse native PDF product cards whose code, unit, and single price share a text line. */
 export function parseNativeInlineCodePriceRows(title:string,text:string):CatalogProduct[]{
  if(!looksLikeCatalog(title,text))return [];
@@ -779,6 +829,8 @@ export function parseLocalCatalogProducts(title:string,text:string):CatalogProdu
  if(nativeDimensionProducts.length)return nativeDimensionProducts;
  const nativeSegmentedPriceProducts=parseNativeAlignedCodeSegmentPriceRows(title,text);
  if(nativeSegmentedPriceProducts.length)return nativeSegmentedPriceProducts;
+ const nativeWrappedTableProducts=parseNativeWrappedTabularCodePriceRows(title,text);
+ if(nativeWrappedTableProducts.length)return nativeWrappedTableProducts;
  const nativeRows=looksLikeCatalog(title,text)?parseNativeCatalogRows(text):[];
  if(nativeRows.length)return nativeRows;
  const nativePricedRows=parseNativeCodePriceRows(title,text);

@@ -4345,5 +4345,167 @@
     "family": "Sicutool Sgorbie per intaglio",
     "variant": "12 mm",
     "price": 80.2
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCP020",
+    "family": "Power Quick/CP",
+    "variant": "16 × 10 × F03-04 × 11 × VKD-TKD",
+    "price": 57.9
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCP020",
+    "family": "Power Quick/CP",
+    "variant": "20 × 15 × F03-04 × 11 × VKD-TKD",
+    "price": 57.9
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCP025",
+    "family": "Power Quick/CP",
+    "variant": "25 × 20 × F03-05 × 11 × VKD-TKD",
+    "price": 73.68
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCP025F04",
+    "family": "Power Quick/CP",
+    "variant": "25 × 20 × F04 × 11 × VKD-TKD",
+    "price": 73.68
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCP032",
+    "family": "Power Quick/CP",
+    "variant": "32 × 25 × F03-05 × 11 × VKD-TKD",
+    "price": 81.85
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCP032F04",
+    "family": "Power Quick/CP",
+    "variant": "32 × 25 × F04 × 11 × VKD-TKD",
+    "price": 81.85
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCP040",
+    "family": "Power Quick/CP",
+    "variant": "40 × 32 × F05-07 × 14 × VKD-TKD",
+    "price": 93.57
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCP050",
+    "family": "Power Quick/CP",
+    "variant": "50 × 40 × F05-07 × 14 × VKD-TKD",
+    "price": 93.57
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCP063",
+    "family": "Power Quick/CP",
+    "variant": "63 × 50 × F05-07 × 14 × VKD-TKD",
+    "price": 99.43
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCE020",
+    "family": "Power Quick/CE",
+    "variant": "16 × 10 × F03-04 × 14 × VKD-TKD",
+    "price": 57.9
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCE020",
+    "family": "Power Quick/CE",
+    "variant": "20 × 15 × F03-04 × 14 × VKD-TKD",
+    "price": 57.9
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCE025",
+    "family": "Power Quick/CE",
+    "variant": "25 × 20 × F03-05 × 14 × VKD-TKD",
+    "price": 73.68
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCE025F04",
+    "family": "Power Quick/CE",
+    "variant": "25 × 20 × F04 × 14 × VKD-TKD",
+    "price": 73.68
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCE032",
+    "family": "Power Quick/CE",
+    "variant": "32 × 25 × F03-05 × 14 × VKD-TKD",
+    "price": 81.85
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCE032F04",
+    "family": "Power Quick/CE",
+    "variant": "32 × 25 × F04 × 14 × VKD-TKD",
+    "price": 81.85
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCE040",
+    "family": "Power Quick/CE",
+    "variant": "40 × 32 × F05-07 × 14 × VKD-TKD",
+    "price": 93.57
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCE050",
+    "family": "Power Quick/CE",
+    "variant": "50 × 40 × F05-07 × 14 × VKD-TKD",
+    "price": 93.57
+  },
+  {
+    "source": "FIP Listino prezzi 2026 valvole attuate, pagina stampata 206",
+    "url": "https://www.aliaxis.it/website/aliaxis-it/DOWNLOAD/LISTINI/LISTINI%20FIP/01-LISTINO%20VALVOLE%20ATTUATE%202026-REL_08-05-26.pdf",
+    "fixture": "fip-actuated-valves-2026-page-206.txt",
+    "code": "PQCE063",
+    "family": "Power Quick/CE",
+    "variant": "63 × 50 × F05-07 × 14 × VKD-TKD",
+    "price": 99.43
   }
 ]
