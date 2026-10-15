@@ -25,9 +25,13 @@ export default function Workspace(){
  const [apiConfigured,setApiConfigured]=useState<boolean|null>(null);
  const [modal,setModal]=useState<Modal>(null);
  const modalRef=useRef<HTMLDivElement>(null);
+ const modalErrorRef=useRef<HTMLDivElement|null>(null);
  const modalTriggerRef=useRef<HTMLElement|null>(null);
  const [switchOpen,setSwitchOpen]=useState(false);
  const [chatOpen,setChatOpen]=useState(false);
+ const [isChatMobile,setIsChatMobile]=useState(false);
+ const chatPanelRef=useRef<HTMLElement|null>(null);
+ const chatTriggerRef=useRef<HTMLElement|null>(null);
  const [chatText,setChatText]=useState("");
  const [busy,setBusy]=useState<string|null>(null);
  const [error,setError]=useState("");
@@ -36,6 +40,42 @@ export default function Workspace(){
  const [loading,setLoading]=useState(true);
  const railEnd=useRef<HTMLDivElement|null>(null);
  const previousSourceStates=useRef<Record<string,string>|null>(null);
+ const openChat=useCallback(()=>{
+  chatTriggerRef.current=document.activeElement instanceof HTMLElement?document.activeElement:null;
+  setChatOpen(true);
+ },[]);
+ const closeChat=useCallback(()=>setChatOpen(false),[]);
+
+ useEffect(()=>{
+  const query=window.matchMedia("(max-width: 1040px)");
+  const update=()=>setIsChatMobile(query.matches);
+  update();
+  query.addEventListener("change",update);
+  return()=>query.removeEventListener("change",update);
+ },[]);
+ useEffect(()=>{
+  if(!isChatMobile||!chatOpen)return;
+  const panel=chatPanelRef.current;
+  const focusable=()=>panel?Array.from(panel.querySelectorAll<HTMLElement>(
+   'button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])'
+  )).filter(item=>item.getAttribute("aria-hidden")!=="true"):[];
+  (focusable()[0]||panel)?.focus();
+  function handleKeyDown(event:KeyboardEvent){
+   if(document.querySelector('.modal[role="dialog"]'))return;
+   if(event.key==="Escape"){event.preventDefault();closeChat();return;}
+   if(event.key!=="Tab")return;
+   const items=focusable();
+   if(!items.length){event.preventDefault();panel?.focus();return;}
+   const first=items[0],last=items[items.length-1];
+   if(event.shiftKey&&(document.activeElement===first||!panel?.contains(document.activeElement))){event.preventDefault();last.focus();}
+   else if(!event.shiftKey&&(document.activeElement===last||!panel?.contains(document.activeElement))){event.preventDefault();first.focus();}
+  }
+  document.addEventListener("keydown",handleKeyDown);
+  return()=>{
+   document.removeEventListener("keydown",handleKeyDown);
+   if(panel?.contains(document.activeElement))chatTriggerRef.current?.focus();
+  };
+ },[chatOpen,closeChat,isChatMobile]);
 
  const flash=(msg:string)=>{setToast(msg);window.setTimeout(()=>setToast(""),4200)};
  const refresh=useCallback(async(id:string)=>{
@@ -45,7 +85,7 @@ export default function Workspace(){
  const choose=(id:string)=>{
    if(!clients.some(c=>c.id===id))return;
    currentId.current=id;setClientId(id);setData(null);setSwitchOpen(false);setChatText("");
-   setView("today");setChatOpen(false);
+   setView("today");closeChat();
    window.localStorage.setItem("forgecy-active-client",id);
    const url=new URL(window.location.href);url.searchParams.set("clientId",id);url.searchParams.delete("integration");
    window.history.replaceState(null,"",url);
@@ -150,7 +190,7 @@ export default function Workspace(){
 
   if(name==="approveMission"){
     const response=await mutate<{campaign_id:string}>(name,()=>requestJson(root+"/missions/"+body.id+"/approve",{method:"POST",body:"{}"}),"Campagna creata dalla proposta");
-    if(response){setView("projects");setChatOpen(false)}
+    if(response){setView("projects");closeChat()}
     return response;
   }
   if(name==="rejectMission")return mutate(name,()=>requestJson(root+"/missions/"+body.id+"/reject",{method:"POST",body:"{}"}),"Proposta scartata");
@@ -234,10 +274,13 @@ export default function Workspace(){
   }else if(kind==="content"){
    url=root+"/contents";payload={campaign_id:item.campaign_id,title:String(f.get("title")||""),channel:String(f.get("channel")||"instagram"),format:String(f.get("format")||"post"),caption:String(f.get("caption")||"")};
   }else if(kind==="mission"){
-   setChatOpen(true);
    const offer=String(f.get("offer_id")||"");
    const result=await onAction("newMission",{request:String(f.get("request")||""),period:String(f.get("period")||"Prossimi 30 giorni"),offer_id:offer||null});
-   if(result)setModal(null);
+   if(result){
+    chatTriggerRef.current=modalTriggerRef.current;
+    setModal(null);
+    setChatOpen(true);
+   }
    return;
   }else if(kind==="upload"){
    const file=f.get("file");if(!(file instanceof File)){setError("Seleziona un file");return}
@@ -269,17 +312,18 @@ export default function Workspace(){
    const items=focusable();
    if(!items.length){event.preventDefault();panel?.focus();return;}
    const first=items[0],last=items[items.length-1];
-   if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
-   else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+   if(event.shiftKey&&(document.activeElement===first||!panel?.contains(document.activeElement))){event.preventDefault();last.focus();}
+   else if(!event.shiftKey&&(document.activeElement===last||!panel?.contains(document.activeElement))){event.preventDefault();first.focus();}
   }
   document.addEventListener("keydown",handleKeyDown);
   return()=>{document.removeEventListener("keydown",handleKeyDown);previousFocus?.focus();};
  },[modal]);
+ useEffect(()=>{if(error&&modal)modalErrorRef.current?.focus();},[error,modal]);
  const latestDossier=data?.dossiers?.[0];
  const latestStrategy=data?.strategies?.[0];
  const canCampaign=latestDossier?.status==="approved" && latestDossier.knowledge_revision===data?.client.knowledge_revision && latestStrategy?.status==="approved" && latestStrategy.knowledge_revision===data?.client.knowledge_revision;
  const pendingMissions=(data?.missions||[]).filter(x=>x.status==="proposed");
- const openModal=(next:Exclude<Modal,null>)=>{if(!modal)modalTriggerRef.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setModal(next);};
+ const openModal=(next:Exclude<Modal,null>)=>{if(!modal)modalTriggerRef.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setError("");setModal(next);};
  const baseModal=()=>openModal({kind:"client"});
 
  if(loading)return <main className="login-panel" style={{minHeight:"100vh"}}><div className="stack"><LoaderCircle className="spin"/> Caricamento Forgecy…</div></main>;
@@ -291,7 +335,7 @@ export default function Workspace(){
     <div className="nav-label">IL TUO WORKSPACE</div>
     <nav className="side-nav" aria-label="Navigazione workspace">{nav.map(n=><button key={n.key} aria-current={view===n.key?"page":undefined} className={"side-link "+(view===n.key?"active":"")} onClick={()=>setView(n.key)}><n.icon size={18}/>{n.label}</button>)}</nav>
     <div className="sidebar-bottom">
-     <button className="side-link" onClick={()=>setChatOpen(true)}><Sparkles size={17}/> Leader AI</button>
+     <button className="side-link" aria-haspopup="dialog" aria-expanded={chatOpen} onClick={openChat}><Sparkles size={17}/> Leader AI</button>
      <div className="separator"/>
      <button className="client-switch" onClick={()=>setSwitchOpen(x=>!x)}>
       <div className="client-avatar">{current?initials(current.name):<Users size={17}/>}</div>
@@ -306,22 +350,25 @@ export default function Workspace(){
    <div className="main-area">
     <div className="topbar">
      <div className="flex center gap8"><button className="mobile-client-button" aria-label={current?`${initials(current.name)} ${current.name}, cambia cliente`:"＋ Scegli cliente"} aria-expanded={switchOpen} onClick={()=>setSwitchOpen(x=>!x)}><span aria-hidden="true">{current?initials(current.name):"＋"}</span> <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{current?.name||"Scegli cliente"}</span><ChevronDown size={13}/></button><span className="muted topbar-crumb" style={{fontSize:12}}>Workspace <ChevronRight size={12} style={{display:"inline"}}/> {nav.find(n=>n.key===view)?.label}</span></div>
-     <div className="flex center gap8"><span className="pill muted topbar-client" style={{maxWidth:190,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{current?.name||"Nessun cliente"}</span><button className="button small mobile-chat-toggle" aria-label="Apri chat con Leader AI" onClick={()=>setChatOpen(true)}><MessageCircle size={15}/> <span>Chat</span></button></div>
+     <div className="flex center gap8"><span className="pill muted topbar-client" style={{maxWidth:190,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{current?.name||"Nessun cliente"}</span><button className="button small mobile-chat-toggle" aria-label="Apri chat con Leader AI" aria-haspopup="dialog" aria-expanded={chatOpen} onClick={openChat}><MessageCircle size={15}/> <span>Chat</span></button></div>
     </div>
     <main className="page-scroll"><div className="page-body">
      {data?.sources.some(s=>s.kind==="document"&&["queued","running"].includes(String((s.source_metadata?.document_processing as Record<string,unknown>|undefined)?.state)))&&<div className="notice" role="status" style={{marginBottom:16,display:"flex",alignItems:"center",gap:10}}><LoaderCircle className="spin" size={17}/><span><strong>Documento in elaborazione in background.</strong> Puoi continuare a lavorare o cambiare schermata; Forgecy ti avviserà quando sarà pronto. Il computer e il server devono restare accesi.</span></div>}
-     {error&&<div className="notice error" role="alert" style={{marginBottom:18,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>{error}<button className="button small" onClick={()=>setError("")}>Chiudi</button></div>}
+     {error&&!modal&&<div className="notice error" role="alert" style={{marginBottom:18,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>{error}<button className="button small" onClick={()=>setError("")}>Chiudi</button></div>}
      {view==="settings"?<ModelSettings/>:!current?<div className="stack-lg welcome-empty" style={{maxWidth:640,margin:"10vh auto"}}>
       <div className="eyebrow">BENVENUTO IN FORGECY</div><h1>Il lavoro inizia da un cliente.</h1><p className="tagline">Crea uno spazio dedicato: potrai aggiungere sito, fonti, prodotti e servizi, costruire un dossier approvato e parlare con il Leader.</p>
       <p className="caption">Crea uno spazio dedicato per organizzare fonti, prodotti, servizi e progetti. Le impostazioni dei modelli AI sono disponibili nella sezione Impostazioni.</p>
       <div className="flex gap8 wrap welcome-actions">{apiConfigured===false&&<button className="button" onClick={()=>setView("settings")}><Settings2 size={16}/> Configura API e modelli AI</button>}<button className="button primary" onClick={baseModal}><Plus size={16}/> Aggiungi cliente</button></div>
      </div>:!data?<div className="empty">Caricamento dati di {current.name}…</div>:
-      <Views data={data} view={view} onView={setView} onModal={(kind,item)=>openModal({kind,item})} onAction={onAction} onChat={()=>setChatOpen(true)} busy={busy}/>}
+      <Views data={data} view={view} onView={setView} onModal={(kind,item)=>openModal({kind,item})} onAction={onAction} onChat={openChat} busy={busy}/>}
     </div></main>
    </div>
-   <aside className={"chat-panel "+(chatOpen?"open":"")}>
+   <aside ref={chatPanelRef} className={"chat-panel "+(chatOpen?"open":"")} tabIndex={-1}
+    role={isChatMobile&&chatOpen&&!modal?"dialog":undefined} aria-modal={isChatMobile&&chatOpen&&!modal?true:undefined}
+    aria-label={isChatMobile&&chatOpen&&!modal?"Chat con il Leader AI":undefined}
+    aria-hidden={Boolean(modal)||(isChatMobile&&!chatOpen)} inert={Boolean(modal)||(isChatMobile&&!chatOpen)}>
     <div className="chat-head"><div className="chat-title"><span className="avatar-square" style={{width:36,height:36}}><Sparkles size={19}/></span><span>Leader AI <small style={{display:"block",fontWeight:500}}>{current?.name||"Seleziona un cliente"}</small></span></div>
-     <button className="button small ghost mobile-chat-toggle" aria-label="Chiudi chat" onClick={()=>setChatOpen(false)}><X size={18}/></button></div>
+     <button className="button small ghost mobile-chat-toggle" aria-label="Chiudi chat" onClick={closeChat}><X size={18}/></button></div>
     <div className="chat-message-list">
      <div className="chat-bubble leader">Ciao! Sono il Leader di Forgecy. Conosco esclusivamente le informazioni del cliente attivo. Posso rispondere a domande o coordinare una campagna con un&apos;approvazione esplicita.</div>
      {data?.messages?.map(m=><div key={m.id} style={{display:"contents"}}>
@@ -358,10 +405,11 @@ export default function Workspace(){
     </form>
    </aside>
   </div>
-  <nav className="mobile-bottom" aria-label="Navigazione principale">{[nav[0],nav[1],nav[2],nav[3],nav[4]].map(n=><button key={n.key} aria-current={view===n.key?"page":undefined} aria-label={n.label} title={n.label} className={view===n.key?"active":""} onClick={()=>{setView(n.key);setChatOpen(false)}}><n.icon size={19}/><span>{n.label}</span></button>)}<button aria-current={view==="settings"?"page":undefined} aria-label="Impostazioni" title="Impostazioni" className={view==="settings"?"active":""} onClick={()=>{setView("settings");setChatOpen(false)}}><Settings2 size={19}/><span>Impost.</span></button></nav>
+  <nav className="mobile-bottom" aria-label="Navigazione principale">{[nav[0],nav[1],nav[2],nav[3],nav[4]].map(n=><button key={n.key} aria-current={view===n.key?"page":undefined} aria-label={n.label} title={n.label} className={view===n.key?"active":""} onClick={()=>{setView(n.key);closeChat()}}><n.icon size={19}/><span>{n.label}</span></button>)}<button aria-current={view==="settings"?"page":undefined} aria-label="Impostazioni" title="Impostazioni" className={view==="settings"?"active":""} onClick={()=>{setView("settings");closeChat()}}><Settings2 size={19}/><span>Impost.</span></button></nav>
   {switchOpen&&<div className="switch-popover mobile-switch"><div className="eyebrow" style={{padding:8}}>CLIENTI</div>{clients.map(c=><button key={c.id} onClick={()=>choose(c.id)}><span className="client-avatar">{initials(c.name)}</span>{c.name}</button>)}<button onClick={()=>{setSwitchOpen(false);baseModal()}}><Plus size={14}/> Nuovo cliente</button></div>}
   {modal&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setModal(null)}}><div ref={modalRef} className="modal" role="dialog" aria-modal="true" aria-labelledby="forgecy-modal-title" tabIndex={-1}><div className="modal-head"><div><div className="eyebrow">FORGECY / {current?.name||"NUOVO CLIENTE"}</div><h2 id="forgecy-modal-title" style={{marginTop:7}}>{({client:"Aggiungi un cliente",source:"Nuova fonte",signal:"Ascolto della community",upload:"Carica documento",offer:"Prodotto o servizio",profile:"Profilo del cliente",campaign:"Nuova campagna",content:"Nuovo contenuto",mission:"Affida un obiettivo al Leader"} as Record<string,string>)[modal.kind]||"Nuovo elemento"}</h2></div><button className="button ghost small" aria-label="Chiudi" onClick={()=>setModal(null)}><X size={18}/></button></div>
    <form onSubmit={modal.kind==="client"?createClient:submitModal}>
+    {error&&<div ref={modalErrorRef} className="notice error" role="alert" tabIndex={-1} style={{marginBottom:10}}>{error}</div>}
     {modal.kind==="client"&&<><div><label htmlFor="forgecy-field-name">Nome del cliente *</label><input id="forgecy-field-name" required name="name" autoFocus maxLength={160} placeholder="Es. CasaLuce"/></div><div className="cols"><div><label htmlFor="forgecy-field-industry">Settore</label><input id="forgecy-field-industry" name="industry" placeholder="Es. Cura della casa"/></div><div><label htmlFor="forgecy-field-intake">Modalità di partenza</label><select id="forgecy-field-intake" name="intake" defaultValue="site"><option value="site">Importa il sito (consigliato)</option><option value="files">Carica documenti</option><option value="both">Sito e documenti</option><option value="later">Lo configuro più tardi</option></select></div></div><div><label htmlFor="forgecy-field-website">Sito web da analizzare</label><input id="forgecy-field-website" name="website" type="url" placeholder="https://azienda.it"/><p className="caption" style={{marginTop:5}}>Acquisisce pagine pubbliche, catalogo prodotti, immagini e documenti trovati sullo stesso dominio.</p></div><div><label htmlFor="forgecy-field-files">Documenti integrativi (PDF fino a 64 MB; altri file fino a 10 MB)</label><input id="forgecy-field-files" type="file" name="files" multiple accept=".txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg,.webp"/><p className="caption" style={{marginTop:5}}>Il sito basta per iniziare. Il dossier viene preparato automaticamente dopo l’importazione.</p></div></>}
     {modal.kind==="profile"&&<><div><label htmlFor="forgecy-field-name">Nome</label><input id="forgecy-field-name" required name="name" defaultValue={current?.name}/></div><div className="cols"><div><label htmlFor="forgecy-field-industry">Settore</label><input id="forgecy-field-industry" name="industry" defaultValue={current?.industry}/></div><div><label htmlFor="forgecy-field-website">Sito web</label><input id="forgecy-field-website" name="website" defaultValue={current?.website||""}/></div></div><div><label htmlFor="forgecy-field-description">Descrizione</label><textarea id="forgecy-field-description" name="description" rows={4} defaultValue={String(data?.client.profile?.description||"")}/></div><div><label htmlFor="forgecy-field-tone">Tono di voce</label><textarea id="forgecy-field-tone" name="tone" rows={2} defaultValue={String(data?.client.profile?.tone||"")}/></div>
       <div><label htmlFor="forgecy-field-brand_logo_url">Logo</label><select id="forgecy-field-brand_logo_url" name="brand_logo_url" defaultValue={String(data?.client.profile?.brand_logo_url||"__automatic__")}><option value="__automatic__">Selezione automatica dal sito</option>{[...new Map((data?.sources||[]).filter(source=>source.source_metadata?.asset_role==="logo"&&source.file_path&&source.source_metadata?.storage_bucket==="forgecy-assets").map(source=>[source.url,source])).values()].map(source=><option key={source.id} value={source.url||""}>{source.title}{source.url?" · "+new URL(source.url).pathname.split("/").pop():""}</option>)}</select><p className="caption" style={{marginTop:5}}>La scansione rileva il logo dal sito. Qui puoi scegliere un’altra immagine importata.</p></div>

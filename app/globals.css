@@ -131,6 +131,7 @@ button,.button{touch-action:manipulation}
  .chat-message-list{padding:16px}
  .chat-compose{padding:12px 14px calc(12px + env(safe-area-inset-bottom))}
  .chat-compose textarea{font-size:16px;min-height:76px}
+  .backup-list a{display:inline-flex;align-items:center;min-height:44px;padding:0 8px;margin-left:-8px;vertical-align:middle}
  .chat-footer{flex-wrap:wrap}
  .chat-footer .button{min-height:42px}
  .modal-backdrop{align-items:end;padding:0}

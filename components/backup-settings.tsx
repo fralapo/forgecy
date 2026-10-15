@@ -118,7 +118,7 @@ export default function BackupSettings() {
           <button className="button" onClick={() => void createBackup()} disabled={Boolean(busy)}>Crea backup ora</button>
         </div>
       </>}
-      {backups.length ? <ul className="stack" style={{ paddingLeft: 20, margin: 0 }}>
+      {backups.length ? <ul className="stack backup-list" style={{ paddingLeft: 20, margin: 0 }}>
         {backups.map(backup => <li key={backup.id} className="caption">{new Date(backup.createdAt).toLocaleString("it-IT")} · {(backup.size / 1024 / 1024).toFixed(1)} MB · <a href={`/api/sync/backups/${encodeURIComponent(backup.id)}`}>Scarica</a></li>)}
       </ul> : <p className="caption">Il primo backup verrà creato all’avvio di Forgecy.</p>}
       {backupListError && <p className="notice error" role="status">{backupListError}</p>}
