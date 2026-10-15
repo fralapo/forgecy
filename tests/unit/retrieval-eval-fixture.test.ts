@@ -10,10 +10,10 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
  const queryPath=join(process.cwd(),"tests/fixtures/retrieval-eval.json");
  const candidates=JSON.parse(readFileSync(fixturePath,"utf8")) as Candidate[];
  const targets=JSON.parse(readFileSync(queryPath,"utf8")) as Array<{id:string;passage:string;category:string;source_url?:string}>;
- assert.equal(targets.length,39);
- assert.equal(candidates.length,150);
+ assert.equal(targets.length,42);
+ assert.equal(candidates.length,156);
  const catalogTargets=targets.filter(target=>target.category.startsWith("catalog-"));
- assert.equal(catalogTargets.length,31);
+ assert.equal(catalogTargets.length,34);
  assert.ok(catalogTargets.every(target=>target.source_url),"every public catalog target must have a citation source");
  assert.equal(new Set(candidates.map(candidate=>candidate.id)).size,candidates.length);
  const targetIds=new Set(targets.map(target=>target.id));
@@ -26,6 +26,7 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
   const match=/codice (AIR\d{6})(?:, variante ([^,]+))?/u.exec(target.passage);
   return match?[`${match[1]}:${(match[2]||"default").normalize("NFKD").replace(/[\u0300-\u036f]/gu,"").toLocaleLowerCase("it").replace(/[^\p{L}\p{N}]+/gu," ").trim()}`]:[];
  }));
+ const targetConexCodes=new Set(targets.flatMap(target=>[...target.passage.matchAll(/codice ((?:8090\s+|8090R|8091\s+)[A-Z0-9]{9,12}),/giu)].map(match=>match[1]!.replace(/\s+/gu,"").toUpperCase())));
  const distractorIds=new Set(candidates.map(candidate=>candidate.id));
  assert.equal([...targetIds].some(id=>distractorIds.has(id)),false);
  const sources=new Map<string,number>();
@@ -41,6 +42,7 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
   const ferroli=/codice ([A-Z0-9]+), prezzo ([\d.]+,\d{2}) EUR\./u.exec(candidate.passage);
   const sicutool=/codice (5234G \d+), larghezza (\d+) mm, prezzo ([\d,]+) EUR\./u.exec(candidate.passage);
   const sicutoolCard=/codice ([A-Z0-9]+), (?:larghezza|lunghezza(?: totale)?) (\d+) mm,[^.]*?prezzo ([\d,]+) EUR(?:[.,;]|$)/u.exec(candidate.passage);
+  const conex=/codice ((?:8090\s+|8090R|8091\s+)[A-Z0-9]{9,12}), misura ([^,]+), prezzo ([\d,]+) EUR al pezzo\./u.exec(candidate.passage);
   if(usag){
    assert.equal(candidate.source_url,"https://usag.it/usag_documents/documentisito/CataListino_ITA_2026.pdf");
    assert.equal(candidate.id,`usag-candidate-${usag[1].toLowerCase()}`);
@@ -66,6 +68,11 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
    assert.equal(candidate.source_url,"https://cms.ferroli.com/sites/default/files/2026-09/LISTINO%20FERROLI%20MAR%202026_89LI3019_01_low.pdf");
    assert.match(candidate.id,/^ferroli-candidate-[a-z0-9-]+$/iu);
    assert.equal(targetProductCodes.has(ferroli[1]),false,candidate.id);
+  }else if(conex){
+   const code=conex[1]!.replace(/\s+/gu,"");
+   assert.equal(candidate.source_url,"https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf");
+   assert.equal(candidate.id,`conex-candidate-${code.toLowerCase()}`);
+   assert.equal(targetConexCodes.has(code.toUpperCase()),false,candidate.id);
   }else if(sicutool){
    assert.equal(candidate.source_url,"https://www.sicutool.it/Novit%C3%A0/Catalogo-Sicutool-Utensili-2025");
    assert.equal(candidate.id,`sicutool-candidate-${sicutool[1].replace(/\s+/gu,"").toLowerCase()}-${sicutool[2]}`);
@@ -86,5 +93,5 @@ test("retrieval evaluation catalog distractors are sourced, unique and distinct 
    assert.equal(targetProductCodes.has(productCode.toUpperCase()),false,candidate.id);
   }
  }
- assert.deepEqual([...sources.values()].sort((a,b)=>a-b),[1,1,1,9,15,15,22,24,24,38]);
+ assert.deepEqual([...sources.values()].sort((a,b)=>a-b),[1,1,1,6,9,15,15,22,24,24,38]);
 });

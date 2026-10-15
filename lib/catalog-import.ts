@@ -120,9 +120,12 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
   const normalizedHeaders=headers.map(normalizeCatalogName);
   let nameIndex=headerIndex(normalizedHeaders,["nome","nome prodotto","prodotto","product","product name","name","articolo","nome articolo","item","modello","model"]);
   let priceIndex=headerIndex(normalizedHeaders,["prezzo listino","prezzo","price","costo","listino","eur"]);
+  if(priceIndex<0)priceIndex=headers.findIndex(header=>/^(?:€|eur|euro)\s*\/\s*(?:cad\.?|pezzo|unità|unita)$/iu.test(header.trim()));
   if(priceIndex<0)priceIndex=headers.findIndex(header=>/^\s*€\s*$/u.test(header));
   let descriptionIndex=headerIndex(normalizedHeaders,["descrizione prodotto","descrizione","description","dettagli","details"]);
   const codeIndex=headerIndex(normalizedHeaders,["cod","codice","code","sku","codice prodotto","product code"]);
+  const perItemPriceHeader=priceIndex>=0&&/^(?:€|eur|euro)\s*\/\s*(?:cad\.?|pezzo|unità|unita)$/iu.test(headers[priceIndex]!.trim());
+  const familyHeading=perItemPriceHeader?lines.slice(0,headerLine).reverse().map(line=>line.trim()).find(line=>/^[A-Z0-9]{3,8}\s+\p{L}/iu.test(line))||"":"";
   const segmentIndex=headerIndex(normalizedHeaders,["segmento","segment","categoria","category"]);
   const contentIndex=headerIndex(normalizedHeaders,["contenuto","content","formato","confezione","packaging"]);
   const barcodeIndex=headerIndex(normalizedHeaders,["barcode","ean","itf-14"]);
@@ -159,8 +162,10 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
    if(productByCode&&price===null)continue;
    const imageReference=productByCode?cells.map(value=>/!?\[img-(\d+)\.[^\]]+\]\(/iu.exec(value)).find(Boolean):null;
    const imageIndex=imageReference?Number(imageReference[1]):null;
-   products.push({name,description,price,currency:(currencyIndex>=0?cells[currencyIndex]||"EUR":"EUR").trim().toUpperCase().slice(0,3)||"EUR",
-    nameQuote:name,descriptionQuote:nameFromDescription?JSON.stringify(evidenceQuotes):productByCode?JSON.stringify(productCodeDescription):description,
+   const displayName=familyHeading&&productByCode?`${familyHeading} — ${(cells[0]||"").trim()} (${name})`.slice(0,180):name;
+   const nameQuote=familyHeading&&productByCode?JSON.stringify([familyHeading,(cells[0]||"").trim(),name]):name;
+   products.push({name:displayName,description,price,currency:(currencyIndex>=0?cells[currencyIndex]||"EUR":"EUR").trim().toUpperCase().slice(0,3)||"EUR",
+    nameQuote,descriptionQuote:nameFromDescription?JSON.stringify(evidenceQuotes):productByCode?JSON.stringify(productCodeDescription):description,
     priceQuote:price===null?"":priceQuote,existingOfferId:null,imageIndex:imageIndex!==null&&imageIndex<=7?imageIndex:null});
   }
   found.push(...products);

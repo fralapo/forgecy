@@ -263,5 +263,26 @@
     "passage": "Catalogo Sicutool Utensili 2025, pagina 1108: coltello universale Carolus con lama a settori, codice 5233V, lunghezza totale 170 mm, prezzo 23,80 EUR.",
     "query": "Quanto costa il coltello Carolus Sicutool 5233V lungo 170 mm?",
     "source_url": "https://www.sicutool.it/Novit%C3%A0/Catalogo-Sicutool-Utensili-2025"
+  },
+  {
+    "id": "conex-8090-elbow-one-inch",
+    "category": "catalog-variant-price",
+    "passage": "Listino ufficiale Conex Bänninger Serie 8000, pagina 188: gomito a 90° F/F in ottone, codice 8090 008000000, misura 1 pollice, prezzo 12,17 EUR al pezzo.",
+    "query": "Quanto costa il gomito F/F Conex Serie 8000 codice 8090 008000000, misura 1 pollice?",
+    "source_url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf"
+  },
+  {
+    "id": "conex-8090-chrome-one-inch",
+    "category": "catalog-variant-price",
+    "passage": "Listino ufficiale Conex Bänninger Serie 8000, pagina 188: gomito a 90° F/F cromato, codice 8090 008C00000, misura 1 pollice, prezzo 16,39 EUR al pezzo.",
+    "query": "Prezzo del gomito cromato Conex 8090 da un pollice?",
+    "source_url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf"
+  },
+  {
+    "id": "conex-8090r-reduced-three-quarter-half",
+    "category": "catalog-variant-price",
+    "passage": "Listino ufficiale Conex Bänninger Serie 8000, pagina 188: gomito ridotto F/F, codice 8090R006004000, misura 3/4 × 1/2 pollice, prezzo 8,77 EUR al pezzo.",
+    "query": "Quanto costa il gomito ridotto Conex 8090R da 3/4 per 1/2 pollice?",
+    "source_url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf"
   }
 ]

@@ -4,6 +4,7 @@ import { readFileSync, statSync, mkdtempSync, rmSync, writeFileSync } from "node
 import { basename, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { MAX_PDF_UPLOAD_BYTES } from "../lib/document-safety";
+import { evaluateDocumentEvidence } from "../lib/document-evaluation";
 
 loadEnvConfig(process.cwd());
 
@@ -100,19 +101,12 @@ async function main() {
     const productImages = (sources.data || []).filter((source: Record<string, unknown>) =>
       (source.source_metadata as Record<string, unknown> | undefined)?.asset_role === "product" && typeof source.file_path === "string");
     const linkedProductImages = new Set((offers.data || []).map((offer: Record<string, unknown>) => offer.image_source_id).filter(Boolean));
-    const normalizeEvidenceMarker = (value: string) => value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("it").replace(/[^\p{L}\p{N}]+/gu, "");
     const extractedBody = (payload.source?.body || "");
-    const matchedTextMarkerIndices = expectedText.flatMap((marker, index) =>
-      normalizeEvidenceMarker(extractedBody).includes(normalizeEvidenceMarker(marker)) ? [index + 1] : []);
-    const matchedProductMarkerIndices = expectedProducts.flatMap((marker, index) =>
-      (offers.data || []).some((offer: Record<string, unknown>) =>
-        normalizeEvidenceMarker(`${String(offer.name || "")} ${String(offer.description || "")}`).includes(normalizeEvidenceMarker(marker))) ? [index + 1] : []);
-    const matchedPricedProductMarkerIndices = expectedPricedProducts.flatMap((expected, index) =>
-      (offers.data || []).some((offer: Record<string, unknown>) => {
-        const productEvidence = normalizeEvidenceMarker(`${String(offer.name || "")} ${String(offer.description || "")}`);
-        return productEvidence.includes(normalizeEvidenceMarker(expected.code)) &&
-          productEvidence.includes(normalizeEvidenceMarker(expected.variant)) && Number(offer.price) === expected.price;
-      }) ? [index + 1] : []);
+    const evidenceEvaluation = evaluateDocumentEvidence({
+      body: extractedBody,
+      offers: (offers.data || []) as Array<{ name?: unknown; description?: unknown; price?: unknown }>,
+      expectedText, expectedRows, expectedProducts, expectedPricedProducts,
+    });
     let retainedSeedImage: string | null = null;
     const retainedImages: string[] = [];
     if (evidenceDirectory) {
@@ -152,17 +146,20 @@ async function main() {
       ocrMethod: payload.source?.source_metadata?.document_processing?.method || null,
       ocrPages: payload.source?.source_metadata?.document_processing?.page_count || null,
       pipelineElapsedMs,
-      expectedTextMarkersFound: matchedTextMarkerIndices.length,
-      expectedTextMarkerIndices: matchedTextMarkerIndices,
+      extractedTextPreview: process.argv.includes("--show-extracted-text") ? extractedBody.slice(0, 12_000) : undefined,
+      expectedTextMarkersFound: evidenceEvaluation.textMarkerIndices.length,
+      expectedTextMarkerIndices: evidenceEvaluation.textMarkerIndices,
       expectedTextMarkerCount: expectedText.length,
-      expectedTableRowsFound: expectedRows.filter(row => (payload.source?.body || "").replace(/\s+/g, "").toLocaleLowerCase("it").includes(row.replace(/\s+/g, "").toLocaleLowerCase("it"))).length,
+      expectedTableRowsFound: evidenceEvaluation.tableRowIndices.length,
+      expectedTableRowIndices: evidenceEvaluation.tableRowIndices,
       expectedTableRowCount: expectedRows.length,
-      expectedProductMarkersFound: matchedProductMarkerIndices.length,
-      expectedProductMarkerIndices: matchedProductMarkerIndices,
+      expectedProductMarkersFound: evidenceEvaluation.productMarkerIndices.length,
+      expectedProductMarkerIndices: evidenceEvaluation.productMarkerIndices,
       expectedProductMarkerCount: expectedProducts.length,
-      expectedPricedProductMarkersFound: matchedPricedProductMarkerIndices.length,
-      expectedPricedProductMarkerIndices: matchedPricedProductMarkerIndices,
+      expectedPricedProductMarkersFound: evidenceEvaluation.pricedProductMarkerIndices.length,
+      expectedPricedProductMarkerIndices: evidenceEvaluation.pricedProductMarkerIndices,
       expectedPricedProductMarkerCount: expectedPricedProducts.length,
+      expectationsPassed: evidenceEvaluation.expectationsPassed,
       catalog: payload.catalog || null,
       productRows: offers.data?.length || 0,
       visualProductAssets: productImages.length,
@@ -178,7 +175,7 @@ async function main() {
       userWorkspaceModified: false,
       credentialPrintedOrWritten: false,
     }, null, 2));
-    if (payload.catalog?.status !== "processed") process.exitCode = 1;
+    if (payload.catalog?.status !== "processed" || !evidenceEvaluation.expectationsPassed) process.exitCode = 1;
   } finally {
     db?.connection.close();
     delete (globalThis as typeof globalThis & { __forgecyLocalDb?: unknown }).__forgecyLocalDb;

@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {test} from "node:test";
 import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,hasVariantPriceMatrix,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseLocalCatalogProducts,parseMarkdownCatalogCards,parseMarkdownCatalogCodePriceCards,parseMarkdownCatalogCodeVariants,parseMarkdownCatalogTable,parseMarkdownImageVariants,parseMarkdownVariantPriceMatrices,parsePositionedNativeCatalogRows} from "../../lib/catalog-import";
 
@@ -60,6 +62,43 @@ test("OCR Markdown price tables are imported deterministically with exact row ev
  assert.equal(products[0].price,1690);
  assert.equal(products[0].priceQuote,"1.690,00 €");
  assert.equal(catalogEvidenceIsValid(products[0],source),true);
+});
+
+test("OCR item tables with a €/cad header preserve dimension, SKU and independent row prices",()=>{
+ const source="Series 8000 — raccordi in ottone\n8090 Gomito a 90° F/F\n| Dimensione | Bustina | Scatola | Codice Articolo | €/cad |\n| --- | --- | --- | --- | --- |\n| 1 | 5 | 30 | 8090 008000000 | 12,17 |\n| 1 1/4 | 5 | 10 | 8090 010000000 | 20,79 |\n8090 C Gomito a 90° F/F, cromato\n| Dimensione | Bustina | Scatola | Codice Articolo | €/cad |\n| --- | --- | --- | --- | --- |\n| 1 | 10 | 20 | 8090 008C00000 | 16,39 |";
+ const products=parseLocalCatalogProducts("Conex_Listino_2026_p188_scanned.pdf",source);
+ assert.equal(products.length,3);
+ assert.deepEqual(products.map(product=>[product.name,product.description,product.price]),[
+  ["8090 Gomito a 90° F/F — 1 (8090 008000000)","1 — 5 — 30",12.17],
+  ["8090 Gomito a 90° F/F — 1 1/4 (8090 010000000)","1 1/4 — 5 — 10",20.79],
+  ["8090 C Gomito a 90° F/F, cromato — 1 (8090 008C00000)","1 — 10 — 20",16.39],
+ ]);
+ assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
+ assert.equal(catalogEvidenceIsValid({...products[0]!,price:16.39},source),false);
+});
+
+test("Conex Serie 8000 page 188 OCR imports all table rows with family names and exact evidence",()=>{
+ const source=readFileSync(join(process.cwd(),"tests/fixtures/conex-series-8000-page-188-ocr.md"),"utf8");
+ const products=parseLocalCatalogProducts("Conex_Listino_2026_p188_scanned.pdf",source);
+ assert.equal(products.length,23);
+ assert.deepEqual(products.slice(0,2).map(product=>product.name),[
+  "8090 Gomito a 90° F/F — 1/4 (8090 002000000)",
+  "8090 Gomito a 90° F/F — 3/8 (8090 003000000)",
+ ]);
+ assert.deepEqual([
+  ["8090 008000000",12.17],
+  ["8090 010000000",20.79],
+  ["8090 008C00000",16.39],
+ ].map(([code])=>{
+  const product=products.find(row=>row.name.includes(String(code)));
+  return [product?.name,product?.price];
+ }),[
+  ["8090 Gomito a 90° F/F — 1 (8090 008000000)",12.17],
+  ["8090 Gomito a 90° F/F — 1 1/4 (8090 010000000)",20.79],
+  ["8090 C Gomito a 90° F/F, cromato — 1 (8090 008C00000)",16.39],
+ ]);
+ assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
+ assert.ok(products.every(product=>product.imageIndex===null),"page-only OCR image references are not treated as product assets");
 });
 
 test("OCR width-price matrices expand exact code and size variants with explicit image references",()=>{
