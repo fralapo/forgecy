@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseLocalCatalogProducts,parseMarkdownCatalogCards,parseMarkdownCatalogCodeVariants,parseMarkdownCatalogTable,parseMarkdownImageVariants,parsePositionedNativeCatalogRows} from "../../lib/catalog-import";
+import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseLocalCatalogProducts,parseMarkdownCatalogCards,parseMarkdownCatalogCodeVariants,parseMarkdownCatalogTable,parseMarkdownImageVariants,parseMarkdownVariantPriceMatrices,parsePositionedNativeCatalogRows} from "../../lib/catalog-import";
 
 test("catalog names normalize accents and punctuation for safe matching",()=>{
  assert.equal(normalizeCatalogName("Caffè — Espresso 100%"),"caffe espresso 100");
@@ -60,6 +60,18 @@ test("OCR Markdown price tables are imported deterministically with exact row ev
  assert.equal(products[0].price,1690);
  assert.equal(products[0].priceQuote,"1.690,00 €");
  assert.equal(catalogEvidenceIsValid(products[0],source),true);
+});
+
+test("OCR width-price matrices expand exact code and size variants with explicit image references",()=>{
+ const source="Catalogo Sicutool\nSGORBIE PER INTAGLIO\n5234G 8\n![img-0.jpeg](img-0.jpeg)\nDescrizione di riferimento vedi Art. 5234G 1\n| Larghe | mm | 2 | 4 |\n| --- | --- | --- | --- |\n| 5234G 8 | Cad. | 52,70 | 50,80 |\n| Larghe | mm | 6 | 8 |\n| --- | --- | --- | --- |\n| 5234G 8 | Cad. | 50,80 | 50,80 |\n5234G 9\n![img-1.jpeg](img-1.jpeg)\nDescrizione di riferimento vedi Art. 5234G 1\n| Larghe | mm | 2 | 4 |\n| --- | --- | --- | --- |\n| 5234G 9 | Cad. | 56,30 | 54,50 |";
+ const products=parseLocalCatalogProducts("Sicutool-Catalogo-2025.pdf",source);
+ assert.equal(products.length,6);
+ assert.deepEqual(products.slice(0,4).map(product=>product.name),[
+  "5234G 8 — 2 mm","5234G 8 — 4 mm","5234G 8 — 6 mm","5234G 8 — 8 mm"]);
+ assert.deepEqual(products.map(product=>product.imageIndex),[0,0,0,0,1,1]);
+ assert.deepEqual(products.map(product=>product.price),[52.7,50.8,50.8,50.8,56.3,54.5]);
+ assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
+ assert.equal(catalogEvidenceIsValid({...products[0]!,price:999},source),false);
 });
 
 test("OCR lists with description, code, segment and price columns keep identifiers and categories as evidence",()=>{
@@ -223,4 +235,16 @@ test("positioned PDF rows reject ambiguous prices and unlabelled codes",()=>{
   {str:"U02820301",x:115,y:100},{str:"25,00",x:150,y:100},{str:"30,00",x:170,y:100},
   {str:"U02820302",x:115,y:90},{str:"25,00",x:150,y:90}
  ]),[]);
+});
+
+test("OCR plain-text width matrices keep aligned prices and skip rows with missing values",()=>{
+ const source="Larg. mm 2 4 6\n5234G 1 Cad. 38,10 36,30\nLarg. mm 18 20 22\n5234G 1 Cad. 51,30 53,20 55,10";
+ const products=parseMarkdownVariantPriceMatrices(source);
+ assert.equal(products.length,3);
+ assert.deepEqual(products.map(product=>[product.name,product.price]),[
+  ["5234G 1 — 18 mm",51.3],
+  ["5234G 1 — 20 mm",53.2],
+  ["5234G 1 — 22 mm",55.1]
+ ]);
+ assert.ok(products.every(product=>product.imageIndex===null&&catalogEvidenceIsValid(product,source)));
 });

@@ -169,6 +169,83 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
  return found;
 }
 
+/** Parse OCR tables where a product code is repeated across a width-by-price matrix. */
+export function parseMarkdownVariantPriceMatrices(text:string):CatalogProduct[]{
+ const lines=text.split(/\r?\n/u);
+ const products:CatalogProduct[]=[];
+ const seen=new Set<string>();
+ let widths:string[]=[];
+ let unit="";
+ let activeImage:number|null=null;
+ let plainWidths:string[]=[];
+ let plainUnit="";
+ for(const line of lines){
+  const trimmed=line.trim();
+  const imageMatch=/^!?\[img-(\d+)\.[^\]]+\]\(/iu.exec(trimmed);
+  if(imageMatch){const index=Number(imageMatch[1]);activeImage=index<=7?index:null;continue;}
+  const cells=markdownCells(trimmed);
+  if(cells){
+   if(cells.every(cell=>/^:?-{3,}:?$/u.test(cell.replace(/\s/gu,""))))continue;
+   const first=normalizeCatalogName(cells[0]||"");
+   if(/^largh/u.test(first)&&cells.length>=4){
+    unit=(cells[1]||"").trim();
+    widths=cells.slice(2).map(value=>value.trim());
+    continue;
+   }
+   const code=(cells[0]||"").trim();
+   const isProductCode=/^(?=.*[\p{L}])(?=.*\d)[A-Z0-9]+(?:\s+[A-Z0-9]{1,8}){0,2}$/iu.test(code);
+   const isUnitPrice=/^cad\.?$/iu.test((cells[1]||"").trim());
+   if(!isProductCode||!isUnitPrice||!widths.length||!unit)continue;
+   for(let index=0;index<Math.min(widths.length,cells.length-2);index++){
+    const width=widths[index]!;
+    const priceQuote=(cells[index+2]||"").trim();
+    const price=parsePrice(priceQuote);
+    if(!width||price===null)continue;
+    const identity=`${normalizeCatalogName(code)}|${normalizeCatalogName(width)}|${unit.toLowerCase()}|${priceQuote}`;
+    if(seen.has(identity))continue;
+    seen.add(identity);
+    const name=`${code} — ${width} ${unit}`.slice(0,180);
+    products.push({name,description:`${width} ${unit}`,price,currency:"EUR",
+     nameQuote:JSON.stringify([code,width,unit]),descriptionQuote:JSON.stringify([width,unit]),
+     priceQuote,existingOfferId:null,imageIndex:activeImage});
+   }
+   continue;
+  }
+  const plainHeader=/^Larg\.?\s+(\S+)\s+(.+)$/iu.exec(trimmed);
+  if(plainHeader){
+   plainUnit=plainHeader[1]!.trim();
+   plainWidths=plainHeader[2]!.trim().split(/\s+/u);
+   continue;
+  }
+  const plainPriceRow=/^((?=.*[\p{L}])(?=.*\d)[A-Z0-9]+(?:\s+[A-Z0-9]{1,8}){0,2})\s+Cad\.?\s+(.+)$/iu.exec(trimmed);
+  if(plainPriceRow&&plainWidths.length&&plainUnit){
+   const code=plainPriceRow[1]!.trim();
+   const prices=plainPriceRow[2]!.trim().split(/\s+/u);
+   // OCR sometimes drops a value. Never zip a partial price list to widths: that
+   // would silently assign every later price to the wrong product size.
+   if(prices.length===plainWidths.length){
+    for(let index=0;index<plainWidths.length;index++){
+     const width=plainWidths[index]!;
+     const priceQuote=prices[index]!;
+     const price=parsePrice(priceQuote);
+     if(!width||price===null)continue;
+     const identity=`${normalizeCatalogName(code)}|${normalizeCatalogName(width)}|${plainUnit.toLowerCase()}|${priceQuote}`;
+     if(seen.has(identity))continue;
+     seen.add(identity);
+     const name=`${code} — ${width} ${plainUnit}`.slice(0,180);
+     products.push({name,description:`${width} ${plainUnit}`,price,currency:"EUR",
+      nameQuote:JSON.stringify([code,width,plainUnit]),descriptionQuote:JSON.stringify([width,plainUnit]),
+      priceQuote,existingOfferId:null,imageIndex:null});
+    }
+   }
+   continue;
+  }
+  const codeHeading=/^(?=.*[\p{L}])(?=.*\d)[A-Z0-9]+(?:\s+[A-Z0-9]{1,8}){0,2}$/iu.test(trimmed);
+  if(codeHeading)activeImage=null;
+ }
+ return products.slice(0,1000);
+}
+
 /** Parse OCR product cards: a short product heading, details, then a printed code/packaging block. */
 export function parseMarkdownCatalogCards(text:string):CatalogProduct[]{
  const lines=text.split(/\r?\n/u);
@@ -324,7 +401,8 @@ export function parseLocalCatalogProducts(title:string,text:string):CatalogProdu
  const csvProducts=parseCsvCatalog(text);
  if(csvProducts.length)return csvProducts;
  const markdownProducts=looksLikeCatalog(title,text)?parseMarkdownCatalogTable(text):[];
- if(markdownProducts.length)return markdownProducts;
+ const matrixProducts=parseMarkdownVariantPriceMatrices(text);
+ if(markdownProducts.length||matrixProducts.length)return [...markdownProducts,...matrixProducts].slice(0,1000);
  const markdownCodeVariants=/catalog|catalogo|listino|price[ -]?list/i.test(title)?parseMarkdownCatalogCodeVariants(text):[];
  if(markdownCodeVariants.length)return markdownCodeVariants;
  const catalogCards=parseMarkdownCatalogCards(text);

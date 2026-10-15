@@ -56,6 +56,13 @@ async function main() {
     const expectedText = argumentsFor("--expect-text");
     const expectedRows = argumentsFor("--expect-row");
     const expectedProducts = argumentsFor("--expect-product");
+    const expectedPricedProducts = argumentsFor("--expect-priced-product").map(value => {
+      const [code, variant, price, ...extra] = value.split("|").map(part => part.trim());
+      const parsedPrice = Number(price?.replace(",", "."));
+      if (!code || !variant || !price || extra.length || !Number.isFinite(parsedPrice) || parsedPrice < 0)
+        throw new Error("Ogni --expect-priced-product deve usare il formato codice|variante|prezzo.");
+      return { code, variant, price: parsedPrice };
+    });
     let expectedOfferId: string | null = null;
     if (expectedName) {
       const offer = await db.from("offers").insert({
@@ -100,6 +107,12 @@ async function main() {
     const matchedProductMarkerIndices = expectedProducts.flatMap((marker, index) =>
       (offers.data || []).some((offer: Record<string, unknown>) =>
         normalizeEvidenceMarker(`${String(offer.name || "")} ${String(offer.description || "")}`).includes(normalizeEvidenceMarker(marker))) ? [index + 1] : []);
+    const matchedPricedProductMarkerIndices = expectedPricedProducts.flatMap((expected, index) =>
+      (offers.data || []).some((offer: Record<string, unknown>) => {
+        const productEvidence = normalizeEvidenceMarker(`${String(offer.name || "")} ${String(offer.description || "")}`);
+        return productEvidence.includes(normalizeEvidenceMarker(expected.code)) &&
+          productEvidence.includes(normalizeEvidenceMarker(expected.variant)) && Number(offer.price) === expected.price;
+      }) ? [index + 1] : []);
     let retainedSeedImage: string | null = null;
     const retainedImages: string[] = [];
     if (evidenceDirectory) {
@@ -118,11 +131,12 @@ async function main() {
     }
     const imageAssignments = (offers.data || []).map((offer: Record<string, unknown>, index: number) => {
       const linked = productImages.find((image: Record<string, unknown>) => image.id === offer.image_source_id);
+      const imageOrdinal = linked ? Number(/\((\d+)\)$/.exec(String(linked.title || ""))?.[1] || productImages.indexOf(linked) + 1) : null;
       return {
         productRecord: index + 1,
         seededProduct: offer.id === expectedOfferId,
         linked: Boolean(linked),
-        imageIndex: linked ? Number(/\((\d+)\)$/.exec(String(linked.title || ""))?.[1] || 0) || null : null,
+        imageIndex: imageOrdinal === null ? null : imageOrdinal - 1,
       };
     });
     const imageAssignmentSummary = imageAssignments.length > 80
@@ -146,6 +160,9 @@ async function main() {
       expectedProductMarkersFound: matchedProductMarkerIndices.length,
       expectedProductMarkerIndices: matchedProductMarkerIndices,
       expectedProductMarkerCount: expectedProducts.length,
+      expectedPricedProductMarkersFound: matchedPricedProductMarkerIndices.length,
+      expectedPricedProductMarkerIndices: matchedPricedProductMarkerIndices,
+      expectedPricedProductMarkerCount: expectedPricedProducts.length,
       catalog: payload.catalog || null,
       productRows: offers.data?.length || 0,
       visualProductAssets: productImages.length,

@@ -221,5 +221,26 @@
     "passage": "Listino Ferroli marzo 2026: pompa di calore OMNIA M 3.2 taglia 16T trifase, potenza termica A7W35 15,9 kW, codice 2CP000JF, prezzo 12.576,72 EUR.",
     "query": "Qual è il codice e il prezzo del modello Ferroli OMNIA M 3.2 da 16 kW trifase?",
     "source_url": "https://cms.ferroli.com/sites/default/files/2026-09/LISTINO%20FERROLI%20MAR%202026_89LI3019_01_low.pdf"
+  },
+  {
+    "id": "sicutool-5234g8-width2",
+    "category": "catalog-variant-price",
+    "passage": "Catalogo Sicutool Utensili 2025, pagina 1110: sgorbia per intaglio, codice 5234G 8, larghezza 2 mm, prezzo 52,70 EUR.",
+    "query": "Qual è il prezzo della sgorbia Sicutool 5234G 8 con larghezza 2 mm?",
+    "source_url": "https://www.sicutool.it/Novit%C3%A0/Catalogo-Sicutool-Utensili-2025"
+  },
+  {
+    "id": "sicutool-5234g8-width30",
+    "category": "catalog-variant-price",
+    "passage": "Catalogo Sicutool Utensili 2025, pagina 1110: sgorbia per intaglio, codice 5234G 8, larghezza 30 mm, prezzo 73,20 EUR.",
+    "query": "Quanto costa la forma 8 della sgorbia Sicutool 5234G 8 larga 30 mm?",
+    "source_url": "https://www.sicutool.it/Novit%C3%A0/Catalogo-Sicutool-Utensili-2025"
+  },
+  {
+    "id": "sicutool-5234g19-width20",
+    "category": "catalog-variant-price",
+    "passage": "Catalogo Sicutool Utensili 2025, pagina 1110: sgorbia per intaglio, codice 5234G 19, larghezza 20 mm, prezzo 69,50 EUR.",
+    "query": "Prezzo della sgorbia Sicutool codice 5234G 19, larghezza 20 mm?",
+    "source_url": "https://www.sicutool.it/Novit%C3%A0/Catalogo-Sicutool-Utensili-2025"
   }
 ]
