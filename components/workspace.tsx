@@ -389,11 +389,23 @@ export default function Workspace(){
        const blockers=Array.isArray(qa?.blocking_issues)?qa.blocking_issues as string[]:[];
        const warnings=Array.isArray(qa?.warnings)?qa.warnings as string[]:[];
        const scores=qa?.scores as Record<string,number>|undefined;
+       const assets=Array.isArray(m.payload.contents)?m.payload.contents as Array<{
+        channel?:string;format?:string;title?:string;caption?:string;slides?:Array<{headline?:string;body?:string}>
+       }>:[];
        return <div className="mission-card" key={m.id}>
       <span className="pill warn" style={{alignSelf:"start"}}>PROPOSTA DEL TEAM</span><strong>{m.request}</strong>
       <p>{((m.payload as Record<string,unknown>).campaign as Record<string,unknown>|undefined)?.title as string||"Piano di campagna pronto"}</p>
       <div className="caption">{data?.agent_events.filter(x=>x.mission_id===m.id).length||0} passaggi tra agenti registrati</div>
       {scores&&<div className="caption">Valutazione editoriale (AI, non KPI): strategia {scores.strategic_fit}/10 · originalità {scores.originality}/10 · prove {scores.evidence}/10 · leggibilità {scores.readability}/10</div>}
+      {assets.length>0&&<details className="mission-preview"><summary>Anteprima contenuti · {assets.length} {assets.length===1?"contenuto":"contenuti"}</summary><div className="mission-preview-list">{assets.map((asset,index)=>{
+       const slides=Array.isArray(asset.slides)?asset.slides:[];
+       return <article className="mission-preview-asset" key={`${m.id}-${index}`}>
+        <strong>{asset.title||`Contenuto ${index+1}`}</strong>
+        <span className="caption">{asset.channel||"Canale"} · {asset.format||"Formato"}{slides.length?` · ${slides.length} slide`:""}</span>
+        {asset.caption&&<p className="mission-preview-copy">{asset.caption}</p>}
+        {slides.map((slide,slideIndex)=><div className="mission-preview-slide" key={slideIndex}><b>Slide {slideIndex+1}{slide.headline?` · ${slide.headline}`:""}</b>{slide.body&&<p>{slide.body}</p>}</div>)}
+       </article>;
+      })}</div></details>}
       {warnings.length>0&&<details><summary className="caption" style={{cursor:"pointer"}}>Osservazioni da verificare ({warnings.length})</summary><div className="stack" style={{marginTop:7}}>{warnings.map((v,i)=><p className="caption" key={i}>• {v}</p>)}</div></details>}
       {blockers.length>0&&<div className="notice error"><strong>Proposta bloccata: {blockers.length} problemi</strong><div className="stack" style={{marginTop:8}}>{blockers.map((v,i)=><p key={i} className="caption">{v}</p>)}</div><p className="caption" style={{marginTop:8}}>Richiedi una nuova proposta corretta; questa versione non può essere approvata.</p></div>}
       <div className="stack" style={{gap:2}}>{data?.agent_events.filter(x=>x.mission_id===m.id).slice(-4).map(ev=><div className="agent-event" key={ev.id}>{ev.agent} → {ev.recipient}: {ev.summary}</div>)}</div>
