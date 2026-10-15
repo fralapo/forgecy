@@ -149,9 +149,9 @@ test("recovers parsed OCR annotations from a downstream provider error", async (
   assert.match(result.body,/codice AL-250/);
 });
 
-test("splits scanned PDFs over 40 pages into ordered OCR requests", async () => {
+test("splits scanned PDFs into ordered OCR requests capped at ten pages", async () => {
   const pdf = await PDFDocument.create();
-  for (let page = 0; page < 42; page++) pdf.addPage([300, 400]);
+  for (let page = 0; page < 22; page++) pdf.addPage([300, 400]);
   const bytes = new Uint8Array(await pdf.save());
   const chunkPages: number[] = [];
   const ranges: string[] = [];
@@ -172,14 +172,62 @@ test("splits scanned PDFs over 40 pages into ordered OCR requests", async () => 
       }), {status: 200});
     }
   });
-  assert.deepEqual(chunkPages, [40, 2]);
-  assert.match(ranges[0]!, /p1-40/);
-  assert.match(ranges[1]!, /p41-42/);
-  assert.equal(result.pageCount, 42);
-  assert.equal(result.pagesProcessed, 42);
+  assert.deepEqual(chunkPages, [10, 10, 2]);
+  assert.match(ranges[0]!, /p1-10/);
+  assert.match(ranges[1]!, /p11-20/);
+  assert.match(ranges[2]!, /p21-22/);
+  assert.equal(result.pageCount, 22);
+  assert.equal(result.pagesProcessed, 22);
   assert.equal(result.textTruncated, false);
-  assert.match(result.body, /Pagine PDF 1–40/);
-  assert.match(result.body, /Pagine PDF 41–42/);
+  assert.match(result.body, /Pagine PDF 1–10/);
+  assert.match(result.body, /Pagine PDF 11–20/);
+  assert.match(result.body, /Pagine PDF 21–22/);
+});
+
+test("OCR only includes selected scan pages and prepends the preserved native text",async()=>{
+ const pdf=await PDFDocument.create();
+ for(let page=0;page<6;page++)pdf.addPage([300,400]);
+ const bytes=new Uint8Array(await pdf.save());
+ let sentPageCount=0;let filename="";
+ const result=await ocrDocumentWithOpenRouter({
+  bytes,mime:"application/pdf",name:"catalogo.pdf",model:"deepseek/deepseek-v4.1-flash",pageCount:6,
+  pagesToOcr:[2,5],nativeText:"[Pagina PDF 1]\nTesto nativo già estratto.",
+  keyProvider:async()=>"test-key",
+  fetcher:async(_input,init)=>{
+   const request=JSON.parse(String(init?.body)) as {messages:Array<{content:Array<{file?:{file_data:string;filename:string}}>}>};
+   const file=request.messages[0]!.content[1]!.file!;filename=file.filename;
+   const subset=await PDFDocument.load(Buffer.from(file.file_data.split(",")[1]!,"base64"));sentPageCount=subset.getPageCount();
+   return new Response(JSON.stringify({id:"gen-scan-subset",model:"deepseek/deepseek-v4.1-flash",usage:{prompt_tokens:20,completion_tokens:10},choices:[{message:{annotations:[{type:"file",file:{content:[{type:"text",text:"OCR delle sole pagine scansionate."}]}}]}}]}),{status:200});
+  }
+ });
+ assert.equal(sentPageCount,2);
+ assert.match(filename,/p2_5\.pdf/);
+ assert.match(result.body,/Testo nativo già estratto/);
+ assert.match(result.body,/Pagine PDF 2, 5/);
+ assert.match(result.body,/OCR delle sole pagine scansionate/);
+ assert.equal(result.pageCount,6);
+ assert.equal(result.pagesProcessed,6);
+});
+
+test("mixed-PDF text limits do not stop OCR of the remaining selected pages",async()=>{
+ const pdf=await PDFDocument.create();
+ for(let page=0;page<12;page++)pdf.addPage([300,400]);
+ const bytes=new Uint8Array(await pdf.save());
+ let requests=0;
+ const result=await ocrDocumentWithOpenRouter({
+  bytes,mime:"application/pdf",name:"catalogo.pdf",model:"deepseek/deepseek-v4.1-flash",pageCount:12,
+  pagesToOcr:Array.from({length:12},(_,index)=>index+1),nativeText:"Testo nativo. ".repeat(5000),
+  keyProvider:async()=>"test-key",
+  fetcher:async()=>{
+   requests++;
+   return new Response(JSON.stringify({id:`gen-truncated-${requests}`,model:"deepseek/deepseek-v4.1-flash",usage:{prompt_tokens:20,completion_tokens:10},choices:[{message:{annotations:[{type:"file",file:{content:[{type:"text",text:"Testo OCR di prova. ".repeat(2500)}]}}]}}]}),{status:200});
+  }
+ });
+ assert.equal(requests,2,"all selected page segments must be sent even after the body limit is reached");
+ assert.equal(result.pagesProcessed,12,"all native and scanned pages were processed");
+ assert.equal(result.partialFailure,false);
+ assert.equal(result.textTruncated,true);
+ assert.equal(result.body.length,80_000);
 });
 
 test("splits OCR PDF segments by serialized size as well as page count", async () => {
@@ -227,7 +275,7 @@ test("splits OCR PDF segments by serialized size as well as page count", async (
   assert.equal(result.partialFailure, false);
 });
 
-test("compresses large scanned PDFs before sending them through API OCR", async () => {
+test("segments large scanned PDFs before sending them through API OCR", async () => {
   const pdf = await PDFDocument.create();
   for (let page = 0; page < 30; page++) {
     const image = await pdf.embedPng(noisyPng(500, page + 30));
@@ -235,26 +283,26 @@ test("compresses large scanned PDFs before sending them through API OCR", async 
   }
   const bytes = new Uint8Array(await pdf.save());
   assert.ok(bytes.byteLength > 20 * 1024 * 1024, "fixture must exercise the large-PDF optimization");
-  let requests = 0;
-  let sentBytes = 0;
+  const sentPages: number[] = [];
+  let firstChunkBytes = 0;
   const result = await ocrDocumentWithOpenRouter({
     bytes, mime: "application/pdf", name: "scansione.pdf", model: "deepseek/deepseek-v4.1-flash",
     keyProvider: async () => "test-key",
     fetcher: async (_input, init) => {
-      requests++;
       const body = JSON.parse(String(init?.body)) as {messages:Array<{content:Array<{file?:{file_data:string}}>}>};
       const data = body.messages[0]!.content[1]!.file!.file_data;
-      sentBytes = Buffer.from(data.split(",")[1]!, "base64").byteLength;
+      const sentBytes = Buffer.from(data.split(",")[1]!, "base64").byteLength;
       const sentPdf = await PDFDocument.load(Buffer.from(data.split(",")[1]!, "base64"));
-      assert.equal(sentPdf.getPageCount(), 30);
+      sentPages.push(sentPdf.getPageCount());
+      if(sentPages.length===1)firstChunkBytes=sentBytes;
       return new Response(JSON.stringify({
-        id: "gen-rasterized", model: "deepseek/deepseek-v4.1-flash", usage: {prompt_tokens: 20, completion_tokens: 10},
+        id: `gen-segmented-${sentPages.length}`, model: "deepseek/deepseek-v4.1-flash", usage: {prompt_tokens: 20, completion_tokens: 10},
         choices: [{message: {annotations: [{type: "file", file: {content: [{type: "text", text: "Testo OCR remoto delle trenta pagine."}]}}]}}]
       }), {status: 200});
     }
   });
-  assert.equal(requests, 1);
-  assert.ok(sentBytes < bytes.byteLength / 2, "the API receives a substantially smaller image-only PDF");
+  assert.deepEqual(sentPages,[10,10,10]);
+  assert.ok(firstChunkBytes < bytes.byteLength / 2, "the API receives a bounded PDF segment");
   assert.equal(result.pageCount, 30);
   assert.equal(result.pagesProcessed, 30);
   assert.equal(result.partialFailure, false);
@@ -262,7 +310,7 @@ test("compresses large scanned PDFs before sending them through API OCR", async 
 
 test("keeps completed OCR segments when a later provider request fails", async () => {
   const pdf = await PDFDocument.create();
-  for (let page = 0; page < 42; page++) pdf.addPage([300, 400]);
+  for (let page = 0; page < 20; page++) pdf.addPage([300, 400]);
   const bytes = new Uint8Array(await pdf.save());
   let requests = 0;
   let reservations = 0;
@@ -282,7 +330,7 @@ test("keeps completed OCR segments when a later provider request fails", async (
   });
   assert.equal(requests, 2);
   assert.equal(reservations, 2);
-  assert.equal(result.pagesProcessed, 40);
+  assert.equal(result.pagesProcessed, 10);
   assert.equal(result.textTruncated, true);
   assert.equal(result.partialFailure, true);
   assert.match(result.body, /primo blocco OCR/);
@@ -296,7 +344,7 @@ test("keeps completed OCR segments when a later provider request fails", async (
     fetcher: async (_input, init) => {
       retryRequests++;
       const request = JSON.parse(String(init?.body)) as { messages: Array<{content:Array<{file?:{filename:string}}>}> };
-      assert.match(request.messages[0]!.content[1]!.file!.filename, /p41-42/);
+      assert.match(request.messages[0]!.content[1]!.file!.filename, /p11-20/);
       return new Response(JSON.stringify({
         id: "gen-pdf-resume", model: "deepseek/deepseek-v4.1-flash", usage: {prompt_tokens: 20, completion_tokens: 10},
         choices: [{message: {annotations: [{type: "file", file: {content: [
@@ -307,7 +355,7 @@ test("keeps completed OCR segments when a later provider request fails", async (
   });
   assert.equal(retryRequests, 1);
   assert.equal(retryReservationCount, 1);
-  assert.equal(retried.pagesProcessed, 42);
+  assert.equal(retried.pagesProcessed, 20);
   assert.equal(retried.partialFailure, false);
   assert.equal(retried.textTruncated, false);
   assert.match(retried.body, /primo blocco OCR/);

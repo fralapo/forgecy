@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { deflateSync } from "node:zlib";
 import { PDFDocument, StandardFonts } from "pdf-lib";
-import { applyNativeImageAssociations, nativeImageAssociationSchema } from "../../lib/catalog-image-association";
+import { applyNativeImageAssociations, inferUniqueNativeImageAssociations, nativeImageAssociationSchema } from "../../lib/catalog-image-association";
 import { extractDocumentWithMetadata, extractNativeCatalogImages } from "../../lib/document-extract";
 import type { CatalogProduct } from "../../lib/catalog-import";
 import { createPdfParser, getPositionedPdfText, pdfWasmUrl } from "../../lib/pdf-runtime";
@@ -106,17 +106,19 @@ test("native PDF images stay page-scoped and ambiguous surplus images are exclud
   }
 });
 
-test("mixed PDFs with a full-page scan request API OCR even when other pages contain native text",async()=>{
+test("mixed PDFs preserve native text and queue only rasterized pages for API OCR",async()=>{
  const doc=await PDFDocument.create(),font=await doc.embedFont(StandardFonts.Helvetica);
  const textPage=doc.addPage([450,500]);
  textPage.drawText("Catalogo completo con testo nativo sufficiente per superare il controllo di leggibilita.",{x:30,y:450,size:12,font});
+ textPage.drawText("Elenco prodotti con codice e descrizione verificabili nel testo nativo.",{x:30,y:430,size:12,font});
  const scannedPage=doc.addPage([450,500]);
  const image=await doc.embedPng(solidPng(8,8,[235,235,235]));
  scannedPage.drawImage(image,{x:0,y:0,width:450,height:500});
  const result=await extractDocumentWithMetadata(await doc.save(),"application/pdf","catalogo-misto.pdf");
  assert.equal(result.pageCount,2);
- assert.equal(result.extraction.status,"error");
- assert.equal(result.extraction.error,"PDF con pagine scansionate: serve OCR tramite API");
+ assert.equal(result.extraction.status,"pending");
+ assert.match(result.extraction.body,/testo nativo/);
+ assert.deepEqual(result.pagesToOcr,[2]);
 });
 
 test("native PDF images match product codes found in offer descriptions", async () => {
@@ -240,6 +242,19 @@ test("native image associations reject products outside the page evidence and du
     { product_name: "Beta Polish", image_index: 0 },
   ]);
   assert.deepEqual(conflicting.map(product => product.imageIndex), [0, null]);
+});
+
+test("native image sections with a unique exact product candidate link without a vision request",()=>{
+ const names=["Cleaner (SKU-101)","Polish (SKU-202)","Glass (SKU-303)"];
+ const products:CatalogProduct[]=names.map(name=>({name,description:"",price:null,currency:"EUR",nameQuote:name,descriptionQuote:"",priceQuote:"",existingOfferId:null,imageIndex:null}));
+ const image=(sha:string,candidateProductNames:string[]):DocumentImage=>({
+  dataUrl:"data:image/png;base64,AA==",mime:"image/png",sha256:sha.padStart(64,"0"),origin:"native-pdf",pageNumber:1,candidateProductNames,
+ });
+ const images=[image("1",[names[0]!]),image("2",[names[1]!]),image("3",[names[2]!]),image("4",[names[2]! ,"Other product"])];
+ const associations=inferUniqueNativeImageAssociations(products,images);
+ assert.deepEqual(associations,[{product_name:names[0],image_index:0},{product_name:names[1],image_index:1}]);
+ const linked=applyNativeImageAssociations(products,images,associations);
+ assert.deepEqual(linked.map(product=>product.imageIndex),[0,1,null]);
 });
 
 test("native image association schema accepts large pages with many priced variants", () => {

@@ -8,7 +8,7 @@ import { createPdfParser, getPositionedPdfText, getPdfImagePlacements, pageHasRa
  * Local private storage; extracted text is separate, untrusted evidence.
  */
 export type Extraction={status:"ready"|"pending"|"error";body:string;error:string|null};
-export type DocumentExtraction={extraction:Extraction;pageCount:number|null;pagesProcessed?:number|null;textTruncated?:boolean;nativeImages?:DocumentImage[];nativeCatalogProducts?:CatalogProduct[]};
+export type DocumentExtraction={extraction:Extraction;pageCount:number|null;pagesProcessed?:number|null;textTruncated?:boolean;pagesToOcr?:number[];nativeImages?:DocumentImage[];nativeCatalogProducts?:CatalogProduct[]};
 export const MAX_EXTRACT_CHARS=80000;
 const MIN_NATIVE_PDF_TEXT_CHARS=80;
 export const MAX_NATIVE_PDF_PAGES=500;
@@ -146,24 +146,26 @@ export async function extractDocumentWithMetadata(bytes:Uint8Array,mime:string,n
      if(textLength>=MAX_EXTRACT_CHARS)break;
     }
     const pagesProcessed=pages.length;
-    const body=clean(pages.map(page=>`[Pagina PDF ${page.num}]\n${page.text}`).join("\n\n"));
-    const textTruncated=(pageCount!==null&&pageCount>pagesProcessed)||textLength>=MAX_EXTRACT_CHARS;
-    if(body.length<MIN_NATIVE_PDF_TEXT_CHARS)return {extraction:{status:"error",body:"",error:"PDF senza testo nativo sufficiente: serve OCR o una trascrizione"},pageCount,pagesProcessed,textTruncated};
-    // A few native text layers can make a mixed scan/text PDF look readable
-    // overall while leaving full-page scanned products invisible to search.
-    // Send that case through the configured API OCR path instead of silently
-    // treating only the text layer as the complete source.
+    const pagesToOcr:number[]=[];
     for(const page of pages){
      if(page.text.trim().length>=500)continue;
      try{
       if(await pageHasRasterizedContent(parser,page.num))
-       return {extraction:{status:"error",body:"",error:"PDF con pagine scansionate: serve OCR tramite API"},pageCount,pagesProcessed,textTruncated};
+       pagesToOcr.push(page.num);
      }catch(error){console.warn("[document-extract] scan detection skipped for page",page.num,error instanceof Error?error.message:"unknown");}
+    }
+    const scannedPageNumbers=new Set(pagesToOcr);
+    const nativePages=pages.filter(page=>!scannedPageNumbers.has(page.num));
+    const body=clean(nativePages.map(page=>`[Pagina PDF ${page.num}]\n${page.text}`).join("\n\n"));
+    const textTruncated=(pageCount!==null&&pageCount>pagesProcessed)||textLength>=MAX_EXTRACT_CHARS;
+    if(body.length<MIN_NATIVE_PDF_TEXT_CHARS){
+     return {extraction:{status:"error",body:"",error:"PDF senza testo nativo sufficiente: serve OCR o una trascrizione"},pageCount,pagesProcessed,textTruncated,
+      ...(pagesToOcr.length?{pagesToOcr}:{})};
     }
     const nativeCatalogProducts:CatalogProduct[]=[];
     const positionedProductsByPage=new Map<number,CatalogProduct[]>();
     const positionedItemsByPage=new Map<number,PositionedPdfTextItem[]>();
-    if(looksLikeCatalog(name,body))for(const page of pages){
+    if(looksLikeCatalog(name,body))for(const page of nativePages){
      if(nativeCatalogProducts.length>=200)break;
      try{
       const items=await getPositionedPdfText(parser,page.num);
@@ -174,8 +176,9 @@ export async function extractDocumentWithMetadata(bytes:Uint8Array,mime:string,n
      }
      catch(error){console.warn("[document-extract] positioned catalog extraction skipped for page",page.num,error instanceof Error?error.message:"unknown");}
     }
-    const nativeImages=await extractNativeCatalogImages(parser,pages,name,body,positionedProductsByPage,positionedItemsByPage);
-    return {extraction:{status:"ready",body,error:null},pageCount,pagesProcessed,textTruncated,...(nativeImages.length?{nativeImages}:{}),...(nativeCatalogProducts.length?{nativeCatalogProducts:nativeCatalogProducts.slice(0,200)}:{})};
+    const nativeImages=await extractNativeCatalogImages(parser,nativePages,name,body,positionedProductsByPage,positionedItemsByPage);
+    return {extraction:pagesToOcr.length?{status:"pending",body,error:"Il PDF contiene pagine scansionate da elaborare con OCR API"}:{status:"ready",body,error:null},
+     pageCount,pagesProcessed,textTruncated,...(pagesToOcr.length?{pagesToOcr}:{}),...(nativeImages.length?{nativeImages}:{}),...(nativeCatalogProducts.length?{nativeCatalogProducts:nativeCatalogProducts.slice(0,200)}:{})};
    }finally{await parser.destroy();}
   }
   if(ext==="docx"&&mime==="application/vnd.openxmlformats-officedocument.wordprocessingml.document"){

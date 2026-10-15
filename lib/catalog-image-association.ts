@@ -7,6 +7,23 @@ export const nativeImageAssociationSchema=z.object({associations:z.array(z.objec
   product_name:z.string().trim().min(2).max(180),image_index:z.number().int().min(0).max(7).nullable(),
 })).max(200)}).strict();
 
+/** Return exact image-to-product links only when one native PDF image names one unique product. */
+export function inferUniqueNativeImageAssociations(products:CatalogProduct[],images:DocumentImage[]):ImageAssociation[]{
+ const namesByKey=new Map(products.map(product=>[normalizeCatalogName(product.name),product.name]));
+ const appearances=new Map<string,number>();
+ for(const image of images){
+  if(image.origin!=="native-pdf")continue;
+  for(const key of new Set((image.candidateProductNames||[]).map(normalizeCatalogName)))
+   appearances.set(key,(appearances.get(key)||0)+1);
+ }
+ return images.flatMap((image,image_index)=>{
+  if(image.origin!=="native-pdf"||image.candidateProductNames?.length!==1)return [];
+  const key=normalizeCatalogName(image.candidateProductNames[0]!);
+  const name=namesByKey.get(key);
+  return name&&appearances.get(key)===1?[{product_name:name,image_index}]:[];
+ });
+}
+
 /** Apply only exact, page-supported, one-image-per-product visual matches. */
 export function applyNativeImageAssociations(
   products: CatalogProduct[],

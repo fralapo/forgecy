@@ -96,7 +96,7 @@ async function main() {
     });
     const pipelineElapsedMs = Math.round(performance.now() - uploadStartedAt);
     const payload = await response.json() as {
-      error?: string; extracted?: boolean; source?: { id?: string; body?: string; source_metadata?: { document_processing?: { method?: string; page_count?: number } } };
+      error?: string; extracted?: boolean; source?: { id?: string; body?: string; source_metadata?: { document_processing?: { method?: string; page_count?: number; pages_processed?: number; ocr_pages?: number; truncation_reason?: string } } };
       catalog?: { status?: string; added?: number; updated?: number; skippedManual?: number; invalid?: number };
     };
     if (!response.ok) throw new Error(payload.error || `Upload di valutazione fallito (HTTP ${response.status}).`);
@@ -141,9 +141,11 @@ async function main() {
       offers: (offers.data || []) as Array<{ name?: unknown; description?: unknown; price?: unknown }>,
       expectedText, expectedRows, expectedProducts, expectedPricedProducts, expectedImageLinks, imageAssignments,
     });
-    const imageAssignmentSummary = imageAssignments.length > 80
+    const imageAssignmentSummary = imageAssignments.length > 20
       ? { count: imageAssignments.length, linked: imageAssignments.filter(item => item.linked).length, samples: imageAssignments.slice(0, 10) }
       : imageAssignments;
+    const documentProcessing=payload.source?.source_metadata?.document_processing;
+    const ocrPartial=documentProcessing?.truncation_reason==="ocr_partial";
     const usage = db.connection.prepare("SELECT count(*) requests,sum(reported_cost_usd) reported_cost_usd FROM ai_provider_usage WHERE client_id=?").get(clientId) as { requests: number; reported_cost_usd: number | null };
     const usageDetails = db.connection.prepare("SELECT operation,model,prompt_tokens,completion_tokens,reported_cost_usd FROM ai_provider_usage WHERE client_id=? ORDER BY created_at").all(clientId) as Array<{ operation: string; model: string; prompt_tokens: number | null; completion_tokens: number | null; reported_cost_usd: number | null }>;
     console.log(JSON.stringify({
@@ -152,7 +154,10 @@ async function main() {
       inputBytes: bytes.byteLength,
       extracted: payload.extracted === true,
       ocrMethod: payload.source?.source_metadata?.document_processing?.method || null,
-      ocrPages: payload.source?.source_metadata?.document_processing?.page_count || null,
+      documentPages: payload.source?.source_metadata?.document_processing?.page_count || null,
+      ocrPages: payload.source?.source_metadata?.document_processing?.ocr_pages || null,
+      pagesProcessed: payload.source?.source_metadata?.document_processing?.pages_processed || null,
+      ocrPartial,
       pipelineElapsedMs,
       extractedTextPreview: process.argv.includes("--show-extracted-text") ? extractedBody.slice(0, 12_000) : undefined,
       expectedTextMarkersFound: evidenceEvaluation.textMarkerIndices.length,
@@ -188,7 +193,7 @@ async function main() {
       userWorkspaceModified: false,
       credentialPrintedOrWritten: false,
     }, null, 2));
-    if (payload.catalog?.status !== "processed" || !evidenceEvaluation.expectationsPassed) process.exitCode = 1;
+    if (payload.catalog?.status !== "processed" || !evidenceEvaluation.expectationsPassed || ocrPartial) process.exitCode = 1;
   } finally {
     db?.connection.close();
     delete (globalThis as typeof globalThis & { __forgecyLocalDb?: unknown }).__forgecyLocalDb;
