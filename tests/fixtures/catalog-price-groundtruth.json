@@ -457,5 +457,374 @@
     "family": "uniSTOR VIH R 120/6 M ACI - monovalente",
     "variant": "uniSTOR VIH R 120/6 M ACI - monovalente",
     "price": 1301
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "000376",
+    "family": "Sifone",
+    "variant": "Sifone",
+    "price": 15
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010007523",
+    "family": "ecoVIT exclusive VKK 476/4-7",
+    "variant": "ecoVIT exclusive VKK 476/4-7",
+    "price": 5239
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010007527",
+    "family": "ecoVIT exclusive VKK 656/4-7",
+    "variant": "ecoVIT exclusive VKK 656/4-7",
+    "price": 6185
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010010759",
+    "family": "ecoTEC plus VM 806/5-5 H",
+    "variant": "ecoTEC plus VM 806/5-5 H",
+    "price": 6307
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010010772",
+    "family": "ecoTEC plus VM 1006/5-5 H",
+    "variant": "ecoTEC plus VM 1006/5-5 H",
+    "price": 7838
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010010784",
+    "family": "ecoTEC plus VM 1206/5-5 H",
+    "variant": "ecoTEC plus VM 1206/5-5 H",
+    "price": 8807
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010013146",
+    "family": "auroFLOW plus VPM 15 D - staz. drain bac",
+    "variant": "auroFLOW plus VPM 15 D - staz. drain bac",
+    "price": 2107
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010013156",
+    "family": "auroFLOW plus VPM 30 D - staz. drain bac",
+    "variant": "auroFLOW plus VPM 30 D - staz. drain bac",
+    "price": 2741
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014130",
+    "family": "ecoCRAFT exclusive VKK 806/3-E",
+    "variant": "ecoCRAFT exclusive VKK 806/3-E",
+    "price": 10148
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014131",
+    "family": "ecoCRAFT exclusive VKK 1206/3-E",
+    "variant": "ecoCRAFT exclusive VKK 1206/3-E",
+    "price": 12745
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014132",
+    "family": "ecoCRAFT exclusive VKK 1606/3-E",
+    "variant": "ecoCRAFT exclusive VKK 1606/3-E",
+    "price": 16438
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014133",
+    "family": "ecoCRAFT exclusive VKK 2006/3-E",
+    "variant": "ecoCRAFT exclusive VKK 2006/3-E",
+    "price": 18857
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014134",
+    "family": "ecoCRAFT exclusive VKK 2406/3-E",
+    "variant": "ecoCRAFT exclusive VKK 2406/3-E",
+    "price": 22153
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014135",
+    "family": "ecoCRAFT exclusive VKK 2806/3-E",
+    "variant": "ecoCRAFT exclusive VKK 2806/3-E",
+    "price": 24082
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014301",
+    "family": "Supporto a parete per 2 aguaFLOW VPM /2",
+    "variant": "Supporto a parete per 2 aguaFLOW VPM /2",
+    "price": 628
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014302",
+    "family": "Est. supp. a parete per 1 VPM /2 S aggiu",
+    "variant": "Est. supp. a parete per 1 VPM /2 S aggiu",
+    "price": 440
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014303",
+    "family": "Est. supp. a parete per 1 VPM /2 W aggiu",
+    "variant": "Est. supp. a parete per 1 VPM /2 W aggiu",
+    "price": 358
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014311",
+    "family": "Modulo acqua calda sanit. VPM 20/25/2 W",
+    "variant": "Modulo acqua calda sanit. VPM 20/25/2 W",
+    "price": 1477
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014312",
+    "family": "aguaFLOW exclusive VPM 30/35/2 W",
+    "variant": "aguaFLOW exclusive VPM 30/35/2 W",
+    "price": 1722
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014313",
+    "family": "aguaFLOW exclusive VPM 40/45/2 W",
+    "variant": "aguaFLOW exclusive VPM 40/45/2 W",
+    "price": 1914
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014314",
+    "family": "auroFLOW exclusive VPM 20/2 S",
+    "variant": "auroFLOW exclusive VPM 20/2 S",
+    "price": 1849
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014315",
+    "family": "auroFLOW exclusive VPM 60/2 S",
+    "variant": "auroFLOW exclusive VPM 60/2 S",
+    "price": 2082
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014667",
+    "family": "ecoCOMPACT VSC 256/4-5 100 (H-IT)",
+    "variant": "ecoCOMPACT VSC 256/4-5 100 (H-IT)",
+    "price": 4511
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014668",
+    "family": "ecoCOMPACT VSC 346/4-5 100 (H-IT)",
+    "variant": "ecoCOMPACT VSC 346/4-5 100 (H-IT)",
+    "price": 5283
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014669",
+    "family": "ecoCOMPACT VSC 256/4-5 150 (H-IT)",
+    "variant": "ecoCOMPACT VSC 256/4-5 150 (H-IT)",
+    "price": 4899
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014670",
+    "family": "ecoCOMPACT VSC 346/4-5 150 (H-IT)",
+    "variant": "ecoCOMPACT VSC 346/4-5 150 (H-IT)",
+    "price": 5672
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014671",
+    "family": "auroCOMPACT VSC S 256/4-5 150 (H-IT)",
+    "variant": "auroCOMPACT VSC S 256/4-5 150 (H-IT)",
+    "price": 6056
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014674",
+    "family": "auroCOMPACT VSC S 256/4-5 200 (H-IT)",
+    "variant": "auroCOMPACT VSC S 256/4-5 200 (H-IT)",
+    "price": 6616
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010014676",
+    "family": "auroCOMPACT VSC S 346/4-5 200 (H-IT)",
+    "variant": "auroCOMPACT VSC S 346/4-5 200 (H-IT)",
+    "price": 6984
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010015115",
+    "family": "allSTOR exclusive VPS 1000/3-7",
+    "variant": "allSTOR exclusive VPS 1000/3-7",
+    "price": 3297
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010015116",
+    "family": "allSTOR exclusive VPS 1500/3-7",
+    "variant": "allSTOR exclusive VPS 1500/3-7",
+    "price": 4196
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010015117",
+    "family": "allSTOR exclusive VPS 2000/3-7",
+    "variant": "allSTOR exclusive VPS 2000/3-7",
+    "price": 4999
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010015121",
+    "family": "allSTOR plus VPS 1000/3-5",
+    "variant": "allSTOR plus VPS 1000/3-5",
+    "price": 2811
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010015122",
+    "family": "allSTOR plus VPS 1500/3-5",
+    "variant": "allSTOR plus VPS 1500/3-5",
+    "price": 3475
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010015123",
+    "family": "allSTOR plus VPS 2000/3-5",
+    "variant": "allSTOR plus VPS 2000/3-5",
+    "price": 4280
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010015141",
+    "family": "Isolamento attacchi allSTOR 1,5\"",
+    "variant": "Isolamento attacchi allSTOR 1,5\"",
+    "price": 25
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010015142",
+    "family": "Isolamento attacchi allSTOR 2,0\"",
+    "variant": "Isolamento attacchi allSTOR 2,0\"",
+    "price": 32
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010015144",
+    "family": "Kit di ricircolo completo per VPM /2 W",
+    "variant": "Kit di ricircolo completo per VPM /2 W",
+    "price": 245
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010015145",
+    "family": "Kit conn. ricircolo esterno per VPM /2 W",
+    "variant": "Kit conn. ricircolo esterno per VPM /2 W",
+    "price": 77
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010015146",
+    "family": "Valvola motorizzata per cascate VPM /2 W",
+    "variant": "Valvola motorizzata per cascate VPM /2 W",
+    "price": 232
+  },
+  {
+    "source": "Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)",
+    "url": "https://www.vaillant.it/api/download/document/it/_listino-prezzi-vaillant-giugno-2026_1494613.pdf",
+    "fixture": "vaillant-price-2026-page-2-ocr.md",
+    "code": "0010015940",
+    "family": "uniSTOR VIH R 120/6 M ACI - monovalente",
+    "variant": "uniSTOR VIH R 120/6 M ACI - monovalente",
+    "price": 1301
   }
 ]

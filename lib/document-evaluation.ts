@@ -1,9 +1,11 @@
 export type ExpectedPricedProduct = { code: string; variant: string; price: number };
+export type ExpectedImageLink = { code: string; imageIndex: number | null };
 export type DocumentEvaluation = {
   textMarkerIndices: number[];
   tableRowIndices: number[];
   productMarkerIndices: number[];
   pricedProductMarkerIndices: number[];
+  imageLinkMarkerIndices: number[];
   expectationsPassed: boolean;
 };
 
@@ -18,6 +20,8 @@ export function evaluateDocumentEvidence(input: {
   expectedRows: string[];
   expectedProducts: string[];
   expectedPricedProducts: ExpectedPricedProduct[];
+  expectedImageLinks?: ExpectedImageLink[];
+  imageAssignments?: Array<{ productName: string; imageIndex: number | null }>;
 }): DocumentEvaluation {
   const normalizedBody = normalize(input.body);
   const compactBody = input.body.replace(/\s+/gu, "").toLocaleLowerCase("it");
@@ -31,10 +35,17 @@ export function evaluateDocumentEvidence(input: {
     offer.price !== null && offer.price !== undefined && offer.price !== "" && Number.isFinite(Number(offer.price)) &&
     Number(offer.price) === expected.price,
   ) ? [index + 1] : []);
+  const imageLinkMarkerIndices = (input.expectedImageLinks || []).flatMap((expected, index) =>
+    (input.imageAssignments || []).some((assignment, assignmentIndex) => {
+      const offer = input.offers[assignmentIndex];
+      const productEvidence = normalize(`${String(offer?.name || assignment.productName)} ${String(offer?.description || "")}`);
+      return productEvidence.includes(normalize(expected.code)) && assignment.imageIndex === expected.imageIndex;
+    }) ? [index + 1] : []);
 
   const expectationsPassed = textMarkerIndices.length === input.expectedText.length &&
     tableRowIndices.length === input.expectedRows.length &&
     productMarkerIndices.length === input.expectedProducts.length &&
-    pricedProductMarkerIndices.length === input.expectedPricedProducts.length;
-  return { textMarkerIndices, tableRowIndices, productMarkerIndices, pricedProductMarkerIndices, expectationsPassed };
+    pricedProductMarkerIndices.length === input.expectedPricedProducts.length &&
+    imageLinkMarkerIndices.length === (input.expectedImageLinks || []).length;
+  return { textMarkerIndices, tableRowIndices, productMarkerIndices, pricedProductMarkerIndices, imageLinkMarkerIndices, expectationsPassed };
 }

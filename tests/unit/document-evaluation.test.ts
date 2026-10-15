@@ -30,3 +30,34 @@ test("document evaluation fails when any independently supplied text, row, produ
   assert.equal(missingZeroPrice.expectationsPassed, false);
   assert.deepEqual(missingZeroPrice.pricedProductMarkerIndices, []);
 });
+
+test("document evaluation verifies expected product-image links and explicit unlinked variants", () => {
+  const input = {
+    body: "",
+    offers: [
+      { name: "FATMAX AUTOLOCK 8 m XTHT033671", description: "", price: 45.5 },
+      { name: "Accessory", description: "SKU-002", price: 2 },
+    ],
+    expectedText: [], expectedRows: [], expectedProducts: [], expectedPricedProducts: [],
+    expectedImageLinks: [
+      { code: "XTHT033671", imageIndex: 2 },
+      { code: "SKU-002", imageIndex: null },
+    ],
+    imageAssignments: [
+      { productName: "FATMAX AUTOLOCK 8 m XTHT033671", imageIndex: 2 },
+      { productName: "Accessory", imageIndex: null },
+    ],
+  };
+  const linked = evaluateDocumentEvidence(input);
+  assert.equal(linked.expectationsPassed, true);
+  assert.deepEqual(linked.imageLinkMarkerIndices, [1, 2]);
+
+  const wrongImage = evaluateDocumentEvidence({
+    ...input,
+    imageAssignments: input.imageAssignments.map(assignment => assignment.productName.includes("FATMAX")
+      ? { ...assignment, imageIndex: 1 }
+      : assignment),
+  });
+  assert.equal(wrongImage.expectationsPassed, false);
+  assert.deepEqual(wrongImage.imageLinkMarkerIndices, [2]);
+});

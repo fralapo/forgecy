@@ -57,6 +57,13 @@ async function main() {
     const expectedText = argumentsFor("--expect-text");
     const expectedRows = argumentsFor("--expect-row");
     const expectedProducts = argumentsFor("--expect-product");
+    const expectedImageLinks = argumentsFor("--expect-image-link").map(value => {
+      const [code, rawIndex, ...extra] = value.split("|").map(part => part.trim());
+      const imageIndex = rawIndex === "none" ? null : Number(rawIndex);
+      if (!code || !rawIndex || extra.length || (rawIndex !== "none" && (!Number.isInteger(imageIndex) || imageIndex! < 0)))
+        throw new Error("Ogni --expect-image-link deve usare il formato codice|indice oppure codice|none.");
+      return { code, imageIndex };
+    });
     const expectedPricedProducts = argumentsFor("--expect-priced-product").map(value => {
       const [code, variant, price, ...extra] = value.split("|").map(part => part.trim());
       const parsedPrice = Number(price?.replace(",", "."));
@@ -102,11 +109,6 @@ async function main() {
       (source.source_metadata as Record<string, unknown> | undefined)?.asset_role === "product" && typeof source.file_path === "string");
     const linkedProductImages = new Set((offers.data || []).map((offer: Record<string, unknown>) => offer.image_source_id).filter(Boolean));
     const extractedBody = (payload.source?.body || "");
-    const evidenceEvaluation = evaluateDocumentEvidence({
-      body: extractedBody,
-      offers: (offers.data || []) as Array<{ name?: unknown; description?: unknown; price?: unknown }>,
-      expectedText, expectedRows, expectedProducts, expectedPricedProducts,
-    });
     let retainedSeedImage: string | null = null;
     const retainedImages: string[] = [];
     if (evidenceDirectory) {
@@ -134,6 +136,11 @@ async function main() {
         imageIndex: imageOrdinal === null ? null : imageOrdinal - 1,
       };
     });
+    const evidenceEvaluation = evaluateDocumentEvidence({
+      body: extractedBody,
+      offers: (offers.data || []) as Array<{ name?: unknown; description?: unknown; price?: unknown }>,
+      expectedText, expectedRows, expectedProducts, expectedPricedProducts, expectedImageLinks, imageAssignments,
+    });
     const imageAssignmentSummary = imageAssignments.length > 80
       ? { count: imageAssignments.length, linked: imageAssignments.filter(item => item.linked).length, samples: imageAssignments.slice(0, 10) }
       : imageAssignments;
@@ -160,6 +167,9 @@ async function main() {
       expectedPricedProductMarkersFound: evidenceEvaluation.pricedProductMarkerIndices.length,
       expectedPricedProductMarkerIndices: evidenceEvaluation.pricedProductMarkerIndices,
       expectedPricedProductMarkerCount: expectedPricedProducts.length,
+      expectedImageLinksFound: evidenceEvaluation.imageLinkMarkerIndices.length,
+      expectedImageLinkMarkerIndices: evidenceEvaluation.imageLinkMarkerIndices,
+      expectedImageLinkCount: expectedImageLinks.length,
       expectationsPassed: evidenceEvaluation.expectationsPassed,
       catalog: payload.catalog || null,
       productRows: offers.data?.length || 0,

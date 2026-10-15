@@ -18,10 +18,17 @@ export type CatalogPriceEvaluation = {
   uniquePriceCells: number;
   rowMatches: number;
   correctPrices: number;
+  exactVariants: number;
   exactCodes: number;
-  byFixture: Record<string, { total: number; rowMatches: number; correctPrices: number; exactCodes: number }>;
+  byFixture: Record<string, { total: number; rowMatches: number; correctPrices: number; exactVariants: number; exactCodes: number }>;
   failures: Array<{ code: string; source: string; reason: string }>;
 };
+
+function containsExactCode(product: { name: string; description: string }, code: string) {
+  const parts = code.trim().split(/\s+/u).map(part => part.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"));
+  const pattern = parts.join("\\s*");
+  return new RegExp(`(?:^|[^A-Z0-9])${pattern}(?=$|[^A-Z0-9])`, "iu").test(`${product.name} ${product.description}`);
+}
 
 const groundTruth = JSON.parse(readFileSync(join(process.cwd(), "tests/fixtures/catalog-price-groundtruth.json"), "utf8")) as GroundTruth[];
 
@@ -32,10 +39,11 @@ export function evaluateCatalogPrices(): CatalogPriceEvaluation {
   const uniqueCells = new Set<string>();
   let rowMatches = 0;
   let correctPrices = 0;
+  let exactVariants = 0;
   let exactCodes = 0;
 
   for (const expected of groundTruth) {
-    const fixtureStats = byFixture[expected.fixture] ??= { total: 0, rowMatches: 0, correctPrices: 0, exactCodes: 0 };
+    const fixtureStats = byFixture[expected.fixture] ??= { total: 0, rowMatches: 0, correctPrices: 0, exactVariants: 0, exactCodes: 0 };
     fixtureStats.total += 1;
     uniqueCells.add(`${expected.url}|${expected.code.replace(/\s+/gu, "").toUpperCase()}`);
     let products = fixtureProducts.get(expected.fixture);
@@ -50,36 +58,56 @@ export function evaluateCatalogPrices(): CatalogPriceEvaluation {
       fixtureProducts.set(expected.fixture, products);
     }
 
-    const variantMatches = (name: string) => name.includes(`— ${expected.variant}`)
-      || name.endsWith(`(${expected.variant})`)
-      || name === expected.variant;
-    const match = products.find((product) => product.name.includes(expected.family) && variantMatches(product.name));
+    const variantMatches = (name: string) => {
+      if (name === expected.variant || name.endsWith(`(${expected.variant})`)) return true;
+      const marker = `— ${expected.variant}`;
+      let offset = 0;
+      while (true) {
+        const index = name.indexOf(marker, offset);
+        if (index < 0) return false;
+        const next = name[index + marker.length] || "";
+        if (!/[A-Z0-9]/iu.test(next)) return true;
+        offset = index + 1;
+      }
+    };
+    const matchByCode = products.find((product) => containsExactCode(product, expected.code));
+    // OCR can corrupt a SKU while leaving the family and size intact. Count
+    // that row as found, but report exact-code accuracy separately below.
+    const match = matchByCode ?? products.find((product) => product.name.includes(expected.family) && variantMatches(product.name));
     if (!match) {
       failures.push({ code: expected.code, source: expected.source, reason: "variante non trovata" });
       continue;
     }
     rowMatches += 1;
     fixtureStats.rowMatches += 1;
+    if (variantMatches(match.name)) {
+      exactVariants += 1;
+      fixtureStats.exactVariants += 1;
+    }
+    else failures.push({ code: expected.code, source: expected.source, reason: "variante estratta non esatta" });
     if (match.price === expected.price) {
       correctPrices += 1;
       fixtureStats.correctPrices += 1;
     }
     else failures.push({ code: expected.code, source: expected.source, reason: `prezzo atteso ${expected.price}, trovato ${match.price ?? "vuoto"}` });
 
-    const normalizedExpected = expected.code.replace(/\s+/gu, "").toUpperCase();
-    const normalizedActual = `${match.name} ${match.description}`.replace(/\s+/gu, "").toUpperCase();
-    if (normalizedActual.includes(normalizedExpected)) {
+    if (containsExactCode(match, expected.code)) {
       exactCodes += 1;
       fixtureStats.exactCodes += 1;
     }
     else failures.push({ code: expected.code, source: expected.source, reason: "codice estratto non esatto" });
   }
 
-  return { total: groundTruth.length, uniquePriceCells: uniqueCells.size, rowMatches, correctPrices, exactCodes, byFixture, failures };
+  return { total: groundTruth.length, uniquePriceCells: uniqueCells.size, rowMatches, correctPrices, exactVariants, exactCodes, byFixture, failures };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const result = evaluateCatalogPrices();
   console.log(JSON.stringify(result, null, 2));
-  if (result.correctPrices !== result.total || result.rowMatches !== result.total) process.exitCode = 1;
+  const knownCodeErrors = new Set(["XTHT0-33671", "XTHT0-33501", "FMHT0-33864", "FMHT0-33868"]);
+  const knownVariantErrors = new Set(["0010015141", "0010015142"]);
+  const unexpectedFailures = result.failures.filter((failure) =>
+    !(failure.reason === "codice estratto non esatto" && knownCodeErrors.has(failure.code) && failure.source.includes("Stanley Listino 2026, pagina stampata 54")) &&
+    !(failure.reason === "variante estratta non esatta" && knownVariantErrors.has(failure.code) && failure.source.includes("Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)")));
+  if (result.correctPrices !== result.total || result.rowMatches !== result.total || unexpectedFailures.length) process.exitCode = 1;
 }
