@@ -35,6 +35,7 @@ export default function Workspace(){
  const currentId=useRef<string|null>(null);
  const [loading,setLoading]=useState(true);
  const railEnd=useRef<HTMLDivElement|null>(null);
+ const previousSourceStates=useRef<Record<string,string>|null>(null);
 
  const flash=(msg:string)=>{setToast(msg);window.setTimeout(()=>setToast(""),4200)};
  const refresh=useCallback(async(id:string)=>{
@@ -78,12 +79,28 @@ export default function Workspace(){
   refresh(clientId).catch(e=>{if(active)setError(getError(e))});
   return()=>{active=false};
  },[clientId,refresh]);
+ useEffect(()=>{
+  if(!data)return;
+  const states=Object.fromEntries(data.sources.filter(s=>s.kind==="document").map(s=>[s.id,String(s.source_metadata?.document_processing&&typeof s.source_metadata.document_processing==="object"?(s.source_metadata.document_processing as Record<string,unknown>).state||s.status:s.status)]));
+  const previous=previousSourceStates.current;
+  if(previous){
+   for(const source of data.sources){
+    const before=previous[source.id],after=states[source.id];
+    if((before==="queued"||before==="running")&&(after==="completed"||after==="failed"||after==="attention")){
+     const meta=source.source_metadata?.document_processing as Record<string,unknown>|undefined;
+     const catalog=meta?.catalog as Record<string,unknown>|undefined;
+     flash(after==="completed"?`Documento pronto: ${source.title}${catalog?.status==="processed"?` · ${Number(catalog.added)||0} prodotti aggiunti, ${Number(catalog.updated)||0} aggiornati`:""}`:after==="attention"?`Lettura parziale: ${source.title}. Apri la Biblioteca per riprovare l’OCR.`:`Elaborazione non riuscita: ${source.title}. Puoi riprovare dalla Biblioteca.`);
+    }
+   }
+  }
+  previousSourceStates.current=states;
+ },[data]);
  useEffect(()=>{railEnd.current?.scrollIntoView({behavior:"smooth",block:"end"})},[data?.messages.length,chatOpen]);
  useEffect(()=>{
-  if(!clientId||!data?.ai_jobs?.some(j=>j.status==="queued"||j.status==="running"))return;
+  if(!clientId||!(data?.ai_jobs?.some(j=>j.status==="queued"||j.status==="running")||data?.sources?.some(s=>s.kind==="document"&&["queued","running"].includes(String((s.source_metadata?.document_processing as Record<string,unknown>|undefined)?.state)))))return;
   const id=window.setInterval(()=>{refresh(clientId).catch(()=>undefined);},9000);
   return()=>window.clearInterval(id);
- },[clientId,data?.ai_jobs,refresh]);
+ },[clientId,data?.ai_jobs,data?.sources,refresh]);
 
  async function reloadAll(){
   const result=await requestJson<{clients:Client[]}>("/api/workspace/clients");setClients(result.clients);
@@ -110,10 +127,8 @@ export default function Workspace(){
    return mutate(name,()=>requestJson<{message:string}>(root+"/website",{method:"POST",body:JSON.stringify({url:website,maxPages:100})}).then(result=>{flash(result.message);return result;}));
   }
   if(name==="reprocessDocument"){
-   const result=await mutate<{catalog?:{status:string;added:number;updated:number;skippedManual:number;message?:string}}>(name,()=>requestJson(root+"/sources/"+body.id+"/process",{method:"POST",body:"{}"}));
-   if(result?.catalog?.status==="processed")flash(`Catalogo aggiornato: ${result.catalog.added} aggiunti, ${result.catalog.updated} migliorati${result.catalog.skippedManual?`, ${result.catalog.skippedManual} modifiche manuali protette`:""}.`);
-   else if(result?.catalog?.message)flash(result.catalog.message);
-   else if(result)flash("Scansione della fonte completata");
+   const result=await mutate<{queued?:boolean;message?:string}>(name,()=>requestJson(root+"/sources/"+body.id+"/process",{method:"POST",body:"{}"}));
+   if(result?.queued)flash(result.message||"Documento in elaborazione. Puoi continuare a usare Forgecy.");
    return result;
   }
   if(name==="dossierDraft")return mutate(name,()=>requestJson(root+"/jobs",{method:"POST",body:JSON.stringify({kind:"dossier",payload:{}})}),"Analisi accodata: controlla lo stato dei lavori AI");
@@ -163,12 +178,12 @@ export default function Workspace(){
        try{const upload=new FormData();upload.set("file",file);await requestJson(root+"/upload",{method:"POST",body:upload});docs++;}
        catch(err){issues.push(file.name+": "+getError(err));}
      }
-     if((pages||products||images||docs)&&!dossierQueued){
+     if((pages||products||images)&&!dossierQueued){
        try{await requestJson(root+"/jobs",{method:"POST",body:JSON.stringify({kind:"dossier",payload:{}})});dossierQueued=true;}
        catch(err){issues.push("analisi iniziale: "+getError(err));}
      }
      await refresh(created.id);
-     flash(`Cliente creato · ${pages} pagine, ${products} prodotti, ${images} immagini, ${docs} file importati${dossierQueued?" · dossier in preparazione":""}${issues.length?" · con avvisi":""}`);
+     flash(`Cliente creato · ${pages} pagine, ${products} prodotti, ${images} immagini, ${docs} documenti in elaborazione${dossierQueued?" · dossier in preparazione":""}${issues.length?" · con avvisi":""}`);
      if(issues.length)setError(issues.join(" · "));
    }catch(err){setError(getError(err));}
    finally{setBusy(null);}
@@ -227,11 +242,8 @@ export default function Workspace(){
   }else if(kind==="upload"){
    const file=f.get("file");if(!(file instanceof File)){setError("Seleziona un file");return}
    const form=new FormData();form.set("file",file);
-   const result=await mutate<{extracted:boolean;message?:string;catalog?:{status:string;added:number;updated:number;skippedManual:number;message?:string}}>("upload",()=>requestJson(root+"/upload",{method:"POST",body:form}));
-   if(result&&!result.extracted)flash(result.message?"Documento archiviato: "+result.message:"Documento archiviato ma non leggibile; puoi riprovare dalla fonte.");
-   else if(result?.catalog?.status==="processed")flash(`Documento importato. Catalogo: ${result.catalog.added} prodotti aggiunti, ${result.catalog.updated} migliorati${result.catalog.skippedManual?`, ${result.catalog.skippedManual} modifiche manuali protette`:""}.${result.catalog.message?` ${result.catalog.message}`:""}`);
-   else if(result?.catalog?.message)flash(result.catalog.message);
-   else if(result)flash("Documento caricato e archiviato");
+   const result=await mutate<{queued?:boolean;message?:string}>("upload",()=>requestJson(root+"/upload",{method:"POST",body:form}));
+   if(result?.queued)flash(result.message||"Documento caricato. L’elaborazione continua in background.");
    if(result)setModal(null);return;
   }else return;
   const result=await mutate(kind,()=>requestJson(url,{method,body:JSON.stringify(payload)}),"Operazione completata");
@@ -297,6 +309,7 @@ export default function Workspace(){
      <div className="flex center gap8"><span className="pill muted topbar-client" style={{maxWidth:190,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{current?.name||"Nessun cliente"}</span><button className="button small mobile-chat-toggle" aria-label="Apri chat con Leader AI" onClick={()=>setChatOpen(true)}><MessageCircle size={15}/> <span>Chat</span></button></div>
     </div>
     <main className="page-scroll"><div className="page-body">
+     {data?.sources.some(s=>s.kind==="document"&&["queued","running"].includes(String((s.source_metadata?.document_processing as Record<string,unknown>|undefined)?.state)))&&<div className="notice" role="status" style={{marginBottom:16,display:"flex",alignItems:"center",gap:10}}><LoaderCircle className="spin" size={17}/><span><strong>Documento in elaborazione in background.</strong> Puoi continuare a lavorare o cambiare schermata; Forgecy ti avviserà quando sarà pronto. Il computer e il server devono restare accesi.</span></div>}
      {error&&<div className="notice error" role="alert" style={{marginBottom:18,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>{error}<button className="button small" onClick={()=>setError("")}>Chiudi</button></div>}
      {view==="settings"?<ModelSettings/>:!current?<div className="stack-lg welcome-empty" style={{maxWidth:640,margin:"10vh auto"}}>
       <div className="eyebrow">BENVENUTO IN FORGECY</div><h1>Il lavoro inizia da un cliente.</h1><p className="tagline">Crea uno spazio dedicato: potrai aggiungere sito, fonti, prodotti e servizi, costruire un dossier approvato e parlare con il Leader.</p>

@@ -52,6 +52,6 @@ export async function requestJson<T=Record<string,unknown>>(url:string,init:Requ
  if(!response.ok)throw new Error(typeof data.error==="string"?data.error:("Richiesta non riuscita: HTTP "+response.status));
  return data as T;
 }
-export const statusLabel=(s:string)=>({approved:"Approvato",draft:"Bozza",stale:"Da aggiornare",proposed:"Da approvare",verified:"Verificato",archived:"Archiviato",running:"In lavorazione",failed:"Errore",review:"In revisione",active:"Attiva",completed:"Conclusa"}[s]||s);
+export const statusLabel=(s:string)=>({approved:"Approvato",draft:"Bozza",stale:"Da aggiornare",proposed:"Da approvare",verified:"Verificato",archived:"Archiviato",running:"In lavorazione",pending:"In elaborazione",failed:"Errore",review:"In revisione",active:"Attiva",completed:"Conclusa"}[s]||s);
 export const offerLabel=(o:Offer)=>o.price==null?"Su preventivo":new Intl.NumberFormat("it-IT",{style:"currency",currency:o.currency||"EUR"}).format(o.price);
 export function initials(s:string){return s.trim().split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase()}

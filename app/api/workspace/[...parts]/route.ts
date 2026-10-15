@@ -23,6 +23,7 @@ import { ocrDocumentWithOpenRouter, type OcrImage, type OcrResult } from "@/lib/
 export const runtime="nodejs";
 export const maxDuration=900;
 type Params={params:Promise<{parts:string[]}>};
+declare global { var __forgecyDocumentTasks: Set<string> | undefined; }
 function uploadLimitForMime(mime:string){return mime==="application/pdf"?MAX_PDF_UPLOAD_BYTES:MAX_UPLOAD_BYTES;}
 
 const uuid=z.uuid();
@@ -63,6 +64,12 @@ function documentProcessingMetadata(processing:DocumentProcessingResult){
   ...(processing.pageCount!==null?{page_count:processing.pageCount}:{}),...(processing.pagesProcessed!==null?{pages_processed:processing.pagesProcessed}:{}),
   ...(processing.ocr?{ocr_pages:processing.pagesToOcr.length||processing.pageCount||0}:{}),
   text_truncated:processing.textTruncated||pageLimitReached,...(ocrInterrupted?{truncation_reason:"ocr_partial"}:pageLimitReached?{truncation_reason:"page_limit"}:processing.textTruncated?{truncation_reason:"character_limit"}:{})}};
+}
+function scheduleDocumentTask(key:string,task:()=>Promise<void>){
+ const tasks=globalThis.__forgecyDocumentTasks??(globalThis.__forgecyDocumentTasks=new Set<string>());
+ if(tasks.has(key))return;
+ tasks.add(key);
+ setTimeout(()=>{void task().finally(()=>tasks.delete(key));},0);
 }
 
 async function reconcileCatalogDocument(ctx:Awaited<ReturnType<typeof auth>>,clientId:string,sourceId:string,title:string,body:string,visualImages:OcrImage[]=[],positionedProducts:CatalogProduct[]=[]):Promise<CatalogImportResult>{
@@ -598,30 +605,34 @@ export async function POST(request:Request,{params}:Params){
    if(!source.file_path.startsWith(id+"/")||source.file_path.includes(".."))
     throw new ApiFailure(403,"Percorso documento non valido");
    const sourceBucket=source.source_metadata?.storage_bucket==="forgecy-assets"?"forgecy-assets":"forgecy-sources";
-   const {data:file,error:storageError}=await ctx.db.storage.from(sourceBucket).download(source.file_path);
-   dbError(storageError,"Non è possibile leggere il documento");
-   const mime=file?.type||"";
-   if(!file||file.size>uploadLimitForMime(mime))throw new ApiFailure(413,"Documento troppo grande");
-   const extension=mime==="application/pdf"?"pdf":mime==="image/png"?"png":mime==="image/jpeg"?"jpg":mime==="image/webp"?"webp":"";
-   const name=extension&&!source.title.toLowerCase().endsWith("."+extension)?source.title+"."+extension:source.title;
    const savedProcessing=source.source_metadata?.document_processing;
    const savedPages=savedProcessing&&typeof savedProcessing==="object"?(savedProcessing as Record<string,unknown>):{};
    const resumeAfterPage=savedPages.truncation_reason==="ocr_partial"&&Number.isInteger(savedPages.pages_processed)?Number(savedPages.pages_processed):null;
-   const processed=await extractDocumentWithOcr(ctx,id,new Uint8Array(await file.arrayBuffer()),mime,name,
-    resumeAfterPage!==null?{afterPage:resumeAfterPage,body:source.body||""}:undefined);
-   const {extraction,ocr}=processed;
-   const {data,error}=await ctx.db.from("sources").update({
-    ...extraction,source_metadata:{...(source.source_metadata||{}),...documentProcessingMetadata(processed)},
-    captured_at:extraction.status==="ready"?new Date().toISOString():null
-   }).eq("id",sourceId).eq("client_id",id).select().maybeSingle();
-   dbError(error);if(!data)throw new ApiFailure(404,"Documento non trovato");
-   let catalog:CatalogImportResult=emptyCatalogResult("not_catalog");
-   if(extraction.status==="ready"){
-    try{catalog=await reconcileCatalogDocument(ctx,id,sourceId,source.title,extraction.body,[...(ocr?.images||[]),...processed.nativeImages],processed.nativeCatalogProducts);}
-    catch(error){console.warn("[catalog-import] document analysis failed",error instanceof ApiFailure?error.status:"unknown",error instanceof Error?error.message:"unknown error");catalog=emptyCatalogResult("analysis_failed","Documento archiviato; analisi del catalogo non riuscita. Puoi ripetere la scansione.");}
-   }
-   await audit(ctx,id,"document_reprocessed",sourceId,{status:extraction.status});
-   return json({source:data,extracted:extraction.status==="ready",catalog});
+   const queuedAt=new Date().toISOString();
+   const {data:queued,error:queueError}=await ctx.db.from("sources").update({status:"pending",error:null,source_metadata:{...(source.source_metadata||{}),document_processing:{...savedPages,state:"queued",step:"In coda",queued_at:queuedAt}}}).eq("id",sourceId).eq("client_id",id).select().maybeSingle();
+   dbError(queueError);if(!queued)throw new ApiFailure(404,"Documento non trovato");
+   scheduleDocumentTask(sourceId,async()=>{
+    try{
+     await ctx.db.from("sources").update({source_metadata:{...(source.source_metadata||{}),document_processing:{...savedPages,state:"running",step:"Estrazione del testo e OCR",queued_at:queuedAt}}}).eq("id",sourceId).eq("client_id",id);
+     const {data:file,error:storageError}=await ctx.db.storage.from(sourceBucket).download(source.file_path!);dbError(storageError,"Non è possibile leggere il documento");
+     const mime=file?.type||"";if(!file||file.size>uploadLimitForMime(mime))throw new ApiFailure(413,"Documento troppo grande");
+     const extension=mime==="application/pdf"?"pdf":mime==="image/png"?"png":mime==="image/jpeg"?"jpg":mime==="image/webp"?"webp":"";
+     const name=extension&&!source.title.toLowerCase().endsWith("."+extension)?source.title+"."+extension:source.title;
+     const processed=await extractDocumentWithOcr(ctx,id,new Uint8Array(await file.arrayBuffer()),mime,name,resumeAfterPage!==null?{afterPage:resumeAfterPage,body:source.body||""}:undefined);
+     const {extraction,ocr}=processed;
+     const processing=(documentProcessingMetadata(processed) as {document_processing?:Record<string,unknown>}).document_processing||{};
+     const {error:updateError}=await ctx.db.from("sources").update({body:extraction.body,error:extraction.error,status:"pending",source_metadata:{...(source.source_metadata||{}),document_processing:{...processing,state:"running",step:"Importazione catalogo"}}}).eq("id",sourceId).eq("client_id",id);
+     dbError(updateError);
+     let catalog:CatalogImportResult=emptyCatalogResult("not_catalog");
+     if(extraction.status==="ready")try{catalog=await reconcileCatalogDocument(ctx,id,sourceId,source.title,extraction.body,[...(ocr?.images||[]),...processed.nativeImages],processed.nativeCatalogProducts);}
+      catch(error){console.warn("[catalog-import] document analysis failed",safeCatalogError(error));catalog=emptyCatalogResult("analysis_failed","Lettura completata, ma l’importazione del catalogo non è riuscita.");}
+     const finalState=extraction.status==="ready"?"completed":extraction.status==="pending"?"attention":"failed";
+     const {error:finishError}=await ctx.db.from("sources").update({status:extraction.status,source_metadata:{...(source.source_metadata||{}),document_processing:{...processing,state:finalState,step:extraction.status==="ready"?"Lettura e importazione completate":extraction.status==="pending"?"Lettura parziale · da completare":"Elaborazione non riuscita",catalog}},captured_at:extraction.status==="ready"?new Date().toISOString():null}).eq("id",sourceId).eq("client_id",id);
+     dbError(finishError);
+     await audit(ctx,id,"document_reprocessed",sourceId,{status:extraction.status});
+    }catch(error){console.error("[document-processing] reprocess failed",safeCatalogError(error));await ctx.db.from("sources").update({status:"error",error:"Elaborazione non riuscita. Riprova dalla fonte.",source_metadata:{...(source.source_metadata||{}),document_processing:{...savedPages,state:"failed",step:"Elaborazione non riuscita"}}}).eq("id",sourceId).eq("client_id",id);}
+   });
+   return json({source:queued,queued:true,message:"Documento in elaborazione in background. Puoi continuare a usare Forgecy."},202);
   }
   if(p.length===3 && p[2]==="upload"){
    const form=await readMultipartForm(request,MAX_PDF_UPLOAD_BYTES+1_000_000),file=form.get("file");
@@ -640,21 +651,32 @@ export async function POST(request:Request,{params}:Params){
    }
    const uploaded=await ctx.db.storage.from("forgecy-sources").upload(path,bytes,{contentType:file.type,upsert:false});
    dbError(uploaded.error,"Caricamento non riuscito");
-   const processed=await extractDocumentWithOcr(ctx,id,bytes,file.type,file.name);
-   const {extraction,ocr}=processed;
    const {data,error}=await ctx.db.from("sources").insert({
-    client_id:id,kind:"document",title:file.name,file_path:path,...extraction,
-    source_metadata:documentProcessingMetadata(processed),
-    captured_at:extraction.status==="ready"?new Date().toISOString():null
+    client_id:id,kind:"document",title:file.name,file_path:path,status:"pending",body:"",error:null,
+    source_metadata:{document_processing:{state:"queued",step:"In coda",queued_at:new Date().toISOString()}},captured_at:null
    }).select().single();
    if(error){await ctx.db.storage.from("forgecy-sources").remove([path]);dbError(error);}
-   await audit(ctx,id,"document_uploaded",data.id,{status:extraction.status});
-   let catalog:CatalogImportResult=emptyCatalogResult("not_catalog");
-   if(extraction.status==="ready"){
-    try{catalog=await reconcileCatalogDocument(ctx,id,data.id,file.name,extraction.body,[...(ocr?.images||[]),...processed.nativeImages],processed.nativeCatalogProducts);}
-    catch(error){console.warn("[catalog-import] document analysis failed",safeCatalogError(error));catalog=emptyCatalogResult("analysis_failed","Documento archiviato; analisi del catalogo non riuscita. Puoi ripetere la scansione.");}
-   }
-   return json({source:data,extracted:extraction.status==="ready",message:extraction.error,catalog},201);
+   const sourceId=String(data.id),queuedAt=String(data.source_metadata?.document_processing?.queued_at||new Date().toISOString());
+   scheduleDocumentTask(sourceId,async()=>{
+    try{
+     const {data:savedFile,error:storageError}=await ctx.db.storage.from("forgecy-sources").download(path);dbError(storageError,"Non è possibile leggere il documento");
+     if(!savedFile)throw new ApiFailure(404,"Documento non trovato");
+     await ctx.db.from("sources").update({source_metadata:{document_processing:{state:"running",step:"Estrazione del testo e OCR",queued_at:queuedAt}}}).eq("id",sourceId).eq("client_id",id);
+     const processed=await extractDocumentWithOcr(ctx,id,new Uint8Array(await savedFile.arrayBuffer()),savedFile.type,file.name);
+     const {extraction,ocr}=processed;
+     const processing=(documentProcessingMetadata(processed) as {document_processing?:Record<string,unknown>}).document_processing||{};
+     const {error:updateError}=await ctx.db.from("sources").update({body:extraction.body,error:extraction.error,status:"pending",source_metadata:{document_processing:{...processing,state:"running",step:"Importazione catalogo"}}}).eq("id",sourceId).eq("client_id",id);
+     dbError(updateError);
+     let catalog:CatalogImportResult=emptyCatalogResult("not_catalog");
+     if(extraction.status==="ready")try{catalog=await reconcileCatalogDocument(ctx,id,sourceId,file.name,extraction.body,[...(ocr?.images||[]),...processed.nativeImages],processed.nativeCatalogProducts);}
+      catch(error){console.warn("[catalog-import] document analysis failed",safeCatalogError(error));catalog=emptyCatalogResult("analysis_failed","Lettura completata, ma l’importazione del catalogo non è riuscita.");}
+     const finalState=extraction.status==="ready"?"completed":extraction.status==="pending"?"attention":"failed";
+     const {error:finishError}=await ctx.db.from("sources").update({status:extraction.status,source_metadata:{document_processing:{...processing,state:finalState,step:extraction.status==="ready"?"Lettura e importazione completate":extraction.status==="pending"?"Lettura parziale · da completare":"Elaborazione non riuscita",catalog}},captured_at:extraction.status==="ready"?new Date().toISOString():null}).eq("id",sourceId).eq("client_id",id);
+     dbError(finishError);
+     await audit(ctx,id,"document_uploaded",sourceId,{status:extraction.status});
+    }catch(error){console.error("[document-processing] upload failed",safeCatalogError(error));await ctx.db.from("sources").update({status:"error",error:"Elaborazione non riuscita. Riprova dalla fonte.",source_metadata:{document_processing:{state:"failed",step:"Elaborazione non riuscita",queued_at:queuedAt}}}).eq("id",sourceId).eq("client_id",id);}
+   });
+   return json({source:data,queued:true,message:"Documento archiviato. L’estrazione continua in background: puoi usare Forgecy nel frattempo."},202);
   }
   throw new ApiFailure(404,"Comando non disponibile");
  }catch(e){return fail(e)}
