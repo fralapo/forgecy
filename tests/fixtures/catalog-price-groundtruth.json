@@ -1578,6 +1578,15 @@
     "source": "Caleffi Listino prezzi VMC 2026, pagina stampata 16 (OCR)",
     "url": "https://www.caleffi.com/sites/default/files/media/external-file/05070_IT_26_Listino%20prezzi%20VMC.pdf",
     "fixture": "caleffi-vmc-2026-page-16-ocr.md",
+    "code": "AIR400103",
+    "family": "CORPO PLENUM-SILENZIATORE VMC SIZE 6",
+    "variant": "CORPO PLENUM-SILENZIATORE VMC SIZE 6",
+    "price": 295
+  },
+  {
+    "source": "Caleffi Listino prezzi VMC 2026, pagina stampata 16 (OCR)",
+    "url": "https://www.caleffi.com/sites/default/files/media/external-file/05070_IT_26_Listino%20prezzi%20VMC.pdf",
+    "fixture": "caleffi-vmc-2026-page-16-ocr.md",
     "code": "AIR917080",
     "family": "TUBO EPE DN200 L. 2 M",
     "variant": "TUBO EPE DN200 L. 2 M",
@@ -1591,5 +1600,41 @@
     "family": "CURVA EPE 90° DN125",
     "variant": "CURVA EPE 90° DN125",
     "price": 34.3
+  },
+  {
+    "source": "Caleffi Listino prezzi VMC 2026, pagina stampata 16 (OCR)",
+    "url": "https://www.caleffi.com/sites/default/files/media/external-file/05070_IT_26_Listino%20prezzi%20VMC.pdf",
+    "fixture": "caleffi-vmc-2026-page-16-ocr.md",
+    "code": "AIR990055",
+    "family": "MANICOTTO F/F DN125",
+    "variant": "MANICOTTO F/F DN125",
+    "price": 12.3
+  },
+  {
+    "source": "Caleffi Listino prezzi VMC 2026, pagina stampata 16 (OCR)",
+    "url": "https://www.caleffi.com/sites/default/files/media/external-file/05070_IT_26_Listino%20prezzi%20VMC.pdf",
+    "fixture": "caleffi-vmc-2026-page-16-ocr.md",
+    "code": "AIR990077",
+    "family": "MANICOTTO F/F DN160",
+    "variant": "MANICOTTO F/F DN160",
+    "price": 12.5
+  },
+  {
+    "source": "Caleffi Listino prezzi VMC 2026, pagina stampata 16 (OCR)",
+    "url": "https://www.caleffi.com/sites/default/files/media/external-file/05070_IT_26_Listino%20prezzi%20VMC.pdf",
+    "fixture": "caleffi-vmc-2026-page-16-ocr.md",
+    "code": "AIR990088",
+    "family": "MANICOTTO F/F DN200",
+    "variant": "MANICOTTO F/F DN200",
+    "price": 13.1
+  },
+  {
+    "source": "Caleffi Listino prezzi VMC 2026, pagina stampata 16 (OCR)",
+    "url": "https://www.caleffi.com/sites/default/files/media/external-file/05070_IT_26_Listino%20prezzi%20VMC.pdf",
+    "fixture": "caleffi-vmc-2026-page-16-ocr.md",
+    "code": "AIR990150",
+    "family": "SILENZIATORE CIRCOLARE DN125",
+    "variant": "SILENZIATORE CIRCOLARE DN125",
+    "price": 150
   }
 ]
