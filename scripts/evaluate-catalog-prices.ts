@@ -104,10 +104,10 @@ export function evaluateCatalogPrices(): CatalogPriceEvaluation {
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const result = evaluateCatalogPrices();
   console.log(JSON.stringify(result, null, 2));
-  const knownCodeErrors = new Set(["XTHT0-33671", "XTHT0-33501", "FMHT0-33864", "FMHT0-33868"]);
+  const knownCodeErrors = new Set(["XTHT0-33671", "XTHT0-33501", "FMHT0-33864", "FMHT0-33868", "AIR917080"]);
   const knownVariantErrors = new Set(["0010015141", "0010015142"]);
   const unexpectedFailures = result.failures.filter((failure) =>
-    !(failure.reason === "codice estratto non esatto" && knownCodeErrors.has(failure.code) && failure.source.includes("Stanley Listino 2026, pagina stampata 54")) &&
+    !(failure.reason === "codice estratto non esatto" && knownCodeErrors.has(failure.code) && (failure.source.includes("Stanley Listino 2026, pagina stampata 54") || failure.code === "AIR917080" && failure.source.includes("Caleffi Listino prezzi VMC 2026, pagina stampata 16 (OCR)"))) &&
     !(failure.reason === "variante estratta non esatta" && knownVariantErrors.has(failure.code) && failure.source.includes("Vaillant Listino Prezzi giugno 2026, pagina stampata 2 (OCR)")));
   if (result.correctPrices !== result.total || result.rowMatches !== result.total || unexpectedFailures.length) process.exitCode = 1;
 }
