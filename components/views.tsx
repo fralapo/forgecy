@@ -427,7 +427,7 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
  return <>
   <Header k="PERFORMANCE / MEMORIA" title="I risultati guidano la prossima scelta."
    sub="Snapshot importati, confrontabili nel tempo e attribuiti al profilo corretto."
-   actions={<div className="flex gap8 wrap">{selected&&<><label className="button primary" style={{cursor:busy?"wait":"pointer",opacity:busy ? .65 : 1}}><UploadCloud size={15}/> Importa rilevazione<input type="file" accept="application/json,.json" disabled={Boolean(busy)} hidden onChange={async event=>{
+  actions={<div className="flex gap8 wrap">{selected&&<><button className="button" disabled={Boolean(busy)} onClick={()=>onAction("collectInstagramPublic",{accountId:selected})}><RefreshCw size={15}/> Aggiorna dati pubblici</button><label className="button primary" style={{cursor:busy?"wait":"pointer",opacity:busy ? .65 : 1}}><UploadCloud size={15}/> Importa rilevazione<input type="file" accept="application/json,.json" disabled={Boolean(busy)} hidden onChange={async event=>{
       const file=event.currentTarget.files?.[0];event.currentTarget.value="";if(!file||!selected)return;
       try{setImportError("");const parsed=JSON.parse(await file.text()) as Record<string,unknown>;const snapshot=(parsed.snapshot&&typeof parsed.snapshot==="object"?parsed.snapshot:parsed) as Record<string,unknown>;
        const result=await onAction("syncSocial",{accountId:selected,snapshot});if(!result)setImportError("Importazione non riuscita. Controlla che il file sia un JSON nel formato indicato qui sotto.");
@@ -450,7 +450,7 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
     <input id="instagram-public-handle" value={instagramHandle} onChange={event=>setInstagramHandle(event.target.value)} placeholder="username Instagram" autoCapitalize="none" autoCorrect="off" style={{flex:"1 1 220px",maxWidth:340}} aria-describedby="instagram-public-hint"/>
     <button className="button" type="submit" disabled={!instagramHandle.trim()||Boolean(busy)}><Plus size={15}/> Aggiungi profilo</button>
    </form>
-   <p id="instagram-public-hint" className="caption" style={{margin:"8px 0 0"}}>Forgecy non accede a Instagram e non chiede credenziali. Puoi importare uno snapshot oppure i file followers_*.json del tuo archivio ufficiale. I nomi dei follower vengono contati nel browser e non sono salvati né inviati; il conteggio viene associato all’account selezionato.</p>
+   <p id="instagram-public-hint" className="caption" style={{margin:"8px 0 0"}}>Forgecy non chiede credenziali e legge solo i conteggi esposti nella pagina pubblica, quando disponibili. La lettura può essere limitata o cambiare; in quel caso si ferma senza tentare di superare il blocco. Per il tuo account puoi anche importare i file followers_*.json dell’archivio: i nomi vengono contati nel browser e non sono salvati né inviati.</p>
    {importError&&<p role="alert" className="caption" style={{color:"var(--danger)",marginTop:8}}>{importError}</p>}
    <details style={{marginTop:10}}><summary className="caption" style={{cursor:"pointer"}}>Formato JSON accettato</summary><pre className="caption" style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",marginTop:8}}>{JSON.stringify({account:{username:"nomeaccount",followers_count:1200,media_count:80},media:[{id:"post-1",caption:"Testo",permalink:"https://www.instagram.com/p/ABC/",media_type:"IMAGE",timestamp:"2026-10-14T12:00:00.000Z",like_count:42,comments_count:3}]},null,2)}</pre></details>
   </div>
@@ -465,10 +465,10 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
          onAction("disconnectSocial",{id:selected});
       }}>Rimuovi profilo</button>
     </div></div></div>}
-  {selected&&!snap&&<div className="notice" role="status" style={{marginTop:12}}>Profilo @{data.social_accounts.find(a=>a.id===selected)?.username} aggiunto. Instagram non viene interrogato automaticamente: importa una rilevazione JSON o l’archivio follower usando i pulsanti qui sopra per visualizzare i dati.</div>}
+  {selected&&!snap&&<div className="notice" role="status" style={{marginTop:12}}>Profilo @{data.social_accounts.find(a=>a.id===selected)?.username} aggiunto. Usa “Aggiorna dati pubblici” per una lettura manuale, oppure importa uno snapshot o l’archivio follower.</div>}
   <div className="grid3" style={{marginTop:18}}>
-   <div className="card metric-card"><span className="muted">Follower · ultima lettura</span>
-    <strong>{num(stats.followers)}</strong><small>{stats.delta===null?"Variazione non disponibile":(stats.delta>=0?"+":"")+num(stats.delta)+" rispetto alla lettura precedente"}</small></div>
+   <div className="card metric-card"><span className="muted">Follower · {snap?.data.metric_precision?.followers_count==="rounded"?"conteggio arrotondato":"ultima lettura"}</span>
+    <strong>{snap?.data.metric_precision?.followers_count==="rounded"?"≈":""}{num(stats.followers)}</strong><small>{stats.delta===null?"Variazione non disponibile":(stats.delta_approximate?"Variazione indicativa ~":"")+(stats.delta>=0?"+":"")+num(stats.delta)+(stats.delta_approximate?"":"")+" rispetto alla lettura precedente"}</small></div>
    <div className="card metric-card"><span className="muted">Contenuti dell&apos;account</span>
     <strong>{num(stats.media_count)}</strong><small>Conteggio contenuto nello snapshot importato</small></div>
    <div className="card metric-card"><span className="muted">Interazioni del campione</span>
@@ -486,6 +486,7 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
       <Empty title="Servono almeno due rilevazioni" text="Importa un altro snapshot in un momento successivo per confrontare i dati."/>}
     <div className="separator"/>
     <div className="info-pair"><span>Ultimo snapshot importato</span><strong>{snap?new Date(snap.collected_at).toLocaleString("it-IT"):"—"}</strong></div>
+    {snap?.data.source&&<div className="info-pair"><span>Fonte</span><strong>{snap.data.source}</strong></div>}
     <div className="info-pair"><span>Copertura insight post disponibili</span><strong>{stats.sampled_posts_with_reach===null?"Non disponibile":stats.sampled_posts_with_reach+" su "+stats.sampled_posts}</strong></div>
     {snap?.data.insights_status==="unavailable"&&<div className="notice">Lo snapshot non include insight privati come copertura, salvataggi e condivisioni.</div>}
    </div>

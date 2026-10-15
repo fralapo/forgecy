@@ -55,14 +55,14 @@ Non copiare codice dai repository GPL-3.0 dentro Forgecy. Anche per gli altri re
 - I calcoli in `lib/social-analytics.ts` lavorano sui dati osservati senza inventare valori.
 - Lo schema locale conserva snapshot associati al cliente.
 - La vecchia implementazione in `old/packages/social` contiene parser puri, confronti, analisi di cadenza/mix/hashtag/engagement, limiti per run e circuit breaker. È codice interno storico da valutare e adattare; non è la stessa cosa di una fonte attiva nella versione corrente.
-- Nella versione corrente non c’è un collector automatico Instagram; dopo aver aggiunto un profilo va importata una rilevazione. La UI lo comunica.
+- Nella versione corrente, **Aggiorna dati pubblici** fa una singola richiesta manuale e anonima alla pagina profilo, salva solo follower/post totals esposti dalla pagina e limita la frequenza a una richiesta ogni dieci minuti per profilo. Non raccoglie contenuti o insight privati e non usa retry dopo un blocco.
 
 ## Proposta di implementazione compatibile
 
 1. Mantenere l’import locale dell’archivio ufficiale per i conteggi dell’account proprietario.
 2. Aggiungere metriche di analytics, confronti e report sui dati importati, conservando fonte, data, precisione e campi mancanti.
-3. Per profili business pubblici di terzi, consentire una raccolta esplicita e a bassa frequenza solo di campi effettivamente esposti da una pagina accessibile senza account. Nessun login, cookie, API privata, fingerprint spoofing, proxy anti-blocco, challenge-solving, commenti o identità dei follower. Se appare login wall, challenge, 403/429 o contenuto vuoto, fermarsi e chiedere all’utente di riprovare manualmente più tardi; nessun retry evasivo.
+3. Per profili pubblici, la prima implementazione ora consente una raccolta manuale e limitata ai conteggi disponibili nella pagina pubblica. Nessun login, cookie, API privata, fingerprint spoofing, proxy anti-blocco, challenge-solving, commenti o identità dei follower. Se appare login wall, challenge, 403/429 o contenuto vuoto, fermarsi; nessun retry evasivo.
 4. Rendere chiaro che i conteggi pubblici possono essere arrotondati o mancanti e non sono insight interni del profilo. Non promettere monitoraggio di “tutto”.
 5. Usare le idee di quota/cache/circuit breaker e report viste nei repository, senza copiare codice GPL o collegare provider privati automaticamente.
 
-Il punto 3 è subordinato a una verifica specifica dei termini e delle direttive di accesso della sorgente prima di attivare la raccolta automatica. Se Instagram non consente quella lettura o mostra una barriera, il percorso supportato resta l’importazione manuale/autorizzata.
+Il collector è on-demand, non è una raccolta in background. Instagram può limitare o modificare le pagine pubbliche; non si promette continuità né un set completo di metriche. Se non espone i conteggi o presenta una barriera, il percorso supportato resta l’importazione manuale/autorizzata.

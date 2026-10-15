@@ -126,6 +126,7 @@ export default function Workspace(){
   if(name==="adapt")return mutate(name,()=>requestJson(root+"/contents/"+body.id+"/adapt",{method:"POST",body:"{}"}),"Variante LinkedIn creata");
   if(name==="image")return mutate(name,()=>requestJson(root+"/contents/"+body.id+"/image",{method:"POST",body:JSON.stringify({slideIndex:body.slideIndex,prompt:body.prompt})}),"Immagine generata e salvata");
   if(name==="addInstagramProfile")return mutate(name,()=>requestJson(root+"/social/accounts",{method:"POST",body:JSON.stringify({username:body.username})}),"Profilo Instagram aggiunto");
+  if(name==="collectInstagramPublic")return mutate(name,()=>requestJson(root+"/social/collect",{method:"POST",body:JSON.stringify({accountId:body.accountId})}),"Conteggi pubblici Instagram aggiornati");
   if(name==="syncSocial")return mutate(name,()=>requestJson(root+"/social/sync",{method:"POST",body:JSON.stringify({accountId:body.accountId,snapshot:body.snapshot})}),"Rilevazione importata");
   if(name==="disconnectSocial")return mutate(name,()=>requestJson(root+"/social/accounts/"+body.id,{method:"DELETE"}),"Account Instagram scollegato e statistiche locali cancellate");
   if(name==="calendarCreate")return mutate(name,()=>requestJson(root+"/editorial",{method:"POST",body:JSON.stringify(body)}),"Voce aggiunta al calendario");

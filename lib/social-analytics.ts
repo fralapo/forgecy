@@ -8,6 +8,7 @@ export type ObservedSnapshot={
  id:string;account_id?:string;collected_at:string;period:string;
  data:{account?:{username?:string;followers_count?:number|null;media_count?:number|null};
    media?:ObservedMedia[];account_insights?:Record<string,number|null>;
+   metric_precision?:Record<string,"exact"|"rounded">;
    source?:string;measured?:boolean;insights_status?:string}
 };
 const finite=(v:unknown):v is number=>typeof v==="number"&&Number.isFinite(v)&&v>=0;
@@ -23,6 +24,7 @@ export function summarizeInstagram(snapshots:ObservedSnapshot[], accountId?:stri
  const currentFollowers=latest?.data.account?.followers_count;
  const beforeFollowers=previous?.data.account?.followers_count;
  const delta=finite(currentFollowers)&&finite(beforeFollowers)?currentFollowers-beforeFollowers:null;
+ const deltaApproximate=latest?.data.metric_precision?.followers_count==="rounded"||previous?.data.metric_precision?.followers_count==="rounded";
  const media=latest?.data.media||[];
  const postStats=media.map(m=>{
    const likes=finite(m.like_count)?m.like_count:null;
@@ -45,6 +47,6 @@ export function summarizeInstagram(snapshots:ObservedSnapshot[], accountId?:stri
    media_count:finite(latest?.data.account?.media_count)?latest!.data.account!.media_count!:null,
    sampled_posts:media.length,sampled_posts_with_interactions:withInteractions.length,
    total_sampled_interactions:totalInteractions,average_interactions:avgInteractions,
-   sampled_posts_with_reach:reached,top,posts:postStats,history,
+   sampled_posts_with_reach:reached,top,posts:postStats,history,delta_approximate:deltaApproximate,
    account_insights:latest?.data.account_insights||{}};
 }
