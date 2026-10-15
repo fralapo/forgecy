@@ -223,7 +223,7 @@ export async function modelStructuredJson<T>(
   let answer:{choices?:Array<{message?:{content?:unknown;refusal?:string}}>};
   try{answer=await response.json() as typeof answer;}
   catch(error){
-    if(error instanceof DOMException&&error.name==="TimeoutError")throw new ApiFailure(502,"OpenRouter ha superato il tempo limite durante il dossier JSON.");
+    if(error instanceof DOMException&&error.name==="TimeoutError")throw new ApiFailure(502,"OpenRouter ha superato il tempo limite durante la risposta JSON strutturata.");
     console.warn("[openrouter structured] Invalid response body; retrying with validated JSON mode");
     return retryWithSchemaRepair();
   }

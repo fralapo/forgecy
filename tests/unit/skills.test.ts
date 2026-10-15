@@ -30,6 +30,21 @@ test("a campaign proposal must include both static channels",()=>{
  const issues=reviewStaticAssets([asset("instagram","post")],new Set([proofId]));
  assert.ok(issues.some(x=>x.code==="missing_linkedin"&&x.severity==="blocking"));
 });
+test("explicit Instagram-only briefs prohibit LinkedIn without requiring it",()=>{
+ const brief="Esattamente 2 caroselli Instagram, ciascuno di 5 slide. Evita LinkedIn.";
+ const assets=[asset("instagram","carousel"),asset("instagram","carousel")];
+ for(const x of assets)x.slides=Array.from({length:5},(_,i)=>({headline:`Slide ${i+1}`,body:"Informazione verificata."}));
+ assert.deepEqual(reviewStaticAssets(assets,new Set([proofId]),brief),[]);
+ const issues=reviewStaticAssets([...assets,asset("linkedin","document")],new Set([proofId]),brief);
+ assert.ok(issues.some(x=>x.code==="prohibited_linkedin"&&x.severity==="blocking"));
+});
+test("explicit carousel count and page count are enforced",()=>{
+ const brief="Esattamente 2 caroselli Instagram, ciascuno di 5 slide. Evita LinkedIn.";
+ const a=asset("instagram","carousel");
+ const issues=reviewStaticAssets([a],new Set([proofId]),brief);
+ assert.ok(issues.some(x=>x.code==="carousel_count"&&x.severity==="blocking"));
+ assert.ok(issues.some(x=>x.code==="exact_slide_count"&&x.severity==="blocking"));
+});
 test("wrong format, unknown evidence and short carousel are blockers",()=>{
  const a=asset("instagram","document");a.slides.pop();a.editorial_brief.community_signal_ids=["99999999-9999-4999-8999-999999999999"];
  const issues=reviewStaticAssets([a,asset("linkedin","post")],new Set([proofId]));
