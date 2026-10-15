@@ -5,8 +5,14 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function GET() {
-  try { return json({ backups: listAutomaticBackups(), status: getAutomaticBackupStatus() }); }
-  catch (error) { return fail(error); }
+  const status = getAutomaticBackupStatus();
+  try { return json({ backups: listAutomaticBackups(), status, listError: null }); }
+  catch {
+    return json({
+      backups: [], status,
+      listError: "La cartella dei backup non è disponibile. Controlla il disco o il servizio di sincronizzazione.",
+    });
+  }
 }
 
 export async function POST() {
