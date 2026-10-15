@@ -246,6 +246,8 @@ export async function ocrDocumentWithOpenRouter(options: OcrOptions): Promise<Oc
       }
     } catch (error) {
       if (!blocks.length) throw error;
+      console.warn("[openrouter ocr] interrupted after page",pagesProcessed,"of",pageCount,
+        error instanceof ApiFailure?`HTTP ${error.status}`:"unexpected request failure");
       textTruncated = true;
       partialFailure = true;
       break;

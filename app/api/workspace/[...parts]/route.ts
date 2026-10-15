@@ -46,7 +46,9 @@ async function extractDocumentWithOcr(ctx:Awaited<ReturnType<typeof auth>>,clien
   const ocr=await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"dossier"},()=>
    ocrDocumentWithOpenRouter({bytes,mime,name,model,pageCount:pageCount??undefined,pagesToOcr,nativeText:extraction.body,beforeRequest:async()=>{await reserveAiRequest(ctx,clientId,"dossier");},
     ...(resume?{resumeAfterPage:resume.afterPage,previousBody:resume.body}:{})}));
-  return {extraction:{status:"ready",body:ocr.body,error:null},ocr,nativeImages,nativeCatalogProducts,pageCount:ocr.pageCount,pagesProcessed:ocr.pagesProcessed,textTruncated:ocr.textTruncated,pagesToOcr};
+  return {extraction:{status:ocr.partialFailure?"pending":"ready",body:ocr.body,
+   error:ocr.partialFailure?"OCR parziale: il documento è salvato e puoi riprovare per completare la lettura.":null},
+   ocr,nativeImages,nativeCatalogProducts,pageCount:ocr.pageCount,pagesProcessed:ocr.pagesProcessed,textTruncated:ocr.textTruncated,pagesToOcr};
  }catch(error){
   const message=error instanceof ApiFailure?error.message:"OCR non riuscito. Il file resta salvato e puoi riprovare.";
   return {extraction:{status:"pending",body:extraction.body,error:message},ocr:null,nativeImages,nativeCatalogProducts,pageCount,pagesProcessed:pagesProcessed??null,textTruncated,pagesToOcr};

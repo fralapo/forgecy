@@ -158,6 +158,7 @@ async function main() {
       ocrPages: payload.source?.source_metadata?.document_processing?.ocr_pages || null,
       pagesProcessed: payload.source?.source_metadata?.document_processing?.pages_processed || null,
       ocrPartial,
+      partialOcrWasDeferred:ocrPartial&&payload.extracted===false&&(offers.data||[]).length===0,
       pipelineElapsedMs,
       extractedTextPreview: process.argv.includes("--show-extracted-text") ? extractedBody.slice(0, 12_000) : undefined,
       expectedTextMarkersFound: evidenceEvaluation.textMarkerIndices.length,
