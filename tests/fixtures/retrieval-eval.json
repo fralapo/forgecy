@@ -284,5 +284,26 @@
     "passage": "Listino ufficiale Conex Bänninger Serie 8000, pagina 188: gomito ridotto F/F, codice 8090R006004000, misura 3/4 × 1/2 pollice, prezzo 8,77 EUR al pezzo.",
     "query": "Quanto costa il gomito ridotto Conex 8090R da 3/4 per 1/2 pollice?",
     "source_url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf"
+  },
+  {
+    "id": "stanley-fatmax-xtreme-5m",
+    "category": "catalog-variant-price",
+    "passage": "Listino ufficiale Stanley 2026, pagina 54: flessometro FATMAX XTREME largo 32 mm, codice FMHT38214-0, lunghezza 5 m, prezzo 32,90 EUR.",
+    "query": "Quanto costa il flessometro Stanley FATMAX XTREME da 5 metri largo 32 mm?",
+    "source_url": "https://bynder.sbdinc.com/m/61870d470e95fbff/original/ST_Listino-2026-WEB-IT_DMK1.pdf"
+  },
+  {
+    "id": "stanley-fatmax-xtreme-8m",
+    "category": "catalog-variant-price",
+    "passage": "Listino ufficiale Stanley 2026, pagina 54: flessometro FATMAX XTREME largo 32 mm, codice FMHT38217-0, lunghezza 8 m, prezzo 36,00 EUR.",
+    "query": "Mi serve il FATMAX XTREME Stanley da 8 metri: indica codice e prezzo.",
+    "source_url": "https://bynder.sbdinc.com/m/61870d470e95fbff/original/ST_Listino-2026-WEB-IT_DMK1.pdf"
+  },
+  {
+    "id": "stanley-fatmax-xtreme-10m",
+    "category": "catalog-variant-price",
+    "passage": "Listino ufficiale Stanley 2026, pagina 54: flessometro FATMAX XTREME largo 32 mm, codice FMHT38232-0, lunghezza 10 m, prezzo 39,20 EUR.",
+    "query": "Qual è il prezzo del modello FMHT38232-0 lungo 10 metri?",
+    "source_url": "https://bynder.sbdinc.com/m/61870d470e95fbff/original/ST_Listino-2026-WEB-IT_DMK1.pdf"
   }
 ]

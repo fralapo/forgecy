@@ -31,9 +31,33 @@ export function normalizeCatalogName(value:string){
 }
 
 export function looksLikeCatalog(title:string,body:string){
- return /catalog|catalogo|listino|prodott|price[ -]?list|sku/i.test(title+"\n"+body)&&
+ const titleOrBodySuggestsCatalog=/catalog|catalogo|listino|prodott|price[ -]?list|sku/i.test(title+"\n"+body)&&
   (/\b(product|prodott\w*|prezz[oi]|price|sku|codic\w*|articol\w*|confezion\w*)\b|\bcad\.?\b|\bprod\./i.test(body)||
    /(?:€|\bEUR\b)\s*\d|\b(?:cod\.?|art\.?)\s*\|/iu.test(body));
+ if(titleOrBodySuggestsCatalog)return true;
+
+ // Scanned price lists often omit “catalogo/listino” from their visible text
+ // and arrive with generic filenames such as scan.pdf. Recognize explicit
+ // Markdown price tables by their code + price headers and multiple SKU rows.
+ const lines=body.split(/\r?\n/u);
+ for(let index=0;index<lines.length-2;index++){
+  const header=lines[index]||"";
+  if(!/^\s*\|(?=.*\b(?:codice|articolo|sku|product\s*code)\b)(?=.*(?:€|\beur\b|prezzo|price)).*\|/iu.test(header))continue;
+  const separator=lines[index+1]||"";
+  if(!/^\s*\|\s*:?-{3,}:?\s*\|/u.test(separator))continue;
+  let skuRows=0;
+  for(let row=index+2;row<lines.length;row++){
+   const line=lines[row]||"";
+   if(!line.trim()){
+    if(skuRows)break;
+    continue;
+   }
+   if(!/^\s*\|/u.test(line)){if(skuRows)break;continue;}
+   if(/\b[A-Z0-9][A-Z0-9.-]{4,}\b/iu.test(line)&&/(?:€|\bEUR\b)?\s*\d[\d.,]*/iu.test(line))skuRows++;
+  }
+  if(skuRows>=2)return true;
+ }
+ return false;
 }
 
 function parsePrice(value:string):number|null{

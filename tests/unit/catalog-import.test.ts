@@ -125,6 +125,28 @@ test("OCR lists with description, code, segment and price columns keep identifie
  assert.equal(catalogEvidenceIsValid({...products[0],descriptionQuote:JSON.stringify(["0010007523","Segmento inventato"])},source),false);
 });
 
+test("generic filenames are recognized when OCR yields explicit code-and-price Markdown tables",()=>{
+ const source=readFileSync(join(process.cwd(),"tests/fixtures/stanley-2026-page-54-ocr.md"),"utf8");
+ assert.equal(looksLikeCatalog("document.pdf",source),true);
+ assert.equal(looksLikeCatalog("document.pdf","| Codice | Prezzo € |\n| --- | --- |\n| ABC123 | 32,90 |\n| ABC124 | 35,00 |"),true);
+ assert.equal(looksLikeCatalog("document.pdf","| Codice | Prezzo € |\n| --- | --- |\n| ABC123 | 32,90 |\n\nNote generali"),false);
+ const products=parseLocalCatalogProducts("document.pdf",source);
+ assert.equal(products.length,7);
+ assert.deepEqual([
+  ["FMHT38214-0",32.9],
+  ["FMHT38217-0",36],
+  ["FMHT38232-0",39.2],
+ ].map(([code])=>{
+  const product=products.find(row=>row.name.includes(String(code))||row.description.includes(String(code)));
+  return [product?.name,product?.price];
+ }),[
+  ["FMHT38214-0",32.9],
+  ["FMHT38217-0",36],
+  ["FMHT38232-0",39.2],
+ ]);
+ assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
+});
+
 test("OCR product matrices without prices import coded products and package evidence deterministically",()=>{
  const source="Catalogo prodotti\n| Cod. | Descrizione Prodotto | Contenuto | Barcode | ITF-14 | Pz Crt |\n| --- | --- | --- | --- | --- | --- |\n| AMMORBIDENTE DEO DUE | | | | | |\n| DD107 | DEO DUE MORBIDO FIORI D'ACQUA | 1 LT | 8388776980149 | 18388776980146 | 6 |\n| DD103 | DEO DUE MORBIDO FIORI ROSA | 1 LT | 8388776980026 | 18388776980023 | 6 |";
  const products=parseMarkdownCatalogTable(source);
