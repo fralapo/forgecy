@@ -93,6 +93,7 @@ test("strict JSON Schema rejection falls back once to validated JSON-object mode
   assert.equal(requests.length,2);
   assert.equal((requests[0].response_format as {type:string}).type,"json_schema");
   assert.equal((requests[1].response_format as {type:string}).type,"json_object");
+  assert.deepEqual(requests[1].reasoning,{enabled:false});
   assert.equal(requests[1].max_tokens,6200);
  }finally{
   globalThis.fetch=oldFetch;
@@ -130,6 +131,32 @@ test("invalid strict-schema responses retry once and still enforce Zod validatio
   assert.deepEqual(result,{summary:"Schema verificato"});
   assert.equal(requests.length,2);
   assert.equal((requests[1].response_format as {type:string}).type,"json_object");
+ }finally{globalThis.fetch=oldFetch;}
+});
+
+test("structured JSON fallback repairs schema errors once and validates the corrected result",async()=>{
+ const oldFetch=globalThis.fetch;
+ const requests:Record<string,unknown>[]=[];
+ globalThis.fetch=async(_url,init)=>{
+  const request=JSON.parse(String(init?.body)) as Record<string,unknown>;
+  requests.push(request);
+  const format=request.response_format as {type:string};
+  if(format.type==="json_schema")return new Response(JSON.stringify({choices:[{message:{content:'{"summary":"Dossier completo","findings":[]}'}}]}),{status:200});
+  const messages=request.messages as Array<{role:string;content:string}>;
+  if(messages[0].content.includes("non rispettava lo schema"))
+   return new Response(JSON.stringify({choices:[{message:{content:'{"summary":"Dossier completo","findings":[{"claim":"Fatto supportato"}]}'}}]}),{status:200});
+  return new Response(JSON.stringify({choices:[{message:{content:'{"summary":"Dossier completo","findings":[]}'}}]}),{status:200});
+ };
+ try{
+  const schema=z.object({summary:z.string().min(10),findings:z.array(z.object({claim:z.string()})).min(1)});
+  const result=await modelStructuredJson("Sistema","Fonte",schema,"forgecy_dossier",6200,async()=>"test-server-only-token");
+  assert.equal(result.findings.length,1);
+  assert.equal(requests.length,3);
+  const repairMessages=requests[2].messages as Array<{role:string;content:string}>;
+  assert.match(repairMessages[0].content,/findings/);
+  assert.deepEqual(requests[1].reasoning,{enabled:false});
+  assert.deepEqual(requests[2].reasoning,{enabled:false});
+  assert.deepEqual(result,{summary:"Dossier completo",findings:[{claim:"Fatto supportato"}]});
  }finally{globalThis.fetch=oldFetch;}
 });
 

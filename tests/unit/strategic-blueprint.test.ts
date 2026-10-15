@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {blueprintSchema} from "../../lib/strategic-blueprint";
+import {blueprintSchema,unknownEvidenceIds} from "../../lib/strategic-blueprint";
 
 const valid={
  title:"Piano di comunicazione Atelier Forma",
@@ -24,4 +24,9 @@ test("central company strategy has explicit goals, KPI, roadmap and non-fabricat
 test("invalid strategy is rejected rather than silently accepted",()=>{
  assert.equal(blueprintSchema.safeParse({...valid,objectives:[]}).success,false);
  assert.equal(blueprintSchema.safeParse({...valid,channels:["myspace"]}).success,false);
+});
+
+test("strategy evidence validation rejects fabricated IDs but allows an empty evidence list",()=>{
+ assert.deepEqual(unknownEvidenceIds(["source-a","made-up","made-up"],["source-a"]),["made-up"]);
+ assert.deepEqual(unknownEvidenceIds([], ["source-a"]),[]);
 });

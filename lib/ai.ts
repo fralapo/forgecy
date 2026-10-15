@@ -173,7 +173,22 @@ export async function modelStructuredJson<T>(
   const model=currentTextModel();
   const key=await keyProvider();
   if(!key)throw new ApiFailure(503,"OpenRouter non configurato. Inserisci OPENROUTER_API_KEY sul server.");
-  const retryAsJsonObject=()=>modelJson(system,user,schema,{maxTokens,timeoutMs,temperature:0.1});
+  const retryAsJsonObject=(correction?:string)=>modelJson(
+    correction?system+"\n"+correction:system,user,schema,
+    {maxTokens,timeoutMs,temperature:0.1,reasoningEnabled:false}
+  );
+  const retryWithSchemaRepair=async()=>{
+    try{return await retryAsJsonObject();}
+    catch(error){
+      const prefix="La risposta del modello non rispetta lo schema richiesto:";
+      if(!(error instanceof ApiFailure)||!error.message.startsWith(prefix))throw error;
+      const issues=error.message.slice(prefix.length).trim();
+      console.warn("[openrouter structured] JSON fallback failed schema validation; requesting one corrected response",issues);
+      return retryAsJsonObject(
+        "La risposta JSON precedente non rispettava lo schema: "+issues+". Correggi questi problemi e restituisci l'oggetto completo. Non aggiungere testo fuori dal JSON."
+      );
+    }
+  };
   const jsonSchema=z.toJSONSchema(schema,{target:"draft-7"});
   const response=await openRouterFetch({
     method:"POST",
@@ -200,7 +215,7 @@ export async function modelStructuredJson<T>(
       // selected provider may still reject strict JSON Schema for a particular
       // schema. Retry once in JSON-object mode; Zod validation remains strict.
       console.warn("[openrouter structured] Provider rejected strict JSON Schema; retrying with validated JSON mode");
-      return retryAsJsonObject();
+      return retryWithSchemaRepair();
     }
     console.error("[openrouter structured] HTTP",response.status);
     throw new ApiFailure(502,"OpenRouter non ha generato il dossier strutturato (HTTP "+response.status+"). Verifica che il modello supporti JSON Schema.");
@@ -210,25 +225,25 @@ export async function modelStructuredJson<T>(
   catch(error){
     if(error instanceof DOMException&&error.name==="TimeoutError")throw new ApiFailure(502,"OpenRouter ha superato il tempo limite durante il dossier JSON.");
     console.warn("[openrouter structured] Invalid response body; retrying with validated JSON mode");
-    return retryAsJsonObject();
+    return retryWithSchemaRepair();
   }
   await recordAiProviderUsage("openrouter",model,answer);
   const content=responseContentText(answer.choices?.[0]?.message?.content);
   if(!content){
     console.warn("[openrouter structured] Empty response; retrying with validated JSON mode");
-    return retryAsJsonObject();
+    return retryWithSchemaRepair();
   }
   let parsed:unknown;
   try{parsed=JSON.parse(content);}catch{
     console.warn("[openrouter structured] Non-JSON response; retrying with validated JSON mode");
-    return retryAsJsonObject();
+    return retryWithSchemaRepair();
   }
   const result=schema.safeParse(parsed);
   if(!result.success){
     const issues=result.error.issues.map(issue=>`${issue.path.length?issue.path.join("."):"<root>"}: ${issue.message}`).join("; ").slice(0,600);
     console.error("[openrouter structured] schema validation failed",issues);
     console.warn("[openrouter structured] Invalid schema response; retrying with validated JSON mode");
-    return retryAsJsonObject();
+    return retryWithSchemaRepair();
   }
   return result.data;
 }
