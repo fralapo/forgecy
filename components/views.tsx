@@ -9,6 +9,7 @@ import { audiencePatterns } from "@/lib/audience";
 import { brandStyle } from "@/lib/brand";
 import { summarizeInstagram } from "@/lib/social-analytics";
 import { countInstagramArchiveFollowers } from "@/lib/instagram-archive";
+import { normalizeInstagramUsername } from "@/lib/instagram-username";
 import EditorialCalendar from "./editorial-calendar";
 import {resolvedLayout,layoutStyle,slidePreflight,slideHistoryReducer} from "@/lib/carousel-layout";
 
@@ -451,12 +452,14 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
      {snap&&selected&&<a className="button" href={"/api/workspace/clients/"+data.client.id+"/reports/instagram?accountId="+encodeURIComponent(selected)} target="_blank" rel="noopener noreferrer"><FileText size={15}/> Esporta CSV</a>}</div>}/>
   <div className="card" style={{marginBottom:16}}>
    <form className="flex center gap8 wrap" onSubmit={async event=>{
-    event.preventDefault();const username=instagramHandle.trim();if(!username)return;
+    event.preventDefault();const username=normalizeInstagramUsername(instagramHandle);
+    if(!username){setImportError("Usa uno username Instagram di 1–30 caratteri: lettere, numeri, punti o underscore.");return;}
+    setImportError("");
     const result=await onAction("addInstagramProfile",{username}) as {account?:{id?:string}}|undefined;
     if(result){if(result.account?.id)setRequested(result.account.id);setInstagramHandle("");}
    }}>
     <label htmlFor="instagram-public-handle" style={{fontWeight:650}}>Aggiungi account da monitorare</label>
-    <input id="instagram-public-handle" value={instagramHandle} onChange={event=>setInstagramHandle(event.target.value)} placeholder="username Instagram" autoCapitalize="none" autoCorrect="off" style={{flex:"1 1 220px",maxWidth:340}} aria-describedby="instagram-public-hint"/>
+    <input id="instagram-public-handle" value={instagramHandle} maxLength={31} onChange={event=>setInstagramHandle(event.target.value)} placeholder="username Instagram" autoCapitalize="none" autoCorrect="off" style={{flex:"1 1 220px",maxWidth:340}} aria-describedby="instagram-public-hint"/>
     <button className="button" type="submit" disabled={!instagramHandle.trim()||Boolean(busy)}><Plus size={15}/> Aggiungi profilo</button>
    </form>
    <p id="instagram-public-hint" className="caption" style={{margin:"8px 0 0"}}>Forgecy non chiede credenziali e legge solo i conteggi esposti nella pagina pubblica, quando disponibili. La lettura può essere limitata o cambiare; in quel caso si ferma senza tentare di superare il blocco. Per il tuo account puoi anche importare i file followers_*.json dell’archivio: i nomi vengono contati nel browser e non sono salvati né inviati.</p>

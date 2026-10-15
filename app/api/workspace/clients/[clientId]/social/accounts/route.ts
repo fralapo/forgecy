@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { auth, requireClient, fail, json, ApiFailure, dbError, audit, read } from "@/lib/http";
+import { normalizeInstagramUsername } from "@/lib/instagram-username";
 
 export const runtime = "nodejs";
 const inputSchema = z.object({ username: z.string().trim().min(1).max(32) });
-const handlePattern = /^@?[A-Za-z0-9._]{1,30}$/;
 
 export async function POST(request: Request, { params }: { params: Promise<{ clientId: string }> }) {
   try {
@@ -11,10 +11,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cli
     const ctx = await auth();
     await requireClient(ctx, clientId);
     const input = await read(request, inputSchema);
-    if (!handlePattern.test(input.username)) {
+    const username=normalizeInstagramUsername(input.username);
+    if (!username) {
       throw new ApiFailure(400, "Inserisci solo lo username pubblico Instagram, senza URL.");
     }
-    const username = input.username.replace(/^@/, "").toLowerCase();
     const { data: existing, error: lookupError } = await ctx.db.from("social_accounts")
       .select("id,username")
       .eq("client_id", clientId)
