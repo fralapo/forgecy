@@ -242,5 +242,26 @@
     "passage": "Catalogo Sicutool Utensili 2025, pagina 1110: sgorbia per intaglio, codice 5234G 19, larghezza 20 mm, prezzo 69,50 EUR.",
     "query": "Prezzo della sgorbia Sicutool codice 5234G 19, larghezza 20 mm?",
     "source_url": "https://www.sicutool.it/Novit%C3%A0/Catalogo-Sicutool-Utensili-2025"
+  },
+  {
+    "id": "sicutool-5233te-length-price",
+    "category": "catalog-sku-price",
+    "passage": "Catalogo Sicutool Utensili 2025, pagina 1108: coltello universale con lame a settori, codice 5233TE, lunghezza totale 195 mm, prezzo 30,90 EUR.",
+    "query": "Quanto costa il coltello a settori Sicutool 5233TE lungo 195 mm?",
+    "source_url": "https://www.sicutool.it/Novit%C3%A0/Catalogo-Sicutool-Utensili-2025"
+  },
+  {
+    "id": "sicutool-o5233tp-blade-price",
+    "category": "catalog-sku-price",
+    "passage": "Catalogo Sicutool Utensili 2025, pagina 1108: lame di ricambio per 5233 TL-TP, codice O5233TP, larghezza 25 mm, prezzo 1,30 EUR.",
+    "query": "Prezzo delle lame di ricambio O5233TP larghe 25 mm per coltelli Sicutool?",
+    "source_url": "https://www.sicutool.it/Novit%C3%A0/Catalogo-Sicutool-Utensili-2025"
+  },
+  {
+    "id": "sicutool-5233v-length-price",
+    "category": "catalog-sku-price",
+    "passage": "Catalogo Sicutool Utensili 2025, pagina 1108: coltello universale Carolus con lama a settori, codice 5233V, lunghezza totale 170 mm, prezzo 23,80 EUR.",
+    "query": "Quanto costa il coltello Carolus Sicutool 5233V lungo 170 mm?",
+    "source_url": "https://www.sicutool.it/Novit%C3%A0/Catalogo-Sicutool-Utensili-2025"
   }
 ]
