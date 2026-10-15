@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseLocalCatalogProducts,parseMarkdownCatalogCards,parseMarkdownCatalogCodeVariants,parseMarkdownCatalogTable,parseMarkdownImageVariants,parseMarkdownVariantPriceMatrices,parsePositionedNativeCatalogRows} from "../../lib/catalog-import";
+import {catalogEvidenceIsValid,catalogExtractionModelSchema,catalogExtractionSchema,catalogNameSimilarity,hasVariantPriceMatrix,looksLikeCatalog,normalizeCatalogName,parseCsvCatalog,parseLocalCatalogProducts,parseMarkdownCatalogCards,parseMarkdownCatalogCodeVariants,parseMarkdownCatalogTable,parseMarkdownImageVariants,parseMarkdownVariantPriceMatrices,parsePositionedNativeCatalogRows} from "../../lib/catalog-import";
 
 test("catalog names normalize accents and punctuation for safe matching",()=>{
  assert.equal(normalizeCatalogName("Caffè — Espresso 100%"),"caffe espresso 100");
@@ -69,7 +69,7 @@ test("OCR width-price matrices expand exact code and size variants with explicit
  assert.deepEqual(products.slice(0,4).map(product=>product.name),[
   "5234G 8 — 2 mm","5234G 8 — 4 mm","5234G 8 — 6 mm","5234G 8 — 8 mm"]);
  assert.deepEqual(products.map(product=>product.imageIndex),[0,0,0,0,1,1]);
- assert.deepEqual(products.map(product=>product.price),[52.7,50.8,50.8,50.8,56.3,54.5]);
+ assert.ok(products.every(product=>product.price===null&&product.priceQuote===""));
  assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
  assert.equal(catalogEvidenceIsValid({...products[0]!,price:999},source),false);
 });
@@ -237,14 +237,34 @@ test("positioned PDF rows reject ambiguous prices and unlabelled codes",()=>{
  ]),[]);
 });
 
-test("OCR plain-text width matrices keep aligned prices and skip rows with missing values",()=>{
+test("OCR plain-text width matrices retain evidenced variants without trusting possibly shifted prices",()=>{
  const source="Larg. mm 2 4 6\n5234G 1 Cad. 38,10 36,30\nLarg. mm 18 20 22\n5234G 1 Cad. 51,30 53,20 55,10";
  const products=parseMarkdownVariantPriceMatrices(source);
- assert.equal(products.length,3);
+ assert.equal(products.length,6);
  assert.deepEqual(products.map(product=>[product.name,product.price]),[
-  ["5234G 1 — 18 mm",51.3],
-  ["5234G 1 — 20 mm",53.2],
-  ["5234G 1 — 22 mm",55.1]
+  ["5234G 1 — 2 mm",null],["5234G 1 — 4 mm",null],["5234G 1 — 6 mm",null],
+  ["5234G 1 — 18 mm",null],["5234G 1 — 20 mm",null],["5234G 1 — 22 mm",null]
  ]);
- assert.ok(products.every(product=>product.imageIndex===null&&catalogEvidenceIsValid(product,source)));
+ assert.ok(products.every(product=>product.imageIndex===null&&product.priceQuote===""&&catalogEvidenceIsValid(product,source)));
+});
+
+test("OCR Markdown matrices honor leading blank columns and reject incomplete price rows",()=>{
+ const source="| 5234G 33 | 500 | Descrizione riferimento | | | | | | |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| | | Larghe | mm | 6 | 8 | 10 | 12 | 16 |\n| | | 5234G 33 | Cad. | 33,70 | 33,70 | 33,70 | 36,10 | 37,10 |\n| 5234G 34 | 500 | Descrizione riferimento | | | | | | |\n| | | Larghe | mm | 2 | 4 | 6 | 8 | 10 | 12 |\n| | | 5234G 34 | Cad. | 56,30 | 54,50 | 54,50 | 54,50 | 58,40 | 60,30 |\n| 5234G 46 | 500 | Descrizione riferimento | | | | | | |\n| | | Larghe | mm | 2 | 4 | 6 | 8 | 10 | 12 |\n| | | 5234G 46 | Cad. | 65,30 | 63,50 | 63,50 | 63,50 | 80,20 | |";
+ const products=parseMarkdownVariantPriceMatrices(source);
+ assert.equal(products.length,17);
+ assert.deepEqual(products.slice(0,5).map(product=>[product.name,product.price]),[
+  ["5234G 33 — 6 mm",null],["5234G 33 — 8 mm",null],["5234G 33 — 10 mm",null],
+  ["5234G 33 — 12 mm",null],["5234G 33 — 16 mm",null]
+ ]);
+ assert.equal(products.at(-1)?.name,"5234G 46 — 12 mm");
+ assert.ok(products.every(product=>product.price===null&&product.priceQuote===""));
+ assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
+ assert.equal(hasVariantPriceMatrix(source),true);
+ assert.equal(parseLocalCatalogProducts("Sicutool Catalogo.pdf",source).length,17);
+});
+
+test("variant matrix review warning recognizes padded Markdown and plain-text layouts",()=>{
+ assert.equal(hasVariantPriceMatrix("| | Larghe | mm | 2 |\n| | 5234G 1 | Cad. | 38,10 |"),true);
+ assert.equal(hasVariantPriceMatrix("Larg. mm 2 4\n5234G 1 Cad. 38,10 36,30"),true);
+ assert.equal(hasVariantPriceMatrix("| Codice | Descrizione | Prezzo |\n| ABC123 | Guanto | 4,50 |"),false);
 });

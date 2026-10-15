@@ -15,7 +15,7 @@ import { slidePreflight } from "@/lib/carousel-layout";
 import { createHash } from "node:crypto";
 import { applyNativeImageAssociations, nativeImageAssociationSchema } from "@/lib/catalog-image-association";
 import { planLinkedOfferCleanup } from "@/lib/source-management";
-import { catalogEvidenceIsValid,catalogExtractionModelSchema,catalogNameSimilarity,looksLikeCatalog,normalizeCatalogName,parseLocalCatalogProducts,type CatalogProduct } from "@/lib/catalog-import";
+import { catalogEvidenceIsValid,catalogExtractionModelSchema,catalogNameSimilarity,hasVariantPriceMatrix,looksLikeCatalog,normalizeCatalogName,parseLocalCatalogProducts,type CatalogProduct } from "@/lib/catalog-import";
 import { getOpenRouterApiKey } from "@/lib/openrouter-credentials";
 import { currentOcrModel } from "@/lib/ai-model-settings";
 import { ocrDocumentWithOpenRouter, type OcrImage, type OcrResult } from "@/lib/openrouter-document-ocr";
@@ -198,7 +198,12 @@ async function reconcileCatalogDocument(ctx:Awaited<ReturnType<typeof auth>>,cli
   added++;
  }
  if(!added&&!updated&&!skippedManual&&invalid)return empty("no_products","Non ho trovato prodotti con evidenze verificabili nel documento.");
- return {status:"processed",added,updated,skippedManual,invalid,...(usedTextOnlyFallback?{message:"Catalogo estratto dal testo OCR; dopo un errore del modello immagini non sono stati creati abbinamenti fotografici."}:{})};
+ const matrixPriceReview=hasVariantPriceMatrix(body);
+ const messages=[
+  usedTextOnlyFallback?"Catalogo estratto dal testo OCR; dopo un errore del modello immagini non sono stati creati abbinamenti fotografici.":"",
+  matrixPriceReview?"Le varianti e le misure della matrice sono state importate senza prezzi: controllali sul documento prima di inserirli.":""
+ ].filter(Boolean);
+ return {status:"processed",added,updated,skippedManual,invalid,...(messages.length?{message:messages.join(" ")}:{})};
 }
 function normalizeName(value:string){return value.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("it").replace(/[^\p{L}\p{N}]+/gu," ").trim().replace(/\s+/g," ");}
 function validId(value:string|undefined){

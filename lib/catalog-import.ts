@@ -169,13 +169,14 @@ export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
  return found;
 }
 
-/** Parse OCR tables where a product code is repeated across a width-by-price matrix. */
+/** Parse code-by-width matrices; their prices require independent verification. */
 export function parseMarkdownVariantPriceMatrices(text:string):CatalogProduct[]{
  const lines=text.split(/\r?\n/u);
  const products:CatalogProduct[]=[];
  const seen=new Set<string>();
  let widths:string[]=[];
  let unit="";
+ let matrixColumnStart=0;
  let activeImage:number|null=null;
  let plainWidths:string[]=[];
  let plainUnit="";
@@ -186,28 +187,31 @@ export function parseMarkdownVariantPriceMatrices(text:string):CatalogProduct[]{
   const cells=markdownCells(trimmed);
   if(cells){
    if(cells.every(cell=>/^:?-{3,}:?$/u.test(cell.replace(/\s/gu,""))))continue;
-   const first=normalizeCatalogName(cells[0]||"");
-   if(/^largh/u.test(first)&&cells.length>=4){
-    unit=(cells[1]||"").trim();
-    widths=cells.slice(2).map(value=>value.trim());
+   const widthColumn=cells.findIndex(cell=>/^largh/u.test(normalizeCatalogName(cell)));
+   if(widthColumn>=0&&cells.length>=widthColumn+4){
+    matrixColumnStart=widthColumn;
+    unit=(cells[widthColumn+1]||"").trim();
+    widths=cells.slice(widthColumn+2).map(value=>value.trim());
+    while(widths.at(-1)==="")widths.pop();
     continue;
    }
-   const code=(cells[0]||"").trim();
+   const code=(cells[matrixColumnStart]||"").trim();
    const isProductCode=/^(?=.*[\p{L}])(?=.*\d)[A-Z0-9]+(?:\s+[A-Z0-9]{1,8}){0,2}$/iu.test(code);
-   const isUnitPrice=/^cad\.?$/iu.test((cells[1]||"").trim());
+   const isUnitPrice=/^cad\.?$/iu.test((cells[matrixColumnStart+1]||"").trim());
    if(!isProductCode||!isUnitPrice||!widths.length||!unit)continue;
-   for(let index=0;index<Math.min(widths.length,cells.length-2);index++){
+   for(let index=0;index<widths.length;index++){
     const width=widths[index]!;
-    const priceQuote=(cells[index+2]||"").trim();
-    const price=parsePrice(priceQuote);
-    if(!width||price===null)continue;
-    const identity=`${normalizeCatalogName(code)}|${normalizeCatalogName(width)}|${unit.toLowerCase()}|${priceQuote}`;
+    if(!width)continue;
+    const identity=`${normalizeCatalogName(code)}|${normalizeCatalogName(width)}|${unit.toLowerCase()}`;
     if(seen.has(identity))continue;
     seen.add(identity);
     const name=`${code} — ${width} ${unit}`.slice(0,180);
-    products.push({name,description:`${width} ${unit}`,price,currency:"EUR",
+    // OCR matrix cells are spatially aligned in the original page, but OCR can
+    // omit repeated values without leaving a detectable column-count mismatch.
+    // Import the evidenced product/size and leave the price for verification.
+    products.push({name,description:`${width} ${unit}`,price:null,currency:"EUR",
      nameQuote:JSON.stringify([code,width,unit]),descriptionQuote:JSON.stringify([width,unit]),
-     priceQuote,existingOfferId:null,imageIndex:activeImage});
+     priceQuote:"",existingOfferId:null,imageIndex:activeImage});
    }
    continue;
   }
@@ -220,23 +224,15 @@ export function parseMarkdownVariantPriceMatrices(text:string):CatalogProduct[]{
   const plainPriceRow=/^((?=.*[\p{L}])(?=.*\d)[A-Z0-9]+(?:\s+[A-Z0-9]{1,8}){0,2})\s+Cad\.?\s+(.+)$/iu.exec(trimmed);
   if(plainPriceRow&&plainWidths.length&&plainUnit){
    const code=plainPriceRow[1]!.trim();
-   const prices=plainPriceRow[2]!.trim().split(/\s+/u);
-   // OCR sometimes drops a value. Never zip a partial price list to widths: that
-   // would silently assign every later price to the wrong product size.
-   if(prices.length===plainWidths.length){
-    for(let index=0;index<plainWidths.length;index++){
-     const width=plainWidths[index]!;
-     const priceQuote=prices[index]!;
-     const price=parsePrice(priceQuote);
-     if(!width||price===null)continue;
-     const identity=`${normalizeCatalogName(code)}|${normalizeCatalogName(width)}|${plainUnit.toLowerCase()}|${priceQuote}`;
-     if(seen.has(identity))continue;
-     seen.add(identity);
-     const name=`${code} — ${width} ${plainUnit}`.slice(0,180);
-     products.push({name,description:`${width} ${plainUnit}`,price,currency:"EUR",
-      nameQuote:JSON.stringify([code,width,plainUnit]),descriptionQuote:JSON.stringify([width,plainUnit]),
-      priceQuote,existingOfferId:null,imageIndex:null});
-    }
+   for(const width of plainWidths){
+    if(!width)continue;
+    const identity=`${normalizeCatalogName(code)}|${normalizeCatalogName(width)}|${plainUnit.toLowerCase()}`;
+    if(seen.has(identity))continue;
+    seen.add(identity);
+    const name=`${code} — ${width} ${plainUnit}`.slice(0,180);
+    products.push({name,description:`${width} ${plainUnit}`,price:null,currency:"EUR",
+     nameQuote:JSON.stringify([code,width,plainUnit]),descriptionQuote:JSON.stringify([width,plainUnit]),
+     priceQuote:"",existingOfferId:null,imageIndex:null});
    }
    continue;
   }
@@ -244,6 +240,14 @@ export function parseMarkdownVariantPriceMatrices(text:string):CatalogProduct[]{
   if(codeHeading)activeImage=null;
  }
  return products.slice(0,1000);
+}
+
+export function hasVariantPriceMatrix(text:string){
+ const markdownHeader=/^\s*\|[^\n]*\bLarg(?:h(?:e)?)?\b[^\n]*\bmm\b/imu.test(text);
+ const markdownPrice=/^\s*\|[^\n]*\bCad\.?\b/mu.test(text);
+ const plainHeader=/^\s*Larg(?:h(?:e)?)?\.?\s+\S+\s+/imu.test(text);
+ const plainPrice=/^\s*(?=.*[\p{L}])(?=.*\d)[A-Z0-9]+(?:\s+[A-Z0-9]{1,8}){0,2}\s+Cad\.?\s+/imu.test(text);
+ return (markdownHeader&&markdownPrice)||(plainHeader&&plainPrice);
 }
 
 /** Parse OCR product cards: a short product heading, details, then a printed code/packaging block. */
@@ -402,7 +406,11 @@ export function parseLocalCatalogProducts(title:string,text:string):CatalogProdu
  if(csvProducts.length)return csvProducts;
  const markdownProducts=looksLikeCatalog(title,text)?parseMarkdownCatalogTable(text):[];
  const matrixProducts=parseMarkdownVariantPriceMatrices(text);
- if(markdownProducts.length||matrixProducts.length)return [...markdownProducts,...matrixProducts].slice(0,1000);
+ // Matrix rows use separate width and price lines, which OCR can misalign even
+ // when both lines have the same cell count. Prefer the conservative matrix
+ // result and never let the generic table parser persist those prices.
+ if(matrixProducts.length)return matrixProducts.slice(0,1000);
+ if(markdownProducts.length)return markdownProducts.slice(0,1000);
  const markdownCodeVariants=/catalog|catalogo|listino|price[ -]?list/i.test(title)?parseMarkdownCatalogCodeVariants(text):[];
  if(markdownCodeVariants.length)return markdownCodeVariants;
  const catalogCards=parseMarkdownCatalogCards(text);
