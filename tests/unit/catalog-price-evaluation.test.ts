@@ -4,12 +4,12 @@ import { evaluateCatalogPrices } from "../../scripts/evaluate-catalog-prices";
 
 test("public catalog price benchmark separates prices, OCR variants and exact codes", () => {
   const result = evaluateCatalogPrices();
-  assert.equal(result.total, 192);
-  assert.equal(result.uniquePriceCells, 134);
-  assert.equal(result.rowMatches, 192);
-  assert.equal(result.correctPrices, 192);
-  assert.equal(result.exactVariants, 190);
-  assert.equal(result.exactCodes, 187);
+  assert.equal(result.total, 204);
+  assert.equal(result.uniquePriceCells, 146);
+  assert.equal(result.rowMatches, 204);
+  assert.equal(result.correctPrices, 204);
+  assert.equal(result.exactVariants, 202);
+  assert.equal(result.exactCodes, 199);
   assert.deepEqual(result.byFixture["stanley-2026-page-54-native.txt"], {
     total: 7, rowMatches: 7, correctPrices: 7, exactVariants: 7, exactCodes: 7,
   });
@@ -42,6 +42,9 @@ test("public catalog price benchmark separates prices, OCR variants and exact co
   });
   assert.deepEqual(result.byFixture["aco-r25-2026-page-2-ocr.md"], {
     total: 5, rowMatches: 5, correctPrices: 5, exactVariants: 5, exactCodes: 5,
+  });
+  assert.deepEqual(result.byFixture["aco-d25-2026-page-4-ocr.md"], {
+    total: 12, rowMatches: 12, correctPrices: 12, exactVariants: 12, exactCodes: 12,
   });
   assert.deepEqual(result.failures.map(({ code, reason }) => ({ code, reason })), [
     { code: "XTHT0-33671", reason: "codice estratto non esatto" },

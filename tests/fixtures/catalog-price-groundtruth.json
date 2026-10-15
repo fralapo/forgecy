@@ -1726,5 +1726,113 @@
     "family": "Pozzetto di scarico per Multiline V 100",
     "variant": "100",
     "price": 222.87
+  },
+  {
+    "source": "ACO Listino D25, pagina stampata 4 OCR API (prezzi riportati con aumento 5%)",
+    "url": "https://www.aco.it/fileadmin/standard/aco-it/05_Download/Listini/D25/Listino_D25__5_.pdf",
+    "fixture": "aco-d25-2026-page-4-ocr.md",
+    "code": "12330",
+    "family": "Multiline V 100",
+    "variant": "0.0",
+    "price": 75.06
+  },
+  {
+    "source": "ACO Listino D25, pagina stampata 4 OCR API (prezzi riportati con aumento 5%)",
+    "url": "https://www.aco.it/fileadmin/standard/aco-it/05_Download/Listini/D25/Listino_D25__5_.pdf",
+    "fixture": "aco-d25-2026-page-4-ocr.md",
+    "code": "12530",
+    "family": "Multiline V 100",
+    "variant": "0.0",
+    "price": 90.24
+  },
+  {
+    "source": "ACO Listino D25, pagina stampata 4 OCR API (prezzi riportati con aumento 5%)",
+    "url": "https://www.aco.it/fileadmin/standard/aco-it/05_Download/Listini/D25/Listino_D25__5_.pdf",
+    "fixture": "aco-d25-2026-page-4-ocr.md",
+    "code": "12340",
+    "family": "Multiline V 100",
+    "variant": "5.0",
+    "price": 82.95
+  },
+  {
+    "source": "ACO Listino D25, pagina stampata 4 OCR API (prezzi riportati con aumento 5%)",
+    "url": "https://www.aco.it/fileadmin/standard/aco-it/05_Download/Listini/D25/Listino_D25__5_.pdf",
+    "fixture": "aco-d25-2026-page-4-ocr.md",
+    "code": "12540",
+    "family": "Multiline V 100",
+    "variant": "5.0",
+    "price": 102.07
+  },
+  {
+    "source": "ACO Listino D25, pagina stampata 4 OCR API (prezzi riportati con aumento 5%)",
+    "url": "https://www.aco.it/fileadmin/standard/aco-it/05_Download/Listini/D25/Listino_D25__5_.pdf",
+    "fixture": "aco-d25-2026-page-4-ocr.md",
+    "code": "12350",
+    "family": "Multiline V 100",
+    "variant": "10.0",
+    "price": 87.66
+  },
+  {
+    "source": "ACO Listino D25, pagina stampata 4 OCR API (prezzi riportati con aumento 5%)",
+    "url": "https://www.aco.it/fileadmin/standard/aco-it/05_Download/Listini/D25/Listino_D25__5_.pdf",
+    "fixture": "aco-d25-2026-page-4-ocr.md",
+    "code": "12550",
+    "family": "Multiline V 100",
+    "variant": "10.0",
+    "price": 105.57
+  },
+  {
+    "source": "ACO Listino D25, pagina stampata 4 OCR API (prezzi riportati con aumento 5%)",
+    "url": "https://www.aco.it/fileadmin/standard/aco-it/05_Download/Listini/D25/Listino_D25__5_.pdf",
+    "fixture": "aco-d25-2026-page-4-ocr.md",
+    "code": "12360",
+    "family": "Multiline V 100",
+    "variant": "15.0",
+    "price": 95.67
+  },
+  {
+    "source": "ACO Listino D25, pagina stampata 4 OCR API (prezzi riportati con aumento 5%)",
+    "url": "https://www.aco.it/fileadmin/standard/aco-it/05_Download/Listini/D25/Listino_D25__5_.pdf",
+    "fixture": "aco-d25-2026-page-4-ocr.md",
+    "code": "12560",
+    "family": "Multiline V 100",
+    "variant": "15.0",
+    "price": 111.5
+  },
+  {
+    "source": "ACO Listino D25, pagina stampata 4 OCR API (prezzi riportati con aumento 5%)",
+    "url": "https://www.aco.it/fileadmin/standard/aco-it/05_Download/Listini/D25/Listino_D25__5_.pdf",
+    "fixture": "aco-d25-2026-page-4-ocr.md",
+    "code": "12370",
+    "family": "Multiline V 100",
+    "variant": "20.0",
+    "price": 101.96
+  },
+  {
+    "source": "ACO Listino D25, pagina stampata 4 OCR API (prezzi riportati con aumento 5%)",
+    "url": "https://www.aco.it/fileadmin/standard/aco-it/05_Download/Listini/D25/Listino_D25__5_.pdf",
+    "fixture": "aco-d25-2026-page-4-ocr.md",
+    "code": "12570",
+    "family": "Multiline V 100",
+    "variant": "20.0",
+    "price": 120.94
+  },
+  {
+    "source": "ACO Listino D25, pagina stampata 4 OCR API (prezzi riportati con aumento 5%)",
+    "url": "https://www.aco.it/fileadmin/standard/aco-it/05_Download/Listini/D25/Listino_D25__5_.pdf",
+    "fixture": "aco-d25-2026-page-4-ocr.md",
+    "code": "12334",
+    "family": "Multiline V 100",
+    "variant": "0.0.2",
+    "price": 128.97
+  },
+  {
+    "source": "ACO Listino D25, pagina stampata 4 OCR API (prezzi riportati con aumento 5%)",
+    "url": "https://www.aco.it/fileadmin/standard/aco-it/05_Download/Listini/D25/Listino_D25__5_.pdf",
+    "fixture": "aco-d25-2026-page-4-ocr.md",
+    "code": "12531",
+    "family": "Multiline V 100",
+    "variant": "0.0.2",
+    "price": 156.22
   }
 ]

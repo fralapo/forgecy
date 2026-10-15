@@ -133,6 +133,67 @@ function markdownCells(line:string):string[]|null{
  return cells.length>=3?cells:null;
 }
 
+/** Parse OCR tables with multiple independent SKU and unit-price columns. */
+export function parseMarkdownRepeatedCodePriceTable(text:string):CatalogProduct[]{
+ const lines=text.split(/\r?\n/u);
+ const products:CatalogProduct[]=[];
+ for(let headerLine=0;headerLine<lines.length;headerLine++){
+  const headers=markdownCells(lines[headerLine]);
+  if(!headers)continue;
+  const codeIndexes=headers.flatMap((header,index)=>/\bcod\.?\s*(?:art\.?|ice)?\b/iu.test(header)?[index]:[]);
+  const priceIndexes=headers.flatMap((header,index)=>/^(?:€|eur|euro)\s*\/\s*(?:pz\.?|pezzo|cad\.?)$/iu.test(header.trim())?[index]:[]);
+  if(codeIndexes.length<2||priceIndexes.length<2)continue;
+  const headingQuotes=lines.slice(0,headerLine).reverse().map(line=>/^\s*#{1,6}\s+(.+?)\s*#*\s*$/u.exec(line)?.[1]?.trim()||"")
+   .filter(value=>value&&!/^(?:lunghezza|larghezza|dimensione|misura|dettagli|informazioni)\b/iu.test(value)).slice(0,2).reverse();
+  let category="";
+  for(let index=headerLine-1;index>=0;index--){
+   const line=lines[index]!.trim();
+   if(/^\s*\|/u.test(line)||/^\s*#/u.test(line))continue;
+   if(/^canale\b/iu.test(line)){category=line;break;}
+  }
+  let activeCategory=category;
+  let added=0;
+  for(let rowLine=headerLine+1;rowLine<lines.length;rowLine++){
+   const raw=lines[rowLine]!.trim();
+   const cells=markdownCells(raw);
+   if(!cells){
+    if(/^canale\b/iu.test(raw)){activeCategory=raw;continue;}
+    // ACO OCR may omit the repeated header after a subsection title. Keep the
+    // last observed column map through blank lines and reuse it for that table.
+    if(added&&(raw.length>0||/^\s*#{1,6}\s/u.test(raw)))break;
+    continue;
+   }
+   if(cells.some(cell=>/^canale\b/iu.test(cell))){activeCategory=cells.find(cell=>/^canale\b/iu.test(cell))!.trim();continue;}
+   if(cells.every(cell=>/^:?-{3,}:?$/u.test(cell.replace(/\s/gu,""))))continue;
+   if(cells.length<Math.max(...codeIndexes,...priceIndexes)+1)continue;
+   const firstVariant=(cells[0]||"").trim();
+   if(!/^\d+(?:\.\d+){0,2}$/u.test(firstVariant))continue;
+   for(let pair=0;pair<Math.min(codeIndexes.length,priceIndexes.length);pair++){
+    const code=(cells[codeIndexes[pair]!]||"").trim();
+    const priceQuote=(cells[priceIndexes[pair]!]||"").trim();
+    if(!/^\d{5,8}$/u.test(code))continue;
+    const price=parsePrice(priceQuote);
+    if(price===null)continue;
+    const variantQuote=firstVariant;
+    const nameQuotes=[...headingQuotes,...(activeCategory?[activeCategory]:[]),variantQuote,code];
+    const descriptionParts=headers.flatMap((_header,index)=>
+     !codeIndexes.includes(index)&&!priceIndexes.includes(index)&&cells[index]?.trim()
+      ?[cells[index]!.trim()]:[]);
+    const description=descriptionParts.join("; ").slice(0,1200);
+    products.push({
+     name:[...headingQuotes,...(activeCategory?[activeCategory]:[]),variantQuote,code].join(" — ").slice(0,180),
+     description,price,currency:"EUR",
+     nameQuote:JSON.stringify([...nameQuotes]),
+     descriptionQuote:JSON.stringify(descriptionParts),
+     priceQuote,existingOfferId:null,imageIndex:null,
+    });
+    added++;
+   }
+  }
+ }
+ return products.slice(0,1000);
+}
+
 /** Parse OCR-preserved Markdown price lists and product matrices with exact row evidence. */
 export function parseMarkdownCatalogTable(text:string):CatalogProduct[]{
  const lines=text.split(/\r?\n/u);
@@ -630,6 +691,10 @@ export function parseMarkdownCatalogCodeVariants(text:string):CatalogProduct[]{
 export function parseLocalCatalogProducts(title:string,text:string):CatalogProduct[]{
  const csvProducts=parseCsvCatalog(text);
  if(csvProducts.length)return csvProducts;
+ // The deliberately narrow repeated SKU/price headers are sufficient catalog
+ // evidence even when the OCR filename and surrounding text are generic.
+ const repeatedMarkdownProducts=parseMarkdownRepeatedCodePriceTable(text);
+ if(repeatedMarkdownProducts.length)return repeatedMarkdownProducts;
  const markdownProducts=looksLikeCatalog(title,text)?parseMarkdownCatalogTable(text):[];
  const matrixProducts=parseMarkdownVariantPriceMatrices(text);
  // Matrix rows use separate width and price lines, which OCR can misalign even

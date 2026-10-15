@@ -466,3 +466,18 @@ test("ACO R25 OCR tables parse Euro/pz columns with section and variant evidence
  ]);
  assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
 });
+
+test("ACO D25 OCR pairs repeated SKU and price columns by row and preserves section evidence",()=>{
+ const source=readFileSync(join(process.cwd(),"tests/fixtures/aco-d25-2026-page-4-ocr.md"),"utf8");
+ const products=parseLocalCatalogProducts("aco-d25-scanned-page-4.pdf",source);
+ assert.equal(products.length,20);
+ const byCode=(code:string)=>products.find(product=>product.name.endsWith(`— ${code}`));
+ assert.deepEqual([
+  [byCode("12330")?.price,byCode("12530")?.price],
+  [byCode("12370")?.price,byCode("12570")?.price],
+  [byCode("12334")?.price,byCode("12531")?.price],
+ ],[[75.06,90.24],[101.96,120.94],[128.97,156.22]]);
+ assert.match(byCode("12330")?.name||"",/Canale standard/u);
+ assert.match(byCode("12334")?.name||"",/Canale con guarnizione/u);
+ assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
+});
