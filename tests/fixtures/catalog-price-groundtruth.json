@@ -1564,5 +1564,32 @@
     "family": "ecoTEC plus VMW 26CS/1-5 (N-IT)",
     "variant": "ecoTEC plus VMW 26CS/1-5 (N-IT)",
     "price": 3280
+  },
+  {
+    "source": "Caleffi Listino prezzi VMC 2026, pagina stampata 16 (OCR)",
+    "url": "https://www.caleffi.com/sites/default/files/media/external-file/05070_IT_26_Listino%20prezzi%20VMC.pdf",
+    "fixture": "caleffi-vmc-2026-page-16-ocr.md",
+    "code": "AIR400003",
+    "family": "CORPO PLENUM VMC SIZE 6",
+    "variant": "CORPO PLENUM VMC SIZE 6",
+    "price": 160
+  },
+  {
+    "source": "Caleffi Listino prezzi VMC 2026, pagina stampata 16 (OCR)",
+    "url": "https://www.caleffi.com/sites/default/files/media/external-file/05070_IT_26_Listino%20prezzi%20VMC.pdf",
+    "fixture": "caleffi-vmc-2026-page-16-ocr.md",
+    "code": "AIR917080",
+    "family": "TUBO EPE DN200 L. 2 M",
+    "variant": "TUBO EPE DN200 L. 2 M",
+    "price": 167
+  },
+  {
+    "source": "Caleffi Listino prezzi VMC 2026, pagina stampata 16 (OCR)",
+    "url": "https://www.caleffi.com/sites/default/files/media/external-file/05070_IT_26_Listino%20prezzi%20VMC.pdf",
+    "fixture": "caleffi-vmc-2026-page-16-ocr.md",
+    "code": "AIR917150",
+    "family": "CURVA EPE 90° DN125",
+    "variant": "CURVA EPE 90° DN125",
+    "price": 34.3
   }
 ]
