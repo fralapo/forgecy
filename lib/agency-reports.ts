@@ -93,6 +93,13 @@ export function excelCsvCell(value:unknown):string{
 }
 export function instagramCsv(snapshot:ObservedSnapshot):string{
  if(snapshot.data.measured!==true)throw new Error("Si possono esportare soltanto rilevazioni reali");
+ if(!snapshot.data.media?.length){
+  const headers=["Tipo record","Username","Follower","Precisione follower","Post totali","Rilevato il","Fonte"];
+  const row=["Profilo",snapshot.data.account?.username||"",snapshot.data.account?.followers_count??null,
+   snapshot.data.metric_precision?.followers_count==="rounded"?"arrotondata":"esatta",
+   snapshot.data.account?.media_count??null,snapshot.collected_at,snapshot.data.source||""];
+  return "\ufeff"+[headers.map(excelCsvCell).join(";"),row.map(excelCsvCell).join(";")].join("\r\n")+"\r\n";
+ }
  const headers=["ID post","Data post","Tipo","Caption","Permalink","Like","Commenti","Copertura","Salvataggi","Condivisioni","Acquisito il"];
  const rows=(snapshot.data.media||[]).map(p=>{
   const observed=(key:string)=>{

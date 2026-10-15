@@ -470,7 +470,7 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
    <div className="card metric-card"><span className="muted">Follower · {snap?.data.metric_precision?.followers_count==="rounded"?"conteggio arrotondato":"ultima lettura"}</span>
     <strong>{snap?.data.metric_precision?.followers_count==="rounded"?"≈":""}{num(stats.followers)}</strong><small>{stats.delta===null?"Variazione non disponibile":(stats.delta_approximate?"Variazione indicativa ~":"")+(stats.delta>=0?"+":"")+num(stats.delta)+(stats.delta_approximate?"":"")+" rispetto alla lettura precedente"}</small></div>
    <div className="card metric-card"><span className="muted">Contenuti dell&apos;account</span>
-    <strong>{num(stats.media_count)}</strong><small>Conteggio contenuto nello snapshot importato</small></div>
+    <strong>{snap?.data.metric_precision?.media_count==="rounded"?"≈":""}{num(stats.media_count)}</strong><small>{snap?.data.metric_scope==="public_profile_page"?"Conteggio esposto nella pagina pubblica":"Conteggio contenuto nello snapshot importato"}</small></div>
    <div className="card metric-card"><span className="muted">Interazioni del campione</span>
     <strong>{num(stats.total_sampled_interactions)}</strong><small>Like + commenti per {stats.sampled_posts_with_interactions} contenuti con dati disponibili</small></div>
   </div>

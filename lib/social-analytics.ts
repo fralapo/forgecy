@@ -9,7 +9,7 @@ export type ObservedSnapshot={
  data:{account?:{username?:string;followers_count?:number|null;media_count?:number|null};
    media?:ObservedMedia[];account_insights?:Record<string,number|null>;
    metric_precision?:Record<string,"exact"|"rounded">;
-   source?:string;measured?:boolean;insights_status?:string}
+   source?:string;measured?:boolean;insights_status?:string;metric_scope?:string}
 };
 const finite=(v:unknown):v is number=>typeof v==="number"&&Number.isFinite(v)&&v>=0;
 export function summarizeInstagram(snapshots:ObservedSnapshot[], accountId?:string|null){
