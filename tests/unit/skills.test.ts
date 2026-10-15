@@ -38,6 +38,12 @@ test("explicit Instagram-only briefs prohibit LinkedIn without requiring it",()=
  const issues=reviewStaticAssets([...assets,asset("linkedin","document")],new Set([proofId]),brief);
  assert.ok(issues.some(x=>x.code==="prohibited_linkedin"&&x.severity==="blocking"));
 });
+test("one explicitly requested Instagram carousel is valid without a second channel",()=>{
+ const brief="Crea esattamente 1 carosello Instagram di 5 slide. Non creare deliverable LinkedIn.";
+ const carousel=asset("instagram","carousel");
+ carousel.slides=Array.from({length:5},(_,i)=>({headline:`Slide ${i+1}`,body:"Informazione verificata."}));
+ assert.deepEqual(reviewStaticAssets([carousel],new Set([proofId]),brief),[]);
+});
 test("explicit carousel count and page count are enforced",()=>{
  const brief="Esattamente 2 caroselli Instagram, ciascuno di 5 slide. Evita LinkedIn.";
  const a=asset("instagram","carousel");

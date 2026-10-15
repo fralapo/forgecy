@@ -15,7 +15,7 @@ export function reviewStaticAssets(items:StaticAsset[],validSignals:ReadonlySet<
  const issues:QualityIssue[]=[];
  const add=(item:number,code:string,severity:QualityIssue["severity"],message:string)=>
   issues.push({item,code,severity,message});
- const excludesLinkedIn=/\b(?:evita|senza|escludi|non\s+(?:fare|creare|includere|produrre|usare))\s+(?:il\s+)?linkedin\b/i.test(request);
+ const excludesLinkedIn=/\b(?:evita|senza|escludi|non\s+(?:fare|creare|includere|produrre|usare)(?:\s+[\p{L}\p{N}-]+){0,3})\s+(?:il\s+)?linkedin\b/iu.test(request);
  const instagramOnly=/\bsolo\s+instagram\b/i.test(request);
  if(!items.some(x=>x.channel==="instagram"))add(-1,"missing_instagram","blocking","Manca almeno un contenuto Instagram statico");
  if(!excludesLinkedIn&&!instagramOnly&&!items.some(x=>x.channel==="linkedin"))add(-1,"missing_linkedin","blocking","Manca almeno un adattamento LinkedIn");
