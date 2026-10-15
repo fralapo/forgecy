@@ -286,12 +286,14 @@ function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Pro
  const [calendarOpen,setCalendarOpen]=useState(false);
  const [contentId,setContentId]=useState<string|null>(null);
  const [tab,setTab]=useState<"brief"|"production">("production");
+ const latestDossier=data.dossiers[0],latestStrategy=data.strategies[0];
+ const canCampaign=latestDossier?.status==="approved"&&latestDossier.knowledge_revision===data.client.knowledge_revision&&latestStrategy?.status==="approved"&&latestStrategy.knowledge_revision===data.client.knowledge_revision;
  const campaign=data.campaigns.find(c=>c.id===campaignId);
  const contents=campaign?data.contents.filter(c=>c.campaign_id===campaign.id):[];
  const chosen=contents.find(c=>c.id===contentId);
  return <>
   <Header k="PROGETTI / OBIETTIVI" title="Dall'obiettivo alla pubblicazione." sub="Ogni campagna tiene insieme strategia, calendario, post e adattamenti LinkedIn."
-   actions={<div className="flex gap8 wrap"><button className={"button "+(calendarOpen?"primary":"")} onClick={()=>setCalendarOpen(v=>!v)}><CalendarDays size={16}/>{calendarOpen?"Torna ai progetti":"Calendario editoriale"}</button><button className="button primary" onClick={onChat}><Sparkles size={16}/> Affida un obiettivo al Leader</button></div>}/>
+   actions={<div className="flex gap8 wrap"><button className={"button "+(calendarOpen?"primary":"")} onClick={()=>setCalendarOpen(v=>!v)}><CalendarDays size={16}/>{calendarOpen?"Torna ai progetti":"Calendario editoriale"}</button><button className="button primary" disabled={!canCampaign||Boolean(busy)} title={!canCampaign?"Approva il dossier e il piano strategico aggiornati per avviare una campagna.":undefined} onClick={()=>onModal("mission")}><Sparkles size={16}/> Affida un obiettivo al Leader</button></div>}/>
   {calendarOpen&&<EditorialCalendar data={data} onAction={onAction} busy={busy}/>}
   {!calendarOpen&&chosen&&<ContentEditor key={chosen.id+":"+chosen.revision} content={chosen} clientName={data.client.name} profile={data.client.profile} onBack={()=>setContentId(null)} onAction={onAction} busy={busy}/>}
   {!calendarOpen&&!chosen&&campaign&&<div className="stack-lg">
