@@ -1,6 +1,7 @@
 import {z} from "zod";
 import {auth,requireClient,read,json,fail,ApiFailure,dbError} from "@/lib/http";
 import {missionSchema} from "@/lib/schemas";
+import {mapAiJobEnqueueError} from "@/lib/ai-job-enqueue-error";
 export const runtime="nodejs";
 type P={params:Promise<{clientId:string}>};
 const createJob=z.discriminatedUnion("kind",[
@@ -69,7 +70,11 @@ export async function POST(request:Request,{params}:P){
   const {data,error}=await ctx.db.rpc("forgecy_enqueue_ai_job",{
     p_client_id:clientId,p_kind:input.kind,p_payload:input.payload
   });
-  dbError(error,"Non è possibile mettere in coda il lavoro: controlla limiti e configurazione");
+  if(error){
+   const mapped=mapAiJobEnqueueError(error);
+   if(mapped.status===503)console.error("[ai-jobs] Enqueue failed",error.code||"database error");
+   throw new ApiFailure(mapped.status,mapped.message);
+  }
   return json({job_id:data,status:"queued",message:"Lavoro accodato. Forgecy lo elaborerà in locale."},202);
  }catch(e){return fail(e);}
 }
