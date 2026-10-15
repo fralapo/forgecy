@@ -378,7 +378,21 @@ export async function POST(request:Request,{params}:Params){
      offersImported++;
    }
    let imagesImported=0,documentsImported=0,imagesUpdated=0,documentsUpdated=0;
-   const files=[...result.assets.map(asset=>({url:asset.url,title:asset.alt||"Immagine del sito",role:asset.role,kind:"image" as const})),...result.documents.map(doc=>({url:doc.url,title:doc.title,role:"document",kind:"document" as const}))];
+   // Product.image is authoritative structured data. Keep these URLs even when
+   // the crawler's general asset cap was filled by logos and decorative images.
+   const websiteImages=new Map<string,{url:string;title:string;role:"logo"|"product"|"image";kind:"image"}>();
+   for(const asset of result.assets)websiteImages.set(asset.url,{url:asset.url,title:asset.alt||"Immagine del sito",role:asset.role,kind:"image"});
+   for(const product of result.products){
+    if(!product.image)continue;
+    const prior=websiteImages.get(product.image);
+    websiteImages.set(product.image,{url:product.image,title:product.name,role:"product",kind:"image"});
+    if(prior&&prior.role==="logo")websiteImages.set(product.image,{...prior,role:"product",title:product.name});
+   }
+   const imagePriority={product:0,logo:1,image:2} as const;
+   const imageFiles=[...websiteImages.values()].sort((a,b)=>imagePriority[a.role]-imagePriority[b.role])
+    .slice(0,Math.max(48,result.assets.length));
+   const files:Array<{url:string;title:string;role:"logo"|"product"|"image"|"document";kind:"image"|"document"}>=
+    [...imageFiles,...result.documents.map(doc=>({url:doc.url,title:doc.title,role:"document" as const,kind:"document" as const}))];
    for(let offset=0;offset<files.length;offset+=6){
      await Promise.all(files.slice(offset,offset+6).map(async file=>{
        const existingFile=byUrl.get(file.url);
@@ -386,7 +400,18 @@ export async function POST(request:Request,{params}:Params){
        try{
          const saved=await fetchWebsiteFile(file.url,file.kind);
          const contentSha256=createHash("sha256").update(saved.bytes).digest("hex");
-         if(existingFile?.content_sha256===contentSha256)return;
+         if(existingFile?.content_sha256===contentSha256){
+          // A previously stored generic image may later be identified by the
+          // product's structured image field. Upgrade its role so the offer
+          // can link to the existing local file without downloading it again.
+          if(file.kind==="image"&&file.role==="product"&&existingFile.source_metadata?.asset_role!=="product"&&existingFile.file_path){
+           const sourceMetadata={...(existingFile.source_metadata||{}),asset_role:"product",storage_bucket:existingFile.source_metadata?.storage_bucket||"forgecy-assets"};
+           const upgraded=await ctx.db.from("sources").update({title:file.title.slice(0,180),source_metadata:sourceMetadata})
+            .eq("id",existingFile.id).eq("client_id",id).select("id,title,url,file_path,source_metadata").maybeSingle();
+           if(!upgraded.error&&upgraded.data)byUrl.set(file.url,upgraded.data);
+          }
+          return;
+         }
          const bucket=file.kind==="image"?"forgecy-assets":"forgecy-sources";
          const path=id+"/website/"+crypto.randomUUID()+"."+saved.extension;
          if(file.kind==="document"){
