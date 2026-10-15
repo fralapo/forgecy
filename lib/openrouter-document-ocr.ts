@@ -179,7 +179,7 @@ export async function ocrDocumentWithOpenRouter(options: OcrOptions): Promise<Oc
   const initialText=options.previousBody?.trim()||options.nativeText?.trim()||"";
   // Mixed PDFs need room for both existing native text and OCR from scanned pages.
   const hasOcrPages=isPdf&&(options.pagesToOcr?.length||pageCount||0)>0;
-  const initialTextLimit=hasOcrPages?MAX_OCR_TEXT_CHARS/2:MAX_OCR_TEXT_CHARS;
+  const initialTextLimit=hasOcrPages&&!options.previousBody?MAX_OCR_TEXT_CHARS/2:MAX_OCR_TEXT_CHARS;
   const blocks: string[] = initialText ? [initialText.slice(0, initialTextLimit)] : [];
   const images: OcrImage[] = [];
   const imageHashes = new Set<string>();

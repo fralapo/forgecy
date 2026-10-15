@@ -230,6 +230,23 @@ test("mixed-PDF text limits do not stop OCR of the remaining selected pages",asy
  assert.equal(result.body.length,80_000);
 });
 
+test("resuming partial OCR preserves its previously extracted body",async()=>{
+ const pdf=await PDFDocument.create();
+ for(let page=0;page<12;page++)pdf.addPage([300,400]);
+ const bytes=new Uint8Array(await pdf.save());
+ const previousBody="Testo nativo. ".repeat(3200)+"\n\n[Pagine PDF 1–8]\nOCR già completato.";
+ const result=await ocrDocumentWithOpenRouter({
+  bytes,mime:"application/pdf",name:"catalogo.pdf",model:"deepseek/deepseek-v4.1-flash",pageCount:12,
+  pagesToOcr:[9,10,11,12],resumeAfterPage:8,previousBody,
+  keyProvider:async()=>"test-key",
+  fetcher:async()=>new Response(JSON.stringify({id:"gen-resume",model:"deepseek/deepseek-v4.1-flash",usage:{prompt_tokens:20,completion_tokens:10},choices:[{message:{annotations:[{type:"file",file:{content:[{type:"text",text:"OCR delle pagine rimanenti del documento."}]}}]}}]}),{status:200})
+ });
+ assert.match(result.body,/OCR già completato/);
+ assert.match(result.body,/OCR delle pagine rimanenti/);
+ assert.equal(result.pagesProcessed,12);
+ assert.equal(result.partialFailure,false);
+});
+
 test("splits OCR PDF segments by serialized size as well as page count", async () => {
   const pdf = await PDFDocument.create();
   for (let page = 0; page < 15; page++) {

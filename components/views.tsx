@@ -28,11 +28,11 @@ function sourceCoverageNotice(source:Snapshot["sources"][number]):string|null{
  const processing=value as Record<string,unknown>;
  if(processing.truncation_reason==="ocr_partial"){
   const read=Number(processing.pages_processed)||0,total=Number(processing.page_count)||0;
-  return `OCR parziale: Forgecy ha conservato il testo delle prime ${read} pagine su ${total}. Usa “Riprova OCR” per completare la lettura.`;
+  return `OCR parziale: Forgecy ha elaborato fino a pagina ${read} di ${total}. Usa “Riprova OCR” per completare la lettura.`;
  }
  if(processing.truncation_reason==="page_limit"){
   const read=Number(processing.pages_processed)||0,total=Number(processing.page_count)||0;
-  return `Sono state lette ${read} pagine su ${total}. Dividi il PDF in parti più piccole e carica anche le pagine mancanti.`;
+  return `Sono state lette fino a pagina ${read} di ${total}. Dividi il PDF in parti più piccole e carica anche le pagine mancanti.`;
  }
  if(processing.truncation_reason==="character_limit")return "Il testo estratto ha raggiunto il limite di Forgecy. Dividi il documento e carica le parti separatamente per includerlo tutto.";
  return null;
