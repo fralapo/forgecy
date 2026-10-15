@@ -63,6 +63,69 @@
     "price": 45.1
   },
   {
+    "source": "Stanley Listino 2026, pagina stampata 54 (estrazione PDF nativa)",
+    "url": "https://bynder.sbdinc.com/m/61870d470e95fbff/original/ST_Listino-2026-WEB-IT_DMK1.pdf",
+    "fixture": "stanley-2026-page-54-native.txt",
+    "code": "FMHT38214-0",
+    "family": "FATMAX® XTREME™",
+    "variant": "5",
+    "price": 32.9
+  },
+  {
+    "source": "Stanley Listino 2026, pagina stampata 54 (estrazione PDF nativa)",
+    "url": "https://bynder.sbdinc.com/m/61870d470e95fbff/original/ST_Listino-2026-WEB-IT_DMK1.pdf",
+    "fixture": "stanley-2026-page-54-native.txt",
+    "code": "FMHT38217-0",
+    "family": "FATMAX® XTREME™",
+    "variant": "8",
+    "price": 36
+  },
+  {
+    "source": "Stanley Listino 2026, pagina stampata 54 (estrazione PDF nativa)",
+    "url": "https://bynder.sbdinc.com/m/61870d470e95fbff/original/ST_Listino-2026-WEB-IT_DMK1.pdf",
+    "fixture": "stanley-2026-page-54-native.txt",
+    "code": "FMHT38232-0",
+    "family": "FATMAX® XTREME™",
+    "variant": "10",
+    "price": 39.2
+  },
+  {
+    "source": "Stanley Listino 2026, pagina stampata 54 (estrazione PDF nativa)",
+    "url": "https://bynder.sbdinc.com/m/61870d470e95fbff/original/ST_Listino-2026-WEB-IT_DMK1.pdf",
+    "fixture": "stanley-2026-page-54-native.txt",
+    "code": "XTHT0-33671",
+    "family": "FATMAX® AUTOLOCK",
+    "variant": "5",
+    "price": 39.8
+  },
+  {
+    "source": "Stanley Listino 2026, pagina stampata 54 (estrazione PDF nativa)",
+    "url": "https://bynder.sbdinc.com/m/61870d470e95fbff/original/ST_Listino-2026-WEB-IT_DMK1.pdf",
+    "fixture": "stanley-2026-page-54-native.txt",
+    "code": "XTHT0-33501",
+    "family": "FATMAX® AUTOLOCK",
+    "variant": "8",
+    "price": 45.5
+  },
+  {
+    "source": "Stanley Listino 2026, pagina stampata 54 (estrazione PDF nativa)",
+    "url": "https://bynder.sbdinc.com/m/61870d470e95fbff/original/ST_Listino-2026-WEB-IT_DMK1.pdf",
+    "fixture": "stanley-2026-page-54-native.txt",
+    "code": "FMHT0-33864",
+    "family": "FATMAX® 32 MM. MAGNETICO",
+    "variant": "5",
+    "price": 40.3
+  },
+  {
+    "source": "Stanley Listino 2026, pagina stampata 54 (estrazione PDF nativa)",
+    "url": "https://bynder.sbdinc.com/m/61870d470e95fbff/original/ST_Listino-2026-WEB-IT_DMK1.pdf",
+    "fixture": "stanley-2026-page-54-native.txt",
+    "code": "FMHT0-33868",
+    "family": "FATMAX® 32 MM. MAGNETICO",
+    "variant": "8",
+    "price": 45.1
+  },
+  {
     "source": "Conex Bänninger Listino Serie 8000 2026, pagina 188",
     "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
     "fixture": "conex-series-8000-page-188-ocr.md",

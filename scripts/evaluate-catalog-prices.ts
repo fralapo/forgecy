@@ -15,9 +15,11 @@ type GroundTruth = {
 
 export type CatalogPriceEvaluation = {
   total: number;
+  uniquePriceCells: number;
   rowMatches: number;
   correctPrices: number;
   exactCodes: number;
+  byFixture: Record<string, { total: number; rowMatches: number; correctPrices: number; exactCodes: number }>;
   failures: Array<{ code: string; source: string; reason: string }>;
 };
 
@@ -26,15 +28,21 @@ const groundTruth = JSON.parse(readFileSync(join(process.cwd(), "tests/fixtures/
 export function evaluateCatalogPrices(): CatalogPriceEvaluation {
   const fixtureProducts = new Map<string, ReturnType<typeof parseLocalCatalogProducts>>();
   const failures: CatalogPriceEvaluation["failures"] = [];
+  const byFixture: CatalogPriceEvaluation["byFixture"] = {};
+  const uniqueCells = new Set<string>();
   let rowMatches = 0;
   let correctPrices = 0;
   let exactCodes = 0;
 
   for (const expected of groundTruth) {
+    const fixtureStats = byFixture[expected.fixture] ??= { total: 0, rowMatches: 0, correctPrices: 0, exactCodes: 0 };
+    fixtureStats.total += 1;
+    uniqueCells.add(`${expected.url}|${expected.code.replace(/\s+/gu, "").toUpperCase()}`);
     let products = fixtureProducts.get(expected.fixture);
     if (!products) {
       const text = readFileSync(join(process.cwd(), "tests/fixtures", expected.fixture), "utf8");
-      products = parseLocalCatalogProducts(expected.fixture, text);
+      const title = expected.fixture.endsWith("-native.txt") ? "Stanley-listino-2026-page-54.pdf" : expected.fixture;
+      products = parseLocalCatalogProducts(title, text);
       fixtureProducts.set(expected.fixture, products);
     }
 
@@ -45,16 +53,23 @@ export function evaluateCatalogPrices(): CatalogPriceEvaluation {
       continue;
     }
     rowMatches += 1;
-    if (match.price === expected.price) correctPrices += 1;
+    fixtureStats.rowMatches += 1;
+    if (match.price === expected.price) {
+      correctPrices += 1;
+      fixtureStats.correctPrices += 1;
+    }
     else failures.push({ code: expected.code, source: expected.source, reason: `prezzo atteso ${expected.price}, trovato ${match.price ?? "vuoto"}` });
 
     const normalizedExpected = expected.code.replace(/\s+/gu, "").toUpperCase();
     const normalizedActual = match.name.replace(/\s+/gu, "").toUpperCase();
-    if (normalizedActual.includes(normalizedExpected)) exactCodes += 1;
+    if (normalizedActual.includes(normalizedExpected)) {
+      exactCodes += 1;
+      fixtureStats.exactCodes += 1;
+    }
     else failures.push({ code: expected.code, source: expected.source, reason: "codice estratto non esatto" });
   }
 
-  return { total: groundTruth.length, rowMatches, correctPrices, exactCodes, failures };
+  return { total: groundTruth.length, uniquePriceCells: uniqueCells.size, rowMatches, correctPrices, exactCodes, byFixture, failures };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
