@@ -48,7 +48,7 @@ function SourceFilePreview({clientId,source}:{clientId:string;source:Snapshot["s
  const bucket=source.source_metadata?.storage_bucket==="forgecy-assets"?"forgecy-assets":"forgecy-sources";
  useEffect(()=>{let active=true;if(!source.file_path)return;requestJson<{url:string}>(`/api/workspace/clients/${clientId}/assets?bucket=${bucket}&path=${encodeURIComponent(source.file_path)}`).then(r=>{if(active)setUrl(r.url)}).catch(()=>undefined);return()=>{active=false}},[bucket,clientId,source.file_path]);
  if(!url)return null;
- return bucket==="forgecy-assets"?<a href={url} target="_blank" rel="noreferrer" className="caption" style={{display:"block",marginTop:9}}><Image src={url} alt={source.title} width={220} height={140} unoptimized style={{width:"auto",height:"auto",maxWidth:220,maxHeight:140,objectFit:"contain",borderRadius:8,background:"var(--surface)"}}/><span style={{display:"block"}}>Apri immagine · {String(source.source_metadata?.asset_role||"immagine")}</span></a>:<a className="button small" href={url} target="_blank" rel="noreferrer" style={{marginTop:9}}>Apri documento</a>;
+ return bucket==="forgecy-assets"?<a href={url} target="_blank" rel="noreferrer" className="caption" style={{display:"block",marginTop:9}}><span style={{position:"relative",display:"block",width:220,height:140,maxWidth:"100%",background:"var(--surface)",borderRadius:8}}><Image src={url} alt={source.title} fill unoptimized style={{objectFit:"contain"}}/></span><span style={{display:"block"}}>Apri immagine · {String(source.source_metadata?.asset_role||"immagine")}</span></a>:<a className="button small" href={url} target="_blank" rel="noreferrer" style={{marginTop:9}}>Apri documento</a>;
 }
 function Header({k,title,sub,actions}:{k:string;title:string;sub:string;actions?:React.ReactNode}){
  return <header className="page-head"><div><div className="eyebrow">{k}</div><h1>{title}</h1><p>{sub}</p></div><div className="page-actions">{actions}</div></header>;
@@ -358,8 +358,8 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
   {content.status==="stale"&&<div className="notice warn">Questa bozza utilizza informazioni o una versione originale che sono cambiate. Rivedila prima dell&apos;approvazione.</div>}
   <div className="content-editor">
    <div className="card stack">
-    <label>Titolo del contenuto</label><input value={title} onChange={e=>setTitle(e.target.value)} maxLength={240}/>
-    <label>Didascalia</label><textarea value={caption} onChange={e=>setCaption(e.target.value)} rows={7} maxLength={12000}/>
+    <label htmlFor="forgecy-content-title">Titolo del contenuto</label><input id="forgecy-content-title" value={title} onChange={e=>setTitle(e.target.value)} maxLength={240}/>
+    <label htmlFor="forgecy-content-caption">Didascalia</label><textarea id="forgecy-content-caption" value={caption} onChange={e=>setCaption(e.target.value)} rows={7} maxLength={12000}/>
     <details className="finding" style={{marginTop:8}}>
      <summary style={{cursor:"pointer",fontWeight:800,fontSize:13}}>Perché questo contenuto? · Rationale creativo</summary>
      <p className="caption" style={{margin:"10px 0"}}>Verifica che la promessa del gancio sia mantenuta, il beneficio sia concreto e la CTA abbia un solo obiettivo. Le note sono modificabili, non un punteggio automatico.</p>
@@ -372,24 +372,24 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
        ["rational_proof","Prova concreta o limite dell'affermazione"],
        ["single_cta","Un'unica CTA o nessuna"]
       ] as Array<[keyof EditorialBrief,string]>).map(([key,label])=><div key={key} style={{marginTop:12}}>
-       <label>{label}</label><textarea rows={2} value={String(brief[key]||"")} onChange={e=>setBrief(v=>({...v,[key]:e.target.value}))}/>
+       <label htmlFor={`forgecy-content-brief-${key}`}>{label}</label><textarea id={`forgecy-content-brief-${key}`} rows={2} value={String(brief[key]||"")} onChange={e=>setBrief(v=>({...v,[key]:e.target.value}))}/>
       </div>)}
      {!!brief.community_signal_ids?.length&&<p className="caption" style={{marginTop:12}}>Osservazioni collegate: {brief.community_signal_ids.length}. Controllale nella Biblioteca del cliente.</p>}
     </details>
     {slides.length===0 && (content.format==="carousel"||content.format==="document")&&<button className="button small" onClick={()=>{setSlides([{headline:"Prima pagina",body:"",visual_prompt:""}]);setIdx(0)}}><Plus size={14}/> Aggiungi la prima pagina</button>}
     {slides.length>0&&<><div className="separator"/><div className="flex between center wrap gap8">
-      <label>Slide {idx+1} di {slides.length}</label>
+      <div className="caption">Slide {idx+1} di {slides.length}</div>
       <div className="flex gap8">
        <button className="button small" disabled={!history.past.length} onClick={()=>dispatchHistory({type:"undo"})}>Annulla modifica</button>
        <button className="button small" disabled={!history.future.length} onClick={()=>dispatchHistory({type:"redo"})}>Ripeti</button>
       </div>
      </div>
-     <label>Struttura grafica</label><select value={resolvedLayout(current?.layout)} onChange={e=>setSlides(v=>v.map((x,i)=>i===idx?{...x,layout:resolvedLayout(e.target.value)}:x))}><option value="cover">Copertina</option><option value="content">Contenuto</option><option value="quote">Citazione / evidenza</option><option value="closing">Conclusione / CTA</option></select>
-     <label>Titolo slide</label><textarea rows={3} value={current?.headline||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,headline:e.target.value}:x))}/>
-     <label>Testo slide</label><textarea rows={4} value={current?.body||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,body:e.target.value}:x))}/>
+     <label htmlFor="forgecy-slide-layout">Struttura grafica</label><select id="forgecy-slide-layout" value={resolvedLayout(current?.layout)} onChange={e=>setSlides(v=>v.map((x,i)=>i===idx?{...x,layout:resolvedLayout(e.target.value)}:x))}><option value="cover">Copertina</option><option value="content">Contenuto</option><option value="quote">Citazione / evidenza</option><option value="closing">Conclusione / CTA</option></select>
+     <label htmlFor="forgecy-slide-headline">Titolo slide</label><textarea id="forgecy-slide-headline" rows={3} value={current?.headline||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,headline:e.target.value}:x))}/>
+     <label htmlFor="forgecy-slide-body">Testo slide</label><textarea id="forgecy-slide-body" rows={4} value={current?.body||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,body:e.target.value}:x))}/>
      <div className="caption">Titolo: {(current?.headline||"").length} caratteri · Testo: {(current?.body||"").length} caratteri</div>
      {slideIssues.length>0&&<div className="notice warn">{slideIssues.map((issue,i)=><p key={i}>{issue.severity==="blocking"?"Da correggere":"Da verificare"}: {issue.message}</p>)}</div>}
-     <label>Prompt visivo</label><textarea rows={3} value={current?.visual_prompt||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,visual_prompt:e.target.value}:x))}/>
+     <label htmlFor="forgecy-slide-visual-prompt">Prompt visivo</label><textarea id="forgecy-slide-visual-prompt" rows={3} value={current?.visual_prompt||""} onChange={e=>setSlides(prev=>prev.map((x,i)=>i===idx?{...x,visual_prompt:e.target.value}:x))}/>
      <div className="flex gap8 wrap">
       <button className="button small" onClick={()=>{setSlides(s=>[...s.slice(0,idx+1),{headline:"Nuova pagina",body:"",layout:"content"},...s.slice(idx+1)]);setIdx(idx+1)}}><Plus size={14}/> Pagina</button>
       <button className="button small" onClick={()=>{setSlides(s=>[...s.slice(0,idx+1),{...s[idx]},...s.slice(idx+1)]);setIdx(idx+1)}}>Duplica</button>
@@ -429,12 +429,12 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
  return <>
   <Header k="PERFORMANCE / MEMORIA" title="I risultati guidano la prossima scelta."
    sub="Snapshot importati, confrontabili nel tempo e attribuiti al profilo corretto."
-  actions={<div className="flex gap8 wrap">{selected&&<><button className="button" disabled={Boolean(busy)} onClick={()=>onAction("collectInstagramPublic",{accountId:selected})}><RefreshCw size={15}/> Aggiorna dati pubblici</button><label className="button primary" style={{cursor:busy?"wait":"pointer",opacity:busy ? .65 : 1}}><UploadCloud size={15}/> Importa rilevazione<input type="file" accept="application/json,.json" disabled={Boolean(busy)} hidden onChange={async event=>{
+  actions={<div className="flex gap8 wrap">{selected&&<><button className="button" disabled={Boolean(busy)} onClick={()=>onAction("collectInstagramPublic",{accountId:selected})}><RefreshCw size={15}/> Aggiorna dati pubblici</button><label className="button primary" style={{cursor:busy?"wait":"pointer",opacity:busy ? .65 : 1}}><UploadCloud size={15}/> Importa rilevazione<input id="forgecy-instagram-snapshot-import" name="instagram_snapshot" type="file" accept="application/json,.json" disabled={Boolean(busy)} hidden onChange={async event=>{
       const file=event.currentTarget.files?.[0];event.currentTarget.value="";if(!file||!selected)return;
       try{setImportError("");const parsed=JSON.parse(await file.text()) as Record<string,unknown>;const snapshot=(parsed.snapshot&&typeof parsed.snapshot==="object"?parsed.snapshot:parsed) as Record<string,unknown>;
        const result=await onAction("syncSocial",{accountId:selected,snapshot});if(!result)setImportError("Importazione non riuscita. Controlla che il file sia un JSON nel formato indicato qui sotto.");
       }catch{setImportError("File JSON non valido o illeggibile.");}
-    }}/></label><label className="button" style={{cursor:busy?"wait":"pointer",opacity:busy ? .65 : 1}}>Importa archivio Instagram<input type="file" accept="application/json,.json" multiple disabled={Boolean(busy)} hidden onChange={async event=>{
+    }}/></label><label className="button" style={{cursor:busy?"wait":"pointer",opacity:busy ? .65 : 1}}>Importa archivio Instagram<input id="forgecy-instagram-archive-import" name="instagram_archive" type="file" accept="application/json,.json" multiple disabled={Boolean(busy)} hidden onChange={async event=>{
       const files=Array.from(event.currentTarget.files||[]);event.currentTarget.value="";if(!files.length||!selected)return;
       try{setImportError("");const followers_count=countInstagramArchiveFollowers(await Promise.all(files.map(async file=>({name:file.name,text:await file.text()}))));
        const result=await onAction("syncSocial",{accountId:selected,snapshot:{account:{followers_count}}});
@@ -459,7 +459,7 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
   {!data.social_accounts.length?<div className="notice">Aggiungi un account come riferimento locale, poi importa il primo snapshot JSON.</div>:
    <div className="card"><div className="flex between center wrap gap12"><div><h2>Account Instagram</h2><p className="caption">La dashboard non mescola mai account differenti</p></div>
     <div className="flex center gap8 wrap">
-     <select aria-label="Account Instagram" value={selected||""} onChange={e=>setRequested(e.target.value)} style={{maxWidth:240}}>
+     <select id="forgecy-instagram-account" name="instagram_account" aria-label="Account Instagram" value={selected||""} onChange={e=>setRequested(e.target.value)} style={{maxWidth:240}}>
       {data.social_accounts.map(a=><option value={a.id} key={a.id}>@{a.username}</option>)}
      </select>
      <button className="button small" disabled={!selected||Boolean(busy)} onClick={()=>{

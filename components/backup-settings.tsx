@@ -89,6 +89,8 @@ export default function BackupSettings() {
       {draft && <>
         <label className="stack">Cartella di destinazione sul computer che esegue Forgecy
           <input
+            id="forgecy-backup-directory"
+            name="backup_directory"
             type="text"
             value={draft.directory}
             onChange={event => setDraft({ ...draft, directory: event.target.value })}
@@ -101,12 +103,12 @@ export default function BackupSettings() {
         <p className="caption" id="backup-folder-help">Inserisci un percorso assoluto, per esempio una cartella di Google Drive per desktop, Dropbox o un disco esterno. Forgecy verifica di poterci scrivere. Il database attivo resta sul disco locale: vengono sincronizzati solo gli archivi ZIP. La sincronizzazione cloud dipende dall’app desktop del servizio scelto.</p>
         <div className="flex gap8" style={{ flexWrap: "wrap" }}>
           <label className="stack">Crea una copia ogni
-            <select value={draft.intervalHours} onChange={event => setDraft({ ...draft, intervalHours: Number(event.target.value) })}>
+            <select id="forgecy-backup-interval" name="backup_interval_hours" value={draft.intervalHours} onChange={event => setDraft({ ...draft, intervalHours: Number(event.target.value) })}>
               <option value={4}>4 ore</option><option value={8}>8 ore</option><option value={12}>12 ore</option><option value={24}>Ogni giorno</option><option value={72}>Ogni 3 giorni</option><option value={168}>Ogni settimana</option>
             </select>
           </label>
           <label className="stack">Conserva le ultime
-            <select value={draft.retention} onChange={event => setDraft({ ...draft, retention: Number(event.target.value) })}>
+            <select id="forgecy-backup-retention" name="backup_retention" value={draft.retention} onChange={event => setDraft({ ...draft, retention: Number(event.target.value) })}>
               <option value={3}>3 copie</option><option value={7}>7 copie</option><option value={14}>14 copie</option><option value={30}>30 copie</option>
             </select>
           </label>
@@ -130,7 +132,7 @@ export default function BackupSettings() {
       <div className="flex gap8" style={{ flexWrap: "wrap" }}>
         <a className="button" href="/api/sync/export"><Download size={15}/> Esporta archivio</a>
         <button className="button" onClick={() => fileInput.current?.click()} disabled={Boolean(busy)}><Upload size={15}/> Importa archivio</button>
-        <input ref={fileInput} type="file" accept=".zip,.forgecy.zip,application/zip" hidden onChange={event => void importArchive(event.target.files?.[0])}/>
+        <input ref={fileInput} id="forgecy-archive-import" name="archive" type="file" accept=".zip,.forgecy.zip,application/zip" hidden onChange={event => void importArchive(event.target.files?.[0])}/>
       </div>
     </section>
     {error && <div className="notice error" role="alert">{error}</div>}

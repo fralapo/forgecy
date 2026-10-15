@@ -64,7 +64,7 @@ export type Context = Awaited<ReturnType<typeof auth>> & {
 };
 export async function requireClient(ctx: Context, clientId: string) {
   if (!z.uuid().safeParse(clientId).success) throw new ApiFailure(400,"ID cliente non valido");
-  const { data, error } = await ctx.db.from("clients").select("id,name,industry,website,profile").eq("id", clientId).maybeSingle();
+  const { data, error } = await ctx.db.from("clients").select("id,name,industry,website,profile,knowledge_revision").eq("id", clientId).maybeSingle();
   if (error) throw new ApiFailure(500,"Impossibile leggere il cliente");
   if (!data) throw new ApiFailure(404,"Cliente non trovato");
   return data;

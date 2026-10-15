@@ -356,7 +356,7 @@ export default function ModelSettings() {
       <div className="flex center gap8"><Cpu size={18}/><h2>Ricerca nella memoria dei clienti</h2></div>
       <p className="caption">Ricerca ibrida consigliata: SQLite trova termini e valori esatti; l’indice semantico locale aiuta con sinonimi e parafrasi. Il testo non viene inviato a un servizio di embedding. Puoi disattivarla qui.</p>
       <label className="flex center gap8" style={{fontWeight:650}}>
-        <input type="checkbox" checked={Boolean(knowledge?.enabled)} disabled={!knowledge||savingKnowledge||indexingKnowledge}
+        <input id="forgecy-semantic-search-enabled" name="semantic_search_enabled" type="checkbox" checked={Boolean(knowledge?.enabled)} disabled={!knowledge||savingKnowledge||indexingKnowledge}
           onChange={event=>void toggleSemantic(event.target.checked)} style={{width:18,height:18}}/>
         Ricerca semantica locale (consigliata)
       </label>

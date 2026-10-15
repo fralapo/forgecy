@@ -38,7 +38,7 @@ export default function AiUsagePanel({clientId}:{clientId:string}){
    <div className="section-title">
      <div><h2>Utilizzo dei modelli AI</h2>
        <p className="caption" style={{marginTop:5}}>Solo il cliente corrente · valori comunicati dai provider, non stime di fatturazione</p></div>
-     <select aria-label="Periodo utilizzo AI" value={days} onChange={e=>setDays(Number(e.target.value))}
+     <select id="forgecy-ai-usage-period" name="ai_usage_period" aria-label="Periodo utilizzo AI" value={days} onChange={e=>setDays(Number(e.target.value))}
        style={{maxWidth:180}}>
        <option value={7}>Ultimi 7 giorni</option>
        <option value={30}>Ultimi 30 giorni</option>
