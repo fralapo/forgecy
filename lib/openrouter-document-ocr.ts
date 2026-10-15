@@ -6,9 +6,10 @@ import { createPdfParser, rasterizePdfForOcr } from "./pdf-runtime";
 import { getOpenRouterApiKey } from "./openrouter-credentials";
 import { recordAiProviderUsage } from "./ai-usage";
 import { PDFDocument } from "pdf-lib";
+import { MAX_OCR_DOCUMENT_PAGES } from "./document-limits";
 
 export const MAX_OCR_PDF_PAGES = 10;
-export const MAX_OCR_DOCUMENT_PAGES = 200;
+export { MAX_OCR_DOCUMENT_PAGES } from "./document-limits";
 const MAX_OCR_TEXT_CHARS = 80_000;
 const OPENROUTER = "https://openrouter.ai/api/v1/chat/completions";
 

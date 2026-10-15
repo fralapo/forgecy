@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Cpu, Download, HardDrive, LoaderCircle, RefreshCw, Search, Settings2 } from "lucide-react";
 import { requestJson } from "./types";
+import { MAX_OCR_DOCUMENT_PAGES } from "@/lib/document-limits";
 import type { OpenRouterImageModel, OpenRouterModel } from "@/lib/ai-model-settings";
 import { DEFAULT_IMAGE_MODEL, DEFAULT_OCR_MODEL, DEFAULT_TEXT_MODEL } from "@/lib/ai-model-defaults";
 import BackupSettings from "./backup-settings";
@@ -349,7 +350,7 @@ export default function ModelSettings() {
       {catalog&&<><ModelSelector kind="vision" label="Modello OpenRouter per OCR API e documenti" selectedId={catalog.preferences.ocrModel||DEFAULT_OCR_MODEL}
           models={catalog.visionModels} unavailable={!catalog.visionModels.some(model=>model.id===(catalog.preferences.ocrModel||DEFAULT_OCR_MODEL))}
           recommendedId={DEFAULT_OCR_MODEL} disabled={Boolean(saving)} onChange={id=>void selectModel("ocr",id)} />
-        <p className="caption">{catalog.visionModels.length} modelli visivi OpenRouter disponibili. Il provider può applicare costi secondo modello e numero di pagine; controlla la tariffa corrente sul tuo account. I PDF OCR sono limitati a 40 pagine. Ogni OCR di scansioni e immagini viene elaborato dal provider API selezionato.</p></>}
+        <p className="caption">{catalog.visionModels.length} modelli visivi OpenRouter disponibili. Il provider può applicare costi secondo modello e numero di pagine; controlla la tariffa corrente sul tuo account. I PDF OCR sono limitati a {MAX_OCR_DOCUMENT_PAGES} pagine. Ogni OCR di scansioni e immagini viene elaborato dal provider API selezionato.</p></>}
     </article>
     <article className="card stack">
       <div className="flex center gap8"><Cpu size={18}/><h2>Ricerca nella memoria dei clienti</h2></div>
