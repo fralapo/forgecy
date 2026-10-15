@@ -9,6 +9,13 @@ export const sourceSchema=z.object({
  title:bounded(180).min(1),
  url:z.url().max(2000).optional(),
  body:bounded(100000).default("")
+}).superRefine((source,ctx)=>{
+ const hasBody=source.body.trim().length>0;
+ if(source.kind==="note"&&!hasBody){
+  ctx.addIssue({code:"custom",path:["body"],message:"Aggiungi il contenuto della nota prima di salvarla"});
+ }else if((source.kind==="website"||source.kind==="social")&&!source.url&&!hasBody){
+  ctx.addIssue({code:"custom",path:["body"],message:"Aggiungi un URL o delle annotazioni prima di salvare la fonte"});
+ }
 });
 export const offerSchema=z.object({
  kind:z.enum(["product","service"]),name:bounded(180).min(1),

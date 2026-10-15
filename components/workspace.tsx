@@ -243,7 +243,11 @@ export default function Workspace(){
   if(kind==="source"){
    const sourceKind=String(f.get("kind")||"note");
    const siteUrl=String(f.get("url")||"").trim();
+   const body=String(f.get("body")||"").trim();
+   if(sourceKind==="note"&&!body){setError("Inserisci il contenuto della nota prima di salvarla.");return;}
+   if((sourceKind==="website"||sourceKind==="social")&&!siteUrl&&!body){setError("Aggiungi un URL o delle annotazioni prima di salvare la fonte.");return;}
    if(sourceKind==="website"&&f.get("auto")==="on"){
+    if(!siteUrl){setError("Inserisci l’indirizzo HTTPS del sito da acquisire.");return;}
      url=root+"/website";payload={url:siteUrl};
    }else{
      url=root+"/sources";payload={kind:sourceKind,title:String(f.get("title")||siteUrl||"Nuova fonte"),url:siteUrl||undefined,body:String(f.get("body")||"")};
