@@ -1,6 +1,7 @@
 import { sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { PDFParse } from "pdf-parse";
+import { PDFDocument } from "pdf-lib";
 import type { PositionedPdfTextItem } from "./catalog-import";
 
 /** Configure PDF.js' bundled OpenJPEG decoder so embedded JPEG2000 assets can render in Node. */
@@ -13,6 +14,47 @@ export function pdfWasmUrl() {
 export async function createPdfParser(bytes: Uint8Array) {
   await import("pdf-parse/worker");
   return new PDFParse({ data: Uint8Array.from(bytes), wasmUrl: pdfWasmUrl() });
+}
+
+/** Re-encode large PDFs as bounded-resolution JPEG pages; OCR still happens remotely. */
+export async function rasterizePdfForOcr(bytes: Uint8Array, maxDimension = 1400): Promise<Uint8Array> {
+  const parser = await createPdfParser(bytes);
+  try {
+    const info = await parser.getInfo({ parsePageInfo: false });
+    const runtime = parser as unknown as {
+      doc?: {
+        getPage(n: number): Promise<{
+          getViewport(options: { scale: number }): { width: number; height: number; scale: number };
+          render(options: { canvasContext: unknown; viewport: unknown; canvas: unknown }): { promise: Promise<void> };
+          cleanup(): void;
+        }>;
+        canvasFactory?: { create(width: number, height: number): { canvas: { toBuffer(type: string, quality?: number): Buffer }; context: { fillStyle: string; fillRect(x: number, y: number, width: number, height: number): void } } };
+      };
+    };
+    const doc = runtime.doc;
+    if (!doc?.canvasFactory || !Number.isInteger(info.total) || info.total < 1) throw new Error("PDF renderer unavailable");
+    const output = await PDFDocument.create();
+    for (let pageNumber = 1; pageNumber <= info.total; pageNumber++) {
+      const page = await doc.getPage(pageNumber);
+      const original = page.getViewport({ scale: 1 });
+      const scale = Math.min(1, maxDimension / Math.max(original.width, original.height));
+      const viewport = page.getViewport({ scale });
+      const { canvas, context } = doc.canvasFactory.create(Math.ceil(viewport.width), Math.ceil(viewport.height));
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, Math.ceil(viewport.width), Math.ceil(viewport.height));
+      try {
+        await page.render({ canvasContext: context, viewport, canvas }).promise;
+        const jpeg = canvas.toBuffer("image/jpeg", 76);
+        const image = await output.embedJpg(jpeg);
+        output.addPage([original.width, original.height]).drawImage(image, { x: 0, y: 0, width: original.width, height: original.height });
+      } finally {
+        page.cleanup();
+      }
+    }
+    return output.save({ useObjectStreams: true });
+  } finally {
+    await parser.destroy();
+  }
 }
 
 /** Read raw PDF.js text coordinates through pdf-parse's loaded document for layout-aware tables. */

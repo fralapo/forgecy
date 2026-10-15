@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { ApiFailure } from "./http";
 import { assertSafeDocument, MAX_PDF_UPLOAD_BYTES, MAX_UPLOAD_BYTES } from "./document-safety";
 import type { DocumentImage } from "./document-image";
-import { createPdfParser } from "./pdf-runtime";
+import { createPdfParser, rasterizePdfForOcr } from "./pdf-runtime";
 import { getOpenRouterApiKey } from "./openrouter-credentials";
 import { recordAiProviderUsage } from "./ai-usage";
 import { PDFDocument } from "pdf-lib";
@@ -10,6 +10,7 @@ import { PDFDocument } from "pdf-lib";
 export const MAX_OCR_PDF_PAGES = 40;
 export const MAX_OCR_DOCUMENT_PAGES = 200;
 const MAX_OCR_TEXT_CHARS = 80_000;
+const RASTERIZE_FOR_OCR_THRESHOLD = 20 * 1024 * 1024;
 const OPENROUTER = "https://openrouter.ai/api/v1/chat/completions";
 
 type FileAnnotation = { type?: unknown; file?: { content?: unknown } };
@@ -122,6 +123,15 @@ export async function ocrDocumentWithOpenRouter(options: OcrOptions): Promise<Oc
     throw new ApiFailure(422, "Non riesco a determinare il numero di pagine del PDF.");
   if (isPdf && pageCount! > MAX_OCR_DOCUMENT_PAGES)
     throw new ApiFailure(413, `L'OCR automatico è limitato a ${MAX_OCR_DOCUMENT_PAGES} pagine per documento; dividi il PDF e riprova.`);
+  let ocrBytes = bytes;
+  if (isPdf && bytes.byteLength > RASTERIZE_FOR_OCR_THRESHOLD && pageCount! <= MAX_OCR_PDF_PAGES) {
+    try {
+      const compact = await rasterizePdfForOcr(bytes);
+      if (compact.byteLength < bytes.byteLength) ocrBytes = compact;
+    } catch {
+      // Keep the original PDF when local image preparation is unsupported for this document.
+    }
+  }
   const prompt = [
     "Trascrivi fedelmente il testo leggibile del documento, in italiano quando presente.",
     "Conserva fedelmente titoli, righe di tabella, codici, nomi, importi, quantità, misure e unità di misura come ml, l, g e mm; rappresenta le tabelle come righe Markdown.",
@@ -131,7 +141,7 @@ export async function ocrDocumentWithOpenRouter(options: OcrOptions): Promise<Oc
   ].join(" ");
   const pdfChunks: Array<{ bytes: Uint8Array; firstPage: number; lastPage: number }> = [];
   if (isPdf) {
-    const source = await PDFDocument.load(bytes, { updateMetadata: false });
+    const source = await PDFDocument.load(ocrBytes, { updateMetadata: false });
     let firstPage = 0;
     let chunkPageLimit = MAX_OCR_PDF_PAGES;
     while (firstPage < pageCount!) {

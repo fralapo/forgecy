@@ -227,6 +227,39 @@ test("splits OCR PDF segments by serialized size as well as page count", async (
   assert.equal(result.partialFailure, false);
 });
 
+test("compresses large scanned PDFs before sending them through API OCR", async () => {
+  const pdf = await PDFDocument.create();
+  for (let page = 0; page < 30; page++) {
+    const image = await pdf.embedPng(noisyPng(500, page + 30));
+    pdf.addPage([500, 500]).drawImage(image, { x: 0, y: 0, width: 500, height: 500 });
+  }
+  const bytes = new Uint8Array(await pdf.save());
+  assert.ok(bytes.byteLength > 20 * 1024 * 1024, "fixture must exercise the large-PDF optimization");
+  let requests = 0;
+  let sentBytes = 0;
+  const result = await ocrDocumentWithOpenRouter({
+    bytes, mime: "application/pdf", name: "scansione.pdf", model: "deepseek/deepseek-v4.1-flash",
+    keyProvider: async () => "test-key",
+    fetcher: async (_input, init) => {
+      requests++;
+      const body = JSON.parse(String(init?.body)) as {messages:Array<{content:Array<{file?:{file_data:string}}>}>};
+      const data = body.messages[0]!.content[1]!.file!.file_data;
+      sentBytes = Buffer.from(data.split(",")[1]!, "base64").byteLength;
+      const sentPdf = await PDFDocument.load(Buffer.from(data.split(",")[1]!, "base64"));
+      assert.equal(sentPdf.getPageCount(), 30);
+      return new Response(JSON.stringify({
+        id: "gen-rasterized", model: "deepseek/deepseek-v4.1-flash", usage: {prompt_tokens: 20, completion_tokens: 10},
+        choices: [{message: {annotations: [{type: "file", file: {content: [{type: "text", text: "Testo OCR remoto delle trenta pagine."}]}}]}}]
+      }), {status: 200});
+    }
+  });
+  assert.equal(requests, 1);
+  assert.ok(sentBytes < bytes.byteLength / 2, "the API receives a substantially smaller image-only PDF");
+  assert.equal(result.pageCount, 30);
+  assert.equal(result.pagesProcessed, 30);
+  assert.equal(result.partialFailure, false);
+});
+
 test("keeps completed OCR segments when a later provider request fails", async () => {
   const pdf = await PDFDocument.create();
   for (let page = 0; page < 42; page++) pdf.addPage([300, 400]);
