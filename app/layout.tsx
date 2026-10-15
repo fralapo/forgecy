@@ -6,5 +6,5 @@ export const metadata:Metadata={
 };
 export default function RootLayout({children}:{children:React.ReactNode}){
  // Browsers can inject root-level attributes before React hydrates the page.
- return <html lang="it" suppressHydrationWarning><body>{children}</body></html>;
+ return <html lang="it" suppressHydrationWarning><body suppressHydrationWarning>{children}</body></html>;
 }

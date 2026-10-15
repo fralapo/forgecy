@@ -3,6 +3,7 @@ import {test} from "node:test";
 import {publicHttpsUrl,parseRobots,robotsPermit,sitemapUrls,robotsSitemapUrls,extractWebsitePage} from "../../lib/site-ingest";
 import {reconcileDossierEvidence} from "../../lib/dossier-evidence";
 import {extractWebsiteBrand,websiteStylesheetUrls} from "../../lib/website-brand";
+import {matchWebsiteProductImage} from "../../lib/site-product-images";
 
 test("website URLs reject SSRF destinations and unsupported schemes",()=>{
   for(const input of [
@@ -54,6 +55,25 @@ test("website extraction collects a product catalog, brand assets, and same-host
   assert.equal(page.documents[0].url,"https://shop.example/catalogo.pdf");
   const unknownPrice=extractWebsitePage(new URL("https://shop.example/p/"),`<main><article class="dd-product-card"><h2>Prodotto</h2><p>Descrizione sufficientemente lunga e significativa.</p></article></main>`);
   assert.equal(unknownPrice.products[0].price,null);
+});
+
+test("website product images link variants to the most specific saved product family",()=>{
+ const image=(id:string,title:string,role="product")=>({id,title,file_path:`client/${id}.webp`,source_metadata:{asset_role:role}});
+ const sources=[
+  image("softener","Deo Due Morbido Ammorbidente"),
+  image("premium","Deo Due Morbido Ammorbidente Premium"),
+  image("professional","Deo Due Profumatore Ambiente Professional Line"),
+  image("generic","Deo Due Profumatore Ambiente"),
+  image("drops","Gocce di DeoDue"),
+  image("logo","Deo Due Morbido Ammorbidente Premium","logo"),
+ ];
+ assert.equal(matchWebsiteProductImage("Deo Due Morbido Ammorbidente Premium – Essenza di Bianco Latte",sources)?.id,"premium");
+ assert.equal(matchWebsiteProductImage("Deo Due Profumatore Ambiente Professional Line – Tiarè",sources)?.id,"professional");
+ assert.equal(matchWebsiteProductImage("Deo Due Profumatore Ambiente – Bianco Latte",sources)?.id,"generic");
+ assert.equal(matchWebsiteProductImage("Gocce di DeoDue – Aloe",sources)?.id,"drops");
+ assert.equal(matchWebsiteProductImage("Deo Due Morbido Ammorbidente – Fleur d&#8217;Or",sources)?.id,"softener");
+ assert.equal(matchWebsiteProductImage("Deo Due",sources),null);
+ assert.equal(matchWebsiteProductImage("Altro prodotto senza corrispondenze",sources),null);
 });
 
 test("website extraction preserves heading, paragraph, list and table structure for passage indexing",()=>{

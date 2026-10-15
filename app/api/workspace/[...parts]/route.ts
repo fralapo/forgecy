@@ -7,6 +7,7 @@ import { modelJson,modelJsonWithImages,lowTrustRule } from "@/lib/ai";
 import { reserveAiRequest } from "@/lib/ai-request-budget";
 import {withAiUsageScope} from "@/lib/ai-usage";
 import { crawlWebsite, fetchWebsiteFile, publicHttpsUrl } from "@/lib/site-ingest";
+import { matchWebsiteProductImage } from "@/lib/site-product-images";
 import { requireWebsiteCrawlingEnabled, reserveWebsiteCrawl } from "@/lib/crawl-budget";
 import { extractDocumentWithMetadata, type Extraction } from "@/lib/document-extract";
 import { assertSafeDocument, DocumentSafetyError, MAX_PDF_UPLOAD_BYTES, MAX_UPLOAD_BYTES } from "@/lib/document-safety";
@@ -315,6 +316,24 @@ export async function POST(request:Request,{params}:Params){
    let hostname:string;
    try {hostname=publicHttpsUrl(input.url).hostname;}
    catch {throw new ApiFailure(400,"Inserisci un sito HTTPS pubblico valido");}
+   // Repair links from already downloaded product images before quota checks.
+   // This lets a rescan fix variant cards even when another crawl is rate-limited.
+   const savedImages=await ctx.db.from("sources")
+     .select("id,title,file_path,source_metadata").eq("client_id",id);
+   dbError(savedImages.error,"Impossibile verificare le immagini prodotto salvate");
+   const savedOffers=await ctx.db.from("offers")
+     .select("id,name,image_source_id,catalog_locked,status").eq("client_id",id).eq("kind","product").neq("status","archived");
+   dbError(savedOffers.error,"Impossibile verificare le offerte del cliente");
+   let productImagesLinked=0;
+   for(const offer of savedOffers.data||[]){
+     if(offer.image_source_id||Number(offer.catalog_locked)===1)continue;
+     const image=matchWebsiteProductImage(String(offer.name||""),savedImages.data||[]);
+     if(!image)continue;
+     const linked=await ctx.db.from("offers").update({image_source_id:image.id})
+       .eq("id",offer.id).eq("client_id",id).eq("image_source_id",null).select("id").maybeSingle();
+     if(linked.error)console.warn("[website-ingest] saved product image link skipped",linked.error.code);
+     else if(linked.data)productImagesLinked++;
+   }
    // Reservation is atomic across instances; a failed DB check must block crawling.
    const reservationId=await reserveWebsiteCrawl(ctx,id,hostname,input.maxPages);
    const result=await crawlWebsite(input.url,input.maxPages);
@@ -500,7 +519,7 @@ export async function POST(request:Request,{params}:Params){
      domain:hostname,reservationId,imported:imported.length,unchanged,dossierQueued,
      skipped:result.skipped.length,pages:result.pages.length,offersImported,offersUpdated,imagesImported,imagesUpdated,documentsImported,documentsUpdated
    });
-   return json({source:imported[0]||null,sources:imported,unchanged,offersImported,offersUpdated,imagesImported,imagesUpdated,documentsImported,documentsUpdated,productsFound:result.products.length,dossierQueued,
+   return json({source:imported[0]||null,sources:imported,unchanged,offersImported,offersUpdated,imagesImported,imagesUpdated,documentsImported,documentsUpdated,productsFound:result.products.length,productImagesLinked,dossierQueued,
      visited:result.pages.length,skipped:result.skipped,
      message:`Scansione completata: ${imported.length} pagine aggiornate, ${unchanged} invariate, ${offersImported} nuovi prodotti e ${offersUpdated} aggiornati, ${imagesImported+imagesUpdated} immagini e ${documentsImported+documentsUpdated} documenti.`
    },imported.length||offersImported||offersUpdated||imagesImported||imagesUpdated||documentsImported||documentsUpdated?201:200);
