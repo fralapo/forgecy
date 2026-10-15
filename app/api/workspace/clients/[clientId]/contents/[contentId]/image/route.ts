@@ -2,7 +2,6 @@ import { z } from "zod";
 import { auth,requireClient,read,fail,json,ApiFailure,dbError,audit } from "@/lib/http";
 import { playbook } from "@/lib/skills/playbooks";
 import { brandStyle } from "@/lib/brand";
-import { reserveAiRequest } from "@/lib/ai-request-budget";
 import {withAiUsageScope,recordAiProviderUsage} from "@/lib/ai-usage";
 import {defaultImageModel,loadOpenRouterCatalog} from "@/lib/ai-model-settings";
 import {decodeOpenRouterImage} from "@/lib/openrouter-image";
@@ -48,7 +47,6 @@ export async function POST(request:Request,{params}:{params:Promise<{clientId:st
   const imageModels=await loadOpenRouterCatalog("image");
   const imageModel=imageModels.find(model=>model.id===imageModelId);
   if(!imageModel)throw new ApiFailure(409,"Il modello immagini salvato non è più disponibile. Scegline uno aggiornato in Impostazioni");
-  await reserveAiRequest(ctx,clientId,"image");
   const desiredAspectRatio=content.channel==="linkedin"?"16:9":"4:5";
   const response=await fetch("https://openrouter.ai/api/v1/images",{
    method:"POST",headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json",

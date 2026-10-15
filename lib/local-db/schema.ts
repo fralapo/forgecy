@@ -170,14 +170,6 @@ CREATE TABLE IF NOT EXISTS source_chunks (
 );
 CREATE INDEX IF NOT EXISTS source_chunks_client_source_idx ON source_chunks(client_id,source_id);
 
-CREATE TABLE IF NOT EXISTS ai_request_reservations (
- id TEXT PRIMARY KEY, client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
- requested_by TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('chat','adapt','dossier','strategy','mission','image')),
- weight INTEGER NOT NULL CHECK(weight BETWEEN 1 AND 12), created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS ai_request_client_kind_idx ON ai_request_reservations(client_id,kind,created_at DESC);
-CREATE INDEX IF NOT EXISTS ai_request_owner_idx ON ai_request_reservations(requested_by,created_at DESC);
-
 CREATE TABLE IF NOT EXISTS ai_provider_usage (
  id TEXT PRIMARY KEY, client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
  requested_by TEXT NOT NULL, job_id TEXT REFERENCES ai_jobs(id) ON DELETE SET NULL,
@@ -217,6 +209,6 @@ export const JSON_COLUMNS: Record<string, ReadonlySet<string>> = {
 export const TABLES = new Set([
  "clients", "sources", "offers", "dossiers", "campaigns", "contents", "messages", "ai_jobs", "missions",
  "agent_events", "social_accounts", "social_snapshots", "audit_events", "community_signals", "strategies",
- "editorial_entries", "website_crawl_requests", "source_chunks", "ai_request_reservations", "ai_provider_usage",
+ "editorial_entries", "website_crawl_requests", "source_chunks", "ai_provider_usage",
  "ai_preferences",
 ]);

@@ -326,23 +326,6 @@ export class LocalDatabase {
     };
     const transaction = db.transaction(() => {
       switch (name) {
-        case "forgecy_reserve_ai_request": {
-          const owner = client(a.p_client_id);
-          if (!owner) throw new Error("Cliente non autorizzato");
-          const policy: Record<string, { window: number; day: number; weight: number }> = {
-            chat: { window: 20, day: 90, weight: 2 }, adapt: { window: 6, day: 24, weight: 4 },
-            dossier: { window: 3, day: 12, weight: 7 }, strategy: { window: 3, day: 12, weight: 7 },
-            mission: { window: 3, day: 10, weight: 10 }, image: { window: 3, day: 12, weight: 12 },
-          };
-          const limits = policy[String(a.p_kind)]; if (!limits) throw new Error("Tipo di richiesta AI non consentito");
-          const fifteen = new Date(Date.now() - 15 * 60_000).toISOString();
-          const day = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
-          const recent = Number((db.prepare("SELECT count(*) n FROM ai_request_reservations WHERE client_id=? AND kind=? AND created_at>? ").get(a.p_client_id, a.p_kind, fifteen) as { n: number } | undefined)?.n || 0);
-          const daily = Number((db.prepare("SELECT count(*) n FROM ai_request_reservations WHERE client_id=? AND kind=? AND created_at>? ").get(a.p_client_id, a.p_kind, day) as { n: number } | undefined)?.n || 0);
-          const weight = Number((db.prepare("SELECT coalesce(sum(weight),0) n FROM ai_request_reservations WHERE requested_by=? AND created_at>? ").get(LOCAL_OWNER_ID, day) as { n: number } | undefined)?.n || 0);
-          if (recent >= limits.window || daily >= limits.day || weight + limits.weight > 240) throw new Error("Limite frequenza o giornaliero AI raggiunto");
-          return insert("ai_request_reservations", { client_id: a.p_client_id, requested_by: LOCAL_OWNER_ID, kind: a.p_kind, weight: limits.weight }).id;
-        }
         case "forgecy_reserve_website_crawl": {
           if (!client(a.p_client_id)) throw new Error("Cliente non autorizzato");
           const host = String(a.p_hostname || ""); const pages = Number(a.p_page_budget);
@@ -361,11 +344,6 @@ export class LocalDatabase {
           if (!("dossier strategy mission".split(" ").includes(kind)) || JSON.stringify(payload).length > 12_000) throw new Error("Lavoro non valido");
           if ((kind === "dossier" || kind === "strategy") && Object.keys(payload).length) throw new Error("Parametri non validi");
           if (kind === "mission" && (String(payload.request || "").trim().length < 8 || String(payload.request || "").length > 3000 || String(payload.period || "").length > 80)) throw new Error("Parametri missione non validi");
-          const queued = Number((db.prepare("SELECT count(*) n FROM ai_jobs WHERE client_id=? AND status IN ('queued','running')").get(a.p_client_id) as { n: number } | undefined)?.n || 0);
-          const daily = Number((db.prepare("SELECT count(*) n FROM ai_jobs WHERE client_id=? AND created_at>? ").get(a.p_client_id, new Date(Date.now() - 86_400_000).toISOString()) as { n: number } | undefined)?.n || 0);
-          if (queued >= 3 || daily >= 24) throw new Error("Limite lavori AI raggiunto");
-          const requestPolicy: Record<string, string> = { dossier: "dossier", strategy: "strategy", mission: "mission" };
-          this.runRpc("forgecy_reserve_ai_request", { p_client_id: a.p_client_id, p_kind: requestPolicy[kind] });
           return insert("ai_jobs", { client_id: a.p_client_id, requested_by: LOCAL_OWNER_ID, kind, payload, status: "queued", result: {}, run_after: time }).id;
         }
         case "forgecy_cancel_ai_job": {

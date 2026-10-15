@@ -4,7 +4,6 @@ import { clientSchema,sourceSchema,offerSchema,campaignSchema,missionSchema,chat
 import { draftDossier,executeMission,contextForAI } from "@/lib/agent-team";
 import { handleLeaderMessage } from "@/lib/leader-intent";
 import { modelJson,lowTrustRule } from "@/lib/ai";
-import { reserveAiRequest } from "@/lib/ai-request-budget";
 import {withAiUsageScope} from "@/lib/ai-usage";
 import { crawlWebsite, publicHttpsUrl } from "@/lib/site-ingest";
 import { requireWebsiteCrawlingEnabled, reserveWebsiteCrawl } from "@/lib/crawl-budget";
@@ -145,7 +144,6 @@ export async function POST(request:Request,{params}:Params){
    return json({offer:data},201);
   }
   if(p.length===4 && p[2]==="dossier" && p[3]==="draft"){
-   await reserveAiRequest(ctx,id,"dossier");
    const dossier=await withAiUsageScope({clientId:id,requestedBy:ctx.user.id,operation:"dossier"},()=>draftDossier(ctx,id));
    await audit(ctx,id,"dossier_generated",dossier.id);
    return json({dossier},201);
@@ -176,7 +174,6 @@ export async function POST(request:Request,{params}:Params){
    if(context.strategy?.status!=="approved"||context.strategy.knowledge_revision!==context.client.knowledge_revision)
      throw new ApiFailure(409,"Approva prima il piano strategico attuale");
    if(input.offer_id && !context.offers.some(o=>o.id===input.offer_id))throw new ApiFailure(409,"Offerta non confermata");
-   await reserveAiRequest(ctx,id,"mission");
    const {data,error}=await ctx.db.from("missions").insert({client_id:id,request:input.request,status:"running"}).select().single();
    dbError(error,"Missione non avviata");
    const result=await withAiUsageScope({clientId:id,requestedBy:ctx.user.id,operation:"mission"},()=>executeMission(ctx,id,data.id,input.request,input.period,input.offer_id||null));
@@ -197,7 +194,6 @@ export async function POST(request:Request,{params}:Params){
   }
   if(p.length===3 && p[2]==="messages"){
    const input=await read(request,chatSchema);
-   await reserveAiRequest(ctx,id,"chat");
    const {error}=await ctx.db.from("messages").insert({client_id:id,role:"user",body:input.body});
    dbError(error,"Messaggio non inviato");
    const result=await withAiUsageScope({clientId:id,requestedBy:ctx.user.id,operation:"chat"},()=>handleLeaderMessage(ctx,id,input.body));
@@ -233,7 +229,6 @@ export async function POST(request:Request,{params}:Params){
    const docFormat=original.format==="carousel"?"document":"post";
    const schema=z.object({title:z.string().min(1).max(240),caption:z.string().max(12000),
     slides:z.array(z.object({headline:z.string().max(240),body:z.string().max(1000),visual_prompt:z.string().max(1000).optional()})).max(20)});
-   await reserveAiRequest(ctx,id,"adapt");
    const revised=await withAiUsageScope({clientId:id,requestedBy:ctx.user.id,operation:"adapt"},()=>modelJson(lowTrustRule+"\nRole: LinkedIn editor. Reframe an Instagram asset for LinkedIn professionals; not just a literal translation. Output professional copy and document pages when original carousel. No unsupported claims.",
       "ORIGINALE JSON:\n"+JSON.stringify(original).slice(0,24000),schema));
    const {data,error:writeError}=await ctx.db.from("contents").insert({

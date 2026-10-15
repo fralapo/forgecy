@@ -33,6 +33,10 @@ test("local database persists records, preserves invariants, searches evidence, 
     assert.equal(changed.data.knowledge_revision, 2);
     const reservation = await db.rpc("forgecy_enqueue_ai_job", { p_client_id: clientId, p_kind: "dossier", p_payload: {} });
     assert.equal(reservation.error, null);
+    const additionalJobs = await Promise.all(Array.from({ length: 25 }, () =>
+      db.rpc("forgecy_enqueue_ai_job", { p_client_id: clientId, p_kind: "dossier", p_payload: {} })
+    ));
+    assert.equal(additionalJobs.every(job => job.error === null && typeof job.data === "string"), true);
     const claimed = await db.rpc("forgecy_claim_ai_job");
     assert.equal(claimed.error, null);
     assert.equal(claimed.data[0].id, reservation.data);
