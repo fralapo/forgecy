@@ -44,6 +44,14 @@ test("one explicitly requested Instagram carousel is valid without a second chan
  carousel.slides=Array.from({length:5},(_,i)=>({headline:`Slide ${i+1}`,body:"Informazione verificata."}));
  assert.deepEqual(reviewStaticAssets([carousel],new Set([proofId]),brief),[]);
 });
+test("a brief that forbids adding LinkedIn deliverables blocks an extra LinkedIn asset",()=>{
+ const brief="Crea esattamente 1 carosello Instagram di 5 slide. Non aggiungere deliverable LinkedIn o altri formati.";
+ const carousel=asset("instagram","carousel");
+ carousel.slides=Array.from({length:5},(_,i)=>({headline:`Slide ${i+1}`,body:"Informazione verificata."}));
+ const issues=reviewStaticAssets([carousel,asset("linkedin","post"),asset("instagram","post")],new Set([proofId]),brief);
+ assert.ok(issues.some(x=>x.code==="prohibited_linkedin"&&x.severity==="blocking"));
+ assert.ok(issues.some(x=>x.code==="unrequested_asset"&&x.severity==="blocking"));
+});
 test("explicit carousel count and page count are enforced",()=>{
  const brief="Esattamente 2 caroselli Instagram, ciascuno di 5 slide. Evita LinkedIn.";
  const a=asset("instagram","carousel");
