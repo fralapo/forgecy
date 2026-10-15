@@ -70,7 +70,7 @@ export class LocalStorageBucket {
       const target = filePath(this.bucket, path);
       const bytes = readFileSync(target);
       if (bytes.byteLength > LIMITS[this.bucket]) return { data: null, error: { message: "File troppo grande" } };
-      return { data: new Blob([bytes]), error: null };
+      return { data: new Blob([bytes], { type: MIME[extname(target).toLowerCase()] || "application/octet-stream" }), error: null };
     } catch (error) { return { data: null, error: { message: error instanceof Error ? error.message : "File non trovato" } }; }
   }
   async remove(paths: string[]) {

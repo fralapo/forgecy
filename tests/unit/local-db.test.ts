@@ -112,6 +112,11 @@ test("local database persists records, preserves invariants, searches evidence, 
     assert.equal(uploaded.error, null);
     const downloaded = await db.storage.from("forgecy-assets").download(`${clientId}/sample.png`);
     assert.equal(Buffer.from(await downloaded.data!.arrayBuffer()).toString(), "png");
+    assert.equal(downloaded.data!.type, "image/png");
+    const uploadedPdf = await db.storage.from("forgecy-sources").upload(`${clientId}/sample.pdf`, Buffer.from("%PDF-test"), { contentType: "application/pdf" });
+    assert.equal(uploadedPdf.error, null);
+    const downloadedPdf = await db.storage.from("forgecy-sources").download(`${clientId}/sample.pdf`);
+    assert.equal(downloadedPdf.data!.type, "application/pdf");
 
     await db.from("social_accounts").insert({ client_id: clientId, platform: "instagram", remote_id: "meta-account", username: "forgecy", token_ciphertext: "encrypted-secret" });
     const { archive, manifest } = await (await import("../../lib/sync/archive")).createWorkspaceArchive({ parentHash: "" });

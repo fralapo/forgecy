@@ -91,15 +91,29 @@ async function main() {
     form.append("file", new File([bytes], basename(pdfPath).slice(0, 120), { type: "application/pdf" }));
     const { POST } = await import("../app/api/workspace/[...parts]/route");
     const uploadStartedAt = performance.now();
-    const response = await POST(new Request(`http://localhost/api/workspace/clients/${clientId}/upload`, { method: "POST", body: form }), {
+    let response = await POST(new Request(`http://localhost/api/workspace/clients/${clientId}/upload`, { method: "POST", body: form }), {
       params: Promise.resolve({ parts: ["clients", clientId, "upload"] }),
     });
-    const pipelineElapsedMs = Math.round(performance.now() - uploadStartedAt);
-    const payload = await response.json() as {
+    let pipelineElapsedMs = Math.round(performance.now() - uploadStartedAt);
+    let payload = await response.json() as {
       error?: string; extracted?: boolean; source?: { id?: string; body?: string; source_metadata?: { document_processing?: { method?: string; page_count?: number; pages_processed?: number; ocr_pages?: number; truncation_reason?: string } } };
       catalog?: { status?: string; added?: number; updated?: number; skippedManual?: number; invalid?: number };
     };
     if (!response.ok) throw new Error(payload.error || `Upload di valutazione fallito (HTTP ${response.status}).`);
+    const initialOcrPartial=payload.source?.source_metadata?.document_processing?.truncation_reason==="ocr_partial";
+    let retryPagesProcessed:number|null=null;
+    let retryOcrPartial:boolean|null=null;
+    if(initialOcrPartial&&process.argv.includes("--retry-partial")&&payload.source?.id){
+      const retryStartedAt=performance.now();
+      response=await POST(new Request(`http://localhost/api/workspace/clients/${clientId}/sources/${payload.source.id}/process`,{method:"POST"}),{
+        params:Promise.resolve({parts:["clients",clientId,"sources",payload.source.id,"process"]}),
+      });
+      pipelineElapsedMs+=Math.round(performance.now()-retryStartedAt);
+      payload=await response.json() as typeof payload;
+      if(!response.ok)throw new Error(payload.error||`Retry OCR di valutazione fallito (HTTP ${response.status}).`);
+      retryPagesProcessed=payload.source?.source_metadata?.document_processing?.pages_processed??null;
+      retryOcrPartial=payload.source?.source_metadata?.document_processing?.truncation_reason==="ocr_partial";
+    }
     const offers = await db.from("offers").select("id,source_id,image_source_id,name,description,price").eq("client_id", clientId).eq("kind", "product");
     if (offers.error) throw new Error("Impossibile verificare i prodotti importati.");
     const expectedOffer = expectedOfferId ? offers.data?.find((offer: Record<string, unknown>) => offer.id === expectedOfferId) as Record<string, unknown> | undefined : undefined;
@@ -158,6 +172,10 @@ async function main() {
       ocrPages: payload.source?.source_metadata?.document_processing?.ocr_pages || null,
       pagesProcessed: payload.source?.source_metadata?.document_processing?.pages_processed || null,
       ocrPartial,
+      initialOcrPartial,
+      retryAttempted:initialOcrPartial&&process.argv.includes("--retry-partial"),
+      retryPagesProcessed,
+      retryOcrPartial,
       partialOcrWasDeferred:ocrPartial&&payload.extracted===false&&(offers.data||[]).length===0,
       pipelineElapsedMs,
       extractedTextPreview: process.argv.includes("--show-extracted-text") ? extractedBody.slice(0, 12_000) : undefined,
