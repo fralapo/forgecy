@@ -3,6 +3,7 @@ import type {Context} from "./http";
 import {ApiFailure,audit,dbError} from "./http";
 import {draftDossier,executeMission,contextForAI} from "./agent-team";
 import {missionSchema} from "./schemas";
+import {resolveMissionOffer} from "./mission-offer";
 import {workerDb} from "./worker-db";
 import {draftStrategy} from "./strategic-blueprint";
 import {JobLeaseLost,runWithJobLease} from "./job-lease";
@@ -52,7 +53,13 @@ async function execute(db:ReturnType<typeof workerDb>,job:AiJob,checkpoint:()=>P
    throw new ApiFailure(409,"Approva un dossier aggiornato prima di avviare gli agenti");
  if(!all.strategy||all.strategy.status!=="approved"||all.strategy.knowledge_revision!==all.client.knowledge_revision)
    throw new ApiFailure(409,"Approva il piano strategico attuale prima della missione");
- if(input.data.offer_id&&!all.offers.some(o=>o.id===input.data.offer_id))
+ const selectedOffer=await resolveMissionOffer(all.offers,input.data.offer_id??null,async offerId=>{
+   const {data,error}=await db.from("offers").select("id")
+     .eq("client_id",job.client_id).eq("id",offerId).eq("status","verified").maybeSingle();
+   dbError(error,"Impossibile verificare l’offerta selezionata");
+   return data;
+ });
+ if(input.data.offer_id&&!selectedOffer)
    throw new ApiFailure(409,"L'offerta deve essere verificata per questo cliente");
  // The unique ai_job_id makes worker retries idempotent across crashes.
  const {data:prior,error:priorError}=await db.from("missions")

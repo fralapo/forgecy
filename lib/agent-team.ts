@@ -3,6 +3,7 @@ import type { Context } from "./http";
 import { ApiFailure, dbError } from "./http";
 import { lowTrustRule,modelText,modelStructuredJson } from "./ai";
 import { missionContextFingerprint,restoreMissionStageCheckpointFromEvents,saveMissionStageCheckpoint } from "./mission-checkpoints";
+import { resolveMissionOffer } from "./mission-offer";
 import { reconcileDossierEvidence } from "./dossier-evidence";
 import { JobLeaseLost } from "./job-lease";
 import { retrieveClientKnowledge,contextFromKnowledgeHits } from "./knowledge-search";
@@ -223,7 +224,13 @@ export async function executeMission(ctx:Context,clientId:string,missionId:strin
  if(!all.dossier || all.dossier.status!=="approved") throw new ApiFailure(409,"Approva un dossier aggiornato prima di avviare la campagna");
  if(!all.strategy||all.strategy.status!=="approved"||all.strategy.knowledge_revision!==all.client.knowledge_revision)
    throw new ApiFailure(409,"Approva il piano strategico attuale prima di avviare la campagna");
- const offer=offerId?all.offers.find(o=>o.id===offerId):null;
+ const offer=await resolveMissionOffer(all.offers,offerId,async selectedId=>{
+   const {data,error}=await ctx.db.from("offers")
+     .select("id,name,kind,description,benefits,audience,price,currency,cta,status,version")
+     .eq("client_id",clientId).eq("id",selectedId).eq("status","verified").maybeSingle();
+   dbError(error,"Impossibile verificare l’offerta selezionata");
+   return data;
+ });
  if(offerId && !offer) throw new ApiFailure(409,"Seleziona un'offerta verificata per questo cliente");
  const analystEvidence=await retrieveClientKnowledge(ctx,clientId,
    [request,offer?.name,offer?.description,offer?.audience].filter(Boolean).join(" "),8);
