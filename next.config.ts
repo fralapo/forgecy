@@ -5,6 +5,16 @@ const allowedDevOrigins = (process.env.FORGECY_ALLOWED_DEV_ORIGINS || "")
  .filter(Boolean);
 
 const config: NextConfig = {
+ distDir: process.env.FORGECY_DIST_DIR || ".next",
+ webpack(webpackConfig, { nextRuntime }) {
+  if (nextRuntime === "edge") {
+   webpackConfig.resolve.alias = {
+    ...webpackConfig.resolve.alias,
+    "./instrumentation-node": false,
+   };
+  }
+  return webpackConfig;
+ },
  serverExternalPackages: ["undici","cheerio","ipaddr.js","pdf-parse","@napi-rs/canvas","mammoth","better-sqlite3","@napi-rs/keyring","@huggingface/transformers"],
  poweredByHeader: false,
  // The proxy buffers incoming bodies before API routes see them. Keep this just

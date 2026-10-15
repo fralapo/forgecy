@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "prepare": "node scripts/setup-git-hooks.mjs",
-    "dev": "next dev --hostname 127.0.0.1",
-    "dev:tailscale": "next dev --hostname 127.0.0.1 --port 7694",
-    "build": "next build",
+    "dev": "next dev --webpack --hostname 127.0.0.1",
+    "dev:tailscale": "next dev --webpack --hostname 127.0.0.1 --port 7694",
+    "build": "next build --webpack",
     "start": "next start --hostname 127.0.0.1",
     "start:tailscale": "next start --hostname 127.0.0.1 --port 7694",
     "typecheck": "tsc --noEmit",
