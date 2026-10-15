@@ -343,6 +343,24 @@ test("OCR Markdown matrices honor leading blank columns and reject incomplete pr
  assert.equal(parseLocalCatalogProducts("Sicutool Catalogo.pdf",source).length,17);
 });
 
+test("Sicutool page 1112 OCR variants survive split headers and omitted price cells",()=>{
+ const source=readFileSync(join(process.cwd(),"tests/fixtures/sicutool-2025-page-1112-ocr.txt"),"utf8");
+ const products=parseMarkdownVariantPriceMatrices(source);
+ assert.equal(products.length,21);
+ assert.equal(products.filter(product=>product.name.startsWith("5234G 33 —")).length,5);
+ assert.equal(products.filter(product=>product.name.startsWith("5234G 34 —")).length,8);
+ assert.equal(products.filter(product=>product.name.startsWith("5234G 35 —")).length,8);
+ const disputed=products.find(product=>product.name==="5234G 34 — 12 mm");
+ assert.ok(disputed);
+ assert.equal(disputed.price,null);
+ assert.equal(disputed.priceQuote,"");
+ assert.equal(disputed.imageIndex,1);
+ assert.equal(catalogEvidenceIsValid(disputed,source),true);
+ assert.equal(hasVariantPriceMatrix(source),true);
+ assert.equal(parseLocalCatalogProducts("Sicutool-catalog-page-1112.pdf",source).length,21);
+ assert.ok(products.every(product=>product.price===null&&product.priceQuote===""));
+});
+
 test("variant matrix review warning recognizes padded Markdown and plain-text layouts",()=>{
  assert.equal(hasVariantPriceMatrix("| | Larghe | mm | 2 |\n| | 5234G 1 | Cad. | 38,10 |"),true);
  assert.equal(hasVariantPriceMatrix("Larg. mm 2 4\n5234G 1 Cad. 38,10 36,30"),true);

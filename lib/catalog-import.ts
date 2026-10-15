@@ -221,6 +221,20 @@ export function parseMarkdownVariantPriceMatrices(text:string):CatalogProduct[]{
  let activeImage:number|null=null;
  let plainWidths:string[]=[];
  let plainUnit="";
+ let plainCode="";
+ const addPlainVariants=(code:string)=>{
+  if(!code||!plainWidths.length||!plainUnit)return;
+  for(const width of plainWidths){
+   if(!width)continue;
+   const identity=`${normalizeCatalogName(code)}|${normalizeCatalogName(width)}|${plainUnit.toLowerCase()}`;
+   if(seen.has(identity))continue;
+   seen.add(identity);
+   const name=`${code} — ${width} ${plainUnit}`.slice(0,180);
+   products.push({name,description:`${width} ${plainUnit}`,price:null,currency:"EUR",
+    nameQuote:JSON.stringify([code,width,plainUnit]),descriptionQuote:JSON.stringify([width,plainUnit]),
+    priceQuote:"",existingOfferId:null,imageIndex:activeImage});
+  }
+ };
  for(const line of lines){
   const trimmed=line.trim();
   const imageMatch=/^!?\[img-(\d+)\.[^\]]+\]\(/iu.exec(trimmed);
@@ -256,29 +270,42 @@ export function parseMarkdownVariantPriceMatrices(text:string):CatalogProduct[]{
    }
    continue;
   }
-  const plainHeader=/^Larg\.?\s+(\S+)\s+(.+)$/iu.exec(trimmed);
+  const plainHeader=/^Larg(?:h(?:e)?)?\.?\s+(.+)$/iu.exec(trimmed);
   if(plainHeader){
-   plainUnit=plainHeader[1]!.trim();
-   plainWidths=plainHeader[2]!.trim().split(/\s+/u);
+   const headerContent=plainHeader[1]!.trim();
+   if(/^(?=.*[\p{L}])(?=.*\d)[A-Z0-9]+(?:\s+[A-Z0-9]{1,8}){0,2}$/iu.test(headerContent)){
+    plainCode=headerContent;
+    continue;
+   }
+   const dimensions=/^(\S+)\s+(?:Cad\.?\s+)?(.+)$/iu.exec(headerContent);
+   if(dimensions&&/^mm$/iu.test(dimensions[1]!)){
+    plainUnit=dimensions[1]!.trim();
+    plainWidths=dimensions[2]!.trim().split(/\s+/u).filter(value=>/^\d+(?:[.,]\d+)?$/u.test(value));
+    addPlainVariants(plainCode);
+    continue;
+   }
+   const legacyDimensions=/^(\S+)\s+(.+)$/u.exec(headerContent);
+   if(legacyDimensions){
+    plainUnit=legacyDimensions[1]!.trim();
+    plainWidths=legacyDimensions[2]!.trim().split(/\s+/u);
+   }
+   continue;
+  }
+  const splitUnitHeader=/^mm\s+Cad\.?\s+(.+)$/iu.exec(trimmed);
+  if(splitUnitHeader){
+   plainUnit="mm";
+   plainWidths=splitUnitHeader[1]!.trim().split(/\s+/u).filter(value=>/^\d+(?:[.,]\d+)?$/u.test(value));
+   addPlainVariants(plainCode);
    continue;
   }
   const plainPriceRow=/^((?=.*[\p{L}])(?=.*\d)[A-Z0-9]+(?:\s+[A-Z0-9]{1,8}){0,2})\s+Cad\.?\s+(.+)$/iu.exec(trimmed);
   if(plainPriceRow&&plainWidths.length&&plainUnit){
    const code=plainPriceRow[1]!.trim();
-   for(const width of plainWidths){
-    if(!width)continue;
-    const identity=`${normalizeCatalogName(code)}|${normalizeCatalogName(width)}|${plainUnit.toLowerCase()}`;
-    if(seen.has(identity))continue;
-    seen.add(identity);
-    const name=`${code} — ${width} ${plainUnit}`.slice(0,180);
-    products.push({name,description:`${width} ${plainUnit}`,price:null,currency:"EUR",
-     nameQuote:JSON.stringify([code,width,plainUnit]),descriptionQuote:JSON.stringify([width,plainUnit]),
-     priceQuote:"",existingOfferId:null,imageIndex:null});
-   }
+   addPlainVariants(code);
    continue;
   }
   const codeHeading=/^(?=.*[\p{L}])(?=.*\d)[A-Z0-9]+(?:\s+[A-Z0-9]{1,8}){0,2}$/iu.test(trimmed);
-  if(codeHeading)activeImage=null;
+  if(codeHeading){plainCode=trimmed;plainWidths=[];plainUnit="";activeImage=null;}
  }
  return products.slice(0,1000);
 }
