@@ -444,6 +444,38 @@ export function parseNativeCodePriceRows(title:string,text:string):CatalogProduc
  return products;
 }
 
+/** Parse native PDF product cards whose code, unit, and single price share a text line. */
+export function parseNativeInlineCodePriceRows(title:string,text:string):CatalogProduct[]{
+ if(!looksLikeCatalog(title,text))return [];
+ const lines=text.split(/\r?\n/u);
+ const products:CatalogProduct[]=[];
+ const seen=new Set<string>();
+ const rowPattern=/^\s*([A-Z0-9][A-Z0-9/-]{3,13})\s+(Cad\.?|La conf\.?)\s+(\d{1,3}(?:\.\d{3})*,\d{2})\s*$/iu;
+ for(let index=0;index<lines.length;index++){
+  const line=lines[index]||"";
+  const row=rowPattern.exec(line);
+  if(!row)continue;
+  const code=row[1]!;
+  const priceQuote=row[3]!;
+  const family=lines.slice(Math.max(0,index-80),index).reverse().map(value=>value.trim())
+   .map(value=>value.replace(/^\d{3,4}\s+/u,"").replace(/\s*\([^)]*\)\s*$/u,""))
+   .find(value=>value.length>=5&&value.length<=120&&/\p{L}{4}/u.test(value)
+    &&value===value.toLocaleUpperCase("it")
+    &&!/^(?:PREZZI|CATALOGO|LISTINO|CODICE|DESCRIZIONE)(?:\s|$)/u.test(value)
+    &&!/^(?=.*\d)[A-Z0-9/-]{4,14}$/u.test(value))||"";
+  if(!family)continue;
+  const identity=`${normalizeCatalogName(family)}|${code.toLocaleUpperCase("en-US")}|${priceQuote}`;
+  if(seen.has(identity))continue;
+  seen.add(identity);
+  const name=`${family} (${code})`.slice(0,180);
+  const nameEvidence=[family,code];
+  products.push({name,description:`${family} — ${row[2]}`,price:parsePrice(priceQuote),currency:"EUR",
+   nameQuote:JSON.stringify(nameEvidence),descriptionQuote:JSON.stringify([family,row[2]]),priceQuote,
+   existingOfferId:null,imageIndex:null});
+ }
+ return products;
+}
+
 /** Parse native PDF price tables whose header and rows are tab-separated. */
 export function parseNativeDimensionPriceTables(title:string,text:string):CatalogProduct[]{
  if(!looksLikeCatalog(title,text))return [];
@@ -554,6 +586,8 @@ export function parseLocalCatalogProducts(title:string,text:string):CatalogProdu
  if(nativeRows.length)return nativeRows;
  const nativePricedRows=parseNativeCodePriceRows(title,text);
  if(nativePricedRows.length)return nativePricedRows;
+ const nativeInlinePricedRows=parseNativeInlineCodePriceRows(title,text);
+ if(nativeInlinePricedRows.length)return nativeInlinePricedRows;
  return looksLikeCatalog(title,text)?parseMarkdownImageVariants(text):[];
 }
 

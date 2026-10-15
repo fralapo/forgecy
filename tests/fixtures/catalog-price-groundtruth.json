@@ -126,7 +126,43 @@
     "price": 45.1
   },
   {
-    "source": "Conex Bänninger Listino Serie 8000 2026, pagina 188",
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8090 002000000",
+    "family": "8090 Gomito a 90° F/F",
+    "variant": "1/4 (8090 002000000)",
+    "price": 3.13
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8090 003000000",
+    "family": "8090 Gomito a 90° F/F",
+    "variant": "3/8 (8090 003000000)",
+    "price": 3.98
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8090 004000000",
+    "family": "8090 Gomito a 90° F/F",
+    "variant": "1/2 (8090 004000000)",
+    "price": 4.46
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8090 006000000",
+    "family": "8090 Gomito a 90° F/F",
+    "variant": "3/4 (8090 006000000)",
+    "price": 7.48
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
     "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
     "fixture": "conex-series-8000-page-188-ocr.md",
     "code": "8090 008000000",
@@ -135,7 +171,7 @@
     "price": 12.17
   },
   {
-    "source": "Conex Bänninger Listino Serie 8000 2026, pagina 188",
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
     "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
     "fixture": "conex-series-8000-page-188-ocr.md",
     "code": "8090 010000000",
@@ -144,12 +180,237 @@
     "price": 20.79
   },
   {
-    "source": "Conex Bänninger Listino Serie 8000 2026, pagina 188",
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8090 012000000",
+    "family": "8090 Gomito a 90° F/F",
+    "variant": "1 1/2 (8090 012000000)",
+    "price": 28.47
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8090 016000000",
+    "family": "8090 Gomito a 90° F/F",
+    "variant": "2 (8090 016000000)",
+    "price": 47.41
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8090 020000000",
+    "family": "8090 Gomito a 90° F/F",
+    "variant": "2 1/2 (8090 020000000)",
+    "price": 103.31
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8090 024000000",
+    "family": "8090 Gomito a 90° F/F",
+    "variant": "3 (8090 024000000)",
+    "price": 148.69
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8090 002C00000",
+    "family": "8090 C Gomito a 90° F/F, cromato",
+    "variant": "1/4 (8090 002C00000)",
+    "price": 4.36
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8090 003C00000",
+    "family": "8090 C Gomito a 90° F/F, cromato",
+    "variant": "3/8 (8090 003C00000)",
+    "price": 5.57
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8090 004C00000",
+    "family": "8090 C Gomito a 90° F/F, cromato",
+    "variant": "1/2 (8090 004C00000)",
+    "price": 6.3
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8090 006C00000",
+    "family": "8090 C Gomito a 90° F/F, cromato",
+    "variant": "3/4 (8090 006C00000)",
+    "price": 10.41
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
     "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
     "fixture": "conex-series-8000-page-188-ocr.md",
     "code": "8090 008C00000",
     "family": "8090 C Gomito a 90° F/F, cromato",
     "variant": "1 (8090 008C00000)",
     "price": 16.39
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8090R004003000",
+    "family": "8090R Gomito a 90° ridotto F/F",
+    "variant": "1/2 x 3/8 (8090R004003000)",
+    "price": 5.84
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8090R006004000",
+    "family": "8090R Gomito a 90° ridotto F/F",
+    "variant": "3/4 x 1/2 (8090R006004000)",
+    "price": 8.77
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8090R008006000",
+    "family": "8090R Gomito a 90° ridotto F/F",
+    "variant": "1 x 3/4 (8090R008006000)",
+    "price": 12.89
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8091 003000000",
+    "family": "8091 Gomito a 90° M/M, con filetto cilindrico",
+    "variant": "3/8 (8091 003000000)",
+    "price": 2.6
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8091 004000000",
+    "family": "8091 Gomito a 90° M/M, con filetto cilindrico",
+    "variant": "1/2 (8091 004000000)",
+    "price": 3.95
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8091 006000000",
+    "family": "8091 Gomito a 90° M/M, con filetto cilindrico",
+    "variant": "3/4 (8091 006000000)",
+    "price": 6.03
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8091 008000000",
+    "family": "8091 Gomito a 90° M/M, con filetto cilindrico",
+    "variant": "1 (8091 008000000)",
+    "price": 9.56
+  },
+  {
+    "source": "Conex Bänninger Listino Serie 8000 2026, pagina stampata 188",
+    "url": "https://conexbanninger.com/it/wp-content/uploads/sites/15/2024/12/LISTINO-2026_compressed-1.pdf",
+    "fixture": "conex-series-8000-page-188-ocr.md",
+    "code": "8091 010000000",
+    "family": "8091 Gomito a 90° M/M, con filetto cilindrico",
+    "variant": "1 1/4 (8091 010000000)",
+    "price": 20.8
+  },
+  {
+    "source": "Sicutool Catalogo Utensili 2025 con prezzi, pagina stampata 1108",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1108-native.txt",
+    "code": "5233TE",
+    "family": "COLTELLI UNIVERSALI CON LAME A SETTORI",
+    "variant": "5233TE",
+    "price": 30.9
+  },
+  {
+    "source": "Sicutool Catalogo Utensili 2025 con prezzi, pagina stampata 1108",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1108-native.txt",
+    "code": "O5233TE",
+    "family": "COLTELLI UNIVERSALI CON LAME A SETTORI",
+    "variant": "O5233TE",
+    "price": 13.1
+  },
+  {
+    "source": "Sicutool Catalogo Utensili 2025 con prezzi, pagina stampata 1108",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1108-native.txt",
+    "code": "5233TL",
+    "family": "COLTELLI UNIVERSALI CON LAME A SETTORI",
+    "variant": "5233TL",
+    "price": 8.1
+  },
+  {
+    "source": "Sicutool Catalogo Utensili 2025 con prezzi, pagina stampata 1108",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1108-native.txt",
+    "code": "5233TP",
+    "family": "COLTELLI UNIVERSALI CON LAME A SETTORI",
+    "variant": "5233TP",
+    "price": 10.1
+  },
+  {
+    "source": "Sicutool Catalogo Utensili 2025 con prezzi, pagina stampata 1108",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1108-native.txt",
+    "code": "O5233TP",
+    "family": "COLTELLI UNIVERSALI CON LAME A SETTORI",
+    "variant": "O5233TP",
+    "price": 1.3
+  },
+  {
+    "source": "Sicutool Catalogo Utensili 2025 con prezzi, pagina stampata 1108",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1108-native.txt",
+    "code": "5233V",
+    "family": "COLTELLI UNIVERSALI CON LAME A SETTORI",
+    "variant": "5233V",
+    "price": 23.8
+  },
+  {
+    "source": "Sicutool Catalogo Utensili 2025 con prezzi, pagina stampata 1108",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1108-native.txt",
+    "code": "O5233V",
+    "family": "COLTELLI UNIVERSALI CON LAME A SETTORI",
+    "variant": "O5233V",
+    "price": 11.1
+  },
+  {
+    "source": "Sicutool Catalogo Utensili 2025 con prezzi, pagina stampata 1108",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1108-native.txt",
+    "code": "O5234",
+    "family": "COLTELLI PER POLISTIROLO",
+    "variant": "O5234",
+    "price": 18.1
+  },
+  {
+    "source": "Sicutool Catalogo Utensili 2025 con prezzi, pagina stampata 1108",
+    "url": "https://www.sicutool.it/Catalogo/PDF",
+    "fixture": "sicutool-2025-page-1108-native.txt",
+    "code": "5234",
+    "family": "COLTELLI PER POLISTIROLO",
+    "variant": "5234",
+    "price": 18.5
   }
 ]

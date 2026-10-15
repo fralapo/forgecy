@@ -41,13 +41,18 @@ export function evaluateCatalogPrices(): CatalogPriceEvaluation {
     let products = fixtureProducts.get(expected.fixture);
     if (!products) {
       const text = readFileSync(join(process.cwd(), "tests/fixtures", expected.fixture), "utf8");
-      const title = expected.fixture.endsWith("-native.txt") ? "Stanley-listino-2026-page-54.pdf" : expected.fixture;
+      const title = expected.fixture === "stanley-2026-page-54-native.txt"
+        ? "Stanley-listino-2026-page-54.pdf"
+        : expected.fixture === "sicutool-2025-page-1108-native.txt"
+          ? "Sicutool catalogo 2025 pagina 1108.pdf"
+          : expected.fixture;
       products = parseLocalCatalogProducts(title, text);
       fixtureProducts.set(expected.fixture, products);
     }
 
-    const match = products.find((product) => product.name.includes(expected.family)
-      && product.name.includes(`— ${expected.variant}`));
+    const variantMatches = (name: string) => name.includes(`— ${expected.variant}`)
+      || name.endsWith(`(${expected.variant})`);
+    const match = products.find((product) => product.name.includes(expected.family) && variantMatches(product.name));
     if (!match) {
       failures.push({ code: expected.code, source: expected.source, reason: "variante non trovata" });
       continue;

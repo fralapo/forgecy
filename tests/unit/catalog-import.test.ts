@@ -362,3 +362,14 @@ test("OCR catalog cards import inline SKU prices and keep accessory images unass
  assert.equal(products[1]?.imageIndex,null);
  assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
 });
+
+test("native text Sicutool product cards import inline unit and pack prices with row evidence",()=>{
+ const source=readFileSync(join(process.cwd(),"tests/fixtures/sicutool-2025-page-1108-native.txt"),"utf8");
+ const products=parseLocalCatalogProducts("Sicutool catalogo 2025 pagina 1108.pdf",source);
+ assert.equal(products.length,9);
+ assert.deepEqual(products.map(product=>[product.name.match(/\(([^)]+)\)$/u)?.[1],product.price]),[
+  ["5233TE",30.9],["O5233TE",13.1],["5233TL",8.1],["5233TP",10.1],
+  ["O5233TP",1.3],["5233V",23.8],["O5233V",11.1],["5234",18.5],["O5234",18.1],
+ ]);
+ assert.ok(products.every(product=>catalogEvidenceIsValid(product,source)));
+});
