@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Context } from "./http";
 import { ApiFailure, dbError } from "./http";
 import { lowTrustRule,modelJson,modelText,modelStructuredJson } from "./ai";
+import { missionContextFingerprint,restoreMissionStageCheckpointFromEvents,saveMissionStageCheckpoint } from "./mission-checkpoints";
 import { reconcileDossierEvidence } from "./dossier-evidence";
 import { JobLeaseLost } from "./job-lease";
 import { retrieveClientKnowledge,contextFromKnowledgeHits } from "./knowledge-search";
@@ -43,6 +44,7 @@ const contentSchema=z.object({
    })).max(12)
  }).refine(piece=>piece.channel==="instagram"?(piece.format==="post"||piece.format==="carousel"):(piece.format==="post"||piece.format==="document"),"Canale e formato non coerenti")).min(2).max(12)
 });
+const creativeCheckpointSchema=z.object({contents:contentSchema.shape.contents});
 const guardSchema=z.object({
  warnings:z.array(z.string().max(600)).max(12),
  recommendations:z.array(z.string().max(600)).max(8),
@@ -225,41 +227,71 @@ export async function executeMission(ctx:Context,clientId:string,missionId:strin
  if(offerId && !offer) throw new ApiFailure(409,"Seleziona un'offerta verificata per questo cliente");
  const analystEvidence=await retrieveClientKnowledge(ctx,clientId,
    [request,offer?.name,offer?.description,offer?.audience].filter(Boolean).join(" "),8);
- const ctxJson=JSON.stringify({client:all.client,dossier:all.dossier,company_strategy:all.strategy,
+ const missionContext={client:all.client,dossier:all.dossier,company_strategy:all.strategy,
    offer:offer||null,retrieved_evidence:contextFromKnowledgeHits(analystEvidence),
    community_patterns:all.community_patterns,community_signals:all.community_signals,
-   history:all.history,social:all.social}).slice(0,45000);
+   history:all.history,social:all.social};
+ const ctxJson=JSON.stringify(missionContext).slice(0,45000);
  try {
+   const {data:priorEvents,error:priorEventsError}=await ctx.db.from("agent_events")
+     .select("agent,recipient,summary,result,created_at").eq("client_id",clientId)
+     .eq("mission_id",missionId).order("created_at",{ascending:false}).limit(30);
+   dbError(priorEventsError,"Impossibile riprendere i passaggi già completati");
+   const fingerprint=missionContextFingerprint({clientId,request,period,offerId,
+     knowledge_revision:all.client.knowledge_revision,
+     dossier:{id:all.dossier.id,version:all.dossier.version,knowledge_revision:all.dossier.knowledge_revision},
+     strategy:{id:all.strategy.id,version:all.strategy.version,knowledge_revision:all.strategy.knowledge_revision},
+     offer:offer?{id:offer.id,version:offer.version}:null,context:missionContext});
    await assertLease?.();
-   await record(ctx,clientId,missionId,"Leader","Analyst","Brief validato e contesto assegnato",{request,period,offerId});
-   const analysis=await modelJson(lowTrustRule+"\nRole: Social & Business Analyst.\n"+playbook("analyst")+"\nStart from community questions, objections and needs. Isolated feedback is hypothetical, corroboration is a possible trend not population proof. Cite available source IDs and never invent metrics.",
-     "OBIETTIVO: "+request+"\nPERIODO: "+period+"\nDATI:\n"+ctxJson,analysisSchema,
-     {reasoningEnabled:false,maxTokens:3000});
-   await assertLease?.();
-   await record(ctx,clientId,missionId,"Analyst","Strategist","Evidenze e opportunità consegnate",analysis);
-   const strategy=await modelJson(lowTrustRule+"\nRole: Agency Strategist.\n"+playbook("strategist")+"\nPlan for the requested goal, approved offer, brand voice and audience needs; balance information, trust and sales. Convert recurring supported objections into possible editorial series; do not build a whole strategy from one isolated comment.",
-     "BRIEF: "+request+"\nPERIODO: "+period+"\nCONTESTO: "+ctxJson+
-     "\nEVIDENZE AGGIUNTIVE PER L'ANALISI: "+JSON.stringify(contextFromKnowledgeHits(
-       await retrieveClientKnowledge(ctx,clientId,[request,analysis.audience,...analysis.opportunities].join(" "),8)))+
-     "\nANALISI: "+JSON.stringify(analysis),strategySchema,
-     {reasoningEnabled:false,maxTokens:3000});
-   await assertLease?.();
-   await record(ctx,clientId,missionId,"Strategist","Copywriter","Strategia e KPI consegnati",strategy);
+   if(!priorEvents?.some(event=>event.agent==="Leader"&&event.recipient==="Analyst"&&event.summary==="Brief validato e contesto assegnato"))
+     await record(ctx,clientId,missionId,"Leader","Analyst","Brief validato e contesto assegnato",{request,period,offerId});
+   const savedAnalysis=restoreMissionStageCheckpointFromEvents(priorEvents||[],
+     {agent:"Analyst",recipient:"Strategist",summary:"Evidenze e opportunità consegnate"},fingerprint,analysisSchema);
+   let analysis=savedAnalysis;
+   if(!analysis){
+     analysis=await modelJson(lowTrustRule+"\nRole: Social & Business Analyst.\n"+playbook("analyst")+"\nStart from community questions, objections and needs. Isolated feedback is hypothetical, corroboration is a possible trend not population proof. Cite available source IDs and never invent metrics.",
+       "OBIETTIVO: "+request+"\nPERIODO: "+period+"\nDATI:\n"+ctxJson,analysisSchema,
+       {reasoningEnabled:false,maxTokens:3000});
+     await assertLease?.();
+     await record(ctx,clientId,missionId,"Analyst","Strategist","Evidenze e opportunità consegnate",saveMissionStageCheckpoint(analysis,fingerprint));
+   }
+   const savedStrategy=restoreMissionStageCheckpointFromEvents(priorEvents||[],
+     {agent:"Strategist",recipient:"Copywriter",summary:"Strategia e KPI consegnati"},fingerprint,strategySchema);
+   let strategy=savedStrategy;
+   if(!strategy){
+     strategy=await modelJson(lowTrustRule+"\nRole: Agency Strategist.\n"+playbook("strategist")+"\nPlan for the requested goal, approved offer, brand voice and audience needs; balance information, trust and sales. Convert recurring supported objections into possible editorial series; do not build a whole strategy from one isolated comment.",
+       "BRIEF: "+request+"\nPERIODO: "+period+"\nCONTESTO: "+ctxJson+
+       "\nEVIDENZE AGGIUNTIVE PER L'ANALISI: "+JSON.stringify(contextFromKnowledgeHits(
+         await retrieveClientKnowledge(ctx,clientId,[request,analysis.audience,...analysis.opportunities].join(" "),8)))+
+       "\nANALISI: "+JSON.stringify(analysis),strategySchema,
+       {reasoningEnabled:false,maxTokens:3000});
+     await assertLease?.();
+     await record(ctx,clientId,missionId,"Strategist","Copywriter","Strategia e KPI consegnati",saveMissionStageCheckpoint(strategy,fingerprint));
+   }
    const creativeEvidence=await retrieveClientKnowledge(ctx,clientId,
      [offer?.name,offer?.description,offer?.benefits.join(" "),strategy.positioning,strategy.audience,request].filter(Boolean).join(" "),8);
-   let creative=await modelStructuredJson(lowTrustRule+"\nRole: Copywriter and Art Director.\n"+playbook("creative")+"\nPropose 2 to 8 high-quality static assets covering Instagram and LinkedIn. Carousel/document has 3-8 pages. For each piece fill editorial_brief: hook, audience_need, promise, value_delivered, emotional_angle, rational_proof, single_cta (empty if not needed), community_signal_ids. Prefer clarity and evidence over sensationalism. Use only confirmed product benefits. Do not infer ordering channels, availability, preparation methods, ingredients, freshness, taste or comparative quality. Leave unknown logistics out of the copy. Follow:\n"+EDITORIAL_PLAYBOOK+"\nPLATFORM DIMENSIONS:\n"+JSON.stringify(STATIC_FORMATS)+".",
-     "RICHIESTA ESPLICITA DELL'UTENTE: "+request+"\nPERIODO: "+period+"\nSTRATEGIA: "+JSON.stringify(strategy)+"\nOFFERTA: "+JSON.stringify(offer)+"\nCONTESTO: "+ctxJson+
-     "\nEVIDENZE RECUPERATE PER I CONTENUTI: "+JSON.stringify(contextFromKnowledgeHits(creativeEvidence))+
-     "\nRispetta ogni formato e numero di pagine esplicitamente richiesti; un post singolo non sostituisce un carosello o un documento multipagina.",contentSchema,
-     "forgecy_campaign_contents",6200,undefined,false);
-   const knownSignals=new Set(all.community_signals.map(v=>v.id));
-   for(const piece of creative.contents){
-     for(const sourceId of piece.editorial_brief.community_signal_ids){
-       if(!knownSignals.has(sourceId))throw new ApiFailure(502,"L'AI ha citato un'osservazione della community non disponibile");
-     }
+   const savedCreative=restoreMissionStageCheckpointFromEvents(priorEvents||[],
+     {agent:"Copywriter / Art Director",recipient:"Brand Guard",summary:"Bozze editoriali e razionale creativo per controllo"},fingerprint,creativeCheckpointSchema);
+   let creative=savedCreative;
+   if(!creative){
+     creative=await modelStructuredJson(lowTrustRule+"\nRole: Copywriter and Art Director.\n"+playbook("creative")+"\nPropose 2 to 8 high-quality static assets covering Instagram and LinkedIn. Carousel/document has 3-8 pages. For each piece fill editorial_brief: hook, audience_need, promise, value_delivered, emotional_angle, rational_proof, single_cta (empty if not needed), community_signal_ids. Prefer clarity and evidence over sensationalism. Use only confirmed product benefits. Do not infer ordering channels, availability, preparation methods, ingredients, freshness, taste or comparative quality. Leave unknown logistics out of the copy. Follow:\n"+EDITORIAL_PLAYBOOK+"\nPLATFORM DIMENSIONS:\n"+JSON.stringify(STATIC_FORMATS)+".",
+       "RICHIESTA ESPLICITA DELL'UTENTE: "+request+"\nPERIODO: "+period+"\nSTRATEGIA: "+JSON.stringify(strategy)+"\nOFFERTA: "+JSON.stringify(offer)+"\nCONTESTO: "+ctxJson+
+       "\nEVIDENZE RECUPERATE PER I CONTENUTI: "+JSON.stringify(contextFromKnowledgeHits(creativeEvidence))+
+       "\nRispetta ogni formato e numero di pagine esplicitamente richiesti; un post singolo non sostituisce un carosello o un documento multipagina.",contentSchema,
+       "forgecy_campaign_contents",6200,undefined,false);
    }
+   if(!creative)throw new ApiFailure(502,"La proposta creativa non contiene contenuti validi");
+   const knownSignals=new Set(all.community_signals.map(v=>v.id));
+   const validateSignals=(contents:z.infer<typeof contentSchema>["contents"])=>{
+     for(const piece of contents){
+       for(const sourceId of piece.editorial_brief.community_signal_ids){
+         if(!knownSignals.has(sourceId))throw new ApiFailure(502,"L'AI ha citato un'osservazione della community non disponibile");
+       }
+     }
+   };
+   validateSignals(creative.contents);
    const initialIssues=reviewStaticAssets(creative.contents,new Set(all.community_signals.map(v=>v.id)));
-   if(initialIssues.some(x=>x.severity==="blocking")){
+   if(!savedCreative&&initialIssues.some(x=>x.severity==="blocking")){
      await assertLease?.();
    await record(ctx,clientId,missionId,"Quality Preflight","Copywriter / Art Director","Il controllo strutturale ha richiesto una sola revisione",{
        stage_skills:routedSkills("quality"),issues:initialIssues
@@ -270,11 +302,12 @@ export async function executeMission(ctx:Context,clientId:string,missionId:strin
        "\nSTRUCTURAL ISSUES:\n"+JSON.stringify(initialIssues),contentSchema,
        "forgecy_campaign_content_revision",6200,undefined,false);
    }
+   if(!creative)throw new ApiFailure(502,"La proposta creativa non contiene contenuti validi");
    const finalIssues=reviewStaticAssets(creative.contents,new Set(all.community_signals.map(v=>v.id)));
    await assertLease?.();
-   await record(ctx,clientId,missionId,"Copywriter / Art Director","Brand Guard","Bozze editoriali e razionale creativo per controllo",{
+   await record(ctx,clientId,missionId,"Copywriter / Art Director","Brand Guard","Bozze editoriali e razionale creativo per controllo",saveMissionStageCheckpoint({
      stage_skills:routedSkills("creative"),contents:creative.contents,preflight:finalIssues
-   });
+   },fingerprint));
    const qualityEvidence=await retrieveClientKnowledge(ctx,clientId,
      [offer?.name,...creative.contents.map(piece=>[piece.title,piece.caption,...piece.slides.flatMap(slide=>[slide.headline,slide.body])].join(" "))].filter(Boolean).join(" "),12);
    const check=await modelJson(lowTrustRule+"\nRole: Brand Guard.\n"+playbook("quality")+"\nVerify each hook is fulfilled, the benefit has evidence, the emotion is not manipulative, there is at most one CTA, the content fits its platform and referenced audience signals actually exist. Check price, tone, readability and unsupported claims. Compare every requested channel, format and exact page count with the assets; a missing explicit requirement is blocking. A one-page post cannot substitute for a requested carousel or document. Compare concrete product, order, pickup, contact and availability claims against the provided source text and verified offer; block claims that the evidence does not state, including invented contact methods. Return warnings and never silently rewrite.\nBLOCKING RULE: block only a concrete defect in the proposed assets, such as a factual claim or price unsupported by the supplied evidence, fabricated testimonials or results, unsafe or illegal copy, a prohibited format, a serious hook/CTA failure or an unmet explicit deliverable. Missing sales, follower, engagement, testimonial, audience-research or operating-history data is a warning unless a draft makes a claim that depends on it. Do not block a descriptive pilot proposal for lacking past-performance data. Do not demand proof of campaign effectiveness before publication; effectiveness is measured after the pilot. Do not label a client or offer commercially infeasible without evidence; state uncertainty as a warning.",

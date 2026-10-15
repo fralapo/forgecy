@@ -1,13 +1,12 @@
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { zipSync } from "fflate";
 
 test("local database persists records, preserves invariants, searches evidence, queues work and snapshots", async () => {
-  const directory = mkdtempSync(join(tmpdir(), "forgecy-local-db-"));
-  const externalBackupDirectory = mkdtempSync(join(tmpdir(), "forgecy-backup-destination-"));
+  const directory = mkdtempSync(join(resolve("."), ".forgecy-local-db-test-"));
+  const externalBackupDirectory = mkdtempSync(join(resolve("."), ".forgecy-backup-destination-test-"));
   process.env.FORGECY_DATA_DIR = directory;
   const { localDb, LOCAL_OWNER_ID } = await import("../../lib/local-db/index");
   const db = localDb();
@@ -233,7 +232,7 @@ test("local database persists records, preserves invariants, searches evidence, 
 });
 
 test("large PDF sources remain in local storage and transferable archives", async () => {
-  const directory = mkdtempSync(join(tmpdir(), "forgecy-large-pdf-"));
+  const directory = mkdtempSync(join(resolve("."), ".forgecy-large-pdf-test-"));
   process.env.FORGECY_DATA_DIR = directory;
   const { localDb, LOCAL_OWNER_ID } = await import("../../lib/local-db/index");
   const db = localDb();

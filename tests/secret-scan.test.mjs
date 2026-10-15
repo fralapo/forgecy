@@ -1,12 +1,11 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
 
 test("tracked secret scan handles files deleted from the working tree", () => {
-  const root = mkdtempSync(join(tmpdir(), "forgecy-secret-scan-"));
+  const root = mkdtempSync(join(resolve("."), ".secret-scan-test-"));
   try {
     const git = (...args) => execFileSync("git", args, { cwd: root, stdio: "ignore" });
     git("init", "-q");
