@@ -4,7 +4,6 @@ import { clientSchema,sourceSchema,offerSchema,campaignSchema,missionSchema,chat
 import { draftDossier,executeMission,contextForAI } from "@/lib/agent-team";
 import { handleLeaderMessage } from "@/lib/leader-intent";
 import { modelJson,modelJsonWithImages,lowTrustRule } from "@/lib/ai";
-import { reserveAiRequest } from "@/lib/ai-request-budget";
 import {withAiUsageScope} from "@/lib/ai-usage";
 import { crawlWebsite, fetchWebsiteFile, publicHttpsUrl } from "@/lib/site-ingest";
 import { matchWebsiteProductImage } from "@/lib/site-product-images";
@@ -47,7 +46,7 @@ async function extractDocumentWithOcr(ctx:Awaited<ReturnType<typeof auth>>,clien
  try{
   const model=await currentOcrModel(ctx.user.id);
   const ocr=await withAiUsageScope({clientId,requestedBy:ctx.user.id,operation:"dossier"},()=>
-   ocrDocumentWithOpenRouter({bytes,mime,name,model,pageCount:pageCount??undefined,pagesToOcr,nativeText:extraction.body,beforeRequest:async()=>{await reserveAiRequest(ctx,clientId,"dossier");},
+   ocrDocumentWithOpenRouter({bytes,mime,name,model,pageCount:pageCount??undefined,pagesToOcr,nativeText:extraction.body,
     ...(resume?{resumeAfterPage:resume.afterPage,previousBody:resume.body}:{})}));
   return {extraction:{status:ocr.partialFailure?"pending":"ready",body:ocr.body,
    error:ocr.partialFailure?(ocr.pagesProcessed===0
@@ -124,7 +123,6 @@ async function reconcileCatalogDocument(ctx:Awaited<ReturnType<typeof auth>>,cli
   });
   if(remainingImages.length&&await getOpenRouterApiKey()){
     try{
-     await reserveAiRequest(ctx,clientId,"dossier");
      const imageContext=remainingImages.map(({image,candidates},index)=>({index,origin:image.origin,page:image.pageNumber||null,
       allowedProducts:candidates.map(product=>({name:product.name,description:product.description,code:product.descriptionQuote}))}));
      const user="Associa ciascuna immagine solo a un prodotto chiaramente riconoscibile. Restituisci un record per ogni indice immagine e usa esattamente un nome tra quelli consentiti per quell'immagine; usa product_name null se la confezione non mostra un'etichetta/codice leggibile o l'associazione è incerta. Ogni immagine e ogni prodotto possono apparire al massimo una volta. Per le immagini native PDF, i candidati provengono dalla stessa pagina; per le immagini estratte dall'OCR manca il riferimento pagina, quindi richiedi una corrispondenza visiva esatta di nome, variante o codice. Non dedurre l'abbinamento dalla sola categoria generica e non inventare prodotti.\nIMMAGINI E CANDIDATI CONSENTITI (indice zero-based):\n"+JSON.stringify(imageContext);
@@ -142,7 +140,6 @@ async function reconcileCatalogDocument(ctx:Awaited<ReturnType<typeof auth>>,cli
  else {
   if(!looksLikeCatalog(title,body))return empty("not_catalog");
   if(!await getOpenRouterApiKey())return empty("ai_not_configured","Documento archiviato. Configura OpenRouter per estrarre automaticamente il catalogo da questo formato.");
-  await reserveAiRequest(ctx,clientId,"dossier");
   const existing=await ctx.db.from("offers").select("id,name,description,kind,status").eq("client_id",clientId).eq("kind","product").neq("status","archived").limit(150);
   dbError(existing.error,"Impossibile leggere i prodotti esistenti");
   const candidates=(existing.data||[]).map((offer:Record<string,unknown>)=>({id:offer.id,name:offer.name,description:String(offer.description||"").slice(0,300)}));
@@ -166,7 +163,6 @@ async function reconcileCatalogDocument(ctx:Awaited<ReturnType<typeof auth>>,cli
     nameQuote:product.name_quote,descriptionQuote:product.description_quote,priceQuote:product.price_quote,existingOfferId:product.existing_offer_id,imageIndex:product.image_index},body)).length||0;
    if(!extracted||supportedVisualProducts===0){
     if(extracted)console.warn("[catalog-import] visual extraction produced no products with verifiable text; retrying with OCR text only");
-    await reserveAiRequest(ctx,clientId,"dossier");
     usedTextOnlyFallback=true;
     // Some OpenRouter providers accept json_object but return the supplied
     // JSON Schema itself for strict json_schema requests. The text-only retry
@@ -562,7 +558,6 @@ export async function POST(request:Request,{params}:Params){
    return json({offer:data},201);
   }
   if(p.length===4 && p[2]==="dossier" && p[3]==="draft"){
-   await reserveAiRequest(ctx,id,"dossier");
    const dossier=await withAiUsageScope({clientId:id,requestedBy:ctx.user.id,operation:"dossier"},()=>draftDossier(ctx,id));
    await audit(ctx,id,"dossier_generated",dossier.id);
    return json({dossier},201);
@@ -593,7 +588,6 @@ export async function POST(request:Request,{params}:Params){
    if(context.strategy?.status!=="approved"||context.strategy.knowledge_revision!==context.client.knowledge_revision)
      throw new ApiFailure(409,"Approva prima il piano strategico attuale");
    if(input.offer_id && !context.offers.some(o=>o.id===input.offer_id))throw new ApiFailure(409,"Offerta non confermata");
-   await reserveAiRequest(ctx,id,"mission");
    const {data,error}=await ctx.db.from("missions").insert({client_id:id,request:input.request,status:"running"}).select().single();
    dbError(error,"Missione non avviata");
    const result=await withAiUsageScope({clientId:id,requestedBy:ctx.user.id,operation:"mission"},()=>executeMission(ctx,id,data.id,input.request,input.period,input.offer_id||null));
@@ -614,7 +608,6 @@ export async function POST(request:Request,{params}:Params){
   }
   if(p.length===3 && p[2]==="messages"){
    const input=await read(request,chatSchema);
-   await reserveAiRequest(ctx,id,"chat");
    const {error}=await ctx.db.from("messages").insert({client_id:id,role:"user",body:input.body});
    dbError(error,"Messaggio non inviato");
    const result=await withAiUsageScope({clientId:id,requestedBy:ctx.user.id,operation:"chat"},()=>handleLeaderMessage(ctx,id,input.body));
@@ -650,7 +643,6 @@ export async function POST(request:Request,{params}:Params){
    const docFormat=original.format==="carousel"?"document":"post";
    const schema=z.object({title:z.string().min(1).max(240),caption:z.string().max(12000),
     slides:z.array(z.object({headline:z.string().max(240),body:z.string().max(1000),visual_prompt:z.string().max(1000).optional()})).max(20)});
-   await reserveAiRequest(ctx,id,"adapt");
    const revised=await withAiUsageScope({clientId:id,requestedBy:ctx.user.id,operation:"adapt"},()=>modelJson(lowTrustRule+"\nRole: LinkedIn editor. Reframe an Instagram asset for LinkedIn professionals; not just a literal translation. Output professional copy and document pages when original carousel. No unsupported claims.",
       "ORIGINALE JSON:\n"+JSON.stringify(original).slice(0,24000),schema));
    const {data,error:writeError}=await ctx.db.from("contents").insert({
