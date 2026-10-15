@@ -27,6 +27,7 @@ test("catalog evidence rejects invented names, prices and descriptions",()=>{
  assert.equal(catalogEvidenceIsValid({...valid,price:199},source),false);
  assert.equal(looksLikeCatalog("listino.pdf","Elenco prodotti con prezzo e codice"),true);
  assert.equal(looksLikeCatalog("Elios_Catalog_2025_page20.pdf","LEMON PLUS\nCodici\n10201000\nConfezione"),true);
+ assert.equal(looksLikeCatalog("Sicutool-Catalogo-2025-pagina-1110.pdf","SGORBIE PER INTAGLIO\nProd. SCU\nDescrizione di riferimento vedi Art. 5234G 1\n5234G 8 Cad. 52,70\nPrezzi in EURO"),true);
  assert.equal(looksLikeCatalog("brief.txt","Presentazione aziendale e valori del brand"),false);
 });
 

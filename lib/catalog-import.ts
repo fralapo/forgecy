@@ -32,7 +32,7 @@ export function normalizeCatalogName(value:string){
 
 export function looksLikeCatalog(title:string,body:string){
  return /catalog|catalogo|listino|prodott|price[ -]?list|sku/i.test(title+"\n"+body)&&
-  (/\b(product|prodotto|prodotti|prezzo|price|sku|codice|codici|articolo|articoli|confezione)\b/i.test(body)||
+  (/\b(product|prodott\w*|prezz[oi]|price|sku|codic\w*|articol\w*|confezion\w*)\b|\bcad\.?\b|\bprod\./i.test(body)||
    /(?:€|\bEUR\b)\s*\d|\b(?:cod\.?|art\.?)\s*\|/iu.test(body));
 }
 
