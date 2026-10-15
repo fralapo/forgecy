@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { deflateSync } from "node:zlib";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { applyNativeImageAssociations, nativeImageAssociationSchema } from "../../lib/catalog-image-association";
-import { extractNativeCatalogImages } from "../../lib/document-extract";
+import { extractDocumentWithMetadata, extractNativeCatalogImages } from "../../lib/document-extract";
 import type { CatalogProduct } from "../../lib/catalog-import";
 import { createPdfParser, getPositionedPdfText, pdfWasmUrl } from "../../lib/pdf-runtime";
 import type { DocumentImage } from "../../lib/document-image";
@@ -104,6 +104,19 @@ test("native PDF images stay page-scoped and ambiguous surplus images are exclud
   } finally {
     await ambiguous.destroy();
   }
+});
+
+test("mixed PDFs with a full-page scan request API OCR even when other pages contain native text",async()=>{
+ const doc=await PDFDocument.create(),font=await doc.embedFont(StandardFonts.Helvetica);
+ const textPage=doc.addPage([450,500]);
+ textPage.drawText("Catalogo completo con testo nativo sufficiente per superare il controllo di leggibilita.",{x:30,y:450,size:12,font});
+ const scannedPage=doc.addPage([450,500]);
+ const image=await doc.embedPng(solidPng(8,8,[235,235,235]));
+ scannedPage.drawImage(image,{x:0,y:0,width:450,height:500});
+ const result=await extractDocumentWithMetadata(await doc.save(),"application/pdf","catalogo-misto.pdf");
+ assert.equal(result.pageCount,2);
+ assert.equal(result.extraction.status,"error");
+ assert.equal(result.extraction.error,"PDF con pagine scansionate: serve OCR tramite API");
 });
 
 test("native PDF images match product codes found in offer descriptions", async () => {

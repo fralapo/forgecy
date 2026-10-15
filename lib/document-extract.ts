@@ -2,7 +2,7 @@ import { assertSafeDocument, DocumentSafetyError } from "./document-safety";
 import { createHash } from "node:crypto";
 import { parseLocalCatalogProducts, parsePositionedNativeCatalogRows, normalizeCatalogName, looksLikeCatalog, type CatalogProduct, type PositionedPdfTextItem } from "./catalog-import";
 import type { DocumentImage } from "./document-image";
-import { createPdfParser, getPositionedPdfText, getPdfImagePlacements, type PdfImagePlacement } from "./pdf-runtime";
+import { createPdfParser, getPositionedPdfText, getPdfImagePlacements, pageHasRasterizedContent, type PdfImagePlacement } from "./pdf-runtime";
 /**
  * Bound client-upload text extraction. Original binary always remains in private
  * Local private storage; extracted text is separate, untrusted evidence.
@@ -147,6 +147,17 @@ export async function extractDocumentWithMetadata(bytes:Uint8Array,mime:string,n
     const body=clean(pages.map(page=>`[Pagina PDF ${page.num}]\n${page.text}`).join("\n\n"));
     const textTruncated=(pageCount!==null&&pageCount>pagesProcessed)||textLength>=MAX_EXTRACT_CHARS;
     if(body.length<MIN_NATIVE_PDF_TEXT_CHARS)return {extraction:{status:"error",body:"",error:"PDF senza testo nativo sufficiente: serve OCR o una trascrizione"},pageCount,pagesProcessed,textTruncated};
+    // A few native text layers can make a mixed scan/text PDF look readable
+    // overall while leaving full-page scanned products invisible to search.
+    // Send that case through the configured API OCR path instead of silently
+    // treating only the text layer as the complete source.
+    for(const page of pages){
+     if(page.text.trim().length>=500)continue;
+     try{
+      if(await pageHasRasterizedContent(parser,page.num))
+       return {extraction:{status:"error",body:"",error:"PDF con pagine scansionate: serve OCR tramite API"},pageCount,pagesProcessed,textTruncated};
+     }catch(error){console.warn("[document-extract] scan detection skipped for page",page.num,error instanceof Error?error.message:"unknown");}
+    }
     const nativeCatalogProducts:CatalogProduct[]=[];
     const positionedProductsByPage=new Map<number,CatalogProduct[]>();
     const positionedItemsByPage=new Map<number,PositionedPdfTextItem[]>();

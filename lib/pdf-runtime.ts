@@ -32,6 +32,25 @@ export async function getPositionedPdfText(parser:Awaited<ReturnType<typeof crea
 
 export type PdfImagePlacement={name:string;x:number;y:number;width:number;height:number};
 
+/** Detect image-heavy page scans that can be hidden inside an otherwise text-readable PDF. */
+export async function pageHasRasterizedContent(parser:Awaited<ReturnType<typeof createPdfParser>>,pageNumber:number):Promise<boolean>{
+ const runtime=parser as unknown as {doc?:{getPage(n:number):Promise<{view?:number[]}>}};
+ if(!runtime.doc)throw new Error("PDF document has not been loaded");
+ const page=await runtime.doc.getPage(pageNumber);
+ const view=page.view;
+ if(!view||view.length<4)return false;
+ const left=view[0]!,bottom=view[1]!,right=view[2]!,top=view[3]!;
+ const pageArea=Math.abs((right-left)*(top-bottom));
+ if(pageArea<=0)return false;
+ const images=await getPdfImagePlacements(parser,pageNumber);
+ const coveredArea=images.reduce((total,image)=>{
+  const imageLeft=Math.max(left,image.x),imageBottom=Math.max(bottom,image.y);
+  const imageRight=Math.min(right,image.x+image.width),imageTop=Math.min(top,image.y+image.height);
+  return total+Math.max(0,imageRight-imageLeft)*Math.max(0,imageTop-imageBottom);
+ },0);
+ return coveredArea/pageArea>=0.45;
+}
+
 /** Read image placement boxes so catalog photos can be matched to nearby product rows. */
 export async function getPdfImagePlacements(parser:Awaited<ReturnType<typeof createPdfParser>>,pageNumber:number):Promise<PdfImagePlacement[]>{
  const runtime=parser as unknown as {doc?:{getPage(n:number):Promise<{getOperatorList():Promise<{fnArray:number[];argsArray:unknown[][]}>}>}};
