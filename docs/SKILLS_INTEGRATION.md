@@ -41,7 +41,7 @@ The Leader displays warnings and blocking issues. The local database rejects pro
 
 ## Documents and client memory
 
-Client uploads retain immutable originals in the private local data folder. Text-based PDFs are read in bounded 40-page ranges up to 500 pages and 80,000 characters; mixed PDFs preserve native text and send only scanned pages to OpenRouter in bounded 10-page/10 MB segments up to 200 pages. Each OCR segment is a separate budgeted API request. PDFs may be up to 64 MiB; other files remain capped at 10 MB. Extracted evidence is capped at 80,000 characters; invalid files or scanned PDFs do not turn into fabricated evidence. A source shows page coverage and truncation, preserves successful partial OCR, and offers retry.
+Client uploads retain immutable originals in the private local data folder. Text-based PDFs are read in bounded 40-page ranges up to 500 pages and 80,000 characters; mixed PDFs preserve native text and send only scanned pages to OpenRouter in bounded 10-page/10 MB segments up to 200 pages. Each OCR segment is a separate API request; Forgecy does not apply AI request quotas per client or workspace. PDFs may be up to 64 MiB; other files remain capped at 10 MB. Extracted evidence is capped at 80,000 characters; invalid files or scanned PDFs do not turn into fabricated evidence. A source shows page coverage and truncation, preserves successful partial OCR, and offers retry.
 
 The current pipeline reads native text from PDF/DOCX/CSV locally, uses OpenRouter API exclusively for OCR of scanned PDFs and images, parses supported CSV/Markdown product tables with exact row evidence, and performs local hybrid retrieval. No local OCR engine is used. Remaining work includes representative OCR/evidence evaluations, stronger extraction for irregular catalogs, and a versioned concept/entity wiki if real workflows demonstrate the need. Client documents should be scanned for malicious content and processed within restricted memory/CPU and outbound network limits before using this pipeline for arbitrary high-volume customer uploads.
 
@@ -53,7 +53,7 @@ This does not test live OpenRouter image generation or the full client workflow;
 
 ## Next prioritized work
 
-- Durable queue with retries, cancellation, per-client AI budgets.
+- Durable queue with retries and cancellation; AI usage is recorded for observability without local request quotas.
 - Corpus-quality evaluation for OCR, tables, product/image matching, and retrieval on representative client documents.
 - Consider a versioned concept/entity wiki only if observed multi-hop questions justify its added complexity.
 - GEO audit with real page crawling and source-grounded findings; never synthetic rankings.

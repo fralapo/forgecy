@@ -109,6 +109,14 @@ test("local database persists records, preserves invariants, searches evidence, 
 
     const reservation = await db.rpc("forgecy_enqueue_ai_job", { p_client_id: clientId, p_kind: "dossier", p_payload: {} });
     assert.equal(reservation.error, null);
+    // AI enqueue has no per-client pending or daily request quota.
+    for (let i = 0; i < 24; i++) {
+      const additionalJob = await db.rpc("forgecy_enqueue_ai_job", {
+        p_client_id: clientId, p_kind: "strategy", p_payload: {}
+      });
+      assert.equal(additionalJob.error, null);
+    }
+    assert.equal((await db.from("ai_jobs").select("id").eq("client_id", clientId)).data?.length, 25);
     const claimed = await db.rpc("forgecy_claim_ai_job");
     assert.equal(claimed.error, null);
     assert.equal(claimed.data[0].id, reservation.data);
