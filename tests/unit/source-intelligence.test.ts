@@ -57,23 +57,49 @@ test("website extraction collects a product catalog, brand assets, and same-host
   assert.equal(unknownPrice.products[0].price,null);
 });
 
-test("website product images link variants to the most specific saved product family",()=>{
- const image=(id:string,title:string,role="product")=>({id,title,file_path:`client/${id}.webp`,source_metadata:{asset_role:role}});
+test("website product images require an exact offer or a variant in the asset filename",()=>{
+ const image=(id:string,title:string,url:string,hash:string|null=null,role="product")=>({id,title,url,file_path:`client/${id}.webp`,content_sha256:hash,source_metadata:{asset_role:role}});
  const sources=[
-  image("softener","Deo Due Morbido Ammorbidente"),
-  image("premium","Deo Due Morbido Ammorbidente Premium"),
-  image("professional","Deo Due Profumatore Ambiente Professional Line"),
-  image("generic","Deo Due Profumatore Ambiente"),
-  image("drops","Gocce di DeoDue"),
-  image("logo","Deo Due Morbido Ammorbidente Premium","logo"),
+  image("softener","Deo Due Morbido Ammorbidente","https://shop.example/DD_Morbido_fiori-blu-82x300.png"),
+  image("premium","Deo Due Morbido Ammorbidente Premium","https://shop.example/DD_Morbido_Premium_BIANCO-LATTE-80x300.png","same-premium"),
+  image("premium-copy","Deo Due Morbido Ammorbidente Premium","https://shop.example/DD_Morbido_Premium_BIANCO-LATTE-80x300.png.webp","same-premium"),
+  image("professional","Deo Due Profumatore Ambiente Professional Line","https://shop.example/prof-row1-0-126x300.png"),
+  image("generic","Deo Due Profumatore Ambiente","https://shop.example/ambiente-0-113x300.png"),
+  image("drops","Gocce di DeoDue","https://shop.example/gocce-oriental-clean-97x300.png"),
+  image("sgrassatore","Deo Due Profumatore Sgrassatore","https://shop.example/profumatoresgrassatore_bianco-138x300.png"),
+  image("linen","Deo Due Profuma Biancheria Estate Rosa","https://shop.example/Profumabiancheria_Estate_Rosa_250ml-300x300.png"),
+  image("logo","Deo Due Morbido Ammorbidente Premium","https://shop.example/logo.png",null,"logo"),
  ];
- assert.equal(matchWebsiteProductImage("Deo Due Morbido Ammorbidente Premium – Essenza di Bianco Latte",sources)?.id,"premium");
- assert.equal(matchWebsiteProductImage("Deo Due Profumatore Ambiente Professional Line – Tiarè",sources)?.id,"professional");
- assert.equal(matchWebsiteProductImage("Deo Due Profumatore Ambiente – Bianco Latte",sources)?.id,"generic");
- assert.equal(matchWebsiteProductImage("Gocce di DeoDue – Aloe",sources)?.id,"drops");
- assert.equal(matchWebsiteProductImage("Deo Due Morbido Ammorbidente – Fleur d&#8217;Or",sources)?.id,"softener");
- assert.equal(matchWebsiteProductImage("Deo Due",sources),null);
- assert.equal(matchWebsiteProductImage("Altro prodotto senza corrispondenze",sources),null);
+ const offers=[
+  "Deo Due Morbido Ammorbidente","Deo Due Morbido Ammorbidente – Fiori Blu","Deo Due Morbido Ammorbidente – Fleur d&#8217;Or",
+  "Deo Due Morbido Ammorbidente Premium","Deo Due Morbido Ammorbidente Premium – Essenza di Bianco Latte","Deo Due Morbido Ammorbidente Premium – Nature",
+  "Deo Due Profumatore Ambiente Professional Line","Deo Due Profumatore Ambiente Professional Line – Tiarè",
+  "Deo Due Profumatore Ambiente","Deo Due Profumatore Ambiente – Bianco Latte",
+  "Gocce di DeoDue","Gocce di DeoDue – Oriental","Gocce di DeoDue – Aloe",
+  "Deo Due Profumatore Sgrassatore","Deo Due Profumatore Sgrassatore – Bianco","Deo Due Profumatore Sgrassatore – Rosa",
+  "Deo Due Profuma Biancheria Estate Rosa","Deo Due Profuma Biancheria Estate Rosa – Fiori di Primavera",
+ ];
+ const find=(name:string)=>matchWebsiteProductImage(name,sources,offers)?.id||null;
+ assert.equal(find("Deo Due Morbido Ammorbidente – Fiori Blu"),"softener");
+ assert.equal(find("Deo Due Morbido Ammorbidente – Fleur d&#8217;Or"),null);
+ assert.equal(find("Deo Due Morbido Ammorbidente"),null);
+ assert.equal(find("Deo Due Morbido Ammorbidente Premium – Essenza di Bianco Latte"),"premium");
+ assert.equal(find("Deo Due Morbido Ammorbidente Premium – Nature"),null);
+ assert.equal(find("Deo Due Profumatore Ambiente Professional Line – Tiarè"),null);
+ assert.equal(find("Deo Due Profumatore Ambiente"),"generic");
+ assert.equal(find("Deo Due Profumatore Ambiente – Bianco Latte"),null);
+ assert.equal(find("Gocce di DeoDue – Oriental"),"drops");
+ assert.equal(find("Gocce di DeoDue – Aloe"),null);
+ assert.equal(find("Deo Due Profumatore Sgrassatore – Bianco"),"sgrassatore");
+ assert.equal(find("Deo Due Profumatore Sgrassatore – Rosa"),null);
+ assert.equal(find("Deo Due Profuma Biancheria Estate Rosa"),"linen");
+ assert.equal(find("Deo Due Profuma Biancheria Estate Rosa – Fiori di Primavera"),null);
+ assert.equal(find("Deo Due"),null);
+ assert.equal(find("Altro prodotto senza corrispondenze"),null);
+ assert.equal(matchWebsiteProductImage("LAVATRICE DEO DUE ULTRA POWER + BIANCO",[image("ultrapower-white","Deo Due UltraPower Lavatrice +Bianco","https://shop.example/DD_Lavatrice-ULTRAPOWER-bianco.png")])?.id,"ultrapower-white");
+ assert.equal(matchWebsiteProductImage("LAVATRICE DEO DUE ULTRA POWER + COLORI",[image("ultrapower-white","Deo Due UltraPower Lavatrice +Bianco","https://shop.example/DD_Lavatrice-ULTRAPOWER-bianco.png")]),null);
+ assert.equal(matchWebsiteProductImage("Deo Due UltraPower Lavatrice +Bianco – +Bianco",[image("ultrapower-white","Deo Due UltraPower Lavatrice +Bianco","https://shop.example/DD_Lavatrice-ULTRAPOWER-bianco.png")])?.id,"ultrapower-white");
+ assert.equal(matchWebsiteProductImage("Deo Due Profumatore Ambiente",[image("generic-a","Deo Due Profumatore Ambiente","https://shop.example/ambiente-0.png","hash-a"),image("generic-b","Deo Due Profumatore Ambiente","https://shop.example/ambiente-0.png","hash-b")]),null);
 });
 
 test("website extraction preserves heading, paragraph, list and table structure for passage indexing",()=>{

@@ -371,23 +371,41 @@ export async function POST(request:Request,{params}:Params){
    // Repair links from already downloaded product images before quota checks.
    // This lets a rescan fix variant cards even when another crawl is rate-limited.
    const savedImages=await ctx.db.from("sources")
-     .select("id,title,file_path,source_metadata").eq("client_id",id);
+     .select("id,title,url,file_path,content_sha256,source_metadata").eq("client_id",id);
    dbError(savedImages.error,"Impossibile verificare le immagini prodotto salvate");
    const savedOffers=await ctx.db.from("offers")
      .select("id,name,image_source_id,catalog_locked,status").eq("client_id",id).eq("kind","product").neq("status","archived");
    dbError(savedOffers.error,"Impossibile verificare le offerte del cliente");
    let productImagesLinked=0;
+   let productImagesUnlinked=0;
+   const knownOfferNames=(savedOffers.data||[]).map(offer=>String(offer.name||""));
    for(const offer of savedOffers.data||[]){
-     if(offer.image_source_id||Number(offer.catalog_locked)===1)continue;
-     const image=matchWebsiteProductImage(String(offer.name||""),savedImages.data||[]);
-     if(!image)continue;
-     const linked=await ctx.db.from("offers").update({image_source_id:image.id})
-       .eq("id",offer.id).eq("client_id",id).eq("image_source_id",null).select("id").maybeSingle();
-     if(linked.error)console.warn("[website-ingest] saved product image link skipped",linked.error.code);
-     else if(linked.data)productImagesLinked++;
+     if(Number(offer.catalog_locked)===1)continue;
+     const image=matchWebsiteProductImage(String(offer.name||""),savedImages.data||[],knownOfferNames);
+     const currentImage=(savedImages.data||[]).find(source=>source.id===offer.image_source_id);
+     const currentIsAutomaticWebsiteImage=currentImage?.source_metadata?.source==="website_asset";
+     if(offer.image_source_id&&!currentIsAutomaticWebsiteImage)continue;
+     if(offer.image_source_id&&currentImage&&image&&currentImage.content_sha256&&currentImage.content_sha256===image.content_sha256)continue;
+     const nextImageId=image?.id||null;
+     if(nextImageId===offer.image_source_id)continue;
+     const update=ctx.db.from("offers").update({image_source_id:nextImageId})
+       .eq("id",offer.id).eq("client_id",id);
+     const linked=offer.image_source_id?await update.eq("image_source_id",offer.image_source_id).select("id").maybeSingle()
+       :await update.eq("image_source_id",null).select("id").maybeSingle();
+     if(linked.error)console.warn("[website-ingest] saved product image reconciliation skipped",linked.error.code);
+     else if(linked.data){if(nextImageId)productImagesLinked++;else productImagesUnlinked++;}
    }
+   if(productImagesLinked||productImagesUnlinked)await audit(ctx,id,"website_product_images_reconciled",undefined,{linked:productImagesLinked,unlinked:productImagesUnlinked});
    // Reservation is atomic across instances; a failed DB check must block crawling.
-   const reservationId=await reserveWebsiteCrawl(ctx,id,hostname,input.maxPages);
+   let reservationId:string;
+   try{reservationId=await reserveWebsiteCrawl(ctx,id,hostname,input.maxPages);}
+   catch(error){
+    if(error instanceof ApiFailure&&error.status===429&&(productImagesLinked||productImagesUnlinked))
+     return json({source:null,sources:[],unchanged:0,offersImported:0,offersUpdated:0,imagesImported:0,imagesUpdated:0,documentsImported:0,documentsUpdated:0,
+      productsFound:0,productImagesLinked,productImagesUnlinked,dossierQueued:false,visited:0,skipped:[],
+      message:`Associazioni immagini aggiornate: ${productImagesLinked} collegate e ${productImagesUnlinked} rimosse perché non corrispondevano alla variante. La scansione del sito non è partita: ${error.message}`});
+    throw error;
+   }
    const result=await crawlWebsite(input.url,input.maxPages);
    const {data:previous,error:priorError}=await ctx.db.from("sources")
      .select("id,url,content_sha256,title,kind,file_path,source_metadata").eq("client_id",id).in("kind",["website","document"]);
