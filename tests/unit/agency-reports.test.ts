@@ -31,12 +31,20 @@ test("strategy report exports KPI baseline gaps and all roadmap horizons",()=>{
  assert.ok(doc.includes("Budget"));
 });
 test("Instagram CSV uses only real data and avoids spreadsheet formulas",()=>{
- const csv=instagramCsv({id:"a",collected_at:"2026-10-12T00:00:00Z",period:"latest",
-  data:{measured:true,media:[{id:"media",caption:'=HYPERLINK("https://example.com")',
-   like_count:4,comments_count:0,insights:{saved:2}}]}});
+ const csv=instagramCsv([
+  {id:"a",collected_at:"2026-10-12T00:00:00Z",period:"latest",
+   data:{measured:true,account:{username:"deoduehome",followers_count:1234,media_count:8},media:[{id:"media",caption:'=HYPERLINK("https://example.com")',
+    like_count:4,comments_count:0,insights:{saved:2}}]}},
+  {id:"b",collected_at:"2026-10-13T00:00:00Z",period:"latest",
+   data:{measured:true,account:{username:"deoduehome",followers_count:1240,media_count:8},media:[]}}
+ ]);
  assert.ok(csv.includes("'=HYPERLINK"));
- assert.ok(csv.includes(';"4";"0";"";"2";'));
+ assert.ok(csv.includes("2026-10-12T00:00:00Z"));
+ assert.ok(csv.includes("2026-10-13T00:00:00Z"));
+ assert.ok(csv.includes('"Profilo";"deoduehome";"1240"'));
+ assert.ok(csv.includes('"Post";"deoduehome";"1234"'));
+ assert.ok(csv.includes('"4";"0";"";"2";""'));
  assert.equal(excelCsvCell(null),'""');
- assert.throws(()=>instagramCsv({id:"b",collected_at:"2026-10-12",period:"demo",
-  data:{measured:false,media:[]}}),/rilevazioni reali/);
+ assert.throws(()=>instagramCsv([{id:"c",collected_at:"2026-10-12",period:"demo",
+  data:{measured:false,media:[]}}]),/rilevazioni reali/);
 });

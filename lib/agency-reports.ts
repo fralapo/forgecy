@@ -91,26 +91,28 @@ export function excelCsvCell(value:unknown):string{
  if(/^[=+@-]/.test(v))v="'"+v;
  return '"'+v.replace(/"/g,'""')+'"';
 }
-export function instagramCsv(snapshot:ObservedSnapshot):string{
- if(snapshot.data.measured!==true)throw new Error("Si possono esportare soltanto rilevazioni reali");
- if(!snapshot.data.media?.length){
-  const headers=["Tipo record","Username","Follower","Precisione follower","Post totali","Rilevato il","Fonte"];
-  const row=["Profilo",snapshot.data.account?.username||"",snapshot.data.account?.followers_count??null,
+export function instagramCsv(input:ObservedSnapshot|ObservedSnapshot[]):string{
+ const snapshots=(Array.isArray(input)?input:[input])
+  .filter(snapshot=>snapshot.data.measured===true)
+  .sort((a,b)=>a.collected_at.localeCompare(b.collected_at));
+ if(!snapshots.length)throw new Error("Si possono esportare soltanto rilevazioni reali");
+ const headers=["Tipo record","Username","Follower","Precisione follower","Post totali","Acquisito il","Fonte","ID post","Data post","Tipo media","Caption","Permalink","Like","Commenti","Copertura","Salvataggi","Condivisioni"];
+ const rows=snapshots.flatMap(snapshot=>{
+  const profile=[snapshot.data.account?.username||"",snapshot.data.account?.followers_count??null,
    snapshot.data.metric_precision?.followers_count==="rounded"?"arrotondata":"esatta",
    snapshot.data.account?.media_count??null,snapshot.collected_at,snapshot.data.source||""];
-  return "\ufeff"+[headers.map(excelCsvCell).join(";"),row.map(excelCsvCell).join(";")].join("\r\n")+"\r\n";
- }
- const headers=["ID post","Data post","Tipo","Caption","Permalink","Like","Commenti","Copertura","Salvataggi","Condivisioni","Acquisito il"];
- const rows=(snapshot.data.media||[]).map(p=>{
+  if(!snapshot.data.media?.length)
+   return [["Profilo",...profile,"","","","","","","","","",""].map(excelCsvCell).join(";")];
+  return snapshot.data.media.map(p=>{
   const observed=(key:string)=>{
    const v=p.insights?.[key];
    return typeof v==="number"&&Number.isFinite(v)&&v>=0?v:null;
   };
   return [
-   p.id,p.timestamp||"",p.media_type||"",p.caption||"",p.permalink||"",
-   p.like_count??null,p.comments_count??null,observed("reach"),observed("saved"),
-   observed("shares"),snapshot.collected_at
+   "Post",...profile,p.id,p.timestamp||"",p.media_type||"",p.caption||"",p.permalink||"",
+   p.like_count??null,p.comments_count??null,observed("reach"),observed("saved"),observed("shares")
   ].map(excelCsvCell).join(";");
+  });
  });
  return "\ufeff"+[headers.map(excelCsvCell).join(";"),...rows].join("\r\n")+"\r\n";
 }

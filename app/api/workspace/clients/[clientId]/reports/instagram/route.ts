@@ -18,11 +18,12 @@ export async function GET(request:Request,{params}:P){
     throw new ApiFailure(404,"Account Instagram non collegato a questo cliente");
   const {data,error}=await ctx.db.from("social_snapshots").select("*")
    .eq("client_id",clientId).eq("account_id",requested)
-   .order("collected_at",{ascending:false}).limit(1).maybeSingle();
+   .order("collected_at",{ascending:true}).limit(1000);
   dbError(error);
-  if(!data||data.data?.measured!==true)
+  const measured=(data||[]).filter(snapshot=>snapshot.data?.measured===true);
+  if(!measured.length)
    throw new ApiFailure(404,"Non ci sono statistiche reali esportabili");
-  return new Response(instagramCsv(data as ObservedSnapshot),{headers:{
+  return new Response(instagramCsv(measured as ObservedSnapshot[]),{headers:{
    "Content-Type":"text/csv; charset=utf-8",
    "Content-Disposition":"attachment; filename=forgecy-instagram.csv",
    "Cache-Control":"no-store","X-Content-Type-Options":"nosniff"
