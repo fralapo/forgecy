@@ -179,7 +179,7 @@ function Knowledge({data,onModal,onAction,onView,busy}:{data:Snapshot;onModal:Pr
      {strategy?.status==="draft"&&strategy.knowledge_revision===data.client.knowledge_revision&&<button className="button" onClick={()=>onAction("strategyApprove",{id:strategy.id})}><Check size={15}/> Approva strategia</button>}
      {strategy&&<a className="button" href={"/api/workspace/clients/"+data.client.id+"/reports/strategy"} target="_blank" rel="noopener noreferrer"><FileText size={14}/> Esporta strategia MD</a>}
     </div>
-    {strategy?.status==="stale"&&<div className="notice warn" style={{marginTop:14}}>Le fonti sono cambiate: genera una nuova versione del piano.</div>}
+    {strategy?.status==="stale"&&<div className="notice warn" style={{marginTop:14}}>{dossier?.status==="draft"&&dossier.knowledge_revision===data.client.knowledge_revision?"Il dossier aggiornato è in bozza. Rivedilo e approvalo in Analisi aziendale prima di generare una nuova strategia.":dossier?.status==="approved"?"La strategia è obsoleta: genera una nuova versione del piano.":"Aggiorna e approva il dossier in Analisi aziendale prima di generare una nuova strategia."}</div>}
    </div>
    {strategy&&<div className="stack-lg">
     <div className="card"><h2>Posizionamento</h2><p className="prose">{strategy.blueprint.positioning}</p><div className="separator"/>{strategy.blueprint.audiences.map((a,i)=><div className="list-row" key={i}>{a}</div>)}</div>
