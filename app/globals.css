@@ -119,6 +119,7 @@ button,.button{touch-action:manipulation}
  .welcome-actions .button:last-child{order:1}
  .welcome-actions .button{width:100%;min-height:48px}
  .page-head{margin-bottom:22px}
+ .campaign-content-actions{margin-top:-40px;position:relative;z-index:1}
  .page-head h1{font-size:clamp(25px,7vw,31px);line-height:1.16}
  .page-head p{font-size:14px}
  .card{padding:17px;border-radius:13px}

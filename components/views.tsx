@@ -282,6 +282,50 @@ function Offers({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["onMod
   <div className="notice" style={{marginTop:20}}>I prodotti verificati alimentano il dossier e le campagne. Una modifica al prezzo o ai benefici segnala automaticamente le bozze collegate come da aggiornare.</div>
  </>;
 }
+function BriefSection({title,body,items}:{title:string;body?:string;items?:string[]}){
+ const visibleItems=(items||[]).filter(item=>item.trim());
+ if(!body&&!visibleItems.length)return null;
+ return <section className="card">
+  <h3 style={{fontSize:16,marginBottom:body&&visibleItems.length?10:0}}>{title}</h3>
+  {body&&<p className="prose">{body}</p>}
+  {visibleItems.map((item,index)=><div className="list-row" key={index}>{item}</div>)}
+ </section>;
+}
+function CampaignBrief({strategy}:{strategy:Record<string,unknown>}){
+ const text=(key:string)=>typeof strategy[key]==="string"?String(strategy[key]):undefined;
+ const list=(key:string)=>Array.isArray(strategy[key])?strategy[key].filter((item):item is string=>typeof item==="string"):[];
+ const nested=(key:string)=>strategy[key]&&typeof strategy[key]==="object"&&!Array.isArray(strategy[key])?strategy[key] as Record<string,unknown>:{};
+ const analysis=nested("analysis"),quality=nested("qa");
+ const analysisList=(key:string)=>Array.isArray(analysis[key])?analysis[key].filter((item):item is string=>typeof item==="string"):[];
+ const qualityList=(key:string)=>Array.isArray(quality[key])?quality[key].filter((item):item is string=>typeof item==="string"):[];
+ const scores=quality.scores&&typeof quality.scores==="object"&&!Array.isArray(quality.scores)?quality.scores as Record<string,unknown>:{};
+ const scoreLabels:Record<string,string>={strategic_fit:"Coerenza strategica",originality:"Originalità",audience_relevance:"Rilevanza per il pubblico",evidence:"Solidità delle evidenze",readability:"Leggibilità"};
+ const scoreRows=Object.entries(scores).filter((entry):entry is [string,number]=>typeof entry[1]==="number"&&Number.isFinite(entry[1]));
+ const blockers=qualityList("blocking_issues");
+ return <div className="stack-lg">
+  <div className="grid2">
+   <BriefSection title="Obiettivo" body={text("objective")}/>
+   <BriefSection title="Posizionamento" body={text("positioning")}/>
+   <BriefSection title="Pubblico" body={text("audience")||((typeof analysis.audience==="string")?analysis.audience:undefined)}/>
+   <BriefSection title="Pilastri editoriali" items={list("pillars")}/>
+   <BriefSection title="Indicatori da osservare" items={list("kpis")}/>
+   <BriefSection title="Piano editoriale" body={text("calendar")}/>
+  </div>
+  {(analysisList("opportunities").length>0||analysisList("risks").length>0)&&<div className="grid2">
+   <BriefSection title="Opportunità" items={analysisList("opportunities")}/>
+   <BriefSection title="Rischi da tenere presenti" items={analysisList("risks")}/>
+  </div>}
+  {(scoreRows.length>0||blockers.length>0)&&<section className="card stack">
+   <h3 style={{fontSize:16}}>Controllo del team</h3>
+   {blockers.length>0&&<div className="notice error" role="alert">{blockers.map((item,index)=><div key={index}>{item}</div>)}</div>}
+   {scoreRows.length>0&&<div className="grid2">{scoreRows.map(([key,value])=><div className="info-pair" key={key}><span>{scoreLabels[key]||key}</span><strong>{value}/10</strong></div>)}</div>}
+  </section>}
+  {(qualityList("warnings").length>0||qualityList("recommendations").length>0)&&<div className="grid2">
+   <BriefSection title="Osservazioni editoriali" items={qualityList("warnings")}/>
+   <BriefSection title="Raccomandazioni" items={qualityList("recommendations")}/>
+  </div>}
+ </div>;
+}
 function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Props["onModal"];onAction:Props["onAction"];onChat:()=>void;busy:string|null}){
  const [campaignId,setCampaignId]=useState<string|null>(null);
  const [calendarOpen,setCalendarOpen]=useState(false);
@@ -301,9 +345,9 @@ function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Pro
    <div className="flex between center wrap gap12"><button className="button small ghost" onClick={()=>setCampaignId(null)}><ChevronLeft size={16}/> Tutti i progetti</button><Badge value={campaign.status}/></div>
    <div><div className="eyebrow">{campaign.period}</div><h2 style={{fontSize:25,marginTop:5}}>{campaign.title}</h2><p className="tagline" style={{marginTop:6}}>{campaign.objective}</p></div>
    <div className="tabs"><button className={"tab "+(tab==="brief"?"active":"")} onClick={()=>setTab("brief")}>Strategia e brief</button><button className={"tab "+(tab==="production"?"active":"")} onClick={()=>setTab("production")}>Produzione ({contents.length})</button></div>
-   {tab==="brief"?<div className="card"><h2 style={{marginBottom:14}}>Piano strategico</h2><div className="prose">{JSON.stringify(campaign.strategy,null,2)}</div></div>:
-    <div className="stack-lg">
-     <div className="flex between center wrap gap12"><h2>Contenuti della campagna</h2><button className="button" onClick={()=>onModal("content",{campaign_id:campaign.id})}><Plus size={15}/> Nuovo post</button></div>
+   {tab==="brief"?<div className="stack-lg"><h2 style={{marginBottom:-6}}>Piano strategico</h2><CampaignBrief strategy={campaign.strategy}/></div>:
+     <div className="stack-lg">
+      <div className="campaign-content-actions flex between center wrap gap12"><h2>Contenuti della campagna</h2><button className="button" onClick={()=>onModal("content",{campaign_id:campaign.id})}><Plus size={15}/> Nuovo post</button></div>
      {contents.length?<div className="grid2">{contents.map(c=><button className="click-card stack" onClick={()=>setContentId(c.id)} key={c.id}>
       <div className="flex between center gap8"><span className="offer-type">{c.channel==="instagram"?"Instagram":"LinkedIn"} · {c.format}</span><Badge value={c.status}/></div>
       <h3 style={{fontSize:17}}>{c.title}</h3><p className="caption">{c.caption.slice(0,135)||"Apri per scrivere la didascalia."}</p>

@@ -25,7 +25,8 @@ export function restoreMissionStageCheckpoint<T>(
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
   if (record[CHECKPOINT_FINGERPRINT] !== fingerprint) return null;
-  const { [CHECKPOINT_FINGERPRINT]: _fingerprint, ...result } = record;
+  const result = { ...record };
+  delete result[CHECKPOINT_FINGERPRINT];
   const parsed = schema.safeParse(result);
   return parsed.success ? parsed.data : null;
 }
