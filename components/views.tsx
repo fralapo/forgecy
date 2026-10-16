@@ -12,6 +12,7 @@ import { countInstagramArchiveFollowers } from "@/lib/instagram-archive";
 import { normalizeInstagramUsername } from "@/lib/instagram-username";
 import EditorialCalendar from "./editorial-calendar";
 import {resolvedLayout,layoutStyle,slidePreflight,slideHistoryReducer} from "@/lib/carousel-layout";
+import {linkedinAdaptationBlockReason} from "@/lib/campaign-channel-constraints";
 
 type Props={
  data:Snapshot;view:View;
@@ -373,7 +374,7 @@ function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Pro
   <Header k="PROGETTI / OBIETTIVI" title="Dall'obiettivo alla pubblicazione." sub="Ogni campagna tiene insieme strategia, calendario, post e adattamenti LinkedIn."
    actions={<div className="flex gap8 wrap"><button className={"button "+(calendarOpen?"primary":"")} onClick={()=>setCalendarOpen(v=>!v)}><CalendarDays size={16}/>{calendarOpen?"Torna ai progetti":"Calendario editoriale"}</button><button className="button primary" disabled={!canCampaign||Boolean(busy)} title={!canCampaign?"Approva il dossier e il piano strategico aggiornati per avviare una campagna.":undefined} onClick={()=>onModal("mission")}><Sparkles size={16}/> Affida un obiettivo al Leader</button></div>}/>
   {calendarOpen&&<EditorialCalendar data={data} onAction={onAction} busy={busy}/>}
-  {!calendarOpen&&chosen&&<ContentEditor key={chosen.id+":"+chosen.revision} content={chosen} clientName={data.client.name} profile={data.client.profile} onBack={()=>setContentId(null)} onAction={onAction} busy={busy}/>}
+  {!calendarOpen&&chosen&&<ContentEditor key={chosen.id+":"+chosen.revision} content={chosen} clientName={data.client.name} profile={data.client.profile} linkedinBlockReason={linkedinAdaptationBlockReason(campaign?.objective,campaign?.strategy)} onBack={()=>setContentId(null)} onAction={onAction} busy={busy}/>}
   {!calendarOpen&&!chosen&&campaign&&<div className="stack-lg">
    <div className="flex between center wrap gap12"><button className="button small ghost" onClick={()=>setCampaignId(null)}><ChevronLeft size={16}/> Tutti i progetti</button><Badge value={campaign.status}/></div>
    <div><div className="eyebrow">{campaign.period}</div><h2 style={{fontSize:25,marginTop:5}}>{campaign.title}</h2><p className="tagline" style={{marginTop:6}}>{campaign.objective}</p></div>
@@ -397,7 +398,7 @@ function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Pro
   <Empty title="Nessun progetto ancora" text="Parti da un obiettivo commerciale: il Leader creerà una proposta completa da approvare."><button className="button primary" onClick={onChat}>✧ Avvia una campagna</button></Empty>)}
  </>;
 }
-function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{content:Content;clientName:string;profile:Record<string,unknown>;onBack:()=>void;onAction:Props["onAction"];busy:string|null}){
+function ContentEditor({content,clientName,profile,linkedinBlockReason,onBack,onAction,busy}:{content:Content;clientName:string;profile:Record<string,unknown>;linkedinBlockReason:string|null;onBack:()=>void;onAction:Props["onAction"];busy:string|null}){
  const palette=brandStyle(profile);
  const [title,setTitle]=useState(content.title),[caption,setCaption]=useState(content.caption);
  const [history,dispatchHistory]=useReducer(slideHistoryReducer,{
@@ -473,7 +474,7 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
     </>}
     <div className="separator"/><div className="flex gap8 wrap"><button className="button primary" disabled={Boolean(busy)} onClick={()=>save()}>Salva modifiche</button><button className="button" disabled={Boolean(busy)||content.status==="stale"||Boolean(approvalProblem)} aria-describedby={approvalProblem?"forgecy-content-approval-hint":undefined} onClick={()=>save("approved")}><Check size={14}/> Approva</button>{content.status==="stale"&&<button className="button" disabled={Boolean(busy)} onClick={()=>onAction("revalidateContent",{id:content.id})}><RefreshCw size={14}/> Rivedi versione attuale</button>}</div>
     {approvalProblem&&<p id="forgecy-content-approval-hint" className="caption" role="status">{approvalProblem}</p>}
-    {content.channel==="instagram"&&<button className="button" disabled={Boolean(busy)||content.status==="stale"} onClick={()=>onAction("adapt",{id:content.id})}><Layers3 size={15}/> Riadatta per LinkedIn</button>}
+    {content.channel==="instagram"&&<><button className="button" disabled={Boolean(busy)||content.status==="stale"||Boolean(linkedinBlockReason)} title={linkedinBlockReason||undefined} aria-describedby={linkedinBlockReason?"forgecy-linkedin-adaptation-hint":undefined} onClick={()=>onAction("adapt",{id:content.id})}><Layers3 size={15}/> Riadatta per LinkedIn</button>{linkedinBlockReason&&<p id="forgecy-linkedin-adaptation-hint" className="caption" role="status">{linkedinBlockReason}</p>}</>}
    </div>
    <div className="card" style={{background:"#f5f8f4"}}>
     {slides.length?<><div className="eyebrow" style={{textAlign:"center",marginBottom:16}}>ANTEPRIMA · {content.channel==="instagram"?"4:5 · 1080×1350":"16:9 · 1920×1080"} · PAGINA {idx+1}/{slides.length}</div>

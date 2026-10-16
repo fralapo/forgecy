@@ -7,6 +7,7 @@ import { modelJson,modelJsonWithImages,lowTrustRule } from "@/lib/ai";
 import {withAiUsageScope} from "@/lib/ai-usage";
 import { crawlWebsite, fetchWebsiteFile, publicHttpsUrl } from "@/lib/site-ingest";
 import { matchWebsiteProductImage } from "@/lib/site-product-images";
+import { linkedinAdaptationBlockReason } from "@/lib/campaign-channel-constraints";
 import { requireWebsiteCrawlingEnabled, reserveWebsiteCrawl } from "@/lib/crawl-budget";
 import { extractDocumentWithMetadata, type Extraction } from "@/lib/document-extract";
 import type { DocumentImage } from "@/lib/document-image";
@@ -684,6 +685,14 @@ export async function POST(request:Request,{params}:Params){
    const {data:original,error}=await ctx.db.from("contents").select("*").eq("id",contentId).eq("client_id",id).maybeSingle();
    dbError(error);
    if(!original||original.channel!=="instagram"||original.status==="stale")throw new ApiFailure(409,"Apri un contenuto Instagram valido");
+   if(original.campaign_id){
+    const {data:campaign,error:campaignError}=await ctx.db.from("campaigns").select("objective,strategy")
+     .eq("client_id",id).eq("id",original.campaign_id).maybeSingle();
+    dbError(campaignError);
+    if(!campaign)throw new ApiFailure(404,"Campagna non trovata");
+    const blockReason=linkedinAdaptationBlockReason(campaign.objective,campaign.strategy);
+    if(blockReason)throw new ApiFailure(409,blockReason);
+   }
    let offerVersion:number|null=null,offerContext:Record<string,unknown>|null=null;
    if(original.offer_id){
     const {data:offer,error:offerError}=await ctx.db.from("offers")
