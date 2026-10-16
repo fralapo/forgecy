@@ -7,6 +7,7 @@ import {
   rankKnowledgeHitsByExactNumbers,
   contextFromKnowledgeHits,
   retrieveClientKnowledge,
+  retrieveClientKnowledgeWithMode,
   fuseKnowledgeHits
 } from "../../lib/knowledge-search";
 
@@ -79,8 +80,9 @@ test("local lexical fallback ranks matching numeric product variants first",asyn
  ];
  const ctx={db:{rpc:async()=>({data:candidates,error:null}),from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:{semantic_enabled:0},error:null})})})})},
   user:{id:"11111111-1111-4111-8111-111111111111"}} as unknown as import("../../lib/http").Context;
- const hits=await retrieveClientKnowledge(ctx,"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+ const {hits,mode}=await retrieveClientKnowledgeWithMode(ctx,"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   "OMNIA M 3.2 taglia 08 HI3 potenza 8,4 kW",2);
+ assert.equal(mode,"lexical");
  assert.equal(hits[0].source_id,"exact");
 });
 

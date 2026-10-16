@@ -10,15 +10,23 @@ export const LOCAL_EMBEDDING_DIMENSIONS=384;
 type Tensor={data:Float32Array;dims:number[]};
 type Extractor=(texts:string|string[],options:{pooling:"mean";normalize:true})=>Promise<Tensor>;
 type Runtime={pipeline:(task:"feature-extraction",model:string,options:Record<string,unknown>)=>Promise<Extractor>;env:{cacheDir:string|null;backends:{onnx:{wasm:{numThreads?:number}}}}};
-let extractorPromise:Promise<Extractor>|null=null;
-let state:"not_loaded"|"loading"|"ready"|"error"="not_loaded";
+type RuntimeState="not_loaded"|"loading"|"ready"|"error";
+type EmbeddingRuntimeCache={extractorPromise:Promise<Extractor>|null;state:RuntimeState};
+declare global{var __forgecyLocalEmbeddingRuntime:EmbeddingRuntimeCache|undefined;}
 
-export function localEmbeddingRuntimeStatus(){return {state,model:LOCAL_EMBEDDING_MODEL_ID};}
+function runtimeCache():EmbeddingRuntimeCache{
+ return globalThis.__forgecyLocalEmbeddingRuntime??=(
+  {extractorPromise:null,state:"not_loaded"}
+ );
+}
+
+export function localEmbeddingRuntimeStatus(){return {state:runtimeCache().state,model:LOCAL_EMBEDDING_MODEL_ID};}
 
 async function extractor():Promise<Extractor>{
- if(extractorPromise)return extractorPromise;
- state="loading";
- extractorPromise=(async()=>{
+ const cache=runtimeCache();
+ if(cache.extractorPromise)return cache.extractorPromise;
+ cache.state="loading";
+ cache.extractorPromise=(async()=>{
   const runtime=await import("@huggingface/transformers") as unknown as Runtime;
   const cacheDir=join(getLocalDataDirectory(),"models","huggingface");
   mkdirSync(cacheDir,{recursive:true,mode:0o700});
@@ -27,10 +35,10 @@ async function extractor():Promise<Extractor>{
   return runtime.pipeline("feature-extraction",LOCAL_EMBEDDING_MODEL_ID,{
    revision:LOCAL_EMBEDDING_MODEL_REVISION,dtype:"q8"
   });
- })().then(value=>{state="ready";return value;}).catch(error=>{
-  state="error";extractorPromise=null;throw error;
+ })().then(value=>{cache.state="ready";return value;}).catch(error=>{
+  cache.state="error";cache.extractorPromise=null;throw error;
  });
- return extractorPromise;
+ return cache.extractorPromise;
 }
 
 export async function embedLocalTexts(texts:string[]):Promise<number[][]>{

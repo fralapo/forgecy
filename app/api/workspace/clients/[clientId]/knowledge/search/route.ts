@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { auth, requireClient, json, fail, ApiFailure, dbError } from "@/lib/http";
+import { auth, requireClient, json, fail, ApiFailure } from "@/lib/http";
+import { retrieveClientKnowledgeWithMode } from "@/lib/knowledge-search";
 
 export const runtime = "nodejs";
 
@@ -17,10 +18,7 @@ export async function GET(request:Request,{params}:Params) {
     if(!/^(?:[1-9]|1[0-9]|20)$/.test(count))
       throw new ApiFailure(400,"Limite di ricerca non valido");
     const limit=Number(count);
-    const {data,error} = await ctx.db.rpc("forgecy_search_client_sources",{
-      p_client_id:clientId,p_query:query,p_limit:limit
-    });
-    dbError(error,"Impossibile cercare nelle fonti del cliente");
-    return json({query,hits:data||[],mode:"lexical",limit});
+    const {hits,mode}=await retrieveClientKnowledgeWithMode(ctx,clientId,query,limit);
+    return json({query,hits,mode,limit});
   }catch(error){return fail(error);}
 }

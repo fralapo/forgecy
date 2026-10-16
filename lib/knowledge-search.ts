@@ -82,6 +82,12 @@ export function rankKnowledgeHitsByExactNumbers<T extends {excerpt:string}>(ques
 export async function retrieveClientKnowledge(
  ctx:Context,clientId:string,question:string,limit=8
 ):Promise<KnowledgeHit[]> {
+ return (await retrieveClientKnowledgeWithMode(ctx,clientId,question,limit)).hits;
+}
+
+export async function retrieveClientKnowledgeWithMode(
+ ctx:Context,clientId:string,question:string,limit=8
+):Promise<{hits:KnowledgeHit[];mode:"hybrid"|"lexical"}> {
   const phrase=knowledgeQueryFromQuestion(question);
   const boundedLimit=Math.min(Math.max(limit,1),20);
   const args={p_client_id:clientId,p_query:phrase||"",p_limit:Math.min(boundedLimit*3,20)};
@@ -107,18 +113,18 @@ export async function retrieveClientKnowledge(
     .eq("owner_id",ctx.user.id).maybeSingle();
   if(preferences.error){
     console.error("[knowledge search] Could not read local retrieval preference");
-    return lexical.slice(0,boundedLimit);
+    return {hits:lexical.slice(0,boundedLimit),mode:"lexical"};
   }
-  if(preferences.data?.semantic_enabled===0)return lexical.slice(0,boundedLimit);
+  if(preferences.data?.semantic_enabled===0)return {hits:lexical.slice(0,boundedLimit),mode:"lexical"};
   try{
     const counts=knowledgeEmbeddingCounts(clientId,LOCAL_EMBEDDING_INDEX_ID);
-    if(counts.indexed===0)return lexical.slice(0,boundedLimit);
+    if(counts.indexed===0)return {hits:lexical.slice(0,boundedLimit),mode:"lexical"};
     const semantic=await searchSemanticKnowledge(clientId,question,Math.min(boundedLimit*3,20));
-    return fuseKnowledgeHits(lexical,semantic,boundedLimit,
-      knowledgeQueryContainsIdentifier(question)||knowledgeQueryContainsNumericValue(question)?IDENTIFIER_LEXICAL_WEIGHT:1);
+    return {hits:fuseKnowledgeHits(lexical,semantic,boundedLimit,
+      knowledgeQueryContainsIdentifier(question)||knowledgeQueryContainsNumericValue(question)?IDENTIFIER_LEXICAL_WEIGHT:1),mode:"hybrid"};
   }catch(error){
     console.error("[knowledge search] Local semantic search unavailable; using FTS5",error instanceof Error?error.message:"unknown error");
-    return lexical.slice(0,boundedLimit);
+    return {hits:lexical.slice(0,boundedLimit),mode:"lexical"};
   }
 }
 
