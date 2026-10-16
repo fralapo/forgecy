@@ -275,7 +275,7 @@ export default function ModelSettings() {
       <div>
         <div className="eyebrow">FORGECY / WORKSPACE LOCALE</div>
         <h1 style={{ marginTop: 7 }}>Impostazioni</h1>
-        <p className="tagline" style={{ marginTop: 7 }}>Configura i modelli AI e scegli come leggere localmente i documenti.</p>
+        <p className="tagline" style={{ marginTop: 7 }}>Configura i modelli AI e scegli quelli per OCR, documenti e immagini.</p>
       </div>
       <button className="button" onClick={() => void loadCatalog(true)} disabled={loading || refreshing || Boolean(saving)}>
         {refreshing ? <LoaderCircle className="spin" size={15}/> : <RefreshCw size={15}/>} Aggiorna modelli

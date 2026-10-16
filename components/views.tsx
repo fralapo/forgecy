@@ -12,6 +12,7 @@ import { countInstagramArchiveFollowers } from "@/lib/instagram-archive";
 import { normalizeInstagramUsername } from "@/lib/instagram-username";
 import EditorialCalendar from "./editorial-calendar";
 import {resolvedLayout,layoutStyle,slidePreflight,slideHistoryReducer} from "@/lib/carousel-layout";
+import {createSignedUrlCache} from "@/lib/signed-url-cache";
 
 type Props={
  data:Snapshot;view:View;
@@ -21,6 +22,8 @@ type Props={
  onChat:()=>void;
  busy:string|null;
 };
+
+const sourceFileUrlCache=createSignedUrlCache();
 
 function Badge({value}:{value:string}){return <span className={"pill "+(["stale","draft","proposed","running"].includes(value)?"warn":value==="failed"?"danger":value==="archived"?"muted":"")}>{statusLabel(value)}</span>}
 function sourceCoverageNotice(source:Snapshot["sources"][number]):string|null{
@@ -47,7 +50,7 @@ function isPartialOcr(source:Snapshot["sources"][number]):boolean{
 function SourceFilePreview({clientId,source}:{clientId:string;source:Snapshot["sources"][number]}){
  const [url,setUrl]=useState("");
  const bucket=source.source_metadata?.storage_bucket==="forgecy-assets"?"forgecy-assets":"forgecy-sources";
- useEffect(()=>{let active=true;if(!source.file_path)return;requestJson<{url:string}>(`/api/workspace/clients/${clientId}/assets?bucket=${bucket}&path=${encodeURIComponent(source.file_path)}`).then(r=>{if(active)setUrl(r.url)}).catch(()=>undefined);return()=>{active=false}},[bucket,clientId,source.file_path]);
+ useEffect(()=>{let active=true;if(!source.file_path)return;const key=`${clientId}:${bucket}:${source.file_path}`;sourceFileUrlCache.get(key,async()=>{const result=await requestJson<{url:string}>(`/api/workspace/clients/${clientId}/assets?bucket=${bucket}&path=${encodeURIComponent(source.file_path!)}`);if(!result.url)throw new Error("URL file non disponibile");return result.url}).then(value=>{if(active)setUrl(value)}).catch(()=>undefined);return()=>{active=false}},[bucket,clientId,source.file_path]);
  if(!url)return null;
  return bucket==="forgecy-assets"?<a href={url} target="_blank" rel="noreferrer" className="caption" style={{display:"block",marginTop:9}}><span style={{position:"relative",display:"block",width:220,height:140,maxWidth:"100%",background:"var(--surface)",borderRadius:8}}><Image src={url} alt={source.title} fill unoptimized style={{objectFit:"contain"}}/></span><span style={{display:"block"}}>Apri immagine · {String(source.source_metadata?.asset_role||"immagine")}</span></a>:<a className="button small" href={url} target="_blank" rel="noreferrer" style={{marginTop:9}}>Apri documento</a>;
 }
