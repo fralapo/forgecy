@@ -34,7 +34,7 @@ export const offerPatchSchema=z.object({
  price:z.number().nonnegative().max(99999999).nullable().optional(),
  currency:z.string().length(3).optional(),cta:bounded(400).optional(),
  status:z.enum(["draft","verified","archived"]).optional(),
- source_id:z.uuid().nullable().optional()
+ source_id:z.uuid().nullable().optional(),image_source_id:z.uuid().nullable().optional()
 }).refine(x=>Object.keys(x).length>0);
 export const campaignSchema=z.object({
  title:bounded(180).min(1),objective:bounded(3000).min(1),period:bounded(80).min(1),

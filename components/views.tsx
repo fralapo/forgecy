@@ -2,7 +2,7 @@
 import { useEffect,useReducer,useState } from "react";
 import Image from "next/image";
 import { ArrowRight,BookOpen,CalendarDays,Check,ChevronLeft,ChevronRight,FileText,Globe,Layers3,Plus,RefreshCw,Sparkles,UploadCloud,Image as ImageIcon,ExternalLink,Trash2 } from "lucide-react";
-import type { Snapshot,View,Content,Slide,EditorialBrief } from "./types";
+import type { Snapshot,View,Content,Slide,EditorialBrief,Offer } from "./types";
 import { offerLabel,statusLabel,requestJson } from "./types";
 import AiUsagePanel from "./ai-usage-panel";
 import { audiencePatterns } from "@/lib/audience";
@@ -257,6 +257,36 @@ function Knowledge({data,onModal,onAction,onView,busy}:{data:Snapshot;onModal:Pr
   </div>}
  </>;
 }
+function OfferImagePicker({clientId,offer,sources,onAction,busy}:{clientId:string;offer:Offer;sources:Snapshot["sources"];onAction:Props["onAction"];busy:string|null}){
+ const [open,setOpen]=useState(false);
+ const [selected,setSelected]=useState(offer.image_source_id||"");
+ const images=sources.filter(source=>source.file_path&&source.source_metadata?.asset_role==="product");
+ const current=images.find(source=>source.id===offer.image_source_id);
+ const preview=images.find(source=>source.id===selected);
+ return <div className="stack" style={{gap:8}}>
+  {current?<SourceFilePreview clientId={clientId} source={current}/>:<div className="notice" style={{margin:0}}>Nessuna immagine collegata. Scegli una foto prodotto tra le fonti del cliente.</div>}
+  <button className="button small" type="button" aria-expanded={open} onClick={()=>{setSelected(offer.image_source_id||"");setOpen(value=>!value)}}>
+   {offer.image_source_id?"Cambia immagine":"Associa immagine"}
+  </button>
+  {open&&<div className="finding stack" style={{gap:8}}>
+   <label htmlFor={`offer-image-${offer.id}`}>Immagine prodotto</label>
+   <select id={`offer-image-${offer.id}`} value={selected} onChange={event=>setSelected(event.target.value)}>
+    <option value="">Nessuna immagine</option>
+    {images.map(source=>{
+     const page=source.source_metadata?.page_number;
+     const origin=source.source_metadata?.source==="website_asset"?"Sito":typeof page==="number"?`Catalogo · pagina ${page}`:"Catalogo";
+     return <option key={source.id} value={source.id}>{source.title} · {origin}</option>;
+    })}
+   </select>
+   {preview&&<SourceFilePreview clientId={clientId} source={preview}/>}
+   <div className="flex gap8 wrap">
+    <button className="button small primary" type="button" disabled={Boolean(busy)||selected===(offer.image_source_id||"")} onClick={async()=>{await onAction("updateOfferImage",{id:offer.id,image_source_id:selected||null});setOpen(false)}}>Salva associazione</button>
+    <button className="button small ghost" type="button" disabled={Boolean(busy)} onClick={()=>setOpen(false)}>Annulla</button>
+   </div>
+   <p className="caption" style={{margin:0}}>Controlla l’anteprima: una stessa immagine può rappresentare un’intera linea, non una variante specifica.</p>
+  </div>}
+ </div>;
+}
 function Offers({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["onModal"];onAction:Props["onAction"];busy:string|null}){
  const [filter,setFilter]=useState<"all"|"product"|"service">("all");
  const items=data.offers.filter(o=>filter==="all"||o.kind===filter);
@@ -266,7 +296,7 @@ function Offers({data,onModal,onAction,busy}:{data:Snapshot;onModal:Props["onMod
   <div className="tabs">{[["all","Tutte"],["product","Prodotti"],["service","Servizi"]].map(([k,t])=><button key={k} className={"tab "+(filter===k?"active":"")} onClick={()=>setFilter(k as typeof filter)}>{t} {k==="all"?"("+data.offers.length+")":""}</button>)}</div>
   {items.length?<div className="grid2">{items.map(o=><div className="card stack" key={o.id}>
    <div className="flex between center"><span className="offer-type">{o.kind==="product"?"Prodotto fisico":"Servizio"}</span><Badge value={o.status}/></div>
-   {o.image_source_id&&data.sources.find(source=>source.id===o.image_source_id)?.file_path&&<SourceFilePreview clientId={data.client.id} source={data.sources.find(source=>source.id===o.image_source_id)!}/>}
+   {o.kind==="product"&&<OfferImagePicker clientId={data.client.id} offer={o} sources={data.sources} onAction={onAction} busy={busy}/>}
    <h2>{o.name}</h2><p className="tagline">{o.description||"Descrizione da completare."}</p>
    <div className="info-pair"><span>Prezzo</span><strong>{offerLabel(o)}</strong></div>
    <div className="info-pair"><span>Destinatari</span><strong>{o.audience||"Non indicati"}</strong></div>

@@ -807,6 +807,12 @@ export async function PATCH(request:Request,{params}:Params){
   if(p.length===4 && p[2]==="offers"){
    const offerId=validId(p[3]);
    const input=await read(request,offerPatchSchema);
+   if("image_source_id" in input&&input.image_source_id){
+    const image=await ctx.db.from("sources").select("id,source_metadata,file_path").eq("id",input.image_source_id).eq("client_id",id).maybeSingle();
+    dbError(image.error,"Impossibile verificare l’immagine selezionata");
+    if(!image.data||!image.data.file_path||image.data.source_metadata?.asset_role!=="product")
+     throw new ApiFailure(422,"Seleziona un’immagine prodotto disponibile per questo cliente");
+   }
    const catalogFields=["kind","name","description","audience","benefits","price","currency","cta"];
    const manuallyEdited=catalogFields.some(field=>field in input);
    const {data,error}=await ctx.db.from("offers").update({...input,...(manuallyEdited?{catalog_locked:1}:{})}).eq("id",offerId).eq("client_id",id).select().maybeSingle();
