@@ -1,4 +1,4 @@
-import { MAX_ARCHIVE_BYTES, restoreWorkspaceArchive } from "@/lib/sync/archive";
+import { MAX_ARCHIVE_BYTES, restoreWorkspaceArchive, WorkspaceArchiveValidationError } from "@/lib/sync/archive";
 import { ApiFailure, fail, json } from "@/lib/http";
 
 export const runtime = "nodejs";
@@ -31,7 +31,15 @@ export async function POST(request: Request) {
     const bytes = new Uint8Array(size);
     let offset = 0;
     for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-    const restored = await restoreWorkspaceArchive(bytes);
+    if (!size) throw new ApiFailure(400, "Seleziona un archivio Forgecy");
+    let restored;
+    try { restored = await restoreWorkspaceArchive(bytes); }
+    catch (error) {
+      if (error instanceof WorkspaceArchiveValidationError) {
+        throw new ApiFailure(400, "L’archivio Forgecy non è valido o è danneggiato");
+      }
+      throw error;
+    }
     return json({ restored: true, hash: restored.hash, backup: restored.backup, message: "Workspace importato. Forgecy ha conservato una copia locale precedente, se presente." });
   } catch (error) { return fail(error); }
 }

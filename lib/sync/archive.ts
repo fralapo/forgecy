@@ -29,6 +29,12 @@ const manifestSchema = z.object({
 }).strict();
 export type SnapshotManifest = z.infer<typeof manifestSchema>;
 export type ValidatedArchive = { manifest: SnapshotManifest; entries: Record<string, Uint8Array> };
+export class WorkspaceArchiveValidationError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "WorkspaceArchiveValidationError";
+  }
+}
 
 export function sha256(value: Uint8Array | string) { return createHash("sha256").update(value).digest("hex"); }
 function contentHash(databaseHash: string, assets: SnapshotManifest["assets"]) {
@@ -142,7 +148,7 @@ function validateZipDirectory(buffer: Buffer) {
   if (offset !== buffer.readUInt32LE(end + 16) + directorySize) throw new Error("Indice ZIP non coerente");
 }
 
-export function validateWorkspaceArchive(input: Uint8Array): ValidatedArchive {
+function validateWorkspaceArchiveUnchecked(input: Uint8Array): ValidatedArchive {
   const buffer = Buffer.from(input);
   if (!buffer.byteLength || buffer.byteLength > MAX_ARCHIVE_BYTES) throw new Error("Archivio non valido o troppo grande");
   validateZipDirectory(buffer);
@@ -179,6 +185,24 @@ export function validateWorkspaceArchive(input: Uint8Array): ValidatedArchive {
     } finally { check.close(); }
   } finally { rmSync(scratch, { recursive: true, force: true }); }
   return { manifest, entries };
+}
+
+export function validateWorkspaceArchive(input: Uint8Array): ValidatedArchive {
+  try {
+    return validateWorkspaceArchiveUnchecked(input);
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error
+      ? String((error as { code?: unknown }).code)
+      : "";
+    if (["EACCES", "EROFS", "ENOSPC", "EIO", "EMFILE", "ENFILE", "ENOENT", "SQLITE_CANTOPEN", "SQLITE_IOERR", "SQLITE_FULL", "SQLITE_BUSY"].includes(code)) {
+      throw error;
+    }
+    if (error instanceof WorkspaceArchiveValidationError) throw error;
+    throw new WorkspaceArchiveValidationError(
+      error instanceof Error ? error.message : "Archivio Forgecy non valido",
+      { cause: error },
+    );
+  }
 }
 
 let restoreQueue = Promise.resolve();

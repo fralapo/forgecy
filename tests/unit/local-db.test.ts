@@ -143,12 +143,14 @@ test("local database persists records, preserves invariants, searches evidence, 
     await db.from("social_accounts").insert({ client_id: clientId, platform: "instagram", remote_id: "meta-account", username: "forgecy", token_ciphertext: "encrypted-secret" });
     const { archive, manifest } = await (await import("../../lib/sync/archive")).createWorkspaceArchive({ parentHash: "" });
     const { createWorkspaceArchive } = await import("../../lib/sync/archive");
-    const { validateWorkspaceArchive, restoreWorkspaceArchive } = await import("../../lib/sync/archive");
+    const { validateWorkspaceArchive, restoreWorkspaceArchive, WorkspaceArchiveValidationError } = await import("../../lib/sync/archive");
     const unchangedArchive = await (await import("../../lib/sync/archive")).createWorkspaceArchive({ parentHash: "" });
     assert.equal(unchangedArchive.manifest.contentHash, manifest.contentHash);
     assert.notEqual(unchangedArchive.manifest.hash, manifest.hash);
     const validated = validateWorkspaceArchive(archive);
     assert.equal(validated.manifest.hash, manifest.hash);
+    assert.throws(() => validateWorkspaceArchive(new Uint8Array()), WorkspaceArchiveValidationError);
+    assert.throws(() => validateWorkspaceArchive(new Uint8Array([1, 2, 3, 4])), WorkspaceArchiveValidationError);
     const exportedDbPath=join(directory,"exported.sqlite");
     writeFileSync(exportedDbPath,Buffer.from(validated.entries["database/forgecy.sqlite"]));
     const exportedDb=new (await import("better-sqlite3")).default(exportedDbPath,{readonly:true});
