@@ -69,6 +69,7 @@ export const editorialBriefSchema=z.object({
 export const updateContentSchema=z.object({
  title:bounded(240).min(1).optional(),
  caption:bounded(12000).optional(),
+ offer_id:z.uuid().nullable().optional(),
  slides:z.array(z.object({
  headline:bounded(250),body:bounded(1200),
  visual_prompt:bounded(1200).optional(),image_path:bounded(500).optional(),

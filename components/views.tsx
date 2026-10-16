@@ -374,7 +374,7 @@ function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Pro
   <Header k="PROGETTI / OBIETTIVI" title="Dall'obiettivo alla pubblicazione." sub="Ogni campagna tiene insieme strategia, calendario, post e adattamenti LinkedIn."
    actions={<div className="flex gap8 wrap"><button className={"button "+(calendarOpen?"primary":"")} onClick={()=>setCalendarOpen(v=>!v)}><CalendarDays size={16}/>{calendarOpen?"Torna ai progetti":"Calendario editoriale"}</button><button className="button primary" disabled={!canCampaign||Boolean(busy)} title={!canCampaign?"Approva il dossier e il piano strategico aggiornati per avviare una campagna.":undefined} onClick={()=>onModal("mission")}><Sparkles size={16}/> Affida un obiettivo al Leader</button></div>}/>
   {calendarOpen&&<EditorialCalendar data={data} onAction={onAction} busy={busy}/>}
-  {!calendarOpen&&chosen&&<ContentEditor key={chosen.id+":"+chosen.revision} content={chosen} clientName={data.client.name} profile={data.client.profile} linkedinBlockReason={linkedinAdaptationBlockReason(campaign?.objective,campaign?.strategy)} onBack={()=>setContentId(null)} onAction={onAction} busy={busy}/>}
+  {!calendarOpen&&chosen&&<ContentEditor key={chosen.id+":"+chosen.revision} content={chosen} offers={data.offers} clientName={data.client.name} profile={data.client.profile} linkedinBlockReason={linkedinAdaptationBlockReason(campaign?.objective,campaign?.strategy)} onBack={()=>setContentId(null)} onAction={onAction} busy={busy}/>}
   {!calendarOpen&&!chosen&&campaign&&<div className="stack-lg">
    <div className="flex between center wrap gap12"><button className="button small ghost" onClick={()=>setCampaignId(null)}><ChevronLeft size={16}/> Tutti i progetti</button><Badge value={campaign.status}/></div>
    <div><div className="eyebrow">{campaign.period}</div><h2 style={{fontSize:25,marginTop:5}}>{campaign.title}</h2><p className="tagline" style={{marginTop:6}}>{campaign.objective}</p></div>
@@ -398,9 +398,10 @@ function Projects({data,onModal,onAction,onChat,busy}:{data:Snapshot;onModal:Pro
   <Empty title="Nessun progetto ancora" text="Parti da un obiettivo commerciale: il Leader creerà una proposta completa da approvare."><button className="button primary" onClick={onChat}>✧ Avvia una campagna</button></Empty>)}
  </>;
 }
-function ContentEditor({content,clientName,profile,linkedinBlockReason,onBack,onAction,busy}:{content:Content;clientName:string;profile:Record<string,unknown>;linkedinBlockReason:string|null;onBack:()=>void;onAction:Props["onAction"];busy:string|null}){
+function ContentEditor({content,offers,clientName,profile,linkedinBlockReason,onBack,onAction,busy}:{content:Content;offers:Offer[];clientName:string;profile:Record<string,unknown>;linkedinBlockReason:string|null;onBack:()=>void;onAction:Props["onAction"];busy:string|null}){
  const palette=brandStyle(profile);
  const [title,setTitle]=useState(content.title),[caption,setCaption]=useState(content.caption);
+ const [offerId,setOfferId]=useState(content.offer_id||"");
  const [history,dispatchHistory]=useReducer(slideHistoryReducer,{
    past:[],present:content.slides||[],future:[]
  });
@@ -421,6 +422,7 @@ function ContentEditor({content,clientName,profile,linkedinBlockReason,onBack,on
  const imageSrc=current?.image_path?workspaceAssetUrl(content.client_id,"forgecy-assets",current.image_path):"";
  const save=async(status?:"draft"|"review"|"approved")=>{
   const change:Record<string,unknown>={id:content.id,title,caption,slides,editorial_brief:{audience_need:brief.audience_need||"",hook:brief.hook||"",promise:brief.promise||"",value_delivered:brief.value_delivered||"",emotional_angle:brief.emotional_angle||"",rational_proof:brief.rational_proof||"",single_cta:brief.single_cta||"",community_signal_ids:brief.community_signal_ids||[]}};
+  if(offerId!==(content.offer_id||""))change.offer_id=offerId||null;
   if(status)change.status=status;
   return await onAction("updateContent",change);
  };
@@ -432,6 +434,7 @@ function ContentEditor({content,clientName,profile,linkedinBlockReason,onBack,on
   <div className="content-editor">
    <div className="card stack">
     <label htmlFor="forgecy-content-title">Titolo del contenuto</label><input id="forgecy-content-title" value={title} onChange={e=>setTitle(e.target.value)} maxLength={240}/>
+    <label htmlFor="forgecy-content-offer">Prodotto o servizio collegato</label><select id="forgecy-content-offer" value={offerId} onChange={e=>setOfferId(e.target.value)}><option value="">Nessuna offerta specifica</option>{!offers.some(offer=>offer.id===offerId)&&offerId&&<option value={offerId}>Offerta attuale non verificata</option>}{offers.filter(offer=>offer.status==="verified").map(offer=><option key={offer.id} value={offer.id}>{offer.name}</option>)}</select>
     <label htmlFor="forgecy-content-caption">Didascalia</label><textarea id="forgecy-content-caption" value={caption} onChange={e=>setCaption(e.target.value)} rows={7} maxLength={12000}/>
     <details className="finding" style={{marginTop:8}}>
      <summary style={{cursor:"pointer",fontWeight:800,fontSize:13}}>Perché questo contenuto? · Rationale creativo</summary>

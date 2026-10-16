@@ -863,8 +863,17 @@ export async function PATCH(request:Request,{params}:Params){
   if(p.length===4 && p[2]==="contents"){
    const contentId=validId(p[3]);
    const input=await read(request,updateContentSchema.refine(x=>Object.keys(x).length>0));
-   const {data:current}=await ctx.db.from("contents").select("revision,offer_id,offer_version,parent_id,source_revision,status,format,slides").eq("id",contentId).eq("client_id",id).maybeSingle();
+   const {data:current}=await ctx.db.from("contents").select("revision,campaign_id,offer_id,offer_version,parent_id,source_revision,status,format,slides").eq("id",contentId).eq("client_id",id).maybeSingle();
    if(!current)throw new ApiFailure(404,"Contenuto non trovato");
+   if(input.offer_id!==undefined&&input.offer_id!==current.offer_id&&current.status==="approved")
+     throw new ApiFailure(409,"Riapri il contenuto prima di cambiare l’offerta collegata");
+   let selectedOffer:{version:number;status:string}|null=null;
+   if(input.offer_id){
+     const {data:offer,error:offerError}=await ctx.db.from("offers").select("version,status").eq("id",input.offer_id).eq("client_id",id).maybeSingle();
+     dbError(offerError,"Impossibile verificare l’offerta collegata");
+     if(!offer||offer.status!=="verified")throw new ApiFailure(422,"Collega solo un’offerta verificata di questo cliente");
+     selectedOffer=offer;
+   }
    if(input.status==="approved" && current.status==="stale")throw new ApiFailure(409,"La bozza è obsoleta: verificane le dipendenze prima di approvarla");
    if(input.status==="approved"){
      const finalSlides=Array.isArray(input.slides)?input.slides:
@@ -882,9 +891,14 @@ export async function PATCH(request:Request,{params}:Params){
      if((linked||[]).length!==new Set(ids).size)throw new ApiFailure(400,"Un segnale della community non appartiene a questo cliente");
    }
    if(input.slides?.some(slide=>slide.image_path && (!slide.image_path.startsWith(id+"/")||slide.image_path.includes(".."))))throw new ApiFailure(403,"Immagine fuori dal profilo cliente");
-   if(input.status==="approved" && current.offer_id){
-     const {data:offer}=await ctx.db.from("offers").select("version,status").eq("id",current.offer_id).eq("client_id",id).maybeSingle();
-     if(!offer||offer.status!=="verified"||offer.version!==current.offer_version){
+   const effectiveOfferId=input.offer_id===undefined?current.offer_id:input.offer_id;
+   if(input.status==="approved" && effectiveOfferId){
+     const offer=selectedOffer||await (async()=>{
+       const {data}=await ctx.db.from("offers").select("version,status").eq("id",effectiveOfferId).eq("client_id",id).maybeSingle();
+       return data;
+     })();
+     const effectiveOfferVersion=input.offer_id===undefined?current.offer_version:selectedOffer?.version;
+     if(!offer||offer.status!=="verified"||offer.version!==effectiveOfferVersion){
        if(current.status!=="stale"){
          const {error:staleError}=await ctx.db.from("contents").update({status:"stale"}).eq("id",contentId).eq("client_id",id).eq("revision",current.revision);
          dbError(staleError,"Impossibile aggiornare lo stato del contenuto");
@@ -902,8 +916,27 @@ export async function PATCH(request:Request,{params}:Params){
        throw new ApiFailure(409,"Originale Instagram cambiato: riadatta LinkedIn");
      }
    }
-   const {data,error}=await ctx.db.from("contents").update(input).eq("id",contentId).eq("client_id",id).eq("revision",current.revision).select().maybeSingle();
+   const update={...input,...(input.offer_id!==undefined?{offer_version:selectedOffer?.version??null}:{})};
+   const {data,error}=await ctx.db.from("contents").update(update).eq("id",contentId).eq("client_id",id).eq("revision",current.revision).select().maybeSingle();
    dbError(error,"Modifica non salvata");if(!data)throw new ApiFailure(409,"Il contenuto è cambiato: aggiorna la pagina");
+   if(input.offer_id!==undefined&&input.offer_id!==current.offer_id&&current.campaign_id){
+     const {data:campaign,error:campaignError}=await ctx.db.from("campaigns").select("id,offer_id").eq("id",current.campaign_id).eq("client_id",id).maybeSingle();
+     dbError(campaignError,"Impossibile verificare la campagna collegata");
+     if(campaign&&campaign.offer_id===current.offer_id){
+       const {data:campaignContents,error:contentsError}=await ctx.db.from("contents").select("id,offer_id").eq("campaign_id",current.campaign_id).eq("client_id",id);
+       dbError(contentsError,"Impossibile verificare i contenuti della campagna");
+       if((campaignContents||[]).length===1&&campaignContents?.[0]?.id===contentId){
+         const campaignUpdate=ctx.db.from("campaigns").update({offer_id:input.offer_id}).eq("id",current.campaign_id).eq("client_id",id);
+         const {error:campaignUpdateError}=current.offer_id
+           ?await campaignUpdate.eq("offer_id",current.offer_id)
+           :await campaignUpdate;
+         if(campaignUpdateError){
+           await ctx.db.from("contents").update({offer_id:current.offer_id,offer_version:current.offer_version}).eq("id",contentId).eq("client_id",id).eq("revision",data.revision);
+           dbError(campaignUpdateError,"Impossibile aggiornare l’offerta della campagna");
+         }
+       }
+     }
+   }
    await audit(ctx,id,"content_updated",contentId);return json({content:data});
   }
   throw new ApiFailure(404,"Aggiornamento non disponibile");
