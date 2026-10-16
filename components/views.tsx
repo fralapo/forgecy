@@ -527,11 +527,11 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
     const result=await onAction("addInstagramProfile",{username}) as {account?:{id?:string}}|undefined;
     if(result){if(result.account?.id)setRequested(result.account.id);setInstagramHandle("");}
    }}>
-    <label htmlFor="instagram-public-handle" style={{fontWeight:650}}>Aggiungi account da monitorare</label>
+    <label htmlFor="instagram-public-handle" style={{fontWeight:650}}>Aggiungi profilo Instagram</label>
     <input id="instagram-public-handle" value={instagramHandle} maxLength={31} onChange={event=>setInstagramHandle(event.target.value)} placeholder="username Instagram" autoCapitalize="none" autoCorrect="off" style={{flex:"1 1 220px",maxWidth:340}} aria-describedby="instagram-public-hint"/>
     <button className="button" type="submit" disabled={!instagramHandle.trim()||Boolean(busy)}><Plus size={15}/> Aggiungi profilo</button>
    </form>
-   <p id="instagram-public-hint" className="caption" style={{margin:"8px 0 0"}}>Forgecy non chiede credenziali e legge solo i conteggi esposti nella pagina pubblica, quando disponibili. La lettura può essere limitata o cambiare; in quel caso si ferma senza tentare di superare il blocco. Per il tuo account puoi anche importare i file followers_*.json dell’archivio: i nomi vengono contati nel browser e non sono salvati né inviati.</p>
+   <p id="instagram-public-hint" className="caption" style={{margin:"8px 0 0"}}>Il profilo viene aggiunto allo storico locale: non è un monitoraggio automatico. Puoi aggiornare manualmente i conteggi pubblici quando Instagram li rende disponibili, oppure importare una rilevazione. Forgecy non chiede credenziali e si ferma se la pagina limita la lettura. Per il tuo account puoi anche importare i file followers_*.json dell’archivio: i nomi vengono contati nel browser e non sono salvati né inviati.</p>
    {importError&&<p role="alert" className="caption" style={{color:"var(--danger)",marginTop:8}}>{importError}</p>}
    <details style={{marginTop:10}}><summary className="caption" style={{cursor:"pointer"}}>Formato JSON accettato</summary><pre className="caption" style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",marginTop:8}}>{JSON.stringify({account:{username:"nomeaccount",followers_count:1200,media_count:80},media:[{id:"post-1",caption:"Testo",permalink:"https://www.instagram.com/p/ABC/",media_type:"IMAGE",timestamp:"2026-10-14T12:00:00.000Z",like_count:42,comments_count:3}]},null,2)}</pre></details>
   </div>
@@ -600,3 +600,4 @@ function Results({data,onAction,onChat,busy}:{data:Snapshot;onAction:Props["onAc
   <AiUsagePanel clientId={data.client.id}/>
  </>;
 }
+
