@@ -12,7 +12,6 @@ import { countInstagramArchiveFollowers } from "@/lib/instagram-archive";
 import { normalizeInstagramUsername } from "@/lib/instagram-username";
 import EditorialCalendar from "./editorial-calendar";
 import {resolvedLayout,layoutStyle,slidePreflight,slideHistoryReducer} from "@/lib/carousel-layout";
-import {createSignedUrlCache} from "@/lib/signed-url-cache";
 
 type Props={
  data:Snapshot;view:View;
@@ -23,7 +22,9 @@ type Props={
  busy:string|null;
 };
 
-const sourceFileUrlCache=createSignedUrlCache();
+function workspaceAssetUrl(clientId:string,bucket:string,path:string){
+ return `/api/workspace/clients/${clientId}/assets?bucket=${bucket}&path=${encodeURIComponent(path)}&download=1`;
+}
 
 function Badge({value}:{value:string}){return <span className={"pill "+(["stale","draft","proposed","running"].includes(value)?"warn":value==="failed"?"danger":value==="archived"?"muted":"")}>{statusLabel(value)}</span>}
 function sourceCoverageNotice(source:Snapshot["sources"][number]):string|null{
@@ -48,9 +49,8 @@ function isPartialOcr(source:Snapshot["sources"][number]):boolean{
  return Boolean(value&&typeof value==="object"&&(value as Record<string,unknown>).truncation_reason==="ocr_partial");
 }
 function SourceFilePreview({clientId,source}:{clientId:string;source:Snapshot["sources"][number]}){
- const [url,setUrl]=useState("");
  const bucket=source.source_metadata?.storage_bucket==="forgecy-assets"?"forgecy-assets":"forgecy-sources";
- useEffect(()=>{let active=true;if(!source.file_path)return;const key=`${clientId}:${bucket}:${source.file_path}`;sourceFileUrlCache.get(key,async()=>{const result=await requestJson<{url:string}>(`/api/workspace/clients/${clientId}/assets?bucket=${bucket}&path=${encodeURIComponent(source.file_path!)}`);if(!result.url)throw new Error("URL file non disponibile");return result.url}).then(value=>{if(active)setUrl(value)}).catch(()=>undefined);return()=>{active=false}},[bucket,clientId,source.file_path]);
+ const url=source.file_path?workspaceAssetUrl(clientId,bucket,source.file_path):"";
  if(!url)return null;
  return bucket==="forgecy-assets"?<a href={url} target="_blank" rel="noreferrer" className="caption" style={{display:"block",marginTop:9}}><span style={{position:"relative",display:"block",width:220,height:140,maxWidth:"100%",background:"var(--surface)",borderRadius:8}}><Image src={url} alt={source.title} fill unoptimized style={{objectFit:"contain"}}/></span><span style={{display:"block"}}>Apri immagine · {String(source.source_metadata?.asset_role||"immagine")}</span></a>:<a className="button small" href={url} target="_blank" rel="noreferrer" style={{marginTop:9}}>Apri documento</a>;
 }
@@ -417,19 +417,7 @@ function ContentEditor({content,clientName,profile,onBack,onAction,busy}:{conten
  const approvalProblem=isMultiPage&&(slides.length<3||slides.length>8)
    ?slides.length<3?"Aggiungi almeno 3 pagine per approvare un carosello o un documento.":"Riduci il contenuto a un massimo di 8 pagine prima di approvarlo."
    :slides.flatMap(slidePreflight).find(issue=>issue.severity==="blocking")?.message||"";
- const [resolvedImage,setResolvedImage]=useState<{path:string;url:string}|null>(null);
- // A new slide must never temporarily show the previous slide's image.
- const imageSrc=resolvedImage && resolvedImage.path===current?.image_path?resolvedImage.url:"";
- useEffect(()=>{
-  let cancelled=false;
-  const path=current?.image_path;
-  if(!path)return;
-  import("./types").then(m=>m.requestJson<{url:string}>(
-    "/api/workspace/clients/"+content.client_id+"/assets?path="+encodeURIComponent(path)
-  )).then(v=>{if(!cancelled)setResolvedImage({path,url:v.url});})
-    .catch(()=>{if(!cancelled)setResolvedImage({path,url:""});});
-  return()=>{cancelled=true};
- },[content.client_id,current?.image_path]);
+ const imageSrc=current?.image_path?workspaceAssetUrl(content.client_id,"forgecy-assets",current.image_path):"";
  const save=async(status?:"draft"|"review"|"approved")=>{
   const change:Record<string,unknown>={id:content.id,title,caption,slides,editorial_brief:{audience_need:brief.audience_need||"",hook:brief.hook||"",promise:brief.promise||"",value_delivered:brief.value_delivered||"",emotional_angle:brief.emotional_angle||"",rational_proof:brief.rational_proof||"",single_cta:brief.single_cta||"",community_signal_ids:brief.community_signal_ids||[]}};
   if(status)change.status=status;

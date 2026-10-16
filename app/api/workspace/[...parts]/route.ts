@@ -314,6 +314,20 @@ export async function GET(request:Request,{params}:Params){
    }
    if(!storedBucket)throw new ApiFailure(404,"File non trovato");
    if(storedBucket!==bucket)throw new ApiFailure(403,"Archivio file non autorizzato");
+   if(new URL(request.url).searchParams.get("download")==="1"){
+    const {data:file,error}=await ctx.db.storage.from(bucket).download(path);
+    dbError(error,"Impossibile leggere il file");
+    if(!file)throw new ApiFailure(404,"File non trovato");
+    const filename=path.split("/").at(-1)||"file";
+    return new Response(await file.arrayBuffer(),{headers:{
+     "Content-Type":file.type||"application/octet-stream",
+     "Content-Length":String(file.size),
+     "Content-Disposition":`inline; filename*=UTF-8''${encodeURIComponent(filename)}`,
+     "Cache-Control":"private, no-store",
+     "X-Content-Type-Options":"nosniff",
+     "Content-Security-Policy":"default-src 'none'; sandbox",
+    }});
+   }
    const {data,error}=await ctx.db.storage.from(bucket).createSignedUrl(path,120);
    dbError(error,"Impossibile firmare il file");
    return json({url:data?.signedUrl});
