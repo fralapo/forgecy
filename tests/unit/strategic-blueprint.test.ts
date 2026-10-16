@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {blueprintSchema,unknownEvidenceIds} from "../../lib/strategic-blueprint";
+import {blueprintSchema,STRATEGY_GROUNDING_RULES,unknownEvidenceIds} from "../../lib/strategic-blueprint";
 
 const valid={
  title:"Piano di comunicazione Atelier Forma",
@@ -20,6 +20,12 @@ test("central company strategy has explicit goals, KPI, roadmap and non-fabricat
  const x=blueprintSchema.parse(valid);
  assert.equal(x.objectives[0].baseline,null);
  assert.equal(x.roadmap.days_90[0],"Valutazione");
+});
+test("strategy generation separates brand claims from measured proof and labels unsupported audiences",()=>{
+ assert.match(STRATEGY_GROUNDING_RULES,/does not prove efficacy, performance or customer outcomes/);
+ assert.match(STRATEGY_GROUNDING_RULES,/Never call a claim, slogan or product feature proof/);
+ assert.match(STRATEGY_GROUNDING_RULES,/Only include product dosage, preparation, safety or usage instructions/);
+ assert.match(STRATEGY_GROUNDING_RULES,/Label audience descriptions as hypotheses/);
 });
 test("invalid strategy is rejected rather than silently accepted",()=>{
  assert.equal(blueprintSchema.safeParse({...valid,objectives:[]}).success,false);

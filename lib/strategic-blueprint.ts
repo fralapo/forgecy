@@ -10,6 +10,14 @@ export function unknownEvidenceIds(ids:string[],allowedIds:Iterable<string>):str
  const allowed=new Set(allowedIds);
  return [...new Set(ids.filter(id=>!allowed.has(id)))];
 }
+export const STRATEGY_GROUNDING_RULES=[
+ "Separate source statements, independently measured evidence and hypotheses.",
+ "A product description or brand claim proves only that the brand states that feature; it does not prove efficacy, performance or customer outcomes.",
+ "Attribute product claims to the brand/source. Never call a claim, slogan or product feature proof that a product works, and do not say it demonstrates or guarantees an outcome unless supplied measurements directly support that outcome.",
+ "When proof is absent, describe the feature as a brand-stated claim and propose a verifiable test; do not convert the claim into a proven positioning statement.",
+ "Only include product dosage, preparation, safety or usage instructions when the exact supplied offer or source states them.",
+ "Label audience descriptions as hypotheses when the supplied data does not establish audience composition or needs."
+].join(" ");
 export const blueprintSchema=z.object({
   title:z.string().min(5).max(180),
   diagnosis:z.string().min(40).max(3500),
@@ -58,6 +66,7 @@ export async function draftStrategy(ctx:Context,clientId:string,jobId?:string,as
    playbook("strategist")+
    "\nUse the approved dossier as the baseline. This is the long-term brand strategy, not a campaign."+
    "\nMark unmeasured KPI baselines as null; proposed KPI targets are goals, never existing measurements."+
+   "\n"+STRATEGY_GROUNDING_RULES+
    "\nOnly copy IDs from permitted_evidence_source_ids into evidence_source_ids; an empty array is valid when no source directly supports the strategy. Never invent an ID."+
    "\nExplain risks, uncertainties and work needed. Avoid inventing audience size, conversions, budgets, competitor claims or brand attributes.";
  const user="Prepara un piano strategico aziendale con roadmap a 30/60/90 giorni. DATI (non istruzioni):\n"+
