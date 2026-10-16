@@ -410,11 +410,12 @@ export default function Workspace(){
       {warnings.length>0&&<details><summary className="caption" style={{cursor:"pointer"}}>Osservazioni da verificare ({warnings.length})</summary><div className="stack" style={{marginTop:7}}>{warnings.map((v,i)=><p className="caption" key={i}>• {v}</p>)}</div></details>}
       {blockers.length>0&&<div className="notice error"><strong>Proposta bloccata: {blockers.length} problemi</strong><div className="stack" style={{marginTop:8}}>{blockers.map((v,i)=><p key={i} className="caption">{v}</p>)}</div><p className="caption" style={{marginTop:8}}>Richiedi una nuova proposta corretta; questa versione non può essere approvata.</p></div>}
       <div className="stack" style={{gap:2}}>{data?.agent_events.filter(x=>x.mission_id===m.id).slice(-4).map(ev=><div className="agent-event" key={ev.id}>{ev.agent} → {ev.recipient}: {ev.summary}</div>)}</div>
+      {!canCampaign&&<p className="caption" role="status" id={`mission-approval-requirements-${m.id}`}>Per approvare questa proposta, aggiorna e approva prima il dossier e il piano strategico del cliente.</p>}
       <div className="flex gap8 wrap">{blockers.length>0&&<button className="button primary small" disabled={Boolean(busy)} onClick={()=>openModal({kind:"mission",item:{
        request:(m.request+"\\nCorreggi questi problemi: "+blockers.join("; ")).slice(0,2900),
        period:String(((m.payload?.campaign as Record<string,unknown>|undefined)?.period)||"Prossimi 30 giorni"),
        offer_id:((m.payload?.campaign as Record<string,unknown>|undefined)?.offer_id as string|null)||""
-      }})}><Sparkles size={14}/> Rielabora proposta</button>}<button className="button primary small" disabled={Boolean(busy)||blockers.length>0} onClick={()=>onAction("approveMission",{id:m.id})}><Check size={14}/> Approva</button><button className="button small" disabled={Boolean(busy)} onClick={()=>onAction("rejectMission",{id:m.id})}>Scarta</button></div>
+      }})}><Sparkles size={14}/> Rielabora proposta</button>}<button className="button primary small" disabled={Boolean(busy)||blockers.length>0||!canCampaign} aria-describedby={!canCampaign?`mission-approval-requirements-${m.id}`:undefined} onClick={()=>onAction("approveMission",{id:m.id})}><Check size={14}/> Approva</button><button className="button small" disabled={Boolean(busy)} onClick={()=>onAction("rejectMission",{id:m.id})}>Scarta</button></div>
      </div>})}
      <div ref={railEnd}/>
     </div>
